@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.managers.AudioManager;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -88,16 +89,17 @@ public class Handler extends ListenerAdapter {
                 channel.sendMessage("Don't talk to me").queue();
             }
 
-            if (msg.equals("!roll")) {
+            if (msg.startsWith("!roll")) {
                 //In this case, we have an example showing how to use the flatMap operator for a RestAction. The operator
                 // will provide you with the object that results after you execute your RestAction. As a note, not all RestActions
                 // have object returns and will instead have Void returns. You can still use the flatMap operator to run chain another RestAction!
 
                 Random rand = ThreadLocalRandom.current();
-                int roll = rand.nextInt(6) + 1; //This results in 1 - 6 (instead of 0 - 5)
+                int diceRoll = Optional.of(Integer.parseInt(msg.split(" ")[1])).orElse(6);
+                int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
                 channel.sendMessage("Your roll: " + roll)
                         .flatMap(
-                                (v) -> roll <= 3,
+                                (v) -> roll <= (diceRoll/2),
                                 // Send another message if the roll was bad (less than 3)
                                 sentMessage -> channel.sendMessage("...shit be cool\n")
                         )
