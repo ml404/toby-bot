@@ -100,9 +100,9 @@ public class BotMain extends ListenerAdapter {
                 int roll = rand.nextInt(6) + 1; //This results in 1 - 6 (instead of 0 - 5)
                 channel.sendMessage("Your roll: " + roll)
                         .flatMap(
-                                (v) -> roll < 3,
+                                (v) -> roll <= 3,
                                 // Send another message if the roll was bad (less than 3)
-                                sentMessage -> channel.sendMessage("The roll for messageId was: " + sentMessage.getId() + "...shit be cool\n")
+                                sentMessage -> channel.sendMessage("...shit be cool\n")
                         )
                         .queue();
             }
