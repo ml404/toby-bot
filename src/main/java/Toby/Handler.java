@@ -95,7 +95,7 @@ public class Handler extends ListenerAdapter {
                 // have object returns and will instead have Void returns. You can still use the flatMap operator to run chain another RestAction!
 
                 Random rand = ThreadLocalRandom.current();
-                Optional<String> s = Optional.ofNullable(msg.split(" ")[1]);
+                Optional<String> s = Optional.of(msg.replaceAll("[^0-9]", ""));
                 int diceRoll = s.map(Integer::parseInt).orElse(6);
                 int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
                 channel.sendMessage("Your roll: " + roll)
