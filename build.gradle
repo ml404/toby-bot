@@ -9,7 +9,7 @@ plugins{
     id 'application'
 }
 
-mainClassName = "Toby.Main"
+mainClassName = "Toby.BotMain"
 
 group 'com.github.ml404'
 version '1.0-SNAPSHOT'
