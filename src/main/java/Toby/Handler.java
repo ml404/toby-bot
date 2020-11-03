@@ -14,8 +14,6 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.managers.AudioManager;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -24,7 +22,7 @@ import static Toby.BotMain.jda;
 public class Handler extends ListenerAdapter {
 
 
-   private AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+    private AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
@@ -129,49 +127,51 @@ public class Handler extends ListenerAdapter {
                         channel.sendMessage("Sorry! I don't have permission to shoot members in this Server").queue();
                         return; //We jump out of the method instead of using cascading if/else
                     }
-
-                    if (!kickRequester.hasPermission(Permission.KICK_MEMBERS)) {
-                        channel.sendMessage("You can't shoot people, don't talk to me.").queue();
+                    if (kickRequester == null) {
+                        channel.sendMessage("Matt can't code and the kickRequester variable is null.").queue();
                     } else {
+                        if (!kickRequester.hasPermission(Permission.KICK_MEMBERS)) {
+                            channel.sendMessage("You can't shoot people, don't talk to me.").queue();
+                        } else {
+                            //Loop over all mentioned users, kicking them one at a time. Mwauahahah!
+                            List<User> mentionedUsers = message.getMentionedUsers();
+                            for (User user : mentionedUsers) {
+                                Member kickTarget = guild.getMember(user);  //We get the member object for each mentioned user to kick them!
 
-                        //Loop over all mentioned users, kicking them one at a time. Mwauahahah!
-                        List<User> mentionedUsers = message.getMentionedUsers();
-                        for (User user : mentionedUsers) {
-                            Member kickTarget = guild.getMember(user);  //We get the member object for each mentioned user to kick them!
+                                //We need to make sure that we can interact with them. Interacting with a Member means you are higher
+                                // in the Role hierarchy than they are. Remember, NO ONE is above the Guild's Owner. (Guild#getOwner())
+                                if (!tobyBot.canInteract(kickTarget)) {
+                                    // use the MessageAction to construct the content in StringBuilder syntax using append calls
+                                    channel.sendMessage("Cannot shoot member: ")
+                                            .append(kickTarget.getEffectiveName())
+                                            .append(", they gibe more than me.")
+                                            .queue();
+                                    continue;   //Continue to the next mentioned user to be kicked.
+                                }
 
-                            //We need to make sure that we can interact with them. Interacting with a Member means you are higher
-                            // in the Role hierarchy than they are. Remember, NO ONE is above the Guild's Owner. (Guild#getOwner())
-                            if (!tobyBot.canInteract(kickTarget)) {
-                                // use the MessageAction to construct the content in StringBuilder syntax using append calls
-                                channel.sendMessage("Cannot shoot member: ")
-                                        .append(kickTarget.getEffectiveName())
-                                        .append(", they gibe more than me.")
-                                        .queue();
-                                continue;   //Continue to the next mentioned user to be kicked.
+                                //Remember, due to the fact that we're using queue we will never have to deal with RateLimits.
+                                // JDA will do it all for you so long as you are using queue!
+                                guild.kick(kickTarget).queue(
+                                        success -> channel.sendMessage("Shot ").append(kickTarget.getEffectiveName()).append("... something about fortnite?").queue(),
+                                        error ->
+                                        {
+                                            //The failure consumer provides a throwable. In this case we want to check for a PermissionException.
+                                            if (error instanceof PermissionException) {
+                                                PermissionException pe = (PermissionException) error;
+                                                Permission missingPermission = pe.getPermission();  //If you want to know exactly what permission is missing, this is how.
+                                                //Note: some PermissionExceptions have no permission provided, only an error message!
+
+                                                channel.sendMessage("PermissionError shooting [")
+                                                        .append(kickTarget.getEffectiveName()).append("]: ")
+                                                        .append(error.getMessage()).queue();
+                                            } else {
+                                                channel.sendMessage("Unknown error while shooting [")
+                                                        .append(kickTarget.getEffectiveName())
+                                                        .append("]: <").append(error.getClass().getSimpleName()).append(">: ")
+                                                        .append(error.getMessage()).queue();
+                                            }
+                                        });
                             }
-
-                            //Remember, due to the fact that we're using queue we will never have to deal with RateLimits.
-                            // JDA will do it all for you so long as you are using queue!
-                            guild.kick(kickTarget).queue(
-                                    success -> channel.sendMessage("Shot ").append(kickTarget.getEffectiveName()).append("... something about fortnite?").queue(),
-                                    error ->
-                                    {
-                                        //The failure consumer provides a throwable. In this case we want to check for a PermissionException.
-                                        if (error instanceof PermissionException) {
-                                            PermissionException pe = (PermissionException) error;
-                                            Permission missingPermission = pe.getPermission();  //If you want to know exactly what permission is missing, this is how.
-                                            //Note: some PermissionExceptions have no permission provided, only an error message!
-
-                                            channel.sendMessage("PermissionError shooting [")
-                                                    .append(kickTarget.getEffectiveName()).append("]: ")
-                                                    .append(error.getMessage()).queue();
-                                        } else {
-                                            channel.sendMessage("Unknown error while shooting [")
-                                                    .append(kickTarget.getEffectiveName())
-                                                    .append("]: <").append(error.getClass().getSimpleName()).append(">: ")
-                                                    .append(error.getMessage()).queue();
-                                        }
-                                    });
                         }
                     }
                 }
