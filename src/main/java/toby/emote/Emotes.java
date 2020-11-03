@@ -1,4 +1,4 @@
-package Toby.Emote;
+package toby.emote;
 
 public class Emotes {
 
