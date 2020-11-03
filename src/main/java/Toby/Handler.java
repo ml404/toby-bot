@@ -64,7 +64,6 @@ public class Handler extends ListenerAdapter {
                 name = author.getName();                //If this is a Webhook message, then there is no Member associated
             }                                           // with the User, thus we default to the author for name.
             else {
-                assert member != null;
                 name = member.getEffectiveName();       //This will either use the Member's nickname if they have one,
             }                                           // otherwise it will default to their username. (User#getName())
 
@@ -100,56 +99,61 @@ public class Handler extends ListenerAdapter {
                 int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
                 channel.sendMessage("Your roll: " + roll)
                         .flatMap(
-                                (v) -> roll <= (diceRoll/2),
+                                (v) -> roll <= (diceRoll / 2),
                                 // Send another message if the roll was bad (less than 3)
                                 sentMessage -> channel.sendMessage("...shit be cool\n")
                         )
                         .queue();
             }
+        } else if (msg.startsWith("!kick")) {
+            Member kickRequester = event.getMember();
+            //This is an admin command. That means that it requires specific permissions to use it, in this case
+            // it needs Permission.KICK_MEMBERS. We will have a check before we attempt to kick members to see
+            // if the logged in account actually has the permission, but considering something could change after our
+            // check we should also take into account the possibility that we don't have permission anymore, thus Discord
+            // response with a permission failure!
+            //We will use the error consumer, the second parameter in queue!
 
-            if (msg.startsWith("!kick")) {
-                //This is an admin command. That means that it requires specific permissions to use it, in this case
-                // it needs Permission.KICK_MEMBERS. We will have a check before we attempt to kick members to see
-                // if the logged in account actually has the permission, but considering something could change after our
-                // check we should also take into account the possibility that we don't have permission anymore, thus Discord
-                // response with a permission failure!
-                //We will use the error consumer, the second parameter in queue!
+            //We only want to deal with message sent in a Guild.
+            if (message.isFromType(ChannelType.TEXT)) {
+                //If no users are provided, we can't kick anyone!
+                if (message.getMentionedUsers().isEmpty()) {
+                    channel.sendMessage("You must mention 1 or more Users to be shot").queue();
+                } else {
+                    Guild guild = event.getGuild();
+                    Member tobyBot = guild.getSelfMember();  //This is the currently logged in account's Member object.
+                    // Very similar to JDA#getSelfUser()!
 
-                //We only want to deal with message sent in a Guild.
-                if (message.isFromType(ChannelType.TEXT)) {
-                    //If no users are provided, we can't kick anyone!
-                    if (message.getMentionedUsers().isEmpty()) {
-                        channel.sendMessage("You must mention 1 or more Users to shoot").queue();
+                    //Now, we the the logged in account doesn't have permission to kick members.. well.. we can't kick!
+                    if (!tobyBot.hasPermission(Permission.KICK_MEMBERS)) {
+                        channel.sendMessage("Sorry! I don't have permission to shoot members in this Server").queue();
+                        return; //We jump out of the method instead of using cascading if/else
+                    }
+
+                    if (!kickRequester.hasPermission(Permission.KICK_MEMBERS)) {
+                        channel.sendMessage("You can't shoot people, don't talk to me.").queue();
                     } else {
-                        Member selfMember = guild.getSelfMember();  //This is the currently logged in account's Member object.
-                        // Very similar to JDA#getSelfUser()!
 
-                        //Now, we the the logged in account doesn't have permission to kick members.. well.. we can't kick!
-                        if (!selfMember.hasPermission(Permission.KICK_MEMBERS)) {
-                            channel.sendMessage("Sorry! I don't have permission to shoot members in this server!").queue();
-                            return; //We jump out of the method instead of using cascading if/else
-                        }
-
-                        //Loop over all mentioned users, kicking them one at a time.
+                        //Loop over all mentioned users, kicking them one at a time. Mwauahahah!
                         List<User> mentionedUsers = message.getMentionedUsers();
                         for (User user : mentionedUsers) {
-                            Member mentionedMember = guild.getMember(user);  //We get the member object for each mentioned user to kick them!
+                            Member kickTarget = guild.getMember(user);  //We get the member object for each mentioned user to kick them!
 
                             //We need to make sure that we can interact with them. Interacting with a Member means you are higher
                             // in the Role hierarchy than they are. Remember, NO ONE is above the Guild's Owner. (Guild#getOwner())
-                            if (!selfMember.canInteract(mentionedMember)) {
+                            if (!tobyBot.canInteract(kickTarget)) {
                                 // use the MessageAction to construct the content in StringBuilder syntax using append calls
-                                channel.sendMessage("Cannot kick member: ")
-                                        .append(member.getEffectiveName())
-                                        .append(", they are higher in the hierarchy than I am!")
+                                channel.sendMessage("Cannot shoot member: ")
+                                        .append(kickTarget.getEffectiveName())
+                                        .append(", they gibe more than me.")
                                         .queue();
                                 continue;   //Continue to the next mentioned user to be kicked.
                             }
 
                             //Remember, due to the fact that we're using queue we will never have to deal with RateLimits.
                             // JDA will do it all for you so long as you are using queue!
-                            guild.kick(Objects.requireNonNull(member)).queue(
-                                    success -> channel.sendMessage("Shot ").append(member.getEffectiveName()).append("!").queue(),
+                            guild.kick(kickTarget).queue(
+                                    success -> channel.sendMessage("Shot ").append(kickTarget.getEffectiveName()).append("... something about fortnite?").queue(),
                                     error ->
                                     {
                                         //The failure consumer provides a throwable. In this case we want to check for a PermissionException.
@@ -159,20 +163,20 @@ public class Handler extends ListenerAdapter {
                                             //Note: some PermissionExceptions have no permission provided, only an error message!
 
                                             channel.sendMessage("PermissionError shooting [")
-                                                    .append(member.getEffectiveName()).append("]: ")
+                                                    .append(kickTarget.getEffectiveName()).append("]: ")
                                                     .append(error.getMessage()).queue();
                                         } else {
                                             channel.sendMessage("Unknown error while shooting [")
-                                                    .append(member.getEffectiveName())
+                                                    .append(kickTarget.getEffectiveName())
                                                     .append("]: <").append(error.getClass().getSimpleName()).append(">: ")
                                                     .append(error.getMessage()).queue();
                                         }
                                     });
                         }
                     }
-                } else {
-                    channel.sendMessage("This is a Server-Only command!").queue();
                 }
+            } else {
+                channel.sendMessage("This is a Guild-Only command!").queue();
             }
         }
     }
