@@ -29,6 +29,8 @@ dependencies {
     runtime 'ch.qos.logback:logback-classic:1.1.8'
     implementation group: 'io.github.cdimascio', name: 'java-dotenv', version: '5.1.1'
     implementation("com.google.guava:guava:30.0-jre")
+    implementation group: 'me.duncte123', name: 'botCommons', version: '1.0.45'
+
 }
 
 apply plugin: 'com.github.johnrengelman.shadow'

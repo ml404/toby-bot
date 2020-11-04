@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.KickCommand;
+import toby.command.commands.MemeCommand;
 import toby.command.commands.RollCommand;
 
 import javax.annotation.Nullable;
@@ -18,6 +19,7 @@ public class CommandManager {
     public CommandManager() {
         addCommand(new KickCommand());
         addCommand(new RollCommand());
+        addCommand(new MemeCommand());
     }
 
     private void addCommand(ICommand cmd) {
