@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import toby.handler.Handler;
 
 import javax.security.auth.login.LoginException;
+import java.util.EnumSet;
 
 public class BotMain {
     public static JDA jda;
@@ -20,14 +21,15 @@ public class BotMain {
                         .setFooter("TobyBot")
         );
 
-        JDABuilder builder = JDABuilder.create(BotConfig.get("token"),
+        JDABuilder builder = JDABuilder.createDefault(BotConfig.get("token"),
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES,
                 GatewayIntent.GUILD_VOICE_STATES,
                 GatewayIntent.GUILD_EMOJIS
-                ).disableCache(CacheFlag.CLIENT_STATUS,
+                ).disableCache(EnumSet.of(
+                CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
-                ).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
+        )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
         builder.addEventListeners(new Handler());
         jda = builder.build();
     }

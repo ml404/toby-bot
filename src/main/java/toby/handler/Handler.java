@@ -109,19 +109,20 @@ public class Handler extends ListenerAdapter {
 
     }
 
-    @Override
-    public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
-
-        AudioSourceManagers.registerRemoteSources(playerManager);
-        AudioPlayer player = playerManager.createPlayer();
-
-        // Creates a variable equal to the channel that the user is in.
-        VoiceChannel connectedChannel = event.getMember().getVoiceState().getChannel();
-        AudioManager audioManager = event.getGuild().getAudioManager();
-        audioManager.openAudioConnection(connectedChannel);
-
-        event.getGuild().getAudioManager().closeAudioConnection();
-
-    }
+    //Will need this for playing bugsnax, but for now comment out
+//    @Override
+//    public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
+//
+//        AudioSourceManagers.registerRemoteSources(playerManager);
+//        AudioPlayer player = playerManager.createPlayer();
+//
+//        // Creates a variable equal to the channel that the user is in.
+//        VoiceChannel connectedChannel = event.getMember().getVoiceState().getChannel();
+//        AudioManager audioManager = event.getGuild().getAudioManager();
+//        audioManager.openAudioConnection(connectedChannel);
+//
+//        event.getGuild().getAudioManager().closeAudioConnection();
+//
+//    }
 }
 
