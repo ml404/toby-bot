@@ -20,7 +20,7 @@ public class BotMain {
                         .setFooter("TobyBot")
         );
 
-        JDABuilder builder = JDABuilder.createDefault(BotConfig.get("token"),
+        JDABuilder builder = JDABuilder.create(BotConfig.get("token"),
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES
                 ).disableCache(CacheFlag.CLIENT_STATUS,
