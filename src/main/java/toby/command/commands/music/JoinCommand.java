@@ -9,7 +9,7 @@ import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
-public class JoinCommand  implements ICommand {
+public class JoinCommand implements ICommand {
     @Override
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();

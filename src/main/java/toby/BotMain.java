@@ -23,7 +23,8 @@ public class BotMain {
         JDABuilder builder = JDABuilder.create(BotConfig.get("token"),
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES,
-                GatewayIntent.GUILD_VOICE_STATES
+                GatewayIntent.GUILD_VOICE_STATES,
+                GatewayIntent.GUILD_EMOJIS
                 ).disableCache(CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
                 ).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
