@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 public class PlayerManager {
-
     private static PlayerManager INSTANCE;
 
     private final Map<Long, GuildMusicManager> musicManagers;
@@ -66,7 +65,9 @@ public class PlayerManager {
                         .append('`')
                         .queue();
 
-                tracks.forEach(musicManager.scheduler::queue);
+                for (final AudioTrack track : tracks) {
+                    musicManager.scheduler.queue(track);
+                }
             }
 
             @Override

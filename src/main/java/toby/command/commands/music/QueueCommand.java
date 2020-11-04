@@ -72,4 +72,3 @@ public class QueueCommand implements ICommand {
         return "shows the queued up songs";
     }
 }
-
