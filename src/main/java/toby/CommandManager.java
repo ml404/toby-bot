@@ -6,6 +6,7 @@ import toby.command.ICommand;
 import toby.command.commands.KickCommand;
 import toby.command.commands.MemeCommand;
 import toby.command.commands.RollCommand;
+import toby.command.commands.music.*;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -20,6 +21,12 @@ public class CommandManager {
         addCommand(new KickCommand());
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
+        addCommand(new JoinCommand());
+        addCommand(new PlayCommand());
+        addCommand(new StopCommand());
+        addCommand(new SkipCommand());
+        addCommand(new NowPlayingCommand());
+        addCommand(new QueueCommand());
     }
 
     private void addCommand(ICommand cmd) {
