@@ -15,6 +15,7 @@
     <orderEntry type="library" name="Gradle: io.github.cdimascio:java-dotenv:5.1.1" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:guava:30.0-jre" level="project" />
     <orderEntry type="library" name="Gradle: me.duncte123:botCommons:1.0.45" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.8.6" level="project" />
     <orderEntry type="library" name="Gradle: junit:junit:4.12" level="project" />
     <orderEntry type="library" name="Gradle: com.google.code.findbugs:jsr305:3.0.2" level="project" />
     <orderEntry type="library" name="Gradle: com.squareup.okhttp3:okhttp:4.0.1" level="project" />
