@@ -23,7 +23,7 @@ public class RedditAPIDto {
     private Boolean video;
 
 
-    public static String redditPrefix ="https://old.reddit.com/r/%s/hot/.json";
+    public static String redditPrefix ="https://old.reddit.com/r/%s/top/.json";
 
     public String getTitle() {
         return title;
