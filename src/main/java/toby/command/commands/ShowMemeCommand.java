@@ -36,14 +36,14 @@ public class ShowMemeCommand implements ICommand {
                 JsonNode meme = children.get(random.nextInt(children.size()));
                 RedditAPIDto redditAPIDto = gson.fromJson(meme.get("data").toString(), RedditAPIDto.class);
                 if (redditAPIDto.isNsfw()) {
-                    channel.sendMessage(String.format("I received a NSFW subreddit by %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", ctx.getAuthor())).queue();
+                    channel.sendMessage(String.format("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", ctx.getAuthor())).queue();
                 } else if (redditAPIDto.getVideo()) {
-                    channel.sendMessage("I pulled back a video, whoops. Try again maybe?").queue();
+                    channel.sendMessage("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue();
                 } else {
                     String title = redditAPIDto.getTitle();
                     String url = redditAPIDto.getUrl();
                     String image = redditAPIDto.getImage();
-                    EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, url, image);
+                    EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, String.format(RedditAPIDto.commentsPrefix,url), image);
                     channel.sendMessage(embed.build()).queue();
 
                 }

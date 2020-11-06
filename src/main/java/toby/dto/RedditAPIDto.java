@@ -10,7 +10,7 @@ public class RedditAPIDto {
     @SerializedName("author")
     private String author;
 
-    @SerializedName("url")
+    @SerializedName("permalink")
     private String url;
 
     @SerializedName("url_overridden_by_dest")
@@ -23,7 +23,8 @@ public class RedditAPIDto {
     private Boolean video;
 
 
-    public static String redditPrefix ="https://old.reddit.com/r/%s/top/.json";
+    public static String redditPrefix ="https://old.reddit.com/r/%s/top/.json?limit=10";
+    public static String commentsPrefix ="https://old.reddit.com%s";
 
     public String getTitle() {
         return title;
