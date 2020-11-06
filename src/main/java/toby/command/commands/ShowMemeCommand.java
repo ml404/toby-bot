@@ -23,31 +23,34 @@ public class ShowMemeCommand implements ICommand {
             getHelp();
         } else {
             String subredditArg = args.get(0);
-            WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg)).async((json) -> {
-                if ((json.get("data").get("dist").asInt() == 0)) {
-                    channel.sendMessage(String.format("I think you typo'd the subreddit: %s", subredditArg)).queue();
-                    System.out.println(json);
-                    return;
-                }
+            if (subredditArg.equals("sneakybackgroundfeet")) {
+                channel.sendMessage("Don't talk to me.").queue();
+            } else {
+                WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg)).async((json) -> {
+                    if ((json.get("data").get("dist").asInt() == 0)) {
+                        channel.sendMessage(String.format("I think you typo'd the subreddit: %s", subredditArg)).queue();
+                        System.out.println(json);
+                        return;
+                    }
+                    final JsonNode parentData = json.get("data");
+                    final JsonNode children = parentData.get("children");
+                    Random random = new Random();
+                    JsonNode meme = children.get(random.nextInt(children.size()));
+                    RedditAPIDto redditAPIDto = gson.fromJson(meme.get("data").toString(), RedditAPIDto.class);
+                    if (redditAPIDto.isNsfw()) {
+                        channel.sendMessage(String.format("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", ctx.getAuthor())).queue();
+                    } else if (redditAPIDto.getVideo()) {
+                        channel.sendMessage("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue();
+                    } else {
+                        String title = redditAPIDto.getTitle();
+                        String url = redditAPIDto.getUrl();
+                        String image = redditAPIDto.getImage();
+                        EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, String.format(RedditAPIDto.commentsPrefix, url), image);
+                        channel.sendMessage(embed.build()).queue();
 
-                final JsonNode parentData = json.get("data");
-                final JsonNode children = parentData.get("children");
-                Random random = new Random();
-                JsonNode meme = children.get(random.nextInt(children.size()));
-                RedditAPIDto redditAPIDto = gson.fromJson(meme.get("data").toString(), RedditAPIDto.class);
-                if (redditAPIDto.isNsfw()) {
-                    channel.sendMessage(String.format("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", ctx.getAuthor())).queue();
-                } else if (redditAPIDto.getVideo()) {
-                    channel.sendMessage("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue();
-                } else {
-                    String title = redditAPIDto.getTitle();
-                    String url = redditAPIDto.getUrl();
-                    String image = redditAPIDto.getImage();
-                    EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, String.format(RedditAPIDto.commentsPrefix,url), image);
-                    channel.sendMessage(embed.build()).queue();
-
-                }
-            });
+                    }
+                });
+            }
         }
     }
 
