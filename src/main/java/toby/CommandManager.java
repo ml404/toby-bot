@@ -19,8 +19,8 @@ public class CommandManager {
         addCommand(new HelpCommand(this));
         addCommand(new KickCommand());
         addCommand(new RollCommand());
-        addCommand(new ShowMemeCommand());
         addCommand(new MemeCommand());
+        addCommand(new ShhCommand());
         addCommand(new JoinCommand());
         addCommand(new LeaveCommand());
         addCommand(new PlayCommand());
