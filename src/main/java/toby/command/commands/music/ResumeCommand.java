@@ -2,6 +2,7 @@ package toby.command.commands.music;
 
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -37,7 +38,16 @@ public class ResumeCommand implements ICommand {
         }
 
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(ctx.getGuild()).audioPlayer;
-        if(audioPlayer.isPaused()) audioPlayer.setPaused(false);
+        if(audioPlayer.isPaused()) {
+            AudioTrack track = audioPlayer.getPlayingTrack();
+            channel.sendMessage("Resuming: `")
+                    .append(track.getInfo().title)
+                    .append("` by `")
+                    .append(track.getInfo().author)
+                    .append('`')
+                    .queue();
+            audioPlayer.setPaused(false);
+        }
     }
 
     @Override
