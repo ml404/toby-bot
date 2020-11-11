@@ -11,6 +11,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class TrackScheduler extends AudioEventAdapter {
     public final AudioPlayer player;
     public final BlockingQueue<AudioTrack> queue;
+    private boolean isLooping;
+
+    public boolean isLooping() {
+        return isLooping;
+    }
+
+    public void setLooping(boolean looping) {
+        isLooping = looping;
+    }
 
     public TrackScheduler(AudioPlayer player) {
         this.player = player;
@@ -30,6 +39,10 @@ public class TrackScheduler extends AudioEventAdapter {
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
         if (endReason.mayStartNext) {
+            if(isLooping){
+                this.player.startTrack(track.makeClone(), false);
+                return;
+            }
             nextTrack();
         }
     }
