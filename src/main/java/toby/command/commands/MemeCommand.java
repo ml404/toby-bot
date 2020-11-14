@@ -11,7 +11,6 @@ import toby.command.ICommand;
 import toby.dto.RedditAPIDto;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 public class MemeCommand implements ICommand {
@@ -24,14 +23,12 @@ public class MemeCommand implements ICommand {
             getHelp();
         } else {
             String subredditArg = args.get(0);
-            String timePeriod = args.get(1) != null ? args.get(1) : "day";
-            String limit = args.get(2) !=null ? args.get(2) : "5";
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 channel.sendMessage("Don't talk to me.").queue();
             } else {
-                WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
+                WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg)).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
-                        channel.sendMessage(String.format("I think you typo'd the subreddit: %s, I couldn't get anything from the reddit API", subredditArg)).queue();
+                        channel.sendMessage(String.format("I think you typo'd the subreddit: %s", subredditArg)).queue();
                         System.out.println(json);
                         return;
                     }
@@ -65,8 +62,7 @@ public class MemeCommand implements ICommand {
     @Override
     public String getHelp() {
         return "This command shows a meme from the subreddit you've specified (SFW only) \n" +
-                "Usage: `!meme raimimemes` (picks a top 5 meme of the day by default) \n" +
-                "`!meme raimimemes day/week $topXPosts`";
+                "Usage: `!meme raimimemes` \n";
     }
 }
 
