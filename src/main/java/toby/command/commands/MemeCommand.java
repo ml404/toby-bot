@@ -24,8 +24,8 @@ public class MemeCommand implements ICommand {
             getHelp();
         } else {
             String subredditArg = args.get(0);
-            String timePeriod = Optional.ofNullable(args.get(1)).orElse("day");
-            String limit = Optional.ofNullable(args.get(2)).orElse("5");
+            String timePeriod = args.get(1) != null ? args.get(1) : "day";
+            String limit = args.get(2) !=null ? args.get(2) : "5";
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 channel.sendMessage("Don't talk to me.").queue();
             } else {
