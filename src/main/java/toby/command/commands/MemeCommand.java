@@ -23,8 +23,18 @@ public class MemeCommand implements ICommand {
             getHelp();
         } else {
             String subredditArg = args.get(0);
-            String timePeriod = !args.get(1).isEmpty() ? args.get(1) : "day";
-            String limit = !args.get(2).isEmpty() ? args.get(2) : "5";
+            String timePeriod;
+            String limit;
+            try {
+                timePeriod = args.get(1);
+            } catch (IndexOutOfBoundsException e) {
+                timePeriod = "day";
+            }
+            try {
+                limit = args.get(2);
+            } catch (IndexOutOfBoundsException e) {
+                limit = "5";
+            }
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 channel.sendMessage("Don't talk to me.").queue();
             } else {
@@ -65,7 +75,7 @@ public class MemeCommand implements ICommand {
     public String getHelp() {
         return "This command shows a meme from the subreddit you've specified (SFW only) \n" +
                 "Usage: `!meme raimimemes` (picks a top 5 meme of the day by default) \n" +
-                "`!meme raimimemes day/week $topXPosts`";
+                "`!meme raimimemes day/week/month/all $topXPosts`";
     }
 }
 
