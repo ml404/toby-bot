@@ -40,7 +40,7 @@ public class RedditAPIDto {
 
     }
 
-    public static String redditPrefix = "https://old.reddit.com/r/%s/top/.json?limit=%s&t=%s";
+    public static String redditPrefix = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s";
     public static String commentsPrefix = "https://old.reddit.com%s";
 
     public String getTitle() {

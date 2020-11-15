@@ -24,7 +24,7 @@ public class MemeCommand implements ICommand {
         } else {
             String subredditArg = args.get(0);
             String timePeriod;
-            String limit;
+            int limit;
             try {
                 timePeriod = RedditAPIDto.TimePeriod.valueOf(args.get(1).toUpperCase()).toString().toLowerCase();
             } catch (IndexOutOfBoundsException e) {
@@ -35,9 +35,13 @@ public class MemeCommand implements ICommand {
                         String.format("Using default time period of %s", timePeriod)).queue();
             }
             try {
-                limit = args.get(2);
+                limit = Integer.parseInt(args.get(2));
             } catch (IndexOutOfBoundsException e) {
-                limit = "5";
+                limit = 5;
+            }
+            catch (NumberFormatException e){
+                limit = 5;
+                channel.sendMessage(String.format("Invalid number supplied, using default value %d", limit)).queue();
             }
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 channel.sendMessage("Don't talk to me.").queue();
