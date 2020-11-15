@@ -9,7 +9,8 @@ public class BotConfig {
 
      static final Map<String, String> configMap = ImmutableMap.of(
              "TOKEN", "NTUzNjU4MDM5MjY2NDQzMjY0.D2RTSA._rvjb2-d1hxBXF55jH4is4_VHGQ",
-             "PREFIX", "!"
+             "PREFIX", "!",
+             "DATEFORMAT", "yyyy/MM/dd"
      );
 
 
