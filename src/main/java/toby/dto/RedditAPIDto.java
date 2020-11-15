@@ -22,9 +22,26 @@ public class RedditAPIDto {
     @SerializedName("is_video")
     private Boolean video;
 
+    public enum TimePeriod {
+        DAY("day"),
+        WEEK("week"),
+        MONTH("month"),
+        ALL("all");
 
-    public static String redditPrefix ="https://old.reddit.com/r/%s/top/.json?limit=%s&t=%s";
-    public static String commentsPrefix ="https://old.reddit.com%s";
+        private final String timePeriod;
+
+        TimePeriod(String timePeriod){
+            this.timePeriod=timePeriod;
+        }
+
+        public String getTimePeriod(){
+            return this.timePeriod;
+        }
+
+    }
+
+    public static String redditPrefix = "https://old.reddit.com/r/%s/top/.json?limit=%s&t=%s";
+    public static String commentsPrefix = "https://old.reddit.com%s";
 
     public String getTitle() {
         return title;
@@ -73,4 +90,5 @@ public class RedditAPIDto {
     public void setVideo(Boolean video) {
         this.video = video;
     }
+
 }

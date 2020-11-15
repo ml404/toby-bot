@@ -26,9 +26,13 @@ public class MemeCommand implements ICommand {
             String timePeriod;
             String limit;
             try {
-                timePeriod = args.get(1);
+                timePeriod = RedditAPIDto.TimePeriod.valueOf(args.get(1).toUpperCase()).toString().toLowerCase();
             } catch (IndexOutOfBoundsException e) {
                 timePeriod = "day";
+            } catch (IllegalArgumentException e) {
+                timePeriod = "day";
+                channel.sendMessage(String.format("You entered a time period not supported: **%s**\\. Please use one of: day/week/month/all \n", args.get(1)) +
+                        String.format("Using default time period of %s", timePeriod)).queue();
             }
             try {
                 limit = args.get(2);
