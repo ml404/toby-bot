@@ -20,7 +20,7 @@ public class CommandManager {
         addCommand(new KickCommand());
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
-        addCommand(new HelloCommand());
+        addCommand(new HelloThereCommand());
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
         addCommand(new JoinCommand());
