@@ -2,10 +2,12 @@
   <library name="Gradle: com.sedmelluq:lavaplayer:1.3.55">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.sedmelluq/lavaplayer/1.3.55/af42e8330e396a095a4d8ece224603ca2ec4a623/lavaplayer-1.3.55.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/com.sedmelluq/lavaplayer/1.3.55/af42e8330e396a095a4d8ece224603ca2ec4a623/lavaplayer-1.3.55.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.sedmelluq/lavaplayer/1.3.55/ef61400d7c17521c6a4babdc4d5da1eff425cc7e/lavaplayer-1.3.55-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/com.sedmelluq/lavaplayer/1.3.55/ef61400d7c17521c6a4babdc4d5da1eff425cc7e/lavaplayer-1.3.55-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

@@ -2,10 +2,12 @@
   <library name="Gradle: me.duncte123:botCommons:1.0.45">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/me.duncte123/botCommons/1.0.45/14f0b797575c175f99fa66930cf7c29c07bb6c07/botCommons-1.0.45.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/me.duncte123/botCommons/1.0.45/14f0b797575c175f99fa66930cf7c29c07bb6c07/botCommons-1.0.45.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/me.duncte123/botCommons/1.0.45/725e321f5cbd6ae35b109c6c44bac575c775582b/botCommons-1.0.45-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/me.duncte123/botCommons/1.0.45/725e321f5cbd6ae35b109c6c44bac575c775582b/botCommons-1.0.45-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

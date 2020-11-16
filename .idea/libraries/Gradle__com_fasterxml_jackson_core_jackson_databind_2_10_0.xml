@@ -5,10 +5,12 @@
     </ANNOTATIONS>
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.10.0/1127c9cf62f2bb3121a3a2a0a1351d251a602117/jackson-databind-2.10.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.10.0/1127c9cf62f2bb3121a3a2a0a1351d251a602117/jackson-databind-2.10.0.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.10.0/465988edbcc098cebd769e2ef110ce57661a27a4/jackson-databind-2.10.0-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.10.0/465988edbcc098cebd769e2ef110ce57661a27a4/jackson-databind-2.10.0-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

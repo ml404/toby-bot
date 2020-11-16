@@ -2,10 +2,12 @@
   <library name="Gradle: me.duncte123:reliqua:2.4.8">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/me.duncte123/reliqua/2.4.8/a2f0df283b58ca6bb9844600ff3744b8e76988a0/reliqua-2.4.8.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/me.duncte123/reliqua/2.4.8/a2f0df283b58ca6bb9844600ff3744b8e76988a0/reliqua-2.4.8.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/me.duncte123/reliqua/2.4.8/2aebd4e5d2c96e8ae0e94d5945390bab5f44539a/reliqua-2.4.8-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/me.duncte123/reliqua/2.4.8/2aebd4e5d2c96e8ae0e94d5945390bab5f44539a/reliqua-2.4.8-sources.jar!/" />
     </SOURCES>
   </library>
 </component>
