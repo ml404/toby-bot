@@ -14,7 +14,7 @@ mainClassName = "toby.BotMain"
 group 'com.github.ml404'
 version '1.1-SNAPSHOT'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.15
 
 
 repositories {
