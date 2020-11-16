@@ -1,12 +1,10 @@
 <component name="libraryTable">
   <library name="Gradle: io.github.cdimascio:java-dotenv:5.1.1">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.github.cdimascio/java-dotenv/5.1.1/6c5712d04751e707b9f925aab756302e74103f59/java-dotenv-5.1.1.jar!/" />
       <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/io.github.cdimascio/java-dotenv/5.1.1/6c5712d04751e707b9f925aab756302e74103f59/java-dotenv-5.1.1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.github.cdimascio/java-dotenv/5.1.1/9700182addb4657ae1875d3e82349617051fc42f/java-dotenv-5.1.1-sources.jar!/" />
       <root url="jar://$PROJECT_DIR$/../../.gradle/caches/modules-2/files-2.1/io.github.cdimascio/java-dotenv/5.1.1/9700182addb4657ae1875d3e82349617051fc42f/java-dotenv-5.1.1-sources.jar!/" />
     </SOURCES>
   </library>
