@@ -1,28 +1,29 @@
 package toby.command.commands;
 
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Emote;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.BotConfig;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-
-import java.util.List;
+import toby.emote.Emotes;
 
 public class BrotherCommand implements ICommand {
     @Override
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
+        Guild guild = ctx.getGuild();
+        Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
 
         if (message.getMentionedMembers().isEmpty()) {
-            if (BotConfig.brotherList.contains(message.getAuthor().getIdLong())) {
-                channel.sendMessage(String.format("Of course you're my brother %s", message.getAuthor())).queue();
+            if (BotConfig.brotherMap.containsKey(message.getAuthor().getIdLong())) {
+                channel.sendMessage(String.format("Of course you're my brother %s.", BotConfig.brotherMap.get(message.getAuthor().getIdLong()))).queue();
             } else if (BotConfig.tobyId.equals(message.getAuthor().getIdLong())) {
-                channel.sendMessage(String.format("You're not my fucking brother %s, you're me", message.getAuthor())).queue();
+                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s",tobyEmote)).queue();
             } else
-                channel.sendMessage(String.format("You're not my fucking brother %s ffs", message.getAuthor())).queue();
+                channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue();
         }
     }
 
