@@ -32,11 +32,11 @@ public class ChCommand implements ICommand {
                 }
                 if (s.substring(vowelIndex).equalsIgnoreCase("ink")) {
                     return "gamerword";
-                } else return "ch" + s.substring(vowelIndex);
+                } else return "ch" + s.substring(vowelIndex).toLowerCase();
             }
         }).collect(Collectors.joining(" "));
 
-        channel.sendMessage("Oh! I think you mean: '" + newMessage + "'").queue();
+        channel.sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue();
     }
 
 
