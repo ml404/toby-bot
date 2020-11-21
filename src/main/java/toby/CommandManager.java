@@ -22,6 +22,7 @@ public class CommandManager {
         addCommand(new MemeCommand());
         addCommand(new HelloThereCommand());
         addCommand(new BrotherCommand());
+        addCommand(new ChCommand());
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
         addCommand(new JoinCommand());
