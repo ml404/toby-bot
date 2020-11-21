@@ -18,7 +18,6 @@ public class ChCommand implements ICommand {
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
-        Guild guild = ctx.getGuild();
         String newMessage = Arrays.stream(message.getContentRaw().split(" ")).map(s -> {
             if (s.equalsIgnoreCase("!ch")) {
                 return "";
