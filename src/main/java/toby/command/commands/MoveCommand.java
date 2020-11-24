@@ -50,7 +50,7 @@ public class MoveCommand implements ICommand {
 
             final Member botMember = ctx.getSelfMember();
 
-            if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
+            if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
                 channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue();
                 return;
             }
@@ -72,6 +72,6 @@ public class MoveCommand implements ICommand {
     public String getHelp() {
         return "move a member into a voice channel.\n" +
                 "Usage: `!move <@user> channelId (right click voice channel and copy id)`\n" +
-                "e.g. !move @FratLayton 756262044491055165";
+                "e.g. !move @username 756262044491055165";
     }
 }
