@@ -39,6 +39,10 @@ public class MoveCommand implements ICommand {
         voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(BotConfig.badOpinionChannel));
         message.getMentionedMembers().forEach(target -> {
 
+            if(!target.getVoiceState().inVoiceChannel()){
+                channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue();
+                return;
+            }
             if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
                 channel.sendMessage(String.format("You can't move '%s'", target.getEffectiveName())).queue();
                 return;
