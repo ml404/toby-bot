@@ -7,6 +7,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,9 +27,16 @@ public class MoveCommand implements ICommand {
             return;
         }
 
-        Optional<VoiceChannel> voiceChannelOptional = args.stream().map(guild::getVoiceChannelById).collect(Collectors.toList()).stream().findFirst();
-        voiceChannel = voiceChannelOptional.isEmpty() ? guild.getVoiceChannelById(args.stream().map(s -> BotConfig.channelMap.get(s)).findFirst().orElse(756262044491055165L)) : voiceChannelOptional.get();
-
+        Optional<VoiceChannel> voiceChannelOptional;
+        try {
+            voiceChannelOptional = args.stream()
+                    .filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))
+                    .map(guild::getVoiceChannelById)
+                    .collect(Collectors.toList()).stream().findFirst();
+        } catch (Error e) {
+            return;
+        }
+        voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(BotConfig.badOpinionChannel));
         message.getMentionedMembers().forEach(target -> {
 
             if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
@@ -38,15 +46,14 @@ public class MoveCommand implements ICommand {
 
             final Member botMember = ctx.getSelfMember();
 
-            if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
+            if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
                 channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue();
                 return;
             }
 
-            guild
-                    .moveVoiceMember(target, voiceChannel)
+            guild.moveVoiceMember(target, voiceChannel)
                     .queue(
-                            (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel).queue(),
+                            (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(),
                             (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue()
                     );
         });
@@ -60,7 +67,7 @@ public class MoveCommand implements ICommand {
     @Override
     public String getHelp() {
         return "move a member into a voice channel.\n" +
-                "Usage: `!move <@user> channelId`\n" +
+                "Usage: `!move <@user> channelId (right click voice channel and copy id)`\n" +
                 "e.g. !move @FratLayton 756262044491055165";
     }
 }

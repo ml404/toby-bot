@@ -20,7 +20,7 @@ public class MemeCommand implements ICommand {
         final TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
         if (args.size() == 0) {
-            getHelp();
+            channel.sendMessage(getHelp()).queue();
         } else {
             String subredditArg = args.get(0);
             String timePeriod;
