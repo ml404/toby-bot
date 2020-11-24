@@ -19,6 +19,13 @@ public class BotConfig {
              549342186139942922L, "Hot Cuppa",
              313049624636162059L, "Matt");
 
+
+     public static Map<String, Long> channelMap = Map.of(
+             "i have a bad opinion", 756262044491055165L,
+             "isometric exercise", 756198055186792479L,
+             "chayday chew", 778240186256982056L
+             );
+
     public static Long tobyId = 320919876883447808L;
 
 

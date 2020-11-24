@@ -29,9 +29,9 @@ public class KickCommand implements ICommand {
             return;
         }
 
-        final Member selfMember = ctx.getSelfMember();
+        final Member botMember = ctx.getSelfMember();
 
-        if (!selfMember.canInteract(target) || !selfMember.hasPermission(Permission.KICK_MEMBERS)) {
+        if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
             channel.sendMessage(String.format("I'm not allowed to shoot %s", target)).queue();
             return;
         }

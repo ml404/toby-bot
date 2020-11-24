@@ -30,7 +30,7 @@ public class ChCommand implements ICommand {
                         break;
                     }
                 }
-                if (s.substring(vowelIndex).equalsIgnoreCase("ink")) {
+                if (s.substring(vowelIndex).toLowerCase().startsWith("ink")) {
                     return "gamerword";
                 } else return "ch" + s.substring(vowelIndex).toLowerCase();
             }
