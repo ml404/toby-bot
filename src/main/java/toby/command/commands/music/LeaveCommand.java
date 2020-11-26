@@ -5,6 +5,8 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.lavaplayer.GuildMusicManager;
+import toby.lavaplayer.PlayerManager;
 
 public class LeaveCommand implements ICommand {
     @Override
@@ -22,15 +24,16 @@ public class LeaveCommand implements ICommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
 
-        final AudioManager audioManager = ctx.getGuild().getAudioManager();
+        Guild guild = ctx.getGuild();
+        final AudioManager audioManager = guild.getAudioManager();
         final VoiceChannel memberChannel = memberVoiceState.getChannel();
 
-        Role chadmin = member.getGuild().getRoleById("553665444914003969");
-        Role gibeGeneral = member.getGuild().getRoleById("765616921269764097");
-        if(member.getRoles().contains(chadmin) || member.getRoles().contains(gibeGeneral)){
+        GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
+        musicManager.scheduler.setLooping(false);
+        musicManager.scheduler.queue.clear();
+        musicManager.audioPlayer.stopTrack();
         audioManager.closeAudioConnection();
         channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
-        }
     }
 
     @Override
