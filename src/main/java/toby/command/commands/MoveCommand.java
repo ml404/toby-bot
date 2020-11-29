@@ -50,7 +50,7 @@ public class MoveCommand implements ICommand {
 
             final Member botMember = ctx.getSelfMember();
 
-            if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
+            if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
                 channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue();
                 return;
             }
