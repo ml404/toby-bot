@@ -26,7 +26,7 @@ public class TalkCommand implements ICommand {
 
         final Member bot = ctx.getSelfMember();
 
-        if (!bot.canInteract(target) || !bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
+        if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
             channel.sendMessage(String.format("I'm not allowed to unmute %s", target)).queue();
             return;
         }
