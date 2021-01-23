@@ -18,7 +18,7 @@ public class NowDigOnThisCommand implements ICommand {
         final TextChannel channel = ctx.getChannel();
 
         if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage("Correct usage is `!nowDigOnThis <youtube link>`").queue();
+            channel.sendMessage("Correct usage is `!nowdigonthis <youtube link>`").queue();
             return;
         }
 
@@ -59,13 +59,13 @@ public class NowDigOnThisCommand implements ICommand {
 
     @Override
     public String getName() {
-        return "nowDigOnThis";
+        return "nowdigonthis";
     }
 
     @Override
     public String getHelp() {
         return "Plays a song\n" +
-                "Usage: `!nowDigOnThis <youtube link>`";
+                "Usage: `!nowdigonthis <youtube link>`";
     }
 
     private boolean isUrl(String url) {
