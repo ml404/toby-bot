@@ -54,7 +54,7 @@ public class QueueCommand implements ICommand {
         messageAction.queue();
     }
 
-    private String formatTime(long timeInMillis) {
+    public static String formatTime(long timeInMillis) {
         final long hours = timeInMillis / TimeUnit.HOURS.toMillis(1);
         final long minutes = timeInMillis / TimeUnit.MINUTES.toMillis(1);
         final long seconds = timeInMillis % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1);

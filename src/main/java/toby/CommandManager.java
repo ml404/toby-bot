@@ -29,6 +29,7 @@ public class CommandManager {
         addCommand(new JoinCommand());
         addCommand(new LeaveCommand());
         addCommand(new PlayCommand());
+        addCommand(new NowDigOnThisCommand());
         addCommand(new PauseCommand());
         addCommand(new ResumeCommand());
         addCommand(new LoopCommand());

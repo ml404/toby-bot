@@ -19,6 +19,7 @@ public class PlayerManager {
 
     private final Map<Long, GuildMusicManager> musicManagers;
     private final AudioPlayerManager audioPlayerManager;
+    private boolean currentlyStoppable = true;
 
     public PlayerManager() {
         this.musicManagers = new HashMap<>();
@@ -39,8 +40,12 @@ public class PlayerManager {
     }
 
     public void loadAndPlay(TextChannel channel, String trackUrl) {
-        final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
+        loadAndPlay(channel, trackUrl, false);
+    }
 
+    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean skippable) {
+        final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
+        this.currentlyStoppable = skippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
@@ -88,6 +93,14 @@ public class PlayerManager {
         }
 
         return INSTANCE;
+    }
+
+    public boolean isCurrentlyStoppable() {
+        return currentlyStoppable;
+    }
+
+    public void setCurrentlyStoppable(boolean stoppable) {
+        this.currentlyStoppable = stoppable;
     }
 
 }

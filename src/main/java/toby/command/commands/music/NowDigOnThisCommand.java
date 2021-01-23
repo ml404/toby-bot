@@ -1,17 +1,27 @@
 package toby.command.commands.music;
 
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
-public class StopCommand implements ICommand {
+import java.net.URI;
+import java.net.URISyntaxException;
+
+public class NowDigOnThisCommand implements ICommand {
+    @SuppressWarnings("ConstantConditions")
     @Override
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();
+
+        if (ctx.getArgs().isEmpty()) {
+            channel.sendMessage("Correct usage is `!nowDigOnThis <youtube link>`").queue();
+            return;
+        }
+
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
@@ -33,27 +43,37 @@ public class StopCommand implements ICommand {
             return;
         }
 
-        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
+        String link = String.join(" ", ctx.getArgs());
 
-        boolean stopped = musicManager.scheduler.stopTrack(PlayerManager.getInstance().isCurrentlyStoppable());
-        if (stopped) {
-            musicManager.scheduler.queue.clear();
-            musicManager.scheduler.setLooping(false);
-            channel.sendMessage("The player has been stopped and the queue has been cleared").queue();
-        } else {
-            long duration = musicManager.audioPlayer.getPlayingTrack().getDuration();
-            String songDuration = QueueCommand.formatTime(duration);
-            channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
+        if (!member.hasPermission(Permission.KICK_MEMBERS)) {
+            channel.sendMessage(String.format("I'ma rub dirt in your eye %s", member.getEffectiveName())).queue();
+            return;
         }
+        if (!isUrl(link)) {
+            link = "ytsearch:" + link;
+        }
+
+        PlayerManager.getInstance().loadAndPlay(channel, link, false);
+
     }
 
     @Override
     public String getName() {
-        return "stop";
+        return "nowDigOnThis";
     }
 
     @Override
     public String getHelp() {
-        return "Stops the current song and clears the queue";
+        return "Plays a song\n" +
+                "Usage: `!nowDigOnThis <youtube link>`";
+    }
+
+    private boolean isUrl(String url) {
+        try {
+            new URI(url);
+            return true;
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 }

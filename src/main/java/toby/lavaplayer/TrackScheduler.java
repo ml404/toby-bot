@@ -39,11 +39,21 @@ public class TrackScheduler extends AudioEventAdapter {
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
         if (endReason.mayStartNext) {
-            if(isLooping){
+            if (isLooping) {
                 this.player.startTrack(track.makeClone(), false);
                 return;
             }
+            PlayerManager.getInstance().setCurrentlyStoppable(true);
             nextTrack();
+        }
+    }
+
+    public boolean stopTrack(boolean isStoppable) {
+        if (isStoppable) {
+            player.stopTrack();
+            return true;
+        } else {
+            return false;
         }
     }
 }
