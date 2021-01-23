@@ -40,12 +40,12 @@ public class PlayerManager {
     }
 
     public void loadAndPlay(TextChannel channel, String trackUrl) {
-        loadAndPlay(channel, trackUrl, false);
+        loadAndPlay(channel, trackUrl, true);
     }
 
-    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean skippable) {
+    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable) {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
-        this.currentlyStoppable = skippable;
+        this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
