@@ -1,6 +1,7 @@
 package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -8,6 +9,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
+import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class SkipCommand implements ICommand {
     @Override
@@ -42,9 +44,13 @@ public class SkipCommand implements ICommand {
             return;
         }
 
-        musicManager.scheduler.nextTrack();
-        musicManager.scheduler.setLooping(false);
-        channel.sendMessage("Skipped the current track").queue();
+        if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+            musicManager.scheduler.nextTrack();
+            musicManager.scheduler.setLooping(false);
+            channel.sendMessage("Skipped the current track").queue();
+        } else {
+            sendDeniedStoppableMessage(channel, musicManager);
+        }
     }
 
     @Override

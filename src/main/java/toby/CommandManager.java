@@ -29,6 +29,7 @@ public class CommandManager {
         addCommand(new JoinCommand());
         addCommand(new LeaveCommand());
         addCommand(new PlayCommand());
+        addCommand(new NowDigOnThisCommand());
         addCommand(new PauseCommand());
         addCommand(new ResumeCommand());
         addCommand(new LoopCommand());
@@ -36,8 +37,6 @@ public class CommandManager {
         addCommand(new SkipCommand());
         addCommand(new NowPlayingCommand());
         addCommand(new QueueCommand());
-        addCommand(new NowDigOnThisCommand());
-
     }
 
     private void addCommand(ICommand cmd) {

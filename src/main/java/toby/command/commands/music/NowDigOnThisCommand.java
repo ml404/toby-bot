@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.net.URI;
@@ -45,8 +46,8 @@ public class NowDigOnThisCommand implements ICommand {
 
         String link = String.join(" ", ctx.getArgs());
 
-        if (!member.hasPermission(Permission.KICK_MEMBERS)) {
-            channel.sendMessage(String.format("I'ma rub dirt in your eye %s", member.getEffectiveName())).queue();
+        if (!member.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
+            channel.sendMessage(String.format("I'm gonna put some dirt in your eye %s", member.getEffectiveName())).queue();
             return;
         }
         if (!isUrl(link)) {
@@ -75,5 +76,11 @@ public class NowDigOnThisCommand implements ICommand {
         } catch (URISyntaxException e) {
             return false;
         }
+    }
+
+    public static void sendDeniedStoppableMessage(TextChannel channel, GuildMusicManager musicManager) {
+        long duration = musicManager.audioPlayer.getPlayingTrack().getDuration();
+        String songDuration = QueueCommand.formatTime(duration);
+        channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
     }
 }

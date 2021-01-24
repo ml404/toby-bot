@@ -1,5 +1,6 @@
 package toby.command.commands.music;
 
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -7,6 +8,8 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
+
+import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class StopCommand implements ICommand {
     @Override
@@ -35,15 +38,13 @@ public class StopCommand implements ICommand {
 
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
 
-        boolean stopped = musicManager.scheduler.stopTrack(PlayerManager.getInstance().isCurrentlyStoppable());
-        if (stopped) {
+        if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+            musicManager.scheduler.stopTrack(true);
             musicManager.scheduler.queue.clear();
             musicManager.scheduler.setLooping(false);
             channel.sendMessage("The player has been stopped and the queue has been cleared").queue();
         } else {
-            long duration = musicManager.audioPlayer.getPlayingTrack().getDuration();
-            String songDuration = QueueCommand.formatTime(duration);
-            channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
+            sendDeniedStoppableMessage(channel, musicManager);
         }
     }
 

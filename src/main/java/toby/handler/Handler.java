@@ -24,7 +24,7 @@ import static toby.BotMain.jda;
 public class Handler extends ListenerAdapter {
 
 
-    private AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+    private final AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
     private final CommandManager manager = new CommandManager();

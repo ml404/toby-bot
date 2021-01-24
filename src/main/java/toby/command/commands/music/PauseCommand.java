@@ -3,12 +3,17 @@ package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
+
+import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class PauseCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
@@ -37,16 +42,22 @@ public class PauseCommand implements ICommand {
             return;
         }
 
-        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(ctx.getGuild()).audioPlayer;
-        if(!audioPlayer.isPaused()) {
-            AudioTrack track = audioPlayer.getPlayingTrack();
-            channel.sendMessage("Pausing: `")
-                    .append(track.getInfo().title)
-                    .append("` by `")
-                    .append(track.getInfo().author)
-                    .append('`')
-                    .queue();
-            audioPlayer.setPaused(true);
+        Guild guild = ctx.getGuild();
+        GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
+        if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+            AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).audioPlayer;
+            if (!audioPlayer.isPaused()) {
+                AudioTrack track = audioPlayer.getPlayingTrack();
+                channel.sendMessage("Pausing: `")
+                        .append(track.getInfo().title)
+                        .append("` by `")
+                        .append(track.getInfo().author)
+                        .append('`')
+                        .queue();
+                audioPlayer.setPaused(true);
+            }
+        } else {
+            sendDeniedStoppableMessage(channel, musicManager);
         }
     }
 

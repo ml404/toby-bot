@@ -8,6 +8,8 @@ import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
+import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
+
 public class LeaveCommand implements ICommand {
     @Override
     public void handle(CommandContext ctx) {
@@ -29,11 +31,16 @@ public class LeaveCommand implements ICommand {
         final VoiceChannel memberChannel = memberVoiceState.getChannel();
 
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
-        musicManager.scheduler.setLooping(false);
-        musicManager.scheduler.queue.clear();
-        musicManager.audioPlayer.stopTrack();
-        audioManager.closeAudioConnection();
-        channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
+        if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+            musicManager.scheduler.setLooping(false);
+            musicManager.scheduler.queue.clear();
+            musicManager.audioPlayer.stopTrack();
+            audioManager.closeAudioConnection();
+            channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
+        }
+        else {
+            sendDeniedStoppableMessage(channel, musicManager);
+        }
     }
 
     @Override
