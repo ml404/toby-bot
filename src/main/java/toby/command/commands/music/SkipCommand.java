@@ -68,8 +68,8 @@ public class SkipCommand implements ICommand {
 
     @Override
     public String getHelp() {
-        return "skip X number of tracks" +
-                "e.g. !skip 5" +
+        return "skip X number of tracks \n" +
+                "e.g. `!skip 5` \n" +
                 "skips one by default";
     }
 }
