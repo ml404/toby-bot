@@ -9,6 +9,9 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
+
+import java.util.List;
+
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class SkipCommand implements ICommand {
@@ -43,9 +46,14 @@ public class SkipCommand implements ICommand {
             channel.sendMessage("There is no track playing currently").queue();
             return;
         }
+        List<String> args = ctx.getArgs();
+        String skipValue = (!args.isEmpty()) ? args.get(0) : "";
+        int tracksToSkip = !skipValue.isEmpty() ? Integer.parseInt(skipValue) : 1;
 
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-            musicManager.scheduler.nextTrack();
+            for (int j = 0; j < tracksToSkip; j++) {
+                musicManager.scheduler.nextTrack();
+            }
             musicManager.scheduler.setLooping(false);
             channel.sendMessage("Skipped the current track").queue();
         } else {
@@ -60,7 +68,9 @@ public class SkipCommand implements ICommand {
 
     @Override
     public String getHelp() {
-        return "skips the current track";
+        return "skip X number of tracks" +
+                "e.g. !skip 5" +
+                "skips one by default";
     }
 }
 
