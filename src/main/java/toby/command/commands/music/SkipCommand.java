@@ -15,6 +15,7 @@ import java.util.List;
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class SkipCommand implements ICommand {
+
     @Override
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();
@@ -49,6 +50,11 @@ public class SkipCommand implements ICommand {
         List<String> args = ctx.getArgs();
         String skipValue = (!args.isEmpty()) ? args.get(0) : "";
         int tracksToSkip = !skipValue.isEmpty() ? Integer.parseInt(skipValue) : 1;
+
+        if(tracksToSkip < 0){
+            channel.sendMessage("You're not too bright, but thanks for trying").queue();
+            return ;
+        }
 
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
             for (int j = 0; j < tracksToSkip; j++) {

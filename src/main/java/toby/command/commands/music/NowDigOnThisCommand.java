@@ -79,8 +79,12 @@ public class NowDigOnThisCommand implements ICommand {
     }
 
     public static void sendDeniedStoppableMessage(TextChannel channel, GuildMusicManager musicManager) {
-        long duration = musicManager.audioPlayer.getPlayingTrack().getDuration();
-        String songDuration = QueueCommand.formatTime(duration);
-        channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
+        if (musicManager.scheduler.queue.size() > 1) {
+            channel.sendMessage("Our daddy taught us not to be ashamed of our playlists").queue();
+        } else {
+            long duration = musicManager.audioPlayer.getPlayingTrack().getDuration();
+            String songDuration = QueueCommand.formatTime(duration);
+            channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
+        }
     }
 }
