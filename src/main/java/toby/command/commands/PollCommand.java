@@ -19,7 +19,7 @@ public class PollCommand implements ICommand {
         String msg = ctx.getMessage().getContentRaw();
 
         if (!args.isEmpty()) {
-            Optional<String> question = Optional.of(msg.split(" ", 3)[1].split("\\?",2)[0]);
+            Optional<String> question = Optional.of(msg.split("\\?",2)[0].replaceAll("!poll","").trim());
             List<String> pollArgs = question.isPresent() ? Arrays.asList(msg.split(" ", 3)[2].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
             if (pollArgs.size() > 10) {
                 ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue();
