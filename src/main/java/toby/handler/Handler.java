@@ -1,5 +1,6 @@
 package toby.handler;
 
+import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
@@ -27,7 +28,11 @@ public class Handler extends ListenerAdapter {
     private final AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
-    private final CommandManager manager = new CommandManager();
+    private final CommandManager manager;
+
+    public Handler(EventWaiter waiter){
+        manager = new CommandManager(waiter);
+    }
 
     @Override
     public void onReady(@Nonnull ReadyEvent event) {

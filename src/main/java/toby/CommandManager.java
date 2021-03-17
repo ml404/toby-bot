@@ -1,5 +1,6 @@
 package toby;
 
+import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -15,7 +16,7 @@ import java.util.regex.Pattern;
 public class CommandManager {
     private final List<ICommand> commands = new ArrayList<>();
 
-    public CommandManager() {
+    public CommandManager(EventWaiter waiter) {
         addCommand(new HelpCommand(this));
         addCommand(new KickCommand());
         addCommand(new MoveCommand());
@@ -26,6 +27,8 @@ public class CommandManager {
         addCommand(new ChCommand());
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
+        addCommand(new EventWaiterCommand(waiter));
+        addCommand(new PollCommand());
         addCommand(new JoinCommand());
         addCommand(new LeaveCommand());
         addCommand(new PlayCommand());
