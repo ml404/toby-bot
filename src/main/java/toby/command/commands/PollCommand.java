@@ -8,7 +8,6 @@ import toby.emote.Emotes;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 public class PollCommand implements ICommand {
 
@@ -19,9 +18,8 @@ public class PollCommand implements ICommand {
         String msg = ctx.getMessage().getContentRaw();
 
         if (!args.isEmpty()) {
-            String questionOptional = msg.split("\\?",2)[0];
-            boolean isPresent = !questionOptional.isBlank();
-            String question = isPresent ? questionOptional.replaceAll("!poll","").trim().concat("?") : "Poll";
+            boolean isPresent = msg.contains("?");
+            String question = isPresent ? msg.split("\\?", 2)[0].replaceAll("!poll", "").trim().concat("?") : "Poll";
             List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
             if (pollArgs.size() > 10) {
                 ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue();
@@ -55,7 +53,7 @@ public class PollCommand implements ICommand {
     @Override
     public String getHelp() {
         return "Start a poll for every user in the server who has read permission in the channel you're posting to \n" +
-                String.format("`%s%s each option separated by a comma(,)` \n", BotConfig.configMap.get("PREFIX"), getName())+
+                String.format("`%s%s each option separated by a comma(,)` \n", BotConfig.configMap.get("PREFIX"), getName()) +
                 "e.g. !poll option1,option2";
     }
 }
