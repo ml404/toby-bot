@@ -31,7 +31,7 @@ public class PollCommand implements ICommand {
                     .setFooter("Please react to this poll with the emoji that aligns with the option you want to vote for");
 
             for (int i = 0; i < pollArgs.size(); i++) {
-                poll.appendDescription(String.format("`%s : %s` /n", emojiList.get(i), pollArgs.get(i).trim()));
+                poll.appendDescription(String.format("`%s : %s` \n", emojiList.get(i), pollArgs.get(i).trim()));
             }
 
             ctx.getChannel().sendMessage(poll.build()).queue(message -> {
