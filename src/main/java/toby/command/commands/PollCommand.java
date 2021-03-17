@@ -6,9 +6,9 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public class PollCommand implements ICommand {
 
@@ -19,7 +19,8 @@ public class PollCommand implements ICommand {
         String msg = ctx.getMessage().getContentRaw();
 
         if (!args.isEmpty()) {
-            List<String> pollArgs = Arrays.asList(msg.split(" ", 2)[1].split(","));
+            Optional<String> question = Optional.of(msg.split(" ", 3)[1].split("\\?",2)[0]);
+            List<String> pollArgs = Arrays.asList(msg.split(" ", 3)[2].split(","));
             if (pollArgs.size() > 10) {
                 ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue();
                 return;
@@ -27,7 +28,7 @@ public class PollCommand implements ICommand {
             List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
 
             EmbedBuilder poll = new EmbedBuilder()
-                    .setTitle("Poll")
+                    .setTitle(question.map(s -> s.trim().concat("?")).orElse("Poll"))
                     .setFooter("Please react to this poll with the emoji that aligns with the option you want to vote for");
 
             for (int i = 0; i < pollArgs.size(); i++) {
