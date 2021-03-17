@@ -33,6 +33,12 @@
     <orderEntry type="library" name="Gradle: org.jsoup:jsoup:1.12.1" level="project" />
     <orderEntry type="library" name="Gradle: net.iharder:base64:2.3.9" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:1.3.41" level="project" />
+    <orderEntry type="library" name="Gradle: com.jagrosh:jda-utilities-examples:3.0.4" level="project" />
+    <orderEntry type="library" name="Gradle: com.jagrosh:jda-utilities-command:3.0.4" level="project" />
+    <orderEntry type="library" name="Gradle: com.jagrosh:jda-utilities-menu:3.0.4" level="project" />
+    <orderEntry type="library" name="Gradle: com.jagrosh:jda-utilities-oauth2:3.0.4" level="project" />
+    <orderEntry type="library" name="Gradle: com.jagrosh:jda-utilities-doc:3.0.4" level="project" />
+    <orderEntry type="library" name="Gradle: com.jagrosh:jda-utilities-commons:3.0.4" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:failureaccess:1.0.1" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava" level="project" />
     <orderEntry type="library" name="Gradle: org.checkerframework:checker-qual:3.5.0" level="project" />
@@ -49,6 +55,7 @@
     <orderEntry type="library" name="Gradle: commons-codec:commons-codec:1.11" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Gradle: com.fasterxml.jackson.core:jackson-annotations:2.10.0" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-common:1.3.41" level="project" />
+    <orderEntry type="library" name="Gradle: org.json:json:20160810" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.8.1" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: ch.qos.logback:logback-classic:1.1.8" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: net.sf.trove4j:trove4j:3.0.3" level="project" />
