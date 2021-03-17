@@ -53,7 +53,7 @@ public class PollCommand implements ICommand {
     @Override
     public String getHelp() {
         return "Start a poll for every user in the server who has read permission in the channel you're posting to \n" +
-                String.format("`%s%s each option separated by a comma(,)` \n", BotConfig.configMap.get("PREFIX"), getName()) +
-                "e.g. !poll option1,option2";
+                String.format("`%s%s question title? (this is optional, don't have to have a question title) and then each option separated by a comma(,)` \n", BotConfig.configMap.get("PREFIX"), getName()) +
+                "e.g. !poll question title? option1,option2";
     }
 }
