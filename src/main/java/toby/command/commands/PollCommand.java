@@ -17,7 +17,7 @@ public class PollCommand implements ICommand {
         String msg = ctx.getMessage().getContentRaw();
 
         if (!args.isEmpty()) {
-            boolean isPresent = args.contains("?");
+            boolean isPresent = msg.contains("?");
             String question = isPresent ? msg.split("\\?", 2)[0].replaceAll("!poll", "").trim().concat("?") : "Poll";
             List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
             if (pollArgs.size() > 10) {
