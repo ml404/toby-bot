@@ -1,7 +1,6 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import toby.BotConfig;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
