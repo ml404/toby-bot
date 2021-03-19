@@ -1,20 +1,16 @@
 package toby.handler;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.managers.AudioManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import toby.BotConfig;
+import toby.DatabaseHelper;
 import toby.CommandManager;
 import toby.emote.Emotes;
 
@@ -47,7 +43,7 @@ public class Handler extends ListenerAdapter {
             return;
         }
 
-        String prefix = BotConfig.get("prefix");
+        String prefix = DatabaseHelper.getConfigValue("PREFIX");
         String raw = event.getMessage().getContentRaw();
 
         if (raw.startsWith(prefix)) {

@@ -4,7 +4,7 @@ import net.dv8tion.jda.api.entities.Emote;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.BotConfig;
+import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
@@ -18,9 +18,10 @@ public class BrotherCommand implements ICommand {
         Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
 
         if (message.getMentionedMembers().isEmpty()) {
-            if (BotConfig.brotherMap.containsKey(message.getAuthor().getIdLong())) {
-                channel.sendMessage(String.format("Of course you're my brother %s.", BotConfig.brotherMap.get(message.getAuthor().getIdLong()))).queue();
-            } else if (BotConfig.tobyId.equals(message.getAuthor().getIdLong())) {
+            String brotherName = DatabaseHelper.getBrotherName(message.getAuthor().getId());
+            if (brotherName!=null) {
+                channel.sendMessage(String.format("Of course you're my brother %s.", brotherName)).queue();
+            } else if (DatabaseHelper.tobyId.equals(message.getAuthor().getIdLong())) {
                 channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s",tobyEmote)).queue();
             } else
                 channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue();

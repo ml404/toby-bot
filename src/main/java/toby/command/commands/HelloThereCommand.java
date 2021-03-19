@@ -1,17 +1,17 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.BotConfig;
+import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
 import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
+
+import static toby.BotMain.connection;
 
 public class HelloThereCommand implements ICommand {
     @Override
@@ -19,7 +19,7 @@ public class HelloThereCommand implements ICommand {
         TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
 
-        String dateformat = BotConfig.get("DATEFORMAT");
+        String dateformat = DatabaseHelper.getConfigValue("DATEFORMAT");
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateformat);
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 
@@ -47,10 +47,12 @@ public class HelloThereCommand implements ICommand {
 
     @Override
     public String getHelp() {
-        return "Hmm... \n" +
-                "As I am a bot I have a bad understanding of time, can you please let me know what the date is so I can greet you appropriately. \n" +
-                "Usage: `!hellothere yyyy/MM/dd` \n" +
-                "e.g. `!hellothere 2005/05/18` \n";
+        return """
+                Hmm...\s
+                As I am a bot I have a bad understanding of time, can you please let me know what the date is so I can greet you appropriately.\s
+                Usage: `!hellothere yyyy/MM/dd`\s
+                e.g. `!hellothere 2005/05/18`\s
+                """;
 
     }
 }

@@ -19,8 +19,9 @@ import java.util.EnumSet;
 
 public class BotMain {
     public static JDA jda;
+    public static Connection connection;
 
-    private BotMain() throws LoginException {
+    private BotMain() throws LoginException, SQLException {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
@@ -28,14 +29,19 @@ public class BotMain {
         );
 
         EventWaiter waiter = new EventWaiter();
-
-        JDABuilder builder = JDABuilder.createDefault(BotConfig.get("token"),
+        try {
+            connection = getConnection();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        assert connection != null;
+        JDABuilder builder = JDABuilder.createDefault(DatabaseHelper.getConfigValue("TOKEN"),
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES,
                 GatewayIntent.GUILD_MESSAGE_REACTIONS,
                 GatewayIntent.GUILD_VOICE_STATES,
                 GatewayIntent.GUILD_EMOJIS
-                ).disableCache(EnumSet.of(
+        ).disableCache(EnumSet.of(
                 CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
         )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
@@ -55,7 +61,7 @@ public class BotMain {
 
 
 
-    public static void main(String[] args) throws LoginException {
+    public static void main(String[] args) throws LoginException, SQLException {
         new BotMain();
     }
 }

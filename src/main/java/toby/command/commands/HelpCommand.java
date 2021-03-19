@@ -1,13 +1,16 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.BotConfig;
 import toby.CommandManager;
+import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
+
+import static toby.BotMain.connection;
 
 public class HelpCommand implements ICommand {
 
@@ -28,7 +31,7 @@ public class HelpCommand implements ICommand {
             builder.append("List of commands\n");
 
             manager.getCommands().stream().map(ICommand::getName).forEach(
-                    (it) -> builder.append('`').append(BotConfig.get("prefix")).append(it).append("`\n")
+                    (it) -> builder.append('`').append(DatabaseHelper.getConfigValue("prefix")).append(it).append("`\n")
             );
 
             channel.sendMessage(builder.toString()).queue();

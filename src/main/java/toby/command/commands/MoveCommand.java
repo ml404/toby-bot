@@ -2,15 +2,13 @@ package toby.command.commands;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
-import toby.BotConfig;
+import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class MoveCommand implements ICommand {
     @Override
@@ -36,7 +34,7 @@ public class MoveCommand implements ICommand {
         } catch (Error e) {
             return;
         }
-        voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(BotConfig.badOpinionChannel));
+        voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(DatabaseHelper.badOpinionChannel));
         message.getMentionedMembers().forEach(target -> {
 
             if(!target.getVoiceState().inVoiceChannel()){

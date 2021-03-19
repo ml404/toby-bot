@@ -70,8 +70,9 @@ public class CommandManager {
     }
 
     public void handle(GuildMessageReceivedEvent event) {
+        String prefix = DatabaseHelper.getConfigValue("PREFIX");
         String[] split = event.getMessage().getContentRaw()
-                .replaceFirst("(?i)" + Pattern.quote(BotConfig.get("prefix")), "")
+                .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");
 
         String invoke = split[0].toLowerCase();

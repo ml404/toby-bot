@@ -1,13 +1,9 @@
 package toby.command.commands;
 
-import net.dv8tion.jda.api.entities.Emote;
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.BotConfig;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.emote.Emotes;
 
 import java.util.Arrays;
 import java.util.List;
