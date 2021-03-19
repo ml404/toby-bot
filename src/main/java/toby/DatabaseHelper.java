@@ -13,7 +13,7 @@ public class DatabaseHelper {
     public static String getConfigValue(String name) {
         try {
             String query = connection.nativeSQL(String.format("select value from public.config where name ='%s'", name.toUpperCase()));
-            return connection.createStatement().executeQuery(query).toString();
+            return connection.createStatement().executeQuery(query).getString(1);
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -23,7 +23,7 @@ public class DatabaseHelper {
     public static String getBrotherName(String userId) {
         try {
             String query = connection.nativeSQL(String.format("select brother_name from public.brothers where user_id ='%s'", userId));
-            return connection.createStatement().executeQuery(query).toString();
+            return connection.createStatement().executeQuery(query).getString(1);
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
