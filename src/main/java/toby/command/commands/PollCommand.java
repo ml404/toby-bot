@@ -5,6 +5,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class PollCommand implements ICommand {
@@ -13,11 +14,13 @@ public class PollCommand implements ICommand {
     @Override
     public void handle(CommandContext ctx) {
         List<String> args = ctx.getArgs();
+        String msg = ctx.getMessage().getContentRaw();
+
         if (!args.isEmpty()) {
-            boolean containsQuestion = args.get(0).contains("?");
-            String question = containsQuestion ? args.get(0) : "Poll";
-            if (containsQuestion) args.remove(0);
-            if (args.size() > 10) {
+            boolean isPresent = args.contains("?");
+            String question = isPresent ? msg.split("\\?", 2)[0].replaceAll("!poll", "").trim().concat("?") : "Poll";
+            List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
+            if (pollArgs.size() > 10) {
                 ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue();
                 return;
             }
@@ -27,12 +30,12 @@ public class PollCommand implements ICommand {
                     .setTitle(question)
                     .setFooter("Please react to this poll with the emoji that aligns with the option you want to vote for");
 
-            for (int i = 0; i < args.size(); i++) {
-                poll.appendDescription(String.format("%s - **%s** \n", emojiList.get(i), args.get(i).trim()));
+            for (int i = 0; i < pollArgs.size(); i++) {
+                poll.appendDescription(String.format("%s - **%s** \n", emojiList.get(i), pollArgs.get(i).trim()));
             }
 
             ctx.getChannel().sendMessage(poll.build()).queue(message -> {
-                for (int i = 0; i < args.size(); i++) {
+                for (int i = 0; i < pollArgs.size(); i++) {
                     message.addReaction(emojiList.get(i)).queue();
                 }
             });
