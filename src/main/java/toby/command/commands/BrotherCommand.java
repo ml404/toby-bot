@@ -19,7 +19,7 @@ public class BrotherCommand implements ICommand {
 
         if (message.getMentionedMembers().isEmpty()) {
             String brotherName = DatabaseHelper.getBrotherName(message.getAuthor().getId());
-            if (brotherName!=null) {
+            if (!brotherName.isEmpty()) {
                 channel.sendMessage(String.format("Of course you're my brother %s.", brotherName)).queue();
             } else if (DatabaseHelper.tobyId.equals(message.getAuthor().getIdLong())) {
                 channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s",tobyEmote)).queue();

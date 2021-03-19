@@ -13,8 +13,6 @@ public class DatabaseHelper {
 
 
     public static String getConfigValue(String name) {
-        PreparedStatement ps = null;
-
         try {
             String query = connection.nativeSQL(String.format("select value from public.config where name ='%s'", name.toUpperCase()));
             PreparedStatement preparedStatement = connection.prepareStatement(query);
@@ -28,7 +26,7 @@ public class DatabaseHelper {
 
     public static String getBrotherName(String userId) {
         try {
-            String query = connection.nativeSQL(String.format("select brother_name from public.brothers where user_id ='%s'", userId));
+            String query = connection.nativeSQL(String.format("select brother_name from public.brothers where discord_id ='%s'", userId));
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             ResultSet resultSet = preparedStatement.executeQuery();
             return resultSet.next() ? resultSet.getString("brother_name") : "";
