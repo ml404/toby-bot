@@ -35,7 +35,9 @@ public class BotMain {
             e.printStackTrace();
         }
         assert connection != null;
-        JDABuilder builder = JDABuilder.createDefault(DatabaseHelper.getConfigValue("TOKEN"),
+        String token = DatabaseHelper.getConfigValue("TOKEN");
+        System.out.print("Token: " + token);
+        JDABuilder builder = JDABuilder.createDefault(token,
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES,
                 GatewayIntent.GUILD_MESSAGE_REACTIONS,

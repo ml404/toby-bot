@@ -6,11 +6,8 @@ import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
-
-import static toby.BotMain.connection;
 
 public class HelpCommand implements ICommand {
 
