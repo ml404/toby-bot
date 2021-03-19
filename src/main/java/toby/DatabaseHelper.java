@@ -11,9 +11,9 @@ public class DatabaseHelper {
 
 
     public static String getConfigValue(String name) {
-
         try {
-            return connection.nativeSQL(String.format("select value from public.config where name ='%s'", name.toUpperCase()));
+            String query = connection.nativeSQL(String.format("select value from public.config where name ='%s'", name.toUpperCase()));
+            return connection.createStatement().executeQuery(query).toString();
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -22,7 +22,8 @@ public class DatabaseHelper {
 
     public static String getBrotherName(String userId) {
         try {
-            return connection.nativeSQL(String.format("select brother_name from public.brothers where user_id ='%s'", userId));
+            String query = connection.nativeSQL(String.format("select brother_name from public.brothers where user_id ='%s'", userId));
+            return connection.createStatement().executeQuery(query).toString();
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
