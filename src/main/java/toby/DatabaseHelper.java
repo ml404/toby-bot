@@ -1,5 +1,7 @@
 package toby;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static toby.BotMain.connection;
@@ -11,9 +13,13 @@ public class DatabaseHelper {
 
 
     public static String getConfigValue(String name) {
+        PreparedStatement ps = null;
+
         try {
             String query = connection.nativeSQL(String.format("select value from public.config where name ='%s'", name.toUpperCase()));
-            return connection.createStatement().executeQuery(query).getString(1);
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            return resultSet.next() ? resultSet.getString("value") : "";
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -23,7 +29,9 @@ public class DatabaseHelper {
     public static String getBrotherName(String userId) {
         try {
             String query = connection.nativeSQL(String.format("select brother_name from public.brothers where user_id ='%s'", userId));
-            return connection.createStatement().executeQuery(query).getString(1);
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            return resultSet.next() ? resultSet.getString("brother_name") : "";
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
