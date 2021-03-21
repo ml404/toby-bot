@@ -10,12 +10,12 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import toby.handler.Handler;
 
 import javax.security.auth.login.LoginException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.EnumSet;
+
+import static toby.DatabaseHelper.getConnection;
 
 public class BotMain {
     public static JDA jda;
@@ -50,18 +50,6 @@ public class BotMain {
         builder.addEventListeners(new Handler(waiter), waiter);
         jda = builder.build();
     }
-
-    private static Connection getConnection() throws URISyntaxException, SQLException {
-        URI dbUri = new URI(System.getenv("DATABASE_URL"));
-
-        String username = dbUri.getUserInfo().split(":")[0];
-        String password = dbUri.getUserInfo().split(":")[1];
-        String dbUrl = "jdbc:postgresql://" + dbUri.getHost() + ':' + dbUri.getPort() + dbUri.getPath() + "?sslmode=require";
-
-        return DriverManager.getConnection(dbUrl, username, password);
-    }
-
-
 
     public static void main(String[] args) throws LoginException, SQLException {
         new BotMain();

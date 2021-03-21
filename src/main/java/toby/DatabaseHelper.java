@@ -1,8 +1,8 @@
 package toby;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.sql.*;
 
 import static toby.BotMain.connection;
 
@@ -11,6 +11,15 @@ public class DatabaseHelper {
     public static Long badOpinionChannel = 756262044491055165L;
     public static Long tobyId = 320919876883447808L;
 
+    public static Connection getConnection() throws URISyntaxException, SQLException {
+        URI dbUri = new URI(System.getenv("DATABASE_URL"));
+
+        String username = dbUri.getUserInfo().split(":")[0];
+        String password = dbUri.getUserInfo().split(":")[1];
+        String dbUrl = "jdbc:postgresql://" + dbUri.getHost() + ':' + dbUri.getPort() + dbUri.getPath() + "?sslmode=require";
+
+        return DriverManager.getConnection(dbUrl, username, password);
+    }
 
     public static String getConfigValue(String name) {
         try {
