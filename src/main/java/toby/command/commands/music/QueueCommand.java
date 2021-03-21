@@ -19,7 +19,7 @@ public class QueueCommand implements ICommand {
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
-        final BlockingQueue<AudioTrack> queue = musicManager.scheduler.queue;
+        final BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
 
         if (queue.isEmpty()) {
             channel.sendMessage("The queue is currently empty").queue();

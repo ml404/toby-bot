@@ -41,7 +41,7 @@ public class SkipCommand implements ICommand {
         }
 
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
-        final AudioPlayer audioPlayer = musicManager.audioPlayer;
+        final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
 
         if (audioPlayer.getPlayingTrack() == null) {
             channel.sendMessage("There is no track playing currently").queue();
@@ -58,9 +58,9 @@ public class SkipCommand implements ICommand {
 
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
             for (int j = 0; j < tracksToSkip; j++) {
-                musicManager.scheduler.nextTrack();
+                musicManager.getScheduler().nextTrack();
             }
-            musicManager.scheduler.setLooping(false);
+            musicManager.getScheduler().setLooping(false);
             channel.sendMessage(String.format("Skipped %d track(s)", tracksToSkip)).queue();
         } else {
             sendDeniedStoppableMessage(channel, musicManager);

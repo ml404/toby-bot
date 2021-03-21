@@ -38,7 +38,7 @@ public class LoopCommand implements ICommand {
         }
 
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
-        TrackScheduler scheduler = musicManager.scheduler;
+        TrackScheduler scheduler = musicManager.getScheduler();
         boolean newIsRepeating = !scheduler.isLooping();
         scheduler.setLooping(newIsRepeating);
 

@@ -9,8 +9,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class TrackScheduler extends AudioEventAdapter {
-    public final AudioPlayer player;
-    public final BlockingQueue<AudioTrack> queue;
+    private final AudioPlayer player;
+    private final BlockingQueue<AudioTrack> queue;
     private boolean isLooping;
 
     public boolean isLooping() {
@@ -55,5 +55,13 @@ public class TrackScheduler extends AudioEventAdapter {
         } else {
             return false;
         }
+    }
+
+    public AudioPlayer getPlayer() {
+        return player;
+    }
+
+    public BlockingQueue<AudioTrack> getQueue() {
+        return queue;
     }
 }

@@ -49,7 +49,7 @@ public class PlayerManager {
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
-                musicManager.scheduler.queue(track);
+                musicManager.getScheduler().queue(track);
 
                 channel.sendMessage("Adding to queue: `")
                         .append(track.getInfo().title)
@@ -71,7 +71,7 @@ public class PlayerManager {
                         .queue();
 
                 for (final AudioTrack track : tracks) {
-                    musicManager.scheduler.queue(track);
+                    musicManager.getScheduler().queue(track);
                 }
             }
 

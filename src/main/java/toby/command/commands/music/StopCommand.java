@@ -39,10 +39,10 @@ public class StopCommand implements ICommand {
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
 
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-            musicManager.scheduler.stopTrack(true);
-            musicManager.scheduler.queue.clear();
-            musicManager.scheduler.setLooping(false);
-            musicManager.audioPlayer.setPaused(false);
+            musicManager.getScheduler().stopTrack(true);
+            musicManager.getScheduler().getQueue().clear();
+            musicManager.getScheduler().setLooping(false);
+            musicManager.getAudioPlayer().setPaused(false);
             channel.sendMessage("The player has been stopped and the queue has been cleared").queue();
         } else {
             sendDeniedStoppableMessage(channel, musicManager);

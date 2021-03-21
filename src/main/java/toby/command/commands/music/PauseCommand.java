@@ -45,7 +45,7 @@ public class PauseCommand implements ICommand {
         Guild guild = ctx.getGuild();
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-            AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).audioPlayer;
+            AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
             if (!audioPlayer.isPaused()) {
                 AudioTrack track = audioPlayer.getPlayingTrack();
                 channel.sendMessage("Pausing: `")

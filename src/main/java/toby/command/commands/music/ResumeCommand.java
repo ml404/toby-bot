@@ -37,7 +37,7 @@ public class ResumeCommand implements ICommand {
             return;
         }
 
-        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(ctx.getGuild()).audioPlayer;
+        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(ctx.getGuild()).getAudioPlayer();
         if(audioPlayer.isPaused()) {
             AudioTrack track = audioPlayer.getPlayingTrack();
             channel.sendMessage("Resuming: `")

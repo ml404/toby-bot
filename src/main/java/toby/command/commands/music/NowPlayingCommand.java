@@ -38,7 +38,7 @@ public class NowPlayingCommand implements ICommand {
         }
 
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
-        final AudioPlayer audioPlayer = musicManager.audioPlayer;
+        final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
         final AudioTrack track = audioPlayer.getPlayingTrack();
 
         if (track == null) {
@@ -48,7 +48,7 @@ public class NowPlayingCommand implements ICommand {
 
         final AudioTrackInfo info = track.getInfo();
 
-        AudioTrack playingTrack = musicManager.audioPlayer.getPlayingTrack();
+        AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
         long position = playingTrack.getPosition();
         long duration = playingTrack.getDuration();
         String songPosition = QueueCommand.formatTime(position);

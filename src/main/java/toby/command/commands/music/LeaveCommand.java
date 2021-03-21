@@ -32,9 +32,9 @@ public class LeaveCommand implements ICommand {
 
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-            musicManager.scheduler.setLooping(false);
-            musicManager.scheduler.queue.clear();
-            musicManager.audioPlayer.stopTrack();
+            musicManager.getScheduler().setLooping(false);
+            musicManager.getScheduler().getQueue().clear();
+            musicManager.getAudioPlayer().stopTrack();
             audioManager.closeAudioConnection();
             channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
         }
