@@ -8,7 +8,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.dto.RedditAPIDto;
+import toby.dto.web.RedditAPIDto;
 
 import java.util.List;
 import java.util.Random;

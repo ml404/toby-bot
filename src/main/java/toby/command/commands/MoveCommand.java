@@ -2,7 +2,6 @@ package toby.command.commands;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
-import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
@@ -11,6 +10,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class MoveCommand implements ICommand {
+
+    public static Long badOpinionChannel = 756262044491055165L;
+
     @Override
     public void handle(CommandContext ctx) {
         final TextChannel channel = ctx.getChannel();
@@ -34,7 +36,7 @@ public class MoveCommand implements ICommand {
         } catch (Error e) {
             return;
         }
-        voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(DatabaseHelper.badOpinionChannel));
+        voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(badOpinionChannel));
         message.getMentionedMembers().forEach(target -> {
 
             if(!target.getVoiceState().inVoiceChannel()){

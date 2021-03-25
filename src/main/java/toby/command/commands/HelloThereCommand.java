@@ -1,25 +1,30 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.service.IConfigService;
 
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
-import static toby.BotMain.connection;
 
 public class HelloThereCommand implements ICommand {
+
+    private final IConfigService configService;
+
+    public HelloThereCommand(IConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
     public void handle(CommandContext ctx) {
         TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
 
-        String dateformat = DatabaseHelper.getConfigValue("DATEFORMAT");
+        String dateformat = configService.getConfigByName("DATEFORMAT").getValue();
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateformat);
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 

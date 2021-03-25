@@ -1,6 +1,5 @@
 package toby.handler;
 
-import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import net.dv8tion.jda.api.entities.*;
@@ -10,25 +9,34 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import toby.DatabaseHelper;
-import toby.CommandManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Configurable;
+import org.springframework.stereotype.Service;
+import toby.BotMain;
 import toby.emote.Emotes;
+import toby.jpa.service.IBrotherService;
+import toby.jpa.service.IConfigService;
+import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
 
-import static toby.BotMain.jda;
-
+@Service
+@Configurable
 public class Handler extends ListenerAdapter {
 
-
     private final AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
-
+    private IConfigService configService;
+    private IBrotherService brotherService;
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
     private final CommandManager manager;
 
-    public Handler(EventWaiter waiter){
-        manager = new CommandManager(waiter);
+    @Autowired
+    public Handler(IConfigService configService, IBrotherService brotherService) {
+        manager = new CommandManager(configService, brotherService);
+        this.configService = configService;
+        this.brotherService = brotherService;
     }
+
 
     @Override
     public void onReady(@Nonnull ReadyEvent event) {
@@ -43,7 +51,7 @@ public class Handler extends ListenerAdapter {
             return;
         }
 
-        String prefix = DatabaseHelper.getConfigValue("PREFIX");
+        String prefix = configService.getConfigByName("PREFIX").getValue();
         String raw = event.getMessage().getContentRaw();
 
         if (raw.startsWith(prefix)) {
@@ -66,40 +74,40 @@ public class Handler extends ListenerAdapter {
         if (bot) {
             return;
         }
-            Guild guild = event.getGuild();             //The Guild that this message was sent in. (note, in the API, Guilds are Servers)
-            TextChannel textChannel = event.getChannel(); //The TextChannel that this message was sent to.
-            Member member = event.getMember();          //This Member that sent the message. Contains Guild specific information about the User!
+        Guild guild = event.getGuild();             //The Guild that this message was sent in. (note, in the API, Guilds are Servers)
+        TextChannel textChannel = event.getChannel(); //The TextChannel that this message was sent to.
+        Member member = event.getMember();          //This Member that sent the message. Contains Guild specific information about the User!
 
-            String name;
-            if (message.isWebhookMessage()) {
-                name = author.getName();                //If this is a Webhook message, then there is no Member associated
-            }                                           // with the User, thus we default to the author for name.
-            else {
-                name = member.getEffectiveName();       //This will either use the Member's nickname if they have one,
-            }                                           // otherwise it will default to their username. (User#getName())
+        String name;
+        if (message.isWebhookMessage()) {
+            name = author.getName();                //If this is a Webhook message, then there is no Member associated
+        }                                           // with the User, thus we default to the author for name.
+        else {
+            name = member.getEffectiveName();       //This will either use the Member's nickname if they have one,
+        }                                           // otherwise it will default to their username. (User#getName())
 
-            Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
-            Emote jessEmote = guild.getJDA().getEmoteById(Emotes.JESS);
+        Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
+        Emote jessEmote = guild.getJDA().getEmoteById(Emotes.JESS);
 
-            if (message.getContentRaw().toLowerCase().contains("toby") || message.getContentRaw().toLowerCase().contains("tobs")) {
-                message.addReaction(tobyEmote).queue();
-                channel.sendMessage(String.format("%s... that's not my name %s", name, tobyEmote)).queue();
-            }
-
-            if (message.getContentRaw().toLowerCase().trim().contains("sigh")) {
-                channel.sendMessage(String.format("Hey %s, what's up champ?", name)).queue();
-                channel.sendMessage(String.format("%s", jessEmote)).queue();
-            }
-
-            if (message.getContentRaw().toLowerCase().contains("yeah")) {
-                channel.sendMessage("YEAH????").queue();
-            }
-
-            if (message.isMentioned(jda.getSelfUser())) {
-                channel.sendMessage("Don't talk to me").queue();
-            }
-
+        if (message.getContentRaw().toLowerCase().contains("toby") || message.getContentRaw().toLowerCase().contains("tobs")) {
+            message.addReaction(tobyEmote).queue();
+            channel.sendMessage(String.format("%s... that's not my name %s", name, tobyEmote)).queue();
         }
+
+        if (message.getContentRaw().toLowerCase().trim().contains("sigh")) {
+            channel.sendMessage(String.format("Hey %s, what's up champ?", name)).queue();
+            channel.sendMessage(String.format("%s", jessEmote)).queue();
+        }
+
+        if (message.getContentRaw().toLowerCase().contains("yeah")) {
+            channel.sendMessage("YEAH????").queue();
+        }
+
+        if (message.isMentioned(BotMain.getJda().getSelfUser())) {
+            channel.sendMessage("Don't talk to me").queue();
+        }
+
+    }
 
 
     @Override
