@@ -1,31 +1,56 @@
 buildscript {
+    ext {
+        springBootVersion = '2.4.4'
+    }
     dependencies {
-        classpath  'com.github.jengelman.gradle.plugins:shadow:6.1.0'
-    }}
+        classpath 'com.github.jengelman.gradle.plugins:shadow:6.1.0'
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
 
-plugins{
+plugins {
     id 'com.github.johnrengelman.shadow' version '6.1.0'
     id 'java'
     id 'application'
+    id "org.springframework.boot" version "2.4.4"
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 
-mainClassName = "toby.BotMain"
+configurations {
+    compile.exclude module: 'spring-webmvc'
+}
+
+mainClassName = "toby.Application"
 
 group 'com.github.ml404'
-version '1.2-SNAPSHOT'
+version '2.0-SNAPSHOT'
 
-sourceCompatibility = 1.15
+java.sourceCompatibility = JavaVersion.VERSION_15
+java.targetCompatibility = JavaVersion.VERSION_15
 
+bootRun {
+    mainClass = 'toby.Application'
+}
+
+bootJar {
+    manifest {
+        attributes 'Start-Class': 'toby.Application'
+    }
+}
 
 repositories {
     mavenCentral()
     jcenter()
+    maven { url "http://repo.spring.io/libs-snapshot" }
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     compile 'net.dv8tion:JDA:4.2.0_214'
     compile 'com.sedmelluq:lavaplayer:1.3.55'
+    compile("org.hibernate:hibernate-core:5.4.30.Final")
+    // https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.0'
     runtime 'ch.qos.logback:logback-classic:1.1.8'
     implementation group: 'io.github.cdimascio', name: 'java-dotenv', version: '5.1.1'
     implementation group: 'com.jagrosh', name: 'jda-utilities', version: '3.0.4'
@@ -34,12 +59,25 @@ dependencies {
     implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.19'
+    implementation('org.springframework.boot:spring-boot-starter-data-jpa')
+// uncomment below when I want restful endpoints
+//    implementation('org.springframework.boot:spring-boot-starter-web')
+    implementation('org.springframework.boot:spring-boot-autoconfigure')
+    implementation('org.springframework:spring-core')
+    implementation('org.springframework:spring-jdbc')
+    implementation('org.springframework:spring-orm')
+    implementation('org.springframework:spring-context')
+    testImplementation('org.springframework.boot:spring-boot-starter-test')
+    // https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api
+    implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
 
 }
 
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
-compileJava {options.encoding = "UTF-8"}
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+compileJava { options.encoding = "UTF-8" }
 
 task stage(dependsOn: ['build', 'clean'])
 build.mustRunAfter clean

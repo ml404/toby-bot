@@ -7,21 +7,23 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Configurable;
+import org.springframework.stereotype.Service;
 import toby.handler.Handler;
+import toby.jpa.service.IBrotherService;
+import toby.jpa.service.IConfigService;
 
 import javax.security.auth.login.LoginException;
-import java.net.URISyntaxException;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.EnumSet;
 
-import static toby.DatabaseHelper.getConnection;
-
+@Service
+@Configurable
 public class BotMain {
-    public static JDA jda;
-    public static Connection connection;
+    private static JDA jda;
 
-    private BotMain() throws LoginException, SQLException {
+    @Autowired
+    public BotMain(IConfigService configService, IBrotherService brotherService) throws LoginException {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
@@ -29,14 +31,7 @@ public class BotMain {
         );
 
         EventWaiter waiter = new EventWaiter();
-        try {
-            connection = getConnection();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-        assert connection != null;
-        String token = DatabaseHelper.getConfigValue("TOKEN");
-
+        String token = configService.getConfigByName("TOKEN").getValue();
         JDABuilder builder = JDABuilder.createDefault(token,
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES,
@@ -47,12 +42,17 @@ public class BotMain {
                 CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
         )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
-        builder.addEventListeners(new Handler(waiter), waiter);
-        jda = builder.build();
+        builder.addEventListeners(new Handler(configService, brotherService));
+        setJda(builder.build());
     }
 
-    public static void main(String[] args) throws LoginException, SQLException {
-        new BotMain();
+    public static JDA getJda() {
+        return jda;
+    }
+
+    public static void setJda(JDA jda) {
+        BotMain.jda = jda;
     }
 }
+
 

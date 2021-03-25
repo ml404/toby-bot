@@ -3,3 +3,5 @@
 /build/
 /build/classes/java/main/
 /out/
+/.idea/gradle.xml
+/.idea/libraries

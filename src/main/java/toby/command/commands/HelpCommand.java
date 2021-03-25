@@ -1,10 +1,11 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.CommandManager;
-import toby.DatabaseHelper;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.dto.ConfigDto;
+import toby.jpa.service.IConfigService;
+import toby.managers.CommandManager;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,13 +13,16 @@ import java.util.List;
 public class HelpCommand implements ICommand {
 
     private final CommandManager manager;
+    private final IConfigService configService;
 
-    public HelpCommand(CommandManager manager) {
+    public HelpCommand(CommandManager manager, IConfigService configService) {
         this.manager = manager;
+        this.configService = configService;
     }
 
     @Override
     public void handle(CommandContext ctx) {
+
         List<String> args = ctx.getArgs();
         TextChannel channel = ctx.getChannel();
 
@@ -27,8 +31,11 @@ public class HelpCommand implements ICommand {
 
             builder.append("List of commands\n");
 
+            ConfigDto prefix = configService.getConfigByName("PREFIX");
             manager.getCommands().stream().map(ICommand::getName).forEach(
-                    (it) -> builder.append('`').append(DatabaseHelper.getConfigValue("prefix")).append(it).append("`\n")
+                    (it) -> {
+                        builder.append('`').append(prefix).append(it).append("`\n");
+                    }
             );
 
             channel.sendMessage(builder.toString()).queue();
