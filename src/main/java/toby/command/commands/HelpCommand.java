@@ -3,7 +3,6 @@ package toby.command.commands;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.jpa.dto.ConfigDto;
 import toby.jpa.service.IConfigService;
 import toby.managers.CommandManager;
 
@@ -31,7 +30,7 @@ public class HelpCommand implements ICommand {
 
             builder.append("List of commands\n");
 
-            ConfigDto prefix = configService.getConfigByName("PREFIX");
+            String prefix = configService.getConfigByName("PREFIX").getValue();
             manager.getCommands().stream().map(ICommand::getName).forEach(
                     (it) -> {
                         builder.append('`').append(prefix).append(it).append("`\n");
