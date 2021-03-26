@@ -1,3 +1,13 @@
+//needed by shadowJar process
+mainClassName = "toby.Application"
+group 'com.github.ml404'
+version '2.0-SNAPSHOT'
+
+java.sourceCompatibility = JavaVersion.VERSION_15
+java.targetCompatibility = JavaVersion.VERSION_15
+compileJava { options.encoding = "UTF-8" }
+
+
 buildscript {
     ext {
         springBootVersion = '2.4.4'
@@ -17,18 +27,14 @@ plugins {
     id "nebula.lint" version "16.9.0"
 }
 
-apply plugin :"nebula.lint"
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: "nebula.lint"
 gradleLint {
-    rules=['unused-dependency']
+    rules = ['unused-dependency']
 }
-
-mainClassName = "toby.Application"
-
-group 'com.github.ml404'
-version '2.0-SNAPSHOT'
-
-java.sourceCompatibility = JavaVersion.VERSION_15
-java.targetCompatibility = JavaVersion.VERSION_15
 
 repositories {
     mavenCentral()
@@ -59,11 +65,12 @@ dependencies {
 
 }
 
-apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'java'
-apply plugin: 'org.springframework.boot'
-apply plugin: 'io.spring.dependency-management'
-compileJava { options.encoding = "UTF-8" }
-
-task stage(dependsOn: ['build', 'clean'])
+task stage {
+    dependsOn build
+    doLast {
+        delete fileTree(dir: "build", exclude: "libs")
+        delete fileTree(dir: "build/libs", exclude: "*.jar")
+    }
+    dependsOn clean
+}
 build.mustRunAfter clean
