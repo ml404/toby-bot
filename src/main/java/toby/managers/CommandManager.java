@@ -8,7 +8,6 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.*;
 import toby.command.commands.music.*;
-import toby.jpa.dto.ConfigDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
 
@@ -83,9 +82,9 @@ public class CommandManager {
     }
 
     public void handle(GuildMessageReceivedEvent event) {
-        ConfigDto configDto = configService.getConfigByName("PREFIX");
+        String prefix = configService.getConfigByName("PREFIX").getValue();
         String[] split = event.getMessage().getContentRaw()
-                .replaceFirst("(?i)" + Pattern.quote(configDto.getValue()), "")
+                .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");
 
         String invoke = split[0].toLowerCase();
