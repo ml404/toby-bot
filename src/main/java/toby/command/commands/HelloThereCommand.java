@@ -24,7 +24,7 @@ public class HelloThereCommand implements ICommand {
         TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
 
-        String dateformat = configService.getConfigByName("DATEFORMAT").getValue();
+        String dateformat = configService.getConfigByName("DATEFORMAT", ctx.getGuild().getId()).getValue();
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateformat);
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 

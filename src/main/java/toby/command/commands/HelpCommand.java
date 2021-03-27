@@ -30,7 +30,7 @@ public class HelpCommand implements ICommand {
 
             builder.append("List of commands\n");
 
-            String prefix = configService.getConfigByName("PREFIX").getValue();
+            String prefix = configService.getConfigByName("PREFIX", ctx.getGuild().getId()).getValue();
             manager.getCommands().stream().map(ICommand::getName).forEach(
                     (it) -> {
                         builder.append('`').append(prefix).append(it).append("`\n");

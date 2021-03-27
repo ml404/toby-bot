@@ -8,7 +8,7 @@ public interface IConfigService {
 
     public List<ConfigDto> listConfig();
 
-    public ConfigDto getConfigByName(String name);
+    public ConfigDto getConfigByName(String name, String guildId);
 
     public Long createNewConfig(ConfigDto configDto);
 

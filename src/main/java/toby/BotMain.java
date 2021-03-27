@@ -31,7 +31,7 @@ public class BotMain {
         );
 
         EventWaiter waiter = new EventWaiter();
-        String token = configService.getConfigByName("TOKEN").getValue();
+        String token = configService.getConfigByName("TOKEN", "all").getValue();
         JDABuilder builder = JDABuilder.createDefault(token,
                 GatewayIntent.GUILD_MEMBERS,
                 GatewayIntent.GUILD_MESSAGES,
