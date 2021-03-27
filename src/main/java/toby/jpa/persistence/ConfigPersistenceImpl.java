@@ -8,6 +8,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Repository
 @Transactional
@@ -30,7 +32,10 @@ public class ConfigPersistenceImpl  implements IConfigPersistence {
         Query q = em.createNamedQuery("ConfigDto.getValue", ConfigDto.class);
         q.setParameter("name", name);
         q.setParameter("guild_id", guildId);
-        return (ConfigDto) q.getSingleResult();
+        List<ConfigDto> allInclusiveConfig = (List<ConfigDto>) q.getResultList();
+        List<ConfigDto> serverSpecificConfig = allInclusiveConfig.stream().filter(configDto -> configDto.getGuildId().equals(guildId)).collect(Collectors.toList());
+        return !serverSpecificConfig.isEmpty() ? serverSpecificConfig.get(0) : !allInclusiveConfig.isEmpty() ? allInclusiveConfig.get(0) : new ConfigDto();
+
     }
 
 
