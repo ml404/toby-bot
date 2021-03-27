@@ -82,7 +82,7 @@ public class CommandManager {
     }
 
     public void handle(GuildMessageReceivedEvent event) {
-        String prefix = configService.getConfigByName("PREFIX").getValue();
+        String prefix = configService.getConfigByName("PREFIX", event.getGuild().getId()).getValue();
         String[] split = event.getMessage().getContentRaw()
                 .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");

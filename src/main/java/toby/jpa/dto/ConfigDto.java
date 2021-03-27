@@ -9,7 +9,7 @@ import java.io.Serializable;
                 query = "select a from ConfigDto as a"),
 
         @NamedQuery(name =  "ConfigDto.getValue",
-                query = "select a from ConfigDto as a WHERE a.name = :name")
+                query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guild_id OR :guild_id = 'all')")
 })
 
 @Entity
@@ -21,14 +21,17 @@ public class ConfigDto implements Serializable {
     private String name;
     @Column(name = "value")
     private String value;
+    @Column(name = "guild_id")
+    private String guildId;
 
 
     public ConfigDto(){
     };
 
-    public ConfigDto(String name, String value) {
+    public ConfigDto(String name, String value, String guildId) {
         this.name = name;
         this.value = value;
+        this.guildId = guildId;
     }
 
     public String getName() {
@@ -47,12 +50,23 @@ public class ConfigDto implements Serializable {
         this.value = value;
     }
 
+
+    public String getGuildId() {
+        return guildId;
+    }
+
+    public void setGuildId(String guildId) {
+        this.guildId = guildId;
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("ConfigDto{");
-        sb.append("name='").append(name);
+        sb.append("guildId=").append(guildId);
+        sb.append(", name='").append(name);
         sb.append(", value=").append(value);
         sb.append('}');
         return sb.toString();
     }
+
 }

@@ -51,7 +51,7 @@ public class Handler extends ListenerAdapter {
             return;
         }
 
-        String prefix = configService.getConfigByName("PREFIX").getValue();
+        String prefix = configService.getConfigByName("PREFIX", event.getGuild().getId()).getValue();
         String raw = event.getMessage().getContentRaw();
 
         if (raw.startsWith(prefix)) {

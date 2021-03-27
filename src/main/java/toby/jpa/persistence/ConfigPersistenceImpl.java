@@ -26,22 +26,19 @@ public class ConfigPersistenceImpl  implements IConfigPersistence {
 
 
     @Override
-    public ConfigDto getConfigByName(String name) {
-        return em.find(ConfigDto.class, name);
-    }
-
-    public ConfigDto getByName(String name) {
-        Query q = em.createNamedQuery("ConfigDto.getName", ConfigDto.class);
+    public ConfigDto getConfigByName(String name, String guildId) {
+        Query q = em.createNamedQuery("ConfigDto.getValue", ConfigDto.class);
         q.setParameter("name", name);
+        q.setParameter("guild_id", guildId);
         return (ConfigDto) q.getSingleResult();
     }
+
 
     @Override
     public ArrayList<ConfigDto> listConfig() {
         Query q = em.createNamedQuery("ConfigDto.getAll", ConfigDto.class);
         return (ArrayList<ConfigDto>) q.getResultList();
     }
-
 
 
     @Override

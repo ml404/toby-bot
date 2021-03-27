@@ -20,8 +20,8 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     @Override
-    public ConfigDto getConfigByName(String name) {
-        return configService.getConfigByName(name);
+    public ConfigDto getConfigByName(String name, String guildId) {
+        return configService.getConfigByName(name, guildId);
     }
 
     @Override
