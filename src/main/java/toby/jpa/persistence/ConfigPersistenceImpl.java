@@ -49,7 +49,6 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
 
 
     @Override
-    @Transactional
     public ConfigDto createNewConfig(ConfigDto configDto) {
         ConfigDto databaseConfig = em.find(ConfigDto.class, configDto);
         if (databaseConfig == null) {
@@ -61,7 +60,6 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
     }
 
     @Override
-    @Transactional
     public ConfigDto updateConfig(ConfigDto configDto) {
         em.merge(configDto);
         em.flush();
