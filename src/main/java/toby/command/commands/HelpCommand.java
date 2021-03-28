@@ -20,7 +20,7 @@ public class HelpCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
 
         List<String> args = ctx.getArgs();
         TextChannel channel = ctx.getChannel();
@@ -29,8 +29,6 @@ public class HelpCommand implements ICommand {
             StringBuilder builder = new StringBuilder();
 
             builder.append("List of commands\n");
-
-            String prefix = configService.getConfigByName("PREFIX", ctx.getGuild().getId()).getValue();
             manager.getCommands().stream().map(ICommand::getName).forEach(
                     (it) -> {
                         builder.append('`').append(prefix).append(it).append("`\n");
@@ -49,7 +47,7 @@ public class HelpCommand implements ICommand {
             return;
         }
 
-        channel.sendMessage(command.getHelp()).queue();
+        channel.sendMessage(command.getHelp(prefix)).queue();
     }
 
     @Override
@@ -58,9 +56,9 @@ public class HelpCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Shows the list with commands in the bot\n" +
-                "Usage: `!help [command]`";
+                String.format("Usage: `%shelp [command]`", prefix);
     }
 
     @Override

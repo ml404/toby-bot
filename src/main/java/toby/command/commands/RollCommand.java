@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RollCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         TextChannel channel = ctx.getChannel();
         String msg = ctx.getMessage().getContentDisplay();
         List<String> args = ctx.getArgs();
@@ -35,9 +35,9 @@ public class RollCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Roll an X sided dice.\n" +
-                "Usage: `!roll number` \n" +
+                String.format("Usage: `%sroll number` \n", prefix) +
                 "If no number is provided, 6 sided dice is rolled";
 
     }

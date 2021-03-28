@@ -19,7 +19,7 @@ public class EventWaiterCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         channel.sendMessage("React with")
                 .append(Emotes.TOBY)
@@ -43,7 +43,7 @@ public class EventWaiterCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "This is a test of the eventwaiter structure in JDA. It's not that useful yet.";
     }
 }

@@ -15,12 +15,12 @@ import java.util.Random;
 
 public class MemeCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         Gson gson = new Gson();
         final TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
         if (args.size() == 0) {
-            channel.sendMessage(getHelp()).queue();
+            channel.sendMessage(getHelp(prefix)).queue();
         } else {
             String subredditArg = args.get(0);
             String timePeriod;
@@ -80,9 +80,9 @@ public class MemeCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "This command shows a meme from the subreddit you've specified (SFW only) \n" +
-                "Usage: `!meme raimimemes` (picks a top 5 meme of the day by default) \n" +
+                String.format("Usage: `%smeme raimimemes` (picks a top 5 meme of the day by default) \n", prefix) +
                 "`!meme raimimemes day/week/month/all $topXPosts`";
     }
 }

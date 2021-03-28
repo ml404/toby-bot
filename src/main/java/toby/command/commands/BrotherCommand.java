@@ -25,7 +25,7 @@ public class BrotherCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         Guild guild = ctx.getGuild();
@@ -48,8 +48,8 @@ public class BrotherCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Let me tell you if you're my brother.\n" +
-                "Usage: `!brother`";
+                String.format("Usage: `%sbrother`", prefix);
     }
 }

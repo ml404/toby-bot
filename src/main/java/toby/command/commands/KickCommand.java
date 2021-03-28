@@ -1,17 +1,17 @@
 package toby.command.commands;
 
-import toby.command.CommandContext;
-import toby.command.ICommand;
-
-import java.util.List;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
+import toby.command.CommandContext;
+import toby.command.ICommand;
+
+import java.util.List;
 
 public class KickCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();
@@ -52,8 +52,8 @@ public class KickCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Kick a member off the server.\n" +
-                "Usage: `!kick <@user>`";
+                String.format("Usage: `%skick <@user>`", prefix);
     }
 }

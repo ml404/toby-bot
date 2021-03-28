@@ -18,7 +18,7 @@ import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppabl
 public class PauseCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
@@ -67,8 +67,8 @@ public class PauseCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Pauses the current song if one is playing\n" +
-                "Usage: `!pause`";
+                String.format("Usage: `%spause`", prefix);
     }
 }

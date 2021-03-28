@@ -13,7 +13,7 @@ import java.net.URISyntaxException;
 public class PlayCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
 
         if (ctx.getArgs().isEmpty()) {
@@ -57,9 +57,9 @@ public class PlayCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Plays a song\n" +
-                "Usage: `!play <youtube link>`";
+                String.format("Usage: `%splay <youtube link>`", prefix);
     }
 
     private boolean isUrl(String url) {

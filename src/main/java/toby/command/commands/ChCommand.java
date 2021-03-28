@@ -4,18 +4,27 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.service.IConfigService;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class ChCommand implements ICommand {
+
+    private final IConfigService configService;
+
+    public ChCommand(IConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
+
         String newMessage = Arrays.stream(message.getContentRaw().split(" ")).map(s -> {
-            if (s.equalsIgnoreCase("!ch")) {
+            if (s.equalsIgnoreCase(String.format("%sch", prefix))) {
                 return "";
             } else {
                 int vowelIndex = 0;
@@ -42,9 +51,9 @@ public class ChCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Allow me to translate whatever you type.\n" +
-                "Usage: `!ch example message here`";
+                String.format("Usage: `%sch example message here`", prefix);
     }
 
     private boolean isVowel(String s) {

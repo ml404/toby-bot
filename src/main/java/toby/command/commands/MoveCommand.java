@@ -14,7 +14,7 @@ public class MoveCommand implements ICommand {
     public static Long badOpinionChannel = 756262044491055165L;
 
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();
@@ -69,9 +69,9 @@ public class MoveCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "move a member into a voice channel.\n" +
-                "Usage: `!move <@user> channelId (right click voice channel and copy id)`\n" +
+                String.format("Usage: `%smove <@user> channelId (right click voice channel and copy id)`\n", prefix) +
                 "e.g. !move @username 756262044491055165";
     }
 }

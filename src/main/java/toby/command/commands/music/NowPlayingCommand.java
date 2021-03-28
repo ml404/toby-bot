@@ -14,7 +14,7 @@ import toby.lavaplayer.PlayerManager;
 
 public class NowPlayingCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
@@ -65,7 +65,7 @@ public class NowPlayingCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Shows the currently playing song";
     }
 }

@@ -7,7 +7,7 @@ import toby.jpa.dto.BrotherDto;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.util.ArrayList;
+import java.util.List;
 
 @Repository
 @Transactional
@@ -38,9 +38,10 @@ public class BrotherPersistenceImpl implements IBrotherPersistence {
     }
 
     @Override
-    public ArrayList<BrotherDto> listBrothers() {
+    @SuppressWarnings("unchecked")
+    public List<BrotherDto> listBrothers() {
         Query q = em.createNamedQuery("BrotherDto.getAll", BrotherDto.class);
-        return (ArrayList<BrotherDto>) q.getResultList();
+        return q.getResultList();
     }
 
 

@@ -30,13 +30,14 @@ public class CommandManager {
         this.brotherService = brotherService;
 
         addCommand(new HelpCommand(this, configService));
+        addCommand(new SetPrefixCommand(configService));
         addCommand(new KickCommand());
         addCommand(new MoveCommand());
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
-        addCommand(new ChCommand());
+        addCommand(new ChCommand(configService));
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
 //        addCommand(new EventWaiterCommand(waiter));
@@ -96,7 +97,7 @@ public class CommandManager {
 
             CommandContext ctx = new CommandContext(event, args);
 
-            cmd.handle(ctx);
+            cmd.handle(ctx, prefix);
         }
     }
 

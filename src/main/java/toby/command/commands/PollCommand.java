@@ -12,7 +12,7 @@ public class PollCommand implements ICommand {
 
 
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         List<String> args = ctx.getArgs();
         String msg = ctx.getMessage().getContentRaw();
 
@@ -40,7 +40,7 @@ public class PollCommand implements ICommand {
                 }
             });
         } else {
-            getHelp();
+            getHelp(prefix);
         }
     }
 
@@ -50,10 +50,9 @@ public class PollCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
-        return """
-                Start a poll for every user in the server who has read permission in the channel you're posting to\s
-                `!poll question title? (this is optional, don't have to have a question title) and then each option separated by a comma(,)`\s
-                e.g. !poll question title? option1,option2""";
+    public String getHelp(String prefix) {
+        return "Start a poll for every user in the server who has read permission in the channel you're posting to\n" +
+                String.format("`%spoll question title? (this is optional, don't have to have a question title) and then each option separated by a comma(,)`\n", prefix) +
+                String.format("e.g. %spoll question title? option1,option2", prefix);
     }
 }
