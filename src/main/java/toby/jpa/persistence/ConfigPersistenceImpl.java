@@ -66,7 +66,7 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
         return configDto;
     }
 
-    public ConfigDto persistConfigDto(ConfigDto configDto) {
+    private ConfigDto persistConfigDto(ConfigDto configDto) {
         em.persist(configDto);
         em.flush();
         return configDto;
