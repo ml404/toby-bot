@@ -15,11 +15,11 @@ import java.net.URISyntaxException;
 public class NowDigOnThisCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
 
         if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage("Correct usage is `!nowdigonthis <youtube link>`").queue();
+            channel.sendMessageFormat("Correct usage is `%snowdigonthis <youtube link>`", prefix).queue();
             return;
         }
 
@@ -64,9 +64,9 @@ public class NowDigOnThisCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Plays a song\n" +
-                "Usage: `!nowdigonthis <youtube link>`";
+                String.format("Usage: `%snowdigonthis <youtube link>`", prefix);
     }
 
     private boolean isUrl(String url) {

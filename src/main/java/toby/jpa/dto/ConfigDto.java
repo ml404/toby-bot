@@ -21,6 +21,7 @@ public class ConfigDto implements Serializable {
     private String name;
     @Column(name = "value")
     private String value;
+    @Id
     @Column(name = "guild_id")
     private String guildId;
 

@@ -1,15 +1,16 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.VoiceChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
-import java.util.List;
-
 public class ShhCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
 
         final Member member = ctx.getMember();
@@ -43,8 +44,8 @@ public class ShhCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Silence everyone in your voice channel, please only use for Among Us.\n" +
-                "Usage: `!shh`";
+                String.format("Usage: `%sshh`", prefix);
     }
 }

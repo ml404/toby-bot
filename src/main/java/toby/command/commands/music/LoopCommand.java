@@ -13,7 +13,7 @@ import toby.lavaplayer.TrackScheduler;
 public class LoopCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
@@ -51,8 +51,8 @@ public class LoopCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Loop the current song\n" +
-                "Usage: `!loop`";
+                String.format("Usage: `%sloop`", prefix);
     }
 }

@@ -10,7 +10,7 @@ import toby.command.ICommand;
 
 public class TalkCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
 
         final Member member = ctx.getMember();
@@ -44,8 +44,8 @@ public class TalkCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Unmute everyone in your voice channel, mostly made for Among Us.\n" +
-                "Usage: `!talk`";
+                String.format("Usage: `%stalk`", prefix);
     }
 }

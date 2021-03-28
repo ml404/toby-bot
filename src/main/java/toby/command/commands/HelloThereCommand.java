@@ -20,7 +20,7 @@ public class HelloThereCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
 
@@ -29,7 +29,7 @@ public class HelloThereCommand implements ICommand {
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 
         if (args.size() == 0) {
-            channel.sendMessage(getHelp()).queue();
+            channel.sendMessage(getHelp(prefix)).queue();
         } else
             try {
                 LocalDate dateGiven = LocalDate.parse(args.get(0), dateTimeFormatter);
@@ -51,13 +51,11 @@ public class HelloThereCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
-        return """
-                Hmm...\s
-                As I am a bot I have a bad understanding of time, can you please let me know what the date is so I can greet you appropriately.\s
-                Usage: `!hellothere yyyy/MM/dd`\s
-                e.g. `!hellothere 2005/05/18`\s
-                """;
+    public String getHelp(String prefix) {
+        return  "Hmm...\n" +
+                "As I am a bot I have a bad understanding of time, can you please let me know what the date is so I can greet you appropriately.\n" +
+                String.format("Usage: `%shellothere yyyy/MM/dd`\n", prefix) +
+                String.format("e.g. `%shellothere 2005/05/18`\n", prefix);
 
     }
 }

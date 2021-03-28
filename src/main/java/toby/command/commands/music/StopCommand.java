@@ -13,7 +13,7 @@ import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppabl
 
 public class StopCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
@@ -55,7 +55,7 @@ public class StopCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "Stops the current song and clears the queue";
     }
 }

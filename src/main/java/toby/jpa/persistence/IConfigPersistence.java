@@ -9,6 +9,7 @@ public interface IConfigPersistence {
 
     public ConfigDto getConfigByName(String name, String guildId);
 
-    public Long createNewConfig(ConfigDto configDto);
+    public ConfigDto createNewConfig(ConfigDto configDto);
 
+    public ConfigDto updateConfig(ConfigDto configDto);
 }

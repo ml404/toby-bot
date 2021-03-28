@@ -25,7 +25,12 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     @Override
-    public Long createNewConfig(ConfigDto configDto) {
+    public ConfigDto createNewConfig(ConfigDto configDto) {
         return configService.createNewConfig(configDto);
+    }
+
+    @Override
+    public ConfigDto updateConfig(ConfigDto configDto) {
+        return configService.updateConfig(configDto);
     }
 }

@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 public class QueueCommand implements ICommand {
     @Override
-    public void handle(CommandContext ctx) {
+    public void handle(CommandContext ctx, String prefix) {
         final TextChannel channel = ctx.getChannel();
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
         final BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
@@ -68,7 +68,7 @@ public class QueueCommand implements ICommand {
     }
 
     @Override
-    public String getHelp() {
+    public String getHelp(String prefix) {
         return "shows the queued up songs";
     }
 }
