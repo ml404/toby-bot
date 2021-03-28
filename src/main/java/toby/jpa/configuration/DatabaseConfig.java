@@ -37,8 +37,8 @@ public class DatabaseConfig {
     public JpaVendorAdapter vendorAdapter() {
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         vendorAdapter.setGenerateDdl(true);
-        vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQL9Dialect");
-//        vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQLDialect");
+//        vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQL9Dialect");
+        vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQLDialect");
         vendorAdapter.setShowSql(true);
 
         return vendorAdapter;
