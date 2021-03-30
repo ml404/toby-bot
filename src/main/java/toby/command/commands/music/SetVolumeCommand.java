@@ -44,7 +44,7 @@ public class SetVolumeCommand implements ICommand {
         }
 
         Guild guild = ctx.getGuild();
-        boolean validVolumeArg = ctx.getArgs().get(0).matches("\\d");
+        boolean validVolumeArg = ctx.getArgs().get(0).matches("\\d+");
         if (validVolumeArg) {
             int volume = Integer.parseInt(ctx.getArgs().get(0));
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
