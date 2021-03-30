@@ -4,6 +4,9 @@ import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -24,6 +27,10 @@ public class PlayerManager {
     public PlayerManager() {
         this.musicManagers = new HashMap<>();
         this.audioPlayerManager = new DefaultAudioPlayerManager();
+
+        audioPlayerManager.registerSourceManager(new YoutubeAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new HttpAudioSourceManager());
 
         AudioSourceManagers.registerRemoteSources(this.audioPlayerManager);
         AudioSourceManagers.registerLocalSource(this.audioPlayerManager);
@@ -47,6 +54,7 @@ public class PlayerManager {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
         this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
+
             @Override
             public void trackLoaded(AudioTrack track) {
                 musicManager.getScheduler().queue(track);
@@ -77,12 +85,13 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                //
+                channel.sendMessage("I was not able to find a match for the link provided").queue();
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                //
+                channel.sendMessage("The link provided was unable to load").queue();
+
             }
         });
     }
