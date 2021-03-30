@@ -90,8 +90,7 @@ public class PlayerManager {
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                channel.sendMessage("The link provided was unable to load").queue();
-
+                channel.sendMessage("The link provided was not unable to load").queue();
             }
         });
     }
