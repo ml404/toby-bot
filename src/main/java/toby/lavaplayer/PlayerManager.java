@@ -85,12 +85,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                channel.sendMessage("I was not able to find a match for the link provided").queue();
+                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue();
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                channel.sendMessage("The link provided was not unable to load").queue();
+                channel.sendMessageFormat("Could not play: ", exception.getMessage()).queue();
             }
         });
     }
