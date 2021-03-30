@@ -46,6 +46,7 @@ public class CommandManager {
         addCommand(new LeaveCommand());
         addCommand(new PlayCommand());
         addCommand(new NowDigOnThisCommand());
+        addCommand(new SetVolumeCommand());
         addCommand(new PauseCommand());
         addCommand(new ResumeCommand());
         addCommand(new LoopCommand());
