@@ -50,7 +50,7 @@ public class NowDigOnThisCommand implements ICommand {
             channel.sendMessage(String.format("I'm gonna put some dirt in your eye %s", member.getEffectiveName())).queue();
             return;
         }
-        if (!isUrl(link)) {
+        if (link.contains("youtube") && !isUrl(link)) {
             link = "ytsearch:" + link;
         }
 

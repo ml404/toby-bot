@@ -83,7 +83,7 @@ public class MemeCommand implements ICommand {
     public String getHelp(String prefix) {
         return "This command shows a meme from the subreddit you've specified (SFW only) \n" +
                 String.format("Usage: `%smeme raimimemes` (picks a top 5 meme of the day by default) \n", prefix) +
-                "`!meme raimimemes day/week/month/all $topXPosts`";
+                String.format("`%smeme raimimemes day/week/month/all $topXPosts`", prefix);
     }
 }
 

@@ -44,7 +44,7 @@ public class PlayCommand implements ICommand {
 
         String link = String.join(" ", ctx.getArgs());
 
-        if (!isUrl(link)) {
+        if (link.contains("youtube") && !isUrl(link)) {
             link = "ytsearch:" + link;
         }
 
