@@ -35,6 +35,7 @@ public class LeaveCommand implements ICommand {
             musicManager.getScheduler().setLooping(false);
             musicManager.getScheduler().getQueue().clear();
             musicManager.getAudioPlayer().stopTrack();
+            musicManager.getAudioPlayer().setVolume(100);
             audioManager.closeAudioConnection();
             channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
         }

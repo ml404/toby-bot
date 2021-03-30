@@ -54,9 +54,8 @@ public class NowPlayingCommand implements ICommand {
         String songPosition = QueueCommand.formatTime(position);
         String songDuration = QueueCommand.formatTime(duration);
 
-        String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
-        String timeStamp = String.format("`[%s/%s]`", songPosition, songDuration);
-        channel.sendMessage(nowPlaying + timeStamp).queue();
+        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) ", info.title, info.author, songPosition, songDuration, info.uri);
+        channel.sendMessage(nowPlaying).queue();
     }
 
     @Override
