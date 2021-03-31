@@ -1,18 +1,23 @@
 package toby.command.commands.music;
 
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import net.dv8tion.jda.api.Permission;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
+import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.emote.Emotes;
 import toby.lavaplayer.PlayerManager;
+import toby.lavaplayer.TrackScheduler;
 
-public class SetVolumeCommand implements ICommand {
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+public class ShuffleCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
     @Override
     public void handle(CommandContext ctx, String prefix) {
@@ -20,11 +25,6 @@ public class SetVolumeCommand implements ICommand {
 
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
-
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue();
-            return;
-        }
 
         if (!selfVoiceState.inVoiceChannel()) {
             channel.sendMessage("I need to be in a voice channel for this to work").queue();
@@ -45,30 +45,34 @@ public class SetVolumeCommand implements ICommand {
         }
 
         Guild guild = ctx.getGuild();
-        boolean validVolumeArg = ctx.getArgs().get(0).matches("\\d+");
-        if (validVolumeArg) {
-            int volume = Integer.parseInt(ctx.getArgs().get(0));
-            if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-                AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
-                if (volume < 1) volume = 1;
-                if (volume > 100) volume = 100;
-                int oldVolume = audioPlayer.getVolume();
-                audioPlayer.setVolume(volume);
-                channel.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volume).queue();
-            } else {
-                channel.sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).queue();
-            }
-        } else channel.sendMessage(getHelp(prefix)).queue();
+
+        TrackScheduler trackScheduler = PlayerManager.getInstance().getMusicManager(guild).getScheduler();
+        BlockingQueue<AudioTrack> queue = trackScheduler.getQueue();
+        if (queue.size() == 0){
+            channel.sendMessage("I can't shuffle a queue that doesn't exist").queue();
+            return;
+        }
+        LinkedBlockingQueue<AudioTrack> shuffledAudioTracks = shuffleAudioTracks(queue);
+        trackScheduler.setQueue(shuffledAudioTracks);
+        channel.sendMessage("The queue has been shuffled 🦧").queue();
+
+    }
+
+    @NotNull
+    private LinkedBlockingQueue<AudioTrack> shuffleAudioTracks(BlockingQueue<AudioTrack> queue) {
+        ArrayList<AudioTrack> audioTrackArrayList = new ArrayList<>(queue);
+        Collections.shuffle(audioTrackArrayList);
+        return new LinkedBlockingQueue<>(audioTrackArrayList);
     }
 
     @Override
     public String getName() {
-        return "setvolume";
+        return "shuffle";
     }
 
     @Override
     public String getHelp(String prefix) {
-        return "Set the volume of the audio player for the server to a percent value between 1 and 100\n" +
-                String.format("Usage: `%ssetvolume 10`", prefix);
+        return "Use this command to shuffle the queue\n" +
+                String.format("Usage: `%sshuffle`", prefix);
     }
 }
