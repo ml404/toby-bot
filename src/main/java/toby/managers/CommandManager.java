@@ -20,8 +20,8 @@ import java.util.regex.Pattern;
 @Service
 @Configurable
 public class CommandManager {
-    private IConfigService configService;
-    private IBrotherService brotherService;
+    private final IConfigService configService;
+    private final IBrotherService brotherService;
     private final List<ICommand> commands = new ArrayList<>();
 
     @Autowired
@@ -42,6 +42,7 @@ public class CommandManager {
         addCommand(new TalkCommand());
 //        addCommand(new EventWaiterCommand(waiter));
         addCommand(new PollCommand());
+        //music commands
         addCommand(new JoinCommand());
         addCommand(new LeaveCommand());
         addCommand(new PlayCommand());
@@ -54,6 +55,7 @@ public class CommandManager {
         addCommand(new SkipCommand());
         addCommand(new NowPlayingCommand());
         addCommand(new QueueCommand());
+        addCommand(new ShuffleCommand());
     }
 
     private void addCommand(ICommand cmd) {
