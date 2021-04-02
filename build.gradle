@@ -1,4 +1,3 @@
-
 buildscript {
     ext {
         springBootVersion = '2.4.4'
@@ -44,6 +43,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.junit.jupiter:junit-jupiter:5.4.2'
+
 //    testCompile group: 'junit', name: 'junit', version: '4.12'
     compile 'net.dv8tion:JDA:4.2.0_214'
     compile 'com.github.sedmelluq:lavaplayer:1.3.75'
@@ -63,6 +64,9 @@ dependencies {
     implementation('org.springframework:spring-context')
     // https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api
     implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+    testImplementation 'org.mockito:mockito-inline:3.7.7'
 
 }
 
@@ -75,3 +79,7 @@ task stage {
     dependsOn clean
 }
 build.mustRunAfter clean
+
+test {
+    useJUnitPlatform()
+}
