@@ -1,10 +1,7 @@
 package commands;
 
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.*;
 import toby.command.commands.music.*;
@@ -24,9 +21,6 @@ public class CommandManagerTest {
     ConfigServiceImpl configService;
     @Mock
     BrotherServiceImpl brotherService;
-
-    @Mock
-    GuildMessageReceivedEvent event;
 
 
     @Test
@@ -62,22 +56,4 @@ public class CommandManagerTest {
         assertEquals(availableCommands, commandManager.getCommands().stream().map(ICommand::getClass).collect(Collectors.toList()));
         assertEquals(25, commandManager.getCommands().size());
     }
-
-
-    @Test
-    @Disabled
-    public void testHelpCommand() {
-        CommandManager commandManager = new CommandManager(configService, brotherService);
-        HelpCommand helpCommand = new HelpCommand(commandManager, configService);
-        CommandContext commandContext = new CommandContext(event, List.of("meme"));
-
-        String prefix = "!";
-        helpCommand.handle(commandContext, prefix);
-
-        String memeCommandString = "This command shows a meme from the subreddit you've specified (SFW only) \n" +
-                String.format("Usage: `%smeme raimimemes` (picks a top 5 meme of the day by default) \n", prefix) +
-                String.format("`%smeme raimimemes day/week/month/all $topXPosts`", prefix);
-//        when(event.getChannel().sendMessage(anyString()).queue()).thenAnswer(memeCommandString);
-    }
-
 }

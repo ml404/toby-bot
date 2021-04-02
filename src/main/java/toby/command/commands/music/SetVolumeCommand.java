@@ -12,6 +12,9 @@ import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.lavaplayer.PlayerManager;
 
+import java.util.Collections;
+import java.util.List;
+
 public class SetVolumeCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
     @Override
@@ -70,5 +73,10 @@ public class SetVolumeCommand implements ICommand {
     public String getHelp(String prefix) {
         return "Set the volume of the audio player for the server to a percent value between 1 and 100\n" +
                 String.format("Usage: `%ssetvolume 10`", prefix);
+    }
+
+    @Override
+    public List<String> getAliases() {
+        return Collections.singletonList("volume, vol");
     }
 }
