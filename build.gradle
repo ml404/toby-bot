@@ -62,7 +62,6 @@ dependencies {
     implementation('org.springframework:spring-jdbc')
     implementation('org.springframework:spring-orm')
     implementation('org.springframework:spring-context')
-    implementation 'org.hsqldb:hsqldb:2.5.1'
     // https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api
     implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
