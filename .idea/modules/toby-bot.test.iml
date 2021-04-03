@@ -22,6 +22,7 @@
     <orderEntry type="library" name="Gradle: org.springframework:spring-orm:5.3.5" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-jdbc:5.3.5" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-context:5.3.5" level="project" />
+    <orderEntry type="library" name="Gradle: org.hsqldb:hsqldb:2.5.1" level="project" />
     <orderEntry type="library" name="Gradle: javax.persistence:javax.persistence-api:2.2" level="project" />
     <orderEntry type="library" name="Gradle: org.mockito:mockito-inline:3.7.7" level="project" />
     <orderEntry type="library" name="Gradle: com.google.code.findbugs:jsr305:3.0.2" level="project" />
