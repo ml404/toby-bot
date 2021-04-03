@@ -6,9 +6,12 @@ import java.util.List;
 
 public interface IBrotherService {
 
-    public List<BrotherDto> listBrothers();
-    public Long createNewBrother(BrotherDto brotherDto);
-    public BrotherDto getBrotherById(Long discordId);
-    public BrotherDto getUserByName(String name);
+    List<BrotherDto> listBrothers();
+    BrotherDto createNewBrother(BrotherDto brotherDto);
+    BrotherDto getBrotherById(Long discordId);
+    BrotherDto getUserByName(String name);
+    BrotherDto updateBrother(BrotherDto brotherDto);
+    void deleteBrother(BrotherDto brotherDto);
+    void deleteBrotherById(long discordId);
 
 }

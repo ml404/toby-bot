@@ -42,8 +42,16 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
 
     @Override
     @SuppressWarnings(value = "unchecked")
-    public List<ConfigDto> listConfig() {
+    public List<ConfigDto> listAllConfig() {
         Query q = em.createNamedQuery("ConfigDto.getAll", ConfigDto.class);
+        return q.getResultList();
+    }
+
+    @Override
+    @SuppressWarnings(value = "unchecked")
+    public List<ConfigDto> listGuildConfig(String guildId) {
+        Query q = em.createNamedQuery("ConfigDto.getGuildAll", ConfigDto.class);
+        q.setParameter("guild_id", guildId);
         return q.getResultList();
     }
 
@@ -64,6 +72,12 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
         em.merge(configDto);
         em.flush();
         return configDto;
+    }
+
+    @Override
+    public void deleteAll(String guildId){
+        String deletionString = String.format("DELETE FROM ConfigDto where guild_id = '%s'", guildId);
+        em.createQuery(deletionString);
     }
 
     private ConfigDto persistConfigDto(ConfigDto configDto) {

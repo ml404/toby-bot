@@ -8,8 +8,14 @@ import java.io.Serializable;
         @NamedQuery(name = "ConfigDto.getAll",
                 query = "select a from ConfigDto as a"),
 
+        @NamedQuery(name = "ConfigDto.getGuildAll",
+                query = "select a from ConfigDto as a WHERE a.guildId = :guild_id "),
+
         @NamedQuery(name =  "ConfigDto.getValue",
-                query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guild_id OR a.guildId = 'all')")
+                query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guild_id OR a.guildId = 'all')"),
+
+        @NamedQuery(name =  "ConfigDto.deleteAll",
+                query = "delete from ConfigDto as a WHERE a.guildId = :guild_id ")
 })
 
 @Entity

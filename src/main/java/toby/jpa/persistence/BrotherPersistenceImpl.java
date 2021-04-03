@@ -38,6 +38,13 @@ public class BrotherPersistenceImpl implements IBrotherPersistence {
     }
 
     @Override
+    public BrotherDto updateBrother(BrotherDto brotherDto) {
+        em.merge(brotherDto);
+        em.flush();
+        return brotherDto;
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public List<BrotherDto> listBrothers() {
         Query q = em.createNamedQuery("BrotherDto.getAll", BrotherDto.class);
@@ -46,9 +53,32 @@ public class BrotherPersistenceImpl implements IBrotherPersistence {
 
 
     @Override
-    public Long createNewBrother(BrotherDto brotherDto) {
-        return null;
+    public BrotherDto createNewBrother(BrotherDto brotherDto) {
+
+        BrotherDto databaseBrother = em.find(BrotherDto.class, brotherDto.getDiscordId());
+        if (databaseBrother == null) {
+            return persistBrotherDto(brotherDto);
+        } else if (!brotherDto.getDiscordId().equals(databaseBrother.getDiscordId())) {
+            return persistBrotherDto(brotherDto);
+        } else
+            return databaseBrother;
     }
 
+    @Override
+    public void deleteBrother(BrotherDto brotherDto) {
+        em.remove(brotherDto);
+    }
 
+    @Override
+    public void deleteBrotherById(long discordId) {
+        Query q = em.createNamedQuery("BrotherDto.deleteById");
+        q.setParameter("discordId", discordId);
+        q.executeUpdate();
+    }
+
+    private BrotherDto persistBrotherDto(BrotherDto brotherDto) {
+        em.persist(brotherDto);
+        em.flush();
+        return brotherDto;
+    }
 }
