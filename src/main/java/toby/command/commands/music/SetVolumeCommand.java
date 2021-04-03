@@ -12,7 +12,7 @@ import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.lavaplayer.PlayerManager;
 
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 public class SetVolumeCommand implements ICommand {
@@ -77,6 +77,6 @@ public class SetVolumeCommand implements ICommand {
 
     @Override
     public List<String> getAliases() {
-        return Collections.singletonList("volume, vol");
+        return Arrays.asList("volume", "vol");
     }
 }
