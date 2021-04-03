@@ -20,7 +20,7 @@ public class BrotherServiceImpl implements IBrotherService {
     }
 
     @Override
-    public Long createNewBrother(BrotherDto brotherDto) {
+    public BrotherDto createNewBrother(BrotherDto brotherDto) {
         return brotherService.createNewBrother(brotherDto);
     }
 
@@ -33,4 +33,21 @@ public class BrotherServiceImpl implements IBrotherService {
     public BrotherDto getUserByName(String name) {
         return brotherService.getUserByName(name);
     }
+
+    @Override
+    public BrotherDto updateBrother(BrotherDto brotherDto) {
+        return brotherService.updateBrother(brotherDto);
+    }
+
+    @Override
+    public void deleteBrother(BrotherDto brotherDto) {
+        brotherService.deleteBrother(brotherDto);
+    }
+
+    @Override
+    public void deleteBrotherById(long discordId) {
+        brotherService.deleteBrotherById(discordId);
+    }
+
+
 }

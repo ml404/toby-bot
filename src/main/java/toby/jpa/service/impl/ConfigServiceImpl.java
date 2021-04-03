@@ -15,8 +15,13 @@ public class ConfigServiceImpl implements IConfigService {
     IConfigPersistence configService;
 
     @Override
-    public List<ConfigDto> listConfig() {
-        return configService.listConfig();
+    public List<ConfigDto> listAllConfig() {
+        return configService.listAllConfig();
+    }
+
+    @Override
+    public List<ConfigDto> listGuildConfig(String guildId) {
+        return configService.listGuildConfig(guildId);
     }
 
     @Override
@@ -32,5 +37,10 @@ public class ConfigServiceImpl implements IConfigService {
     @Override
     public ConfigDto updateConfig(ConfigDto configDto) {
         return configService.updateConfig(configDto);
+    }
+
+    @Override
+    public void deleteAll(String guildId){
+        configService.deleteAll(guildId);
     }
 }

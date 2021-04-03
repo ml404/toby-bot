@@ -8,7 +8,13 @@ import java.io.Serializable;
                 query = "select a from BrotherDto as a"),
 
         @NamedQuery(name =  "BrotherDto.getName",
-                query = "select a from BrotherDto as a WHERE a.brotherName = :name")
+                query = "select a from BrotherDto as a WHERE a.brotherName = :name"),
+
+        @NamedQuery(name =  "BrotherDto.getById",
+                query = "select a from BrotherDto as a WHERE a.discordId = :discordId"),
+
+        @NamedQuery(name =  "BrotherDto.deleteById",
+                query = "delete from BrotherDto as a WHERE a.discordId = :discordId")
 })
 
 @Entity
