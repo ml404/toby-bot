@@ -4,6 +4,9 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
+import net.dv8tion.jda.api.entities.TextChannel;
+import toby.command.commands.music.QueueCommand;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -12,6 +15,7 @@ public class TrackScheduler extends AudioEventAdapter {
     private final AudioPlayer player;
     private BlockingQueue<AudioTrack> queue;
     private boolean isLooping;
+    private TextChannel channel;
 
     public boolean isLooping() {
         return isLooping;
@@ -26,14 +30,21 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = new LinkedBlockingQueue<>();
     }
 
-    public void queue(AudioTrack track) {
+    public void queue(AudioTrack track, TextChannel channel) {
+        this.channel = channel;
         if (!this.player.startTrack(track, true)) {
             this.queue.offer(track);
         }
     }
 
     public void nextTrack() {
-        this.player.startTrack(this.queue.poll(), false);
+        AudioTrack track = this.queue.poll();
+        AudioTrackInfo info = track.getInfo();
+        long duration = track.getDuration();
+        String songDuration = QueueCommand.formatTime(duration);
+        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
+        channel.sendMessage(nowPlaying).queue();
+        this.player.startTrack(track, false);
     }
 
     @Override

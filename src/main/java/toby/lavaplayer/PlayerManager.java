@@ -10,10 +10,8 @@ import com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
-import toby.command.commands.music.QueueCommand;
 
 import java.util.HashMap;
 import java.util.List;
@@ -59,7 +57,7 @@ public class PlayerManager {
 
             @Override
             public void trackLoaded(AudioTrack track) {
-                musicManager.getScheduler().queue(track);
+                musicManager.getScheduler().queue(track, channel);
 
                 channel.sendMessage("Adding to queue: `")
                         .append(track.getInfo().title)
@@ -81,13 +79,7 @@ public class PlayerManager {
                         .queue();
 
                 for (final AudioTrack track : tracks) {
-                    AudioTrackInfo info = track.getInfo();
-                    long duration = track.getDuration();
-                    String songDuration = QueueCommand.formatTime(duration);
-                    String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
-                    musicManager.getScheduler().queue(track);
-                    channel.sendMessage(nowPlaying).queue();
-
+                    musicManager.getScheduler().queue(track, channel);
                 }
             }
 
