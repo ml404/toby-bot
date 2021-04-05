@@ -1,6 +1,8 @@
 package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
@@ -10,6 +12,7 @@ import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
@@ -62,9 +65,19 @@ public class SkipCommand implements ICommand {
             }
             musicManager.getScheduler().setLooping(false);
             channel.sendMessage(String.format("Skipped %d track(s)", tracksToSkip)).queue();
+            nowPlaying(channel, musicManager);
         } else {
             sendDeniedStoppableMessage(channel, musicManager);
         }
+    }
+
+    private void nowPlaying(TextChannel channel, GuildMusicManager musicManager) {
+        AudioTrack track = new ArrayList<>(musicManager.getScheduler().getQueue()).get(0);
+        AudioTrackInfo info = track.getInfo();
+        long duration = track.getDuration();
+        String songDuration = QueueCommand.formatTime(duration);
+        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
+        channel.sendMessage(nowPlaying).queue();
     }
 
     @Override
