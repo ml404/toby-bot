@@ -9,6 +9,9 @@ import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class StopCommand implements ICommand {
@@ -57,6 +60,12 @@ public class StopCommand implements ICommand {
 
     @Override
     public String getHelp(String prefix) {
-        return "Stops the current song and clears the queue";
+        return "Stops the current song and clears the queue\n"+
+                String.format("Aliases are: %s",String.join(",", getAliases()));
+
+    }
+    @Override
+    public List<String> getAliases(){
+        return Arrays.asList("stfu");
     }
 }

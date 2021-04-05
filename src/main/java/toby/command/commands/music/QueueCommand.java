@@ -10,6 +10,7 @@ import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +70,12 @@ public class QueueCommand implements ICommand {
 
     @Override
     public String getHelp(String prefix) {
-        return "shows the queued up songs";
+        return "shows the queued up songs\n"+
+                String.format("Aliases are: %s",String.join(",", getAliases()));
+    }
+
+    @Override
+    public List<String> getAliases() {
+        return Arrays.asList("q");
     }
 }

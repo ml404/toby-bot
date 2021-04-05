@@ -11,6 +11,8 @@ import toby.lavaplayer.PlayerManager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 
 public class NowDigOnThisCommand implements ICommand {
     @SuppressWarnings("ConstantConditions")
@@ -66,7 +68,13 @@ public class NowDigOnThisCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Plays a song\n" +
-                String.format("Usage: `%snowdigonthis <youtube link>`", prefix);
+                String.format("Usage: `%snowdigonthis <youtube link>` \n", prefix)+
+                String.format("Aliases are: %s",String.join(",", getAliases()));
+    }
+
+    @Override
+    public List<String> getAliases() {
+        return Arrays.asList("ndot", "dig");
     }
 
     private boolean isUrl(String url) {

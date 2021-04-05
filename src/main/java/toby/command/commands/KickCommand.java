@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class KickCommand implements ICommand {
@@ -54,6 +55,12 @@ public class KickCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Kick a member off the server.\n" +
-                String.format("Usage: `%skick <@user>`", prefix);
+                String.format("Usage: `%skick <@user>`", prefix)+
+                String.format("Aliases are: %s",String.join(",", getAliases()));
+
+    }
+
+    public List<String> getAliases(){
+        return Arrays.asList("shoot");
     }
 }

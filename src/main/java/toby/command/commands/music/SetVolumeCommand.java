@@ -72,7 +72,9 @@ public class SetVolumeCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Set the volume of the audio player for the server to a percent value between 1 and 100\n" +
-                String.format("Usage: `%ssetvolume 10`", prefix);
+                String.format("Usage: `%ssetvolume 10`\n", prefix)+
+                String.format("Aliases are: %s",String.join(",", getAliases()));
+
     }
 
     @Override
