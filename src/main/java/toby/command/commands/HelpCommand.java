@@ -58,7 +58,8 @@ public class HelpCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Shows the list with commands in the bot\n" +
-                String.format("Usage: `%shelp [command]`", prefix);
+                String.format("Usage: `%shelp [command]`\n", prefix) +
+                String.format("Aliases are: %s",String.join(",", getAliases()));
     }
 
     @Override

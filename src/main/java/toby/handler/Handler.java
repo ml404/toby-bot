@@ -118,20 +118,15 @@ public class Handler extends ListenerAdapter {
 
     }
 
-    //Will need this for playing bugsnax, but for now comment out
+//    Will need this for auto leaving voice channel, but for now comment out
 //    @Override
-//    public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
-//
-//        AudioSourceManagers.registerRemoteSources(playerManager);
-//        AudioPlayer player = playerManager.createPlayer();
+//    public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
 //
 //        // Creates a variable equal to the channel that the user is in.
 //        VoiceChannel connectedChannel = event.getMember().getVoiceState().getChannel();
-//        AudioManager audioManager = event.getGuild().getAudioManager();
-//        audioManager.openAudioConnection(connectedChannel);
-//
-//        event.getGuild().getAudioManager().closeAudioConnection();
-//
+//        if(connectedChannel.getMembers().isEmpty()) {
+//            event.getGuild().getAudioManager().closeAudioConnection();
+//        }
 //    }
 }
 
