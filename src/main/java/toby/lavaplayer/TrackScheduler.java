@@ -31,8 +31,7 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = new LinkedBlockingQueue<>();
     }
 
-    public void queue(AudioTrack track, TextChannel channel) {
-        this.currentTextChannel = channel;
+    public void queue(AudioTrack track) {
         if (!this.player.startTrack(track, true)) {
             this.queue.offer(track);
         }
@@ -77,6 +76,13 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = queue;
     }
 
+    public TextChannel getCurrentTextChannel() {
+        return currentTextChannel;
+    }
+
+    public void setCurrentTextChannel(TextChannel currentTextChannel) {
+        this.currentTextChannel = currentTextChannel;
+    }
 
     private void nowPlaying(TextChannel channel, AudioTrack track) {
         AudioTrackInfo info = track.getInfo();

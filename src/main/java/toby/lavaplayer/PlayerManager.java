@@ -55,9 +55,12 @@ public class PlayerManager {
         this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
 
+            private final TrackScheduler scheduler = musicManager.getScheduler();
+
             @Override
             public void trackLoaded(AudioTrack track) {
-                musicManager.getScheduler().queue(track);
+                scheduler.setCurrentTextChannel(channel);
+                scheduler.queue(track);
 
                 channel.sendMessage("Adding to queue: `")
                         .append(track.getInfo().title)
@@ -70,6 +73,7 @@ public class PlayerManager {
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
                 final List<AudioTrack> tracks = playlist.getTracks();
+                scheduler.setCurrentTextChannel(channel);
 
                 channel.sendMessage("Adding to queue: `")
                         .append(String.valueOf(tracks.size()))
@@ -79,7 +83,7 @@ public class PlayerManager {
                         .queue();
 
                 for (final AudioTrack track : tracks) {
-                    musicManager.getScheduler().queue(track);
+                    scheduler.queue(track);
                 }
             }
 
