@@ -12,7 +12,6 @@ import toby.command.ICommand;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
@@ -72,7 +71,7 @@ public class SkipCommand implements ICommand {
     }
 
     private void nowPlaying(TextChannel channel, GuildMusicManager musicManager) {
-        AudioTrack track = new ArrayList<>(musicManager.getScheduler().getQueue()).get(0);
+        AudioTrack track = musicManager.getAudioPlayer().getPlayingTrack();
         AudioTrackInfo info = track.getInfo();
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);

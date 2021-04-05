@@ -52,7 +52,7 @@ public class TrackScheduler extends AudioEventAdapter {
             }
             PlayerManager.getInstance().setCurrentlyStoppable(true);
             nextTrack();
-            nowPlaying(currentTextChannel, track);
+            nowPlaying(currentTextChannel, player.getPlayingTrack());
         }
     }
 
