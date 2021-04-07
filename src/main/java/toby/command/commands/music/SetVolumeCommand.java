@@ -53,9 +53,15 @@ public class SetVolumeCommand implements ICommand {
             int volume = Integer.parseInt(ctx.getArgs().get(0));
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
-                if (volume < 1) volume = 1;
-                if (volume > 100) volume = 100;
+                if (volume < 1 || volume > 100) {
+                    channel.sendMessage(getHelp(prefix)).queue();
+                    return;
+                }
                 int oldVolume = audioPlayer.getVolume();
+                if (volume == oldVolume) {
+                    channel.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).queue();
+                    return;
+                }
                 audioPlayer.setVolume(volume);
                 channel.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volume).queue();
             } else {
@@ -72,8 +78,8 @@ public class SetVolumeCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Set the volume of the audio player for the server to a percent value between 1 and 100\n" +
-                String.format("Usage: `%ssetvolume 10`\n", prefix)+
-                String.format("Aliases are: %s",String.join(",", getAliases()));
+                String.format("Usage: `%ssetvolume 10`\n", prefix) +
+                String.format("Aliases are: %s", String.join(",", getAliases()));
 
     }
 
