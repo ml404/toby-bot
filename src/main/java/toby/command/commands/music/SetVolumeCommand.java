@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
+import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
@@ -24,29 +25,13 @@ public class SetVolumeCommand implements ICommand {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue();
-            return;
-        }
+        final Member member = doChannelAndArgsValidation(ctx, prefix, channel, selfVoiceState);
+        if (member == null) return;
 
-        if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue();
-            return;
-        }
+        setNewVolume(ctx, prefix, channel, member);
+    }
 
-        final Member member = ctx.getMember();
-        final GuildVoiceState memberVoiceState = member.getVoiceState();
-
-        if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
-            return;
-        }
-
-        if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
-            return;
-        }
-
+    private void setNewVolume(CommandContext ctx, String prefix, TextChannel channel, Member member) {
         Guild guild = ctx.getGuild();
         boolean validVolumeArg = ctx.getArgs().get(0).matches("\\d+");
         if (validVolumeArg) {
@@ -68,6 +53,33 @@ public class SetVolumeCommand implements ICommand {
                 channel.sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).queue();
             }
         } else channel.sendMessage(getHelp(prefix)).queue();
+    }
+
+    @Nullable
+    private Member doChannelAndArgsValidation(CommandContext ctx, String prefix, TextChannel channel, GuildVoiceState selfVoiceState) {
+        if (ctx.getArgs().isEmpty()) {
+            channel.sendMessage(getHelp(prefix)).queue();
+            return null;
+        }
+
+        if (!selfVoiceState.inVoiceChannel()) {
+            channel.sendMessage("I need to be in a voice channel for this to work").queue();
+            return null;
+        }
+
+        final Member member = ctx.getMember();
+        final GuildVoiceState memberVoiceState = member.getVoiceState();
+
+        if (!memberVoiceState.inVoiceChannel()) {
+            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
+            return null;
+        }
+
+        if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
+            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
+            return null;
+        }
+        return member;
     }
 
     @Override

@@ -31,12 +31,16 @@ public class BrotherCommand implements ICommand {
         Guild guild = ctx.getGuild();
         Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
 
+        determineBrother(channel, message, tobyEmote);
+    }
+
+    private void determineBrother(TextChannel channel, Message message, Emote tobyEmote) {
         if (message.getMentionedMembers().isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(message.getAuthor().getIdLong());
             if (brother!=null) {
                 channel.sendMessage(String.format("Of course you're my brother %s.", brother.getBrotherName())).queue();
             } else if (tobyId.equals(message.getAuthor().getIdLong())) {
-                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s",tobyEmote)).queue();
+                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s", tobyEmote)).queue();
             } else
                 channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue();
         }

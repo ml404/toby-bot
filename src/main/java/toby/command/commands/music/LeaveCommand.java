@@ -51,6 +51,6 @@ public class LeaveCommand implements ICommand {
 
     @Override
     public String getHelp(String prefix) {
-        return "Makes the bot leave your voice channel";
+        return "Makes the TobyBot leave the voice channel it's currently in";
     }
 }
