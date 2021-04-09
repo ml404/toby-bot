@@ -21,23 +21,7 @@ public class NowPlayingCommand implements ICommand {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-        if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue();
-            return;
-        }
-
-        final Member member = ctx.getMember();
-        final GuildVoiceState memberVoiceState = member.getVoiceState();
-
-        if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
-            return;
-        }
-
-        if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
-            return;
-        }
+        if (doChannelValidation(ctx, channel, selfVoiceState)) return;
 
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
@@ -62,6 +46,27 @@ public class NowPlayingCommand implements ICommand {
             String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
             channel.sendMessage(nowPlaying).queue();
         }
+    }
+
+    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState) {
+        if (!selfVoiceState.inVoiceChannel()) {
+            channel.sendMessage("I need to be in a voice channel for this to work").queue();
+            return true;
+        }
+
+        final Member member = ctx.getMember();
+        final GuildVoiceState memberVoiceState = member.getVoiceState();
+
+        if (!memberVoiceState.inVoiceChannel()) {
+            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
+            return true;
+        }
+
+        if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
+            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
+            return true;
+        }
+        return false;
     }
 
     @Override

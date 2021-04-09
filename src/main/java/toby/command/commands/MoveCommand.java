@@ -39,21 +39,7 @@ public class MoveCommand implements ICommand {
         voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(badOpinionChannel));
         message.getMentionedMembers().forEach(target -> {
 
-            if(!target.getVoiceState().inVoiceChannel()){
-                channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue();
-                return;
-            }
-            if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-                channel.sendMessage(String.format("You can't move '%s'", target.getEffectiveName())).queue();
-                return;
-            }
-
-            final Member botMember = ctx.getSelfMember();
-
-            if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-                channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue();
-                return;
-            }
+            if (doChannelValidation(ctx, channel, member, target)) return;
 
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
@@ -61,6 +47,25 @@ public class MoveCommand implements ICommand {
                             (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue()
                     );
         });
+    }
+
+    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, Member member, Member target) {
+        if(!target.getVoiceState().inVoiceChannel()){
+            channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue();
+            return true;
+        }
+        if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
+            channel.sendMessage(String.format("You can't move '%s'", target.getEffectiveName())).queue();
+            return true;
+        }
+
+        final Member botMember = ctx.getSelfMember();
+
+        if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
+            channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue();
+            return true;
+        }
+        return false;
     }
 
     @Override
