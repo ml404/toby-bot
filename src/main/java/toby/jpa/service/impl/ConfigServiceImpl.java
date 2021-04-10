@@ -2,6 +2,7 @@ package toby.jpa.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import toby.jpa.dto.ConfigDto;
@@ -35,6 +36,7 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     @Override
+    @CachePut(value="configs", key="#configDto.name+#configDto.guildId")
     public ConfigDto createNewConfig(ConfigDto configDto) {
         return configService.createNewConfig(configDto);
     }

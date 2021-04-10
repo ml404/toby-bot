@@ -2,6 +2,7 @@ package toby.jpa.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import toby.jpa.dto.BrotherDto;
@@ -23,6 +24,7 @@ public class BrotherServiceImpl implements IBrotherService {
     }
 
     @Override
+    @CachePut(value="brothers", key = "#brotherDto.discordId")
     public BrotherDto createNewBrother(BrotherDto brotherDto) {
         return brotherService.createNewBrother(brotherDto);
     }
@@ -34,6 +36,7 @@ public class BrotherServiceImpl implements IBrotherService {
     }
 
     @Override
+    @Cacheable(value = "brothers", key = "#name")
     public BrotherDto getUserByName(String name) {
         return brotherService.getUserByName(name);
     }
