@@ -12,6 +12,6 @@ public interface IBrotherService {
     BrotherDto getUserByName(String name);
     BrotherDto updateBrother(BrotherDto brotherDto);
     void deleteBrother(BrotherDto brotherDto);
-    void deleteBrotherById(long discordId);
+    void deleteBrotherById(Long discordId);
 
 }

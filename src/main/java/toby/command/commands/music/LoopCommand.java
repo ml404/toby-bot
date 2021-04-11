@@ -5,19 +5,24 @@ import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 import toby.lavaplayer.TrackScheduler;
 
-public class LoopCommand implements ICommand {
+public class LoopCommand implements IMusicCommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         if (doChannelValidation(ctx, channel, selfVoiceState)) return;
 

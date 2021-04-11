@@ -48,6 +48,7 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     @Override
+    @CacheEvict(value="configs", allEntries = true)
     public void deleteAll(String guildId){
         configService.deleteAll(guildId);
     }

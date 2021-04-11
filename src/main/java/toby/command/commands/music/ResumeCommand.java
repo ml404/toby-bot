@@ -7,22 +7,27 @@ import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
-public class ResumeCommand implements ICommand {
+public class ResumeCommand implements IMusicCommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         if (doChannelValidation(ctx, channel, selfVoiceState)) return;
 
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(ctx.getGuild()).getAudioPlayer();
-        if(audioPlayer.isPaused()) {
+        if (audioPlayer.isPaused()) {
             AudioTrack track = audioPlayer.getPlayingTrack();
             channel.sendMessage("Resuming: `")
                     .append(track.getInfo().title)
@@ -65,4 +70,5 @@ public class ResumeCommand implements ICommand {
         return "Resumes the current song if one is paused\n" +
                 String.format("Usage: `%sresume`", prefix);
     }
+
 }

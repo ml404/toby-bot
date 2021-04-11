@@ -7,44 +7,47 @@ import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class NowPlayingCommand implements ICommand {
+public class NowPlayingCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-        if (doChannelValidation(ctx, channel, selfVoiceState)) return;
+        if (requestingUserDto.hasMusicPermission()) {
+            if (doChannelValidation(ctx, channel, selfVoiceState)) return;
 
-        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
-        final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
-        final AudioTrack track = audioPlayer.getPlayingTrack();
+            final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
+            final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
+            final AudioTrack track = audioPlayer.getPlayingTrack();
 
-        if (track == null) {
-            channel.sendMessage("There is no track playing currently").queue();
-            return;
-        }
+            if (track == null) {
+                channel.sendMessage("There is no track playing currently").queue();
+                return;
+            }
 
-        final AudioTrackInfo info = track.getInfo();
+            final AudioTrackInfo info = track.getInfo();
 
-        AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
-        if (!track.getInfo().isStream) {
-            long position = playingTrack.getPosition();
-            long duration = playingTrack.getDuration();
-            String songPosition = QueueCommand.formatTime(position);
-            String songDuration = QueueCommand.formatTime(duration);
-            String nowPlaying = String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) ", info.title, info.author, songPosition, songDuration, info.uri);
-            channel.sendMessage(nowPlaying).queue();
-        } else {
-            String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
-            channel.sendMessage(nowPlaying).queue();
+            AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
+            if (!track.getInfo().isStream) {
+                long position = playingTrack.getPosition();
+                long duration = playingTrack.getDuration();
+                String songPosition = QueueCommand.formatTime(position);
+                String songDuration = QueueCommand.formatTime(duration);
+                String nowPlaying = String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) ", info.title, info.author, songPosition, songDuration, info.uri);
+                channel.sendMessage(nowPlaying).queue();
+            } else {
+                String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
+                channel.sendMessage(nowPlaying).queue();
+            }
         }
     }
 
@@ -83,4 +86,5 @@ public class NowPlayingCommand implements ICommand {
     public List<String> getAliases() {
         return Arrays.asList("np", "now");
     }
+
 }

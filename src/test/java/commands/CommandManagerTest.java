@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import toby.command.ICommand;
 import toby.command.commands.*;
+import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.service.impl.BrotherServiceImpl;
 import toby.jpa.service.impl.ConfigServiceImpl;
+import toby.jpa.service.impl.UserServiceImpl;
 import toby.managers.CommandManager;
 
 import java.util.Arrays;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CommandManagerTest {
 
@@ -22,10 +25,12 @@ public class CommandManagerTest {
     @Mock
     BrotherServiceImpl brotherService;
 
+    @Mock
+    UserServiceImpl userService;
 
     @Test
     public void testCommandManagerFindsAllCommands() {
-        CommandManager commandManager = new CommandManager(configService, brotherService);
+        CommandManager commandManager = new CommandManager(configService, brotherService, userService);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
                 SetPrefixCommand.class,
@@ -51,9 +56,10 @@ public class CommandManagerTest {
                 SkipCommand.class,
                 NowPlayingCommand.class,
                 QueueCommand.class,
-                ShuffleCommand.class);
+                ShuffleCommand.class,
+                AdjustUserCommand.class);
 
-        assertEquals(availableCommands, commandManager.getCommands().stream().map(ICommand::getClass).collect(Collectors.toList()));
-        assertEquals(25, commandManager.getCommands().size());
+        assertTrue(availableCommands.containsAll(commandManager.getCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
+        assertEquals(26, commandManager.getCommands().size());
     }
 }

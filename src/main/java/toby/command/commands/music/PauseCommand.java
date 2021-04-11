@@ -10,20 +10,25 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
-public class PauseCommand implements ICommand {
+public class PauseCommand implements IMusicCommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         final Member member = doChannelStateValidation(ctx, channel, selfVoiceState);
         if (member == null) return;
@@ -79,4 +84,5 @@ public class PauseCommand implements ICommand {
         return "Pauses the current song if one is playing\n" +
                 String.format("Usage: `%spause`", prefix);
     }
+
 }

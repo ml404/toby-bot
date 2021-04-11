@@ -10,6 +10,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.BrotherDto;
+import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 
 
@@ -25,7 +26,7 @@ public class BrotherCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         Guild guild = ctx.getGuild();

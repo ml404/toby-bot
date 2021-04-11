@@ -5,7 +5,8 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
@@ -15,12 +16,18 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class QueueCommand implements ICommand {
+public class QueueCommand implements IMusicCommand {
+
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
         final BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
+
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         if (queue.isEmpty()) {
             channel.sendMessage("The queue is currently empty").queue();
@@ -31,7 +38,7 @@ public class QueueCommand implements ICommand {
         final List<AudioTrack> trackList = new ArrayList<>(queue);
         final MessageAction messageAction = channel.sendMessage("**Current Queue:**\n");
 
-        for (int i = 0; i <  trackCount; i++) {
+        for (int i = 0; i < trackCount; i++) {
             final AudioTrack track = trackList.get(i);
             final AudioTrackInfo info = track.getInfo();
 
@@ -70,8 +77,8 @@ public class QueueCommand implements ICommand {
 
     @Override
     public String getHelp(String prefix) {
-        return "shows the queued up songs\n"+
-                String.format("Aliases are: %s",String.join(",", getAliases()));
+        return "shows the queued up songs\n" +
+                String.format("Aliases are: %s", String.join(",", getAliases()));
     }
 
     @Override

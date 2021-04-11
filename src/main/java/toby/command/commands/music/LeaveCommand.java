@@ -4,18 +4,24 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
-public class LeaveCommand implements ICommand {
+public class LeaveCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
+
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         if (!selfVoiceState.inVoiceChannel()) {
             channel.sendMessage("I'm not in a voice channel, somebody shoot this guy").queue();
@@ -38,11 +44,11 @@ public class LeaveCommand implements ICommand {
             musicManager.getAudioPlayer().setVolume(100);
             audioManager.closeAudioConnection();
             channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
-        }
-        else {
+        } else {
             sendDeniedStoppableMessage(channel, musicManager);
         }
     }
+
 
     @Override
     public String getName() {
@@ -53,4 +59,6 @@ public class LeaveCommand implements ICommand {
     public String getHelp(String prefix) {
         return "Makes the TobyBot leave the voice channel it's currently in";
     }
+
+
 }

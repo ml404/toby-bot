@@ -1,20 +1,25 @@
 package toby.managers;
 
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.*;
+import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
+import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
+import toby.jpa.service.IUserService;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Service
@@ -22,26 +27,32 @@ import java.util.regex.Pattern;
 public class CommandManager {
     private final IConfigService configService;
     private final IBrotherService brotherService;
+    private final IUserService userService;
     private final List<ICommand> commands = new ArrayList<>();
 
     @Autowired
-    public CommandManager(IConfigService configService, IBrotherService brotherService) {
+    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService) {
         this.configService = configService;
         this.brotherService = brotherService;
+        this.userService = userService;
 
+        //misc commands
         addCommand(new HelpCommand(this, configService));
-        addCommand(new SetPrefixCommand(configService));
-        addCommand(new KickCommand());
-        addCommand(new MoveCommand());
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand(configService));
+
+        //moderation commands
+        addCommand(new SetPrefixCommand(configService));
+        addCommand(new KickCommand());
+        addCommand(new MoveCommand(configService));
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
-//        addCommand(new EventWaiterCommand(waiter));
         addCommand(new PollCommand());
+        addCommand(new AdjustUserCommand(userService));
+
         //music commands
         addCommand(new JoinCommand());
         addCommand(new LeaveCommand());
@@ -56,6 +67,8 @@ public class CommandManager {
         addCommand(new NowPlayingCommand());
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
+
+        //addCommand(new EventWaiterCommand(waiter));
     }
 
     private void addCommand(ICommand cmd) {
@@ -91,6 +104,7 @@ public class CommandManager {
                 .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");
 
+        UserDto requestingUserDto = calculateUserDto(event);
         String invoke = split[0].toLowerCase();
         ICommand cmd = this.getCommand(invoke);
 
@@ -99,9 +113,25 @@ public class CommandManager {
             List<String> args = Arrays.asList(split).subList(1, split.length);
 
             CommandContext ctx = new CommandContext(event, args);
-
-            cmd.handle(ctx, prefix);
+            cmd.handle(ctx, prefix, requestingUserDto);
         }
+    }
+
+    @NotNull
+    private UserDto calculateUserDto(GuildMessageReceivedEvent event) {
+        long guildId = event.getGuild().getIdLong();
+        long discordId = event.getAuthor().getIdLong();
+
+        List<UserDto> guildUserDtos = userService.listGuildUsers(guildId);
+        Optional<UserDto> userDtoOptional = guildUserDtos.stream().filter(userDto -> userDto.getDiscordId().equals(discordId) && userDto.getGuildId().equals(guildId)).findFirst();
+        if (userDtoOptional.isEmpty()) {
+            UserDto userDto = new UserDto();
+            userDto.setDiscordId(discordId);
+            userDto.setGuildId(guildId);
+            userDto.setSuperUser(event.getMember().isOwner());
+            return userService.createNewUser(userDto);
+        }
+        return userDtoOptional.get();
     }
 
 }

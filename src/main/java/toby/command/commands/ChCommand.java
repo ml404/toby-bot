@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 
 import java.util.Arrays;
@@ -19,7 +20,7 @@ public class ChCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
 

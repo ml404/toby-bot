@@ -55,7 +55,7 @@ public class BrotherServiceImpl implements IBrotherService {
 
     @Override
     @CacheEvict(value = "brothers", key = "#discordId")
-    public void deleteBrotherById(long discordId) {
+    public void deleteBrotherById(Long discordId) {
         brotherService.deleteBrotherById(discordId);
     }
 
