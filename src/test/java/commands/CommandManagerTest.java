@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CommandManagerTest {
 
@@ -55,9 +56,10 @@ public class CommandManagerTest {
                 SkipCommand.class,
                 NowPlayingCommand.class,
                 QueueCommand.class,
-                ShuffleCommand.class);
+                ShuffleCommand.class,
+                AdjustUserCommand.class);
 
-        assertEquals(availableCommands, commandManager.getCommands().stream().map(ICommand::getClass).collect(Collectors.toList()));
-        assertEquals(25, commandManager.getCommands().size());
+        assertTrue(availableCommands.containsAll(commandManager.getCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
+        assertEquals(26, commandManager.getCommands().size());
     }
 }
