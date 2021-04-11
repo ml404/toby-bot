@@ -4,7 +4,8 @@ import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
 import java.net.URI;
@@ -12,11 +13,16 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 
-public class PlayCommand implements ICommand {
-    @SuppressWarnings("ConstantConditions")
+public class PlayCommand implements IMusicCommand {
+
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
+
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         if (doMethodAndChannelValidation(ctx, channel)) return;
 
@@ -66,8 +72,8 @@ public class PlayCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Plays a song\n" +
-                String.format("Usage: `%splay <youtube link>`\n", prefix)+
-                String.format("Aliases are: %s", getAliases());
+                String.format("Usage: `%splay <youtube link>`\n", prefix) +
+                String.format("Aliases are: %s", String.join(",", getAliases()));
     }
 
     @Override

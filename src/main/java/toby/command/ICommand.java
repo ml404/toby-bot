@@ -1,10 +1,12 @@
 package toby.command;
 
+import toby.jpa.dto.UserDto;
+
 import java.util.Arrays;
 import java.util.List;
 
 public interface ICommand {
-    void handle(CommandContext ctx, String prefix);
+    void handle(CommandContext ctx, String prefix, UserDto requestingUserDto);
 
     String getName();
 

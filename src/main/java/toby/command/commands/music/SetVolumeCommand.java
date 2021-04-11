@@ -9,27 +9,31 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
 import toby.emote.Emotes;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class SetVolumeCommand implements ICommand {
+public class SetVolumeCommand implements IMusicCommand {
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
-
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
         final Member member = doChannelAndArgsValidation(ctx, prefix, channel, selfVoiceState);
         if (member == null) return;
-
         setNewVolume(ctx, prefix, channel, member);
     }
+
 
     private void setNewVolume(CommandContext ctx, String prefix, TextChannel channel, Member member) {
         Guild guild = ctx.getGuild();
@@ -99,4 +103,5 @@ public class SetVolumeCommand implements ICommand {
     public List<String> getAliases() {
         return Arrays.asList("volume", "vol");
     }
+
 }

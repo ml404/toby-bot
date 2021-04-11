@@ -16,6 +16,7 @@ import toby.BotMain;
 import toby.emote.Emotes;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
+import toby.jpa.service.IUserService;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
@@ -27,14 +28,17 @@ public class Handler extends ListenerAdapter {
     private final AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
     private IConfigService configService;
     private IBrotherService brotherService;
+    private IUserService userService;
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
     private final CommandManager manager;
 
     @Autowired
-    public Handler(IConfigService configService, IBrotherService brotherService) {
-        manager = new CommandManager(configService, brotherService);
+    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService) {
+
+        manager = new CommandManager(configService, brotherService, userService);
         this.configService = configService;
         this.brotherService = brotherService;
+        this.userService = userService;
     }
 
 

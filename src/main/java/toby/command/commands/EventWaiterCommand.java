@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEve
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
+import toby.jpa.dto.UserDto;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +20,7 @@ public class EventWaiterCommand implements ICommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         channel.sendMessage("React with")
                 .append(Emotes.TOBY)

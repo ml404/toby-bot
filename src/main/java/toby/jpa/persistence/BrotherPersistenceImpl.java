@@ -67,10 +67,11 @@ public class BrotherPersistenceImpl implements IBrotherPersistence {
     @Override
     public void deleteBrother(BrotherDto brotherDto) {
         em.remove(brotherDto);
+        em.flush();
     }
 
     @Override
-    public void deleteBrotherById(long discordId) {
+    public void deleteBrotherById(Long discordId) {
         Query q = em.createNamedQuery("BrotherDto.deleteById");
         q.setParameter("discordId", discordId);
         q.executeUpdate();

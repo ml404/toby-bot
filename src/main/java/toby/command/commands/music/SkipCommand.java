@@ -3,13 +3,13 @@ package toby.command.commands.music;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
@@ -17,10 +17,10 @@ import java.util.List;
 
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
-public class SkipCommand implements ICommand {
+public class SkipCommand implements IMusicCommand {
 
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
@@ -39,12 +39,12 @@ public class SkipCommand implements ICommand {
         String skipValue = (!args.isEmpty()) ? args.get(0) : "";
         int tracksToSkip = !skipValue.isEmpty() ? Integer.parseInt(skipValue) : 1;
 
-        if(tracksToSkip < 0){
+        if (tracksToSkip < 0) {
             channel.sendMessage("You're not too bright, but thanks for trying").queue();
-            return ;
+            return;
         }
 
-        if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+        if (PlayerManager.getInstance().isCurrentlyStoppable() || requestingUserDto.isSuperUser()) {
             for (int j = 0; j < tracksToSkip; j++) {
                 musicManager.getScheduler().nextTrack();
             }
@@ -98,5 +98,6 @@ public class SkipCommand implements ICommand {
                 String.format("e.g. `%sskip 5` \n", prefix) +
                 "skips one by default";
     }
+
 }
 

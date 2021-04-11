@@ -1,9 +1,12 @@
-package toby.command.commands;
+package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.dto.ConfigDto;
+import toby.jpa.dto.UserDto;
+import toby.jpa.service.IConfigService;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,15 +14,19 @@ import java.util.stream.Collectors;
 
 public class MoveCommand implements ICommand {
 
-    public static Long badOpinionChannel = 756262044491055165L;
+    private final IConfigService configService;
+
+    public MoveCommand(IConfigService configService) {
+        this.configService = configService;
+    }
+
 
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();
         final List<String> args = ctx.getArgs();
-        VoiceChannel voiceChannel;
         Guild guild = ctx.getGuild();
 
         if (message.getMentionedMembers().isEmpty()) {
@@ -27,16 +34,18 @@ public class MoveCommand implements ICommand {
             return;
         }
 
-        Optional<VoiceChannel> voiceChannelOptional;
-        try {
-            voiceChannelOptional = args.stream()
-                    .filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))
-                    .map(guild::getVoiceChannelById)
-                    .collect(Collectors.toList()).stream().findFirst();
-        } catch (Error e) {
-            return;
+        List<String> prefixlessList = args.stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
+        String channelName = String.join(" ", prefixlessList);
+        ConfigDto channelConfig = configService.getConfigByName("DEFAULT_MOVE_CHANNEL", guild.getId());
+
+        Optional<VoiceChannel> voiceChannelOptional = guild.getVoiceChannelsByName(channelName, true).stream().findFirst();
+        VoiceChannel voiceChannel = voiceChannelOptional.orElseGet(() -> {
+            Optional<VoiceChannel> first = guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
+            return first.orElse(null);
+        });
+        if (voiceChannel == null) {
+            channel.sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue();
         }
-        voiceChannel = voiceChannelOptional.orElseGet(() -> guild.getVoiceChannelById(badOpinionChannel));
         message.getMentionedMembers().forEach(target -> {
 
             if (doChannelValidation(ctx, channel, member, target)) return;
@@ -50,7 +59,7 @@ public class MoveCommand implements ICommand {
     }
 
     private boolean doChannelValidation(CommandContext ctx, TextChannel channel, Member member, Member target) {
-        if(!target.getVoiceState().inVoiceChannel()){
+        if (!target.getVoiceState().inVoiceChannel()) {
             channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue();
             return true;
         }
@@ -76,7 +85,7 @@ public class MoveCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "move a member into a voice channel.\n" +
-                String.format("Usage: `%smove <@user> channelId (right click voice channel and copy id)`\n", prefix) +
-                "e.g. !move @username 756262044491055165";
+                String.format("Usage: `%smove <@user> channel name`\n", prefix) +
+                "e.g. !move @username i have a bad opinion";
     }
 }

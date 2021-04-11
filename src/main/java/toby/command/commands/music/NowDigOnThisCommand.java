@@ -1,12 +1,12 @@
 package toby.command.commands.music;
 
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
@@ -15,27 +15,28 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 
-public class NowDigOnThisCommand implements ICommand {
-    @SuppressWarnings("ConstantConditions")
+public class NowDigOnThisCommand implements IMusicCommand {
+
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
 
-        final Member member = doChannelValidation(ctx, prefix, channel);
-        if (member == null) return;
+        if (!requestingUserDto.hasDigPermission()) {
+            final Member member = doChannelValidation(ctx, prefix, channel);
+            if (member == null) return;
 
-        String link = String.join(" ", ctx.getArgs());
+            String link = String.join(" ", ctx.getArgs());
 
-        if (!member.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            channel.sendMessage(String.format("I'm gonna put some dirt in your eye %s", member.getEffectiveName())).queue();
-            return;
+            if (!requestingUserDto.hasDigPermission()) {
+                channel.sendMessage(String.format("I'm gonna put some dirt in your eye %s", member.getEffectiveName())).queue();
+                return;
+            }
+            if (link.contains("youtube") && !isUrl(link)) {
+                link = "ytsearch:" + link;
+            }
+
+            PlayerManager.getInstance().loadAndPlay(channel, link, false);
         }
-        if (link.contains("youtube") && !isUrl(link)) {
-            link = "ytsearch:" + link;
-        }
-
-        PlayerManager.getInstance().loadAndPlay(channel, link, false);
-
     }
 
     @Nullable
@@ -68,6 +69,16 @@ public class NowDigOnThisCommand implements ICommand {
         return member;
     }
 
+    public static void sendDeniedStoppableMessage(TextChannel channel, GuildMusicManager musicManager) {
+        if (musicManager.getScheduler().getQueue().size() > 1) {
+            channel.sendMessage("Our daddy taught us not to be ashamed of our playlists").queue();
+        } else {
+            long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
+            String songDuration = QueueCommand.formatTime(duration);
+            channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
+        }
+    }
+
     @Override
     public String getName() {
         return "nowdigonthis";
@@ -76,8 +87,8 @@ public class NowDigOnThisCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Plays a song\n" +
-                String.format("Usage: `%snowdigonthis <youtube link>` \n", prefix)+
-                String.format("Aliases are: %s",String.join(",", getAliases()));
+                String.format("Usage: `%snowdigonthis <youtube link>` \n", prefix) +
+                String.format("Aliases are: %s", String.join(",", getAliases()));
     }
 
     @Override
@@ -91,16 +102,6 @@ public class NowDigOnThisCommand implements ICommand {
             return true;
         } catch (URISyntaxException e) {
             return false;
-        }
-    }
-
-    public static void sendDeniedStoppableMessage(TextChannel channel, GuildMusicManager musicManager) {
-        if (musicManager.getScheduler().getQueue().size() > 1) {
-            channel.sendMessage("Our daddy taught us not to be ashamed of our playlists").queue();
-        } else {
-            long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
-            String songDuration = QueueCommand.formatTime(duration);
-            channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue();
         }
     }
 }

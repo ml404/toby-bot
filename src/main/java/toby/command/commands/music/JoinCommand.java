@@ -8,14 +8,21 @@ import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.command.IMusicCommand;
+import toby.jpa.dto.UserDto;
 
-public class JoinCommand implements ICommand {
+public class JoinCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
+
+        if (!requestingUserDto.hasMusicPermission()) {
+            sendErrorMessage(ctx, channel);
+            return;
+        }
 
         final GuildVoiceState memberVoiceState = doChannelValidation(ctx, channel, selfVoiceState);
         if (memberVoiceState == null) return;
@@ -23,11 +30,12 @@ public class JoinCommand implements ICommand {
         final AudioManager audioManager = ctx.getGuild().getAudioManager();
         final VoiceChannel memberChannel = memberVoiceState.getChannel();
 
-        if(self.hasPermission(Permission.VOICE_CONNECT)){
-        audioManager.openAudioConnection(memberChannel);
-        channel.sendMessageFormat("Connecting to `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
+        if (self.hasPermission(Permission.VOICE_CONNECT)) {
+            audioManager.openAudioConnection(memberChannel);
+            channel.sendMessageFormat("Connecting to `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
         }
     }
+
 
     @Nullable
     private GuildVoiceState doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState) {

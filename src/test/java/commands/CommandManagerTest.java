@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import toby.command.ICommand;
 import toby.command.commands.*;
+import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.service.impl.BrotherServiceImpl;
 import toby.jpa.service.impl.ConfigServiceImpl;
+import toby.jpa.service.impl.UserServiceImpl;
 import toby.managers.CommandManager;
 
 import java.util.Arrays;
@@ -22,10 +24,12 @@ public class CommandManagerTest {
     @Mock
     BrotherServiceImpl brotherService;
 
+    @Mock
+    UserServiceImpl userService;
 
     @Test
     public void testCommandManagerFindsAllCommands() {
-        CommandManager commandManager = new CommandManager(configService, brotherService);
+        CommandManager commandManager = new CommandManager(configService, brotherService, userService);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
                 SetPrefixCommand.class,

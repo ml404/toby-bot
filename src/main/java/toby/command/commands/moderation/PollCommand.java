@@ -1,9 +1,10 @@
-package toby.command.commands;
+package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
+import toby.jpa.dto.UserDto;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +13,7 @@ public class PollCommand implements ICommand {
 
 
     @Override
-    public void handle(CommandContext ctx, String prefix) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         List<String> args = ctx.getArgs();
         String msg = ctx.getMessage().getContentRaw();
 
@@ -28,6 +29,7 @@ public class PollCommand implements ICommand {
 
             EmbedBuilder poll = new EmbedBuilder()
                     .setTitle(question)
+                    .setAuthor(ctx.getAuthor().getName())
                     .setFooter("Please react to this poll with the emoji that aligns with the option you want to vote for");
 
             for (int i = 0; i < pollArgs.size(); i++) {
