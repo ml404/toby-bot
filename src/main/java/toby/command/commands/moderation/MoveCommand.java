@@ -38,18 +38,16 @@ public class MoveCommand implements ICommand {
         String channelName = String.join(" ", prefixlessList);
         ConfigDto channelConfig = configService.getConfigByName("DEFAULT_MOVE_CHANNEL", guild.getId());
 
-        Optional<VoiceChannel> voiceChannelOptional = guild.getVoiceChannelsByName(channelName, true).stream().findFirst();
-        VoiceChannel voiceChannel = voiceChannelOptional.orElseGet(() -> {
-            Optional<VoiceChannel> first = guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
-            return first.orElse(null);
-        });
-        if (voiceChannel == null) {
+        Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
+        if (!voiceChannelOptional.isPresent()) {
             channel.sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue();
+            return;
         }
         message.getMentionedMembers().forEach(target -> {
 
             if (doChannelValidation(ctx, channel, member, target)) return;
 
+            VoiceChannel voiceChannel = voiceChannelOptional.get();
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
                             (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(),
