@@ -31,7 +31,7 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
     public ConfigDto getConfigByName(String name, String guildId) {
         Query q = em.createNamedQuery("ConfigDto.getValue", ConfigDto.class);
         q.setParameter("name", name);
-        q.setParameter("guildId", guildId);
+        q.setParameter("guild_id", guildId);
 
         List<ConfigDto> allInclusiveConfig = q.getResultList();
         List<ConfigDto> serverSpecificConfig = allInclusiveConfig.stream().filter(configDto -> configDto.getGuildId().equals(guildId)).collect(Collectors.toList());
@@ -51,7 +51,7 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
     @SuppressWarnings(value = "unchecked")
     public List<ConfigDto> listGuildConfig(String guildId) {
         Query q = em.createNamedQuery("ConfigDto.getGuildAll", ConfigDto.class);
-        q.setParameter("guildId", guildId);
+        q.setParameter("guild_id", guildId);
         return q.getResultList();
     }
 
