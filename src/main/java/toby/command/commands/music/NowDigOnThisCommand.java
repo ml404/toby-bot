@@ -20,23 +20,16 @@ public class NowDigOnThisCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
-
-        if (!requestingUserDto.hasDigPermission()) {
-            final Member member = doChannelValidation(ctx, prefix, channel);
+        if (requestingUserDto.hasDigPermission()) {
+            Member member = doChannelValidation(ctx, prefix, channel);
             if (member == null) return;
 
             String link = String.join(" ", ctx.getArgs());
-
-            if (!requestingUserDto.hasDigPermission()) {
-                channel.sendMessage(String.format("I'm gonna put some dirt in your eye %s", member.getEffectiveName())).queue();
-                return;
-            }
-            if (link.contains("youtube") && !isUrl(link)) {
-                link = "ytsearch:" + link;
-            }
+            if (link.contains("youtube") && !isUrl(link)) link = "ytsearch:" + link;
 
             PlayerManager.getInstance().loadAndPlay(channel, link, false);
-        }
+        } else
+            sendErrorMessage(ctx, channel);
     }
 
     @Nullable
@@ -94,6 +87,16 @@ public class NowDigOnThisCommand implements IMusicCommand {
     @Override
     public List<String> getAliases() {
         return Arrays.asList("ndot", "dig");
+    }
+
+    @Override
+    public String getErrorMessage() {
+        return "I'm gonna put some dirt in your eye %s";
+    }
+
+    @Override
+    public void sendErrorMessage(CommandContext ctx, TextChannel channel) {
+        channel.sendMessageFormat(getErrorMessage(), ctx.getEvent().getMember().getNickname()).queue();
     }
 
     private boolean isUrl(String url) {
