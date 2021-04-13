@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import toby.handler.Handler;
 import toby.jpa.service.IBrotherService;
@@ -24,14 +25,13 @@ public class BotMain {
     private static JDA jda;
 
     @Autowired
-    public BotMain(IConfigService configService, IBrotherService brotherService, IUserService userService) throws LoginException {
+    public BotMain(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) throws LoginException {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
                         .setFooter("TobyBot")
         );
 
-        EventWaiter waiter = new EventWaiter();
         String token = configService.getConfigByName("TOKEN", "all").getValue();
         JDABuilder builder = JDABuilder.createDefault(token,
                 GatewayIntent.GUILD_MEMBERS,
@@ -43,7 +43,7 @@ public class BotMain {
                 CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
         )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
-        builder.addEventListeners(new Handler(configService, brotherService, userService));
+        builder.addEventListeners(new Handler(configService, brotherService, userService, waiter));
         setJda(builder.build());
     }
 
@@ -53,6 +53,11 @@ public class BotMain {
 
     public static void setJda(JDA jda) {
         BotMain.jda = jda;
+    }
+
+    @Bean
+    public static EventWaiter eventWaiter(){
+        return new EventWaiter();
     }
 }
 
