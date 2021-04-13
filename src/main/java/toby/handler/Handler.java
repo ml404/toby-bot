@@ -1,5 +1,6 @@
 package toby.handler;
 
+import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import net.dv8tion.jda.api.JDA;
@@ -41,9 +42,9 @@ public class Handler extends ListenerAdapter {
     private final CommandManager manager;
 
     @Autowired
-    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService) {
+    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) {
 
-        manager = new CommandManager(configService, brotherService, userService);
+        manager = new CommandManager(configService, brotherService, userService, waiter);
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;

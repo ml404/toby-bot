@@ -1,5 +1,6 @@
 package toby.managers;
 
+import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ public class CommandManager {
     private final List<ICommand> commands = new ArrayList<>();
 
     @Autowired
-    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService) {
+    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) {
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
@@ -69,7 +70,7 @@ public class CommandManager {
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
 
-        //addCommand(new EventWaiterCommand(waiter));
+        addCommand(new EventWaiterCommand(waiter));
     }
 
     private void addCommand(ICommand cmd) {

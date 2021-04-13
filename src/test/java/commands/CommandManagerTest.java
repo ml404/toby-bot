@@ -1,5 +1,6 @@
 package commands;
 
+import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import toby.command.ICommand;
@@ -28,9 +29,12 @@ public class CommandManagerTest {
     @Mock
     UserServiceImpl userService;
 
+    @Mock
+    EventWaiter waiter;
+
     @Test
     public void testCommandManagerFindsAllCommands() {
-        CommandManager commandManager = new CommandManager(configService, brotherService, userService);
+        CommandManager commandManager = new CommandManager(configService, brotherService, userService, waiter);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
                 SetPrefixCommand.class,
@@ -57,9 +61,10 @@ public class CommandManagerTest {
                 NowPlayingCommand.class,
                 QueueCommand.class,
                 ShuffleCommand.class,
-                AdjustUserCommand.class);
+                AdjustUserCommand.class,
+                EventWaiterCommand.class);
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(26, commandManager.getAllCommands().size());
+        assertEquals(27, commandManager.getAllCommands().size());
     }
 }
