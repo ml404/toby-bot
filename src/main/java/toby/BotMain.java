@@ -43,7 +43,7 @@ public class BotMain {
                 CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
         )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
-        builder.addEventListeners(new Handler(configService, brotherService, userService, waiter));
+        builder.addEventListeners(new Handler(configService, brotherService, userService, waiter), waiter);
         setJda(builder.build());
     }
 

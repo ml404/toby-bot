@@ -1,13 +1,13 @@
 package toby.command.commands.misc;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
+import net.dv8tion.jda.api.entities.Emote;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import toby.command.CommandContext;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class EventWaiterCommand implements IMiscCommand {
@@ -21,10 +21,11 @@ public class EventWaiterCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         final TextChannel channel = ctx.getChannel();
-        channel.sendMessage("React with")
-                .append(Emotes.TOBY)
+        Emote emoteById = ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY);
+        channel.sendMessageFormat("React with %s", emoteById)
                 .queue(message -> {
-                    message.addReaction(Objects.requireNonNull(ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY))).queue();
+                    message.addReaction(emoteById).queue();
+
                     this.waiter.waitForEvent(
                             GuildMessageReactionAddEvent.class,
                             e -> e.getMessageIdLong() == message.getIdLong() && !e.getUser().isBot(),
