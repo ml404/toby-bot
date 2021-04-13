@@ -2,11 +2,14 @@ package toby.handler;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.managers.AudioManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +20,14 @@ import toby.emote.Emotes;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
 import toby.jpa.service.IUserService;
+import toby.lavaplayer.GuildMusicManager;
+import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Configurable
@@ -90,8 +98,9 @@ public class Handler extends ListenerAdapter {
             name = member.getEffectiveName();       //This will either use the Member's nickname if they have one,
         }                                           // otherwise it will default to their username. (User#getName())
 
-        Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
-        Emote jessEmote = guild.getJDA().getEmoteById(Emotes.JESS);
+        JDA jda = guild.getJDA();
+        Emote tobyEmote = jda.getEmoteById(Emotes.TOBY);
+        Emote jessEmote = jda.getEmoteById(Emotes.JESS);
 
         if (message.getContentRaw().toLowerCase().contains("toby") || message.getContentRaw().toLowerCase().contains("tobs")) {
             message.addReaction(tobyEmote).queue();
@@ -122,15 +131,20 @@ public class Handler extends ListenerAdapter {
 
     }
 
-//    Will need this for auto leaving voice channel, but for now comment out
-//    @Override
-//    public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
-//
-//        // Creates a variable equal to the channel that the user is in.
-//        VoiceChannel connectedChannel = event.getMember().getVoiceState().getChannel();
-//        if(connectedChannel.getMembers().isEmpty()) {
-//            event.getGuild().getAudioManager().closeAudioConnection();
-//        }
-//    }
+    //    Need this for auto leaving voice channel when it becomes empty
+    @Override
+    public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
+        Guild guild = event.getGuild();
+        AudioManager audioManager = guild.getAudioManager();
+        List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembers.isEmpty()) {
+            GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
+            musicManager.getScheduler().setLooping(false);
+            musicManager.getScheduler().getQueue().clear();
+            musicManager.getAudioPlayer().stopTrack();
+            musicManager.getAudioPlayer().setVolume(100);
+            audioManager.closeAudioConnection();
+        }
+    }
 }
 
