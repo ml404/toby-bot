@@ -1,17 +1,16 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class EventWaiterCommand implements ICommand {
+public class EventWaiterCommand implements IMiscCommand {
 
     private final EventWaiter waiter;
 

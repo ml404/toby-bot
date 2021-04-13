@@ -1,15 +1,14 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class RollCommand implements ICommand {
+public class RollCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         TextChannel channel = ctx.getChannel();

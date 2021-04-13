@@ -9,7 +9,6 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.IMusicCommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;

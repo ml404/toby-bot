@@ -1,8 +1,7 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 
@@ -12,7 +11,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 
-public class HelloThereCommand implements ICommand {
+public class HelloThereCommand implements IMiscCommand {
 
     private final IConfigService configService;
 

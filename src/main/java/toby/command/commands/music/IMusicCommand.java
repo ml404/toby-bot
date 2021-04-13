@@ -1,6 +1,8 @@
-package toby.command;
+package toby.command.commands.music;
 
 import net.dv8tion.jda.api.entities.TextChannel;
+import toby.command.CommandContext;
+import toby.command.ICommand;
 
 public interface IMusicCommand extends ICommand {
 

@@ -8,7 +8,6 @@ import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.IMusicCommand;
 import toby.jpa.dto.UserDto;
 
 public class JoinCommand implements IMusicCommand {

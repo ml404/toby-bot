@@ -8,7 +8,6 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
-import toby.command.IMusicCommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 import toby.lavaplayer.TrackScheduler;

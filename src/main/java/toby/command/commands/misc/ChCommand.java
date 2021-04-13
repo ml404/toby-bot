@@ -1,23 +1,15 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
-import toby.jpa.service.IConfigService;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ChCommand implements ICommand {
-
-    private final IConfigService configService;
-
-    public ChCommand(IConfigService configService) {
-        this.configService = configService;
-    }
+public class ChCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
