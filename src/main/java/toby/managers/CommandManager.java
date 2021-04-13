@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.command.commands.*;
+import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.dto.UserDto;
@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @Configurable
@@ -37,12 +38,12 @@ public class CommandManager {
         this.userService = userService;
 
         //misc commands
-        addCommand(new HelpCommand(this, configService));
+        addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
-        addCommand(new ChCommand(configService));
+        addCommand(new ChCommand());
 
         //moderation commands
         addCommand(new SetPrefixCommand(configService));
@@ -81,8 +82,20 @@ public class CommandManager {
         commands.add(cmd);
     }
 
-    public List<ICommand> getCommands() {
+    public List<ICommand> getAllCommands() {
         return commands;
+    }
+
+    public List<ICommand> getMusicCommands(){
+        return commands.stream().filter(iCommand -> iCommand instanceof IMusicCommand).collect(Collectors.toList());
+    }
+
+    public List<ICommand> getModerationCommands(){
+        return commands.stream().filter(iCommand -> iCommand instanceof IModerationCommand).collect(Collectors.toList());
+    }
+
+    public List<ICommand> getMiscCommands(){
+        return commands.stream().filter(iCommand -> iCommand instanceof IMiscCommand).collect(Collectors.toList());
     }
 
     @Nullable

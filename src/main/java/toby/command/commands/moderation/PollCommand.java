@@ -2,14 +2,13 @@ package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class PollCommand implements ICommand {
+public class PollCommand implements IModerationCommand {
 
 
     @Override
@@ -55,6 +54,6 @@ public class PollCommand implements ICommand {
     public String getHelp(String prefix) {
         return "Start a poll for every user in the server who has read permission in the channel you're posting to\n" +
                 String.format("`%spoll question title? (this is optional, don't have to have a question title) and then each option separated by a comma(,)`\n", prefix) +
-                String.format("e.g. %spoll question title? option1,option2", prefix);
+                String.format("e.g. `%spoll question title? option1,option2`", prefix);
     }
 }

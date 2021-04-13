@@ -1,4 +1,4 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.Gson;
@@ -8,14 +8,13 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.dto.web.RedditAPIDto;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
 import java.util.Random;
 
-public class MemeCommand implements ICommand {
+public class MemeCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
 

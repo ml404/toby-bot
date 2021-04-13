@@ -3,7 +3,7 @@ package commands;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import toby.command.ICommand;
-import toby.command.commands.*;
+import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.service.impl.BrotherServiceImpl;
@@ -59,7 +59,7 @@ public class CommandManagerTest {
                 ShuffleCommand.class,
                 AdjustUserCommand.class);
 
-        assertTrue(availableCommands.containsAll(commandManager.getCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(26, commandManager.getCommands().size());
+        assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
+        assertEquals(26, commandManager.getAllCommands().size());
     }
 }

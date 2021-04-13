@@ -1,4 +1,4 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.Emote;
 import net.dv8tion.jda.api.entities.Guild;
@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.dto.UserDto;
@@ -16,7 +15,7 @@ import toby.jpa.service.IBrotherService;
 
 @Service
 @Configurable
-public class BrotherCommand implements ICommand {
+public class BrotherCommand implements IMiscCommand {
 
     private final IBrotherService brotherService;
     public static Long tobyId = 320919876883447808L;

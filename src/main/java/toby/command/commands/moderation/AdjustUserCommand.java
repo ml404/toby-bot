@@ -5,7 +5,6 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
@@ -14,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class AdjustUserCommand implements ICommand {
+public class AdjustUserCommand implements IModerationCommand {
 
     private final IUserService userService;
 

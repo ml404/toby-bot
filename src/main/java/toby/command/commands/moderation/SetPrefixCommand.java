@@ -3,14 +3,13 @@ package toby.command.commands.moderation;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 
 import java.util.List;
 
-public class SetPrefixCommand implements ICommand {
+public class SetPrefixCommand implements IModerationCommand {
 
     private final IConfigService configService;
 

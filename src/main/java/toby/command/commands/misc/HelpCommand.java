@@ -1,23 +1,20 @@
-package toby.command.commands;
+package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
-import toby.jpa.service.IConfigService;
 import toby.managers.CommandManager;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class HelpCommand implements ICommand {
+public class HelpCommand implements IMiscCommand {
 
     private final CommandManager manager;
-    private final IConfigService configService;
 
-    public HelpCommand(CommandManager manager, IConfigService configService) {
+    public HelpCommand(CommandManager manager) {
         this.manager = manager;
-        this.configService = configService;
     }
 
     @Override
@@ -29,12 +26,26 @@ public class HelpCommand implements ICommand {
         if (args.isEmpty()) {
             StringBuilder builder = new StringBuilder();
 
-            builder.append("List of commands\n");
-            manager.getCommands().stream().map(ICommand::getName).forEach(
-                    (it) -> {
-                        builder.append('`').append(prefix).append(it).append("`\n");
+            builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", prefix));
+            builder.append("Music Commands:\n");
+            manager.getMusicCommands().stream().map(ICommand::getName).forEach(
+                    (commandName) -> {
+                        builder.append('`').append(prefix).append(commandName).append("`\n");
                     }
             );
+            builder.append("Miscellaneous Commands:\n");
+            manager.getMiscCommands().stream().map(ICommand::getName).forEach(
+                    (commandName) -> {
+                        builder.append('`').append(prefix).append(commandName).append("`\n");
+                    }
+            );
+            builder.append("Moderation Commands:\n");
+            manager.getModerationCommands().stream().map(ICommand::getName).forEach(
+                    (commandName) -> {
+                        builder.append('`').append(prefix).append(commandName).append("`\n");
+                    }
+            );
+
 
             channel.sendMessage(builder.toString()).queue();
             return;
@@ -59,8 +70,8 @@ public class HelpCommand implements ICommand {
     @Override
     public String getHelp(String prefix) {
         return "Shows the list with commands in the bot\n" +
-                String.format("Usage: `%shelp [command]`\n", prefix) +
-                String.format("Aliases are: %s",String.join(",", getAliases()));
+                String.format("Usage: `%shelp commandName`\n", prefix) +
+                String.format("Aliases are: %s", String.join(",", getAliases()));
     }
 
     @Override

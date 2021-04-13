@@ -3,7 +3,6 @@ package toby.command.commands.moderation;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -12,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class MoveCommand implements ICommand {
+public class MoveCommand implements IModerationCommand {
 
     private final IConfigService configService;
 
@@ -84,6 +83,6 @@ public class MoveCommand implements ICommand {
     public String getHelp(String prefix) {
         return "move a member into a voice channel.\n" +
                 String.format("Usage: `%smove <@user> channel name`\n", prefix) +
-                "e.g. !move @username i have a bad opinion";
+                "e.g. `!move @username i have a bad opinion`";
     }
 }
