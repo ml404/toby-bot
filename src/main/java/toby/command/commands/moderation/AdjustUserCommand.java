@@ -39,7 +39,7 @@ public class AdjustUserCommand implements IModerationCommand {
                 boolean isSameGuild = requestingUserDto.getGuildId().equals(targetUserDto.getGuildId());
                 boolean requesterCanAdjustPermissions = userAdjustmentValidation(requestingUserDto, targetUserDto) || member.isOwner();
                 if (requesterCanAdjustPermissions && isSameGuild) {
-                    validateArgumentsAndUpdateUser(targetUserDto, args, member.isOwner());
+                    validateArgumentsAndUpdateUser(channel, targetUserDto, args, member.isOwner());
                     channel.sendMessageFormat("Updated user %s's permissions", targetMember.getNickname()).queue();
                 } else
                     channel.sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue();
@@ -52,12 +52,16 @@ public class AdjustUserCommand implements IModerationCommand {
 
     }
 
-    private void validateArgumentsAndUpdateUser(UserDto targetUserDto, List<String> args, Boolean isOwner) {
+    private void validateArgumentsAndUpdateUser(TextChannel channel, UserDto targetUserDto, List<String> args, Boolean isOwner) {
         List<String> valuesToAdjust = args.stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
         Map<String, Boolean> permissionMap = valuesToAdjust.stream()
                 .map(s -> s.split("=", 2))
-                .filter(strings -> UserDto.Permissions.isValidEnum(strings[0]) && (strings[1] != null && (strings[1].equalsIgnoreCase("false") || strings[1].equalsIgnoreCase("true"))))
+                .filter(strings -> UserDto.Permissions.isValidEnum(strings[0].toUpperCase()) && (strings[1] != null && (strings[1].equalsIgnoreCase("false") || strings[1].equalsIgnoreCase("true"))))
                 .collect(Collectors.toMap(s -> s[0], s -> Boolean.valueOf(s[1])));
+
+        if(permissionMap.isEmpty()){
+            channel.sendMessage("You did not mention a valid permission to update").queue();
+        }
 
         if (permissionMap.containsKey(UserDto.Permissions.MUSIC.name()))
             targetUserDto.setMusicPermission(permissionMap.get(UserDto.Permissions.MUSIC.name()));
@@ -87,7 +91,7 @@ public class AdjustUserCommand implements IModerationCommand {
             return null;
         }
 
-        if (args.isEmpty()) {
+        if (!args.stream().anyMatch(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))) {
             channel.sendMessage(getHelp(prefix)).queue();
             return null;
         }
