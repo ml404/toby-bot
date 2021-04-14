@@ -27,20 +27,27 @@ public class HelpCommand implements IMiscCommand {
             StringBuilder builder = new StringBuilder();
 
             builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", prefix));
-            builder.append("Music Commands:\n");
+            builder.append("**Music Commands**:\n");
             manager.getMusicCommands().stream().map(ICommand::getName).forEach(
                     (commandName) -> {
                         builder.append('`').append(prefix).append(commandName).append("`\n");
                     }
             );
-            builder.append("Miscellaneous Commands:\n");
+            builder.append("**Miscellaneous Commands**:\n");
             manager.getMiscCommands().stream().map(ICommand::getName).forEach(
                     (commandName) -> {
                         builder.append('`').append(prefix).append(commandName).append("`\n");
                     }
             );
-            builder.append("Moderation Commands:\n");
+            builder.append("**Moderation Commands**:\n");
             manager.getModerationCommands().stream().map(ICommand::getName).forEach(
+                    (commandName) -> {
+                        builder.append('`').append(prefix).append(commandName).append("`\n");
+                    }
+            );
+
+            builder.append("**Fetch Commands**:\n");
+            manager.getFetchCommands().stream().map(ICommand::getName).forEach(
                     (commandName) -> {
                         builder.append('`').append(prefix).append(commandName).append("`\n");
                     }
@@ -71,7 +78,7 @@ public class HelpCommand implements IMiscCommand {
     public String getHelp(String prefix) {
         return "Shows the list with commands in the bot\n" +
                 String.format("Usage: `%shelp commandName`\n", prefix) +
-                String.format("Aliases are: %s", String.join(",", getAliases()));
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override

@@ -80,7 +80,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
     public String getHelp(String prefix) {
         return "Plays a song\n" +
                 String.format("Usage: `%snowdigonthis <youtube link>` \n", prefix) +
-                String.format("Aliases are: %s", String.join(",", getAliases()));
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override

@@ -110,7 +110,7 @@ public class AdjustUserCommand implements IModerationCommand {
         return "Use this command to adjust the mentioned user's permissions to use TobyBot commands for your server\n" +
                 String.format("Usage: `%sadjustuser <@user> permission1=true/false permission2=true/false`... \n", prefix) +
                 String.format("e.g. `%sadjustuser <@user> music=true/false dig=true/false memePermission=true/false superuser=true/false` \n", prefix) +
-                String.format("Aliases are: %s", String.join(",", getAliases()));
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override

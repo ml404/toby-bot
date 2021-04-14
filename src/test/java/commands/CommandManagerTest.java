@@ -4,6 +4,7 @@ import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import toby.command.ICommand;
+import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
