@@ -49,7 +49,7 @@ public class CommandManager {
         addCommand(new ChCommand());
 
         //moderation commands
-        addCommand(new SetPrefixCommand(configService));
+        addCommand(new SetConfigCommand(configService));
         addCommand(new KickCommand());
         addCommand(new MoveCommand(configService));
         addCommand(new ShhCommand());
@@ -58,8 +58,8 @@ public class CommandManager {
         addCommand(new AdjustUserCommand(userService));
 
         //music commands
-        addCommand(new JoinCommand());
-        addCommand(new LeaveCommand());
+        addCommand(new JoinCommand(configService));
+        addCommand(new LeaveCommand(configService));
         addCommand(new PlayCommand());
         addCommand(new NowDigOnThisCommand());
         addCommand(new SetVolumeCommand());

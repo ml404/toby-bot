@@ -8,9 +8,18 @@ import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
+import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
+import toby.jpa.service.IConfigService;
+import toby.lavaplayer.PlayerManager;
 
 public class JoinCommand implements IMusicCommand {
+    private final IConfigService configService;
+
+    public JoinCommand(IConfigService configService) {
+        this.configService = configService;
+    }
+
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
 
@@ -31,7 +40,11 @@ public class JoinCommand implements IMusicCommand {
 
         if (self.hasPermission(Permission.VOICE_CONNECT)) {
             audioManager.openAudioConnection(memberChannel);
-            channel.sendMessageFormat("Connecting to `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
+            String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+            ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, ctx.getGuild().getId());
+            int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
+            PlayerManager.getInstance().getMusicManager(ctx.getGuild()).getAudioPlayer().setVolume(defaultVolume);
+            channel.sendMessageFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue();
         }
     }
 

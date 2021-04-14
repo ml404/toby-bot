@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class SetVolumeCommand implements IMusicCommand {
+
     @SuppressWarnings("ConstantConditions")
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {

@@ -1,5 +1,7 @@
 package toby.jpa.dto;
 
+import org.apache.commons.lang3.EnumUtils;
+
 import javax.persistence.*;
 import java.io.Serializable;
 
@@ -31,6 +33,26 @@ public class ConfigDto implements Serializable {
     @Column(name = "guild_id")
     private String guildId;
 
+
+    public enum Configurations {
+        PREFIX("PREFIX"),
+        VOLUME("DEFAULT_VOLUME"),
+        MOVE("DEFAULT_MOVE_CHANNEL");
+
+        private final String configValue;
+
+        Configurations(String configName) {
+            this.configValue = configName;
+        }
+
+        public String getConfigValue() {
+            return this.configValue;
+        }
+
+        public static Boolean isValidEnum(String enumName) {
+            return EnumUtils.isValidEnum(ConfigDto.Configurations.class, enumName);
+        }
+    }
 
     public ConfigDto(){
     };
