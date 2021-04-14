@@ -61,6 +61,7 @@ public class AdjustUserCommand implements IModerationCommand {
 
         if(permissionMap.isEmpty()){
             channel.sendMessage("You did not mention a valid permission to update").queue();
+            return;
         }
 
         if (permissionMap.containsKey(UserDto.Permissions.MUSIC.name()))
