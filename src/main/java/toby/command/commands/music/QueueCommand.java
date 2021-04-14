@@ -77,7 +77,7 @@ public class QueueCommand implements IMusicCommand {
     @Override
     public String getHelp(String prefix) {
         return "shows the queued up songs\n" +
-                String.format("Aliases are: %s", String.join(",", getAliases()));
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override

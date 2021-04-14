@@ -1,4 +1,4 @@
-package toby.command.commands.misc;
+package toby.command.commands.fetch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.Gson;
@@ -14,7 +14,7 @@ import toby.jpa.dto.UserDto;
 import java.util.List;
 import java.util.Random;
 
-public class MemeCommand implements IMiscCommand {
+public class MemeCommand implements IFetchCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
 
@@ -60,8 +60,7 @@ public class MemeCommand implements IMiscCommand {
             } else {
                 WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
-                        channel.sendMessage(String.format("I think you typo'd the subreddit: %s, I couldn't get anything from the reddit API", subredditArg)).queue();
-                        System.out.println(json);
+                        channel.sendMessage(String.format("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg)).queue();
                         return;
                     }
                     final JsonNode parentData = json.get("data");

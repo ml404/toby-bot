@@ -67,7 +67,7 @@ public class StopCommand implements IMusicCommand {
     @Override
     public String getHelp(String prefix) {
         return "Stops the current song and clears the queue\n" +
-                String.format("Aliases are: %s", String.join(",", getAliases()));
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
 
     }
 

@@ -56,7 +56,7 @@ public class KickCommand implements IModerationCommand {
     public String getHelp(String prefix) {
         return "Kick a member off the server.\n" +
                 String.format("Usage: `%skick <@user>`", prefix)+
-                String.format("Aliases are: %s",String.join(",", getAliases()));
+                String.format("Aliases are: '%s'",String.join(",", getAliases()));
 
     }
 

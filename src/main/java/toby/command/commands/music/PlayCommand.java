@@ -72,7 +72,7 @@ public class PlayCommand implements IMusicCommand {
     public String getHelp(String prefix) {
         return "Plays a song\n" +
                 String.format("Usage: `%splay <youtube link>`\n", prefix) +
-                String.format("Aliases are: %s", String.join(",", getAliases()));
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override

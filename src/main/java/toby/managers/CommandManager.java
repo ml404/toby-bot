@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.command.commands.fetch.IFetchCommand;
+import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
@@ -97,6 +99,10 @@ public class CommandManager {
 
     public List<ICommand> getMiscCommands(){
         return commands.stream().filter(iCommand -> iCommand instanceof IMiscCommand).collect(Collectors.toList());
+    }
+
+    public List<ICommand> getFetchCommands(){
+        return commands.stream().filter(iCommand -> iCommand instanceof IFetchCommand).collect(Collectors.toList());
     }
 
     @Nullable
