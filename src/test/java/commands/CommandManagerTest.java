@@ -38,7 +38,7 @@ public class CommandManagerTest {
         CommandManager commandManager = new CommandManager(configService, brotherService, userService, waiter);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
-                SetPrefixCommand.class,
+                SetConfigCommand.class,
                 KickCommand.class,
                 MoveCommand.class,
                 RollCommand.class,

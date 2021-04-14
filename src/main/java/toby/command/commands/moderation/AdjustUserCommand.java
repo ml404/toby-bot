@@ -59,7 +59,7 @@ public class AdjustUserCommand implements IModerationCommand {
                 .filter(strings -> UserDto.Permissions.isValidEnum(strings[0].toUpperCase()) && (strings[1] != null && (strings[1].equalsIgnoreCase("false") || strings[1].equalsIgnoreCase("true"))))
                 .collect(Collectors.toMap(s -> s[0], s -> Boolean.valueOf(s[1])));
 
-        if(permissionMap.isEmpty()){
+        if (permissionMap.isEmpty()) {
             channel.sendMessage("You did not mention a valid permission to update").queue();
             return;
         }
@@ -114,7 +114,7 @@ public class AdjustUserCommand implements IModerationCommand {
     public String getHelp(String prefix) {
         return "Use this command to adjust the mentioned user's permissions to use TobyBot commands for your server\n" +
                 String.format("Usage: `%sadjustuser <@user> permission1=true/false permission2=true/false`... \n", prefix) +
-                String.format("e.g. `%sadjustuser <@user> music=true/false dig=true/false memePermission=true/false superuser=true/false` \n", prefix) +
+                String.format("Adjustable values are as follows: %s \n", Arrays.stream(UserDto.Permissions.values()).map(Enum::name).collect(Collectors.joining(","))) +
                 String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 

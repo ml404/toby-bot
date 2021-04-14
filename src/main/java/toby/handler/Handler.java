@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
+import toby.jpa.dto.ConfigDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
 import toby.jpa.service.IUserService;
@@ -137,13 +138,17 @@ public class Handler extends ListenerAdapter {
     public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
+        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+        ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        int defaultVolume = databaseConfig!=null ? Integer.parseInt(databaseConfig.getValue()) : 100;
+        audioManager.closeAudioConnection();
         List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembers.isEmpty()) {
             GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
             musicManager.getScheduler().setLooping(false);
             musicManager.getScheduler().getQueue().clear();
             musicManager.getAudioPlayer().stopTrack();
-            musicManager.getAudioPlayer().setVolume(100);
+            musicManager.getAudioPlayer().setVolume(defaultVolume);
             audioManager.closeAudioConnection();
         }
     }

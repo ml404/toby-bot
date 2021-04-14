@@ -27,7 +27,6 @@ public class PlayerManager {
     public PlayerManager() {
         this.musicManagers = new HashMap<>();
         this.audioPlayerManager = new DefaultAudioPlayerManager();
-
         audioPlayerManager.registerSourceManager(new YoutubeAudioSourceManager());
         audioPlayerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
         audioPlayerManager.registerSourceManager(new HttpAudioSourceManager());
