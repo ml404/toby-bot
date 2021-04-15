@@ -6,6 +6,7 @@ import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -133,15 +134,29 @@ public class Handler extends ListenerAdapter {
 
     }
 
-    //    Need this for auto leaving voice channel when it becomes empty
+    //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server
+    @Override
+    public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
+        Guild guild = event.getGuild();
+        AudioManager audioManager = guild.getAudioManager();
+        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+        ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
+        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
+            audioManager.openAudioConnection(event.getChannelJoined());
+        }
+    }
+
+    //Auto leaving voice channel when it becomes empty
     @Override
     public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
-        int defaultVolume = databaseConfig!=null ? Integer.parseInt(databaseConfig.getValue()) : 100;
-        audioManager.closeAudioConnection();
+        int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembers.isEmpty()) {
             GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
