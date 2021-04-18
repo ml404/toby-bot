@@ -1,8 +1,11 @@
 package commands;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import toby.command.ICommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
@@ -32,6 +35,19 @@ public class CommandManagerTest {
 
     @Mock
     EventWaiter waiter;
+
+
+    private AutoCloseable closeable;
+
+    @BeforeEach
+    public void openMocks() {
+        closeable = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    public void releaseMocks() throws Exception {
+        closeable.close();
+    }
 
     @Test
     public void testCommandManagerFindsAllCommands() {

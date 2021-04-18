@@ -12,7 +12,6 @@ public class RollCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
         TextChannel channel = ctx.getChannel();
-        String msg = ctx.getMessage().getContentDisplay();
         List<String> args = ctx.getArgs();
 
         Random rand = ThreadLocalRandom.current();
@@ -22,7 +21,7 @@ public class RollCommand implements IMiscCommand {
         channel.sendMessage("Your roll: " + roll)
                 .flatMap(
                         (v) -> roll <= (diceRoll / 2),
-                        // Send another message if the roll was bad (less than 3)
+                        // Send another message if the roll was bad (less than half top value)
                         sentMessage -> channel.sendMessage("...shit be cool\n")
                 )
                 .queue();
