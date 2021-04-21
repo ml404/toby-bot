@@ -12,6 +12,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
+import toby.command.ICommand;
 
 import java.util.HashMap;
 import java.util.List;
@@ -67,7 +68,7 @@ public class PlayerManager {
                         .append("` by `")
                         .append(track.getInfo().author)
                         .append('`')
-                        .queue();
+                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
             @Override
@@ -81,7 +82,7 @@ public class PlayerManager {
                         .append("` tracks from playlist `")
                         .append(playlist.getName())
                         .append('`')
-                        .queue();
+                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
                 for (final AudioTrack track : tracks) {
                     scheduler.queue(track);
