@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -16,20 +17,20 @@ import java.util.List;
 
 public class NowPlayingCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (requestingUserDto.hasMusicPermission()) {
-            if (doChannelValidation(ctx, channel, selfVoiceState)) return;
+            if (doChannelValidation(ctx, channel, selfVoiceState, deleteDelay)) return;
 
             final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
             final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
             final AudioTrack track = audioPlayer.getPlayingTrack();
 
             if (track == null) {
-                channel.sendMessage("There is no track playing currently").queue();
+                channel.sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
 
@@ -42,17 +43,17 @@ public class NowPlayingCommand implements IMusicCommand {
                 String songPosition = QueueCommand.formatTime(position);
                 String songDuration = QueueCommand.formatTime(duration);
                 String nowPlaying = String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) ", info.title, info.author, songPosition, songDuration, info.uri);
-                channel.sendMessage(nowPlaying).queue();
+                channel.sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
                 String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
-                channel.sendMessage(nowPlaying).queue();
+                channel.sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         }
     }
 
-    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState) {
+    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState, Integer deleteDelay) {
         if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue();
+            channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
 
@@ -60,12 +61,12 @@ public class NowPlayingCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
+            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
 
         if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
+            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
         return false;

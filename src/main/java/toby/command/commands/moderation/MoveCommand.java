@@ -21,7 +21,7 @@ public class MoveCommand implements IModerationCommand {
 
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();

@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -23,26 +24,26 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
 
         List<String> args = ctx.getArgs();
         TextChannel channel = ctx.getChannel();
         final Member member = ctx.getMember();
 
         if (!member.isOwner()) {
-            channel.sendMessage("This is currently reserved for the owner of the server only, this may change in future").queue();
+            channel.sendMessage("This is currently reserved for the owner of the server only, this may change in future").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         if (args.isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue();
+            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        validateArgumentsAndUpdateConfigs(ctx, channel, prefix, args);
+        validateArgumentsAndUpdateConfigs(ctx, channel, prefix, args, deleteDelay);
     }
 
 
-    private void validateArgumentsAndUpdateConfigs(CommandContext ctx, TextChannel channel, String prefix, List<String> args) {
+    private void validateArgumentsAndUpdateConfigs(CommandContext ctx, TextChannel channel, String prefix, List<String> args, Integer deleteDelay) {
         String valuesToAdjust = args.stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.joining(" "));
 
 
@@ -52,7 +53,7 @@ public class SetConfigCommand implements IModerationCommand {
                 .collect(Collectors.toMap(s -> s[0].toUpperCase().trim(), s -> s[1].trim()));
 
         if (configMap.isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue();
+            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -69,7 +70,7 @@ public class SetConfigCommand implements IModerationCommand {
                 } else {
                     configService.createNewConfig(newConfigDto);
                 }
-                channel.sendMessageFormat("Set prefix to '%s'", newPrefix).queue();
+                channel.sendMessageFormat("Set prefix to '%s'", newPrefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
             }
         }
@@ -85,7 +86,7 @@ public class SetConfigCommand implements IModerationCommand {
                 } else {
                     configService.createNewConfig(newConfigDto);
                 }
-                channel.sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue();
+                channel.sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
             }
         }
@@ -100,9 +101,26 @@ public class SetConfigCommand implements IModerationCommand {
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            channel.sendMessageFormat("Set default volume to '%s'", newDefaultVolume).queue();
+            channel.sendMessageFormat("Set default volume to '%s'", newDefaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
 
+        }
+
+        if (configMap.containsKey(ConfigDto.Configurations.DELETE_DELAY.name())) {
+            String newDefaultDelay = configMap.get(ConfigDto.Configurations.DELETE_DELAY.name());
+            if(!newDefaultDelay.matches("\\d+")){
+                channel.sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                return;
+            }
+            String deletePropertyName = ConfigDto.Configurations.DELETE_DELAY.getConfigValue();
+            ConfigDto databaseConfig = configService.getConfigByName(deletePropertyName, ctx.getGuild().getId());
+            ConfigDto newConfigDto = new ConfigDto(deletePropertyName, newDefaultDelay, ctx.getGuild().getId());
+            if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
+                configService.updateConfig(newConfigDto);
+            } else {
+                configService.createNewConfig(newConfigDto);
+            }
+            channel.sendMessageFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 

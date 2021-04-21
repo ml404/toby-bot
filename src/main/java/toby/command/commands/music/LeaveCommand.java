@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -20,18 +21,18 @@ public class LeaveCommand implements IMusicCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel);
+            sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
 
         if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I'm not in a voice channel, somebody shoot this guy").queue();
+            channel.sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -53,9 +54,9 @@ public class LeaveCommand implements IMusicCommand {
             musicManager.getAudioPlayer().stopTrack();
             musicManager.getAudioPlayer().setVolume(defaultVolume);
             audioManager.closeAudioConnection();
-            channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue();
+            channel.sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
-            sendDeniedStoppableMessage(channel, musicManager);
+            sendDeniedStoppableMessage(channel, musicManager, deleteDelay);
         }
     }
 

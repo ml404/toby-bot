@@ -13,6 +13,7 @@ import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
+import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
@@ -119,7 +120,9 @@ public class CommandManager {
     }
 
     public void handle(GuildMessageReceivedEvent event) {
-        String prefix = configService.getConfigByName("PREFIX", event.getGuild().getId()).getValue();
+        String prefix = configService.getConfigByName(ConfigDto.Configurations.PREFIX.getConfigValue(), event.getGuild().getId()).getValue();
+        Integer deleteDelay = Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId()).getValue());
+
         String[] split = event.getMessage().getContentRaw()
                 .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");
@@ -133,7 +136,7 @@ public class CommandManager {
             List<String> args = Arrays.asList(split).subList(1, split.length);
 
             CommandContext ctx = new CommandContext(event, args);
-            cmd.handle(ctx, prefix, requestingUserDto);
+            cmd.handle(ctx, prefix, requestingUserDto, deleteDelay);
         }
     }
 

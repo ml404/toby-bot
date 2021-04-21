@@ -10,7 +10,7 @@ import toby.jpa.dto.UserDto;
 
 public class TalkCommand implements IModerationCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
 
         final Member member = ctx.getMember();

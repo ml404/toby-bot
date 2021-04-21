@@ -16,7 +16,7 @@ import java.util.Random;
 
 public class MemeCommand implements IFetchCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
 
         Gson gson = new Gson();
         final TextChannel channel = ctx.getChannel();

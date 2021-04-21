@@ -1,12 +1,15 @@
 package toby.command;
 
+import net.dv8tion.jda.api.entities.Message;
 import toby.jpa.dto.UserDto;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public interface ICommand {
-    void handle(CommandContext ctx, String prefix, UserDto requestingUserDto);
+
+    void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay);
 
     String getName();
 
@@ -14,5 +17,9 @@ public interface ICommand {
 
     default List<String> getAliases() {
         return Arrays.asList();
+    }
+
+    static void deleteAfter(Message message, int delay) {
+        message.delete().queueAfter(delay, TimeUnit.SECONDS);
     }
 }
