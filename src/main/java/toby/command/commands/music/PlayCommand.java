@@ -32,7 +32,7 @@ public class PlayCommand implements IMusicCommand {
             link = "ytsearch:" + link;
         }
 
-        PlayerManager.getInstance().loadAndPlay(channel, link);
+        PlayerManager.getInstance().loadAndPlay(channel, link, deleteDelay);
     }
 
     private boolean doMethodAndChannelValidation(CommandContext ctx, TextChannel channel, Integer deleteDelay) {

@@ -27,7 +27,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
             String link = String.join(" ", ctx.getArgs());
             if (link.contains("youtube") && !isUrl(link)) link = "ytsearch:" + link;
 
-            PlayerManager.getInstance().loadAndPlay(channel, link, false);
+            PlayerManager.getInstance().loadAndPlay(channel, link, false, deleteDelay);
         } else
             sendErrorMessage(ctx, channel, deleteDelay);
     }
