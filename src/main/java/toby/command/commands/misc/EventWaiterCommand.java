@@ -19,7 +19,7 @@ public class EventWaiterCommand implements IMiscCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
         Emote emoteById = ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY);
         channel.sendMessageFormat("React with %s", emoteById)

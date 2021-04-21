@@ -5,6 +5,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -18,18 +19,18 @@ import java.util.concurrent.TimeUnit;
 public class QueueCommand implements IMusicCommand {
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
         final BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
 
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel);
+            sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
 
         if (queue.isEmpty()) {
-            channel.sendMessage("The queue is currently empty").queue();
+            channel.sendMessage("The queue is currently empty").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

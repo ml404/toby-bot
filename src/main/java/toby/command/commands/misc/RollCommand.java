@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RollCommand implements IMiscCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
 

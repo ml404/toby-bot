@@ -18,7 +18,7 @@ public class HelpCommand implements IMiscCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
 
         List<String> args = ctx.getArgs();
         TextChannel channel = ctx.getChannel();

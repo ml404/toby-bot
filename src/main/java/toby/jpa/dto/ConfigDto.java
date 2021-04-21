@@ -37,7 +37,8 @@ public class ConfigDto implements Serializable {
     public enum Configurations {
         PREFIX("PREFIX"),
         VOLUME("DEFAULT_VOLUME"),
-        MOVE("DEFAULT_MOVE_CHANNEL");
+        MOVE("DEFAULT_MOVE_CHANNEL"),
+        DELETE_DELAY("DELETE_MESSAGE_DELAY");
 
         private final String configValue;
 

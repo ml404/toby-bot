@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -19,19 +20,19 @@ import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppabl
 public class SkipCommand implements IMusicCommand {
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-        final Member member = doChannelValidation(ctx, channel, selfVoiceState);
+        final Member member = doChannelValidation(ctx, channel, selfVoiceState, deleteDelay);
         if (member == null) return;
 
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
 
         if (audioPlayer.getPlayingTrack() == null) {
-            channel.sendMessage("There is no track playing currently").queue();
+            channel.sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         List<String> args = ctx.getArgs();
@@ -39,7 +40,7 @@ public class SkipCommand implements IMusicCommand {
         int tracksToSkip = !skipValue.isEmpty() ? Integer.parseInt(skipValue) : 1;
 
         if (tracksToSkip < 0) {
-            channel.sendMessage("You're not too bright, but thanks for trying").queue();
+            channel.sendMessage("You're not too bright, but thanks for trying").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -48,17 +49,17 @@ public class SkipCommand implements IMusicCommand {
                 musicManager.getScheduler().nextTrack();
             }
             musicManager.getScheduler().setLooping(false);
-            channel.sendMessage(String.format("Skipped %d track(s)", tracksToSkip)).queue();
-            nowPlaying(channel, musicManager);
+            channel.sendMessage(String.format("Skipped %d track(s)", tracksToSkip)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            nowPlaying(channel, musicManager, deleteDelay);
         } else {
-            sendDeniedStoppableMessage(channel, musicManager);
+            sendDeniedStoppableMessage(channel, musicManager, deleteDelay);
         }
     }
 
     @Nullable
-    private Member doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState) {
+    private Member doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState, Integer deleteDelay) {
         if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue();
+            channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
@@ -66,24 +67,24 @@ public class SkipCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
+            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
         if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
+            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
         return member;
     }
 
-    private void nowPlaying(TextChannel channel, GuildMusicManager musicManager) {
+    private void nowPlaying(TextChannel channel, GuildMusicManager musicManager, Integer deleteDelay) {
         AudioTrack track = musicManager.getAudioPlayer().getPlayingTrack();
         AudioTrackInfo info = track.getInfo();
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);
         String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
-        channel.sendMessage(nowPlaying).queue();
+        channel.sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override

@@ -20,7 +20,7 @@ public class HelloThereCommand implements IMiscCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         TextChannel channel = ctx.getChannel();
         List<String> args = ctx.getArgs();
 

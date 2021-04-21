@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -16,9 +17,9 @@ import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppabl
 
 public class StopCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
-        final Member member = doChannelStateValidation(ctx, channel);
+        final Member member = doChannelStateValidation(ctx, channel, deleteDelay);
         if (member == null) return;
 
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
@@ -28,19 +29,19 @@ public class StopCommand implements IMusicCommand {
             musicManager.getScheduler().getQueue().clear();
             musicManager.getScheduler().setLooping(false);
             musicManager.getAudioPlayer().setPaused(false);
-            channel.sendMessage("The player has been stopped and the queue has been cleared").queue();
+            channel.sendMessage("The player has been stopped and the queue has been cleared").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
-            sendDeniedStoppableMessage(channel, musicManager);
+            sendDeniedStoppableMessage(channel, musicManager, deleteDelay);
         }
     }
 
     @Nullable
-    private Member doChannelStateValidation(CommandContext ctx, TextChannel channel) {
+    private Member doChannelStateValidation(CommandContext ctx, TextChannel channel, Integer deleteDelay) {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue();
+            channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
@@ -48,12 +49,12 @@ public class StopCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
+            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
         if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
+            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
         return member;

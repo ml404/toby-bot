@@ -10,8 +10,8 @@ public interface IMusicCommand extends ICommand {
         return "You do not have adequate permissions to use this command, talk to the server owner: %s";
     }
 
-    default void sendErrorMessage(CommandContext ctx, TextChannel channel) {
-        channel.sendMessageFormat(getErrorMessage(), ctx.getGuild().getOwner().getNickname()).queue();
+    default void sendErrorMessage(CommandContext ctx, TextChannel channel, Integer deleteDelay) {
+        channel.sendMessageFormat(getErrorMessage(), ctx.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 }
 

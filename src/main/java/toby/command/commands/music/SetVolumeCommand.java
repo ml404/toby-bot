@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
@@ -20,22 +21,22 @@ public class SetVolumeCommand implements IMusicCommand {
 
     @SuppressWarnings("ConstantConditions")
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto) {
+    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         final TextChannel channel = ctx.getChannel();
 
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel);
+            sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
-        final Member member = doChannelAndArgsValidation(ctx, prefix, channel, selfVoiceState);
+        final Member member = doChannelAndArgsValidation(ctx, prefix, channel, selfVoiceState, deleteDelay);
         if (member == null) return;
-        setNewVolume(ctx, prefix, channel, member);
+        setNewVolume(ctx, prefix, channel, member, deleteDelay);
     }
 
 
-    private void setNewVolume(CommandContext ctx, String prefix, TextChannel channel, Member member) {
+    private void setNewVolume(CommandContext ctx, String prefix, TextChannel channel, Member member, Integer deleteDelay) {
         Guild guild = ctx.getGuild();
         boolean validVolumeArg = ctx.getArgs().get(0).matches("\\d+");
         if (validVolumeArg) {
@@ -43,31 +44,31 @@ public class SetVolumeCommand implements IMusicCommand {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
                 if (volume < 1 || volume > 100) {
-                    channel.sendMessage(getHelp(prefix)).queue();
+                    channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
                 int oldVolume = audioPlayer.getVolume();
                 if (volume == oldVolume) {
-                    channel.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).queue();
+                    channel.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
                 audioPlayer.setVolume(volume);
-                channel.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volume).queue();
+                channel.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
-                channel.sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).queue();
+                channel.sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
-        } else channel.sendMessage(getHelp(prefix)).queue();
+        } else channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Nullable
-    private Member doChannelAndArgsValidation(CommandContext ctx, String prefix, TextChannel channel, GuildVoiceState selfVoiceState) {
+    private Member doChannelAndArgsValidation(CommandContext ctx, String prefix, TextChannel channel, GuildVoiceState selfVoiceState, Integer deleteDelay) {
         if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue();
+            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
         if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue();
+            channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
@@ -75,12 +76,12 @@ public class SetVolumeCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue();
+            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
         if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue();
+            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
         return member;
