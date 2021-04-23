@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMoveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -149,6 +150,20 @@ public class Handler extends ListenerAdapter {
         }
     }
 
+
+    @Override
+    public void onGuildVoiceMove(GuildVoiceMoveEvent event) {
+        Guild guild = event.getGuild();
+        AudioManager audioManager = guild.getAudioManager();
+        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+        ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
+        List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembers.isEmpty()) {
+            closeAudioPlayer(guild, audioManager, defaultVolume);
+        }
+    }
+
     //Auto leaving voice channel when it becomes empty
     @Override
     public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
@@ -159,13 +174,17 @@ public class Handler extends ListenerAdapter {
         int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembers.isEmpty()) {
-            GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
-            musicManager.getScheduler().setLooping(false);
-            musicManager.getScheduler().getQueue().clear();
-            musicManager.getAudioPlayer().stopTrack();
-            musicManager.getAudioPlayer().setVolume(defaultVolume);
-            audioManager.closeAudioConnection();
+            closeAudioPlayer(guild, audioManager, defaultVolume);
         }
+    }
+
+    private void closeAudioPlayer(Guild guild, AudioManager audioManager, int defaultVolume) {
+        GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
+        musicManager.getScheduler().setLooping(false);
+        musicManager.getScheduler().getQueue().clear();
+        musicManager.getAudioPlayer().stopTrack();
+        musicManager.getAudioPlayer().setVolume(defaultVolume);
+        audioManager.closeAudioConnection();
     }
 }
 
