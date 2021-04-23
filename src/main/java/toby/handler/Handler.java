@@ -1,8 +1,6 @@
 package toby.handler;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
-import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
@@ -37,7 +35,6 @@ import java.util.stream.Collectors;
 @Configurable
 public class Handler extends ListenerAdapter {
 
-    private final AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
     private IConfigService configService;
     private IBrotherService brotherService;
     private IUserService userService;
@@ -158,9 +155,14 @@ public class Handler extends ListenerAdapter {
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
         int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
-        List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
-        if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembers.isEmpty()) {
+        List<Member> nonBotConnectedMembersInOldChannel = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelLeft()) && nonBotConnectedMembersInOldChannel.isEmpty()) {
             closeAudioPlayer(guild, audioManager, defaultVolume);
+        }
+        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
+            audioManager.openAudioConnection(event.getChannelJoined());
         }
     }
 
