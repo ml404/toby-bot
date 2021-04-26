@@ -142,7 +142,7 @@ public class SetConfigCommand implements IModerationCommand {
         return "Use this command to set the configuration used for your server\n" +
                 String.format("Usage: `%ssetConfig prefix=? move=i have a bad opinion volume=10` \n", prefix) +
                 String.format("Aliases are: %s \n", String.join(",", getAliases())) +
-                String.format("Adjustable values are as follows: %s", Arrays.stream(ConfigDto.Configurations.values()).map(Enum::name).collect(Collectors.joining(",")));
+                String.format("Adjustable values are as follows: %s", Arrays.stream(ConfigDto.Configurations.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining(",")));
     }
 
     @Override

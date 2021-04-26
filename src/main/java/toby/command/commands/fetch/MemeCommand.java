@@ -11,8 +11,10 @@ import toby.command.CommandContext;
 import toby.dto.web.RedditAPIDto;
 import toby.jpa.dto.UserDto;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class MemeCommand implements IFetchCommand {
     @Override
@@ -43,7 +45,7 @@ public class MemeCommand implements IFetchCommand {
                 timePeriod = "day";
             } catch (IllegalArgumentException e) {
                 timePeriod = "day";
-                channel.sendMessage(String.format("You entered a time period not supported: **%s**\\. Please use one of: day/week/month/all \n", args.get(1)) +
+                channel.sendMessage(String.format("You entered a time period not supported: **%s**\\. Please use one of: %S \n", args.get(1), Arrays.stream(RedditAPIDto.TimePeriod.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining("/"))) +
                         String.format("Using default time period of %s", timePeriod)).queue();
             }
             try {
