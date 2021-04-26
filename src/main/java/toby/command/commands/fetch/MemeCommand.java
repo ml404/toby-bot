@@ -45,7 +45,7 @@ public class MemeCommand implements IFetchCommand {
                 timePeriod = "day";
             } catch (IllegalArgumentException e) {
                 timePeriod = "day";
-                channel.sendMessage(String.format("You entered a time period not supported: **%s**\\. Please use one of: %S \n", args.get(1), Arrays.stream(RedditAPIDto.TimePeriod.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining("/"))) +
+                channel.sendMessage(String.format("You entered a time period not supported: **%s**\\. Please use one of: %s \n", args.get(1), Arrays.stream(RedditAPIDto.TimePeriod.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining("/"))) +
                         String.format("Using default time period of %s", timePeriod)).queue();
             }
             try {
