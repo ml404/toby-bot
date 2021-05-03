@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.command.commands.music.IntroSongCommand;
 import toby.command.commands.fetch.IFetchCommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
@@ -24,6 +25,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -147,8 +149,8 @@ public class CommandManager {
         long guildId = event.getGuild().getIdLong();
         long discordId = event.getAuthor().getIdLong();
 
-        UserDto userById = userService.getUserById(discordId, guildId);
-        if (userById == null) {
+        Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
+        if (dbUserDto.isEmpty()) {
             UserDto userDto = new UserDto();
             userDto.setDiscordId(discordId);
             userDto.setGuildId(guildId);
@@ -156,7 +158,7 @@ public class CommandManager {
             userDto.setMusicId(guildId, discordId);
             return userService.createNewUser(userDto);
         }
-        return userById;
+        return userService.getUserById(discordId,guildId);
     }
 
 }

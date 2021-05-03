@@ -9,13 +9,13 @@ import java.io.Serializable;
 
 @NamedQueries({
         @NamedQuery(name = "UserDto.getGuildAll",
-                query = "select u from UserDto as u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId"),
+                query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.getById",
                 query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.discordId = :discordId AND u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.deleteById",
-                query = "delete from UserDto as u WHERE u.discordId = :discordId AND u.guildId = :guildId")
+                query = "delete from UserDto u WHERE u.discordId = :discordId AND u.guildId = :guildId")
 })
 
 @Entity

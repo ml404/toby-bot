@@ -61,6 +61,7 @@ public class UserServiceImplIntegrationTest {
         UserDto userDto = new UserDto();
         userDto.setDiscordId(1L);
         userDto.setGuildId(1L);
+        userDto.setMusicId(1L, 1L);
         userService.createNewUser(userDto);
         UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
 
