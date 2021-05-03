@@ -21,6 +21,7 @@ import toby.emote.Emotes;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
+import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -38,16 +39,18 @@ public class Handler extends ListenerAdapter {
     private IConfigService configService;
     private IBrotherService brotherService;
     private IUserService userService;
+    private IMusicFileService musicFileService;
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
     private final CommandManager manager;
 
     @Autowired
-    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) {
+    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) {
 
-        manager = new CommandManager(configService, brotherService, userService, waiter);
+        manager = new CommandManager(configService, brotherService, userService, musicFileService, waiter);
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
+        this.musicFileService = musicFileService;
     }
 
 

@@ -2,6 +2,7 @@ package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
@@ -13,6 +14,7 @@ public class PollCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         List<String> args = ctx.getArgs();
         String msg = ctx.getMessage().getContentRaw();
 

@@ -63,7 +63,8 @@ dependencies {
     implementation('org.springframework:spring-orm')
     implementation('org.springframework:spring-context')
     // https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api
-    implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
+    implementation 'javax.persistence:javax.persistence-api:2.2'
+    implementation 'org.hibernate:hibernate-core:5.4.31.Final'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
     testImplementation 'org.mockito:mockito-inline:3.7.7'

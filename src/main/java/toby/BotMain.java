@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import toby.handler.Handler;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
+import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
 
 import javax.security.auth.login.LoginException;
@@ -25,7 +26,7 @@ public class BotMain {
     private static JDA jda;
 
     @Autowired
-    public BotMain(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) throws LoginException {
+    public BotMain(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) throws LoginException {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
@@ -43,7 +44,7 @@ public class BotMain {
                 CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
         )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
-        builder.addEventListeners(new Handler(configService, brotherService, userService, waiter), waiter);
+        builder.addEventListeners(new Handler(configService, brotherService, userService, musicFileService, waiter), waiter);
         setJda(builder.build());
     }
 

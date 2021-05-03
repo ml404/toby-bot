@@ -1,19 +1,21 @@
 package toby.jpa.dto;
 
 import org.apache.commons.lang3.EnumUtils;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import javax.persistence.*;
 import java.io.Serializable;
 
 @NamedQueries({
         @NamedQuery(name = "UserDto.getGuildAll",
-                query = "select a from UserDto as a WHERE a.guildId = :guildId"),
+                query = "select u from UserDto as u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.getById",
-                query = "select a from UserDto as a WHERE a.discordId = :discordId AND a.guildId = :guildId"),
+                query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.discordId = :discordId AND u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.deleteById",
-                query = "delete from UserDto as a WHERE a.discordId = :discordId AND a.guildId = :guildId")
+                query = "delete from UserDto as u WHERE u.discordId = :discordId AND u.guildId = :guildId")
 })
 
 @Entity
@@ -39,6 +41,19 @@ public class UserDto implements Serializable {
     @Column(name = "meme_permission")
     private boolean memePermission = true;
 
+    @Column(name = "music_file_id")
+    private String musicId;
+
+    @OneToOne
+    @NotFound(action = NotFoundAction.IGNORE)
+    @JoinColumn(name = "id",
+            referencedColumnName = "id",
+            insertable = false, updatable = false,
+            foreignKey = @javax.persistence
+                    .ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
+    @Transient
+    private MusicDto musicDto;
+
 
     public enum Permissions {
         MUSIC("music"),
@@ -48,8 +63,8 @@ public class UserDto implements Serializable {
 
         private final String permission;
 
-        Permissions(String permision) {
-            this.permission = permision;
+        Permissions(String permission) {
+            this.permission = permission;
         }
 
         public String getPermission() {
@@ -66,13 +81,19 @@ public class UserDto implements Serializable {
 
     ;
 
-    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission) {
+    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission, MusicDto musicDto) {
         this.discordId = discordId;
         this.guildId = guildId;
         this.superUser = superUser;
         this.musicPermission = musicPermission;
         this.digPermission = digPermission;
         this.memePermission = memePermission;
+        this.musicDto = musicDto;
+        this.musicId = createMusicId(guildId, discordId);
+    }
+
+    private String createMusicId(Long guildId, Long discordId) {
+        return String.format("%s_%s", guildId, discordId);
     }
 
     public Long getDiscordId() {
@@ -124,6 +145,23 @@ public class UserDto implements Serializable {
         this.memePermission = memePermission;
     }
 
+    public String getMusicId() {
+        return musicId;
+    }
+
+    public void setMusicId(Long guildId, Long discordId) {
+        this.musicId = createMusicId(guildId, discordId);
+    }
+
+    public MusicDto getMusicDto() {
+        return musicDto;
+    }
+
+    public void setMusicDto(MusicDto musicDto) {
+        this.musicDto = musicDto;
+        this.musicId = musicDto.getId();
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("UserDto{");
@@ -133,6 +171,7 @@ public class UserDto implements Serializable {
         sb.append(", musicPermission=").append(musicPermission);
         sb.append(", digPermission=").append(digPermission);
         sb.append(", memePermission=").append(memePermission);
+        sb.append(", musicId=").append(musicId);
         sb.append('}');
         return sb.toString();
     }

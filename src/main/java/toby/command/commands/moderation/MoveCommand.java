@@ -3,6 +3,7 @@ package toby.command.commands.moderation;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -22,6 +23,7 @@ public class MoveCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();

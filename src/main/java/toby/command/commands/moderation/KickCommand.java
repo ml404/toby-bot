@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.Arrays;
@@ -13,6 +14,7 @@ import java.util.List;
 public class KickCommand implements IModerationCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();

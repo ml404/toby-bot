@@ -6,11 +6,13 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 public class TalkCommand implements IModerationCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
 
         final Member member = ctx.getMember();

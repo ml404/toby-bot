@@ -1,8 +1,9 @@
-package toby.jpa.persistence;
+package toby.jpa.persistence.impl;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import toby.jpa.dto.ConfigDto;
+import toby.jpa.persistence.IConfigPersistence;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;

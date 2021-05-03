@@ -17,13 +17,13 @@ import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
+import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -34,12 +34,14 @@ public class CommandManager {
     private final IBrotherService brotherService;
     private final IUserService userService;
     private final List<ICommand> commands = new ArrayList<>();
+    private final IMusicFileService musicFileService;
 
     @Autowired
-    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) {
+    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) {
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
+        this.musicFileService = musicFileService;
 
         //misc commands
         addCommand(new HelpCommand(this));
@@ -72,7 +74,7 @@ public class CommandManager {
         addCommand(new NowPlayingCommand());
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
-
+        addCommand(new IntroSongCommand(userService, musicFileService));
         addCommand(new EventWaiterCommand(waiter));
     }
 
@@ -145,16 +147,16 @@ public class CommandManager {
         long guildId = event.getGuild().getIdLong();
         long discordId = event.getAuthor().getIdLong();
 
-        List<UserDto> guildUserDtos = userService.listGuildUsers(guildId);
-        Optional<UserDto> userDtoOptional = guildUserDtos.stream().filter(userDto -> userDto.getDiscordId().equals(discordId) && userDto.getGuildId().equals(guildId)).findFirst();
-        if (userDtoOptional.isEmpty()) {
+        UserDto userById = userService.getUserById(discordId, guildId);
+        if (userById == null) {
             UserDto userDto = new UserDto();
             userDto.setDiscordId(discordId);
             userDto.setGuildId(guildId);
             userDto.setSuperUser(event.getMember().isOwner());
+            userDto.setMusicId(guildId, discordId);
             return userService.createNewUser(userDto);
         }
-        return userDtoOptional.get();
+        return userById;
     }
 
 }
