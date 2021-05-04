@@ -1,6 +1,5 @@
 package toby.jpa.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.EnumUtils;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
@@ -43,7 +42,6 @@ public class UserDto implements Serializable {
     private boolean memePermission = true;
 
     @Column(name = "music_file_id")
-    @JsonIgnore
     private String musicId;
 
     @OneToOne
@@ -173,7 +171,6 @@ public class UserDto implements Serializable {
         sb.append(", musicPermission=").append(musicPermission);
         sb.append(", digPermission=").append(digPermission);
         sb.append(", memePermission=").append(memePermission);
-        sb.append(", musicId=").append(musicId);
         sb.append('}');
         return sb.toString();
     }
