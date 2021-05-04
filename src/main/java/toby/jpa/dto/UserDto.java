@@ -164,7 +164,7 @@ public class UserDto implements Serializable {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("UserDto{");
+        final StringBuilder sb = new StringBuilder("User{");
         sb.append("discordId='").append(discordId);
         sb.append(", guildId=").append(guildId);
         sb.append(", superUser=").append(superUser);

@@ -59,10 +59,17 @@ public class UserPersistenceImpl implements IUserPersistence {
 
     @Override
     public UserDto getUserById(Long discordId, Long guildId) {
-        Query q = em.createNamedQuery("UserDto.getById", UserDto.class);
-        q.setParameter("discordId", discordId);
-        q.setParameter("guildId", guildId);
-        return (UserDto) q.getSingleResult();
+        Query userQuery = em.createNamedQuery("UserDto.getById", UserDto.class);
+        userQuery.setParameter("discordId", discordId);
+        userQuery.setParameter("guildId", guildId);
+
+        UserDto dbUser = (UserDto) userQuery.getSingleResult();
+
+        Query musicQuery = em.createNamedQuery("MusicDto.getById", MusicDto.class);
+        musicQuery.setParameter("id", dbUser.getMusicId());
+        MusicDto dbMusicFile = (MusicDto) musicQuery.getSingleResult();
+        dbUser.setMusicDto(dbMusicFile);
+        return dbUser;
     }
 
     @Override

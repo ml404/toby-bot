@@ -29,7 +29,7 @@ public class UserCommand implements IMiscCommand {
         if (message.getMentionedMembers().isEmpty()) {
             if (requestingUserDto != null) {
                 channel.sendMessage(String.format("Here are your permissions: '%s'.", requestingUserDto)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-                channel.sendMessage(String.format("Your intro song is currently set as: '%s'.", requestingUserDto.getMusicDto())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                channel.sendMessage(String.format("Your intro song is currently set as: '%s'.", requestingUserDto.getMusicDto().getFileName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             }
         }
     }
