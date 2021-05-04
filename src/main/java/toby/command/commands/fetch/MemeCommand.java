@@ -81,6 +81,7 @@ public class MemeCommand implements IFetchCommand {
                         String url = redditAPIDto.getUrl();
                         String image = redditAPIDto.getImage();
                         EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, String.format(RedditAPIDto.commentsPrefix, url), image);
+                        embed.addField("Subreddit", subredditArg, false);
                         channel.sendMessage(embed.build()).queue();
 
                     }
