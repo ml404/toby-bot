@@ -59,6 +59,7 @@ public class UserPersistenceImpl implements IUserPersistence {
 
     @Override
     public UserDto getUserById(Long discordId, Long guildId) {
+        //TODO look at getting below working in one query (it did in test)
         Query userQuery = em.createNamedQuery("UserDto.getById", UserDto.class);
         userQuery.setParameter("discordId", discordId);
         userQuery.setParameter("guildId", guildId);
