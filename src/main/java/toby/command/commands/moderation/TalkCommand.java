@@ -22,14 +22,14 @@ public class TalkCommand implements IModerationCommand {
         memberChannel.getMembers().forEach(target -> {
 
         if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
-            channel.sendMessage(String.format("You aren't allowed to unmute %s", target)).queue();
+            channel.sendMessage(String.format("You aren't allowed to unmute %s", target)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         final Member bot = ctx.getSelfMember();
 
         if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            channel.sendMessage(String.format("I'm not allowed to unmute %s", target)).queue();
+            channel.sendMessage(String.format("I'm not allowed to unmute %s", target)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

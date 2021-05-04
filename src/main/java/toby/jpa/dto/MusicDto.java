@@ -21,6 +21,7 @@ public class MusicDto implements Serializable {
 
     @Id
     @Column(name = "id")
+    @JsonIgnore
     private String id;
 
     @Column(name = "file_name")

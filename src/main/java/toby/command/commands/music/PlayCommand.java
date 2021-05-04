@@ -17,6 +17,7 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
 
         if (!requestingUserDto.hasMusicPermission()) {

@@ -52,6 +52,7 @@ public class CommandManager {
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());
+        addCommand(new UserCommand());
 
         //moderation commands
         addCommand(new SetConfigCommand(configService));

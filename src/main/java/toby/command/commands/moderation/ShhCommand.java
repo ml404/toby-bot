@@ -22,14 +22,14 @@ public class ShhCommand implements IModerationCommand {
         memberChannel.getMembers().forEach(target -> {
 
         if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
-            channel.sendMessage(String.format("You aren't allowed to mute %s", target)).queue();
+            channel.sendMessage(String.format("You aren't allowed to mute %s", target)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         final Member bot = ctx.getSelfMember();
 
         if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            channel.sendMessage(String.format("I'm not allowed to mute %s", target)).queue();
+            channel.sendMessage(String.format("I'm not allowed to mute %s", target)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

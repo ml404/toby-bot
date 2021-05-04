@@ -18,6 +18,7 @@ import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppabl
 public class StopCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         final Member member = doChannelStateValidation(ctx, channel, deleteDelay);
         if (member == null) return;
