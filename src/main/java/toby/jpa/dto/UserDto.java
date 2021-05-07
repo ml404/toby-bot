@@ -3,18 +3,16 @@ package toby.jpa.dto;
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 import java.io.Serializable;
 
 @NamedQueries({
         @NamedQuery(name = "UserDto.getGuildAll",
-                query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId"),
+                query = "select u from UserDto u join MusicDto m on u.musicDto.id = m.id WHERE u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.getById",
-                query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId AND u.discordId = :discordId"),
+                query = "select u from UserDto u join MusicDto m on u.musicDto.id = m.id WHERE u.guildId = :guildId AND u.discordId = :discordId"),
 
         @NamedQuery(name = "UserDto.deleteById",
                 query = "delete from UserDto u WHERE u.guildId = :guildId AND u.discordId = :discordId")
@@ -43,15 +41,9 @@ public class UserDto implements Serializable {
     @Column(name = "meme_permission")
     private boolean memePermission = true;
 
-    @Column(name = "music_file_id")
-    private String musicId;
-
-    @OneToOne(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
-    @Fetch(FetchMode.JOIN)
-    @JoinColumn(name = "id")
-    @Transient
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "music_file_id", referencedColumnName = "id")
     private MusicDto musicDto;
-
 
     public enum Permissions {
         MUSIC("music"),
@@ -87,12 +79,8 @@ public class UserDto implements Serializable {
         this.digPermission = digPermission;
         this.memePermission = memePermission;
         this.musicDto = musicDto;
-        this.musicId = createMusicId(guildId, discordId);
     }
 
-    private String createMusicId(Long guildId, Long discordId) {
-        return String.format("%s_%s", guildId, discordId);
-    }
 
     public Long getDiscordId() {
         return discordId;
@@ -143,13 +131,7 @@ public class UserDto implements Serializable {
         this.memePermission = memePermission;
     }
 
-    public String getMusicId() {
-        return musicId;
-    }
 
-    public void setMusicId(Long guildId, Long discordId) {
-        this.musicId = createMusicId(guildId, discordId);
-    }
 
     public MusicDto getMusicDto() {
         return musicDto;
@@ -157,7 +139,6 @@ public class UserDto implements Serializable {
 
     public void setMusicDto(MusicDto musicDto) {
         this.musicDto = musicDto;
-        this.musicId = musicDto.getId();
     }
 
     @Override
@@ -197,7 +178,7 @@ public class UserDto implements Serializable {
                 .append(musicPermission, other.musicPermission)
                 .append(digPermission, other.digPermission)
                 .append(memePermission, other.memePermission)
-                .append(musicId, other.musicId)
+                .append(musicDto, other.musicDto)
                 .isEquals();
     }
 
@@ -210,7 +191,7 @@ public class UserDto implements Serializable {
                 .append(musicPermission)
                 .append(digPermission)
                 .append(memePermission)
-                .append(musicId)
+                .append(musicDto)
                 .toHashCode();
     }
 
