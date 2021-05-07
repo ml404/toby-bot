@@ -32,9 +32,14 @@ public class UserInfoCommand implements IMiscCommand {
                 channel.sendMessage(String.format("Here are your permissions: '%s'.", requestingUserDto)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 MusicDto musicDto = requestingUserDto.getMusicDto();
                 if (musicDto != null) {
-                    channel.sendMessage(String.format("Your intro song is currently set as: '%s'.", musicDto.getFileName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-                }
-                else   channel.sendMessage("I was unable to retrieve your music file.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    if (musicDto.getFileName() == null || musicDto.getFileName().isBlank()) {
+                        channel.sendMessage("There is no intro music file associated with your user.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+
+                    } else if (musicDto.getFileName() != null) {
+                        channel.sendMessage(String.format("Your intro song is currently set as: '%s'.", musicDto.getFileName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    }
+                } else
+                    channel.sendMessage("I was unable to retrieve your music file.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
             }
         }
@@ -53,6 +58,6 @@ public class UserInfoCommand implements IMiscCommand {
 
     @Override
     public List<String> getAliases() {
-        return Arrays.asList("getuser","info", "permissions", "permission", "perm");
+        return Arrays.asList("getuser", "info", "permissions", "permission", "perm");
     }
 }

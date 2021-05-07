@@ -147,8 +147,8 @@ public class UserDto implements Serializable {
     public String toString() {
         final StringBuilder sb = new StringBuilder("User{");
         sb.append("discordId='").append(discordId);
-        sb.append(", guildId=").append(guildId);
-        sb.append(", superUser=").append(superUser);
+        sb.append("', guildId='").append(guildId);
+        sb.append("', superUser=").append(superUser);
         sb.append(", musicPermission=").append(musicPermission);
         sb.append(", digPermission=").append(digPermission);
         sb.append(", memePermission=").append(memePermission);
