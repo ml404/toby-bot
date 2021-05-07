@@ -44,45 +44,35 @@ public class UserPersistenceImpl implements IUserPersistence {
 
     @Override
     public UserDto createNewUser(UserDto userDto) {
-        UserDto databaseConfig = em.find(UserDto.class, userDto);
-        UserDto result = (databaseConfig == null) ? persistConfigDto(userDto) : databaseConfig;
         createMusicFileEntry(userDto);
+        UserDto databaseUser = em.find(UserDto.class, userDto);
+        UserDto result = (databaseUser == null) ? persistConfigDto(userDto) : databaseUser;
 
         return result;
     }
 
     private void createMusicFileEntry(UserDto userDto) {
         MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
-        em.persist(musicDto);
+        musicFileService.createNewMusicFile(musicDto);
         em.flush();
     }
 
     @Override
     public UserDto getUserById(Long discordId, Long guildId) {
-        //TODO look at getting below working in one query (it did in test)
         Query userQuery = em.createNamedQuery("UserDto.getById", UserDto.class);
         userQuery.setParameter("discordId", discordId);
         userQuery.setParameter("guildId", guildId);
-
-        UserDto dbUser = (UserDto) userQuery.getSingleResult();
-
-        Query musicQuery = em.createNamedQuery("MusicDto.getById", MusicDto.class);
-        musicQuery.setParameter("id", dbUser.getMusicId());
-        MusicDto dbMusicFile = (MusicDto) musicQuery.getSingleResult();
-        dbUser.setMusicDto(dbMusicFile);
-        return dbUser;
+        return (UserDto) userQuery.getSingleResult();
     }
 
     @Override
     public UserDto updateUser(UserDto userDto) {
-        MusicDto musicFileDto = userDto.getMusicDto();
-        MusicDto databaseMusicFile = musicFileService.getMusicFileById(userDto.getMusicId());
-
-        if (musicFileDto != null && musicFileDto.getMusicBlob() != null && (!musicFileDto.getMusicBlob().equals(databaseMusicFile.getMusicBlob()))) {
-            em.merge(musicFileDto);
+        UserDto dbUser = getUserById(userDto.getDiscordId(), userDto.getGuildId());
+        if (!userDto.equals(dbUser)) {
+            em.merge(userDto);
+            em.flush();
         }
-        em.merge(userDto);
-        em.flush();
+
         return userDto;
     }
 

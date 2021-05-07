@@ -12,6 +12,7 @@ import toby.jpa.service.IUserService;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -95,6 +96,6 @@ public class IntroSongCommand implements IMusicCommand {
 
     @Override
     public List<String> getAliases() {
-        return IMusicCommand.super.getAliases();
+        return Arrays.asList("intro", "setintro");
     }
 }

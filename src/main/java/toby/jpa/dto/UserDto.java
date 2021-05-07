@@ -1,8 +1,10 @@
 package toby.jpa.dto;
 
 import org.apache.commons.lang3.EnumUtils;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -12,10 +14,10 @@ import java.io.Serializable;
                 query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.getById",
-                query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.discordId = :discordId AND u.guildId = :guildId"),
+                query = "select u from UserDto u join MusicDto m on u.musicId = m.id WHERE u.guildId = :guildId AND u.discordId = :discordId"),
 
         @NamedQuery(name = "UserDto.deleteById",
-                query = "delete from UserDto u WHERE u.discordId = :discordId AND u.guildId = :guildId")
+                query = "delete from UserDto u WHERE u.guildId = :guildId AND u.discordId = :discordId")
 })
 
 @Entity
@@ -44,13 +46,9 @@ public class UserDto implements Serializable {
     @Column(name = "music_file_id")
     private String musicId;
 
-    @OneToOne
-    @NotFound(action = NotFoundAction.IGNORE)
-    @JoinColumn(name = "id",
-            referencedColumnName = "id",
-            insertable = false, updatable = false,
-            foreignKey = @javax.persistence
-                    .ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
+    @OneToOne(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
+    @Fetch(FetchMode.JOIN)
+    @JoinColumn(name = "id")
     @Transient
     private MusicDto musicDto;
 
@@ -173,6 +171,47 @@ public class UserDto implements Serializable {
         sb.append(", memePermission=").append(memePermission);
         sb.append('}');
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        // If the object is compared with itself then return true
+        if (o == this) {
+            return true;
+        }
+
+        /* Check if o is an instance of MusicDto or not
+          "null instanceof [type]" also returns false */
+        if (!(o instanceof UserDto)) {
+            return false;
+        }
+
+        // typecast o to MusicDto so that we can compare data members
+        UserDto other = (UserDto) o;
+
+        // Compare the data members and return accordingly
+        return new EqualsBuilder()
+                .append(discordId, other.discordId)
+                .append(guildId, other.guildId)
+                .append(superUser, other.superUser)
+                .append(musicPermission, other.musicPermission)
+                .append(digPermission, other.digPermission)
+                .append(memePermission, other.memePermission)
+                .append(musicId, other.musicId)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(discordId)
+                .append(guildId)
+                .append(superUser)
+                .append(musicPermission)
+                .append(digPermission)
+                .append(memePermission)
+                .append(musicId)
+                .toHashCode();
     }
 
 }

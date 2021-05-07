@@ -8,13 +8,13 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.command.commands.music.IntroSongCommand;
 import toby.command.commands.fetch.IFetchCommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.dto.ConfigDto;
+import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
@@ -52,7 +52,7 @@ public class CommandManager {
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());
-        addCommand(new UserCommand());
+        addCommand(new UserInfoCommand());
 
         //moderation commands
         addCommand(new SetConfigCommand(configService));
@@ -156,7 +156,8 @@ public class CommandManager {
             userDto.setDiscordId(discordId);
             userDto.setGuildId(guildId);
             userDto.setSuperUser(event.getMember().isOwner());
-            userDto.setMusicId(guildId, discordId);
+            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
+            userDto.setMusicDto(musicDto);
             return userService.createNewUser(userDto);
         }
         return userService.getUserById(discordId,guildId);

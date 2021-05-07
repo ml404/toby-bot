@@ -85,7 +85,7 @@ public class CommandManagerTest {
                 AdjustUserCommand.class,
                 IntroSongCommand.class,
                 EventWaiterCommand.class,
-                UserCommand.class);
+                UserInfoCommand.class);
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
         assertEquals(29, commandManager.getAllCommands().size());

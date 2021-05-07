@@ -1,6 +1,7 @@
 package toby.handler;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
 import toby.jpa.dto.ConfigDto;
+import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
 import toby.jpa.service.IMusicFileService;
@@ -144,10 +146,13 @@ public class Handler extends ListenerAdapter {
         ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
         int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
         if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
+            audioPlayer.setVolume(defaultVolume);
             audioManager.openAudioConnection(event.getChannelJoined());
         }
+        Member member = event.getMember();
+        UserDto dbUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
     }
 
 

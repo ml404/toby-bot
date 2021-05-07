@@ -8,7 +8,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import toby.Application;
 import toby.jpa.dto.MusicDto;
-import toby.jpa.dto.UserDto;
 import toby.jpa.persistence.IMusicFilePersistence;
 import toby.jpa.persistence.IUserPersistence;
 import toby.jpa.service.IMusicFileService;
@@ -48,18 +47,11 @@ public class MusicFileServiceImplIntegrationTest {
 
     @BeforeEach
     public void setUp() {
-        userService.deleteUserById(1L, 1L);
-        UserDto userDto = new UserDto();
-        userDto.setDiscordId(1L);
-        userDto.setGuildId(1L);
-        userDto.setMusicId(1L, 1L);
-        userService.createNewUser(userDto);
         musicFileService.deleteMusicFileById("1_1");
     }
 
     @AfterEach
     public void tearDown(){
-        userService.deleteUserById(1L, 1L);
         musicFileService.deleteMusicFileById("1_1");
     }
 
@@ -87,18 +79,17 @@ public class MusicFileServiceImplIntegrationTest {
         musicDto1 = musicFileService.createNewMusicFile(musicDto1);
         MusicDto dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.getId());
 
+        assertEquals(dbMusicDto1.getId(),musicDto1.getId());
+        assertEquals(dbMusicDto1.getFileName(),musicDto1.getFileName());
+        assertEquals(dbMusicDto1.getMusicBlob(),musicDto1.getMusicBlob());
+
+
         MusicDto musicDto2 = new MusicDto();
         musicDto2.setId("1_1");
         musicDto2.setFileName("file 2");
         musicDto2.setMusicBlob("some data 2");
         musicDto2 = musicFileService.updateMusicFile(musicDto2);
         MusicDto dbMusicDto2 = musicFileService.getMusicFileById(musicDto2.getId());
-
-
-        assertEquals(dbMusicDto1.getId(),musicDto1.getId());
-        assertEquals(dbMusicDto1.getFileName(),musicDto1.getFileName());
-        assertEquals(dbMusicDto1.getMusicBlob(),musicDto1.getMusicBlob());
-
 
         assertEquals(dbMusicDto2.getId(),musicDto2.getId());
         assertEquals(dbMusicDto2.getFileName(),musicDto2.getFileName());

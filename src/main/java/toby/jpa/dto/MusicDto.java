@@ -1,6 +1,8 @@
 package toby.jpa.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -29,7 +31,7 @@ public class MusicDto implements Serializable {
 
     @Lob
     @JsonIgnore
-    @Column(name = "music_blob", columnDefinition="TEXT")
+    @Column(name = "music_blob", columnDefinition = "TEXT")
     private String musicBlob;
 
 
@@ -47,14 +49,6 @@ public class MusicDto implements Serializable {
         return String.format("%s_%s", guildId, discordId);
     }
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("MusicDto{");
-        sb.append("id=").append(id);
-        sb.append(", fileName=").append(fileName);
-        sb.append('}');
-        return sb.toString();
-    }
 
     public String getId() {
         return id;
@@ -81,4 +75,45 @@ public class MusicDto implements Serializable {
     }
 
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("MusicDto{");
+        sb.append("id=").append(id);
+        sb.append(", fileName=").append(fileName);
+        sb.append('}');
+        return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        // If the object is compared with itself then return true
+        if (o == this) {
+            return true;
+        }
+
+        /* Check if o is an instance of MusicDto or not
+          "null instanceof [type]" also returns false */
+        if (!(o instanceof MusicDto)) {
+            return false;
+        }
+
+        // typecast o to MusicDto so that we can compare data members
+        MusicDto other = (MusicDto) o;
+
+        // Compare the data members and return accordingly
+        return new EqualsBuilder()
+                .append(id, other.id)
+                .append(fileName, other.fileName)
+                .append(musicBlob, other.musicBlob)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(id)
+                .append(fileName)
+                .append(musicBlob)
+                .toHashCode();
+    }
 }

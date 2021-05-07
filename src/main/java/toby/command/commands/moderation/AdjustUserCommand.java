@@ -46,7 +46,7 @@ public class AdjustUserCommand implements IModerationCommand {
                     channel.sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
             } else {
-                createNewUser(channel, targetMember);
+                createNewUser(channel, targetMember, deleteDelay);
             }
         });
 
@@ -77,13 +77,13 @@ public class AdjustUserCommand implements IModerationCommand {
         userService.updateUser(targetUserDto);
     }
 
-    private void createNewUser(TextChannel channel, Member targetMember) {
+    private void createNewUser(TextChannel channel, Member targetMember, int deleteDelay) {
         //Database did not contain an entry for the user we have made a request against, so make one.
         UserDto newDto = new UserDto();
         newDto.setDiscordId(targetMember.getIdLong());
         newDto.setGuildId(targetMember.getGuild().getIdLong());
         userService.createNewUser(newDto);
-        channel.sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue();
+        channel.sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue(message -> ICommand.deleteAfter(message,deleteDelay));
     }
 
     @Nullable
@@ -121,7 +121,7 @@ public class AdjustUserCommand implements IModerationCommand {
 
     @Override
     public List<String> getAliases() {
-        return Arrays.asList("user");
+        return Arrays.asList("setuser", "user");
     }
 
     private boolean userAdjustmentValidation(UserDto requester, UserDto target) {
