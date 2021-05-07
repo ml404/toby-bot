@@ -41,7 +41,7 @@ public class UserDto implements Serializable {
     @Column(name = "meme_permission")
     private boolean memePermission = true;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "music_file_id", referencedColumnName = "id")
     private MusicDto musicDto;
 
