@@ -68,6 +68,12 @@ public class UserPersistenceImpl implements IUserPersistence {
     @Override
     public UserDto updateUser(UserDto userDto) {
         UserDto dbUser = getUserById(userDto.getDiscordId(), userDto.getGuildId());
+        MusicDto musicFileById = musicFileService.getMusicFileById(userDto.getMusicDto().getId());
+        MusicDto requestMusicDto = dbUser.getMusicDto();
+        if (!requestMusicDto.equals(musicFileById)) {
+            musicFileService.updateMusicFile(requestMusicDto);
+        }
+
         if (!userDto.equals(dbUser)) {
             em.merge(userDto);
             em.flush();
