@@ -3,6 +3,7 @@ package toby.jpa.dto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -18,6 +19,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name = "music_files", schema = "public")
+@Transactional
 public class MusicDto implements Serializable {
 
 
