@@ -162,7 +162,7 @@ public class UserServiceImplIntegrationTest {
 
 
         dbMusicFileDto.setFileName("file name");
-        dbMusicFileDto.setMusicBlob("test data");
+        dbMusicFileDto.setMusicBlob("test data".getBytes());
         userDto.setMusicDto(dbMusicFileDto);
         UserDto dbUser2 = userService.updateUser(userDto);
 

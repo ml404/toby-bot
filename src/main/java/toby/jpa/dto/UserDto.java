@@ -163,13 +163,13 @@ public class UserDto implements Serializable {
             return true;
         }
 
-        /* Check if o is an instance of MusicDto or not
+        /* Check if o is an instance of UserDto or not
           "null instanceof [type]" also returns false */
         if (!(o instanceof UserDto)) {
             return false;
         }
 
-        // typecast o to MusicDto so that we can compare data members
+        // typecast o to UserDto so that we can compare data members
         UserDto other = (UserDto) o;
 
         // Compare the data members and return accordingly

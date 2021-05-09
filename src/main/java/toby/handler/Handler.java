@@ -2,6 +2,8 @@ package toby.handler;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.tools.io.MessageInput;
+import com.sedmelluq.discord.lavaplayer.track.DecodedTrackHolder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
 import toby.jpa.dto.ConfigDto;
+import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
@@ -30,9 +33,12 @@ import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static toby.helpers.FileUtils.readByteArrayToInputStream;
 
 @Service
 @Configurable
@@ -153,6 +159,16 @@ public class Handler extends ListenerAdapter {
         }
         Member member = event.getMember();
         UserDto dbUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
+        MusicDto musicDto = dbUser.getMusicDto();
+        if (musicDto !=null && musicDto.getMusicBlob() != null) {
+            MessageInput bufferedInputStream = new MessageInput(readByteArrayToInputStream(musicDto.getMusicBlob()));
+            try {
+                DecodedTrackHolder decodedTrackHolder = PlayerManager.getInstance().getAudioPlayerManager().decodeTrack(bufferedInputStream);
+                audioPlayer.playTrack(decodedTrackHolder.decodedTrack);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 

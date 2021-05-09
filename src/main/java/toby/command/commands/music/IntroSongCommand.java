@@ -9,14 +9,13 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
+
+import static toby.helpers.FileUtils.readInputStreamToByteArray;
 
 public class IntroSongCommand implements IMusicCommand {
     private final IUserService userService;
@@ -50,10 +49,10 @@ public class IntroSongCommand implements IMusicCommand {
                 channel.sendMessage("Please keep the file size under 200kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
                 String filename = attachment.getFileName();
-                String fileContents;
+                byte[] fileContents;
                 try {
-                    fileContents = readAttachmentContents(attachment);
-                } catch (ExecutionException | InterruptedException e) {
+                    fileContents = readInputStreamToByteArray(attachment.retrieveInputStream().get());
+                } catch (ExecutionException | InterruptedException | IOException e) {
                     channel.sendMessageFormat("Unable to read file '%s'", filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
@@ -75,12 +74,7 @@ public class IntroSongCommand implements IMusicCommand {
 
     }
 
-    private String readAttachmentContents(Message.Attachment attachment) throws ExecutionException, InterruptedException {
-        InputStream inputStream = attachment.retrieveInputStream().get();
-        return new BufferedReader(new InputStreamReader(inputStream))
-                .lines().collect(Collectors.joining("\n"));
 
-    }
 
     @Override
     public String getName() {

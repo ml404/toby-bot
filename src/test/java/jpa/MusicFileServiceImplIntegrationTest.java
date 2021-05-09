@@ -15,6 +15,9 @@ import toby.jpa.service.IUserService;
 import toby.jpa.service.impl.MusicFileServiceImpl;
 import toby.jpa.service.impl.UserServiceImpl;
 
+import java.io.IOException;
+import java.net.URL;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = Application.class)
@@ -60,7 +63,7 @@ public class MusicFileServiceImplIntegrationTest {
         MusicDto musicDto1 = new MusicDto();
         musicDto1.setId("1_1");
         musicDto1.setFileName("filename");
-        musicDto1.setMusicBlob("Some data");
+        musicDto1.setMusicBlob("Some data".getBytes());
         musicFileService.createNewMusicFile(musicDto1);
         MusicDto dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.getId());
 
@@ -75,7 +78,7 @@ public class MusicFileServiceImplIntegrationTest {
         MusicDto musicDto1 = new MusicDto();
         musicDto1.setId("1_1");
         musicDto1.setFileName("file 1");
-        musicDto1.setMusicBlob("some data 1");
+        musicDto1.setMusicBlob("some data 1".getBytes());
         musicDto1 = musicFileService.createNewMusicFile(musicDto1);
         MusicDto dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.getId());
 
@@ -87,7 +90,7 @@ public class MusicFileServiceImplIntegrationTest {
         MusicDto musicDto2 = new MusicDto();
         musicDto2.setId("1_1");
         musicDto2.setFileName("file 2");
-        musicDto2.setMusicBlob("some data 2");
+        musicDto2.setMusicBlob("some data 2".getBytes());
         musicDto2 = musicFileService.updateMusicFile(musicDto2);
         MusicDto dbMusicDto2 = musicFileService.getMusicFileById(musicDto2.getId());
 
@@ -95,6 +98,23 @@ public class MusicFileServiceImplIntegrationTest {
         assertEquals(dbMusicDto2.getFileName(),musicDto2.getFileName());
         assertEquals(dbMusicDto2.getMusicBlob(),musicDto2.getMusicBlob());
 
+
+    }
+
+    @Test
+    public void musicDtoBlobSerialisesAndDeserialisesCorrectly() throws IOException {
+        ClassLoader classLoader = getClass().getClassLoader();
+        URL mp3Resource = classLoader.getResource("test.mp3");
+        MusicDto musicDto1 = new MusicDto();
+        musicDto1.setId("1_1");
+        musicDto1.setFileName("filename");
+        musicDto1.setMusicBlob(mp3Resource.openStream().readAllBytes());
+        musicFileService.createNewMusicFile(musicDto1);
+        MusicDto dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.getId());
+
+        assertEquals(dbMusicDto1.getId(),musicDto1.getId());
+        assertEquals(dbMusicDto1.getFileName(),musicDto1.getFileName());
+        assertEquals(dbMusicDto1.getMusicBlob(),musicDto1.getMusicBlob());
 
     }
 }

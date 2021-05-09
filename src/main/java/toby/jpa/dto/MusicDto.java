@@ -34,13 +34,13 @@ public class MusicDto implements Serializable {
     @Lob
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "TEXT")
-    private String musicBlob;
+    private byte[] musicBlob;
 
 
     public MusicDto() {
     }
 
-    public MusicDto(Long discordId, Long guildId, String fileName, String musicBlob) {
+    public MusicDto(Long discordId, Long guildId, String fileName, byte[] musicBlob) {
         this.id = createMusicId(guildId, discordId);
         this.fileName = fileName;
         this.musicBlob = musicBlob;
@@ -68,11 +68,11 @@ public class MusicDto implements Serializable {
         this.fileName = fileName;
     }
 
-    public String getMusicBlob() {
+    public byte[] getMusicBlob() {
         return musicBlob;
     }
 
-    public void setMusicBlob(String musicBlob) {
+    public void setMusicBlob(byte[] musicBlob) {
         this.musicBlob = musicBlob;
     }
 
