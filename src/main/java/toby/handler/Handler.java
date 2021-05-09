@@ -158,7 +158,7 @@ public class Handler extends ListenerAdapter {
             audioManager.openAudioConnection(event.getChannelJoined());
         }
         Member member = event.getMember();
-        UserDto dbUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
+        UserDto dbUser = userService.getUserById(member.getUser().getIdLong(), member.getGuild().getIdLong());
         MusicDto musicDto = dbUser.getMusicDto();
         if (musicDto !=null && musicDto.getMusicBlob() != null) {
             MessageInput bufferedInputStream = new MessageInput(readByteArrayToInputStream(musicDto.getMusicBlob()));
