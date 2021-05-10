@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.dto.ConfigDto;
-import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
@@ -47,9 +46,9 @@ public class BotController {
 
 
     @RequestMapping("/music/{id}")
-    public MusicDto getMusic(@RequestParam("id") String id){
+    public byte[] getMusicBlob(@RequestParam("id") String id){
 
-        return musicFileService.getMusicFileById(id);
+        return musicFileService.getMusicFileById(id).getMusicBlob();
     }
 
     @RequestMapping("/user/{guildId}/{discordId}")
