@@ -5,6 +5,8 @@ import org.apache.commons.io.IOUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
 public class FileUtils {
@@ -23,5 +25,14 @@ public class FileUtils {
         } catch (IOException ignored) {
         }
         return false;
+    }
+
+
+    public static InputStream readByteArrayToUTF8InputStream(byte[] fileContents) {
+        return new ByteArrayInputStream(Arrays.toString(fileContents).getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static byte[] readInputStreamToUTF8ByteArray(InputStream inputStream) throws IOException {
+        return Arrays.toString(inputStream.readAllBytes()).getBytes(StandardCharsets.UTF_8);
     }
 }

@@ -2,8 +2,6 @@ package toby.handler;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import com.sedmelluq.discord.lavaplayer.tools.io.MessageInput;
-import com.sedmelluq.discord.lavaplayer.track.DecodedTrackHolder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.ReadyEvent;
@@ -21,6 +19,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
+import toby.jpa.controller.ConsumeWebService;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
@@ -33,12 +32,9 @@ import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static toby.helpers.FileUtils.readByteArrayToInputStream;
 
 @Service
 @Configurable
@@ -143,14 +139,16 @@ public class Handler extends ListenerAdapter {
 
     }
 
-    //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server
+    //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server, then play the associated user's intro song
     @Override
     public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-        ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
-        int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
+        String deleteDelayPropertyName = ConfigDto.Configurations.DELETE_DELAY.getConfigValue();
+        ConfigDto databaseVolumeConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        ConfigDto databaseDeleteDelayConfig = configService.getConfigByName(deleteDelayPropertyName, event.getGuild().getId());
+        int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
         if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
@@ -158,16 +156,15 @@ public class Handler extends ListenerAdapter {
             audioManager.openAudioConnection(event.getChannelJoined());
         }
         Member member = event.getMember();
-        UserDto dbUser = userService.getUserById(member.getUser().getIdLong(), member.getGuild().getIdLong());
+        long discordId = member.getUser().getIdLong();
+        long guildId = member.getGuild().getIdLong();
+
+        UserDto dbUser = userService.getUserById(discordId, guildId);
         MusicDto musicDto = dbUser.getMusicDto();
-        if (musicDto !=null && musicDto.getMusicBlob() != null) {
-            MessageInput bufferedInputStream = new MessageInput(readByteArrayToInputStream(musicDto.getMusicBlob()));
-            try {
-                DecodedTrackHolder decodedTrackHolder = PlayerManager.getInstance().getAudioPlayerManager().decodeTrack(bufferedInputStream);
-                audioPlayer.playTrack(decodedTrackHolder.decodedTrack);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (musicDto != null && musicDto.getMusicBlob() != null) {
+            PlayerManager.getInstance().loadAndPlay(guild.getDefaultChannel(),
+                    String.format(ConsumeWebService.getWebUrl() + "/music/%s", musicDto.getId()),
+                    Integer.parseInt(databaseDeleteDelayConfig.getValue()));
         }
     }
 

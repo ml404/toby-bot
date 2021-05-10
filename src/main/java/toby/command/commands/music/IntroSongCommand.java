@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
-import static toby.helpers.FileUtils.readInputStreamToByteArray;
+import static toby.helpers.FileUtils.readInputStreamToUTF8ByteArray;
 
 public class IntroSongCommand implements IMusicCommand {
     private final IUserService userService;
@@ -51,7 +51,7 @@ public class IntroSongCommand implements IMusicCommand {
                 String filename = attachment.getFileName();
                 byte[] fileContents;
                 try {
-                    fileContents = readInputStreamToByteArray(attachment.retrieveInputStream().get());
+                    fileContents = readInputStreamToUTF8ByteArray(attachment.retrieveInputStream().get());
                 } catch (ExecutionException | InterruptedException | IOException e) {
                     channel.sendMessageFormat("Unable to read file '%s'", filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
