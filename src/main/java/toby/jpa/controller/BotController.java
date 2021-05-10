@@ -30,7 +30,7 @@ public class BotController {
 
     @RequestMapping("/")
     public String index() {
-        return "Welcome to the TobyBot music request endpoint";
+        return "Welcome to TobyBot";
     }
 
     @RequestMapping("/brother/{discordId}")
