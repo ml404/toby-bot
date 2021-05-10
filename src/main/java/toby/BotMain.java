@@ -62,7 +62,10 @@ public class BotMain {
         return new EventWaiter();
     }
 
-
+    @Bean
+    public static WebClient localApiClient() {
+        return WebClient.create("http://localhost:8080/api/v1");
+    }
 }
 
 
