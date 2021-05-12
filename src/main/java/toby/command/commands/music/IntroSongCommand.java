@@ -1,5 +1,6 @@
 package toby.command.commands.music;
 
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
@@ -13,13 +14,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import static toby.helpers.FileUtils.readInputStreamToUTF8ByteArray;
 
 public class IntroSongCommand implements IMusicCommand {
     private final IUserService userService;
-    private IMusicFileService musicFileService;
+    private final IMusicFileService musicFileService;
 
     public IntroSongCommand(IUserService userService, IMusicFileService musicFileService) {
         this.userService = userService;
@@ -32,13 +34,12 @@ public class IntroSongCommand implements IMusicCommand {
 
         final TextChannel channel = ctx.getChannel();
 
-        if (!requestingUserDto.hasMusicPermission()) {
+        if (!requestingUserDto.isSuperUser()) {
             sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
 
         List<Message.Attachment> attachments = ctx.getMessage().getAttachments();
-
         if (attachments.isEmpty()) {
             channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
@@ -47,34 +48,60 @@ public class IntroSongCommand implements IMusicCommand {
                 channel.sendMessage("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else if (attachment.getSize() > 200000) {
                 channel.sendMessage("Please keep the file size under 200kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            } else {
-                String filename = attachment.getFileName();
-                byte[] fileContents;
-                try {
-                    fileContents = readInputStreamToUTF8ByteArray(attachment.retrieveInputStream().get());
-                } catch (ExecutionException | InterruptedException | IOException e) {
-                    channel.sendMessageFormat("Unable to read file '%s'", filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-                    return;
-                }
-                MusicDto musicFileDto = requestingUserDto.getMusicDto();
-                if (musicFileDto == null) {
-                    MusicDto musicDto = new MusicDto(requestingUserDto.getDiscordId(), requestingUserDto.getGuildId(), filename, fileContents);
-                    musicFileService.createNewMusicFile(musicDto);
-                    requestingUserDto.setMusicDto(musicDto);
-                    userService.updateUser(requestingUserDto);
-                    channel.sendMessageFormat("Successfully set %s's intro song to '%s'", ctx.getAuthor().getName(), musicDto.getFileName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-                    return;
-                }
-                musicFileDto.setFileName(filename);
-                musicFileDto.setMusicBlob(fileContents);
-                musicFileService.updateMusicFile(musicFileDto);
-                channel.sendMessageFormat("Successfully updated %s's intro song to '%s'", ctx.getAuthor().getName(), filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
-        }
 
+            List<Member> mentionedMembers = ctx.getMessage().getMentionedMembers();
+            if (mentionedMembers.size() > 0) {
+                mentionedMembers.forEach(member -> {
+                    UserDto userDto = calculateUserDto(member);
+                    persistMusicFile(ctx, userDto, deleteDelay, channel, attachment);
+                });
+            } else persistMusicFile(ctx, requestingUserDto, deleteDelay, channel, attachment);
+        }
     }
 
 
+    private void persistMusicFile(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, Message.Attachment attachment) {
+        String filename = attachment.getFileName();
+        byte[] fileContents;
+        try {
+            fileContents = readInputStreamToUTF8ByteArray(attachment.retrieveInputStream().get());
+        } catch (ExecutionException | InterruptedException | IOException e) {
+            channel.sendMessageFormat("Unable to read file '%s'", filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
+        }
+        MusicDto musicFileDto = requestingUserDto.getMusicDto();
+        if (musicFileDto == null) {
+            MusicDto musicDto = new MusicDto(requestingUserDto.getDiscordId(), requestingUserDto.getGuildId(), filename, fileContents);
+            musicFileService.createNewMusicFile(musicDto);
+            requestingUserDto.setMusicDto(musicDto);
+            userService.updateUser(requestingUserDto);
+            channel.sendMessageFormat("Successfully set %s's intro song to '%s'", ctx.getAuthor().getName(), musicDto.getFileName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
+        }
+        musicFileDto.setFileName(filename);
+        musicFileDto.setMusicBlob(fileContents);
+        musicFileService.updateMusicFile(musicFileDto);
+        channel.sendMessageFormat("Successfully updated %s's intro song to '%s'", ctx.getAuthor().getName(), filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
+
+
+    private UserDto calculateUserDto(Member member) {
+        long guildId = member.getGuild().getIdLong();
+        long discordId = member.getUser().getIdLong();
+
+        Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
+        if (dbUserDto.isEmpty()) {
+            UserDto userDto = new UserDto();
+            userDto.setDiscordId(discordId);
+            userDto.setGuildId(guildId);
+            userDto.setSuperUser(member.isOwner());
+            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
+            userDto.setMusicDto(musicDto);
+            return userService.createNewUser(userDto);
+        }
+        return userService.getUserById(discordId, guildId);
+    }
 
     @Override
     public String getName() {

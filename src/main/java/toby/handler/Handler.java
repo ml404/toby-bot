@@ -160,7 +160,7 @@ public class Handler extends ListenerAdapter {
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
             UserDto dbUser = userService.getUserById(discordId, guildId);
             MusicDto musicDto = dbUser.getMusicDto();
-            if (musicDto != null && musicDto.getMusicBlob() != null) {
+            if (musicDto != null && musicDto.getFileName() != null) {
                 PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
                         String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
                         0);
