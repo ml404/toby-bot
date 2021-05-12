@@ -14,9 +14,11 @@ import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.dto.ConfigDto;
+import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
+import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
 
 import javax.annotation.Nullable;
@@ -34,12 +36,14 @@ public class CommandManager {
     private final IBrotherService brotherService;
     private final IUserService userService;
     private final List<ICommand> commands = new ArrayList<>();
+    private final IMusicFileService musicFileService;
 
     @Autowired
-    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, EventWaiter waiter) {
+    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) {
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
+        this.musicFileService = musicFileService;
 
         //misc commands
         addCommand(new HelpCommand(this));
@@ -48,6 +52,7 @@ public class CommandManager {
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());
+        addCommand(new UserInfoCommand());
 
         //moderation commands
         addCommand(new SetConfigCommand(configService));
@@ -72,7 +77,7 @@ public class CommandManager {
         addCommand(new NowPlayingCommand());
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
-
+        addCommand(new IntroSongCommand(userService, musicFileService));
         addCommand(new EventWaiterCommand(waiter));
     }
 
@@ -145,16 +150,17 @@ public class CommandManager {
         long guildId = event.getGuild().getIdLong();
         long discordId = event.getAuthor().getIdLong();
 
-        List<UserDto> guildUserDtos = userService.listGuildUsers(guildId);
-        Optional<UserDto> userDtoOptional = guildUserDtos.stream().filter(userDto -> userDto.getDiscordId().equals(discordId) && userDto.getGuildId().equals(guildId)).findFirst();
-        if (userDtoOptional.isEmpty()) {
+        Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
+        if (dbUserDto.isEmpty()) {
             UserDto userDto = new UserDto();
             userDto.setDiscordId(discordId);
             userDto.setGuildId(guildId);
             userDto.setSuperUser(event.getMember().isOwner());
+            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
+            userDto.setMusicDto(musicDto);
             return userService.createNewUser(userDto);
         }
-        return userDtoOptional.get();
+        return userService.getUserById(discordId,guildId);
     }
 
 }

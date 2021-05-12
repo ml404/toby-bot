@@ -13,6 +13,7 @@ import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.jpa.service.impl.BrotherServiceImpl;
 import toby.jpa.service.impl.ConfigServiceImpl;
+import toby.jpa.service.impl.MusicFileServiceImpl;
 import toby.jpa.service.impl.UserServiceImpl;
 import toby.managers.CommandManager;
 
@@ -34,6 +35,9 @@ public class CommandManagerTest {
     UserServiceImpl userService;
 
     @Mock
+    MusicFileServiceImpl musicFileService;
+
+    @Mock
     EventWaiter waiter;
 
 
@@ -51,7 +55,7 @@ public class CommandManagerTest {
 
     @Test
     public void testCommandManagerFindsAllCommands() {
-        CommandManager commandManager = new CommandManager(configService, brotherService, userService, waiter);
+        CommandManager commandManager = new CommandManager(configService, brotherService, userService, musicFileService, waiter);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
                 SetConfigCommand.class,
@@ -79,9 +83,11 @@ public class CommandManagerTest {
                 QueueCommand.class,
                 ShuffleCommand.class,
                 AdjustUserCommand.class,
-                EventWaiterCommand.class);
+                IntroSongCommand.class,
+                EventWaiterCommand.class,
+                UserInfoCommand.class);
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(27, commandManager.getAllCommands().size());
+        assertEquals(29, commandManager.getAllCommands().size());
     }
 }

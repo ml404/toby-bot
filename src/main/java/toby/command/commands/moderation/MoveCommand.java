@@ -3,6 +3,7 @@ package toby.command.commands.moderation;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -22,6 +23,7 @@ public class MoveCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         final Member member = ctx.getMember();
@@ -29,7 +31,7 @@ public class MoveCommand implements IModerationCommand {
         Guild guild = ctx.getGuild();
 
         if (message.getMentionedMembers().isEmpty()) {
-            channel.sendMessage("You must mention 1 or more Users to move").queue();
+            channel.sendMessage("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
@@ -39,36 +41,36 @@ public class MoveCommand implements IModerationCommand {
 
         Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
         if (!voiceChannelOptional.isPresent()) {
-            channel.sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue();
+            channel.sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
         message.getMentionedMembers().forEach(target -> {
 
-            if (doChannelValidation(ctx, channel, member, target)) return;
+            if (doChannelValidation(ctx, channel, member, target, deleteDelay)) return;
 
             VoiceChannel voiceChannel = voiceChannelOptional.get();
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
-                            (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(),
+                            (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
                             (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue()
                     );
         });
     }
 
-    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, Member member, Member target) {
+    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, Member member, Member target, int deleteDelay) {
         if (!target.getVoiceState().inVoiceChannel()) {
-            channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue();
+            channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }
         if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            channel.sendMessage(String.format("You can't move '%s'", target.getEffectiveName())).queue();
+            channel.sendMessage(String.format("You can't move '%s'", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }
 
         final Member botMember = ctx.getSelfMember();
 
         if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue();
+            channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }
         return false;

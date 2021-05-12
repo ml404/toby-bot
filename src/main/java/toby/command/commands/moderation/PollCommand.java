@@ -2,6 +2,7 @@ package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
@@ -13,6 +14,7 @@ public class PollCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         List<String> args = ctx.getArgs();
         String msg = ctx.getMessage().getContentRaw();
 
@@ -21,7 +23,7 @@ public class PollCommand implements IModerationCommand {
             String question = isPresent ? msg.split("\\?", 2)[0].replaceAll("!poll", "").trim().concat("?") : "Poll";
             List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
             if (pollArgs.size() > 10) {
-                ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue();
+                ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
             List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");

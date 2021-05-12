@@ -24,7 +24,7 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    @CachePut(value = "users", key = "#userDto.discordId")
+    @CachePut(value = "users", key = "#userDto.discordId+#userDto.guildId")
     public UserDto createNewUser(UserDto userDto) {
         return userService.createNewUser(userDto);
     }

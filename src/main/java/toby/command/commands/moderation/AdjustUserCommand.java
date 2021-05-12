@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
@@ -23,7 +24,7 @@ public class AdjustUserCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         List<String> args = ctx.getArgs();
         TextChannel channel = ctx.getChannel();
         Message message = ctx.getMessage();
@@ -39,20 +40,20 @@ public class AdjustUserCommand implements IModerationCommand {
                 boolean isSameGuild = requestingUserDto.getGuildId().equals(targetUserDto.getGuildId());
                 boolean requesterCanAdjustPermissions = userAdjustmentValidation(requestingUserDto, targetUserDto) || member.isOwner();
                 if (requesterCanAdjustPermissions && isSameGuild) {
-                    validateArgumentsAndUpdateUser(channel, targetUserDto, args, member.isOwner());
-                    channel.sendMessageFormat("Updated user %s's permissions", targetMember.getNickname()).queue();
+                    validateArgumentsAndUpdateUser(channel, targetUserDto, args, member.isOwner(), deleteDelay);
+                    channel.sendMessageFormat("Updated user %s's permissions", targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 } else
-                    channel.sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue();
+                    channel.sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
             } else {
-                createNewUser(channel, targetMember);
+                createNewUser(channel, targetMember, deleteDelay);
             }
         });
 
 
     }
 
-    private void validateArgumentsAndUpdateUser(TextChannel channel, UserDto targetUserDto, List<String> args, Boolean isOwner) {
+    private void validateArgumentsAndUpdateUser(TextChannel channel, UserDto targetUserDto, List<String> args, Boolean isOwner, int deleteDelay) {
         List<String> valuesToAdjust = args.stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
         Map<String, Boolean> permissionMap = valuesToAdjust.stream()
                 .map(s -> s.split("=", 2))
@@ -60,7 +61,7 @@ public class AdjustUserCommand implements IModerationCommand {
                 .collect(Collectors.toMap(s -> s[0], s -> Boolean.valueOf(s[1])));
 
         if (permissionMap.isEmpty()) {
-            channel.sendMessage("You did not mention a valid permission to update").queue();
+            channel.sendMessage("You did not mention a valid permission to update").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -76,13 +77,13 @@ public class AdjustUserCommand implements IModerationCommand {
         userService.updateUser(targetUserDto);
     }
 
-    private void createNewUser(TextChannel channel, Member targetMember) {
+    private void createNewUser(TextChannel channel, Member targetMember, int deleteDelay) {
         //Database did not contain an entry for the user we have made a request against, so make one.
         UserDto newDto = new UserDto();
         newDto.setDiscordId(targetMember.getIdLong());
         newDto.setGuildId(targetMember.getGuild().getIdLong());
         userService.createNewUser(newDto);
-        channel.sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue();
+        channel.sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue(message -> ICommand.deleteAfter(message,deleteDelay));
     }
 
     @Nullable
@@ -120,7 +121,7 @@ public class AdjustUserCommand implements IModerationCommand {
 
     @Override
     public List<String> getAliases() {
-        return Arrays.asList("user");
+        return Arrays.asList("setuser", "user");
     }
 
     private boolean userAdjustmentValidation(UserDto requester, UserDto target) {

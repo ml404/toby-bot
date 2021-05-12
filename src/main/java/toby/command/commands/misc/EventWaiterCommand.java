@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Emote;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
@@ -20,6 +21,7 @@ public class EventWaiterCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         Emote emoteById = ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY);
         channel.sendMessageFormat("React with %s", emoteById)

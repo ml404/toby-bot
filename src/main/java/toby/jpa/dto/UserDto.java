@@ -1,23 +1,27 @@
 package toby.jpa.dto;
 
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.*;
 import java.io.Serializable;
 
 @NamedQueries({
         @NamedQuery(name = "UserDto.getGuildAll",
-                query = "select a from UserDto as a WHERE a.guildId = :guildId"),
+                query = "select u from UserDto u join MusicDto m on u.musicDto.id = m.id WHERE u.guildId = :guildId"),
 
         @NamedQuery(name = "UserDto.getById",
-                query = "select a from UserDto as a WHERE a.discordId = :discordId AND a.guildId = :guildId"),
+                query = "select u from UserDto u join MusicDto m on u.musicDto.id = m.id WHERE u.guildId = :guildId AND u.discordId = :discordId"),
 
         @NamedQuery(name = "UserDto.deleteById",
-                query = "delete from UserDto as a WHERE a.discordId = :discordId AND a.guildId = :guildId")
+                query = "delete from UserDto u WHERE u.guildId = :guildId AND u.discordId = :discordId")
 })
 
 @Entity
 @Table(name = "user", schema = "public")
+@Transactional
 public class UserDto implements Serializable {
 
     @Id
@@ -39,6 +43,9 @@ public class UserDto implements Serializable {
     @Column(name = "meme_permission")
     private boolean memePermission = true;
 
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "music_file_id", referencedColumnName = "id")
+    private MusicDto musicDto;
 
     public enum Permissions {
         MUSIC("music"),
@@ -48,8 +55,8 @@ public class UserDto implements Serializable {
 
         private final String permission;
 
-        Permissions(String permision) {
-            this.permission = permision;
+        Permissions(String permission) {
+            this.permission = permission;
         }
 
         public String getPermission() {
@@ -66,14 +73,16 @@ public class UserDto implements Serializable {
 
     ;
 
-    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission) {
+    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission, MusicDto musicDto) {
         this.discordId = discordId;
         this.guildId = guildId;
         this.superUser = superUser;
         this.musicPermission = musicPermission;
         this.digPermission = digPermission;
         this.memePermission = memePermission;
+        this.musicDto = musicDto;
     }
+
 
     public Long getDiscordId() {
         return discordId;
@@ -124,17 +133,68 @@ public class UserDto implements Serializable {
         this.memePermission = memePermission;
     }
 
+
+
+    public MusicDto getMusicDto() {
+        return musicDto;
+    }
+
+    public void setMusicDto(MusicDto musicDto) {
+        this.musicDto = musicDto;
+    }
+
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("UserDto{");
+        final StringBuilder sb = new StringBuilder("User{");
         sb.append("discordId='").append(discordId);
-        sb.append(", guildId=").append(guildId);
-        sb.append(", superUser=").append(superUser);
+        sb.append("', guildId='").append(guildId);
+        sb.append("', superUser=").append(superUser);
         sb.append(", musicPermission=").append(musicPermission);
         sb.append(", digPermission=").append(digPermission);
         sb.append(", memePermission=").append(memePermission);
         sb.append('}');
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        // If the object is compared with itself then return true
+        if (o == this) {
+            return true;
+        }
+
+        /* Check if o is an instance of UserDto or not
+          "null instanceof [type]" also returns false */
+        if (!(o instanceof UserDto)) {
+            return false;
+        }
+
+        // typecast o to UserDto so that we can compare data members
+        UserDto other = (UserDto) o;
+
+        // Compare the data members and return accordingly
+        return new EqualsBuilder()
+                .append(discordId, other.discordId)
+                .append(guildId, other.guildId)
+                .append(superUser, other.superUser)
+                .append(musicPermission, other.musicPermission)
+                .append(digPermission, other.digPermission)
+                .append(memePermission, other.memePermission)
+                .append(musicDto, other.musicDto)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(discordId)
+                .append(guildId)
+                .append(superUser)
+                .append(musicPermission)
+                .append(digPermission)
+                .append(memePermission)
+                .append(musicDto)
+                .toHashCode();
     }
 
 }

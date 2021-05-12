@@ -5,6 +5,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager;
+import com.sedmelluq.discord.lavaplayer.source.local.LocalAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
@@ -25,12 +26,14 @@ public class PlayerManager {
     private final AudioPlayerManager audioPlayerManager;
     private boolean currentlyStoppable = true;
 
+
     public PlayerManager() {
         this.musicManagers = new HashMap<>();
         this.audioPlayerManager = new DefaultAudioPlayerManager();
         audioPlayerManager.registerSourceManager(new YoutubeAudioSourceManager());
         audioPlayerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
         audioPlayerManager.registerSourceManager(new HttpAudioSourceManager());
+        audioPlayerManager.registerSourceManager(new LocalAudioSourceManager());
 
         AudioSourceManagers.registerRemoteSources(this.audioPlayerManager);
         AudioSourceManagers.registerLocalSource(this.audioPlayerManager);
@@ -91,12 +94,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue();
+                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue();
+                channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         });
     }
@@ -115,6 +118,10 @@ public class PlayerManager {
 
     public void setCurrentlyStoppable(boolean stoppable) {
         this.currentlyStoppable = stoppable;
+    }
+
+    public AudioPlayerManager getAudioPlayerManager() {
+        return audioPlayerManager;
     }
 
 }

@@ -4,8 +4,6 @@ import net.dv8tion.jda.api.entities.Emote;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import org.springframework.beans.factory.annotation.Configurable;
-import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.emote.Emotes;
 import toby.jpa.dto.BrotherDto;
@@ -13,8 +11,6 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 
 
-@Service
-@Configurable
 public class BrotherCommand implements IMiscCommand {
 
     private final IBrotherService brotherService;

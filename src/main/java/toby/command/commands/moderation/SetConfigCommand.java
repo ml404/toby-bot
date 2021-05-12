@@ -25,7 +25,7 @@ public class SetConfigCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         List<String> args = ctx.getArgs();
         TextChannel channel = ctx.getChannel();
         final Member member = ctx.getMember();

@@ -1,5 +1,7 @@
 package toby.jpa.dto;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import javax.persistence.*;
 import java.io.Serializable;
 
@@ -19,6 +21,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name="brothers", schema ="public")
+@Transactional
 public class BrotherDto implements Serializable {
 
     @Id

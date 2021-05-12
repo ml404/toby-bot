@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.dto.web.RedditAPIDto;
 import toby.jpa.dto.UserDto;
 
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class MemeCommand implements IFetchCommand {
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
 
         Gson gson = new Gson();
         final TextChannel channel = ctx.getChannel();
@@ -79,6 +81,7 @@ public class MemeCommand implements IFetchCommand {
                         String url = redditAPIDto.getUrl();
                         String image = redditAPIDto.getImage();
                         EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, String.format(RedditAPIDto.commentsPrefix, url), image);
+                        embed.addField("Subreddit", subredditArg, false);
                         channel.sendMessage(embed.build()).queue();
 
                     }

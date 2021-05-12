@@ -19,7 +19,8 @@ public class CachingConfig {
         cacheManager.setCaches(Arrays.asList(
                 new ConcurrentMapCache("configs"),
                 new ConcurrentMapCache("brothers"),
-                new ConcurrentMapCache("users")
+                new ConcurrentMapCache("users"),
+                new ConcurrentMapCache("music")
                 ));
         return cacheManager;
     }

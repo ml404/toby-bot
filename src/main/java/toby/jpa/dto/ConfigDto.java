@@ -1,6 +1,7 @@
 package toby.jpa.dto;
 
 import org.apache.commons.lang3.EnumUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -22,6 +23,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name="config", schema ="public")
+@Transactional
 public class ConfigDto implements Serializable {
 
     @Id
