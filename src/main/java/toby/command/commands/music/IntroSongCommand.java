@@ -54,14 +54,14 @@ public class IntroSongCommand implements IMusicCommand {
             if (mentionedMembers.size() > 0) {
                 mentionedMembers.forEach(member -> {
                     UserDto userDto = calculateUserDto(member);
-                    persistMusicFile(ctx, userDto, deleteDelay, channel, attachment);
+                    persistMusicFile(ctx, userDto, deleteDelay, channel, attachment, member.getNickname());
                 });
-            } else persistMusicFile(ctx, requestingUserDto, deleteDelay, channel, attachment);
+            } else persistMusicFile(ctx, requestingUserDto, deleteDelay, channel, attachment, ctx.getAuthor().getName());
         }
     }
 
 
-    private void persistMusicFile(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, Message.Attachment attachment) {
+    private void persistMusicFile(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, Message.Attachment attachment, String memberName) {
         String filename = attachment.getFileName();
         byte[] fileContents;
         try {
@@ -76,13 +76,13 @@ public class IntroSongCommand implements IMusicCommand {
             musicFileService.createNewMusicFile(musicDto);
             requestingUserDto.setMusicDto(musicDto);
             userService.updateUser(requestingUserDto);
-            channel.sendMessageFormat("Successfully set %s's intro song to '%s'", ctx.getAuthor().getName(), musicDto.getFileName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            channel.sendMessageFormat("Successfully set %s's intro song to '%s'", memberName, musicDto.getFileName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         musicFileDto.setFileName(filename);
         musicFileDto.setMusicBlob(fileContents);
         musicFileService.updateMusicFile(musicFileDto);
-        channel.sendMessageFormat("Successfully updated %s's intro song to '%s'", ctx.getAuthor().getName(), filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        channel.sendMessageFormat("Successfully updated %s's intro song to '%s'", memberName, filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
