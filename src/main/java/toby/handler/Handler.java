@@ -145,9 +145,7 @@ public class Handler extends ListenerAdapter {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-        String deleteDelayPropertyName = ConfigDto.Configurations.DELETE_DELAY.getConfigValue();
         ConfigDto databaseVolumeConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
-        ConfigDto databaseDeleteDelayConfig = configService.getConfigByName(deleteDelayPropertyName, event.getGuild().getId());
         int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
@@ -159,12 +157,14 @@ public class Handler extends ListenerAdapter {
         long discordId = member.getUser().getIdLong();
         long guildId = member.getGuild().getIdLong();
 
-        UserDto dbUser = userService.getUserById(discordId, guildId);
-        MusicDto musicDto = dbUser.getMusicDto();
-        if (musicDto != null && musicDto.getMusicBlob() != null) {
-            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
-                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
-                    Integer.parseInt(databaseDeleteDelayConfig.getValue()));
+        if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
+            UserDto dbUser = userService.getUserById(discordId, guildId);
+            MusicDto musicDto = dbUser.getMusicDto();
+            if (musicDto != null && musicDto.getMusicBlob() != null) {
+                PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
+                        String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                        0);
+            }
         }
     }
 
