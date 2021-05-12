@@ -162,7 +162,7 @@ public class Handler extends ListenerAdapter {
         UserDto dbUser = userService.getUserById(discordId, guildId);
         MusicDto musicDto = dbUser.getMusicDto();
         if (musicDto != null && musicDto.getMusicBlob() != null) {
-            PlayerManager.getInstance().loadAndPlay(guild.getDefaultChannel(),
+            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
                     Integer.parseInt(databaseDeleteDelayConfig.getValue()));
         }
