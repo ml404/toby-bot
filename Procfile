@@ -1,1 +1,1 @@
-worker: java -jar build/libs/toby-bot-3.0-SNAPSHOT-all.jar
+web: java -jar build/libs/toby-bot-4.0-SNAPSHOT.jar

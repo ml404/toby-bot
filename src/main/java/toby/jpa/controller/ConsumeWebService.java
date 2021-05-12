@@ -23,7 +23,7 @@ public class ConsumeWebService {
     public MusicDto getMusicDto(String id) {
 
         return webClient.get()
-                .uri("/music/" + id)
+                .uri("/music?id=" + id)
                 .retrieve()
                 .bodyToMono(MusicDto.class)
                 .block(REQUEST_TIMEOUT);

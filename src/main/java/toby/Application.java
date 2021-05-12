@@ -1,20 +1,17 @@
 package toby;
 
-import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
 
 
 @SpringBootApplication
 @ComponentScan("toby")
-public class Application {
-
+public class Application extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
-        new SpringApplicationBuilder(Application.class)
-                .web(WebApplicationType.REACTIVE)
-                .run(args);
+        SpringApplication.run(Application.class, args);
     }
 
 }

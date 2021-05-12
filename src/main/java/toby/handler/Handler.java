@@ -163,7 +163,7 @@ public class Handler extends ListenerAdapter {
         MusicDto musicDto = dbUser.getMusicDto();
         if (musicDto != null && musicDto.getMusicBlob() != null) {
             PlayerManager.getInstance().loadAndPlay(guild.getDefaultChannel(),
-                    String.format(ConsumeWebService.getWebUrl() + "/music/%s", musicDto.getId()),
+                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
                     Integer.parseInt(databaseDeleteDelayConfig.getValue()));
         }
     }

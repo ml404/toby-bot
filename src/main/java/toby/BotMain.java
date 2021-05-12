@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import toby.handler.Handler;
 import toby.jpa.service.IBrotherService;
 import toby.jpa.service.IConfigService;
@@ -62,10 +61,6 @@ public class BotMain {
         return new EventWaiter();
     }
 
-    @Bean
-    public static WebClient localApiClient() {
-        return WebClient.create("http://localhost:8080/api/v1");
-    }
 }
 
 

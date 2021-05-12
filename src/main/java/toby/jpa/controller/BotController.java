@@ -1,8 +1,9 @@
 package toby.jpa.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.dto.ConfigDto;
@@ -27,31 +28,36 @@ public class BotController {
     @Autowired
     public IBrotherService brotherService;
 
-    @RequestMapping("/")
+    @GetMapping("/")
+    @ResponseBody
     public String index() {
         return "Welcome to TobyBot";
     }
 
-    @RequestMapping("/brother/{discordId}")
+    @GetMapping("/brother")
+    @ResponseBody
     public BrotherDto getBrother(@RequestParam("discordId") String discordId){
 
         return brotherService.getUserByName(discordId);
     }
 
-    @RequestMapping("/config/{guildId}/{name}")
+    @GetMapping("/config")
+    @ResponseBody
     public ConfigDto getConfig(@RequestParam("name") String name, @RequestParam("guildId") String guildId){
 
         return configService.getConfigByName(name, guildId);
     }
 
 
-    @RequestMapping("/music/{id}")
+    @GetMapping("/music")
+    @ResponseBody
     public byte[] getMusicBlob(@RequestParam("id") String id){
 
         return musicFileService.getMusicFileById(id).getMusicBlob();
     }
 
-    @RequestMapping("/user/{guildId}/{discordId}")
+    @GetMapping("/user")
+    @ResponseBody
     public UserDto getUser(@RequestParam("discordId") Long discordId, @RequestParam("guildId") Long guildId){
 
         return userService.getUserById(discordId, guildId);
