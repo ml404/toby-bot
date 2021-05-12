@@ -54,14 +54,14 @@ public class IntroSongCommand implements IMusicCommand {
             if (mentionedMembers.size() > 0) {
                 mentionedMembers.forEach(member -> {
                     UserDto userDto = calculateUserDto(member);
-                    persistMusicFile(ctx, userDto, deleteDelay, channel, attachment, member.getNickname());
+                    persistMusicFile(userDto, deleteDelay, channel, attachment, member.getNickname());
                 });
-            } else persistMusicFile(ctx, requestingUserDto, deleteDelay, channel, attachment, ctx.getAuthor().getName());
+            } else persistMusicFile(requestingUserDto, deleteDelay, channel, attachment, ctx.getAuthor().getName());
         }
     }
 
 
-    private void persistMusicFile(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, Message.Attachment attachment, String memberName) {
+    private void persistMusicFile(UserDto targetDto, Integer deleteDelay, TextChannel channel, Message.Attachment attachment, String memberName) {
         String filename = attachment.getFileName();
         byte[] fileContents;
         try {
@@ -70,12 +70,12 @@ public class IntroSongCommand implements IMusicCommand {
             channel.sendMessageFormat("Unable to read file '%s'", filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        MusicDto musicFileDto = requestingUserDto.getMusicDto();
+        MusicDto musicFileDto = targetDto.getMusicDto();
         if (musicFileDto == null) {
-            MusicDto musicDto = new MusicDto(requestingUserDto.getDiscordId(), requestingUserDto.getGuildId(), filename, fileContents);
+            MusicDto musicDto = new MusicDto(targetDto.getDiscordId(), targetDto.getGuildId(), filename, fileContents);
             musicFileService.createNewMusicFile(musicDto);
-            requestingUserDto.setMusicDto(musicDto);
-            userService.updateUser(requestingUserDto);
+            targetDto.setMusicDto(musicDto);
+            userService.updateUser(targetDto);
             channel.sendMessageFormat("Successfully set %s's intro song to '%s'", memberName, musicDto.getFileName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
