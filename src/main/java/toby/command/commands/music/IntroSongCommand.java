@@ -54,7 +54,7 @@ public class IntroSongCommand implements IMusicCommand {
             if (mentionedMembers.size() > 0) {
                 mentionedMembers.forEach(member -> {
                     UserDto userDto = calculateUserDto(member);
-                    persistMusicFile(userDto, deleteDelay, channel, attachment, member.getNickname());
+                    persistMusicFile(userDto, deleteDelay, channel, attachment, member.getEffectiveName());
                 });
             } else persistMusicFile(requestingUserDto, deleteDelay, channel, attachment, ctx.getAuthor().getName());
         }
