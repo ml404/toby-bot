@@ -53,7 +53,7 @@ dependencies {
 
 //    testCompile group: 'junit', name: 'junit', version: '4.12'
     compile 'net.dv8tion:JDA:4.2.0_214'
-    compile 'com.github.sedmelluq:lavaplayer:1.3.75'
+    compile 'com.github.sedmelluq:lavaplayer:1.3.77'
     runtime("org.hibernate:hibernate-core:5.4.30.Final")
     // https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api
     runtime 'ch.qos.logback:logback-classic:1.1.8'
