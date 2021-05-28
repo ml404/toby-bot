@@ -21,21 +21,21 @@ public class KickCommand implements IModerationCommand {
         final List<String> args = ctx.getArgs();
 
         if (message.getMentionedMembers().isEmpty()) {
-            channel.sendMessage("You must mention 1 or more Users to shoot").queue();
+            channel.sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
         message.getMentionedMembers().forEach(target -> {
 
         if (!member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS)) {
-            channel.sendMessage(String.format("You can't shoot %s", target)).queue();
+            channel.sendMessage(String.format("You can't shoot %s", target)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
         final Member botMember = ctx.getSelfMember();
 
         if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
-            channel.sendMessage(String.format("I'm not allowed to shoot %s", target)).queue();
+            channel.sendMessage(String.format("I'm not allowed to shoot %s", target)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
@@ -43,8 +43,8 @@ public class KickCommand implements IModerationCommand {
                 .kick(target)
                 .reason("because you told me to.")
                 .queue(
-                        (__) -> channel.sendMessage("Shot hit the mark... something about fortnite?").queue(),
-                        (error) -> channel.sendMessageFormat("Could not shoot %s", error.getMessage()).queue()
+                        (__) -> channel.sendMessage("Shot hit the mark... something about fortnite?").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
+                        (error) -> channel.sendMessageFormat("Could not shoot %s", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                 );
         });
     }

@@ -60,7 +60,7 @@ public class QueueCommand implements IMusicCommand {
                     .append("` more...");
         }
 
-        messageAction.queue();
+        messageAction.queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static String formatTime(long timeInMillis) {

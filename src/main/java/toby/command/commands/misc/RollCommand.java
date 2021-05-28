@@ -26,7 +26,7 @@ public class RollCommand implements IMiscCommand {
                         // Send another message if the roll was bad (less than half top value)
                         sentMessage -> channel.sendMessage("...shit be cool\n")
                 )
-                .queue();
+                .queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 

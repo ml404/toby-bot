@@ -52,7 +52,7 @@ public class MoveCommand implements IModerationCommand {
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
                             (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
-                            (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue()
+                            (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                     );
         });
     }

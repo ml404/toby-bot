@@ -36,7 +36,7 @@ public class ChCommand implements IMiscCommand {
             }
         }).collect(Collectors.joining(" "));
 
-        channel.sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue();
+        channel.sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
 

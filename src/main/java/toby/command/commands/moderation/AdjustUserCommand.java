@@ -30,7 +30,7 @@ public class AdjustUserCommand implements IModerationCommand {
         Message message = ctx.getMessage();
         final Member member = ctx.getMember();
 
-        List<Member> mentionedMembers = channelAndArgumentValidation(prefix, requestingUserDto, args, channel, message, member);
+        List<Member> mentionedMembers = channelAndArgumentValidation(prefix, requestingUserDto, args, channel, message, member, deleteDelay);
         if (mentionedMembers == null) return;
 
         mentionedMembers.forEach(targetMember -> {
@@ -87,20 +87,20 @@ public class AdjustUserCommand implements IModerationCommand {
     }
 
     @Nullable
-    private List<Member> channelAndArgumentValidation(String prefix, UserDto requestingUserDto, List<String> args, TextChannel channel, Message message, Member member) {
+    private List<Member> channelAndArgumentValidation(String prefix, UserDto requestingUserDto, List<String> args, TextChannel channel, Message message, Member member, int deleteDelay) {
         if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
-            channel.sendMessage("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").queue();
+            channel.sendMessage("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
         if (!args.stream().anyMatch(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))) {
-            channel.sendMessage(getHelp(prefix)).queue();
+            channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
         List<Member> mentionedMembers = message.getMentionedMembers();
         if (mentionedMembers.isEmpty()) {
-            channel.sendMessage("You must mention 1 or more Users to adjust permissions of").queue();
+            channel.sendMessage("You must mention 1 or more Users to adjust permissions of").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
         return mentionedMembers;

@@ -36,12 +36,12 @@ public class HelloThereCommand implements IMiscCommand {
             try {
                 LocalDate dateGiven = LocalDate.parse(args.get(0), dateTimeFormatter);
                 if (dateGiven.isBefore(EP3Date)) {
-                    channel.sendMessage("Hello.").queue();
+                    channel.sendMessage("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 } else {
-                    channel.sendMessage("General Kenobi.").queue();
+                    channel.sendMessage("General Kenobi.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 }
             } catch (DateTimeParseException e) {
-                channel.sendMessage(String.format("I don't recognise the format of the date you gave me, please use this format %s", dateformat)).queue();
+                channel.sendMessage(String.format("I don't recognise the format of the date you gave me, please use this format %s", dateformat)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
     }

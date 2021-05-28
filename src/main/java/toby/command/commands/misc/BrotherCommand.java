@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.dto.UserDto;
@@ -27,18 +28,18 @@ public class BrotherCommand implements IMiscCommand {
         Guild guild = ctx.getGuild();
         Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
 
-        determineBrother(channel, message, tobyEmote);
+        determineBrother(channel, message, tobyEmote, deleteDelay);
     }
 
-    private void determineBrother(TextChannel channel, Message message, Emote tobyEmote) {
+    private void determineBrother(TextChannel channel, Message message, Emote tobyEmote, int deleteDelay) {
         if (message.getMentionedMembers().isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(message.getAuthor().getIdLong());
             if (brother!=null) {
-                channel.sendMessage(String.format("Of course you're my brother %s.", brother.getBrotherName())).queue();
+                channel.sendMessage(String.format("Of course you're my brother %s.", brother.getBrotherName())).queue(message1 -> ICommand.deleteAfter(message, deleteDelay));
             } else if (tobyId.equals(message.getAuthor().getIdLong())) {
-                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s", tobyEmote)).queue();
+                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s", tobyEmote)).queue(message1 -> ICommand.deleteAfter(message, deleteDelay));
             } else
-                channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue();
+                channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue(message1 -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 
