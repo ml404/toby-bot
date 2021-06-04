@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.fetch.IFetchCommand;
+import toby.command.commands.fetch.Kf2RandomMapCommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
@@ -49,10 +50,13 @@ public class CommandManager {
         addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
+        addCommand(new Kf2RandomMapCommand());
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());
         addCommand(new UserInfoCommand());
+        addCommand(new RandomCommand());
+        addCommand(new EventWaiterCommand(waiter));
 
         //moderation commands
         addCommand(new SetConfigCommand(configService));
@@ -78,7 +82,6 @@ public class CommandManager {
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
         addCommand(new IntroSongCommand(userService, musicFileService));
-        addCommand(new EventWaiterCommand(waiter));
     }
 
     private void addCommand(ICommand cmd) {

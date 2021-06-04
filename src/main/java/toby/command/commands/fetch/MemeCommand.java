@@ -31,7 +31,7 @@ public class MemeCommand implements IFetchCommand {
             channel.sendMessageFormat(
                     "You do not have adequate permissions to use this command, talk to the server owner: %s",
                     ctx.getGuild().getOwner().getNickname()
-            ).queue();
+            ).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return ;
         }
 
@@ -48,7 +48,7 @@ public class MemeCommand implements IFetchCommand {
             } catch (IllegalArgumentException e) {
                 timePeriod = "day";
                 channel.sendMessage(String.format("You entered a time period not supported: **%s**\\. Please use one of: %s \n", args.get(1), Arrays.stream(RedditAPIDto.TimePeriod.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining("/"))) +
-                        String.format("Using default time period of %s", timePeriod)).queue();
+                        String.format("Using default time period of %s", timePeriod)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             try {
                 limit = Integer.parseInt(args.get(2));
@@ -57,14 +57,14 @@ public class MemeCommand implements IFetchCommand {
             }
             catch (NumberFormatException e){
                 limit = 5;
-                channel.sendMessage(String.format("Invalid number supplied, using default value %d", limit)).queue();
+                channel.sendMessage(String.format("Invalid number supplied, using default value %d", limit)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 channel.sendMessage("Don't talk to me.").queue();
             } else {
                 WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
-                        channel.sendMessage(String.format("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg)).queue();
+                        channel.sendMessage(String.format("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                         return;
                     }
                     final JsonNode parentData = json.get("data");
@@ -73,9 +73,9 @@ public class MemeCommand implements IFetchCommand {
                     JsonNode meme = children.get(random.nextInt(children.size()));
                     RedditAPIDto redditAPIDto = gson.fromJson(meme.get("data").toString(), RedditAPIDto.class);
                     if (redditAPIDto.isNsfw()) {
-                        channel.sendMessage(String.format("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", member)).queue();
+                        channel.sendMessage(String.format("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", member)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     } else if (redditAPIDto.getVideo()) {
-                        channel.sendMessage("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue();
+                        channel.sendMessage("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     } else {
                         String title = redditAPIDto.getTitle();
                         String url = redditAPIDto.getUrl();
