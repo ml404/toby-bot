@@ -67,7 +67,7 @@ public class HelpCommand implements IMiscCommand {
             return;
         }
 
-        channel.sendMessage(command.getHelp(prefix)).queue();
+        channel.sendMessage(command.getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override
