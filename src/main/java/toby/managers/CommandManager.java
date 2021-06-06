@@ -14,6 +14,7 @@ import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
+import toby.helpers.Cache;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
@@ -46,11 +47,13 @@ public class CommandManager {
         this.userService = userService;
         this.musicFileService = musicFileService;
 
+        var cache = new Cache(86400,3600,1);
+
         //misc commands
         addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
-        addCommand(new Kf2RandomMapCommand());
+        addCommand(new Kf2RandomMapCommand(cache));
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());
