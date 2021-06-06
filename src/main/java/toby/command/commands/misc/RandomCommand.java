@@ -21,7 +21,7 @@ public class RandomCommand implements IMiscCommand {
         if (args.size() == 0) {
             channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
-        Object randomElement = getRandomElement(ctx.getArgs());
+        Object randomElement = getRandomElement(args);
         channel.sendMessage(randomElement.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
     }
