@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import toby.command.ICommand;
+import toby.command.commands.fetch.DbdRandomKillerCommand;
 import toby.command.commands.fetch.Kf2RandomMapCommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
@@ -88,9 +89,11 @@ public class CommandManagerTest {
                 EventWaiterCommand.class,
                 UserInfoCommand.class,
                 RandomCommand.class,
-                Kf2RandomMapCommand.class);
+                Kf2RandomMapCommand.class,
+                DbdRandomKillerCommand.class
+                );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(31, commandManager.getAllCommands().size());
+        assertEquals(32, commandManager.getAllCommands().size());
     }
 }

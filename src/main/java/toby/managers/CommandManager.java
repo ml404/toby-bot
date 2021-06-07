@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.command.commands.fetch.DbdRandomKillerCommand;
 import toby.command.commands.fetch.IFetchCommand;
 import toby.command.commands.fetch.Kf2RandomMapCommand;
 import toby.command.commands.fetch.MemeCommand;
@@ -47,13 +48,14 @@ public class CommandManager {
         this.userService = userService;
         this.musicFileService = musicFileService;
 
-        var cache = new Cache(86400,3600,1);
+        var cache = new Cache(86400,3600,2);
 
         //misc commands
         addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
         addCommand(new Kf2RandomMapCommand(cache));
+        addCommand(new DbdRandomKillerCommand(cache));
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());

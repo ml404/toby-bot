@@ -1,5 +1,4 @@
-package fileutils;
-
+package helpers;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +12,6 @@ import java.net.URL;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static toby.helpers.FileUtils.streamsAreEqual;
-
 
 /**
  * FileUtils Tester.
