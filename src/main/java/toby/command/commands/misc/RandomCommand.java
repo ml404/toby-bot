@@ -17,10 +17,10 @@ public class RandomCommand implements IMiscCommand {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         ICommand.deleteAfter(message, deleteDelay);
-        List<String> args = Arrays.asList(message.getContentRaw().split(" ", 2)[1].split(","));
-        if (args.size() == 0) {
+        if (ctx.getArgs().isEmpty()) {
             channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
+        List<String> args = Arrays.asList(message.getContentRaw().split(" ", 2)[1].split(","));
         Object randomElement = getRandomElement(args);
         channel.sendMessage(randomElement.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
@@ -38,8 +38,9 @@ public class RandomCommand implements IMiscCommand {
 
     @Override
     public String getHelp(String prefix) {
-        return "Return one item from a list you provide with options separated by commas. \n"
-                + String.format("Usage: %srandom option1, option2, option3", prefix);
+        return "Return one item from a list you provide with options separated by commas. \n" +
+                String.format("Usage: %srandom option1, option2, option3 \n", prefix) +
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override
