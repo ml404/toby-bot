@@ -50,11 +50,11 @@ public class UserInfoCommand implements IMiscCommand {
             if (requestingUserDto.isSuperUser()) {
                 message.getMentionedMembers().forEach(member -> {
                     UserDto mentionedUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
-                    channel.sendMessageFormat("Here are the permissions for '%s': '%s'.", member.getNickname(), mentionedUser).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    channel.sendMessageFormat("Here are the permissions for '%s': '%s'.", member.getEffectiveName(), mentionedUser).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     MusicDto musicDto = mentionedUser.getMusicDto();
                     if (musicDto != null) {
                         if (musicDto.getFileName() == null || musicDto.getFileName().isBlank()) {
-                            channel.sendMessageFormat("There is no intro music file associated with '%s'.", member.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                            channel.sendMessageFormat("There is no intro music file associated with '%s'.", member.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
                         } else if (musicDto.getFileName() != null) {
                             channel.sendMessage(String.format("Their intro song is currently set as: '%s'.", musicDto.getFileName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
