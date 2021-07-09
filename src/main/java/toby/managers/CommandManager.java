@@ -59,7 +59,7 @@ public class CommandManager {
         addCommand(new HelloThereCommand(configService));
         addCommand(new BrotherCommand(brotherService));
         addCommand(new ChCommand());
-        addCommand(new UserInfoCommand());
+        addCommand(new UserInfoCommand(userService));
         addCommand(new RandomCommand());
         addCommand(new EventWaiterCommand(waiter));
 

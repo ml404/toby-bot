@@ -46,6 +46,7 @@ public class IntroSongCommand implements IMusicCommand {
             Message.Attachment attachment = attachments.stream().findFirst().get();
             if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
                 channel.sendMessage("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                return;
             } else if (attachment.getSize() > 200000) {
                 channel.sendMessage("Please keep the file size under 200kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
@@ -111,7 +112,8 @@ public class IntroSongCommand implements IMusicCommand {
     @Override
     public String getHelp(String prefix) {
         return "Upload a short (200kb or less) **MP3** file for Toby to sing when you join a voice channel (and he's not currently in a voice channel playing music) \n" +
-                String.format("Usage: %sintrosong with a file attached to your message", prefix);
+                String.format("Usage: %sintrosong with a file attached to your message", prefix) +
+                String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
     @Override
