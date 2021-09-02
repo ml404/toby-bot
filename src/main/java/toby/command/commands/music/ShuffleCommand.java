@@ -28,7 +28,7 @@ public class ShuffleCommand implements IMusicCommand {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-        if (!requestingUserDto.hasMusicPermission()) {
+        if (requestingUserDto.hasMusicPermission()) {
             if (doChannelValidation(ctx, channel, selfVoiceState, deleteDelay)) return;
 
             Guild guild = ctx.getGuild();
