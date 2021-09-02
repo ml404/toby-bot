@@ -59,7 +59,7 @@ public class WikiFetcherTest {
         List<String> mapStrings = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery);
 
         assertNotNull(mapStrings);
-        assertEquals(mapStrings.size(), 24);
+        assertEquals(mapStrings.size(), 25);
     }
 
 
