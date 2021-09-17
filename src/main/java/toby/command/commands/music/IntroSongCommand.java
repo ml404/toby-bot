@@ -86,10 +86,10 @@ public class IntroSongCommand implements IMusicCommand {
         if (mentionedMembers.size() > 0) {
             mentionedMembers.forEach(member -> {
                 UserDto userDto = calculateUserDto(member);
-                persistMusicUrl(userDto, deleteDelay, channel, "YT Link", url, member.getEffectiveName());
+                persistMusicUrl(userDto, deleteDelay, channel, url, url, member.getEffectiveName());
             });
         } else
-            persistMusicUrl(requestingUserDto, deleteDelay, channel, "YT Link", url, ctx.getAuthor().getName());
+            persistMusicUrl(requestingUserDto, deleteDelay, channel, url, url, ctx.getAuthor().getName());
     }
 
 
