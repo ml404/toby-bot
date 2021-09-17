@@ -32,6 +32,7 @@ import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -163,6 +164,9 @@ public class Handler extends ListenerAdapter {
             if (musicDto != null && musicDto.getFileName() != null) {
                 PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
                         String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                        0);
+            } else if (musicDto != null) {
+                PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),
                         0);
             }
         }
