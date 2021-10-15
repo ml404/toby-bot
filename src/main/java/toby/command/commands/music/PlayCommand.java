@@ -1,10 +1,13 @@
 package toby.command.commands.music;
 
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.controller.ConsumeWebService;
+import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
@@ -28,6 +31,11 @@ public class PlayCommand implements IMusicCommand {
         if (doMethodAndChannelValidation(ctx, channel, deleteDelay)) return;
 
         String link = String.join(" ", ctx.getArgs());
+
+        if(link.equals("intro")){
+            playUserIntro(requestingUserDto, ctx.getGuild());
+            return;
+        }
 
         if (link.contains("youtube") && !isUrl(link)) {
             link = "ytsearch:" + link;
@@ -63,6 +71,18 @@ public class PlayCommand implements IMusicCommand {
             return true;
         }
         return false;
+    }
+
+    private void playUserIntro(UserDto dbUser, Guild guild) {
+        MusicDto musicDto = dbUser.getMusicDto();
+        if (musicDto != null && musicDto.getFileName() != null) {
+            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
+                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    0);
+        } else if (musicDto != null) {
+            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),
+                    0);
+        }
     }
 
     @Override
