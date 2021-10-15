@@ -159,16 +159,20 @@ public class Handler extends ListenerAdapter {
         long guildId = member.getGuild().getIdLong();
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            UserDto dbUser = userService.getUserById(discordId, guildId);
-            MusicDto musicDto = dbUser.getMusicDto();
-            if (musicDto != null && musicDto.getFileName() != null) {
-                PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
-                        String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
-                        0);
-            } else if (musicDto != null) {
-                PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),
-                        0);
-            }
+            playUserIntro(guild, discordId, guildId);
+        }
+    }
+
+    private void playUserIntro(Guild guild, long discordId, long guildId) {
+        UserDto dbUser = userService.getUserById(discordId, guildId);
+        MusicDto musicDto = dbUser.getMusicDto();
+        if (musicDto != null && musicDto.getFileName() != null) {
+            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
+                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    0);
+        } else if (musicDto != null) {
+            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),
+                    0);
         }
     }
 
