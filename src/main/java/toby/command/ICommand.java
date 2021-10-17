@@ -4,7 +4,6 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.jpa.dto.UserDto;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -17,7 +16,7 @@ public interface ICommand {
     String getHelp(String prefix);
 
     default List<String> getAliases() {
-        return Arrays.asList();
+        return List.of();
     }
 
     static void deleteAfter(Message message, int delay) {

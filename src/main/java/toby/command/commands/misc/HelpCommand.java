@@ -27,7 +27,7 @@ public class HelpCommand implements IMiscCommand {
 
         if (args.isEmpty()) {
             StringBuilder builder = new StringBuilder();
-            Consumer<ICommand> commandConsumer = (command) -> builder.append('`').append(prefix).append(command.getName()).append('`').append(String.format("Aliases are: '%s'", String.join(",", command.getAliases()))).append("\n");
+            Consumer<ICommand> commandConsumer = (command) -> builder.append('`').append(prefix).append(command.getName()).append('`').append(String.format(" Aliases are: '%s'", String.join(",", command.getAliases()))).append("\n");
 
             builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", prefix));
             builder.append("**Music Commands**:\n");
