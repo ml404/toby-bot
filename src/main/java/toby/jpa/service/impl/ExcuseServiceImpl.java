@@ -54,9 +54,8 @@ public class ExcuseServiceImpl implements IExcuseService {
     }
 
     @Override
-    @CacheEvict(value = "excuses", key = "#excuseDto.id")
-    public void deleteExcuse(ExcuseDto excuseDto) {
-        excuseService.deleteExcuse(excuseDto);
+    public void deleteExcuseByGuildId(Long guildId) {
+        excuseService.deleteAllExcusesForGuild(guildId);
     }
 
     @Override

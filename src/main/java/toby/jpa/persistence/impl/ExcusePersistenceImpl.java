@@ -79,9 +79,10 @@ public class ExcusePersistenceImpl implements IExcusePersistence {
     }
 
     @Override
-    public void deleteExcuse(ExcuseDto excuseDto) {
-        em.remove(excuseDto);
-        em.flush();
+    public void deleteAllExcusesForGuild(Long guildId) {
+        Query excuseQuery = em.createNamedQuery("ExcuseDto.deleteAllByGuildId");
+        excuseQuery.setParameter("guildId", guildId);
+        excuseQuery.executeUpdate();
     }
 
     @Override
@@ -92,6 +93,7 @@ public class ExcusePersistenceImpl implements IExcusePersistence {
 
     }
 
+    @Transactional
     private ExcuseDto persistExcuseDto(ExcuseDto excuseDto) {
         em.persist(excuseDto);
         em.flush();

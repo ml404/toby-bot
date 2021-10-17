@@ -12,7 +12,7 @@ public interface IExcuseService {
     ExcuseDto createNewExcuse(ExcuseDto excuseDto);
     ExcuseDto getExcuseById(Integer id);
     ExcuseDto updateExcuse(ExcuseDto excuseDto);
-    void deleteExcuse(ExcuseDto excuseDto);
+    void deleteExcuseByGuildId(Long guildId);
     void deleteExcuseById(Integer id);
 
 }

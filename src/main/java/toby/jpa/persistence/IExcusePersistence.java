@@ -12,6 +12,6 @@ public interface IExcusePersistence {
     ExcuseDto createNewExcuse(ExcuseDto excuseDto);
     ExcuseDto getExcuseById(Integer id);
     ExcuseDto updateExcuse(ExcuseDto excuseDto);
-    void deleteExcuse(ExcuseDto excuseDto);
+    void deleteAllExcusesForGuild(Long excuseDto);
     void deleteExcuseById(Integer discordId);
 }

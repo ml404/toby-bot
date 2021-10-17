@@ -32,18 +32,16 @@ public class ExcuseServiceImplIntegrationTest {
 
     @BeforeEach
     public void setUp() {
-        excuseService.deleteExcuseById(1);
     }
 
     @AfterEach
     public void tearDown() {
-        excuseService.deleteExcuseById(1);
+        excuseService.deleteExcuseByGuildId(1L);
     }
 
     @Test
     public void whenValidIdAndGuild_thenExcuseShouldBeFound() {
         ExcuseDto excuseDto = new ExcuseDto();
-        excuseDto.setId(1);
         excuseDto.setGuildId(1L);
         excuseDto.setAuthor("Author");
         excuseDto.setExcuse("Excuse");
@@ -62,7 +60,6 @@ public class ExcuseServiceImplIntegrationTest {
     @Transactional
     public void testUpdate_thenNewExcuseValuesShouldBeReturned() {
         ExcuseDto excuseDto1 = new ExcuseDto();
-        excuseDto1.setId(1);
         excuseDto1.setGuildId(1L);
         excuseDto1.setAuthor("Author");
         excuseDto1.setExcuse("Excuse");
@@ -83,7 +80,7 @@ public class ExcuseServiceImplIntegrationTest {
 
 
         ExcuseDto excuseDto2 = new ExcuseDto();
-        excuseDto2.setId(1);
+        excuseDto2.setId(excuseDto1.getId());
         excuseDto2.setGuildId(1L);
         excuseDto2.setAuthor("Author");
         excuseDto2.setExcuse("Excuse");

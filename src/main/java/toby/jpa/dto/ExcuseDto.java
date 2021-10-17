@@ -21,7 +21,10 @@ import java.io.Serializable;
                 query = "select e from ExcuseDto e WHERE e.id = :id"),
 
         @NamedQuery(name = "ExcuseDto.deleteById",
-                query = "delete from ExcuseDto e WHERE e.id = :id")
+                query = "delete from ExcuseDto e WHERE e.id = :id"),
+
+        @NamedQuery(name = "ExcuseDto.deleteAllByGuildId",
+                query = "delete from ExcuseDto e WHERE e.guildId = :guildId")
 })
 
 @Entity
@@ -31,6 +34,7 @@ public class ExcuseDto implements Serializable {
 
     @Id
     @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Column(name = "guild_id")
