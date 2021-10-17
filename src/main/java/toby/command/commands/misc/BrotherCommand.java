@@ -35,11 +35,11 @@ public class BrotherCommand implements IMiscCommand {
         if (message.getMentionedMembers().isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(message.getAuthor().getIdLong());
             if (brother!=null) {
-                channel.sendMessage(String.format("Of course you're my brother %s.", brother.getBrotherName())).queue(message1 -> ICommand.deleteAfter(message, deleteDelay));
+                channel.sendMessage(String.format("Of course you're my brother %s.", brother.getBrotherName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else if (tobyId.equals(message.getAuthor().getIdLong())) {
-                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s", tobyEmote)).queue(message1 -> ICommand.deleteAfter(message, deleteDelay));
+                channel.sendMessage(String.format("You're not my fucking brother Toby, you're me %s", tobyEmote)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else
-                channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue(message1 -> ICommand.deleteAfter(message, deleteDelay));
+                channel.sendMessage(String.format("You're not my fucking brother %s ffs %s", message.getMember().getEffectiveName(), tobyEmote)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
     }
 

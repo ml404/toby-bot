@@ -11,6 +11,7 @@ import toby.jpa.service.IExcuseService;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 
 public class ExcuseCommand implements IMiscCommand {
@@ -37,7 +38,8 @@ public class ExcuseCommand implements IMiscCommand {
         } else if (args.contains("approve")) {
             approvePendingExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
         } else {
-            createNewExcuse(channel, guildId, ctx.getAuthor().getName(), message.getContentRaw(), deleteDelay);
+            String author = message.getMentionedMembers().size() > 0 ? message.getMentionedMembers().stream().findFirst().get().getNickname() : ctx.getAuthor().getName();
+            createNewExcuse(channel, guildId, author, args, deleteDelay);
         }
     }
 
@@ -67,18 +69,19 @@ public class ExcuseCommand implements IMiscCommand {
     }
 
 
-    private void createNewExcuse(TextChannel channel, Long guildId, String author, String excuse, Integer deleteDelay) {
-        Optional<ExcuseDto> existingExcuse = excuseService.listAllGuildExcuses(guildId).stream().filter(excuseDto -> excuseDto.getExcuse().equals(excuse)).findFirst();
+    private void createNewExcuse(TextChannel channel, Long guildId, String author, List<String> args, Integer deleteDelay) {
+        List<String> mentionlessList = args.subList(1, args.size()+1).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
+        String excuseMessage = String.join(" ", mentionlessList);
+        Optional<ExcuseDto> existingExcuse = excuseService.listAllGuildExcuses(guildId).stream().filter(excuseDto -> excuseDto.getExcuse().equals(excuseMessage)).findFirst();
         if (existingExcuse.isPresent()) {
-            channel.sendMessage("I've heard that one before, keep up.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            channel.sendMessage("I've heard that one before, keep up.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         } else {
-            String excuseMessage = excuse.split(" ", 2)[1];
             ExcuseDto excuseDto = new ExcuseDto();
             excuseDto.setGuildId(guildId);
             excuseDto.setAuthor(author);
             excuseDto.setExcuse(excuseMessage);
             ExcuseDto newExcuse = excuseService.createNewExcuse(excuseDto);
-            channel.sendMessage(String.format("Submitted new excuse '%s' with id '%d' for approval.", excuseMessage, newExcuse.getId())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            channel.sendMessage(String.format("Submitted new excuse '%s' with id '%d' for approval.", excuseMessage, newExcuse.getId())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
     }
 
@@ -102,7 +105,7 @@ public class ExcuseCommand implements IMiscCommand {
     public String getHelp(String prefix) {
         return "Let me give you a convenient excuse! \n" +
                 String.format("Usages: `%sexcuse` to list a random approved excuse \n", prefix) +
-                String.format("`%sexcuse exampleExcuseMessage` to submit an excuse to be approved, max 200 characters. \n", prefix) +
+                String.format("`%sexcuse exampleExcuseMessage` to submit an excuse to be approved, max 200 characters. Can optionally mention a user to attribute the quote to. \n", prefix) +
                 String.format("`%sexcuse pending` to list pending excuses. \n", prefix) +
                 String.format("`%sexcuse approve $pendingExcuseNumber` to approve a pending excuse. \n", prefix);
     }

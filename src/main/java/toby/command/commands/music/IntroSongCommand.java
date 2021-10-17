@@ -58,8 +58,8 @@ public class IntroSongCommand implements IMusicCommand {
         if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
             channel.sendMessage("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
-        } else if (attachment.getSize() > 200000) {
-            channel.sendMessage("Please keep the file size under 200kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        } else if (attachment.getSize() > 300000) {
+            channel.sendMessage("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
 
         List<Member> mentionedMembers = ctx.getMessage().getMentionedMembers();
