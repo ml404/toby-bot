@@ -70,7 +70,7 @@ public class ExcuseCommand implements IMiscCommand {
 
 
     private void createNewExcuse(TextChannel channel, Long guildId, String author, List<String> args, Integer deleteDelay) {
-        List<String> mentionlessList = args.subList(1, args.size()+1).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
+        List<String> mentionlessList = args.subList(0, args.size()).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
         String excuseMessage = String.join(" ", mentionlessList);
         Optional<ExcuseDto> existingExcuse = excuseService.listAllGuildExcuses(guildId).stream().filter(excuseDto -> excuseDto.getExcuse().equals(excuseMessage)).findFirst();
         if (existingExcuse.isPresent()) {
