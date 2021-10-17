@@ -31,7 +31,8 @@ public class BotController {
     @GetMapping("/")
     @ResponseBody
     public String index() {
-        return "Welcome to TobyBot";
+        return "Welcome to TobyBot \n" +
+                "To find out more, please visit https://github.com/ml404/toby-bot#readme";
     }
 
     @GetMapping("/brother")

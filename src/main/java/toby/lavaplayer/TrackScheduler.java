@@ -4,13 +4,13 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.ICommand;
-import toby.command.commands.music.QueueCommand;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import static toby.helpers.MusicPlayerHelper.nowPlaying;
 
 public class TrackScheduler extends AudioEventAdapter {
     private final AudioPlayer player;
@@ -53,7 +53,7 @@ public class TrackScheduler extends AudioEventAdapter {
             }
             PlayerManager.getInstance().setCurrentlyStoppable(true);
             nextTrack();
-            nowPlaying(currentTextChannel, deleteDelay, player.getPlayingTrack());
+            nowPlaying(currentTextChannel, player.getPlayingTrack(), deleteDelay);
         }
     }
 
@@ -100,11 +100,5 @@ public class TrackScheduler extends AudioEventAdapter {
         return deleteDelay;
     }
 
-    private void nowPlaying(TextChannel channel, Integer deleteDelay, AudioTrack track) {
-        AudioTrackInfo info = track.getInfo();
-        long duration = track.getDuration();
-        String songDuration = QueueCommand.formatTime(duration);
-        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
-        channel.sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-    }
+
 }

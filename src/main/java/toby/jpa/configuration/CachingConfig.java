@@ -20,7 +20,8 @@ public class CachingConfig {
                 new ConcurrentMapCache("configs"),
                 new ConcurrentMapCache("brothers"),
                 new ConcurrentMapCache("users"),
-                new ConcurrentMapCache("music")
+                new ConcurrentMapCache("music"),
+                new ConcurrentMapCache("excuses")
                 ));
         return cacheManager;
     }

@@ -24,6 +24,6 @@ public class BotControllerTest {
     public void getIndex() throws Exception {
         mvc.perform(MockMvcRequestBuilders.get("/").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().string(equalTo("Welcome to TobyBot")));
+                .andExpect(content().string(equalTo("Welcome to TobyBot \nTo find out more, please visit https://github.com/ml404/toby-bot#readme")));
     }
 }

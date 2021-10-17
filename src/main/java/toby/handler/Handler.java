@@ -19,43 +19,40 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
-import toby.jpa.controller.ConsumeWebService;
 import toby.jpa.dto.ConfigDto;
-import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
-import toby.jpa.service.IBrotherService;
-import toby.jpa.service.IConfigService;
-import toby.jpa.service.IMusicFileService;
-import toby.jpa.service.IUserService;
+import toby.jpa.service.*;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static toby.helpers.MusicPlayerHelper.playUserIntro;
 
 @Service
 @Configurable
 public class Handler extends ListenerAdapter {
 
-    private IConfigService configService;
-    private IBrotherService brotherService;
-    private IUserService userService;
-    private IMusicFileService musicFileService;
+    private final IConfigService configService;
+    private final IBrotherService brotherService;
+    private final IUserService userService;
+    private final IMusicFileService musicFileService;
+    private final IExcuseService excuseService;
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
     private final CommandManager manager;
 
     @Autowired
-    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) {
-
-        manager = new CommandManager(configService, brotherService, userService, musicFileService, waiter);
+    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService, EventWaiter waiter) {
+        manager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService, waiter);
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
         this.musicFileService = musicFileService;
+        this.excuseService = excuseService;
     }
 
 
@@ -157,22 +154,10 @@ public class Handler extends ListenerAdapter {
         Member member = event.getMember();
         long discordId = member.getUser().getIdLong();
         long guildId = member.getGuild().getIdLong();
+        UserDto userDto = userService.getUserById(discordId, guildId);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(guild, discordId, guildId);
-        }
-    }
-
-    private void playUserIntro(Guild guild, long discordId, long guildId) {
-        UserDto dbUser = userService.getUserById(discordId, guildId);
-        MusicDto musicDto = dbUser.getMusicDto();
-        if (musicDto != null && musicDto.getFileName() != null) {
-            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(),
-                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
-                    0);
-        } else if (musicDto != null) {
-            PlayerManager.getInstance().loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),
-                    0);
+            playUserIntro(userDto, member.getGuild());
         }
     }
 
