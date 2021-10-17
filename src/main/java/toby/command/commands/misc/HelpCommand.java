@@ -8,6 +8,7 @@ import toby.managers.CommandManager;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class HelpCommand implements IMiscCommand {
 
@@ -26,33 +27,17 @@ public class HelpCommand implements IMiscCommand {
 
         if (args.isEmpty()) {
             StringBuilder builder = new StringBuilder();
+            Consumer<ICommand> commandConsumer = (command) -> builder.append('`').append(prefix).append(command.getName()).append('`').append(String.format("Aliases are: '%s'", String.join(",", command.getAliases()))).append("\n");
 
             builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", prefix));
             builder.append("**Music Commands**:\n");
-            manager.getMusicCommands().stream().map(ICommand::getName).forEach(
-                    (commandName) -> {
-                        builder.append('`').append(prefix).append(commandName).append("`\n");
-                    }
-            );
+            manager.getMusicCommands().forEach(commandConsumer);
             builder.append("**Miscellaneous Commands**:\n");
-            manager.getMiscCommands().stream().map(ICommand::getName).forEach(
-                    (commandName) -> {
-                        builder.append('`').append(prefix).append(commandName).append("`\n");
-                    }
-            );
+            manager.getMiscCommands().forEach(commandConsumer);
             builder.append("**Moderation Commands**:\n");
-            manager.getModerationCommands().stream().map(ICommand::getName).forEach(
-                    (commandName) -> {
-                        builder.append('`').append(prefix).append(commandName).append("`\n");
-                    }
-            );
-
+            manager.getModerationCommands().forEach(commandConsumer);
             builder.append("**Fetch Commands**:\n");
-            manager.getFetchCommands().stream().map(ICommand::getName).forEach(
-                    (commandName) -> {
-                        builder.append('`').append(prefix).append(commandName).append("`\n");
-                    }
-            );
+            manager.getFetchCommands().forEach(commandConsumer);
 
 
             channel.sendMessage(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -63,7 +48,7 @@ public class HelpCommand implements IMiscCommand {
         ICommand command = manager.getCommand(search);
 
         if (command == null) {
-            channel.sendMessage("Nothing found for " + search).queue();
+            channel.sendMessage("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

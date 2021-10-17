@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
-import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
@@ -17,9 +16,9 @@ import toby.lavaplayer.PlayerManager;
 import java.util.Arrays;
 import java.util.List;
 
+
 public class SetVolumeCommand implements IMusicCommand {
 
-    @SuppressWarnings("ConstantConditions")
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
@@ -31,8 +30,12 @@ public class SetVolumeCommand implements IMusicCommand {
             sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
-        final Member member = doChannelAndArgsValidation(ctx, prefix, channel, selfVoiceState, deleteDelay);
-        if (member == null) return;
+        if (ctx.getArgs().isEmpty()) {
+            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
+        }
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
+        final Member member = ctx.getMember();
         setNewVolume(ctx, prefix, channel, member, deleteDelay);
     }
 
@@ -61,32 +64,6 @@ public class SetVolumeCommand implements IMusicCommand {
         } else channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    @Nullable
-    private Member doChannelAndArgsValidation(CommandContext ctx, String prefix, TextChannel channel, GuildVoiceState selfVoiceState, Integer deleteDelay) {
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-
-        if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-
-        final Member member = ctx.getMember();
-        final GuildVoiceState memberVoiceState = member.getVoiceState();
-
-        if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-
-        if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-        return member;
-    }
 
     @Override
     public String getName() {

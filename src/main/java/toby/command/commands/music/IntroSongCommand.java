@@ -17,11 +17,11 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static toby.helpers.FileUtils.readInputStreamToByteArray;
+import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 public class IntroSongCommand implements IMusicCommand {
     private final IUserService userService;
@@ -53,7 +53,7 @@ public class IntroSongCommand implements IMusicCommand {
         }
     }
 
-    private void setIntroViaDiscordAttachment(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, List<Message.Attachment> attachments){
+    private void setIntroViaDiscordAttachment(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, List<Message.Attachment> attachments) {
         Message.Attachment attachment = attachments.stream().findFirst().get();
         if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
             channel.sendMessage("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -69,10 +69,10 @@ public class IntroSongCommand implements IMusicCommand {
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
-        if (mentionedMembers.size() > 0) {
+        if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
             InputStream finalInputStream = inputStream;
             mentionedMembers.forEach(member -> {
-                UserDto userDto = calculateUserDto(member);
+                UserDto userDto = calculateUserDto(member.getGuild().getIdLong(), member.getIdLong(), member.isOwner(), userService);
                 persistMusicFile(userDto, deleteDelay, channel, attachment.getFileName(), finalInputStream, member.getEffectiveName());
             });
         } else
@@ -83,9 +83,9 @@ public class IntroSongCommand implements IMusicCommand {
         List<Member> mentionedMembers = ctx.getMessage().getMentionedMembers();
         String url = urlList.get(0).toString();
 
-        if (mentionedMembers.size() > 0) {
+        if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
             mentionedMembers.forEach(member -> {
-                UserDto userDto = calculateUserDto(member);
+                UserDto userDto = calculateUserDto(member.getGuild().getIdLong(), member.getIdLong(), member.isOwner(), userService);
                 persistMusicUrl(userDto, deleteDelay, channel, url, url, member.getEffectiveName());
             });
         } else
@@ -134,23 +134,6 @@ public class IntroSongCommand implements IMusicCommand {
     }
 
 
-    private UserDto calculateUserDto(Member member) {
-        long guildId = member.getGuild().getIdLong();
-        long discordId = member.getUser().getIdLong();
-
-        Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
-        if (dbUserDto.isEmpty()) {
-            UserDto userDto = new UserDto();
-            userDto.setDiscordId(discordId);
-            userDto.setGuildId(guildId);
-            userDto.setSuperUser(member.isOwner());
-            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
-            userDto.setMusicDto(musicDto);
-            return userService.createNewUser(userDto);
-        }
-        return userService.getUserById(discordId, guildId);
-    }
-
     @Override
     public String getName() {
         return "introsong";
@@ -159,8 +142,8 @@ public class IntroSongCommand implements IMusicCommand {
     @Override
     public String getHelp(String prefix) {
         return "Upload a short (200kb or less) **MP3** file for Toby to sing when you join a voice channel (and he's not currently in a voice channel playing music). Also works with youtube video links instead of file. \n" +
-                String.format("Usage: %sintrosong with a file attached to your message", prefix) +
-                String.format("Usage: %sintrosong with a youtube link", prefix) +
+                String.format("Usages: %sintrosong with a file attached to your message. \n", prefix) +
+                String.format("%sintrosong with a youtube link. \n", prefix) +
                 String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 

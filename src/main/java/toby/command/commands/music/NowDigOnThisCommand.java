@@ -1,9 +1,6 @@
 package toby.command.commands.music;
 
-import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
-import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -15,6 +12,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 
+
 public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
@@ -22,46 +20,18 @@ public class NowDigOnThisCommand implements IMusicCommand {
         ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         if (requestingUserDto.hasDigPermission()) {
-            Member member = doChannelValidation(ctx, prefix, channel, deleteDelay);
-            if (member == null) return;
-
+            if (ctx.getArgs().isEmpty()) {
+                channel.sendMessageFormat("Correct usage is `%snowdigonthis <youtube link>`", prefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                return;
+            }
+            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
             String link = String.join(" ", ctx.getArgs());
             if (link.contains("youtube") && !isUrl(link)) link = "ytsearch:" + link;
-
             PlayerManager.getInstance().loadAndPlay(channel, link, false, deleteDelay);
         } else
             sendErrorMessage(ctx, channel, deleteDelay);
     }
 
-    @Nullable
-    private Member doChannelValidation(CommandContext ctx, String prefix, TextChannel channel, Integer deleteDelay) {
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessageFormat("Correct usage is `%snowdigonthis <youtube link>`", prefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-
-        final Member self = ctx.getSelfMember();
-        final GuildVoiceState selfVoiceState = self.getVoiceState();
-
-        if (!selfVoiceState.inVoiceChannel()) {
-            channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-
-        final Member member = ctx.getMember();
-        final GuildVoiceState memberVoiceState = member.getVoiceState();
-
-        if (!memberVoiceState.inVoiceChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-
-        if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            channel.sendMessage("You need to be in the same voice channel as me for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return null;
-        }
-        return member;
-    }
 
     public static void sendDeniedStoppableMessage(TextChannel channel, GuildMusicManager musicManager, Integer deleteDelay) {
         if (musicManager.getScheduler().getQueue().size() > 1) {

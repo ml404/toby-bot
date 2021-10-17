@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
-import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
@@ -26,14 +25,13 @@ public class JoinCommand implements IMusicCommand {
         ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
         final TextChannel channel = ctx.getChannel();
         final Member self = ctx.getSelfMember();
-        final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!requestingUserDto.hasMusicPermission()) {
             sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
 
-        final GuildVoiceState memberVoiceState = doChannelValidation(ctx, channel, selfVoiceState, deleteDelay);
+        final GuildVoiceState memberVoiceState = doJoinChannelValidation(ctx, channel, deleteDelay);
         if (memberVoiceState == null) return;
 
         final AudioManager audioManager = ctx.getGuild().getAudioManager();
@@ -49,9 +47,10 @@ public class JoinCommand implements IMusicCommand {
         }
     }
 
+    private GuildVoiceState doJoinChannelValidation(CommandContext ctx, TextChannel channel, Integer deleteDelay) {
+        final Member self = ctx.getSelfMember();
+        final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-    @Nullable
-    private GuildVoiceState doChannelValidation(CommandContext ctx, TextChannel channel, GuildVoiceState selfVoiceState, Integer deleteDelay) {
         if (selfVoiceState.inVoiceChannel()) {
             channel.sendMessage("I'm already in a voice channel").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;

@@ -13,6 +13,7 @@ import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
+import toby.jpa.service.IExcuseService;
 import toby.jpa.service.impl.BrotherServiceImpl;
 import toby.jpa.service.impl.ConfigServiceImpl;
 import toby.jpa.service.impl.MusicFileServiceImpl;
@@ -40,10 +41,14 @@ public class CommandManagerTest {
     MusicFileServiceImpl musicFileService;
 
     @Mock
+    IExcuseService excuseService;
+
+    @Mock
     EventWaiter waiter;
 
 
     private AutoCloseable closeable;
+
 
     @BeforeEach
     public void openMocks() {
@@ -57,7 +62,7 @@ public class CommandManagerTest {
 
     @Test
     public void testCommandManagerFindsAllCommands() {
-        CommandManager commandManager = new CommandManager(configService, brotherService, userService, musicFileService, waiter);
+        CommandManager commandManager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService, waiter);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
                 SetConfigCommand.class,
@@ -90,10 +95,11 @@ public class CommandManagerTest {
                 UserInfoCommand.class,
                 RandomCommand.class,
                 Kf2RandomMapCommand.class,
-                DbdRandomKillerCommand.class
+                DbdRandomKillerCommand.class,
+                ExcuseCommand.class
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(32, commandManager.getAllCommands().size());
+        assertEquals(33, commandManager.getAllCommands().size());
     }
 }

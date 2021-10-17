@@ -2,7 +2,6 @@ package toby.managers;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
@@ -17,20 +16,18 @@ import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.helpers.Cache;
 import toby.jpa.dto.ConfigDto;
-import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
-import toby.jpa.service.IBrotherService;
-import toby.jpa.service.IConfigService;
-import toby.jpa.service.IMusicFileService;
-import toby.jpa.service.IUserService;
+import toby.jpa.service.*;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
 @Configurable
@@ -40,15 +37,17 @@ public class CommandManager {
     private final IUserService userService;
     private final List<ICommand> commands = new ArrayList<>();
     private final IMusicFileService musicFileService;
+    private final IExcuseService excuseService;
 
     @Autowired
-    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) {
+    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService, EventWaiter waiter) {
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
         this.musicFileService = musicFileService;
+        this.excuseService = excuseService;
 
-        var cache = new Cache(86400,3600,2);
+        var cache = new Cache(86400, 3600, 2);
 
         //misc commands
         addCommand(new HelpCommand(this));
@@ -62,6 +61,7 @@ public class CommandManager {
         addCommand(new UserInfoCommand(userService));
         addCommand(new RandomCommand());
         addCommand(new EventWaiterCommand(waiter));
+        addCommand(new ExcuseCommand(excuseService));
 
         //moderation commands
         addCommand(new SetConfigCommand(configService));
@@ -103,19 +103,19 @@ public class CommandManager {
         return commands;
     }
 
-    public List<ICommand> getMusicCommands(){
+    public List<ICommand> getMusicCommands() {
         return commands.stream().filter(iCommand -> iCommand instanceof IMusicCommand).collect(Collectors.toList());
     }
 
-    public List<ICommand> getModerationCommands(){
+    public List<ICommand> getModerationCommands() {
         return commands.stream().filter(iCommand -> iCommand instanceof IModerationCommand).collect(Collectors.toList());
     }
 
-    public List<ICommand> getMiscCommands(){
+    public List<ICommand> getMiscCommands() {
         return commands.stream().filter(iCommand -> iCommand instanceof IMiscCommand).collect(Collectors.toList());
     }
 
-    public List<ICommand> getFetchCommands(){
+    public List<ICommand> getFetchCommands() {
         return commands.stream().filter(iCommand -> iCommand instanceof IFetchCommand).collect(Collectors.toList());
     }
 
@@ -140,7 +140,7 @@ public class CommandManager {
                 .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");
 
-        UserDto requestingUserDto = calculateUserDto(event);
+        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(),event.getAuthor().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService);
         String invoke = split[0].toLowerCase();
         ICommand cmd = this.getCommand(invoke);
 
@@ -150,25 +150,8 @@ public class CommandManager {
 
             CommandContext ctx = new CommandContext(event, args);
             cmd.handle(ctx, prefix, requestingUserDto, deleteDelay);
+        } else {
+            getCommand("help");
         }
     }
-
-    @NotNull
-    private UserDto calculateUserDto(GuildMessageReceivedEvent event) {
-        long guildId = event.getGuild().getIdLong();
-        long discordId = event.getAuthor().getIdLong();
-
-        Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
-        if (dbUserDto.isEmpty()) {
-            UserDto userDto = new UserDto();
-            userDto.setDiscordId(discordId);
-            userDto.setGuildId(guildId);
-            userDto.setSuperUser(event.getMember().isOwner());
-            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
-            userDto.setMusicDto(musicDto);
-            return userService.createNewUser(userDto);
-        }
-        return userService.getUserById(discordId,guildId);
-    }
-
 }

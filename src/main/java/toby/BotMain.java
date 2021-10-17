@@ -12,10 +12,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import toby.handler.Handler;
-import toby.jpa.service.IBrotherService;
-import toby.jpa.service.IConfigService;
-import toby.jpa.service.IMusicFileService;
-import toby.jpa.service.IUserService;
+import toby.jpa.service.*;
 
 import javax.security.auth.login.LoginException;
 import java.util.EnumSet;
@@ -26,7 +23,12 @@ public class BotMain {
     private static JDA jda;
 
     @Autowired
-    public BotMain(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, EventWaiter waiter) throws LoginException {
+    public BotMain(IConfigService configService,
+                   IBrotherService brotherService,
+                   IUserService userService,
+                   IMusicFileService musicFileService,
+                   IExcuseService excuseService,
+                   EventWaiter waiter) throws LoginException {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
@@ -44,7 +46,7 @@ public class BotMain {
                 CacheFlag.CLIENT_STATUS,
                 CacheFlag.ACTIVITY
         )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOTE);
-        builder.addEventListeners(new Handler(configService, brotherService, userService, musicFileService, waiter), waiter);
+        builder.addEventListeners(new Handler(configService, brotherService, userService, musicFileService, excuseService, waiter), waiter);
         setJda(builder.build());
     }
 
@@ -57,7 +59,7 @@ public class BotMain {
     }
 
     @Bean
-    public static EventWaiter eventWaiter(){
+    public static EventWaiter eventWaiter() {
         return new EventWaiter();
     }
 

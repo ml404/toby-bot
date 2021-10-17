@@ -60,7 +60,7 @@ public class MemeCommand implements IFetchCommand {
                 channel.sendMessage(String.format("Invalid number supplied, using default value %d", limit)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             if (subredditArg.equals("sneakybackgroundfeet")) {
-                channel.sendMessage("Don't talk to me.").queue();
+                channel.sendMessage("Don't talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
                 WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {

@@ -31,10 +31,10 @@ public class BotControllerIT {
     }
 
     @Test
-    public void getIndex() throws Exception {
+    public void getIndex() {
         ResponseEntity<String> response = template.getForEntity(base.toString(),
                 String.class);
-        assertThat(response.getBody()).isEqualTo("Welcome to TobyBot");
+        assertThat(response.getBody()).isEqualTo("Welcome to TobyBot \nTo find out more, please visit https://github.com/ml404/toby-bot#readme");
     }
 }
 
