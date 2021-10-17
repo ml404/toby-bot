@@ -81,7 +81,7 @@ public class ExcuseCommand implements IMiscCommand {
             excuseDto.setAuthor(author);
             excuseDto.setExcuse(excuseMessage);
             ExcuseDto newExcuse = excuseService.createNewExcuse(excuseDto);
-            channel.sendMessage(String.format("Submitted new excuse '%s' with id '%d' for approval.", excuseMessage, newExcuse.getId())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            channel.sendMessage(String.format("Submitted new excuse '%s' - %s with id '%d' for approval.", excuseMessage, author, newExcuse.getId())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
     }
 
