@@ -63,7 +63,7 @@ public class ExcuseCommand implements IMiscCommand {
         }
         Random random = new Random();
         ExcuseDto excuseDto = excuseDtos.get(random.nextInt(excuseDtos.size()));
-        channel.sendMessage(String.format("Excuse #%d: '%s' - '%s'.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        channel.sendMessage(String.format("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
@@ -77,8 +77,8 @@ public class ExcuseCommand implements IMiscCommand {
             excuseDto.setGuildId(guildId);
             excuseDto.setAuthor(author);
             excuseDto.setExcuse(excuseMessage);
-            channel.sendMessage(String.format("Submitted new excuse '%s' for approval.", excuseMessage)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            excuseService.createNewExcuse(excuseDto);
+            ExcuseDto newExcuse = excuseService.createNewExcuse(excuseDto);
+            channel.sendMessage(String.format("Submitted new excuse '%s' with id '%d' for approval.", excuseMessage, newExcuse.getId())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 
@@ -90,7 +90,7 @@ public class ExcuseCommand implements IMiscCommand {
         }
         Random random = new Random();
         ExcuseDto excuseDto = excuseDtos.get(random.nextInt(excuseDtos.size()));
-        channel.sendMessage(String.format("Excuse #%d: '%s' - '%s'.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        channel.sendMessage(String.format("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override
