@@ -37,13 +37,16 @@ public class ExcuseCommand implements IMiscCommand {
             lookupPendingExcuses(channel, guildId, deleteDelay);
         } else if (args.contains("approve")) {
             approvePendingExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
+        } else if (args.contains("delete")) {
+            deleteExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
         } else {
-            String author = message.getMentionedMembers().size() > 0 ? message.getMentionedMembers().stream().findFirst().get().getNickname() : ctx.getAuthor().getName();
+            String author = message.getMentionedMembers().size() > 0 ? message.getMentionedMembers().stream().findFirst().get().getEffectiveName() : ctx.getAuthor().getName();
             createNewExcuse(channel, guildId, author, args, deleteDelay);
         }
     }
 
-    private void approvePendingExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String pendingExcuse, Integer deleteDelay) {
+    private void approvePendingExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String
+            pendingExcuse, Integer deleteDelay) {
         if (requestingUserDto.isSuperUser()) {
             String excuseId = pendingExcuse.split(" ", 3)[2];
             ExcuseDto excuseById = excuseService.getExcuseById(Integer.parseInt(excuseId));
@@ -94,6 +97,14 @@ public class ExcuseCommand implements IMiscCommand {
         Random random = new Random();
         ExcuseDto excuseDto = excuseDtos.get(random.nextInt(excuseDtos.size()));
         channel.sendMessage(String.format("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
+
+    private void deleteExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String excuseMessageString, Integer deleteDelay) {
+        if (requestingUserDto.isSuperUser()) {
+            String excuseId = excuseMessageString.split(" ", 3)[2];
+            excuseService.deleteExcuseById(Integer.parseInt(excuseId));
+            channel.sendMessage(String.format("Deleted excuse with id '%s'.", excuseId)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        } else sendErrorMessage(ctx, channel, deleteDelay);
     }
 
     @Override
