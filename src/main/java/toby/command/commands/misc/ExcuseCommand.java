@@ -16,6 +16,10 @@ import java.util.stream.Collectors;
 
 public class ExcuseCommand implements IMiscCommand {
 
+    public static final String PENDING = "pending";
+    public static final String ALL = "all";
+    public static final String APPROVE = "approve";
+    public static final String DELETE = "delete";
     private final IExcuseService excuseService;
 
     public ExcuseCommand(IExcuseService excuseService) {
@@ -33,20 +37,37 @@ public class ExcuseCommand implements IMiscCommand {
 
         if (args.isEmpty()) {
             lookupExcuse(channel, guildId, deleteDelay);
-        } else if (args.contains("pending")) {
-            lookupPendingExcuses(channel, guildId, deleteDelay);
-        } else if (args.contains("approve")) {
-            approvePendingExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
-        } else if (args.contains("delete")) {
-            deleteExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
         } else {
-            String author = message.getMentionedMembers().size() > 0 ? message.getMentionedMembers().stream().findFirst().get().getEffectiveName() : ctx.getAuthor().getName();
-            createNewExcuse(channel, guildId, author, args, deleteDelay);
+            String command = args.get(0);
+            if (command.contains(PENDING)) {
+                lookupPendingExcuses(channel, guildId, deleteDelay);
+            } else if (command.contains(ALL)) {
+                listAllExcuses(channel, guildId, deleteDelay);
+            } else if (command.contains(APPROVE)) {
+                approvePendingExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
+            } else if (command.contains(DELETE)) {
+                deleteExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
+            } else {
+                String author = message.getMentionedMembers().size() > 0 ? message.getMentionedMembers().stream().findFirst().get().getEffectiveName() : ctx.getAuthor().getName();
+                createNewExcuse(channel, guildId, author, args, deleteDelay);
+            }
         }
     }
 
-    private void approvePendingExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String
-            pendingExcuse, Integer deleteDelay) {
+    private void listAllExcuses(TextChannel channel, Long guildId, Integer deleteDelay) {
+        List<ExcuseDto> excuseDtos = excuseService.listApprovedGuildExcuses(guildId);
+        if (excuseDtos.size() == 0) {
+            channel.sendMessage("There are no approved excuses, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
+        }
+        channel.sendMessage("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        excuseDtos.forEach(excuseDto -> {
+            String approvedStatus = excuseDto.isApproved() ? "Approved" : "Pending";
+            channel.sendMessage(String.format("Excuse #%d: '%s' - %s. - %s", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor(), approvedStatus)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        });
+    }
+
+    private void approvePendingExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String pendingExcuse, Integer deleteDelay) {
         if (requestingUserDto.isSuperUser()) {
             String excuseId = pendingExcuse.split(" ", 3)[2];
             ExcuseDto excuseById = excuseService.getExcuseById(Integer.parseInt(excuseId));
@@ -118,6 +139,7 @@ public class ExcuseCommand implements IMiscCommand {
                 String.format("Usages: `%sexcuse` to list a random approved excuse \n", prefix) +
                 String.format("`%sexcuse exampleExcuseMessage` to submit an excuse to be approved, max 200 characters. Can optionally mention a user to attribute the quote to. \n", prefix) +
                 String.format("`%sexcuse pending` to list pending excuses. \n", prefix) +
-                String.format("`%sexcuse approve $pendingExcuseNumber` to approve a pending excuse. \n", prefix);
+                String.format("`%sexcuse approve $pendingExcuseNumber` to approve a pending excuse. \n", prefix) +
+                String.format("`%sexcuse all` to list all approved excuses. \n", prefix);
     }
 }
