@@ -38,7 +38,7 @@ public class IntroSongCommand implements IMusicCommand {
 
         final TextChannel channel = ctx.getChannel();
 
-        if (!requestingUserDto.isSuperUser()) {
+        if (!requestingUserDto.isSuperUser() && ctx.getMessage().getMentionedMembers().size() > 0) {
             sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
