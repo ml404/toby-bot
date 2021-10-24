@@ -61,10 +61,9 @@ public class ExcuseCommand implements IMiscCommand {
             return;
         }
         channel.sendMessage("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        excuseDtos.forEach(excuseDto -> {
-            String approvedStatus = excuseDto.isApproved() ? "Approved" : "Pending";
-            channel.sendMessage(String.format("Excuse #%d: '%s' - %s. - %s", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor(), approvedStatus)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        });
+        StringBuilder sb = new StringBuilder();
+        excuseDtos.forEach(excuseDto -> sb.append(String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())));
+        channel.sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     private void approvePendingExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String pendingExcuse, Integer deleteDelay) {
