@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static toby.helpers.UserDtoHelper.userAdjustmentValidation;
+
 public class AdjustUserCommand implements IModerationCommand {
 
     private final IUserService userService;
@@ -93,7 +95,7 @@ public class AdjustUserCommand implements IModerationCommand {
             return null;
         }
 
-        if (!args.stream().anyMatch(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))) {
+        if (args.stream().allMatch(s -> s.matches(Message.MentionType.USER.getPattern().pattern()))) {
             channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
@@ -123,10 +125,4 @@ public class AdjustUserCommand implements IModerationCommand {
     public List<String> getAliases() {
         return Arrays.asList("setuser", "user");
     }
-
-    private boolean userAdjustmentValidation(UserDto requester, UserDto target) {
-
-        return requester.isSuperUser() && !target.isSuperUser();
-    }
-
 }
