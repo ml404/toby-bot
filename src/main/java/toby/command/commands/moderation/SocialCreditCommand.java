@@ -42,8 +42,8 @@ public class SocialCreditCommand implements IModerationCommand {
                     boolean requesterCanAdjustPermissions = member.isOwner();
                     if (requesterCanAdjustPermissions && isSameGuild) {
                         String socialCreditString = args.subList(0, args.size()).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).findFirst().get();
-                        validateArgumentsAndAdjustSocialCredit(ctx, targetUserDto, channel, Long.valueOf(socialCreditString), ctx.getMember().isOwner(), deleteDelay);
-                        channel.sendMessageFormat("Updated user %s's social credit by %s", targetMember.getNickname(), socialCreditString).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                        UserDto updatedUser = validateArgumentsAndAdjustSocialCredit(ctx, targetUserDto, channel, Long.valueOf(socialCreditString), ctx.getMember().isOwner(), deleteDelay);
+                        channel.sendMessageFormat("Updated user %s's social credit by %s. New score is: %d", targetMember.getNickname(), socialCreditString, updatedUser.getSocialCredit()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     } else
                         channel.sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 }
@@ -53,13 +53,15 @@ public class SocialCreditCommand implements IModerationCommand {
 
     }
 
-    private void validateArgumentsAndAdjustSocialCredit(CommandContext ctx, UserDto targetUserDto, TextChannel channel, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
+    private UserDto validateArgumentsAndAdjustSocialCredit(CommandContext ctx, UserDto targetUserDto, TextChannel channel, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
         if (isOwner) {
             Long socialCredit = targetUserDto.getSocialCredit() == null ? 0L : targetUserDto.getSocialCredit();;
             targetUserDto.setSocialCredit(socialCredit + socialCreditScore);
             userService.updateUser(targetUserDto);
+            return targetUserDto;
         } else
             sendErrorMessage(ctx, channel, deleteDelay);
+        return targetUserDto;
     }
 
 
