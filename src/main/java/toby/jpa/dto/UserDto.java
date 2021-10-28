@@ -43,6 +43,9 @@ public class UserDto implements Serializable {
     @Column(name = "meme_permission")
     private boolean memePermission = true;
 
+    @Column(name = "social_credit")
+    private Long socialCredit = 0L;
+
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "music_file_id", referencedColumnName = "id")
     private MusicDto musicDto;
@@ -73,9 +76,10 @@ public class UserDto implements Serializable {
 
     ;
 
-    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission, MusicDto musicDto) {
+    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission, Long socialCredit, MusicDto musicDto) {
         this.discordId = discordId;
         this.guildId = guildId;
+        this.socialCredit = socialCredit;
         this.superUser = superUser;
         this.musicPermission = musicPermission;
         this.digPermission = digPermission;
@@ -133,7 +137,13 @@ public class UserDto implements Serializable {
         this.memePermission = memePermission;
     }
 
+    public Long getSocialCredit() {
+        return socialCredit;
+    }
 
+    public void setSocialCredit(Long socialCredit) {
+        this.socialCredit = socialCredit;
+    }
 
     public MusicDto getMusicDto() {
         return musicDto;
@@ -148,10 +158,11 @@ public class UserDto implements Serializable {
         final StringBuilder sb = new StringBuilder("User{");
         sb.append("discordId='").append(discordId);
         sb.append("', guildId='").append(guildId);
-        sb.append("', superUser=").append(superUser);
-        sb.append(", musicPermission=").append(musicPermission);
-        sb.append(", digPermission=").append(digPermission);
-        sb.append(", memePermission=").append(memePermission);
+        sb.append("', socialCredit='").append(socialCredit);
+        sb.append("', superUser='").append(superUser);
+        sb.append("', musicPermission='").append(musicPermission);
+        sb.append("', digPermission='").append(digPermission);
+        sb.append("', memePermission='").append(memePermission);
         sb.append('}');
         return sb.toString();
     }
@@ -176,6 +187,7 @@ public class UserDto implements Serializable {
         return new EqualsBuilder()
                 .append(discordId, other.discordId)
                 .append(guildId, other.guildId)
+                .append(socialCredit, other.socialCredit)
                 .append(superUser, other.superUser)
                 .append(musicPermission, other.musicPermission)
                 .append(digPermission, other.digPermission)
@@ -189,6 +201,7 @@ public class UserDto implements Serializable {
         return new HashCodeBuilder(17, 37)
                 .append(discordId)
                 .append(guildId)
+                .append(socialCredit)
                 .append(superUser)
                 .append(musicPermission)
                 .append(digPermission)

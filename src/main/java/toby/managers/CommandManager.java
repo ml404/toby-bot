@@ -71,6 +71,7 @@ public class CommandManager {
         addCommand(new TalkCommand());
         addCommand(new PollCommand());
         addCommand(new AdjustUserCommand(userService));
+        addCommand(new SocialCreditCommand(userService));
 
         //music commands
         addCommand(new JoinCommand(configService));

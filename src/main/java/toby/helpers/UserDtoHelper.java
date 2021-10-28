@@ -23,4 +23,9 @@ public class UserDtoHelper {
         return userService.getUserById(discordId, guildId);
     }
 
+    public static boolean userAdjustmentValidation(UserDto requester, UserDto target) {
+
+        return requester.isSuperUser() && !target.isSuperUser();
+    }
+
 }
