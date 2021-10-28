@@ -12,8 +12,6 @@ import toby.jpa.service.IUserService;
 import java.util.Arrays;
 import java.util.List;
 
-import static toby.helpers.UserDtoHelper.userAdjustmentValidation;
-
 public class SocialCreditCommand implements IModerationCommand {
 
     private final IUserService userService;
@@ -41,11 +39,11 @@ public class SocialCreditCommand implements IModerationCommand {
                 //Check to see if the database contained an entry for the user we have made a request against
                 if (targetUserDto != null) {
                     boolean isSameGuild = requestingUserDto.getGuildId().equals(targetUserDto.getGuildId());
-                    boolean requesterCanAdjustPermissions = userAdjustmentValidation(requestingUserDto, targetUserDto) || member.isOwner();
+                    boolean requesterCanAdjustPermissions = member.isOwner();
                     if (requesterCanAdjustPermissions && isSameGuild) {
-                        String socialCreditString = args.get(0);
+                        String socialCreditString = args.subList(0, args.size()).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).findFirst().get();
                         validateArgumentsAndAdjustSocialCredit(ctx, targetUserDto, channel, Long.valueOf(socialCreditString), ctx.getMember().isOwner(), deleteDelay);
-                        channel.sendMessageFormat("Updated user %s's social credit by %d", targetMember.getNickname(), socialCreditString).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                        channel.sendMessageFormat("Updated user %s's social credit by %s", targetMember.getNickname(), socialCreditString).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     } else
                         channel.sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 }
@@ -57,7 +55,8 @@ public class SocialCreditCommand implements IModerationCommand {
 
     private void validateArgumentsAndAdjustSocialCredit(CommandContext ctx, UserDto targetUserDto, TextChannel channel, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
         if (isOwner) {
-            targetUserDto.setSocialCredit(targetUserDto.getSocialCredit() + socialCreditScore);
+            Long socialCredit = targetUserDto.getSocialCredit() == null ? 0L : targetUserDto.getSocialCredit();;
+            targetUserDto.setSocialCredit(socialCredit + socialCreditScore);
             userService.updateUser(targetUserDto);
         } else
             sendErrorMessage(ctx, channel, deleteDelay);
