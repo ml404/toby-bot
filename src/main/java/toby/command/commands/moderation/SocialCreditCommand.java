@@ -29,13 +29,13 @@ public class SocialCreditCommand implements IModerationCommand {
 
         List<Member> mentionedMembers =  message.getMentionedMembers();
         if (mentionedMembers.isEmpty()) {
-            listSocialCreditScore(requestingUserDto, deleteDelay, channel);
+            listSocialCreditScore(requestingUserDto, member.getEffectiveName(), deleteDelay, channel);
         } else
             mentionedMembers.forEach(targetMember ->
             {
                 UserDto targetUserDto = userService.getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
                 if (args.subList(0, args.size()).stream().allMatch(s -> s.matches(Message.MentionType.USER.getPattern().pattern()))) {
-                    listSocialCreditScore(targetUserDto, deleteDelay, channel);
+                    listSocialCreditScore(targetUserDto, targetMember.getEffectiveName(), deleteDelay, channel);
                 } else {
                     //Check to see if the database contained an entry for the user we have made a request against
                     if (targetUserDto != null) {
@@ -54,9 +54,9 @@ public class SocialCreditCommand implements IModerationCommand {
 
     }
 
-    private void listSocialCreditScore(UserDto requestingUserDto, Integer deleteDelay, TextChannel channel) {
-        Long socialCredit = requestingUserDto.getSocialCredit() == null ? 0L : requestingUserDto.getSocialCredit();
-        channel.sendMessageFormat("Your social credit is: %d", socialCredit).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+    private void listSocialCreditScore(UserDto userDto,String mentionedName, Integer deleteDelay, TextChannel channel) {
+        Long socialCredit = userDto.getSocialCredit() == null ? 0L : userDto.getSocialCredit();
+        channel.sendMessageFormat("%s's social credit is: %d",mentionedName, socialCredit).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
     private UserDto validateArgumentsAndAdjustSocialCredit(CommandContext ctx, UserDto targetUserDto, TextChannel channel, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
