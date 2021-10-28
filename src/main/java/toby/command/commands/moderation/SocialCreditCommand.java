@@ -29,9 +29,13 @@ public class SocialCreditCommand implements IModerationCommand {
         final Member member = ctx.getMember();
 
         List<Member> mentionedMembers = channelAndArgumentValidation(prefix, requestingUserDto, args, channel, message, member, deleteDelay);
-        if (mentionedMembers == null) return;
-
-        mentionedMembers.forEach(targetMember -> {
+        if (mentionedMembers == null) {
+            Long socialCredit = requestingUserDto.getSocialCredit() == null ? 0L : requestingUserDto.getSocialCredit();
+            channel.sendMessageFormat("Your social credit is: %d", socialCredit).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            return;
+        }
+        mentionedMembers.forEach(targetMember ->
+        {
             if (args.isEmpty()) {
                 channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else {
@@ -55,7 +59,7 @@ public class SocialCreditCommand implements IModerationCommand {
 
     private UserDto validateArgumentsAndAdjustSocialCredit(CommandContext ctx, UserDto targetUserDto, TextChannel channel, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
         if (isOwner) {
-            Long socialCredit = targetUserDto.getSocialCredit() == null ? 0L : targetUserDto.getSocialCredit();;
+            Long socialCredit = targetUserDto.getSocialCredit() == null ? 0L : targetUserDto.getSocialCredit();
             targetUserDto.setSocialCredit(socialCredit + socialCreditScore);
             userService.updateUser(targetUserDto);
             return targetUserDto;
@@ -69,7 +73,7 @@ public class SocialCreditCommand implements IModerationCommand {
     private List<Member> channelAndArgumentValidation(String prefix, UserDto
             requestingUserDto, List<String> args, TextChannel channel, Message message, Member member, int deleteDelay) {
         if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
-            channel.sendMessage("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            channel.sendMessage("This command is reserved for the owner of the server only, this may change in the future").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
@@ -78,12 +82,7 @@ public class SocialCreditCommand implements IModerationCommand {
             return null;
         }
 
-        List<Member> mentionedMembers = message.getMentionedMembers();
-        if (mentionedMembers.isEmpty()) {
-            channel.sendMessage("You must mention 1 or more Users to adjust credit of").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-            return null;
-        }
-        return mentionedMembers;
+        return message.getMentionedMembers();
     }
 
     @Override
@@ -94,7 +93,8 @@ public class SocialCreditCommand implements IModerationCommand {
     @Override
     public String getHelp(String prefix) {
         return "Use this command to adjust the mentioned user's social credit.\n" +
-                String.format("Usage: `%ssocialcredit <@user> +/-100`... \n", prefix) +
+                String.format("Usage: `%ssocialcredit <@user> +/-100` to adjust the mentioned users social credit \n", prefix) +
+                String.format("Usage: `%ssocialcredit` to show your social credit \n", prefix) +
                 String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
