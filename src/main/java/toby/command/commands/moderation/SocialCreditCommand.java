@@ -3,7 +3,6 @@ package toby.command.commands.moderation;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -28,15 +27,15 @@ public class SocialCreditCommand implements IModerationCommand {
         Message message = ctx.getMessage();
         final Member member = ctx.getMember();
 
-        List<Member> mentionedMembers = channelAndArgumentValidation(requestingUserDto, channel, message, member, deleteDelay);
-        if (mentionedMembers == null) {
+        List<Member> mentionedMembers =  message.getMentionedMembers();
+        if (mentionedMembers.isEmpty()) {
             listSocialCreditScore(requestingUserDto, deleteDelay, channel);
         } else
             mentionedMembers.forEach(targetMember ->
             {
                 UserDto targetUserDto = userService.getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-                if (args.subList(0, args.size()).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).count() == 0) {
-                    listSocialCreditScore(requestingUserDto, deleteDelay, channel);
+                if (args.subList(0, args.size()).stream().allMatch(s -> s.matches(Message.MentionType.USER.getPattern().pattern()))) {
+                    listSocialCreditScore(targetUserDto, deleteDelay, channel);
                 } else {
                     //Check to see if the database contained an entry for the user we have made a request against
                     if (targetUserDto != null) {
@@ -71,15 +70,6 @@ public class SocialCreditCommand implements IModerationCommand {
         return targetUserDto;
     }
 
-
-    @Nullable
-    private List<Member> channelAndArgumentValidation(UserDto requestingUserDto, TextChannel channel, Message message, Member member, int deleteDelay) {
-        if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
-            channel.sendMessage("This command is reserved for the owner of the server only, this may change in the future").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-            return null;
-        }
-        return message.getMentionedMembers();
-    }
 
     @Override
     public String getName() {
