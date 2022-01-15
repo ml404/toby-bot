@@ -73,6 +73,7 @@ public class Handler extends ListenerAdapter {
         String raw = event.getMessage().getContentRaw();
 
         if (raw.startsWith(prefix)) {
+            event.getGuild().loadMembers();
             manager.handle(event);
         }
 

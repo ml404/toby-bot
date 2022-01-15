@@ -8,6 +8,7 @@ import toby.jpa.dto.ExcuseDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IExcuseService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -21,6 +22,7 @@ public class ExcuseCommand implements IMiscCommand {
     public static final String APPROVE = "approve";
     public static final String DELETE = "delete";
     private final IExcuseService excuseService;
+    private List<StringBuilder> stringBuilderList;
 
     public ExcuseCommand(IExcuseService excuseService) {
 
@@ -61,9 +63,26 @@ public class ExcuseCommand implements IMiscCommand {
             return;
         }
         channel.sendMessage("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        StringBuilder sb = new StringBuilder();
-        excuseDtos.forEach(excuseDto -> sb.append(String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor())));
-        channel.sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        stringBuilderList = new ArrayList<>();
+        createAndAddStringBuilder();
+        excuseDtos.forEach(excuseDto -> {
+            StringBuilder sb = stringBuilderList.get(stringBuilderList.size() - 1);
+            String excuseString = String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor());
+            if (sb.length() + excuseString.length() >= 2000) {
+                createAndAddStringBuilder();
+                sb = stringBuilderList.get(stringBuilderList.size() - 1);
+
+            }
+            sb.append(excuseString);
+        });
+        stringBuilderList.forEach(sb -> {
+            channel.sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        });
+    }
+
+    private List<StringBuilder> createAndAddStringBuilder() {
+        stringBuilderList.add(new StringBuilder(2000));
+        return stringBuilderList;
     }
 
     private void approvePendingExcuse(CommandContext ctx, UserDto requestingUserDto, TextChannel channel, String pendingExcuse, Integer deleteDelay) {
