@@ -64,6 +64,7 @@ public class ExcuseCommand implements IMiscCommand {
         }
         channel.sendMessage("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         stringBuilderList = new ArrayList<>();
+        createAndAddStringBuilder();
         excuseDtos.forEach(excuseDto -> {
             StringBuilder sb = stringBuilderList.get(stringBuilderList.size() - 1);
             String excuseString = String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor());

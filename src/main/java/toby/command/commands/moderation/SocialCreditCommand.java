@@ -38,7 +38,7 @@ public class SocialCreditCommand implements IModerationCommand {
             });
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("**Social Credit Leaderboard**\n");
-            stringBuilder.append("**-------------------------**\n");
+            stringBuilder.append("**-----------------------------**\n");
             LinkedHashMap<Long, Long> sortedMap = discordSocialCreditMap.entrySet()
                     .stream()
                     .sorted(comparingByValue(Comparator.reverseOrder()))
