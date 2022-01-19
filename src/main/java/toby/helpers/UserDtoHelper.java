@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public class UserDtoHelper {
 
-    public static UserDto calculateUserDto(long guildId, long discordId, boolean isSuperUser, IUserService userService) {
+    public static UserDto calculateUserDto(long guildId, long discordId, boolean isSuperUser, IUserService userService, int introVolume) {
 
         Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
         if (dbUserDto.isEmpty()) {
@@ -16,7 +16,7 @@ public class UserDtoHelper {
             userDto.setDiscordId(discordId);
             userDto.setGuildId(guildId);
             userDto.setSuperUser(isSuperUser);
-            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
+            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, introVolume, null);
             userDto.setMusicDto(musicDto);
             return userService.createNewUser(userDto);
         }

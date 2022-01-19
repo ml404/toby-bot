@@ -110,6 +110,7 @@ public class SocialCreditCommand implements IModerationCommand {
                 String.format("Usage: `%ssocialcredit <@user> +/-100` to adjust the mentioned users social credit \n", prefix) +
                 String.format("Usage: `%ssocialcredit <@user>` to show the tagged user's social credit \n", prefix) +
                 String.format("Usage: `%ssocialcredit` to show your social credit \n", prefix) +
+                String.format("Usage: `%ssocialcredit leaderboard` to show the server leaderboard \n", prefix) +
                 String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 

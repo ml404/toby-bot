@@ -62,7 +62,7 @@ public class UserServiceImplIntegrationTest {
         UserDto userDto = new UserDto();
         userDto.setDiscordId(1L);
         userDto.setGuildId(1L);
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
+        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, 0, null);
         userDto.setMusicDto(musicDto);
         userService.createNewUser(userDto);
         UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
@@ -82,7 +82,7 @@ public class UserServiceImplIntegrationTest {
         UserDto userDto1 = new UserDto();
         userDto1.setDiscordId(1L);
         userDto1.setGuildId(1L);
-        MusicDto musicDto1 = new MusicDto(userDto1.getDiscordId(), userDto1.getGuildId(), null, null);
+        MusicDto musicDto1 = new MusicDto(userDto1.getDiscordId(), userDto1.getGuildId(), null, 0, null);
         userDto1.setMusicDto(musicDto1);
         userDto1 = userService.createNewUser(userDto1);
         UserDto dbUser1 = userService.getUserById(userDto1.getDiscordId(), userDto1.getGuildId());
@@ -98,7 +98,7 @@ public class UserServiceImplIntegrationTest {
         UserDto userDto2 = new UserDto();
         userDto2.setDiscordId(1L);
         userDto2.setGuildId(1L);
-        MusicDto musicDto2 = new MusicDto(userDto2.getDiscordId(), userDto2.getGuildId(), null, null);
+        MusicDto musicDto2 = new MusicDto(userDto2.getDiscordId(), userDto2.getGuildId(), null, 0, null);
         userDto2.setMusicDto(musicDto2);
         userDto2.setDigPermission(false);
         userDto2 = userService.updateUser(userDto2);
@@ -122,7 +122,7 @@ public class UserServiceImplIntegrationTest {
         UserDto userDto = new UserDto();
         userDto.setDiscordId(1L);
         userDto.setGuildId(1L);
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), "test", null);
+        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), "test", 0, null);
         userDto.setMusicDto(musicDto);
         userService.createNewUser(userDto);
         UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
@@ -144,7 +144,7 @@ public class UserServiceImplIntegrationTest {
         UserDto userDto = new UserDto();
         userDto.setDiscordId(1L);
         userDto.setGuildId(1L);
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
+        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, 0, null);
         userDto.setMusicDto(musicDto);
         userService.createNewUser(userDto);
         UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());

@@ -52,8 +52,7 @@ public class UserPersistenceImpl implements IUserPersistence {
     }
 
     private void createMusicFileEntry(UserDto userDto) {
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, null);
-        musicFileService.createNewMusicFile(musicDto);
+        musicFileService.createNewMusicFile(userDto.getMusicDto());
         em.flush();
     }
 
