@@ -32,7 +32,7 @@ public class MusicDto implements Serializable {
     private String fileName;
 
     @Column(name = "file_vol")
-    private int introVolume;
+    private Integer introVolume = 10;
 
     @Lob
     @JsonIgnore
@@ -72,11 +72,11 @@ public class MusicDto implements Serializable {
         this.fileName = fileName;
     }
 
-    public int getIntroVolume() {
+    public Integer getIntroVolume() {
         return introVolume;
     }
 
-    public void setIntroVolume(int introVolume) {
+    public void setIntroVolume(Integer introVolume) {
         this.introVolume = introVolume;
     }
 

@@ -20,12 +20,14 @@ public class MusicPlayerHelper {
         PlayerManager instance = PlayerManager.getInstance();
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
         if (musicDto != null && musicDto.getFileName() != null) {
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(musicDto.getIntroVolume());
+            Integer introVolume = musicDto.getIntroVolume();
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlay(guild.getSystemChannel(),
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
                     0);
         } else if (musicDto != null) {
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(musicDto.getIntroVolume());
+            Integer introVolume = musicDto.getIntroVolume();
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),0);
         }
         PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);

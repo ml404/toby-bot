@@ -134,14 +134,14 @@ public class IntroSongCommand implements IMusicCommand {
             musicFileService.createNewMusicFile(musicDto);
             targetDto.setMusicDto(musicDto);
             userService.updateUser(targetDto);
-            channel.sendMessageFormat("Successfully set %s's intro song to '%s'", memberName, musicDto.getFileName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            channel.sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         musicFileDto.setFileName(filename);
         musicFileDto.setIntroVolume(introVolume);
         musicFileDto.setMusicBlob(urlBytes);
         musicFileService.updateMusicFile(musicFileDto);
-        channel.sendMessageFormat("Successfully updated %s's intro song to '%s'", memberName, filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        channel.sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
