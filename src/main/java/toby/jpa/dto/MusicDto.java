@@ -31,6 +31,9 @@ public class MusicDto implements Serializable {
     @Column(name = "file_name")
     private String fileName;
 
+    @Column(name = "file_vol")
+    private Integer introVolume = 10;
+
     @Lob
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "TEXT")
@@ -40,9 +43,10 @@ public class MusicDto implements Serializable {
     public MusicDto() {
     }
 
-    public MusicDto(Long discordId, Long guildId, String fileName, byte[] musicBlob) {
+    public MusicDto(Long discordId, Long guildId, String fileName, int introVolume, byte[] musicBlob) {
         this.id = createMusicId(guildId, discordId);
         this.fileName = fileName;
+        this.introVolume = introVolume;
         this.musicBlob = musicBlob;
 
     }
@@ -68,6 +72,14 @@ public class MusicDto implements Serializable {
         this.fileName = fileName;
     }
 
+    public Integer getIntroVolume() {
+        return introVolume;
+    }
+
+    public void setIntroVolume(Integer introVolume) {
+        this.introVolume = introVolume;
+    }
+
     public byte[] getMusicBlob() {
         return musicBlob;
     }
@@ -82,6 +94,7 @@ public class MusicDto implements Serializable {
         final StringBuilder sb = new StringBuilder("MusicDto{");
         sb.append("id=").append(id);
         sb.append(", fileName=").append(fileName);
+        sb.append(", introVolume=").append(introVolume);
         sb.append('}');
         return sb.toString();
     }
@@ -106,6 +119,7 @@ public class MusicDto implements Serializable {
         return new EqualsBuilder()
                 .append(id, other.id)
                 .append(fileName, other.fileName)
+                .append(introVolume, other.introVolume)
                 .append(musicBlob, other.musicBlob)
                 .isEquals();
     }
@@ -115,6 +129,7 @@ public class MusicDto implements Serializable {
         return new HashCodeBuilder(17, 37)
                 .append(id)
                 .append(fileName)
+                .append(introVolume)
                 .append(musicBlob)
                 .toHashCode();
     }

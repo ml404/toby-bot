@@ -87,7 +87,7 @@ public class CommandManager {
         addCommand(new NowPlayingCommand());
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
-        addCommand(new IntroSongCommand(userService, musicFileService));
+        addCommand(new IntroSongCommand(userService, musicFileService, configService));
     }
 
     private void addCommand(ICommand cmd) {
@@ -141,7 +141,11 @@ public class CommandManager {
                 .replaceFirst("(?i)" + Pattern.quote(prefix), "")
                 .split("\\s+");
 
-        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(),event.getAuthor().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService);
+        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+        String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
+        int introVolume = Integer.parseInt(defaultVolume);
+
+        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(),event.getAuthor().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
         String invoke = split[0].toLowerCase();
         ICommand cmd = this.getCommand(invoke);
 
