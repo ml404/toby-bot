@@ -33,8 +33,8 @@ public class PlayCommand implements IMusicCommand {
         String link = String.join(" ", ctx.getArgs());
         if (link.equals("intro")) {
             Guild guild = ctx.getGuild();
-            playUserIntro(requestingUserDto, guild, channel, deleteDelay);
             int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
+            playUserIntro(requestingUserDto, guild, channel, deleteDelay);
             channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
             return;
