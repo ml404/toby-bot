@@ -31,7 +31,8 @@ public class PlayCommand implements IMusicCommand {
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
         String link = String.join(" ", ctx.getArgs());
         if (link.equals("intro")) {
-            playUserIntro(requestingUserDto, ctx.getGuild());
+            playUserIntro(requestingUserDto, ctx.getGuild(), channel, deleteDelay);
+
             return;
         }
         if (link.contains("youtube") && !isUrl(link)) {
