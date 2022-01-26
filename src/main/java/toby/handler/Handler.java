@@ -167,8 +167,8 @@ public class Handler extends ListenerAdapter {
 
     private void playIntroAndResetVolume(Guild guild, ConfigDto deleteDelayConfig, Member member, long guildId, UserDto userDto) {
         TextChannel channel = guild.getDefaultChannel();
-        playUserIntro(userDto, member.getGuild(), channel, Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
+        playUserIntro(userDto, member.getGuild(), channel, Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
         channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
         PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
     }
