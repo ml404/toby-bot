@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
+import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
@@ -145,6 +146,8 @@ public class Handler extends ListenerAdapter {
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         ConfigDto databaseVolumeConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
+
         int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
@@ -158,8 +161,16 @@ public class Handler extends ListenerAdapter {
         UserDto userDto = userService.getUserById(discordId, guildId);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(userDto, member.getGuild(), guild.getDefaultChannel(), Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
+            playIntroAndResetVolume(guild, deleteDelayConfig, member, guildId, userDto);
         }
+    }
+
+    private void playIntroAndResetVolume(Guild guild, ConfigDto deleteDelayConfig, Member member, long guildId, UserDto userDto) {
+        TextChannel channel = guild.getDefaultChannel();
+        playUserIntro(userDto, member.getGuild(), channel, Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
+        int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
+        channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
+        PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
     }
 
 

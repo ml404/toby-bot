@@ -1,5 +1,6 @@
 package toby.command.commands.music;
 
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.TextChannel;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -31,8 +32,11 @@ public class PlayCommand implements IMusicCommand {
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
         String link = String.join(" ", ctx.getArgs());
         if (link.equals("intro")) {
-            playUserIntro(requestingUserDto, ctx.getGuild(), channel, deleteDelay);
-
+            Guild guild = ctx.getGuild();
+            playUserIntro(requestingUserDto, guild, channel, deleteDelay);
+            int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
+            channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
             return;
         }
         if (link.contains("youtube") && !isUrl(link)) {

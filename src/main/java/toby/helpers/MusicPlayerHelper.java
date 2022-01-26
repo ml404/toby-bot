@@ -32,8 +32,6 @@ public class MusicPlayerHelper {
             if (introVolume!=null && currentVolume != introVolume) channel.sendMessageFormat("Changing volume from '%s' to intro volume '%s' \uD83D\uDD0A", currentVolume, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()), 0);
         }
-        channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
     }
 
     public static void nowPlaying(TextChannel channel, AudioTrack track, Integer deleteDelay) {
