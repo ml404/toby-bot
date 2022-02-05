@@ -177,9 +177,10 @@ public class Handler extends ListenerAdapter {
     }
 
     private void waitForIntroToFinishIfPlaying() {
-        while(PlayerManager.getInstance().isPlayingIntro()){
+        if(PlayerManager.getInstance().isPlayingIntro()){
             try {
                 Thread.sleep(1000);
+                waitForIntroToFinishIfPlaying();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
