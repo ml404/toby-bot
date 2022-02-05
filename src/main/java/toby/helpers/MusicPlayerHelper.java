@@ -21,7 +21,7 @@ public class MusicPlayerHelper {
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
-            if (introVolume!=null && currentVolume != introVolume) channel.sendMessageFormat("Changing volume from '%s' to intro volume '%s' \uD83D\uDD0A", currentVolume, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.setPlayingIntro(true);
             instance.loadAndPlay(guild.getSystemChannel(),
@@ -30,10 +30,15 @@ public class MusicPlayerHelper {
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
-            if (introVolume!=null && currentVolume != introVolume) channel.sendMessageFormat("Changing volume from '%s' to intro volume '%s' \uD83D\uDD0A", currentVolume, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             instance.setPlayingIntro(true);
             instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()), 0);
         }
+    }
+
+    private static void changeVolumeForIntro(TextChannel channel, int deleteDelay, int currentVolume, Integer introVolume) {
+        if (introVolume != null && currentVolume != introVolume)
+            channel.sendMessageFormat("Changing volume from '%s' to intro volume '%s' \uD83D\uDD0A", currentVolume, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static void nowPlaying(TextChannel channel, AudioTrack track, Integer deleteDelay) {
