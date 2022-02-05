@@ -51,12 +51,13 @@ public class PlayerManager {
     }
 
     public void loadAndPlay(TextChannel channel, String trackUrl, Integer deleteDelay) {
-        loadAndPlay(channel, trackUrl, true, deleteDelay);
+        loadAndPlay(channel, trackUrl, true, false, deleteDelay);
     }
 
-    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay) {
+    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Boolean isIntro, Integer deleteDelay) {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
         this.currentlyStoppable = isSkippable;
+        this.isPlayingIntro = isIntro;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
 
             private final TrackScheduler scheduler = musicManager.getScheduler();

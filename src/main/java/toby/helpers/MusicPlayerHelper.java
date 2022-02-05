@@ -26,13 +26,15 @@ public class MusicPlayerHelper {
             instance.setPlayingIntro(true);
             instance.loadAndPlay(guild.getSystemChannel(),
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    true,
+                    true,
                     0);
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             instance.setPlayingIntro(true);
-            instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()), 0);
+            instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, true, 0);
         }
     }
 
