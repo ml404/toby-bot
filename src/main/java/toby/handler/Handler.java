@@ -167,10 +167,25 @@ public class Handler extends ListenerAdapter {
 
     private void playIntroAndResetVolume(Guild guild, ConfigDto deleteDelayConfig, Member member, long guildId, UserDto userDto) {
         TextChannel channel = guild.getDefaultChannel();
-        int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
+        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
+        int currentVolume = audioPlayer.getVolume();
         playUserIntro(userDto, member.getGuild(), channel, Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
-        channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
-        PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
+        try {
+            waitForIntroToFinish(audioPlayer);
+            channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
+            audioPlayer.setVolume(currentVolume);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void waitForIntroToFinish(AudioPlayer audioPlayer) throws InterruptedException {
+        synchronized (audioPlayer){
+            while (audioPlayer.getPlayingTrack()!=null){
+                audioPlayer.wait();
+            }
+            audioPlayer.notify();
+        }
     }
 
 
