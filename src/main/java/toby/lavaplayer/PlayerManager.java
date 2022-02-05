@@ -25,6 +25,7 @@ public class PlayerManager {
     private final Map<Long, GuildMusicManager> musicManagers;
     private final AudioPlayerManager audioPlayerManager;
     private boolean currentlyStoppable = true;
+    private boolean isPlayingIntro;
 
 
     public PlayerManager() {
@@ -124,4 +125,11 @@ public class PlayerManager {
         return audioPlayerManager;
     }
 
+    public boolean isPlayingIntro() {
+        return isPlayingIntro;
+    }
+
+    public void setPlayingIntro(boolean isPlayingIntro) {
+        this.isPlayingIntro = isPlayingIntro;
+    }
 }

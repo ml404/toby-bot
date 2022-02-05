@@ -169,25 +169,22 @@ public class Handler extends ListenerAdapter {
         TextChannel channel = guild.getDefaultChannel();
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
         int currentVolume = audioPlayer.getVolume();
+        waitForIntroToFinishIfPlaying();
         playUserIntro(userDto, member.getGuild(), channel, Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
-        try {
-            waitForIntroToFinish(audioPlayer);
-            channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
-            audioPlayer.setVolume(currentVolume);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        waitForIntroToFinishIfPlaying();
+        channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
+        audioPlayer.setVolume(currentVolume);
     }
 
-    private void waitForIntroToFinish(AudioPlayer audioPlayer) throws InterruptedException {
-        synchronized (audioPlayer){
-            while (audioPlayer.getPlayingTrack()!=null){
-                audioPlayer.wait();
+    private void waitForIntroToFinishIfPlaying() {
+        while(PlayerManager.getInstance().isPlayingIntro()){
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            audioPlayer.notify();
         }
     }
-
 
     @Override
     public void onGuildVoiceMove(GuildVoiceMoveEvent event) {
