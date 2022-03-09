@@ -18,6 +18,7 @@ public class TrackScheduler extends AudioEventAdapter {
     private boolean isLooping;
     private TextChannel currentTextChannel;
     private Integer deleteDelay;
+    private Integer previousVolume;
 
 
     public boolean isLooping() {
@@ -52,6 +53,10 @@ public class TrackScheduler extends AudioEventAdapter {
                 return;
             }
             PlayerManager.getInstance().setCurrentlyStoppable(true);
+            if (player.getVolume() != previousVolume) {
+                player.setVolume(previousVolume);
+                currentTextChannel.sendMessage(String.format("Setting volume back to '%d' \uD83D\uDD0A", previousVolume)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            }
             nextTrack();
             nowPlaying(currentTextChannel, player.getPlayingTrack(), deleteDelay);
         }
@@ -96,9 +101,12 @@ public class TrackScheduler extends AudioEventAdapter {
         this.deleteDelay = deleteDelay;
     }
 
-    public Integer getDeleteDelay(){
+    public Integer getDeleteDelay() {
         return deleteDelay;
     }
 
 
+    public void setPreviousVolume(Integer previousVolume) {
+        this.previousVolume = previousVolume;
+    }
 }

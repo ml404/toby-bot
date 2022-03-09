@@ -15,22 +15,30 @@ import java.util.Arrays;
 
 public class MusicPlayerHelper {
 
-    public static void playUserIntro(UserDto dbUser, Guild guild) {
+    public static void playUserIntro(UserDto dbUser, Guild guild, TextChannel channel, int deleteDelay) {
         MusicDto musicDto = dbUser.getMusicDto();
         PlayerManager instance = PlayerManager.getInstance();
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
+            changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlay(guild.getSystemChannel(),
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    true,
                     0);
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
-            instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()),0);
+            changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
+            instance.setPreviousVolume(currentVolume);
+            instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, 0);
         }
-        PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
+    }
+
+    private static void changeVolumeForIntro(TextChannel channel, int deleteDelay, int currentVolume, Integer introVolume) {
+        if (introVolume != null && currentVolume != introVolume)
+            channel.sendMessageFormat("Changing volume from '%s' to intro volume '%s' \uD83D\uDD0A", currentVolume, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static void nowPlaying(TextChannel channel, AudioTrack track, Integer deleteDelay) {

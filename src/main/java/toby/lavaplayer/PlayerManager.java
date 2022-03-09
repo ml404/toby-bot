@@ -25,6 +25,7 @@ public class PlayerManager {
     private final Map<Long, GuildMusicManager> musicManagers;
     private final AudioPlayerManager audioPlayerManager;
     private boolean currentlyStoppable = true;
+    private Integer previousVolume;
 
 
     public PlayerManager() {
@@ -65,6 +66,7 @@ public class PlayerManager {
                 scheduler.setCurrentTextChannel(channel);
                 scheduler.setDeleteDelay(deleteDelay);
                 scheduler.queue(track);
+                scheduler.setPreviousVolume(previousVolume);
 
                 channel.sendMessage("Adding to queue: `")
                         .append(track.getInfo().title)
@@ -120,8 +122,7 @@ public class PlayerManager {
         this.currentlyStoppable = stoppable;
     }
 
-    public AudioPlayerManager getAudioPlayerManager() {
-        return audioPlayerManager;
+    public void setPreviousVolume(Integer previousVolume) {
+         this.previousVolume = previousVolume;
     }
-
 }

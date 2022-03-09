@@ -145,6 +145,8 @@ public class Handler extends ListenerAdapter {
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         ConfigDto databaseVolumeConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
+
         int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
@@ -158,10 +160,9 @@ public class Handler extends ListenerAdapter {
         UserDto userDto = userService.getUserById(discordId, guildId);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(userDto, member.getGuild());
+            playUserIntro(userDto,guild,guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
         }
     }
-
 
     @Override
     public void onGuildVoiceMove(GuildVoiceMoveEvent event) {
