@@ -31,19 +31,19 @@ public class PlayCommand implements IMusicCommand {
         }
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
         String link = String.join(" ", ctx.getArgs());
+        PlayerManager instance = PlayerManager.getInstance();
+        Guild guild = ctx.getGuild();
+        int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
+        instance.setPreviousVolume(currentVolume);
+
         if (link.equals("intro")) {
-            Guild guild = ctx.getGuild();
-            int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
             playUserIntro(requestingUserDto, guild, channel, deleteDelay);
-            channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(currentVolume);
             return;
         }
         if (link.contains("youtube") && !isUrl(link)) {
             link = "ytsearch:" + link;
         }
-
-        PlayerManager.getInstance().loadAndPlay(channel, link, deleteDelay);
+        instance.loadAndPlay(channel, link, deleteDelay);
     }
 
 

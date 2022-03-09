@@ -25,7 +25,7 @@ public class PlayerManager {
     private final Map<Long, GuildMusicManager> musicManagers;
     private final AudioPlayerManager audioPlayerManager;
     private boolean currentlyStoppable = true;
-    private boolean isPlayingIntro;
+    private Integer previousVolume;
 
 
     public PlayerManager() {
@@ -51,13 +51,12 @@ public class PlayerManager {
     }
 
     public void loadAndPlay(TextChannel channel, String trackUrl, Integer deleteDelay) {
-        loadAndPlay(channel, trackUrl, true, false, deleteDelay);
+        loadAndPlay(channel, trackUrl, true, deleteDelay);
     }
 
-    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Boolean isIntro, Integer deleteDelay) {
+    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay) {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
         this.currentlyStoppable = isSkippable;
-        this.isPlayingIntro = isIntro;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
 
             private final TrackScheduler scheduler = musicManager.getScheduler();
@@ -67,6 +66,7 @@ public class PlayerManager {
                 scheduler.setCurrentTextChannel(channel);
                 scheduler.setDeleteDelay(deleteDelay);
                 scheduler.queue(track);
+                scheduler.setPreviousVolume(previousVolume);
 
                 channel.sendMessage("Adding to queue: `")
                         .append(track.getInfo().title)
@@ -122,15 +122,7 @@ public class PlayerManager {
         this.currentlyStoppable = stoppable;
     }
 
-    public AudioPlayerManager getAudioPlayerManager() {
-        return audioPlayerManager;
-    }
-
-    public boolean isPlayingIntro() {
-        return isPlayingIntro;
-    }
-
-    public void setPlayingIntro(boolean isPlayingIntro) {
-        this.isPlayingIntro = isPlayingIntro;
+    public void setPreviousVolume(Integer previousVolume) {
+         this.previousVolume = previousVolume;
     }
 }

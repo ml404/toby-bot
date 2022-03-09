@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
-import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
@@ -161,29 +160,7 @@ public class Handler extends ListenerAdapter {
         UserDto userDto = userService.getUserById(discordId, guildId);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playIntroAndResetVolume(guild, deleteDelayConfig, member, guildId, userDto);
-        }
-    }
-
-    private void playIntroAndResetVolume(Guild guild, ConfigDto deleteDelayConfig, Member member, long guildId, UserDto userDto) {
-        TextChannel channel = guild.getDefaultChannel();
-        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
-        int currentVolume = audioPlayer.getVolume();
-        waitForIntroToFinishIfPlaying();
-        playUserIntro(userDto, member.getGuild(), channel, Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), String.valueOf(guildId)).getValue()));
-        waitForIntroToFinishIfPlaying();
-        channel.sendMessageFormat("Changing volume back to '%s' \uD83D\uDD0A", currentVolume).queue(message -> ICommand.deleteAfter(message, Integer.parseInt(deleteDelayConfig.getValue())));
-        audioPlayer.setVolume(currentVolume);
-    }
-
-    private void waitForIntroToFinishIfPlaying() {
-        if(PlayerManager.getInstance().isPlayingIntro()){
-            try {
-                Thread.sleep(1000);
-                waitForIntroToFinishIfPlaying();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            playUserIntro(userDto,guild,guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
         }
     }
 
