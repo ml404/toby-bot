@@ -23,7 +23,7 @@ public class MusicPlayerHelper {
             Integer introVolume = musicDto.getIntroVolume();
             changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
-            instance.loadAndPlay(guild.getSystemChannel(),
+            instance.loadAndPlay(channel,
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
                     true,
                     0);
@@ -32,7 +32,7 @@ public class MusicPlayerHelper {
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(guild.getSystemChannel(), Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, 0);
+            instance.loadAndPlay(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, 0);
         }
     }
 

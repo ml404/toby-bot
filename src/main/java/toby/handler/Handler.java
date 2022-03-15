@@ -160,7 +160,7 @@ public class Handler extends ListenerAdapter {
         UserDto userDto = userService.getUserById(discordId, guildId);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(userDto,guild,guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
+            playUserIntro(userDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
         }
     }
 
