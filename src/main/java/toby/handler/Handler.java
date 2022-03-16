@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static toby.helpers.MusicPlayerHelper.playUserIntro;
+import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
 @Configurable
@@ -157,10 +158,10 @@ public class Handler extends ListenerAdapter {
         Member member = event.getMember();
         long discordId = member.getUser().getIdLong();
         long guildId = member.getGuild().getIdLong();
-        UserDto userDto = userService.getUserById(discordId, guildId);
+        UserDto requestingUserDto = calculateUserDto(guildId, discordId, Objects.requireNonNull(event.getMember()).isOwner(), userService, defaultVolume);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(userDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
+            playUserIntro(requestingUserDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
         }
     }
 
