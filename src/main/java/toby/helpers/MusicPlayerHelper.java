@@ -22,7 +22,6 @@ public class MusicPlayerHelper {
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlay(channel,
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
@@ -32,14 +31,8 @@ public class MusicPlayerHelper {
             Integer introVolume = musicDto.getIntroVolume();
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.setPreviousVolume(currentVolume);
-            changeVolumeForIntro(channel, deleteDelay, currentVolume, introVolume);
-            instance.loadAndPlay(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, 0);
+            instance.loadAndPlay(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay);
         }
-    }
-
-    private static void changeVolumeForIntro(TextChannel channel, int deleteDelay, int currentVolume, Integer introVolume) {
-        if (introVolume != null && currentVolume != introVolume)
-            channel.sendMessageFormat("Changing volume from '%s' to intro volume '%s' \uD83D\uDD0A", currentVolume, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static void nowPlaying(TextChannel channel, AudioTrack track, Integer deleteDelay) {
