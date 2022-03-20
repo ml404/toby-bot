@@ -75,9 +75,7 @@ public class ExcuseCommand implements IMiscCommand {
             }
             sb.append(excuseString);
         });
-        stringBuilderList.forEach(sb -> {
-            channel.sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        });
+        stringBuilderList.forEach(sb -> channel.sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay)));
     }
 
     private List<StringBuilder> createAndAddStringBuilder() {
