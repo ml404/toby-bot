@@ -160,6 +160,7 @@ public class Handler extends ListenerAdapter {
         long guildId = member.getGuild().getIdLong();
         UserDto requestingUserDto = calculateUserDto(guildId, discordId, Objects.requireNonNull(event.getMember()).isOwner(), userService, defaultVolume);
 
+        //TODO guild.getDefaultChannel no longer works if the default channel isn't viewable by guild.getPublicRole() i.e. everyone
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
             playUserIntro(requestingUserDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
         }

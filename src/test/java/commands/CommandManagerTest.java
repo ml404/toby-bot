@@ -97,10 +97,11 @@ public class CommandManagerTest {
                 Kf2RandomMapCommand.class,
                 DbdRandomKillerCommand.class,
                 ExcuseCommand.class,
-                SocialCreditCommand.class
+                SocialCreditCommand.class,
+                TeamCommand.class
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(34, commandManager.getAllCommands().size());
+        assertEquals(35, commandManager.getAllCommands().size());
     }
 }

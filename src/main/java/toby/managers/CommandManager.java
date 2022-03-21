@@ -60,6 +60,7 @@ public class CommandManager {
         addCommand(new ChCommand());
         addCommand(new UserInfoCommand(userService));
         addCommand(new RandomCommand());
+        addCommand(new TeamCommand());
         addCommand(new EventWaiterCommand(waiter));
         addCommand(new ExcuseCommand(excuseService));
 
