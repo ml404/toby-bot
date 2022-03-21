@@ -26,6 +26,7 @@ public class TeamCommand implements IMiscCommand {
         Optional<String> teamOptional = ctx.getArgs().stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).filter(s -> Integer.parseInt(s) > 0).findFirst();
         int defaultNumberOfTeams = 2;
         int listsToInitialise = teamOptional.map(Integer::parseInt).orElse(defaultNumberOfTeams);
+        listsToInitialise = Math.min(listsToInitialise, mentionedMembers.size());
         List<List<Member>> teams = split(mentionedMembers, listsToInitialise);
 
         StringBuilder sb = new StringBuilder();
@@ -42,9 +43,9 @@ public class TeamCommand implements IMiscCommand {
         Collections.shuffle(list);
         int numberOfMembersTagged = list.size();
         for (int i = 0; i < splitSize; i++) {
-            int teamsToMake = (numberOfMembersTagged) / splitSize;
-            int fromIndex = i * teamsToMake;
-            int toIndex = (i + 1) * teamsToMake;
+            int sizeOfTeams = (numberOfMembersTagged) / splitSize;
+            int fromIndex = i * sizeOfTeams;
+            int toIndex = (i + 1) * sizeOfTeams;
             result.add(new ArrayList<>(list.subList(fromIndex, toIndex)));
         }
 
@@ -53,7 +54,7 @@ public class TeamCommand implements IMiscCommand {
 
     @Override
     public String getName() {
-        return "random";
+        return "team";
     }
 
     @Override
