@@ -22,7 +22,8 @@ public class TeamCommand implements IMiscCommand {
         if (ctx.getArgs().isEmpty()) {
             channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
-        List<Member> mentionedMembers = message.getMentionedMembers();
+        //Shuffle gives an NPE with default return of message.getMentionedMembers()
+        List<Member> mentionedMembers = new ArrayList<>(message.getMentionedMembers());
         Optional<String> teamOptional = ctx.getArgs().stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).filter(s -> Integer.parseInt(s) > 0).findFirst();
         int defaultNumberOfTeams = 2;
         int listsToInitialise = teamOptional.map(Integer::parseInt).orElse(defaultNumberOfTeams);
