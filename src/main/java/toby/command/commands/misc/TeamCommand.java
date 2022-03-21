@@ -32,7 +32,7 @@ public class TeamCommand implements IMiscCommand {
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < teams.size(); i++) {
-            sb.append(String.format("**Team %d**: %s \n", i, teams.get(i).stream().map(Member::getEffectiveName).collect(Collectors.joining(","))));
+            sb.append(String.format("**Team %d**: %s \n", i+1, teams.get(i).stream().map(Member::getEffectiveName).collect(Collectors.joining(", "))));
         }
         channel.sendMessage(sb).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
