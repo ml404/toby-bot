@@ -35,7 +35,7 @@ public class TeamCommand implements IMiscCommand {
             String teamName = String.format("**Team %d**", i + 1);
             sb.append(String.format("%s: %s \n", teamName, teams.get(i).stream().map(Member::getEffectiveName).collect(Collectors.joining(", "))));
             ChannelAction<VoiceChannel> voiceChannel = guild.createVoiceChannel(teamName);
-            VoiceChannel createdVoiceChannel = voiceChannel.setBitrate(96).complete();
+            VoiceChannel createdVoiceChannel = voiceChannel.setBitrate(guild.getMaxBitrate()).complete();
             teams.get(i).forEach(target -> guild.moveVoiceMember(target, createdVoiceChannel)
                     .queue(
                             (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), createdVoiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
