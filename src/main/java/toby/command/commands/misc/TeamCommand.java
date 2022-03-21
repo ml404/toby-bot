@@ -1,8 +1,7 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -31,11 +30,19 @@ public class TeamCommand implements IMiscCommand {
         List<List<Member>> teams = split(mentionedMembers, listsToInitialise);
 
         StringBuilder sb = new StringBuilder();
+        Guild guild = ctx.getGuild();
         for (int i = 0; i < teams.size(); i++) {
-            sb.append(String.format("**Team %d**: %s \n", i+1, teams.get(i).stream().map(Member::getEffectiveName).collect(Collectors.joining(", "))));
+            String teamName = String.format("Team %d", i + 1);
+            sb.append(String.format("**%s**: %s \n", teamName, teams.get(i).stream().map(Member::getEffectiveName).collect(Collectors.joining(", "))));
+            ChannelAction<VoiceChannel> voiceChannel = guild.createVoiceChannel(teamName);
+            VoiceChannel createdVoiceChannel = voiceChannel.setBitrate(guild.getMaxBitrate()).complete();
+            teams.get(i).forEach(target -> guild.moveVoiceMember(target, createdVoiceChannel)
+                    .queue(
+                            (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), createdVoiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
+                            (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
+                    ));
         }
         channel.sendMessage(sb).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-
     }
 
 
