@@ -134,7 +134,7 @@ public class Handler extends ListenerAdapter {
             channel.sendMessage("Don't talk to me").queue();
         }
 
-        if(messageStringLowercase.contains("covid")){
+        if(messageStringLowercase.contains("covid") || messageStringLowercase.contains("corona")){
             channel.sendMessage("It is the 2nd millennium, for more than two years humanity has sat immobile on it's fat arse whilst COVID roams the planet. They are the masters of Netflix by the will of the settee, and masters of ordering Chinese takeaway through the might of their wallets. They are fattening imbeciles imbued with energy from last nights curry. They are the isolated ones for whom more than a million people wear masks every day.\n" +
                     "\n" +
                     "Yet, even in their quarantined state, they continue to make everyone's lives miserable. Arsehole scalpers plunder the Internet for the latest ps5 stock, hoarding until they can raise the prices further still. Greatest amount these cretins are the anti-vaxers, complete morons, idiots with IQs less than a goat. Their fools in arms are endless: flat earthers and countless moon landing deniers, the stubborn Facebook politicians and the Karen's of every shopping centre to name only a few. And with all this nonsense they won't shut up about 5G, Immigrants, muh freedoms... and far, far worse.\n" +
