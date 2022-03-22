@@ -110,17 +110,23 @@ public class Handler extends ListenerAdapter {
         Emote tobyEmote = jda.getEmoteById(Emotes.TOBY);
         Emote jessEmote = jda.getEmoteById(Emotes.JESS);
 
-        if (message.getContentRaw().toLowerCase().contains("toby") || message.getContentRaw().toLowerCase().contains("tobs")) {
+        messageContainsRespond(message, channel, name, tobyEmote, jessEmote);
+
+    }
+
+    private void messageContainsRespond(Message message, MessageChannel channel, String name, Emote tobyEmote, Emote jessEmote) {
+        String messageStringLowercase = message.getContentRaw().toLowerCase();
+        if (messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs")) {
             message.addReaction(tobyEmote).queue();
             channel.sendMessage(String.format("%s... that's not my name %s", name, tobyEmote)).queue();
         }
 
-        if (message.getContentRaw().toLowerCase().trim().contains("sigh")) {
+        if (messageStringLowercase.trim().contains("sigh")) {
             channel.sendMessage(String.format("Hey %s, what's up champ?", name)).queue();
             channel.sendMessage(String.format("%s", jessEmote)).queue();
         }
 
-        if (message.getContentRaw().toLowerCase().contains("yeah")) {
+        if (messageStringLowercase.contains("yeah")) {
             channel.sendMessage("YEAH????").queue();
         }
 
@@ -128,6 +134,13 @@ public class Handler extends ListenerAdapter {
             channel.sendMessage("Don't talk to me").queue();
         }
 
+        if(messageStringLowercase.contains("covid")){
+            channel.sendMessage("It is the 2nd millennium, for more than two years humanity has sat immobile on it's fat arse whilst COVID roams the planet. They are the masters of Netflix by the will of the settee, and masters of ordering Chinese takeaway through the might of their wallets. They are fattening imbeciles imbued with energy from last nights curry. They are the isolated ones for whom more than a million people wear masks every day.\n" +
+                    "\n" +
+                    "Yet, even in their quarantined state, they continue to make everyone's lives miserable. Arsehole scalpers plunder the Internet for the latest ps5 stock, hoarding until they can raise the prices further still. Greatest amount these cretins are the anti-vaxers, complete morons, idiots with IQs less than a goat. Their fools in arms are endless: flat earthers and countless moon landing deniers, the stubborn Facebook politicians and the Karen's of every shopping centre to name only a few. And with all this nonsense they won't shut up about 5G, Immigrants, muh freedoms... and far, far worse.\n" +
+                    "\n" +
+                    "To be a man (or woman) in such times is to be one amongst almost 7 billion. It is to live in the stupidest and most irritating regime imaginable. These are the memes of these times. Forget the power of technology and science, for so much will be denied, never to be acknowledged. Forget the promise of immunity and vaccinations, for in our grim dark daily lives, there is only COVID. There is no freedom on our streets, only an eternity of mask mandates and sanitizer, and the coughing of the sick.").queue();
+        }
     }
 
 
