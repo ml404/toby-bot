@@ -14,16 +14,20 @@ public class TeamCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-
+        cleanupTemporaryChannels(ctx.getGuild().getChannels());
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         ICommand.deleteAfter(message, deleteDelay);
-        if (ctx.getArgs().isEmpty()) {
+        List<String> args = ctx.getArgs();
+        if (args.isEmpty()) {
             channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
         List<Member> mentionedMembers = new ArrayList<>(message.getMentionedMembers());
-        Optional<String> teamOptional = ctx.getArgs().stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).filter(s -> Integer.parseInt(s) > 0).findFirst();
+        Optional<String> teamOptional = args.stream()
+                .filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))
+                .filter(s -> Integer.parseInt(s) > 0)
+                .findFirst();
         int defaultNumberOfTeams = 2;
         int listsToInitialise = teamOptional.map(Integer::parseInt).orElse(defaultNumberOfTeams);
         listsToInitialise = Math.min(listsToInitialise, mentionedMembers.size());
@@ -45,6 +49,11 @@ public class TeamCommand implements IMiscCommand {
         channel.sendMessage(sb).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
+    private void cleanupTemporaryChannels(List<GuildChannel> channels) {
+        channels.stream()
+                .filter(guildChannel -> guildChannel.getName().matches("(?i)team\\s[0-9]+"))
+                .forEach(guildChannel -> guildChannel.delete().queue());
+    }
 
     public static List<List<Member>> split(List<Member> list, int splitSize) {
         List<List<Member>> result = new ArrayList<>();
