@@ -20,10 +20,7 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -157,8 +154,19 @@ public class CommandManager {
 
             CommandContext ctx = new CommandContext(event, args);
             cmd.handle(ctx, prefix, requestingUserDto, deleteDelay);
+            attributeSocialCredit(ctx, userService, requestingUserDto, deleteDelay);
         } else {
             getCommand("help");
         }
+    }
+
+    private void attributeSocialCredit(CommandContext ctx, IUserService userService, UserDto requestingUserDto, Integer deleteDelay) {
+        long socialCreditScore = requestingUserDto.getSocialCredit() == null ? 0L : requestingUserDto.getSocialCredit();
+        Random r = new Random();
+        int socialCredit = r.nextInt(5);
+        int awardedSocialCredit = socialCredit * 5;
+        requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
+        userService.updateUser(requestingUserDto);
+        ctx.getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 }
