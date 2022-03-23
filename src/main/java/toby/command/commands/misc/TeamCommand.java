@@ -19,8 +19,12 @@ public class TeamCommand implements IMiscCommand {
         final Message message = ctx.getMessage();
         ICommand.deleteAfter(message, deleteDelay);
         List<String> args = ctx.getArgs();
+        if(args.contains("cleanup")){
+            return;
+        }
         if (args.isEmpty()) {
             channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
         List<Member> mentionedMembers = new ArrayList<>(message.getMentionedMembers());
@@ -77,8 +81,9 @@ public class TeamCommand implements IMiscCommand {
     @Override
     public String getHelp(String prefix) {
         return "Return X teams from a list of tagged users. \n" +
-                String.format("Usage: %steam @person1 @person2 \n", prefix) +
-                String.format("%steam @person1 @person2 $numberOfTeams (defaults to 2) \n", prefix) +
+                String.format("Usage: `%steam @person1 @person2` \n", prefix) +
+                String.format("`%steam @person1 @person2 $numberOfTeams` (defaults to 2) \n", prefix) +
+                String.format("`%steam cleanup` to delete the temporary channels that may be leftover (this is also run before the command does anything) \n", prefix) +
                 String.format("Aliases are: '%s'", String.join(",", getAliases()));
     }
 
