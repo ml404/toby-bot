@@ -63,6 +63,7 @@ public class CommandManager {
         addCommand(new TeamCommand());
         addCommand(new EventWaiterCommand(waiter));
         addCommand(new ExcuseCommand(excuseService));
+        addCommand(new EightBallCommand(userService));
 
         //moderation commands
         addCommand(new SetConfigCommand(configService));

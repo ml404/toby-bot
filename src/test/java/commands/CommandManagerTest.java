@@ -98,10 +98,11 @@ public class CommandManagerTest {
                 DbdRandomKillerCommand.class,
                 ExcuseCommand.class,
                 SocialCreditCommand.class,
-                TeamCommand.class
+                TeamCommand.class,
+                EightBallCommand.class
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(35, commandManager.getAllCommands().size());
+        assertEquals(36, commandManager.getAllCommands().size());
     }
 }
