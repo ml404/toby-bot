@@ -52,20 +52,24 @@ public class MusicPlayerHelper {
     }
 
     public static Long adjustTrackPlayingTimes(List<String> args, TextChannel channel, Integer deleteDelay) {
-        List<String> valuesToAdjust = args.stream().filter(s -> !isUrl(s)).collect(Collectors.toList());
-        Map<String, Long> permissionMap = valuesToAdjust.stream()
+        Map<String, Long> adjustmentMap = args.stream()
+                .filter(s -> !s.toLowerCase().startsWith(MusicDto.Adjustment.START.toString().toLowerCase()) || !s.toLowerCase().startsWith(MusicDto.Adjustment.END.toString().toLowerCase()))
                 .map(s -> s.split("=", 2))
                 .filter(strings -> MusicDto.Adjustment.isValidEnum(strings[0].toUpperCase()) && (strings[1] != null && Long.parseLong(strings[1]) > 0))
-                .collect(Collectors.toMap(s -> s[0], s -> Long.valueOf(s[1])));
+                .collect(Collectors.toMap(s -> s[0].toUpperCase(), s -> Long.valueOf(s[1])));
 
-        if (permissionMap.isEmpty()) {
-            channel.sendMessage("You did not mention a valid permission to update").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        if (adjustmentMap.isEmpty()) {
             return 0L;
         }
 
-        if (permissionMap.containsKey(MusicDto.Adjustment.START.name())){
-            return permissionMap.get(MusicDto.Adjustment.START.name()) * SECOND_MULTIPLIER;
+        if (adjustmentMap.containsKey(MusicDto.Adjustment.START.name())){
+            return adjustmentMap.get(MusicDto.Adjustment.START.name()) * SECOND_MULTIPLIER;
         }
+//       TODO: return a map when end can be specified too
+
+//        if (adjustmentMap.containsKey(MusicDto.Adjustment.END.name())){
+//            return adjustmentMap.get(MusicDto.Adjustment.END.name()) * SECOND_MULTIPLIER;
+//        }
         return 0L;
     }
 
