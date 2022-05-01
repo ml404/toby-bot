@@ -39,7 +39,7 @@ public class PlayCommand implements IMusicCommand {
         Guild guild = ctx.getGuild();
         int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
-        Long startPosition = adjustTrackPlayingTimes(ctx.getArgs(), channel, deleteDelay);
+        Long startPosition = adjustTrackPlayingTimes(ctx.getArgs());
 
         if (link.equals("intro")) {
             playUserIntro(requestingUserDto, guild, channel, deleteDelay, startPosition);

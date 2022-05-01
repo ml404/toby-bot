@@ -51,7 +51,7 @@ public class MusicPlayerHelper {
         channel.sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    public static Long adjustTrackPlayingTimes(List<String> args, TextChannel channel, Integer deleteDelay) {
+    public static Long adjustTrackPlayingTimes(List<String> args) {
         Map<String, Long> adjustmentMap = args.stream()
                 .filter(s -> !s.toLowerCase().startsWith(MusicDto.Adjustment.START.toString().toLowerCase()) || !s.toLowerCase().startsWith(MusicDto.Adjustment.END.toString().toLowerCase()))
                 .map(s -> s.split("=", 2))
