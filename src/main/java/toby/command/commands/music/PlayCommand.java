@@ -31,7 +31,8 @@ public class PlayCommand implements IMusicCommand {
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
         List<String> nonAdjustmentArgs = ctx.getArgs()
                 .stream()
-                .filter(s -> !s.startsWith(MusicDto.Adjustment.START.name()) || !s.startsWith(MusicDto.Adjustment.END.name()))
+                .filter(s -> !s.toLowerCase().startsWith(MusicDto.Adjustment.START.toString().toLowerCase()))
+                .filter(s -> !s.toLowerCase().startsWith(MusicDto.Adjustment.END.toString().toLowerCase()))
                 .collect(Collectors.toList());
         String link = String.join(" ", nonAdjustmentArgs);
         PlayerManager instance = PlayerManager.getInstance();

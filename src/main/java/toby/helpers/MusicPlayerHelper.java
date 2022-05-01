@@ -55,7 +55,7 @@ public class MusicPlayerHelper {
         List<String> valuesToAdjust = args.stream().filter(s -> !isUrl(s)).collect(Collectors.toList());
         Map<String, Long> permissionMap = valuesToAdjust.stream()
                 .map(s -> s.split("=", 2))
-                .filter(strings -> MusicDto.Adjustment.isValidEnum(strings[0].toUpperCase()) && (strings[1] != null && (strings[1].equalsIgnoreCase("false") || strings[1].equalsIgnoreCase("true"))))
+                .filter(strings -> MusicDto.Adjustment.isValidEnum(strings[0].toUpperCase()) && (strings[1] != null && Long.parseLong(strings[1]) > 0))
                 .collect(Collectors.toMap(s -> s[0], s -> Long.valueOf(s[1])));
 
         if (permissionMap.isEmpty()) {
