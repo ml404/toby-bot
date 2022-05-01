@@ -74,6 +74,12 @@ public class TrackScheduler extends AudioEventAdapter {
         nextTrack();
     }
 
+    @Override
+    public void onTrackStart(AudioPlayer player, AudioTrack track){
+        getCurrentTextChannel().sendMessage(String.format("Track is starting at %s ms", track.getPosition())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        this.player.startTrack(track, false);
+    }
+
     public boolean stopTrack(boolean isStoppable) {
         if (isStoppable) {
             player.stopTrack();
