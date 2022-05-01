@@ -12,6 +12,8 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 
+import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
+
 
 public class NowDigOnThisCommand implements IMusicCommand {
 
@@ -27,7 +29,8 @@ public class NowDigOnThisCommand implements IMusicCommand {
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
             String link = String.join(" ", ctx.getArgs());
             if (link.contains("youtube") && !isUrl(link)) link = "ytsearch:" + link;
-            PlayerManager.getInstance().loadAndPlay(channel, link, false, deleteDelay);
+            Long startPosition = adjustTrackPlayingTimes(ctx.getArgs(), channel, deleteDelay);
+            PlayerManager.getInstance().loadAndPlay(channel, link, false, deleteDelay, startPosition);
         } else
             sendErrorMessage(ctx, channel, deleteDelay);
     }

@@ -175,7 +175,7 @@ public class Handler extends ListenerAdapter {
 
         //TODO guild.getDefaultChannel no longer works if the default channel isn't viewable by guild.getPublicRole() i.e. everyone
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(requestingUserDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()));
+            playUserIntro(requestingUserDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()), 0L);
         }
     }
 

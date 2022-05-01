@@ -1,6 +1,7 @@
 package toby.jpa.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,25 @@ public class MusicDto implements Serializable {
         this.introVolume = introVolume;
         this.musicBlob = musicBlob;
 
+    }
+
+    public enum Adjustment {
+        START("start"),
+        END("end");
+
+        private final String adjustment;
+
+        Adjustment(String adjustment) {
+            this.adjustment = adjustment;
+        }
+
+        public String getAdjustment() {
+            return this.adjustment;
+        }
+
+        public static Boolean isValidEnum(String enumName) {
+            return EnumUtils.isValidEnum(MusicDto.Adjustment.class, enumName);
+        }
     }
 
     private String createMusicId(Long guildId, Long discordId) {

@@ -51,10 +51,10 @@ public class PlayerManager {
     }
 
     public void loadAndPlay(TextChannel channel, String trackUrl, Integer deleteDelay) {
-        loadAndPlay(channel, trackUrl, true, deleteDelay);
+        loadAndPlay(channel, trackUrl, true, deleteDelay, 0L);
     }
 
-    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay) {
+    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition) {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
         this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
@@ -65,7 +65,7 @@ public class PlayerManager {
             public void trackLoaded(AudioTrack track) {
                 scheduler.setCurrentTextChannel(channel);
                 scheduler.setDeleteDelay(deleteDelay);
-                scheduler.queue(track);
+                scheduler.queue(track, startPosition);
                 scheduler.setPreviousVolume(previousVolume);
 
                 channel.sendMessage("Adding to queue: `")
