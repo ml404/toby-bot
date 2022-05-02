@@ -73,6 +73,7 @@ public class PlayerManager {
                         .append("` by `")
                         .append(track.getInfo().author)
                         .append('`')
+                        .append(String.format(" starting at '%s ms'", startPosition))
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 

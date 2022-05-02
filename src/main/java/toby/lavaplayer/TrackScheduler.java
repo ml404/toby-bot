@@ -35,8 +35,8 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void queue(AudioTrack track, long startPosition) {
+        track.setPosition(startPosition);
         if (!this.player.startTrack(track, true)) {
-            track.setPosition(startPosition);
             this.queue.offer(track);
         }
     }
@@ -68,11 +68,13 @@ public class TrackScheduler extends AudioEventAdapter {
         }
     }
 
-    @Override
-    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
-        getCurrentTextChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        nextTrack();
-    }
+//    @Override
+//    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
+////        if(track.getPosition() == 0L) {
+////            getCurrentTextChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+////            nextTrack();
+////        }
+//    }
 
     public boolean stopTrack(boolean isStoppable) {
         if (isStoppable) {
