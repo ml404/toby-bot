@@ -30,7 +30,7 @@ public class MoveCommand implements IModerationCommand {
         final List<String> args = ctx.getArgs();
         Guild guild = ctx.getGuild();
 
-        if (message.getMentionedMembers().isEmpty()) {
+        if (message.getMentions().getMembers().isEmpty()) {
             channel.sendMessage("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
@@ -44,7 +44,7 @@ public class MoveCommand implements IModerationCommand {
             channel.sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
-        message.getMentionedMembers().forEach(target -> {
+        message.getMentions().getMembers().forEach(target -> {
 
             if (doChannelValidation(ctx, channel, member, target, deleteDelay)) return;
 
@@ -58,7 +58,7 @@ public class MoveCommand implements IModerationCommand {
     }
 
     private boolean doChannelValidation(CommandContext ctx, TextChannel channel, Member member, Member target, int deleteDelay) {
-        if (!target.getVoiceState().inVoiceChannel()) {
+        if (!target.getVoiceState().inAudioChannel()) {
             channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }

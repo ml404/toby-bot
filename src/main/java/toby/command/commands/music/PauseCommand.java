@@ -33,10 +33,10 @@ public class PauseCommand implements IMusicCommand {
             if (!audioPlayer.isPaused()) {
                 AudioTrack track = audioPlayer.getPlayingTrack();
                 channel.sendMessage("Pausing: `")
-                        .append(track.getInfo().title)
-                        .append("` by `")
-                        .append(track.getInfo().author)
-                        .append('`')
+                        .addContent(track.getInfo().title)
+                        .addContent("` by `")
+                        .addContent(track.getInfo().author)
+                        .addContent("`")
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 audioPlayer.setPaused(true);
             } else {

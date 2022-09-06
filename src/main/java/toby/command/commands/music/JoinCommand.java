@@ -1,10 +1,7 @@
 package toby.command.commands.music;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.entities.VoiceChannel;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -35,7 +32,7 @@ public class JoinCommand implements IMusicCommand {
         if (memberVoiceState == null) return;
 
         final AudioManager audioManager = ctx.getGuild().getAudioManager();
-        final VoiceChannel memberChannel = memberVoiceState.getChannel();
+        final AudioChannel memberChannel = memberVoiceState.getChannel();
 
         if (self.hasPermission(Permission.VOICE_CONNECT)) {
             audioManager.openAudioConnection(memberChannel);
@@ -51,7 +48,7 @@ public class JoinCommand implements IMusicCommand {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
-        if (selfVoiceState.inVoiceChannel()) {
+        if (selfVoiceState.inAudioChannel()) {
             channel.sendMessage("I'm already in a voice channel").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
@@ -59,7 +56,7 @@ public class JoinCommand implements IMusicCommand {
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
-        if (!memberVoiceState.inVoiceChannel()) {
+        if (!memberVoiceState.inAudioChannel()) {
             channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }

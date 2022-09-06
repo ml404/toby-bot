@@ -50,7 +50,7 @@ public class ExcuseCommand implements IMiscCommand {
             } else if (command.contains(DELETE)) {
                 deleteExcuse(ctx, requestingUserDto, channel, message.getContentRaw(), deleteDelay);
             } else {
-                String author = message.getMentionedMembers().size() > 0 ? message.getMentionedMembers().stream().findFirst().get().getEffectiveName() : ctx.getAuthor().getName();
+                String author = message.getMentions().getMembers().size() > 0 ? message.getMentions().getMembers().stream().findFirst().get().getAsMention() : ctx.getAuthor().getName();
                 createNewExcuse(channel, guildId, author, args, deleteDelay);
             }
         }

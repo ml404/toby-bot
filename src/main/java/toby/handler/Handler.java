@@ -4,12 +4,12 @@ import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMoveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.slf4j.Logger;
@@ -63,7 +63,7 @@ public class Handler extends ListenerAdapter {
     }
 
     @Override
-    public void onGuildMessageReceived(@Nonnull GuildMessageReceivedEvent event) {
+    public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
         User user = event.getAuthor();
 
         if (user.isBot() || event.isWebhookMessage()) {
@@ -95,7 +95,7 @@ public class Handler extends ListenerAdapter {
             return;
         }
         Guild guild = event.getGuild();             //The Guild that this message was sent in. (note, in the API, Guilds are Servers)
-        TextChannel textChannel = event.getChannel(); //The TextChannel that this message was sent to.
+        TextChannel textChannel = event.getChannel().asTextChannel(); //The TextChannel that this message was sent to.
         Member member = event.getMember();          //This Member that sent the message. Contains Guild specific information about the User!
 
         String name;
@@ -107,14 +107,14 @@ public class Handler extends ListenerAdapter {
         }                                           // otherwise it will default to their username. (User#getName())
 
         JDA jda = guild.getJDA();
-        Emote tobyEmote = jda.getEmoteById(Emotes.TOBY);
-        Emote jessEmote = jda.getEmoteById(Emotes.JESS);
+        Emoji tobyEmote = jda.getEmojiById(Emotes.TOBY);
+        Emoji jessEmote = jda.getEmojiById(Emotes.JESS);
 
         messageContainsRespond(message, channel, name, tobyEmote, jessEmote);
 
     }
 
-    private void messageContainsRespond(Message message, MessageChannel channel, String name, Emote tobyEmote, Emote jessEmote) {
+    private void messageContainsRespond(Message message, MessageChannel channel, String name, Emoji tobyEmote, Emoji jessEmote) {
         String messageStringLowercase = message.getContentRaw().toLowerCase();
         if (messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs")) {
             message.addReaction(tobyEmote).queue();
@@ -130,7 +130,7 @@ public class Handler extends ListenerAdapter {
             channel.sendMessage("YEAH????").queue();
         }
 
-        if (message.isMentioned(BotMain.getJda().getSelfUser())) {
+        if (message.getMentions().isMentioned(BotMain.getJda().getSelfUser())) {
             channel.sendMessage("Don't talk to me").queue();
         }
 
@@ -141,15 +141,6 @@ public class Handler extends ListenerAdapter {
                     "\n" +
                     "To be a man (or woman) in such times is to be one amongst almost 7 billion. It is to live in the stupidest and most irritating regime imaginable. These are the memes of these times. Forget the power of technology and science, for so much will be denied, never to be acknowledged. Forget the promise of immunity and vaccinations, for in our grim dark daily lives, there is only COVID. There is no freedom on our streets, only an eternity of mask mandates and sanitizer, and the coughing of the sick.").queue();
         }
-    }
-
-
-    @Override
-    public void onMessageReceived(MessageReceivedEvent event) {
-
-        long responseNumber = event.getResponseNumber();//The amount of discord events that JDA has received since the last reconnect.
-
-
     }
 
     //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server, then play the associated user's intro song
@@ -175,7 +166,7 @@ public class Handler extends ListenerAdapter {
 
         //TODO guild.getDefaultChannel no longer works if the default channel isn't viewable by guild.getPublicRole() i.e. everyone
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(requestingUserDto, guild, guild.getDefaultChannel(), Integer.parseInt(deleteDelayConfig.getValue()), 0L);
+            playUserIntro(requestingUserDto, guild, guild.getDefaultChannel().asTextChannel(), Integer.parseInt(deleteDelayConfig.getValue()), 0L);
         }
     }
 
@@ -218,13 +209,13 @@ public class Handler extends ListenerAdapter {
         audioManager.closeAudioConnection();
     }
 
-    private void closeAudioManagerIfChannelEmpty(Guild guild, AudioManager audioManager, int defaultVolume, List<Member> nonBotConnectedMembers, VoiceChannel channelLeft) {
+    private void closeAudioManagerIfChannelEmpty(Guild guild, AudioManager audioManager, int defaultVolume, List<Member> nonBotConnectedMembers, AudioChannel channelLeft) {
         if (Objects.equals(audioManager.getConnectedChannel(), channelLeft) && nonBotConnectedMembers.isEmpty()) {
             closeAudioPlayer(guild, audioManager, defaultVolume);
         }
     }
 
-    private void deleteTemporaryChannelIfEmpty(boolean nonBotConnectedMembersEmpty, VoiceChannel channelLeft) {
+    private void deleteTemporaryChannelIfEmpty(boolean nonBotConnectedMembersEmpty, AudioChannel channelLeft) {
         //The autogenerated channels from the team command are "Team #", so this will delete them once they become empty
         if (channelLeft.getName().matches("(?i)team\\s[0-9]+") && nonBotConnectedMembersEmpty) {
             channelLeft.delete().queue();

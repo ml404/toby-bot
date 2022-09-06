@@ -69,11 +69,11 @@ public class PlayerManager {
                 scheduler.setPreviousVolume(previousVolume);
 
                 channel.sendMessage("Adding to queue: `")
-                        .append(track.getInfo().title)
-                        .append("` by `")
-                        .append(track.getInfo().author)
-                        .append('`')
-                        .append(String.format(" starting at '%s ms'", startPosition))
+                        .addContent(track.getInfo().title)
+                        .addContent("` by `")
+                        .addContent(track.getInfo().author)
+                        .addContent("`")
+                        .addContent(String.format(" starting at '%s ms'", startPosition))
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
@@ -84,10 +84,10 @@ public class PlayerManager {
                 scheduler.setDeleteDelay(deleteDelay);
 
                 channel.sendMessage("Adding to queue: `")
-                        .append(String.valueOf(tracks.size()))
-                        .append("` tracks from playlist `")
-                        .append(playlist.getName())
-                        .append('`')
+                        .addContent(String.valueOf(tracks.size()))
+                        .addContent("` tracks from playlist `")
+                        .addContent(playlist.getName())
+                        .addContent("`")
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
                 for (final AudioTrack track : tracks) {

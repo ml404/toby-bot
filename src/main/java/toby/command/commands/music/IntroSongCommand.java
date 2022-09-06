@@ -28,7 +28,7 @@ import static toby.helpers.UserDtoHelper.calculateUserDto;
 public class IntroSongCommand implements IMusicCommand {
     private final IUserService userService;
     private final IMusicFileService musicFileService;
-    private IConfigService configService;
+    private final IConfigService configService;
 
     public IntroSongCommand(IUserService userService, IMusicFileService musicFileService, IConfigService configService) {
         this.userService = userService;
@@ -47,7 +47,7 @@ public class IntroSongCommand implements IMusicCommand {
         if (introVolume > 100) introVolume = 100;
 
         final TextChannel channel = ctx.getChannel();
-        if (!requestingUserDto.isSuperUser() && ctx.getMessage().getMentionedMembers().size() > 0) {
+        if (!requestingUserDto.isSuperUser() && ctx.getMessage().getMentions().getMembers().size() > 0) {
             sendErrorMessage(ctx, channel, deleteDelay);
             return;
         }
@@ -71,10 +71,10 @@ public class IntroSongCommand implements IMusicCommand {
             channel.sendMessage("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
 
-        List<Member> mentionedMembers = ctx.getMessage().getMentionedMembers();
+        List<Member> mentionedMembers = ctx.getMessage().getMentions().getMembers();
         InputStream inputStream = null;
         try {
-            inputStream = attachment.retrieveInputStream().get();
+            inputStream = attachment.getProxy().download().get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
@@ -89,7 +89,7 @@ public class IntroSongCommand implements IMusicCommand {
     }
 
     private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, List<URI> urlList, int introVolume) {
-        List<Member> mentionedMembers = ctx.getMessage().getMentionedMembers();
+        List<Member> mentionedMembers = ctx.getMessage().getMentions().getMembers();
         String url = urlList.get(0).toString();
 
         if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {

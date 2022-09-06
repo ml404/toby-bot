@@ -3,7 +3,7 @@ package toby.command.commands.music;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.requests.restaction.MessageAction;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -37,27 +37,27 @@ public class QueueCommand implements IMusicCommand {
 
         final int trackCount = Math.min(queue.size(), 20);
         final List<AudioTrack> trackList = new ArrayList<>(queue);
-        final MessageAction messageAction = channel.sendMessage("**Current Queue:**\n");
+        final MessageCreateAction messageAction = channel.sendMessage("**Current Queue:**\n");
 
         for (int i = 0; i < trackCount; i++) {
             final AudioTrack track = trackList.get(i);
             final AudioTrackInfo info = track.getInfo();
 
-            messageAction.append('#')
-                    .append(String.valueOf(i + 1))
-                    .append(" `")
-                    .append(String.valueOf(info.title))
-                    .append(" by ")
-                    .append(info.author)
-                    .append("` [`")
-                    .append(formatTime(track.getDuration()))
-                    .append("`]\n");
+            messageAction.addContent("#")
+                    .addContent(String.valueOf(i + 1))
+                    .addContent(" `")
+                    .addContent(String.valueOf(info.title))
+                    .addContent(" by ")
+                    .addContent(info.author)
+                    .addContent("` [`")
+                    .addContent(formatTime(track.getDuration()))
+                    .addContent("`]\n");
         }
 
         if (trackList.size() > trackCount) {
-            messageAction.append("And `")
-                    .append(String.valueOf(trackList.size() - trackCount))
-                    .append("` more...");
+            messageAction.addContent("And `")
+                    .addContent(String.valueOf(trackList.size() - trackCount))
+                    .addContent("` more...");
         }
 
         messageAction.queue(message -> ICommand.deleteAfter(message, deleteDelay));
