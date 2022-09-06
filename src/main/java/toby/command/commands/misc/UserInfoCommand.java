@@ -32,7 +32,7 @@ public class UserInfoCommand implements IMiscCommand {
     }
 
     private void printUserInfo(TextChannel channel, Message message, UserDto requestingUserDto, Integer deleteDelay) {
-        if (message.getMentionedMembers().isEmpty()) {
+        if (message.getMentions().getMembers().isEmpty()) {
             if (requestingUserDto != null) {
                 channel.sendMessage(String.format("Here are your permissions: '%s'.", requestingUserDto)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 MusicDto musicDto = requestingUserDto.getMusicDto();
@@ -48,7 +48,7 @@ public class UserInfoCommand implements IMiscCommand {
             }
         } else {
             if (requestingUserDto.isSuperUser()) {
-                message.getMentionedMembers().forEach(member -> {
+                message.getMentions().getMembers().forEach(member -> {
                     UserDto mentionedUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
                     channel.sendMessageFormat("Here are the permissions for '%s': '%s'.", member.getEffectiveName(), mentionedUser).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     MusicDto musicDto = mentionedUser.getMusicDto();

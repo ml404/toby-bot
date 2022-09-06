@@ -1,9 +1,9 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.Emote;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
@@ -26,13 +26,13 @@ public class BrotherCommand implements IMiscCommand {
         final TextChannel channel = ctx.getChannel();
         final Message message = ctx.getMessage();
         Guild guild = ctx.getGuild();
-        Emote tobyEmote = guild.getJDA().getEmoteById(Emotes.TOBY);
+        Emoji tobyEmote = guild.getJDA().getEmojiById(Emotes.TOBY);
 
         determineBrother(channel, message, tobyEmote, deleteDelay);
     }
 
-    private void determineBrother(TextChannel channel, Message message, Emote tobyEmote, int deleteDelay) {
-        if (message.getMentionedMembers().isEmpty()) {
+    private void determineBrother(TextChannel channel, Message message, Emoji tobyEmote, int deleteDelay) {
+        if (message.getMentions().getMembers().isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(message.getAuthor().getIdLong());
             if (brother!=null) {
                 channel.sendMessage(String.format("Of course you're my brother %s.", brother.getBrotherName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));

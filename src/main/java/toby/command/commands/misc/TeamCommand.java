@@ -27,7 +27,7 @@ public class TeamCommand implements IMiscCommand {
             return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
-        List<Member> mentionedMembers = new ArrayList<>(message.getMentionedMembers());
+        List<Member> mentionedMembers = new ArrayList<>(message.getMentions().getMembers());
         Optional<String> teamOptional = args.stream()
                 .filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern()))
                 .filter(s -> Integer.parseInt(s) > 0)

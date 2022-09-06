@@ -1,7 +1,7 @@
 package toby.managers;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
@@ -132,7 +132,7 @@ public class CommandManager {
         return null;
     }
 
-    public void handle(GuildMessageReceivedEvent event) {
+    public void handle(MessageReceivedEvent event) {
         String prefix = configService.getConfigByName(ConfigDto.Configurations.PREFIX.getConfigValue(), event.getGuild().getId()).getValue();
         Integer deleteDelay = Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId()).getValue());
 

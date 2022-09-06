@@ -20,12 +20,12 @@ public class KickCommand implements IModerationCommand {
         final Member member = ctx.getMember();
         final List<String> args = ctx.getArgs();
 
-        if (message.getMentionedMembers().isEmpty()) {
+        if (message.getMentions().getMembers().isEmpty()) {
             channel.sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
-        message.getMentionedMembers().forEach(target -> {
+        message.getMentions().getMembers().forEach(target -> {
 
         if (!member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS)) {
             channel.sendMessage(String.format("You can't shoot %s", target)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));

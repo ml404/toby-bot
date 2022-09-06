@@ -100,7 +100,7 @@ public class AdjustUserCommand implements IModerationCommand {
             return null;
         }
 
-        List<Member> mentionedMembers = message.getMentionedMembers();
+        List<Member> mentionedMembers = message.getMentions().getMembers();
         if (mentionedMembers.isEmpty()) {
             channel.sendMessage("You must mention 1 or more Users to adjust permissions of").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;

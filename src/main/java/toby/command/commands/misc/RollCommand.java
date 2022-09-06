@@ -20,7 +20,7 @@ public class RollCommand implements IMiscCommand {
         String rollValue = (!args.isEmpty()) ? args.get(0) : "";
         int diceRoll = !rollValue.isEmpty() ? Integer.parseInt(rollValue) : 6;
         int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
-        channel.sendMessageFormat("You rolled a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        channel.sendMessageFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 

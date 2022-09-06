@@ -32,7 +32,7 @@ public class LeaveCommand implements IMusicCommand {
             return;
         }
 
-        if (!selfVoiceState.inVoiceChannel()) {
+        if (!selfVoiceState.inAudioChannel()) {
             channel.sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
@@ -43,7 +43,7 @@ public class LeaveCommand implements IMusicCommand {
 
         Guild guild = ctx.getGuild();
         final AudioManager audioManager = guild.getAudioManager();
-        final VoiceChannel memberChannel = memberVoiceState.getChannel();
+        final AudioChannel memberChannel = memberVoiceState.getChannel();
 
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {

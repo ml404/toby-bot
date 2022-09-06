@@ -1,6 +1,7 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
@@ -23,7 +24,7 @@ public class PollCommand implements IModerationCommand {
             String question = isPresent ? msg.split("\\?", 2)[0].replaceAll("!poll", "").trim().concat("?") : "Poll";
             List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
             if (pollArgs.size() > 10) {
-                ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmoteById(Emotes.TOBY)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                ctx.getChannel().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", ctx.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
             List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
@@ -37,9 +38,9 @@ public class PollCommand implements IModerationCommand {
                 poll.appendDescription(String.format("%s - **%s** \n", emojiList.get(i), pollArgs.get(i).trim()));
             }
 
-            ctx.getChannel().sendMessage(poll.build()).queue(message -> {
+            ctx.getChannel().sendMessageEmbeds(poll.build()).queue(message -> {
                 for (int i = 0; i < pollArgs.size(); i++) {
-                    message.addReaction(emojiList.get(i)).queue();
+                    message.addReaction(Emoji.fromUnicode(emojiList.get(i))).queue();
                 }
             });
         } else {

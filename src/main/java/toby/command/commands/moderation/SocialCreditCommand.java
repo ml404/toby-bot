@@ -55,7 +55,7 @@ public class SocialCreditCommand implements IModerationCommand {
             });
             channel.sendMessageFormat(stringBuilder.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         } else {
-            List<Member> mentionedMembers = message.getMentionedMembers();
+            List<Member> mentionedMembers = message.getMentions().getMembers();
             if (mentionedMembers.isEmpty()) {
                 listSocialCreditScore(requestingUserDto, member.getEffectiveName(), deleteDelay, channel);
             } else

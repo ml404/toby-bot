@@ -11,14 +11,14 @@ public interface IMusicCommand extends ICommand {
     static boolean isInvalidChannelStateForCommand(CommandContext ctx, TextChannel channel, Integer deleteDelay) {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
-        if (!selfVoiceState.inVoiceChannel()) {
+        if (!selfVoiceState.inAudioChannel()) {
             channel.sendMessage("I need to be in a voice channel for this to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
 
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
-        if (!memberVoiceState.inVoiceChannel()) {
+        if (!memberVoiceState.inAudioChannel()) {
             channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }

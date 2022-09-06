@@ -1,10 +1,7 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.entities.VoiceChannel;
+import net.dv8tion.jda.api.entities.*;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -17,7 +14,7 @@ public class ShhCommand implements IModerationCommand {
 
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
-        final VoiceChannel memberChannel = memberVoiceState.getChannel();
+        final AudioChannel memberChannel = memberVoiceState.getChannel();
 
         memberChannel.getMembers().forEach(target -> {
 
