@@ -2,8 +2,8 @@ package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -11,7 +11,6 @@ import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -19,25 +18,25 @@ import java.util.concurrent.TimeUnit;
 public class QueueCommand implements IMusicCommand {
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
-        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
         final BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
 
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
             return;
         }
 
         if (queue.isEmpty()) {
-            channel.sendMessage("The queue is currently empty").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.reply("The queue is currently empty").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         final int trackCount = Math.min(queue.size(), 20);
         final List<AudioTrack> trackList = new ArrayList<>(queue);
-        final MessageCreateAction messageAction = channel.sendMessage("**Current Queue:**\n");
+        ReplyCallbackAction messageAction = event.reply("**Current Queue:**\n");
 
         for (int i = 0; i < trackCount; i++) {
             final AudioTrack track = trackList.get(i);
@@ -77,13 +76,7 @@ public class QueueCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "shows the queued up songs\n" +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
-    }
+    public String getDescription() {
+        return "shows the queued up songs";}
 
-    @Override
-    public List<String> getAliases() {
-        return Arrays.asList("q");
-    }
 }

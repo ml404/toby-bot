@@ -1,8 +1,11 @@
 package toby.command.commands;
 
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.*;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.sharding.ShardManager;
 
 /**
@@ -22,7 +25,7 @@ public interface ICommandContext {
      *
      * @return the {@link net.dv8tion.jda.api.events.message.MessageReceivedEvent message event} that was received for this instance
      */
-    MessageReceivedEvent getEvent();
+    SlashCommandInteractionEvent getEvent();
 
     /**
      * Returns the {@link net.dv8tion.jda.api.entities.TextChannel channel} that the message for this event was send in
@@ -34,21 +37,12 @@ public interface ICommandContext {
     }
 
     /**
-     * Returns the {@link net.dv8tion.jda.api.entities.Message message} that triggered this event
-     *
-     * @return the {@link net.dv8tion.jda.api.entities.Message message} that triggered this event
-     */
-    default Message getMessage() {
-        return this.getEvent().getMessage();
-    }
-
-    /**
      * Returns the {@link net.dv8tion.jda.api.entities.User author} of the message as user
      *
      * @return the {@link net.dv8tion.jda.api.entities.User author} of the message as user
      */
     default User getAuthor() {
-        return this.getEvent().getAuthor();
+        return this.getEvent().getUser();
     }
     /**
      * Returns the {@link net.dv8tion.jda.api.entities.Member author} of the message as member

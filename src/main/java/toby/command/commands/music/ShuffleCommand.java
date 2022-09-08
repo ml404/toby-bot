@@ -3,7 +3,7 @@ package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -18,23 +18,23 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ShuffleCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
         if (requestingUserDto.hasMusicPermission()) {
-            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
+            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
 
-            Guild guild = ctx.getGuild();
+            Guild guild = event.getGuild();
 
             TrackScheduler trackScheduler = PlayerManager.getInstance().getMusicManager(guild).getScheduler();
             BlockingQueue<AudioTrack> queue = trackScheduler.getQueue();
             if (queue.size() == 0) {
-                channel.sendMessage("I can't shuffle a queue that doesn't exist").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.reply("I can't shuffle a queue that doesn't exist").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
             LinkedBlockingQueue<AudioTrack> shuffledAudioTracks = shuffleAudioTracks(queue);
             trackScheduler.setQueue(shuffledAudioTracks);
-            channel.sendMessage("The queue has been shuffled 🦧").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.reply("The queue has been shuffled 🦧").queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         }
     }
@@ -52,9 +52,8 @@ public class ShuffleCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Use this command to shuffle the queue\n" +
-                String.format("Usage: `%sshuffle`", prefix);
+    public String getDescription() {
+        return "Use this command to shuffle the queue";
     }
 
 }

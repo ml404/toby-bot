@@ -1,13 +1,11 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 public class EightBallCommand implements IMiscCommand {
@@ -22,8 +20,9 @@ public class EightBallCommand implements IMiscCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        ICommand.deleteAfter(event.getHook(), deleteDelay);
 
         Random r = new Random();
 
@@ -52,32 +51,26 @@ public class EightBallCommand implements IMiscCommand {
             default -> "I fucked up, please try again";
         };
 
-        TextChannel channel = ctx.getChannel();
         if(requestingUserDto.getDiscordId().equals(TOMS_DISCORD_ID)){
-            channel.sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             Long socialCredit = requestingUserDto.getSocialCredit();
             int deductedSocialCredit = -5 * choice;
             requestingUserDto.setSocialCredit(socialCredit + deductedSocialCredit);
-            channel.sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("Deducted: %d social credit.", deductedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             userService.updateUser(requestingUserDto);
             return;
         }
-        channel.sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.replyFormat("MAGIC 8-BALL SAYS: %s.", response).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override
     public String getName() {
-        return "eightball";
+        return "8ball";
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Let me divine to you an answer! \n" +
-                String.format("Usages: `%seightball` to ask the magic 8-ball \n", prefix);
-    }
-
-    public List<String> getAliases() {
-        return Arrays.asList("8ball", "magicconch", "conch");
+    public String getDescription() {
+        return "Think of a question and let me divine to you an answer!";
     }
 
 }

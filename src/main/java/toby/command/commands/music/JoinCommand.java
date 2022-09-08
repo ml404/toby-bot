@@ -1,7 +1,10 @@
 package toby.command.commands.music;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.AudioChannel;
+import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -18,38 +21,39 @@ public class JoinCommand implements IMusicCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
         final Member self = ctx.getSelfMember();
 
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
             return;
         }
 
-        final GuildVoiceState memberVoiceState = doJoinChannelValidation(ctx, channel, deleteDelay);
+        final GuildVoiceState memberVoiceState = doJoinChannelValidation(ctx, deleteDelay);
         if (memberVoiceState == null) return;
 
-        final AudioManager audioManager = ctx.getGuild().getAudioManager();
+        final AudioManager audioManager = event.getGuild().getAudioManager();
         final AudioChannel memberChannel = memberVoiceState.getChannel();
 
         if (self.hasPermission(Permission.VOICE_CONNECT)) {
             audioManager.openAudioConnection(memberChannel);
             String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-            ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, ctx.getGuild().getId());
+            ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
             int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
-            PlayerManager.getInstance().getMusicManager(ctx.getGuild()).getAudioPlayer().setVolume(defaultVolume);
-            channel.sendMessageFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            PlayerManager.getInstance().getMusicManager(event.getGuild()).getAudioPlayer().setVolume(defaultVolume);
+            event.replyFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 
-    private GuildVoiceState doJoinChannelValidation(CommandContext ctx, TextChannel channel, Integer deleteDelay) {
+    private GuildVoiceState doJoinChannelValidation(CommandContext ctx, Integer deleteDelay) {
         final Member self = ctx.getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
+        SlashCommandInteractionEvent event = ctx.getEvent();
 
         if (selfVoiceState.inAudioChannel()) {
-            channel.sendMessage("I'm already in a voice channel").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.reply("I'm already in a voice channel").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
@@ -57,7 +61,7 @@ public class JoinCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inAudioChannel()) {
-            channel.sendMessage("You need to be in a voice channel for this command to work").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.reply("You need to be in a voice channel for this command to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
         return memberVoiceState;
@@ -69,7 +73,7 @@ public class JoinCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
+    public String getDescription() {
         return "Makes the bot join your voice channel";
     }
 }

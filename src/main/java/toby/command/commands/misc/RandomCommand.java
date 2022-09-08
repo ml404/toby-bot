@@ -1,29 +1,26 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class RandomCommand implements IMiscCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
 
-        final TextChannel channel = ctx.getChannel();
-        final Message message = ctx.getMessage();
-        ICommand.deleteAfter(message, deleteDelay);
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        ICommand.deleteAfter(event.getHook(), deleteDelay);
+        if (ctx.getEvent().getOptions().isEmpty()) {
+            event.reply(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
-        List<String> args = Arrays.asList(message.getContentRaw().split(" ", 2)[1].split(","));
-        Object randomElement = getRandomElement(args);
-        channel.sendMessage(randomElement.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-
+        List<String> args = List.of(event.getOption("List").getAsString().split(","));
+        event.reply(getRandomElement(args)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
     public static String getRandomElement(List<?> args) {
@@ -37,14 +34,12 @@ public class RandomCommand implements IMiscCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Return one item from a list you provide with options separated by commas. \n" +
-                String.format("Usage: %srandom option1, option2, option3 \n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "Return one item from a list you provide with options separated by commas.";
     }
 
     @Override
-    public List<String> getAliases() {
-        return Arrays.asList("rand", "rando");
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.STRING, "List", "List of elements you want to pick a random value from"));
     }
 }

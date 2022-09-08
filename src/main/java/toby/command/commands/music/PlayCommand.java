@@ -1,15 +1,15 @@
 package toby.command.commands.music;
 
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static toby.helpers.MusicPlayerHelper.*;
 
@@ -17,38 +17,36 @@ import static toby.helpers.MusicPlayerHelper.*;
 public class PlayCommand implements IMusicCommand {
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
             return;
         }
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+
+        String type = event.getOption("Type").getAsString();
+        String link = event.getOption("Link").getAsString();
+
+        if (type.isEmpty()) {
+            event.reply("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
-        List<String> nonAdjustmentArgs = ctx.getArgs()
-                .stream()
-                .filter(s -> !s.toLowerCase().startsWith(MusicDto.Adjustment.START.toString().toLowerCase()))
-                .filter(s -> !s.toLowerCase().startsWith(MusicDto.Adjustment.END.toString().toLowerCase()))
-                .collect(Collectors.toList());
-        String link = String.join(" ", nonAdjustmentArgs);
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         PlayerManager instance = PlayerManager.getInstance();
-        Guild guild = ctx.getGuild();
+        Guild guild = event.getGuild();
         int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
-        Long startPosition = adjustTrackPlayingTimes(ctx.getArgs());
+        Long startPosition = adjustTrackPlayingTimes(event.getOption("Start Position").getAsLong());
 
-        if (link.equals("intro")) {
-            playUserIntro(requestingUserDto, guild, channel, deleteDelay, startPosition);
-            return;
+        if (type.equals("intro")) {
+            playUserIntro(requestingUserDto, guild, event, deleteDelay, startPosition);
+        } else {
+            if (link.contains("youtube") && !isUrl(link)) {
+                link = "ytsearch:" + link;
+            }
+            instance.loadAndPlay(event, link, true, deleteDelay, startPosition);
         }
-        if (link.contains("youtube") && !isUrl(link)) {
-            link = "ytsearch:" + link;
-        }
-        instance.loadAndPlay(channel, link, true, deleteDelay, startPosition);
     }
 
 
@@ -58,15 +56,16 @@ public class PlayCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Plays a song\n" +
-                String.format("Usage: `%splay <youtube link>`\n", prefix) +
-                String.format("Optionally you may specify a start time for the link in seconds by using: `%splay <youtube link> start=<time in seconds>`\n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "Plays a song. You may optionally specify a start time";
     }
 
     @Override
-    public List<String> getAliases() {
-        return List.of("sing,shout,rap");
+    public List<OptionData> getOptionData() {
+        OptionData type = new OptionData(OptionType.STRING, "Type", "Type of thing you're playing (link or intro)", true);
+        type.addChoice("Link", "Link");
+        type.addChoice("Intro", "Intro");
+        OptionData startPosition = new OptionData(OptionType.INTEGER, "Start Position", "Start position of the track in seconds", false);
+        return List.of(type, startPosition);
     }
 }

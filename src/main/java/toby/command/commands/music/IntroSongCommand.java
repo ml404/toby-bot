@@ -2,7 +2,10 @@ package toby.command.commands.music;
 
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.helpers.URLHelper;
@@ -16,11 +19,9 @@ import toby.jpa.service.IUserService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 import static toby.helpers.FileUtils.readInputStreamToByteArray;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
@@ -37,41 +38,41 @@ public class IntroSongCommand implements IMusicCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        ICommand.deleteAfter(event.getHook(), deleteDelay);
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-        String defaultVolume = configService.getConfigByName(volumePropertyName, ctx.getGuild().getId()).getValue();
-        String vol = ctx.getArgs().stream().filter(s -> s.matches("\\d+")).findFirst().orElse(defaultVolume);
-        int introVolume = Integer.parseInt(vol);
+        int defaultVolume = Integer.parseInt(configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue());
+        int volume = event.getOption("Volume").getAsInt();
+        int introVolume = volume != 0 ? volume : defaultVolume;
         if (introVolume < 1) introVolume = 1;
         if (introVolume > 100) introVolume = 100;
-
-        final TextChannel channel = ctx.getChannel();
-        if (!requestingUserDto.isSuperUser() && ctx.getMessage().getMentions().getMembers().size() > 0) {
-            sendErrorMessage(ctx, channel, deleteDelay);
+        if (!requestingUserDto.isSuperUser() && event.getOption("Users").getMentions().getMembers().size() > 0) {
+            sendErrorMessage(event, deleteDelay);
             return;
         }
-        List<Message.Attachment> attachments = ctx.getMessage().getAttachments();
-        List<URI> urlList = ctx.getArgs().stream().map(URLHelper::isValidURL).filter(Objects::nonNull).findFirst().stream().collect(Collectors.toList());
-        if (attachments.isEmpty() && urlList.isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        } else if (attachments.isEmpty()) {
-            setIntroViaUrl(ctx, requestingUserDto, deleteDelay, channel, urlList, introVolume);
+        OptionMapping attachment = ctx.getEvent().getOption("Attachment");
+        Message.Attachment fileAttachment = attachment.getAsAttachment();
+        String link = ctx.getEvent().getOption("Link").getAsString();
+
+        if (attachment != null && URLHelper.isValidURL(link)) {
+            event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        } else if (!link.isEmpty()) {
+            setIntroViaUrl(ctx, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
         } else {
-            setIntroViaDiscordAttachment(ctx, requestingUserDto, deleteDelay, channel, attachments, introVolume);
+            setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, fileAttachment, introVolume);
         }
     }
 
-    private void setIntroViaDiscordAttachment(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, List<Message.Attachment> attachments, int introVolume) {
-        Message.Attachment attachment = attachments.stream().findFirst().get();
+    private void setIntroViaDiscordAttachment(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Message.Attachment attachment, int introVolume) {
         if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
-            channel.sendMessage("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.reply("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         } else if (attachment.getSize() > 300000) {
-            channel.sendMessage("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.reply("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
 
-        List<Member> mentionedMembers = ctx.getMessage().getMentions().getMembers();
+        List<Member> mentionedMembers = event.getOption("Users").getMentions().getMembers();
         InputStream inputStream = null;
         try {
             inputStream = attachment.getProxy().download().get();
@@ -82,32 +83,33 @@ public class IntroSongCommand implements IMusicCommand {
             InputStream finalInputStream = inputStream;
             mentionedMembers.forEach(member -> {
                 UserDto userDto = calculateUserDto(member.getGuild().getIdLong(), member.getIdLong(), member.isOwner(), userService, introVolume);
-                persistMusicFile(userDto, deleteDelay, channel, attachment.getFileName(), introVolume, finalInputStream, member.getEffectiveName());
+                persistMusicFile(event, userDto, deleteDelay, attachment.getFileName(), introVolume, finalInputStream, member.getEffectiveName());
             });
         } else
-            persistMusicFile(requestingUserDto, deleteDelay, channel, attachment.getFileName(), introVolume, inputStream, ctx.getAuthor().getName());
+            persistMusicFile(event, requestingUserDto, deleteDelay, attachment.getFileName(), introVolume, inputStream, event.getUser().getName());
     }
 
-    private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, TextChannel channel, List<URI> urlList, int introVolume) {
-        List<Member> mentionedMembers = ctx.getMessage().getMentions().getMembers();
-        String url = urlList.get(0).toString();
+    private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, URI url, int introVolume) {
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        List<Member> mentionedMembers = event.getOption("Users").getMentions().getMembers();
+        String urlString = url.toString();
 
         if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
             mentionedMembers.forEach(member -> {
                 UserDto userDto = calculateUserDto(member.getGuild().getIdLong(), member.getIdLong(), member.isOwner(), userService, introVolume);
-                persistMusicUrl(userDto, deleteDelay, channel, url, url, member.getEffectiveName(), introVolume);
+                persistMusicUrl(event, userDto, deleteDelay, urlString, urlString, member.getEffectiveName(), introVolume);
             });
         } else
-            persistMusicUrl(requestingUserDto, deleteDelay, channel, url, url, ctx.getAuthor().getName(), introVolume);
+            persistMusicUrl(event, requestingUserDto, deleteDelay, urlString, urlString, ctx.getAuthor().getName(), introVolume);
     }
 
 
-    private void persistMusicFile(UserDto targetDto, Integer deleteDelay, TextChannel channel, String filename, int introVolume, InputStream inputStream, String memberName) {
+    private void persistMusicFile(SlashCommandInteractionEvent event, UserDto targetDto, Integer deleteDelay, String filename, int introVolume, InputStream inputStream, String memberName) {
         byte[] fileContents;
         try {
             fileContents = readInputStreamToByteArray(inputStream);
         } catch (ExecutionException | InterruptedException | IOException e) {
-            channel.sendMessageFormat("Unable to read file '%s'", filename).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("Unable to read file '%s'", filename).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         MusicDto musicFileDto = targetDto.getMusicDto();
@@ -116,17 +118,17 @@ public class IntroSongCommand implements IMusicCommand {
             musicFileService.createNewMusicFile(musicDto);
             targetDto.setMusicDto(musicDto);
             userService.updateUser(targetDto);
-            channel.sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         musicFileDto.setFileName(filename);
         musicFileDto.setIntroVolume(introVolume);
         musicFileDto.setMusicBlob(fileContents);
         musicFileService.updateMusicFile(musicFileDto);
-        channel.sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.replyFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    private void persistMusicUrl(UserDto targetDto, Integer deleteDelay, TextChannel channel, String filename, String url, String memberName, int introVolume) {
+    private void persistMusicUrl(SlashCommandInteractionEvent event, UserDto targetDto, Integer deleteDelay, String filename, String url, String memberName, int introVolume) {
         MusicDto musicFileDto = targetDto.getMusicDto();
         byte[] urlBytes = url.getBytes();
         if (musicFileDto == null) {
@@ -134,14 +136,14 @@ public class IntroSongCommand implements IMusicCommand {
             musicFileService.createNewMusicFile(musicDto);
             targetDto.setMusicDto(musicDto);
             userService.updateUser(targetDto);
-            channel.sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         musicFileDto.setFileName(filename);
         musicFileDto.setIntroVolume(introVolume);
         musicFileDto.setMusicBlob(urlBytes);
         musicFileService.updateMusicFile(musicFileDto);
-        channel.sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.replyFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
@@ -151,16 +153,15 @@ public class IntroSongCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Upload a short (200kb or less) **MP3** file for Toby to sing when you join a voice channel (and he's not currently in a voice channel playing music). Also works with youtube video links instead of file. \n" +
-                String.format("Usages: %sintrosong with a file attached to your message. \n", prefix) +
-                String.format("%sintrosong with a youtube link. \n", prefix) +
-                String.format("%sintrosong with link or attachment and a number between 0 and 100 to represent volume of the intro song wanted (overrides and reverts the server default). \n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "Upload a **MP3** file to play when you join a voice channel. Can use youtube links instead.";
     }
 
     @Override
-    public List<String> getAliases() {
-        return Arrays.asList("intro", "setintro");
+    public List<OptionData> getOptionData() {
+        OptionData users = new OptionData(OptionType.STRING, "Users", "User whose intro to change");
+        OptionData link = new OptionData(OptionType.STRING, "Link", "Link to set as your discord intro");
+        OptionData attachment = new OptionData(OptionType.ATTACHMENT, "Attachment", "Attachment (file) to set as your discord intro");
+        return List.of(users, link, attachment);
     }
 }

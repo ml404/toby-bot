@@ -1,7 +1,12 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.VoiceChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
@@ -10,7 +15,6 @@ import toby.jpa.service.IConfigService;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class MoveCommand implements IModerationCommand {
 
@@ -22,55 +26,53 @@ public class MoveCommand implements IModerationCommand {
 
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
-        final Message message = ctx.getMessage();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
         final Member member = ctx.getMember();
-        final List<String> args = ctx.getArgs();
-        Guild guild = ctx.getGuild();
+        Guild guild = event.getGuild();
 
-        if (message.getMentions().getMembers().isEmpty()) {
-            channel.sendMessage("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        List<Member> users = event.getOption("Users").getMentions().getMembers();
+        if (users.isEmpty()) {
+            event.reply("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
-        List<String> prefixlessList = args.stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.toList());
-        String channelName = String.join(" ", prefixlessList);
+        String channelName = event.getOption("Channel").getAsString();
         ConfigDto channelConfig = configService.getConfigByName("DEFAULT_MOVE_CHANNEL", guild.getId());
 
         Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
         if (!voiceChannelOptional.isPresent()) {
-            channel.sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.replyFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
-        message.getMentions().getMembers().forEach(target -> {
 
-            if (doChannelValidation(ctx, channel, member, target, deleteDelay)) return;
+        users.forEach(target -> {
+
+            if (doChannelValidation(ctx, ctx.getEvent(), member, target, deleteDelay)) return;
 
             VoiceChannel voiceChannel = voiceChannelOptional.get();
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
-                            (__) -> channel.sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
-                            (error) -> channel.sendMessageFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
+                            (__) -> event.replyFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
+                            (error) -> event.replyFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                     );
         });
     }
 
-    private boolean doChannelValidation(CommandContext ctx, TextChannel channel, Member member, Member target, int deleteDelay) {
+    private boolean doChannelValidation(CommandContext ctx, SlashCommandInteractionEvent event, Member member, Member target, int deleteDelay) {
         if (!target.getVoiceState().inAudioChannel()) {
-            channel.sendMessage(String.format("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.replyFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }
         if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            channel.sendMessage(String.format("You can't move '%s'", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.replyFormat("You can't move '%s'", target.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }
-
         final Member botMember = ctx.getSelfMember();
 
         if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            channel.sendMessage(String.format("I'm not allowed to move %s", target.getEffectiveName())).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.replyFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return true;
         }
         return false;
@@ -82,9 +84,14 @@ public class MoveCommand implements IModerationCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "move a member into a voice channel.\n" +
-                String.format("Usage: `%smove <@user> channel name`\n", prefix) +
-                "e.g. `!move @username i have a bad opinion`";
+    public String getDescription() {
+        return "Move mentioned members into a voice channel (voice channel can be defaulted by config command)";
+    }
+
+    @Override
+    public List<OptionData> getOptionData() {
+        return List.of(
+                new OptionData(OptionType.STRING, "Users", "User(s) to move"),
+                new OptionData(OptionType.STRING, "Channel", "Channel to move to"));
     }
 }

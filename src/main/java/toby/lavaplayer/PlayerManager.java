@@ -12,7 +12,7 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.ICommand;
 
 import java.util.HashMap;
@@ -50,12 +50,12 @@ public class PlayerManager {
         });
     }
 
-    public void loadAndPlay(TextChannel channel, String trackUrl, Integer deleteDelay) {
-        loadAndPlay(channel, trackUrl, true, deleteDelay, 0L);
+    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Integer deleteDelay) {
+        loadAndPlay(event, trackUrl, true, deleteDelay, 0L);
     }
 
-    public void loadAndPlay(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition) {
-        final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
+    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition) {
+        final GuildMusicManager musicManager = this.getMusicManager(event.getGuild());
         this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
 
@@ -63,12 +63,12 @@ public class PlayerManager {
 
             @Override
             public void trackLoaded(AudioTrack track) {
-                scheduler.setCurrentTextChannel(channel);
+                scheduler.setEvent(event);
                 scheduler.setDeleteDelay(deleteDelay);
                 scheduler.queue(track, startPosition);
                 scheduler.setPreviousVolume(previousVolume);
 
-                channel.sendMessage("Adding to queue: `")
+                event.reply("Adding to queue: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
@@ -80,10 +80,10 @@ public class PlayerManager {
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
                 final List<AudioTrack> tracks = playlist.getTracks();
-                scheduler.setCurrentTextChannel(channel);
+                scheduler.setEvent(event);
                 scheduler.setDeleteDelay(deleteDelay);
 
-                channel.sendMessage("Adding to queue: `")
+                event.reply("Adding to queue: `")
                         .addContent(String.valueOf(tracks.size()))
                         .addContent("` tracks from playlist `")
                         .addContent(playlist.getName())
@@ -97,12 +97,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.replyFormat("Nothing found for the link '%s'", trackUrl).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.replyFormat("Could not play: %s", exception.getMessage()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         });
     }

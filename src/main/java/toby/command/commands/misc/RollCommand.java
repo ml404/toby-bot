@@ -1,6 +1,10 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -10,17 +14,17 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RollCommand implements IMiscCommand {
-    @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        TextChannel channel = ctx.getChannel();
-        List<String> args = ctx.getArgs();
 
+    @Override
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        OptionMapping arg = event.getOption("Dice Number");
         Random rand = ThreadLocalRandom.current();
-        String rollValue = (!args.isEmpty()) ? args.get(0) : "";
+        String rollValue = arg.getAsString();
         int diceRoll = !rollValue.isEmpty() ? Integer.parseInt(rollValue) : 6;
         int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
-        channel.sendMessageFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.replyFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
@@ -30,10 +34,13 @@ public class RollCommand implements IMiscCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Roll an X sided dice.\n" +
-                String.format("Usage: `%sroll number` \n", prefix) +
-                "If no number is provided, 6 sided dice is rolled";
+    public String getDescription() {
+        return "Roll an X sided dice. (Default 6)";
+    }
 
+    @Override
+    @NotNull
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.NUMBER, "Dice number", "What sided dice would you like to roll?"));
     }
 }
