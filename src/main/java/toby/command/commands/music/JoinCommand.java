@@ -24,6 +24,7 @@ public class JoinCommand implements IMusicCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         final Member self = ctx.getSelfMember();
 
         if (!requestingUserDto.hasMusicPermission()) {

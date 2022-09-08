@@ -13,11 +13,14 @@ import java.util.stream.Collectors;
 
 public class ChCommand implements IMiscCommand {
 
+    private final String MESSAGE = "message";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
-        String message = event.getOption("message").getAsString();
+        event.deferReply().queue();
+        String message = event.getOption(MESSAGE).getAsString();
 
         String newMessage = Arrays.stream(message.split(" ")).map(s -> {
                     int vowelIndex = 0;
@@ -57,6 +60,6 @@ public class ChCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "message", "Message to 'Ch'", true));
+        return List.of(new OptionData(OptionType.STRING, MESSAGE, "Message to 'Ch'", true));
     }
 }

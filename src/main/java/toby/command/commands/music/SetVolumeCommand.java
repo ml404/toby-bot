@@ -24,6 +24,7 @@ public class SetVolumeCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         ICommand.deleteAfter(event.getHook(), deleteDelay);
 
         if (!requestingUserDto.hasMusicPermission()) {

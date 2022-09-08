@@ -27,6 +27,7 @@ public class Kf2RandomMapCommand implements IFetchCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> kf2Maps = wikiFetcher.fetchFromWiki(cacheName, kf2WebUrl, className, "b");

@@ -20,6 +20,7 @@ public class PauseCommand implements IMusicCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         if (!requestingUserDto.hasMusicPermission()) {
             sendErrorMessage(event, deleteDelay);
             return;

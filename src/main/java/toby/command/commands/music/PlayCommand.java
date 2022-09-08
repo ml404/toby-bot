@@ -25,6 +25,7 @@ public class PlayCommand implements IMusicCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         if (!requestingUserDto.hasMusicPermission()) {
             sendErrorMessage(event, deleteDelay);
             return;
@@ -70,7 +71,8 @@ public class PlayCommand implements IMusicCommand {
         OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro)", true);
         type.addChoice(LINK, LINK);
         type.addChoice(INTRO, INTRO);
+        OptionData link = new OptionData(OptionType.STRING, LINK, "link you would like to play");
         OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds", false);
-        return List.of(type, startPosition);
+        return List.of(type,link, startPosition);
     }
 }

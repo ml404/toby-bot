@@ -22,6 +22,7 @@ public class EightBallCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         ICommand.deleteAfter(event.getHook(), deleteDelay);
 
         Random r = new Random();

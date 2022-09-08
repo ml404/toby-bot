@@ -68,7 +68,8 @@ public class PlayerManager {
                 scheduler.queue(track, startPosition);
                 scheduler.setPreviousVolume(previousVolume);
 
-                event.reply("Adding to queue: `")
+                event.deferReply()
+                        .addContent("Adding to queue: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)

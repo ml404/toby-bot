@@ -28,6 +28,7 @@ public class BrotherCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         Guild guild = event.getGuild();
         Emoji tobyEmote = guild.getJDA().getEmojiById(Emotes.TOBY);
 

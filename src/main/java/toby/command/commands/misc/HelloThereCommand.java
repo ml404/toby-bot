@@ -27,6 +27,7 @@ public class HelloThereCommand implements IMiscCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         List <OptionMapping> args = ctx.getEvent().getOptions();
 
         String dateformat = configService.getConfigByName("DATEFORMAT", event.getGuild().getId()).getValue();

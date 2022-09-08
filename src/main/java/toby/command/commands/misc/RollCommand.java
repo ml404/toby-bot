@@ -21,6 +21,7 @@ public class RollCommand implements IMiscCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         OptionMapping arg = event.getOption(DICE_NUMBER);
         Random rand = ThreadLocalRandom.current();
         String rollValue = arg.getAsString();

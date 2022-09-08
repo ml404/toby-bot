@@ -31,6 +31,7 @@ public class SetConfigCommand implements IModerationCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         List<OptionMapping> args = event.getOptions();
         final Member member = ctx.getMember();
 

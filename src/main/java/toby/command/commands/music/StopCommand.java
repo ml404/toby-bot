@@ -15,6 +15,7 @@ public class StopCommand implements IMusicCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         if(IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
 

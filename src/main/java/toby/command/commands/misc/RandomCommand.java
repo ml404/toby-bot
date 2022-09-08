@@ -18,6 +18,7 @@ public class RandomCommand implements IMiscCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
 
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         if (ctx.getEvent().getOptions().isEmpty()) {
             event.reply(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));

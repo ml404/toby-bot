@@ -28,6 +28,7 @@ public class TeamCommand implements IMiscCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         cleanupTemporaryChannels(event.getGuild().getChannels());
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         List<OptionMapping> args = event.getOptions();

@@ -31,6 +31,7 @@ public class AdjustUserCommand implements IModerationCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         final Member member = ctx.getMember();
 
         List<Member> mentionedMembers = channelAndArgumentValidation(requestingUserDto, event, member, deleteDelay);

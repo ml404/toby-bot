@@ -30,6 +30,7 @@ public class SocialCreditCommand implements IModerationCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         List <OptionMapping> args = event.getOptions();
         final Member member = ctx.getMember();

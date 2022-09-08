@@ -34,6 +34,7 @@ public class MemeCommand implements IFetchCommand {
         Gson gson = new Gson();
         List<OptionMapping> args = event.getOptions();
         User member = ctx.getAuthor();
+        event.deferReply().queue();
 
         if(!requestingUserDto.hasMemePermission()){
             event.replyFormat(

@@ -27,6 +27,7 @@ public class HelpCommand implements IMiscCommand {
 
         List<OptionMapping> args = ctx.getEvent().getOptions();
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
 
         if (args.isEmpty()) {
             StringBuilder builder = new StringBuilder();

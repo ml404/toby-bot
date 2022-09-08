@@ -24,6 +24,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         if (requestingUserDto.hasDigPermission()) {
             String link = event.getOption(LINK).getAsString();
             if (link== null) {

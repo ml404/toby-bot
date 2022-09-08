@@ -28,6 +28,7 @@ public class DbdRandomKillerCommand implements IFetchCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery);
