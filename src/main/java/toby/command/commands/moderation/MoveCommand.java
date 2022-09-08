@@ -19,6 +19,8 @@ import java.util.Optional;
 public class MoveCommand implements IModerationCommand {
 
     private final IConfigService configService;
+    private final String USERS = "users";
+    private final String CHANNEL = "channel";
 
     public MoveCommand(IConfigService configService) {
         this.configService = configService;
@@ -32,13 +34,13 @@ public class MoveCommand implements IModerationCommand {
         final Member member = ctx.getMember();
         Guild guild = event.getGuild();
 
-        List<Member> users = event.getOption("Users").getMentions().getMembers();
+        List<Member> users = event.getOption(USERS).getMentions().getMembers();
         if (users.isEmpty()) {
             event.reply("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
-        String channelName = event.getOption("Channel").getAsString();
+        String channelName = event.getOption(CHANNEL).getAsString();
         ConfigDto channelConfig = configService.getConfigByName("DEFAULT_MOVE_CHANNEL", guild.getId());
 
         Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
@@ -91,7 +93,7 @@ public class MoveCommand implements IModerationCommand {
     @Override
     public List<OptionData> getOptionData() {
         return List.of(
-                new OptionData(OptionType.STRING, "Users", "User(s) to move"),
-                new OptionData(OptionType.STRING, "Channel", "Channel to move to"));
+                new OptionData(OptionType.STRING, USERS, "User(s) to move"),
+                new OptionData(OptionType.STRING, CHANNEL, "Channel to move to"));
     }
 }

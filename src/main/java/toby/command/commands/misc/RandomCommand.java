@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Random;
 
 public class RandomCommand implements IMiscCommand {
+
+    private final String LIST = "list";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
 
@@ -19,7 +22,7 @@ public class RandomCommand implements IMiscCommand {
         if (ctx.getEvent().getOptions().isEmpty()) {
             event.reply(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
-        List<String> args = List.of(event.getOption("List").getAsString().split(","));
+        List<String> args = List.of(event.getOption(LIST).getAsString().split(","));
         event.reply(getRandomElement(args)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
@@ -40,6 +43,6 @@ public class RandomCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "List", "List of elements you want to pick a random value from"));
+        return List.of(new OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from"));
     }
 }

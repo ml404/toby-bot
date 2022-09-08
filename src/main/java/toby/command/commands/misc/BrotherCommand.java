@@ -19,6 +19,7 @@ public class BrotherCommand implements IMiscCommand {
 
     private final IBrotherService brotherService;
     public static Long tobyId = 320919876883447808L;
+    private final String BROTHER = "brother";
 
     public BrotherCommand(IBrotherService brotherService) {
         this.brotherService = brotherService;
@@ -34,7 +35,7 @@ public class BrotherCommand implements IMiscCommand {
     }
 
     private void determineBrother(SlashCommandInteractionEvent event, Emoji tobyEmote, int deleteDelay) {
-        if (event.getOptionsByType(OptionType.MENTIONABLE).isEmpty()) {
+        if (event.getOption(BROTHER).getMentions().getMembers().isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(event.getUser().getIdLong());
             if (brother!=null) {
                 event.replyFormat("Of course you're my brother %s.", brother.getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
@@ -47,7 +48,7 @@ public class BrotherCommand implements IMiscCommand {
 
     @Override
     public String getName() {
-        return "brother";
+        return BROTHER;
     }
 
     @Override
@@ -57,6 +58,6 @@ public class BrotherCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.USER, "Brother", "Tag the person who you want to check the brother status of."));
+        return List.of(new OptionData(OptionType.USER, BROTHER, "Tag the person who you want to check the brother status of."));
     }
 }

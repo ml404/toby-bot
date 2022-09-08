@@ -21,6 +21,10 @@ import java.util.stream.Collectors;
 public class TeamCommand implements IMiscCommand {
 
 
+    private final String TEAM_MEMBERS = "members";
+    private final String TEAM_SIZE = "size";
+    private final String CLEANUP = "cleanup";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
@@ -35,8 +39,8 @@ public class TeamCommand implements IMiscCommand {
             return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
-        List<Member> mentionedMembers = event.getOption("Team Members").getMentions().getMembers();
-        int teamSize = event.getOption("Team size").getAsInt();
+        List<Member> mentionedMembers = event.getOption(TEAM_MEMBERS).getMentions().getMembers();
+        int teamSize = event.getOption(TEAM_SIZE).getAsInt();
         int defaultNumberOfTeams = 2;
         int listsToInitialise = teamSize != 0 ? teamSize : defaultNumberOfTeams;
         listsToInitialise = Math.min(listsToInitialise, mentionedMembers.size());
@@ -91,9 +95,9 @@ public class TeamCommand implements IMiscCommand {
     @Override
     public List<OptionData> getOptionData() {
         return List.of(
-                new OptionData(OptionType.STRING, "Team Members", "Which discord users would you like to split into the teams?", true),
-                new OptionData(OptionType.INTEGER, "Team Size", "Number of teams you want to split members into (defaults to 2)"),
-                new OptionData(OptionType.BOOLEAN, "Cleanup", "Do you want to perform cleanup to reset the temporary channels in the guild? (this is also run before the command does anything)")
+                new OptionData(OptionType.STRING, TEAM_MEMBERS, "Which discord users would you like to split into the teams?", true),
+                new OptionData(OptionType.INTEGER, TEAM_SIZE, "Number of teams you want to split members into (defaults to 2)"),
+                new OptionData(OptionType.BOOLEAN, CLEANUP, "Do you want to perform cleanup to reset the temporary channels in the guild?")
         );
 
     }

@@ -19,9 +19,9 @@ import static toby.jpa.dto.ConfigDto.Configurations.values;
 public class AdjustUserCommand implements IModerationCommand {
 
     private final IUserService userService;
-    private final String PERMISSION_NAME = "Permission Name";
-    private final String PERMISSION_VALUE = "Permission Value";
-    private final String USERS = "Users";
+    private final String PERMISSION_NAME = "name";
+    private final String PERMISSION_VALUE = "value";
+    private final String USERS = "users";
 
     public AdjustUserCommand(IUserService userService) {
         this.userService = userService;
@@ -120,8 +120,8 @@ public class AdjustUserCommand implements IModerationCommand {
     @Override
     public List<OptionData> getOptionData() {
         OptionData userOption = new OptionData(OptionType.STRING, USERS, "User(s) who you would like to adjust the permissions of.", true);
-        OptionData permissionName = new OptionData(OptionType.STRING, "Permission Name", "What permission to adjust for the user", true);
-        OptionData permissionValue = new OptionData(OptionType.BOOLEAN, "Permission Value", "Value for the permission you want to adjust (true/false)", true);
+        OptionData permissionName = new OptionData(OptionType.STRING, PERMISSION_NAME, "What permission to adjust for the user", true);
+        OptionData permissionValue = new OptionData(OptionType.BOOLEAN, PERMISSION_VALUE, "Value for the permission you want to adjust (true/false)", true);
         Arrays.stream(values()).forEach(conf -> permissionName.addChoice(conf.getConfigValue(), conf.getConfigValue()));
         return List.of(
                 userOption,

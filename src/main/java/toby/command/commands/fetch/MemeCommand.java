@@ -21,6 +21,11 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class MemeCommand implements IFetchCommand {
+
+    private final String SUBREDDIT = "subreddit";
+    private final String TIME_PERIOD = "timeperiod";
+    private final String LIMIT = "limit";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
@@ -41,11 +46,11 @@ public class MemeCommand implements IFetchCommand {
         if (args.size() == 0) {
             event.reply(getDescription()).queue();
         } else {
-            String subredditArg = event.getOption("Subreddit").getAsString();
+            String subredditArg = event.getOption(SUBREDDIT).getAsString();
             String timePeriod;
             int limit;
             try {
-                timePeriod = RedditAPIDto.TimePeriod.valueOf(event.getOption("Time Period").getAsString()).toString().toLowerCase();
+                timePeriod = RedditAPIDto.TimePeriod.valueOf(event.getOption(TIME_PERIOD).getAsString()).toString().toLowerCase();
             } catch (IndexOutOfBoundsException e) {
                 timePeriod = "day";
             } catch (IllegalArgumentException e) {
@@ -54,7 +59,7 @@ public class MemeCommand implements IFetchCommand {
                         String.format("Using default time period of %s", timePeriod)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             try {
-                limit = event.getOption("Limit").getAsInt();
+                limit = event.getOption(LIMIT).getAsInt();
             } catch (Error e) {
                 limit = 5;
             }
@@ -105,10 +110,10 @@ public class MemeCommand implements IFetchCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData subreddit = new OptionData(OptionType.STRING, "Subreddit", "Which subreddit to pull the meme from", true);
-        OptionData timePeriod = new OptionData(OptionType.STRING, "Time Period", "What time period filter to apply to the subreddit (e.g. day/week/month/all). Default day.", false);
+        OptionData subreddit = new OptionData(OptionType.STRING, SUBREDDIT, "Which subreddit to pull the meme from", true);
+        OptionData timePeriod = new OptionData(OptionType.STRING, TIME_PERIOD, "What time period filter to apply to the subreddit (e.g. day/week/month/all). Default day.", false);
         Arrays.stream(RedditAPIDto.TimePeriod.values()).forEach(tp -> timePeriod.addChoice(tp.getTimePeriod(), tp.getTimePeriod()));
-        OptionData limit = new OptionData(OptionType.INTEGER, "Limit", "Pick from top X posts of that day. Default 5.", false);
+        OptionData limit = new OptionData(OptionType.INTEGER, LIMIT, "Pick from top X posts of that day. Default 5.", false);
 
         return List.of(subreddit,timePeriod,limit);
     }

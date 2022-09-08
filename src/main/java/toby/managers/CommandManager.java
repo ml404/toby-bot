@@ -3,6 +3,7 @@ package toby.managers;
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
@@ -102,7 +103,9 @@ public class CommandManager {
             throw new IllegalArgumentException("A command with this name is already present");
         }
         commands.add(cmd);
-        slashCommands.add(cmd.getSlashCommand());
+        SlashCommandData slashCommand = cmd.getSlashCommand();
+        slashCommand.addOptions(cmd.getOptionData());
+        slashCommands.add(slashCommand);
     }
 
     public List<CommandData> getAllSlashCommands() {

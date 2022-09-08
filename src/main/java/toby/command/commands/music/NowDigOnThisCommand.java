@@ -17,19 +17,22 @@ import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
 
 public class NowDigOnThisCommand implements IMusicCommand {
 
+    private final String LINK = "link";
+    private final String START_POSITION = "start";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         if (requestingUserDto.hasDigPermission()) {
-            String link = event.getOption("Link").getAsString();
+            String link = event.getOption(LINK).getAsString();
             if (link== null) {
                 event.replyFormat("Correct usage is `%snowdigonthis <youtube link>`", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
             if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + link;
-            Long startPosition = adjustTrackPlayingTimes(event.getOption("Start Position").getAsLong());
+            Long startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION).getAsLong());
             PlayerManager.getInstance().loadAndPlay(event, link, false, deleteDelay, startPosition);
         } else
             sendErrorMessage(event, deleteDelay);
@@ -68,8 +71,8 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData linkArg = new OptionData(OptionType.STRING, "Link", "Link to play that cannot be stopped unless requested by a super user", true);
-        OptionData startPositionArg = new OptionData(OptionType.INTEGER, "Start Position", "Start position of the track in seconds");
+        OptionData linkArg = new OptionData(OptionType.STRING, LINK, "Link to play that cannot be stopped unless requested by a super user", true);
+        OptionData startPositionArg = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds");
         return List.of(linkArg, startPositionArg);
     }
 }

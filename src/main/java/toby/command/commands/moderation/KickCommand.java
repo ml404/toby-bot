@@ -12,13 +12,16 @@ import toby.jpa.dto.UserDto;
 import java.util.List;
 
 public class KickCommand implements IModerationCommand {
+
+    private final String USERS = "users";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         final Member member = ctx.getMember();
 
-        List<Member> memberOptions = event.getOption("Users").getMentions().getMembers();
+        List<Member> memberOptions = event.getOption(USERS).getMentions().getMembers();
         if (memberOptions.isEmpty()) {
             event.reply("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
@@ -61,6 +64,6 @@ public class KickCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "Users", "User(s) to kick", true));
+        return List.of(new OptionData(OptionType.STRING, USERS, "User(s) to kick", true));
     }
 }

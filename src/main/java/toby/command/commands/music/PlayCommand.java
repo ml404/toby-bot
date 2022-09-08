@@ -16,6 +16,11 @@ import static toby.helpers.MusicPlayerHelper.*;
 
 public class PlayCommand implements IMusicCommand {
 
+    private final String TYPE = "type";
+    private final String START_POSITION = "start";
+    private final String LINK = "link";
+    private final String INTRO = "intro";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
@@ -25,8 +30,8 @@ public class PlayCommand implements IMusicCommand {
             return;
         }
 
-        String type = event.getOption("Type").getAsString();
-        String link = event.getOption("Link").getAsString();
+        String type = event.getOption(TYPE).getAsString();
+        String link = event.getOption(LINK).getAsString();
 
         if (type.isEmpty()) {
             event.reply("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -37,9 +42,9 @@ public class PlayCommand implements IMusicCommand {
         Guild guild = event.getGuild();
         int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
-        Long startPosition = adjustTrackPlayingTimes(event.getOption("Start Position").getAsLong());
+        Long startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION).getAsLong());
 
-        if (type.equals("intro")) {
+        if (type.equals(INTRO)) {
             playUserIntro(requestingUserDto, guild, event, deleteDelay, startPosition);
         } else {
             if (link.contains("youtube") && !isUrl(link)) {
@@ -62,10 +67,10 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData type = new OptionData(OptionType.STRING, "Type", "Type of thing you're playing (link or intro)", true);
-        type.addChoice("Link", "Link");
-        type.addChoice("Intro", "Intro");
-        OptionData startPosition = new OptionData(OptionType.INTEGER, "Start Position", "Start position of the track in seconds", false);
+        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro)", true);
+        type.addChoice(LINK, LINK);
+        type.addChoice(INTRO, INTRO);
+        OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds", false);
         return List.of(type, startPosition);
     }
 }

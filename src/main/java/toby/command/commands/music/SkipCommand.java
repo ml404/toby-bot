@@ -18,6 +18,8 @@ import static toby.helpers.MusicPlayerHelper.nowPlaying;
 
 public class SkipCommand implements IMusicCommand {
 
+    private final String SKIP = "skip";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
@@ -30,7 +32,7 @@ public class SkipCommand implements IMusicCommand {
             event.reply("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        int skipValue = event.getOption("Skip").getAsInt();
+        int skipValue = event.getOption(SKIP).getAsInt();
         int tracksToSkip = skipValue !=0 ? skipValue : 1;
 
         if (tracksToSkip < 0) {
@@ -62,7 +64,7 @@ public class SkipCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.INTEGER, "Skip", "Number of tracks to skip"));
+        return List.of(new OptionData(OptionType.INTEGER, SKIP, "Number of tracks to skip"));
     }
 }
 

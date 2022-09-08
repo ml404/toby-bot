@@ -9,13 +9,13 @@ import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
-import java.util.Arrays;
 import java.util.List;
 
 
 public class UserInfoCommand implements IMiscCommand {
 
 
+    private final String USERS = "users";
     private IUserService userService;
 
     public UserInfoCommand(IUserService userService) {
@@ -48,7 +48,7 @@ public class UserInfoCommand implements IMiscCommand {
             }
         } else {
             if (requestingUserDto.isSuperUser()) {
-                event.getOption("Users").getMentions().getMembers().stream().forEach(member -> {
+                event.getOption(USERS).getMentions().getMembers().stream().forEach(member -> {
                     UserDto mentionedUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
                     event.replyFormat("Here are the permissions for '%s': '%s'.", member.getEffectiveName(), mentionedUser).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     MusicDto musicDto = mentionedUser.getMusicDto();
@@ -77,12 +77,8 @@ public class UserInfoCommand implements IMiscCommand {
         return "Let me tell you about the permissions tied to the user mentioned (no mention is your own).";
     }
 
-    private List<String> getAliases() {
-        return Arrays.asList("getuser", "info", "permissions", "permission", "perm");
-    }
-
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "Users", "List of users to print info about"));
+        return List.of(new OptionData(OptionType.STRING, USERS, "List of users to print info about"));
     }
 }

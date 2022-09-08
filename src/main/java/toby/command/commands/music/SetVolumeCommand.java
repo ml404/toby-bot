@@ -19,6 +19,8 @@ import java.util.List;
 
 public class SetVolumeCommand implements IMusicCommand {
 
+    private final String VOLUME = "volume";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
@@ -37,7 +39,7 @@ public class SetVolumeCommand implements IMusicCommand {
 
     private void setNewVolume(SlashCommandInteractionEvent event, Member member, Integer deleteDelay) {
         Guild guild = event.getGuild();
-        int volumeArg = event.getOption("Volume").getAsInt();
+        int volumeArg = event.getOption(VOLUME).getAsInt();
         if (volumeArg > 0) {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
@@ -72,6 +74,6 @@ public class SetVolumeCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.INTEGER, "Volume", "Volume value between 1-100 to set the audio to", true));
+        return List.of(new OptionData(OptionType.INTEGER, VOLUME, "Volume value between 1-100 to set the audio to", true));
     }
 }

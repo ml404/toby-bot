@@ -19,6 +19,9 @@ import static java.util.stream.Collectors.toMap;
 public class SocialCreditCommand implements IModerationCommand {
 
     private final IUserService userService;
+    private final String LEADERBOARD = "leaderboard";
+    private final String USERS = "users";
+    private final String SOCIAL_CREDIT = "credit";
 
     public SocialCreditCommand(IUserService userService) {
         this.userService = userService;
@@ -31,7 +34,7 @@ public class SocialCreditCommand implements IModerationCommand {
         List <OptionMapping> args = event.getOptions();
         final Member member = ctx.getMember();
         if(!event.getGuild().isLoaded()) event.getGuild().loadMembers();
-        if (event.getOption("Leaderboard").getAsBoolean()) {
+        if (event.getOption(LEADERBOARD).getAsBoolean()) {
             Map<Long, Long> discordSocialCreditMap = new HashMap<>();
             userService.listGuildUsers(event.getGuild().getIdLong()).forEach(userDto -> {
                 Long socialCredit = userDto.getSocialCredit() == null ? 0L : userDto.getSocialCredit();
@@ -56,7 +59,7 @@ public class SocialCreditCommand implements IModerationCommand {
             });
             event.replyFormat(stringBuilder.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         } else {
-            List<Member> mentionedMembers = event.getOption("Users").getMentions().getMembers();
+            List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();
             if (mentionedMembers.isEmpty()) {
                 listSocialCreditScore(requestingUserDto, member.getEffectiveName(), deleteDelay, event);
             } else
@@ -72,7 +75,7 @@ public class SocialCreditCommand implements IModerationCommand {
                             boolean isSameGuild = requestingUserDto.getGuildId().equals(targetUserDto.getGuildId());
                             boolean requesterCanAdjustPermissions = member.isOwner();
                             if (requesterCanAdjustPermissions && isSameGuild) {
-                                long socialCreditAdjustment = event.getOption("Social Credit").getAsLong();
+                                long socialCreditAdjustment = event.getOption(SOCIAL_CREDIT).getAsLong();
                                 UserDto updatedUser = validateArgumentsAndAdjustSocialCredit(targetUserDto, event, socialCreditAdjustment, ctx.getMember().isOwner(), deleteDelay);
                                 event.replyFormat("Updated user %s's social credit by %d. New score is: %d", targetMember.getEffectiveName(), socialCreditAdjustment, updatedUser.getSocialCredit()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                             } else
@@ -113,9 +116,9 @@ public class SocialCreditCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData leaderboard = new OptionData(OptionType.BOOLEAN, "Leaderboard", "Show the leaderboard");
-        OptionData users = new OptionData(OptionType.STRING, "Users", "User(s) to adjust the social credit value. If used without a score will display their social credit amount");
-        OptionData creditAmount = new OptionData(OptionType.INTEGER, "Social Credit", "Score to add or deduct from mentioned user's social credit");
+        OptionData leaderboard = new OptionData(OptionType.BOOLEAN, LEADERBOARD, "Show the leaderboard");
+        OptionData users = new OptionData(OptionType.STRING, USERS, "User(s) to adjust the social credit value. Without a value will display their social credit amount");
+        OptionData creditAmount = new OptionData(OptionType.INTEGER, SOCIAL_CREDIT, "Score to add or deduct from mentioned user's social credit");
         return List.of(users, creditAmount, leaderboard);
     }
 }

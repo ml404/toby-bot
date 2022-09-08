@@ -17,7 +17,7 @@ public class ChCommand implements IMiscCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
-        String message = event.getOption("Message").getAsString();
+        String message = event.getOption("message").getAsString();
 
         String newMessage = Arrays.stream(message.split(" ")).map(s -> {
                     int vowelIndex = 0;
@@ -57,6 +57,6 @@ public class ChCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "Message", "Message to 'Ch'", true));
+        return List.of(new OptionData(OptionType.STRING, "message", "Message to 'Ch'", true));
     }
 }

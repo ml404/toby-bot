@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 public class HelpCommand implements IMiscCommand {
 
     private final CommandManager manager;
+    private final String COMMAND = "command";
 
     public HelpCommand(CommandManager manager) {
         this.manager = manager;
@@ -69,6 +70,6 @@ public class HelpCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "Command", "Command you would like help with"));
+        return List.of(new OptionData(OptionType.STRING, COMMAND, "Command you would like help with"));
     }
 }

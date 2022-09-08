@@ -37,7 +37,7 @@ public class HelloThereCommand implements IMiscCommand {
             event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else
             try {
-                LocalDate dateGiven = LocalDate.parse(event.getOption("Date").getAsString(), dateTimeFormatter);
+                LocalDate dateGiven = LocalDate.parse(event.getOption("date").getAsString(), dateTimeFormatter);
                 if (dateGiven.isBefore(EP3Date)) {
                     event.reply("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 } else {
@@ -63,6 +63,6 @@ public class HelloThereCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, "Date", "What is the date you would like to say hello to TobyBot for?"));
+        return List.of(new OptionData(OptionType.STRING, "date", "What is the date you would like to say hello to TobyBot for?"));
     }
 }

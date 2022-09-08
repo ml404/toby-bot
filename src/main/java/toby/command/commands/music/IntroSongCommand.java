@@ -30,6 +30,9 @@ public class IntroSongCommand implements IMusicCommand {
     private final IUserService userService;
     private final IMusicFileService musicFileService;
     private final IConfigService configService;
+    private final String USERS = "users";
+    private final String LINK = "link";
+    private final String ATTACHMENT = "attachment";
 
     public IntroSongCommand(IUserService userService, IMusicFileService musicFileService, IConfigService configService) {
         this.userService = userService;
@@ -47,13 +50,13 @@ public class IntroSongCommand implements IMusicCommand {
         int introVolume = volume != 0 ? volume : defaultVolume;
         if (introVolume < 1) introVolume = 1;
         if (introVolume > 100) introVolume = 100;
-        if (!requestingUserDto.isSuperUser() && event.getOption("Users").getMentions().getMembers().size() > 0) {
+        if (!requestingUserDto.isSuperUser() && event.getOption(USERS).getMentions().getMembers().size() > 0) {
             sendErrorMessage(event, deleteDelay);
             return;
         }
-        OptionMapping attachment = ctx.getEvent().getOption("Attachment");
+        OptionMapping attachment = ctx.getEvent().getOption(ATTACHMENT);
         Message.Attachment fileAttachment = attachment.getAsAttachment();
-        String link = ctx.getEvent().getOption("Link").getAsString();
+        String link = ctx.getEvent().getOption(LINK).getAsString();
 
         if (attachment != null && URLHelper.isValidURL(link)) {
             event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -72,7 +75,7 @@ public class IntroSongCommand implements IMusicCommand {
             event.reply("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
 
-        List<Member> mentionedMembers = event.getOption("Users").getMentions().getMembers();
+        List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();
         InputStream inputStream = null;
         try {
             inputStream = attachment.getProxy().download().get();
@@ -91,7 +94,7 @@ public class IntroSongCommand implements IMusicCommand {
 
     private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, URI url, int introVolume) {
         SlashCommandInteractionEvent event = ctx.getEvent();
-        List<Member> mentionedMembers = event.getOption("Users").getMentions().getMembers();
+        List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();
         String urlString = url.toString();
 
         if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
@@ -159,9 +162,9 @@ public class IntroSongCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData users = new OptionData(OptionType.STRING, "Users", "User whose intro to change");
-        OptionData link = new OptionData(OptionType.STRING, "Link", "Link to set as your discord intro");
-        OptionData attachment = new OptionData(OptionType.ATTACHMENT, "Attachment", "Attachment (file) to set as your discord intro");
+        OptionData users = new OptionData(OptionType.STRING, USERS, "User whose intro to change");
+        OptionData link = new OptionData(OptionType.STRING, LINK, "Link to set as your discord intro");
+        OptionData attachment = new OptionData(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro");
         return List.of(users, link, attachment);
     }
 }

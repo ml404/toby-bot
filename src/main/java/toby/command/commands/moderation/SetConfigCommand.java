@@ -20,6 +20,8 @@ import static toby.jpa.dto.ConfigDto.Configurations.*;
 public class SetConfigCommand implements IModerationCommand {
 
     private final IConfigService configService;
+    private final String CONFIG_NAME = "name";
+    private final String CONFIG_VALUE = "value";
 
     public SetConfigCommand(IConfigService configService) {
         this.configService = configService;
@@ -46,7 +48,7 @@ public class SetConfigCommand implements IModerationCommand {
 
 
     private void validateArgumentsAndUpdateConfigs(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String configNameString = event.getOption("Config Name").getAsString().toUpperCase();
+        String configNameString = event.getOption(CONFIG_NAME).getAsString().toUpperCase();
 
         if (configNameString.isEmpty()) {
             event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -151,8 +153,8 @@ public class SetConfigCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData configName = new OptionData(OptionType.STRING, "Config Name", "What config to adjust for the server", true);
-        OptionData configValue = new OptionData(OptionType.STRING, "Config Value", "Value for the config you want to adjust", true);
+        OptionData configName = new OptionData(OptionType.STRING, CONFIG_NAME, "What config to adjust for the server", true);
+        OptionData configValue = new OptionData(OptionType.STRING, CONFIG_VALUE, "Value for the config you want to adjust", true);
         Arrays.stream(values()).forEach(conf -> configName.addChoice(conf.getConfigValue(), conf.getConfigValue()));
         return List.of(configName, configValue);
     }

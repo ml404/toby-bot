@@ -15,11 +15,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RollCommand implements IMiscCommand {
 
+    private final String DICE_NUMBER = "number";
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
-        OptionMapping arg = event.getOption("Dice Number");
+        OptionMapping arg = event.getOption(DICE_NUMBER);
         Random rand = ThreadLocalRandom.current();
         String rollValue = arg.getAsString();
         int diceRoll = !rollValue.isEmpty() ? Integer.parseInt(rollValue) : 6;
@@ -41,6 +43,6 @@ public class RollCommand implements IMiscCommand {
     @Override
     @NotNull
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.NUMBER, "Dice number", "What sided dice would you like to roll?"));
+        return List.of(new OptionData(OptionType.NUMBER, DICE_NUMBER, "What sided dice would you like to roll?"));
     }
 }
