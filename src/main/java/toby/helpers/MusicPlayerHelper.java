@@ -47,7 +47,7 @@ public class MusicPlayerHelper {
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);
         String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
-        event.reply(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static Long adjustTrackPlayingTimes(long startTime) {

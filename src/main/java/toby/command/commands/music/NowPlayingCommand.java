@@ -25,7 +25,7 @@ public class NowPlayingCommand implements IMusicCommand {
             final AudioTrack track = audioPlayer.getPlayingTrack();
 
             if (track == null) {
-                event.reply("There is no track playing currently").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessage("There is no track playing currently").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
 
@@ -38,10 +38,10 @@ public class NowPlayingCommand implements IMusicCommand {
                 String songPosition = QueueCommand.formatTime(position);
                 String songDuration = QueueCommand.formatTime(duration);
                 String nowPlaying = String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) ", info.title, info.author, songPosition, songDuration, info.uri);
-                event.reply(nowPlaying).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessage(nowPlaying).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
                 String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
-                event.reply(nowPlaying).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessage(nowPlaying).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         }
     }

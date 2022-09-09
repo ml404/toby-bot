@@ -30,14 +30,14 @@ public class SkipCommand implements IMusicCommand {
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
 
         if (audioPlayer.getPlayingTrack() == null) {
-            event.reply("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         int skipValue = event.getOption(SKIP).getAsInt();
         int tracksToSkip = skipValue !=0 ? skipValue : 1;
 
         if (tracksToSkip < 0) {
-            event.reply("You're not too bright, but thanks for trying").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You're not too bright, but thanks for trying").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

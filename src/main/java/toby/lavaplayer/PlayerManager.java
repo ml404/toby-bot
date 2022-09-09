@@ -84,7 +84,7 @@ public class PlayerManager {
                 scheduler.setEvent(event);
                 scheduler.setDeleteDelay(deleteDelay);
 
-                event.reply("Adding to queue: `")
+                event.getHook().sendMessage("Adding to queue: `")
                         .addContent(String.valueOf(tracks.size()))
                         .addContent("` tracks from playlist `")
                         .addContent(playlist.getName())

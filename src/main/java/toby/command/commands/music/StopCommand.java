@@ -24,7 +24,7 @@ public class StopCommand implements IMusicCommand {
             musicManager.getScheduler().getQueue().clear();
             musicManager.getScheduler().setLooping(false);
             musicManager.getAudioPlayer().setPaused(false);
-            event.reply("The player has been stopped and the queue has been cleared").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("The player has been stopped and the queue has been cleared").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }

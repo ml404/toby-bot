@@ -36,7 +36,7 @@ public class TeamCommand implements IMiscCommand {
             return;
         }
         if (args.isEmpty()) {
-            event.reply(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
@@ -60,7 +60,7 @@ public class TeamCommand implements IMiscCommand {
                             (error) -> event.replyFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                     ));
         }
-        event.reply(sb.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        event.getHook().sendMessage(sb.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
     private void cleanupTemporaryChannels(List<GuildChannel> channels) {

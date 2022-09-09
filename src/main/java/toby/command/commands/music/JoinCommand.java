@@ -54,7 +54,7 @@ public class JoinCommand implements IMusicCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
 
         if (selfVoiceState.inAudioChannel()) {
-            event.reply("I'm already in a voice channel").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("I'm already in a voice channel").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
 
@@ -62,7 +62,7 @@ public class JoinCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inAudioChannel()) {
-            event.reply("You need to be in a voice channel for this command to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return null;
         }
         return memberVoiceState;

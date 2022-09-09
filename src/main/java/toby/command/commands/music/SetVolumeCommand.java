@@ -45,7 +45,7 @@ public class SetVolumeCommand implements IMusicCommand {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
                 if (volumeArg > 100) {
-                    event.reply(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
                 int oldVolume = audioPlayer.getVolume();
@@ -58,7 +58,7 @@ public class SetVolumeCommand implements IMusicCommand {
             } else {
                 event.replyFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
-        } else event.reply(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        } else event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 

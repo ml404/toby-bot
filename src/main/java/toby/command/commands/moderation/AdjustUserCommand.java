@@ -63,7 +63,7 @@ public class AdjustUserCommand implements IModerationCommand {
         
 
         if (permissionName.isEmpty()) {
-            event.reply("You did not mention a valid permission to update").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -91,18 +91,18 @@ public class AdjustUserCommand implements IModerationCommand {
     @Nullable
     private List<Member> channelAndArgumentValidation(UserDto requestingUserDto, SlashCommandInteractionEvent event, Member member, int deleteDelay) {
         if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
-            event.reply("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
         List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();
         if (mentionedMembers.isEmpty()) {
-            event.reply("You must mention 1 or more Users to adjust permissions of").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to adjust permissions of").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
         if (event.getOption(PERMISSION_NAME).getAsString().isEmpty()) {
-            event.reply("You must mention 1 or more permissions to adjust of the user you've mentioned.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more permissions to adjust of the user you've mentioned.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
         return mentionedMembers;

@@ -35,7 +35,7 @@ public class PlayCommand implements IMusicCommand {
         String link = event.getOption(LINK).getAsString();
 
         if (type.isEmpty()) {
-            event.reply("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;

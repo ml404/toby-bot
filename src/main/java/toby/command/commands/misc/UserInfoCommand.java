@@ -38,13 +38,13 @@ public class UserInfoCommand implements IMiscCommand {
                 MusicDto musicDto = requestingUserDto.getMusicDto();
                 if (musicDto != null) {
                     if (musicDto.getFileName() == null || musicDto.getFileName().isBlank()) {
-                        event.reply("There is no intro music file associated with your user.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                        event.getHook().sendMessage("There is no intro music file associated with your user.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
                     } else if (musicDto.getFileName() != null) {
                         event.replyFormat("Your intro song is currently set as: '%s'.", musicDto.getFileName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     }
                 } else
-                    event.reply("I was unable to retrieve your music file.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    event.getHook().sendMessage("I was unable to retrieve your music file.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             }
         } else {
             if (requestingUserDto.isSuperUser()) {
@@ -63,7 +63,7 @@ public class UserInfoCommand implements IMiscCommand {
                         event.replyFormat("I was unable to retrieve an associated music file for '%s'.", member.getNickname()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 });
             }
-            else event.reply("You do not have permission to view user permissions, if this is a mistake talk to the server owner").setEphemeral(true).queue();
+            else event.getHook().sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner").setEphemeral(true).queue();
         }
     }
 

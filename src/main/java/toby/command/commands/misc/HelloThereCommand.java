@@ -35,14 +35,14 @@ public class HelloThereCommand implements IMiscCommand {
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 
         if (args.isEmpty()) {
-            event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else
             try {
                 LocalDate dateGiven = LocalDate.parse(event.getOption("date").getAsString(), dateTimeFormatter);
                 if (dateGiven.isBefore(EP3Date)) {
-                    event.reply("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessage("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 } else {
-                    event.reply("General Kenobi.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessage("General Kenobi.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 }
             } catch (DateTimeParseException e) {
                 event.replyFormat("I don't recognise the format of the date you gave me, please use this format %s", dateformat).queue(message -> ICommand.deleteAfter(message, deleteDelay));

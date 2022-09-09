@@ -24,7 +24,7 @@ public class KickCommand implements IModerationCommand {
 
         List<Member> memberOptions = event.getOption(USERS).getMentions().getMembers();
         if (memberOptions.isEmpty()) {
-            event.reply("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
@@ -46,7 +46,7 @@ public class KickCommand implements IModerationCommand {
                     .kick(target)
                     .reason("because you told me to.")
                     .queue(
-                            (__) -> event.reply("Shot hit the mark... something about fortnite?").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
+                            (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
                             (error) -> event.replyFormat("Could not kick %s", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                     );
         });

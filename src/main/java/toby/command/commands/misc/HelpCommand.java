@@ -52,11 +52,11 @@ public class HelpCommand implements IMiscCommand {
         ICommand command = manager.getCommand(search);
 
         if (command == null) {
-            event.reply("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        event.reply(command.getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(command.getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override

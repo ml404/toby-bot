@@ -25,7 +25,7 @@ public class ResumeCommand implements IMusicCommand {
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(event.getGuild()).getAudioPlayer();
         if (audioPlayer.isPaused()) {
             AudioTrack track = audioPlayer.getPlayingTrack();
-            event.reply("Resuming: `")
+            event.getHook().sendMessage("Resuming: `")
                     .addContent(track.getInfo().title)
                     .addContent("` by `")
                     .addContent(track.getInfo().author)

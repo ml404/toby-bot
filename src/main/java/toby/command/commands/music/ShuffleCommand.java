@@ -30,12 +30,12 @@ public class ShuffleCommand implements IMusicCommand {
             TrackScheduler trackScheduler = PlayerManager.getInstance().getMusicManager(guild).getScheduler();
             BlockingQueue<AudioTrack> queue = trackScheduler.getQueue();
             if (queue.size() == 0) {
-                event.reply("I can't shuffle a queue that doesn't exist").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessage("I can't shuffle a queue that doesn't exist").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
             LinkedBlockingQueue<AudioTrack> shuffledAudioTracks = shuffleAudioTracks(queue);
             trackScheduler.setQueue(shuffledAudioTracks);
-            event.reply("The queue has been shuffled 🦧").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("The queue has been shuffled 🦧").queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         }
     }

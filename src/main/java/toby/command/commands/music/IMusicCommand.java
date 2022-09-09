@@ -13,19 +13,19 @@ public interface IMusicCommand extends ICommand {
         final GuildVoiceState selfVoiceState = self.getVoiceState();
         SlashCommandInteractionEvent event = ctx.getEvent();
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("I need to be in a voice channel for this to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("I need to be in a voice channel for this to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
 
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
         if (!memberVoiceState.inAudioChannel()) {
-            event.reply("You need to be in a voice channel for this command to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
 
         if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply("You need to be in the same voice channel as me for this to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You need to be in the same voice channel as me for this to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return true;
         }
         return false;

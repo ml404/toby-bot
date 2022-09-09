@@ -38,7 +38,7 @@ public class LeaveCommand implements IMusicCommand {
         }
 
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("I'm not in a voice channel, somebody shoot this guy").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

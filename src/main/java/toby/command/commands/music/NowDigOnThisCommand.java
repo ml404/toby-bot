@@ -42,7 +42,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     public static void sendDeniedStoppableMessage(SlashCommandInteractionEvent event, GuildMusicManager musicManager, Integer deleteDelay) {
         if (musicManager.getScheduler().getQueue().size() > 1) {
-            event.reply("Our daddy taught us not to be ashamed of our playlists").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
             long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
             String songDuration = QueueCommand.formatTime(duration);

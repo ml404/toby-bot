@@ -32,10 +32,10 @@ public class DbdRandomKillerCommand implements IFetchCommand {
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery);
-            event.replyFormat(RandomCommand.getRandomElement(dbdKillers)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat(RandomCommand.getRandomElement(dbdKillers)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         } catch (IOException ignored) {
-            event.replyFormat("Huh, the website I pull data from must have returned something unexpected.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 

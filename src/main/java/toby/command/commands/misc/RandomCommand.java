@@ -21,10 +21,10 @@ public class RandomCommand implements IMiscCommand {
         event.deferReply().queue();
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         if (ctx.getEvent().getOptions().isEmpty()) {
-            event.reply(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
         List<String> args = List.of(event.getOption(LIST).getAsString().split(","));
-        event.reply(getRandomElement(args)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        event.getHook().sendMessage(getRandomElement(args)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
     public static String getRandomElement(List<?> args) {

@@ -24,10 +24,9 @@ public class RollCommand implements IMiscCommand {
         event.deferReply().queue();
         OptionMapping arg = event.getOption(DICE_NUMBER);
         Random rand = ThreadLocalRandom.current();
-        String rollValue = arg.getAsString();
-        int diceRoll = !rollValue.isEmpty() ? Integer.parseInt(rollValue) : 6;
+        int diceRoll = arg != null ? Integer.parseInt(arg.getAsString()) : 6;
         int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
-        event.replyFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 

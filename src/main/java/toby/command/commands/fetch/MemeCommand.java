@@ -18,7 +18,6 @@ import toby.jpa.dto.UserDto;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 public class MemeCommand implements IFetchCommand {
 
@@ -36,44 +35,40 @@ public class MemeCommand implements IFetchCommand {
         User member = ctx.getAuthor();
         event.deferReply().queue();
 
-        if(!requestingUserDto.hasMemePermission()){
-            event.replyFormat(
-                    "You do not have adequate permissions to use this command, talk to the server owner: %s",
-                    event.getGuild().getOwner().getNickname())
-            .queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return ;
+        if (!requestingUserDto.hasMemePermission()) {
+            event.getHook().sendMessageFormat(
+                            "You do not have adequate permissions to use this command, talk to the server owner: %s",
+                            event.getGuild().getOwner().getNickname())
+                    .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
         }
 
         if (args.size() == 0) {
-            event.reply(getDescription()).queue();
+            event.getHook().sendMessageFormat((getDescription())).setEphemeral(true).queue();
         } else {
             String subredditArg = event.getOption(SUBREDDIT).getAsString();
             String timePeriod;
             int limit;
             try {
                 timePeriod = RedditAPIDto.TimePeriod.valueOf(event.getOption(TIME_PERIOD).getAsString()).toString().toLowerCase();
-            } catch (IndexOutOfBoundsException e) {
+            } catch (Error e) {
                 timePeriod = "day";
-            } catch (IllegalArgumentException e) {
-                timePeriod = "day";
-                event.replyFormat("You entered a time period not supported: **%s**\\. Please use one of: %s \n", args.get(1), Arrays.stream(RedditAPIDto.TimePeriod.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining("/")) +
-                        String.format("Using default time period of %s", timePeriod)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat(String.format("Using default time period of %s", timePeriod)).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             try {
                 limit = event.getOption(LIMIT).getAsInt();
             } catch (Error e) {
                 limit = 5;
-            }
-            catch (NumberFormatException e){
+            } catch (NumberFormatException e) {
                 limit = 5;
-                event.replyFormat("Invalid number supplied, using default value %d", limit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Invalid number supplied, using default value %d", limit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             if (subredditArg.equals("sneakybackgroundfeet")) {
-                event.reply("Don't talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Don't talk to me.").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
                 WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
-                        event.replyFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        event.getHook().sendMessageFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                         return;
                     }
                     final JsonNode parentData = json.get("data");
@@ -82,16 +77,16 @@ public class MemeCommand implements IFetchCommand {
                     JsonNode meme = children.get(random.nextInt(children.size()));
                     RedditAPIDto redditAPIDto = gson.fromJson(meme.get("data").toString(), RedditAPIDto.class);
                     if (redditAPIDto.isNsfw()) {
-                        event.replyFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", member).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        event.getHook().sendMessageFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", member).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     } else if (redditAPIDto.getVideo()) {
-                        event.reply("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        event.getHook().sendMessageFormat("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     } else {
                         String title = redditAPIDto.getTitle();
                         String url = redditAPIDto.getUrl();
                         String image = redditAPIDto.getImage();
                         EmbedBuilder embed = EmbedUtils.embedImageWithTitle(title, String.format(RedditAPIDto.commentsPrefix, url), image);
                         embed.addField("Subreddit", subredditArg, false);
-                        event.replyEmbeds(embed.build()).queue();
+                        event.getHook().sendMessageEmbeds(embed.build()).queue();
 
                     }
                 });
@@ -116,7 +111,7 @@ public class MemeCommand implements IFetchCommand {
         Arrays.stream(RedditAPIDto.TimePeriod.values()).forEach(tp -> timePeriod.addChoice(tp.getTimePeriod(), tp.getTimePeriod()));
         OptionData limit = new OptionData(OptionType.INTEGER, LIMIT, "Pick from top X posts of that day. Default 5.", false);
 
-        return List.of(subreddit,timePeriod,limit);
+        return List.of(subreddit, timePeriod, limit);
     }
 }
 

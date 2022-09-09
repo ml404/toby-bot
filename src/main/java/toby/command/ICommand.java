@@ -1,5 +1,6 @@
 package toby.command;
 
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -19,9 +20,14 @@ public interface ICommand {
 
     String getDescription();
 
-    static void deleteAfter(InteractionHook message, int delay) {
-        message.deleteOriginal().queueAfter(delay, TimeUnit.SECONDS);
+    static void deleteAfter(InteractionHook interactionHook, int delay) {
+        interactionHook.deleteOriginal().queueAfter(delay, TimeUnit.SECONDS);
     }
+
+    static void deleteAfter(Message message, int delay) {
+        message.delete().queueAfter(delay, TimeUnit.SECONDS);
+    }
+
 
     default String getErrorMessage() {
         return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: %s";

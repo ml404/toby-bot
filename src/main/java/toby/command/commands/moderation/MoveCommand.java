@@ -37,7 +37,7 @@ public class MoveCommand implements IModerationCommand {
 
         List<Member> users = event.getOption(USERS).getMentions().getMembers();
         if (users.isEmpty()) {
-            event.reply("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 

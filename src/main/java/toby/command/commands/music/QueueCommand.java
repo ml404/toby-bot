@@ -2,8 +2,9 @@ package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -31,13 +32,13 @@ public class QueueCommand implements IMusicCommand {
         }
 
         if (queue.isEmpty()) {
-            event.reply("The queue is currently empty").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("The queue is currently empty").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         final int trackCount = Math.min(queue.size(), 20);
         final List<AudioTrack> trackList = new ArrayList<>(queue);
-        ReplyCallbackAction messageAction = event.reply("**Current Queue:**\n");
+        WebhookMessageCreateAction<Message> messageAction = event.getHook().sendMessage("**Current Queue:**\n");
 
         for (int i = 0; i < trackCount; i++) {
             final AudioTrack track = trackList.get(i);
@@ -60,7 +61,7 @@ public class QueueCommand implements IMusicCommand {
                     .addContent("` more...");
         }
 
-        messageAction.queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        messageAction.setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static String formatTime(long timeInMillis) {

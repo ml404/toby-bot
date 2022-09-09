@@ -39,11 +39,11 @@ public class BrotherCommand implements IMiscCommand {
         if (event.getOption(BROTHER).getMentions().getMembers().isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(event.getUser().getIdLong());
             if (brother!=null) {
-                event.replyFormat("Of course you're my brother %s.", brother.getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessageFormat("Of course you're my brother %s.", brother.getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else if (tobyId.equals(event.getUser().getIdLong())) {
-                event.replyFormat("You're not my fucking brother Toby, you're me %s", tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessageFormat("You're not my fucking brother Toby, you're me %s", tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else
-                event.replyFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessageFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
     }
 

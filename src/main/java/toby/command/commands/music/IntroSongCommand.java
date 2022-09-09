@@ -60,7 +60,7 @@ public class IntroSongCommand implements IMusicCommand {
         String link = ctx.getEvent().getOption(LINK).getAsString();
 
         if (attachment != null && URLHelper.isValidURL(link)) {
-            event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else if (!link.isEmpty()) {
             setIntroViaUrl(ctx, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
         } else {
@@ -70,10 +70,10 @@ public class IntroSongCommand implements IMusicCommand {
 
     private void setIntroViaDiscordAttachment(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Message.Attachment attachment, int introVolume) {
         if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
-            event.reply("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Please use mp3 files only").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         } else if (attachment.getSize() > 300000) {
-            event.reply("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Please keep the file size under 300kb").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
 
         List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();

@@ -63,10 +63,10 @@ public class ExcuseCommand implements IMiscCommand {
     private void listallExcuses(SlashCommandInteractionEvent event, Long guildId, Integer deleteDelay) {
         List<ExcuseDto> excuseDtos = excuseService.listApprovedGuildExcuses(guildId);
         if (excuseDtos.size() == 0) {
-            event.reply("There are no approved excuses, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("There are no approved excuses, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        event.reply("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         stringBuilderList = new ArrayList<>();
         createAndAddStringBuilder();
         excuseDtos.forEach(excuseDto -> {
@@ -79,7 +79,7 @@ public class ExcuseCommand implements IMiscCommand {
             }
             sb.append(excuseString);
         });
-        stringBuilderList.forEach(sb -> event.reply(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay)));
+        stringBuilderList.forEach(sb -> event.getHook().sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay)));
     }
 
     private List<StringBuilder> createAndAddStringBuilder() {
@@ -94,9 +94,9 @@ public class ExcuseCommand implements IMiscCommand {
             if (!excuseById.isApproved()) {
                 excuseById.setApproved(true);
                 excuseService.updateExcuse(excuseById);
-                event.replyFormat("approved excuse '%s'.", excuseById.getExcuse()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("approved excuse '%s'.", excuseById.getExcuse()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else
-                event.reply("I've heard that excuse before, keep up.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessage("I've heard that excuse before, keep up.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else
             sendErrorMessage(event, deleteDelay);
     }
@@ -104,12 +104,12 @@ public class ExcuseCommand implements IMiscCommand {
     private void lookupExcuse(SlashCommandInteractionEvent event, Integer deleteDelay) {
         List<ExcuseDto> excuseDtos = excuseService.listApprovedGuildExcuses(event.getGuild().getIdLong());
         if (excuseDtos.size() == 0) {
-            event.reply("There are no approved excuses, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("There are no approved excuses, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         Random random = new Random();
         ExcuseDto excuseDto = excuseDtos.get(random.nextInt(excuseDtos.size()));
-        event.replyFormat("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
@@ -118,32 +118,32 @@ public class ExcuseCommand implements IMiscCommand {
         long guildId = event.getGuild().getIdLong();
         Optional<ExcuseDto> existingExcuse = excuseService.listAllGuildExcuses(guildId).stream().filter(excuseDto -> excuseDto.getExcuse().equals(excuseMessage)).findFirst();
         if (existingExcuse.isPresent()) {
-            event.reply("I've heard that one before, keep up.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("I've heard that one before, keep up.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         } else {
             ExcuseDto excuseDto = new ExcuseDto();
             excuseDto.setGuildId(guildId);
             excuseDto.setAuthor(author);
             excuseDto.setExcuse(excuseMessage);
             ExcuseDto newExcuse = excuseService.createNewExcuse(excuseDto);
-            event.replyFormat("Submitted new excuse '%s' - %s with id '%d' for approval.", excuseMessage, author, newExcuse.getId()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessageFormat("Submitted new excuse '%s' - %s with id '%d' for approval.", excuseMessage, author, newExcuse.getId()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
     }
 
     private void lookuppendingExcuses(SlashCommandInteractionEvent event, Long guildId, Integer deleteDelay) {
         List<ExcuseDto> excuseDtos = excuseService.listPendingGuildExcuses(guildId);
         if (excuseDtos.size() == 0) {
-            event.reply("There are no excuses pending approval, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("There are no excuses pending approval, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         Random random = new Random();
         ExcuseDto excuseDto = excuseDtos.get(random.nextInt(excuseDtos.size()));
-        event.replyFormat("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     private void deleteExcuse(UserDto requestingUserDto, SlashCommandInteractionEvent event, int excuseId, Integer deleteDelay) {
         if (requestingUserDto.isSuperUser()) {
             excuseService.deleteExcuseById(excuseId);
-            event.replyFormat("deleted excuse with id '%d'.", excuseId).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("deleted excuse with id '%d'.", excuseId).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else sendErrorMessage(event, deleteDelay);
     }
 

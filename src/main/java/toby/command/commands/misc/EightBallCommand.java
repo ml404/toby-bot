@@ -57,11 +57,11 @@ public class EightBallCommand implements IMiscCommand {
             Long socialCredit = requestingUserDto.getSocialCredit();
             int deductedSocialCredit = -5 * choice;
             requestingUserDto.setSocialCredit(socialCredit + deductedSocialCredit);
-            event.replyFormat("Deducted: %d social credit.", deductedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             userService.updateUser(requestingUserDto);
             return;
         }
-        event.replyFormat("MAGIC 8-BALL SAYS: %s.", response).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override

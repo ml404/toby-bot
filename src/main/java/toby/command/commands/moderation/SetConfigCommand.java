@@ -36,12 +36,12 @@ public class SetConfigCommand implements IModerationCommand {
         final Member member = ctx.getMember();
 
         if (!member.isOwner()) {
-            event.reply("This is currently reserved for the owner of the server only, this may change in future").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         if (args.isEmpty()) {
-            event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         validateArgumentsAndUpdateConfigs(event, deleteDelay);
@@ -52,7 +52,7 @@ public class SetConfigCommand implements IModerationCommand {
         String configNameString = event.getOption(CONFIG_NAME).getAsString().toUpperCase();
 
         if (configNameString.isEmpty()) {
-            event.reply(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -71,7 +71,7 @@ public class SetConfigCommand implements IModerationCommand {
     private void setDeleteDelay(SlashCommandInteractionEvent event, Integer deleteDelay) {
         String newDefaultDelay = event.getOption("Config Value").getAsString();
         if (!newDefaultDelay.matches("\\d+")) {
-            event.reply("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         String deletePropertyName = DELETE_DELAY.getConfigValue();
