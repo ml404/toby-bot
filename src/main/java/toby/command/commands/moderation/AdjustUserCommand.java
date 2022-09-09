@@ -12,6 +12,7 @@ import toby.jpa.service.IUserService;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static toby.helpers.UserDtoHelper.userAdjustmentValidation;
 import static toby.jpa.dto.ConfigDto.Configurations.values;
@@ -45,9 +46,9 @@ public class AdjustUserCommand implements IModerationCommand {
                 boolean requesterCanAdjustPermissions = userAdjustmentValidation(requestingUserDto, targetUserDto) || member.isOwner();
                 if (requesterCanAdjustPermissions && isSameGuild) {
                     validateArgumentsAndUpdateUser(event, targetUserDto, member.isOwner(), deleteDelay);
-                    event.replyFormat("Updated user %s's permissions", targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    event.getHook().sendMessageFormat("Updated user %s's permissions", targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 } else
-                    event.replyFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
             } else {
                 createNewUser(event, targetMember, deleteDelay);
@@ -58,15 +59,16 @@ public class AdjustUserCommand implements IModerationCommand {
     }
 
     private void validateArgumentsAndUpdateUser(SlashCommandInteractionEvent event, UserDto targetUserDto, Boolean isOwner, int deleteDelay) {
-        String permissionName = event.getOption(PERMISSION_NAME).getAsString();
-        boolean permissionValue = event.getOption(PERMISSION_VALUE).getAsBoolean();
+        Optional<String> permissionNameOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME).getAsString());
+        Optional<Boolean> permissionValueOptional = Optional.ofNullable(event.getOption(PERMISSION_VALUE).getAsBoolean());
         
 
-        if (permissionName.isEmpty()) {
-            event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        if (permissionNameOptional.isEmpty() || permissionValueOptional.isEmpty()) {
+            event.getHook().sendMessage("You did not mention a valid permission to update, or give it a value").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-
+        String permissionName = permissionNameOptional.get();
+        Boolean permissionValue = permissionValueOptional.get();
         if (permissionName.equals(UserDto.Permissions.MUSIC.name()))
             targetUserDto.setMusicPermission(permissionValue);
         if (permissionName.equals(UserDto.Permissions.DIG.name()))
@@ -85,7 +87,7 @@ public class AdjustUserCommand implements IModerationCommand {
         newDto.setDiscordId(targetMember.getIdLong());
         newDto.setGuildId(targetMember.getGuild().getIdLong());
         userService.createNewUser(newDto);
-        event.replyFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Nullable
@@ -95,17 +97,17 @@ public class AdjustUserCommand implements IModerationCommand {
             return null;
         }
 
-        List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();
-        if (mentionedMembers.isEmpty()) {
+        Optional<List<Member>> mentionedMembersOptional = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers());
+        if (mentionedMembersOptional.isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more Users to adjust permissions of").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
-        if (event.getOption(PERMISSION_NAME).getAsString().isEmpty()) {
+        if (Optional.ofNullable(event.getOption(PERMISSION_NAME).getAsString()).isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more permissions to adjust of the user you've mentioned.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
-        return mentionedMembers;
+        return mentionedMembersOptional.get();
     }
 
     @Override

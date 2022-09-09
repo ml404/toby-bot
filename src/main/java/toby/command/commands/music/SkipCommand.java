@@ -11,6 +11,7 @@ import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
+import java.util.Optional;
 
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 import static toby.helpers.MusicPlayerHelper.nowPlaying;
@@ -33,8 +34,7 @@ public class SkipCommand implements IMusicCommand {
             event.getHook().sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        int skipValue = event.getOption(SKIP).getAsInt();
-        int tracksToSkip = skipValue !=0 ? skipValue : 1;
+        int tracksToSkip = Optional.ofNullable(event.getOption(SKIP).getAsInt()).orElse(1);
 
         if (tracksToSkip < 0) {
             event.getHook().sendMessage("You're not too bright, but thanks for trying").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -46,7 +46,7 @@ public class SkipCommand implements IMusicCommand {
                 musicManager.getScheduler().nextTrack();
             }
             musicManager.getScheduler().setLooping(false);
-            event.replyFormat("Skipped %d track(s)", tracksToSkip).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             nowPlaying(event, musicManager.getAudioPlayer().getPlayingTrack(), deleteDelay);
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);

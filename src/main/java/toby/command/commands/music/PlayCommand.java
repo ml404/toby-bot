@@ -10,6 +10,7 @@ import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
+import java.util.Optional;
 
 import static toby.helpers.MusicPlayerHelper.*;
 
@@ -31,8 +32,7 @@ public class PlayCommand implements IMusicCommand {
             return;
         }
 
-        String type = event.getOption(TYPE).getAsString();
-        String link = event.getOption(LINK).getAsString();
+        String type = Optional.ofNullable(event.getOption(TYPE).getAsString()).orElse("link");
 
         if (type.isEmpty()) {
             event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -43,11 +43,12 @@ public class PlayCommand implements IMusicCommand {
         Guild guild = event.getGuild();
         int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
-        Long startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION).getAsLong());
+        Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION).getAsLong()).orElse(0L));
 
         if (type.equals(INTRO)) {
             playUserIntro(requestingUserDto, guild, event, deleteDelay, startPosition);
         } else {
+            String link = Optional.ofNullable(event.getOption(LINK).getAsString()).orElse("");
             if (link.contains("youtube") && !isUrl(link)) {
                 link = "ytsearch:" + link;
             }

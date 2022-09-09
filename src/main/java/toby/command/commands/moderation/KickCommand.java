@@ -10,6 +10,7 @@ import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
+import java.util.Optional;
 
 public class KickCommand implements IModerationCommand {
 
@@ -22,23 +23,23 @@ public class KickCommand implements IModerationCommand {
         event.deferReply().queue();
         final Member member = ctx.getMember();
 
-        List<Member> memberOptions = event.getOption(USERS).getMentions().getMembers();
-        if (memberOptions.isEmpty()) {
+        Optional<List<Member>> optionalMemberList = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers());
+        if (optionalMemberList.isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
-        memberOptions.forEach(target -> {
+        optionalMemberList.get().forEach(target -> {
 
             if (!member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS)) {
-                event.replyFormat("You can't kick %s", target).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessageFormat("You can't kick %s", target).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 return;
             }
 
             final Member botMember = ctx.getSelfMember();
 
             if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
-                event.replyFormat("I'm not allowed to kick %s", target).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessageFormat("I'm not allowed to kick %s", target).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 return;
             }
 
@@ -47,7 +48,7 @@ public class KickCommand implements IModerationCommand {
                     .reason("because you told me to.")
                     .queue(
                             (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
-                            (error) -> event.replyFormat("Could not kick %s", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
+                            (error) -> event.getHook().sendMessageFormat("Could not kick %s", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                     );
         });
     }

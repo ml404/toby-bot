@@ -44,7 +44,7 @@ public class JoinCommand implements IMusicCommand {
             ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
             int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
             PlayerManager.getInstance().getMusicManager(event.getGuild()).getAudioPlayer().setVolume(defaultVolume);
-            event.replyFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 

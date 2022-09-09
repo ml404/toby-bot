@@ -60,7 +60,7 @@ public class LeaveCommand implements IMusicCommand {
             musicManager.getAudioPlayer().stopTrack();
             musicManager.getAudioPlayer().setVolume(defaultVolume);
             audioManager.closeAudioConnection();
-            event.replyFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }

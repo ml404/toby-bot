@@ -34,7 +34,7 @@ public interface ICommand {
     }
 
     default void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.replyFormat(getErrorMessage(), event.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat(getErrorMessage(), event.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     default SlashCommandData getSlashCommand(){

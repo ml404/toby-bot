@@ -10,6 +10,7 @@ import toby.jpa.dto.UserDto;
 import toby.managers.CommandManager;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class HelpCommand implements IMiscCommand {
@@ -44,15 +45,15 @@ public class HelpCommand implements IMiscCommand {
             manager.getFetchCommands().forEach(commandConsumer);
 
 
-            event.replyFormat(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        String search = event.getOption("Command").getAsString();
-        ICommand command = manager.getCommand(search);
+        Optional<String> searchOptional = Optional.ofNullable(event.getOption("Command").getAsString());
+        ICommand command = searchOptional.isPresent() ? manager.getCommand(searchOptional.get()) : null;
 
         if (command == null) {
-            event.getHook().sendMessage("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Nothing found for " + searchOptional.get()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 

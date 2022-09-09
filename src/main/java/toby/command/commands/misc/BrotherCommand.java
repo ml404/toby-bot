@@ -1,6 +1,7 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -13,6 +14,7 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.IBrotherService;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public class BrotherCommand implements IMiscCommand {
@@ -36,7 +38,8 @@ public class BrotherCommand implements IMiscCommand {
     }
 
     private void determineBrother(SlashCommandInteractionEvent event, Emoji tobyEmote, int deleteDelay) {
-        if (event.getOption(BROTHER).getMentions().getMembers().isEmpty()) {
+        Optional<Mentions> optionalMentions = Optional.ofNullable(event.getOption(BROTHER).getMentions());
+        if (optionalMentions.isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(event.getUser().getIdLong());
             if (brother!=null) {
                 event.getHook().sendMessageFormat("Of course you're my brother %s.", brother.getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));

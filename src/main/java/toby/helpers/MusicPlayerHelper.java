@@ -50,7 +50,7 @@ public class MusicPlayerHelper {
         event.getHook().sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    public static Long adjustTrackPlayingTimes(long startTime) {
+    public static Long adjustTrackPlayingTimes(Long startTime) {
         Map<String, Long> adjustmentMap = new HashMap<>();
 
         if (startTime > 0L) adjustmentMap.put(MusicDto.Adjustment.START.name(), startTime);

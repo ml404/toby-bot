@@ -41,7 +41,7 @@ public class PauseCommand implements IMusicCommand {
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 audioPlayer.setPaused(true);
             } else {
-                event.replyFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);

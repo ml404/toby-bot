@@ -14,6 +14,7 @@ import toby.jpa.service.IConfigService;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static toby.jpa.dto.ConfigDto.Configurations.*;
 
@@ -49,14 +50,14 @@ public class SetConfigCommand implements IModerationCommand {
 
 
     private void validateArgumentsAndUpdateConfigs(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String configNameString = event.getOption(CONFIG_NAME).getAsString().toUpperCase();
+        Optional<String> configNameStringOptional = Optional.ofNullable(event.getOption(CONFIG_NAME).getAsString().toUpperCase());
 
-        if (configNameString.isEmpty()) {
+        if (configNameStringOptional.isEmpty()) {
             event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        ConfigDto.Configurations configName = valueOf(configNameString);
+        ConfigDto.Configurations configName = valueOf(configNameStringOptional.get());
 
         switch (configName) {
             case PREFIX -> setPrefix(event, deleteDelay);
@@ -69,7 +70,7 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     private void setDeleteDelay(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newDefaultDelay = event.getOption("Config Value").getAsString();
+        String newDefaultDelay = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).orElse("");
         if (!newDefaultDelay.matches("\\d+")) {
             event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
@@ -82,11 +83,11 @@ public class SetConfigCommand implements IModerationCommand {
         } else {
             configService.createNewConfig(newConfigDto);
         }
-        event.replyFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     private void setVolume(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newDefaultVolume = event.getOption("Config Value").getAsString();
+        String newDefaultVolume = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).get();
         String volumePropertyName = VOLUME.getConfigValue();
         ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
         ConfigDto newConfigDto = new ConfigDto(volumePropertyName, newDefaultVolume, event.getGuild().getId());
@@ -95,11 +96,11 @@ public class SetConfigCommand implements IModerationCommand {
         } else {
             configService.createNewConfig(newConfigDto);
         }
-        event.replyFormat("Set default volume to '%s'", newDefaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("Set default volume to '%s'", newDefaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     private void setMove(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newDefaultMoveChannel = event.getOption("Config Value").getAsString();
+        String newDefaultMoveChannel = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).get();
         boolean newDefaultVoiceChannelExists = !event.getGuild().getVoiceChannelsByName(newDefaultMoveChannel, true).isEmpty();
         if (newDefaultVoiceChannelExists) {
             String movePropertyName = MOVE.getConfigValue();
@@ -110,13 +111,13 @@ public class SetConfigCommand implements IModerationCommand {
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            event.replyFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         }
     }
 
     private void setPrefix(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newPrefix = event.getOption("Config Value").getAsString();
+        String newPrefix = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).get();
         newPrefix = newPrefix.length() > 2 ? newPrefix.substring(0, 2) : newPrefix;
         if (prefixValidation(newPrefix)) {
             String prefixPropertyName = PREFIX.getConfigValue();
@@ -128,7 +129,7 @@ public class SetConfigCommand implements IModerationCommand {
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            event.replyFormat("Set prefix to '%s'", newPrefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Set prefix to '%s'", newPrefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         }
     }

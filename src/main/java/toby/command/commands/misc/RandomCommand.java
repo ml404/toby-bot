@@ -8,6 +8,7 @@ import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 public class RandomCommand implements IMiscCommand {
@@ -23,7 +24,7 @@ public class RandomCommand implements IMiscCommand {
         if (ctx.getEvent().getOptions().isEmpty()) {
             event.getHook().sendMessage(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
-        List<String> args = List.of(event.getOption(LIST).getAsString().split(","));
+        List<String> args = List.of(Optional.ofNullable(event.getOption(LIST).getAsString()).orElse("").split(","));
         event.getHook().sendMessage(getRandomElement(args)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
@@ -44,6 +45,6 @@ public class RandomCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from"));
+        return List.of(new OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from", true));
     }
 }

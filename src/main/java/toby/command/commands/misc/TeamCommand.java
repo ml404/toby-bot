@@ -1,9 +1,6 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.GuildChannel;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.VoiceChannel;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -13,9 +10,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TeamCommand implements IMiscCommand {
@@ -32,7 +27,7 @@ public class TeamCommand implements IMiscCommand {
         cleanupTemporaryChannels(event.getGuild().getChannels());
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         List<OptionMapping> args = event.getOptions();
-        if (event.getOption("cleanup").getAsBoolean()) {
+        if (event.getOption(CLEANUP).getAsBoolean()) {
             return;
         }
         if (args.isEmpty()) {
@@ -40,10 +35,8 @@ public class TeamCommand implements IMiscCommand {
             return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
-        List<Member> mentionedMembers = event.getOption(TEAM_MEMBERS).getMentions().getMembers();
-        int teamSize = event.getOption(TEAM_SIZE).getAsInt();
-        int defaultNumberOfTeams = 2;
-        int listsToInitialise = teamSize != 0 ? teamSize : defaultNumberOfTeams;
+        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(TEAM_MEMBERS).getMentions().getMembers()).orElse(Collections.emptyList());
+        int listsToInitialise = Optional.ofNullable(event.getOption(TEAM_SIZE).getAsInt()).orElse(2);
         listsToInitialise = Math.min(listsToInitialise, mentionedMembers.size());
         List<List<Member>> teams = split(mentionedMembers, listsToInitialise);
 
@@ -56,8 +49,8 @@ public class TeamCommand implements IMiscCommand {
             VoiceChannel createdVoiceChannel = voiceChannel.setBitrate(guild.getMaxBitrate()).complete();
             teams.get(i).forEach(target -> guild.moveVoiceMember(target, createdVoiceChannel)
                     .queue(
-                            (__) -> event.replyFormat("Moved %s to '%s'", target.getEffectiveName(), createdVoiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
-                            (error) -> event.replyFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
+                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), createdVoiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
+                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
                     ));
         }
         event.getHook().sendMessage(sb.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
