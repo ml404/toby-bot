@@ -75,7 +75,7 @@ public class CommandManagerTest {
                 ChCommand.class,
                 ShhCommand.class,
                 TalkCommand.class,
-                PollCommand.class,
+//                PollCommand.class,
                 JoinCommand.class,
                 LeaveCommand.class,
                 PlayCommand.class,
@@ -91,7 +91,7 @@ public class CommandManagerTest {
                 ShuffleCommand.class,
                 AdjustUserCommand.class,
                 IntroSongCommand.class,
-                EventWaiterCommand.class,
+//                EventWaiterCommand.class,
                 UserInfoCommand.class,
                 RandomCommand.class,
                 Kf2RandomMapCommand.class,
@@ -103,6 +103,7 @@ public class CommandManagerTest {
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
-        assertEquals(36, commandManager.getAllCommands().size());
+        assertEquals(34, commandManager.getAllCommands().size());
+        assertEquals(34, commandManager.getAllSlashCommands().size());
     }
 }

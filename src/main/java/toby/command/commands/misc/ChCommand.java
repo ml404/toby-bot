@@ -1,7 +1,8 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -12,31 +13,31 @@ import java.util.stream.Collectors;
 
 public class ChCommand implements IMiscCommand {
 
+    private final String MESSAGE = "message";
+
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
-        final Message message = ctx.getMessage();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
+        String message = event.getOption(MESSAGE).getAsString();
 
-        String newMessage = Arrays.stream(message.getContentRaw().split(" ")).map(s -> {
-            if (s.equalsIgnoreCase(String.format("%sch", prefix))) {
-                return "";
-            } else {
-                int vowelIndex = 0;
-                for (int i = 0; i < s.length(); i++) {
-                    char c = s.charAt(i);
-                    if (isVowel(String.valueOf(c))) {
-                        vowelIndex = i;
-                        break;
+        String newMessage = Arrays.stream(message.split(" ")).map(s -> {
+                    int vowelIndex = 0;
+                    for (int i = 0; i < s.length(); i++) {
+                        char c = s.charAt(i);
+                        if (isVowel(String.valueOf(c))) {
+                            vowelIndex = i;
+                            break;
+                        }
                     }
+                    if (s.substring(vowelIndex).toLowerCase().startsWith("ink")) {
+                        return "gamerword";
+                    } else return "ch" + s.substring(vowelIndex).toLowerCase();
                 }
-                if (s.substring(vowelIndex).toLowerCase().startsWith("ink")) {
-                    return "gamerword";
-                } else return "ch" + s.substring(vowelIndex).toLowerCase();
-            }
-        }).collect(Collectors.joining(" "));
+        ).collect(Collectors.joining(" "));
 
-        channel.sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        event.getHook().sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
 
@@ -46,13 +47,17 @@ public class ChCommand implements IMiscCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Allow me to translate whatever you type.\n" +
-                String.format("Usage: `%sch example message here`", prefix);
+    public String getDescription() {
+        return "Allow me to 'ch' whatever you type.";
     }
 
     private boolean isVowel(String s) {
         List<String> vowels = List.of("a", "e", "i", "o", "u");
         return vowels.contains(s.toLowerCase());
+    }
+
+    @Override
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.STRING, MESSAGE, "Message to 'Ch'", true));
     }
 }

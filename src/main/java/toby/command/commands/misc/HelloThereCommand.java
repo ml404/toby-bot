@@ -1,6 +1,9 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -21,27 +24,28 @@ public class HelloThereCommand implements IMiscCommand {
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        TextChannel channel = ctx.getChannel();
-        List<String> args = ctx.getArgs();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
+        List <OptionMapping> args = ctx.getEvent().getOptions();
 
-        String dateformat = configService.getConfigByName("DATEFORMAT", ctx.getGuild().getId()).getValue();
+        String dateformat = configService.getConfigByName("DATEFORMAT", event.getGuild().getId()).getValue();
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateformat);
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 
-        if (args.size() == 0) {
-            channel.sendMessage(getHelp(prefix)).queue();
+        if (args.isEmpty()) {
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else
             try {
-                LocalDate dateGiven = LocalDate.parse(args.get(0), dateTimeFormatter);
+                LocalDate dateGiven = LocalDate.parse(event.getOption("date").getAsString(), dateTimeFormatter);
                 if (dateGiven.isBefore(EP3Date)) {
-                    channel.sendMessage("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessage("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 } else {
-                    channel.sendMessage("General Kenobi.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessage("General Kenobi.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 }
             } catch (DateTimeParseException e) {
-                channel.sendMessage(String.format("I don't recognise the format of the date you gave me, please use this format %s", dateformat)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.replyFormat("I don't recognise the format of the date you gave me, please use this format %s", dateformat).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
     }
@@ -53,11 +57,13 @@ public class HelloThereCommand implements IMiscCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return  "Hmm...\n" +
-                "As I am a bot I have a bad understanding of time, can you please let me know what the date is so I can greet you appropriately.\n" +
-                String.format("Usage: `%shellothere yyyy/MM/dd`\n", prefix) +
-                String.format("e.g. `%shellothere 2005/05/18`\n", prefix);
+    public String getDescription() {
+        return  "I have a bad understanding of time, let me know what the date is so I can greet you appropriately";
 
+    }
+
+    @Override
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.STRING, "date", "What is the date you would like to say hello to TobyBot for?"));
     }
 }

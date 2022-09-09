@@ -4,64 +4,61 @@ package toby.command.commands.music;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
-import java.util.Arrays;
 import java.util.List;
 
 
 public class SetVolumeCommand implements IMusicCommand {
 
-    @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    private final String VOLUME = "volume";
 
-        final Member self = ctx.getSelfMember();
-        final GuildVoiceState selfVoiceState = self.getVoiceState();
+    @Override
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
+        ICommand.deleteAfter(event.getHook(), deleteDelay);
+
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
             return;
         }
-        if (ctx.getArgs().isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            return;
-        }
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
+
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         final Member member = ctx.getMember();
-        setNewVolume(ctx, prefix, channel, member, deleteDelay);
+        setNewVolume(event, member, deleteDelay);
     }
 
 
-    private void setNewVolume(CommandContext ctx, String prefix, TextChannel channel, Member member, Integer deleteDelay) {
-        Guild guild = ctx.getGuild();
-        boolean validVolumeArg = ctx.getArgs().get(0).matches("\\d+");
-        if (validVolumeArg) {
-            int volume = Integer.parseInt(ctx.getArgs().get(0));
+    private void setNewVolume(SlashCommandInteractionEvent event, Member member, Integer deleteDelay) {
+        Guild guild = event.getGuild();
+        int volumeArg = event.getOption(VOLUME).getAsInt();
+        if (volumeArg > 0) {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
-                if (volume < 1 || volume > 100) {
-                    channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                if (volumeArg > 100) {
+                    event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
                 int oldVolume = audioPlayer.getVolume();
-                if (volume == oldVolume) {
-                    channel.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                if (volumeArg == oldVolume) {
+                    event.replyFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
-                audioPlayer.setVolume(volume);
-                channel.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                audioPlayer.setVolume(volumeArg);
+                event.replyFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
-                channel.sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.replyFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
-        } else channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        } else event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 
@@ -71,16 +68,13 @@ public class SetVolumeCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Set the volume of the audio player for the server to a percent value between 1 and 100\n" +
-                String.format("Usage: `%ssetvolume 10`\n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "Set the volume of the audio player for the server to a percent value (between 1 and 100)";
 
     }
 
     @Override
-    public List<String> getAliases() {
-        return Arrays.asList("volume", "vol");
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.INTEGER, VOLUME, "Volume value between 1-100 to set the audio to", true));
     }
-
 }

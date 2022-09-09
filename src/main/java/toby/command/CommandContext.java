@@ -1,18 +1,14 @@
 package toby.command;
 
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.commands.ICommandContext;
 
-import java.util.List;
-
 public class CommandContext implements ICommandContext {
-    private final MessageReceivedEvent  event;
-    private final List<String> args;
+    private final SlashCommandInteractionEvent event;
 
-    public CommandContext(MessageReceivedEvent event, List<String> args) {
+    public CommandContext(SlashCommandInteractionEvent event) {
         this.event = event;
-        this.args = args;
     }
 
     @Override
@@ -21,11 +17,8 @@ public class CommandContext implements ICommandContext {
     }
 
     @Override
-    public MessageReceivedEvent getEvent() {
+    public SlashCommandInteractionEvent getEvent() {
         return this.event;
     }
 
-    public List<String> getArgs() {
-        return this.args;
-    }
 }

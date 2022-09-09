@@ -6,7 +6,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -17,22 +17,23 @@ import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppabl
 
 public class PauseCommand implements IMusicCommand {
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
             return;
         }
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         final Member member = ctx.getMember();
-        Guild guild = ctx.getGuild();
+        Guild guild = event.getGuild();
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
             AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
             if (!audioPlayer.isPaused()) {
                 AudioTrack track = audioPlayer.getPlayingTrack();
-                channel.sendMessage("Pausing: `")
+                event.getHook().sendMessage("Pausing: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
@@ -40,10 +41,10 @@ public class PauseCommand implements IMusicCommand {
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 audioPlayer.setPaused(true);
             } else {
-                channel.sendMessageFormat("The audio player on this server is already paused. Please try using %sresume", prefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.replyFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         } else {
-            sendDeniedStoppableMessage(channel, musicManager, deleteDelay);
+            sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
     }
 
@@ -53,9 +54,8 @@ public class PauseCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Pauses the current song if one is playing\n" +
-                String.format("Usage: `%spause`", prefix);
+    public String getDescription() {
+        return "Pauses the current song if one is playing";
     }
 
 }

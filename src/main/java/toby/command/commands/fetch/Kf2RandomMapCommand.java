@@ -1,6 +1,6 @@
 package toby.command.commands.fetch;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.misc.RandomCommand;
@@ -9,7 +9,6 @@ import toby.helpers.WikiFetcher;
 import toby.jpa.dto.UserDto;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 public class Kf2RandomMapCommand implements IFetchCommand {
@@ -25,15 +24,17 @@ public class Kf2RandomMapCommand implements IFetchCommand {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> kf2Maps = wikiFetcher.fetchFromWiki(cacheName, kf2WebUrl, className, "b");
-            channel.sendMessage(RandomCommand.getRandomElement(kf2Maps)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.deferReply().queue();
+            event.getHook().sendMessage(RandomCommand.getRandomElement(kf2Maps)).queue(message -> ICommand.deleteAfter(event.getHook(), deleteDelay));
         } catch (IOException ignored) {
-            channel.sendMessage("Huh, the website I pull data from must have returned something unexpected.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Huh, the website I pull data from must have returned something unexpected.").setEphemeral(true).queue(message -> ICommand.deleteAfter(event.getHook(), deleteDelay));
         }
     }
 
@@ -43,14 +44,8 @@ public class Kf2RandomMapCommand implements IFetchCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "return a random kf2 map \n" +
-                String.format("Usage: %skf2", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "return a random kf2 map";
     }
 
-    @Override
-    public List<String> getAliases() {
-        return Arrays.asList("kf2map", "kfmap", "kfrand");
-    }
 }

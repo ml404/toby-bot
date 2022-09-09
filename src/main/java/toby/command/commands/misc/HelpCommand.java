@@ -1,35 +1,39 @@
 package toby.command.commands.misc;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.managers.CommandManager;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class HelpCommand implements IMiscCommand {
 
     private final CommandManager manager;
+    private final String COMMAND = "command";
 
     public HelpCommand(CommandManager manager) {
         this.manager = manager;
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
 
-        List<String> args = ctx.getArgs();
-        TextChannel channel = ctx.getChannel();
+        List<OptionMapping> args = ctx.getEvent().getOptions();
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
 
         if (args.isEmpty()) {
             StringBuilder builder = new StringBuilder();
-            Consumer<ICommand> commandConsumer = (command) -> builder.append('`').append(prefix).append(command.getName()).append('`').append(String.format(" Aliases are: '%s'", String.join(",", command.getAliases()))).append("\n");
+            Consumer<ICommand> commandConsumer = (command) -> builder.append('`').append("/").append(command.getName()).append('`').append("\n");
 
-            builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", prefix));
+            builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", "/"));
             builder.append("**Music Commands**:\n");
             manager.getMusicCommands().forEach(commandConsumer);
             builder.append("**Miscellaneous Commands**:\n");
@@ -40,19 +44,19 @@ public class HelpCommand implements IMiscCommand {
             manager.getFetchCommands().forEach(commandConsumer);
 
 
-            channel.sendMessage(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        String search = args.get(0);
+        String search = event.getOption("Command").getAsString();
         ICommand command = manager.getCommand(search);
 
         if (command == null) {
-            channel.sendMessage("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        channel.sendMessage(command.getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(command.getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override
@@ -61,14 +65,12 @@ public class HelpCommand implements IMiscCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Shows the list with commands in the bot\n" +
-                String.format("Usage: `%shelp commandName`\n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "get help with the command you give this command";
     }
 
     @Override
-    public List<String> getAliases() {
-        return Arrays.asList("commands", "cmds", "commandlist");
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.STRING, COMMAND, "Command you would like help with"));
     }
 }

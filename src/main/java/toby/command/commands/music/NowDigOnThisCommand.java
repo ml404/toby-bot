@@ -1,15 +1,15 @@
 package toby.command.commands.music;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.helpers.URLHelper;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
 import java.util.List;
 
 import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
@@ -17,32 +17,36 @@ import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
 
 public class NowDigOnThisCommand implements IMusicCommand {
 
+    private final String LINK = "link";
+    private final String START_POSITION = "start";
+
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         if (requestingUserDto.hasDigPermission()) {
-            if (ctx.getArgs().isEmpty()) {
-                channel.sendMessageFormat("Correct usage is `%snowdigonthis <youtube link>`", prefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            String link = event.getOption(LINK).getAsString();
+            if (link== null) {
+                event.replyFormat("Correct usage is `%snowdigonthis <youtube link>`", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
             }
-            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
-            String link = String.join(" ", ctx.getArgs());
-            if (link.contains("youtube") && !isUrl(link)) link = "ytsearch:" + link;
-            Long startPosition = adjustTrackPlayingTimes(ctx.getArgs());
-            PlayerManager.getInstance().loadAndPlay(channel, link, false, deleteDelay, startPosition);
+            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
+            if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + link;
+            Long startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION).getAsLong());
+            PlayerManager.getInstance().loadAndPlay(event, link, false, deleteDelay, startPosition);
         } else
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
     }
 
 
-    public static void sendDeniedStoppableMessage(TextChannel channel, GuildMusicManager musicManager, Integer deleteDelay) {
+    public static void sendDeniedStoppableMessage(SlashCommandInteractionEvent event, GuildMusicManager musicManager, Integer deleteDelay) {
         if (musicManager.getScheduler().getQueue().size() > 1) {
-            channel.sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else {
             long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
             String songDuration = QueueCommand.formatTime(duration);
-            channel.sendMessage(String.format("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 
@@ -52,15 +56,8 @@ public class NowDigOnThisCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Plays a song\n" +
-                String.format("Usage: `%snowdigonthis <youtube link>` \n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
-    }
-
-    @Override
-    public List<String> getAliases() {
-        return Arrays.asList("ndot", "dig");
+    public String getDescription() {
+        return "Plays a song which cannot be skipped";
     }
 
     @Override
@@ -69,16 +66,14 @@ public class NowDigOnThisCommand implements IMusicCommand {
     }
 
     @Override
-    public void sendErrorMessage(CommandContext ctx, TextChannel channel, Integer deleteDelay) {
-        channel.sendMessageFormat(getErrorMessage(), ctx.getEvent().getMember().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        event.replyFormat(getErrorMessage(), event.getMember().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    private boolean isUrl(String url) {
-        try {
-            new URI(url);
-            return true;
-        } catch (URISyntaxException e) {
-            return false;
-        }
+    @Override
+    public List<OptionData> getOptionData() {
+        OptionData linkArg = new OptionData(OptionType.STRING, LINK, "Link to play that cannot be stopped unless requested by a super user", true);
+        OptionData startPositionArg = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds");
+        return List.of(linkArg, startPositionArg);
     }
 }

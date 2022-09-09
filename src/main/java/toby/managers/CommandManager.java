@@ -1,7 +1,9 @@
 package toby.managers;
 
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
@@ -20,8 +22,10 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
 
 import javax.annotation.Nullable;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import static toby.helpers.UserDtoHelper.calculateUserDto;
@@ -33,6 +37,7 @@ public class CommandManager {
     private final IBrotherService brotherService;
     private final IUserService userService;
     private final List<ICommand> commands = new ArrayList<>();
+    private final List<CommandData> slashCommands = new ArrayList<>();
     private final IMusicFileService musicFileService;
     private final IExcuseService excuseService;
 
@@ -58,7 +63,8 @@ public class CommandManager {
         addCommand(new UserInfoCommand(userService));
         addCommand(new RandomCommand());
         addCommand(new TeamCommand());
-        addCommand(new EventWaiterCommand(waiter));
+        //This was an example command, replace with JDA5 style with buttons later
+        //        addCommand(new EventWaiterCommand(waiter));
         addCommand(new ExcuseCommand(excuseService));
         addCommand(new EightBallCommand(userService));
 
@@ -68,7 +74,8 @@ public class CommandManager {
         addCommand(new MoveCommand(configService));
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
-        addCommand(new PollCommand());
+//       look at how it's done JDA5
+//       addCommand(new PollCommand());
         addCommand(new AdjustUserCommand(userService));
         addCommand(new SocialCreditCommand(userService));
 
@@ -95,11 +102,17 @@ public class CommandManager {
         if (nameFound) {
             throw new IllegalArgumentException("A command with this name is already present");
         }
-
         commands.add(cmd);
+        SlashCommandData slashCommand = cmd.getSlashCommand();
+        slashCommand.addOptions(cmd.getOptionData());
+        slashCommands.add(slashCommand);
     }
 
-    public List<ICommand> getAllCommands() {
+    public List<CommandData> getAllSlashCommands() {
+        return slashCommands;
+    }
+
+    public List<ICommand> getAllCommands(){
         return commands;
     }
 
@@ -124,7 +137,7 @@ public class CommandManager {
         String searchLower = search.toLowerCase();
 
         for (ICommand cmd : this.commands) {
-            if (cmd.getName().equals(searchLower) || cmd.getAliases().contains(searchLower)) {
+            if (cmd.getName().equals(searchLower)) {
                 return cmd;
             }
         }
@@ -132,31 +145,22 @@ public class CommandManager {
         return null;
     }
 
-    public void handle(MessageReceivedEvent event) {
-        String prefix = configService.getConfigByName(ConfigDto.Configurations.PREFIX.getConfigValue(), event.getGuild().getId()).getValue();
+    public void handle(SlashCommandInteractionEvent event) {
         Integer deleteDelay = Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId()).getValue());
-
-        String[] split = event.getMessage().getContentRaw()
-                .replaceFirst("(?i)" + Pattern.quote(prefix), "")
-                .split("\\s+");
 
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
         int introVolume = Integer.parseInt(defaultVolume);
 
-        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(),event.getAuthor().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
-        String invoke = split[0].toLowerCase();
+        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(), event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
+        String invoke = event.getName().toLowerCase();
         ICommand cmd = this.getCommand(invoke);
 
         if (cmd != null) {
             event.getChannel().sendTyping().queue();
-            List<String> args = Arrays.asList(split).subList(1, split.length);
-
-            CommandContext ctx = new CommandContext(event, args);
-            cmd.handle(ctx, prefix, requestingUserDto, deleteDelay);
+            CommandContext ctx = new CommandContext(event);
+            cmd.handle(ctx, requestingUserDto, deleteDelay);
             attributeSocialCredit(ctx, userService, requestingUserDto, deleteDelay);
-        } else {
-            getCommand("help");
         }
     }
 
@@ -167,6 +171,6 @@ public class CommandManager {
         int awardedSocialCredit = socialCredit * 5;
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
-        ctx.getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        ctx.getEvent().replyFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 }

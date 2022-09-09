@@ -1,6 +1,6 @@
 package toby.command.commands.fetch;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.misc.RandomCommand;
@@ -9,7 +9,6 @@ import toby.helpers.WikiFetcher;
 import toby.jpa.dto.UserDto;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 public class DbdRandomKillerCommand implements IFetchCommand {
@@ -26,16 +25,17 @@ public class DbdRandomKillerCommand implements IFetchCommand {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery);
-            channel.sendMessage(RandomCommand.getRandomElement(dbdKillers)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat(RandomCommand.getRandomElement(dbdKillers)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         } catch (IOException ignored) {
-            channel.sendMessage("Huh, the website I pull data from must have returned something unexpected.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
         }
     }
 
@@ -45,14 +45,8 @@ public class DbdRandomKillerCommand implements IFetchCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "return a random dead by daylight killer \n" +
-                String.format("Usage: %sdbd", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "return a random dead by daylight killer";
     }
 
-    @Override
-    public List<String> getAliases() {
-        return Arrays.asList("dbd", "killer");
-    }
 }

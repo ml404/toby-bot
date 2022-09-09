@@ -4,7 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.ICommand;
 
 import java.util.concurrent.BlockingQueue;
@@ -16,7 +16,7 @@ public class TrackScheduler extends AudioEventAdapter {
     private final AudioPlayer player;
     private BlockingQueue<AudioTrack> queue;
     private boolean isLooping;
-    private TextChannel currentTextChannel;
+    private SlashCommandInteractionEvent event;
     private Integer deleteDelay;
     private Integer previousVolume;
 
@@ -61,17 +61,17 @@ public class TrackScheduler extends AudioEventAdapter {
             PlayerManager.getInstance().setCurrentlyStoppable(true);
             if (player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
-                currentTextChannel.sendMessage(String.format("Setting volume back to '%d' \uD83D\uDD0A", previousVolume)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.replyFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             nextTrack();
-            nowPlaying(currentTextChannel, player.getPlayingTrack(), deleteDelay);
+            nowPlaying(event, player.getPlayingTrack(), deleteDelay);
         }
     }
 
 //    @Override
 //    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
 ////        if(track.getPosition() == 0L) {
-////            getCurrentTextChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+////            getCurrentTextChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 ////            nextTrack();
 ////        }
 //    }
@@ -97,12 +97,12 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = queue;
     }
 
-    public TextChannel getCurrentTextChannel() {
-        return currentTextChannel;
+    public SlashCommandInteractionEvent getEvent() {
+        return event;
     }
 
-    public void setCurrentTextChannel(TextChannel currentTextChannel) {
-        this.currentTextChannel = currentTextChannel;
+    public void setEvent(SlashCommandInteractionEvent currentTextChannel) {
+        this.event = currentTextChannel;
     }
 
     public void setDeleteDelay(Integer deleteDelay) {

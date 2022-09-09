@@ -1,8 +1,10 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -17,22 +19,25 @@ import static java.util.stream.Collectors.toMap;
 public class SocialCreditCommand implements IModerationCommand {
 
     private final IUserService userService;
+    private final String LEADERBOARD = "leaderboard";
+    private final String USERS = "users";
+    private final String SOCIAL_CREDIT = "credit";
 
     public SocialCreditCommand(IUserService userService) {
         this.userService = userService;
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        List<String> args = ctx.getArgs();
-        TextChannel channel = ctx.getChannel();
-        Message message = ctx.getMessage();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
+        ICommand.deleteAfter(event.getHook(), deleteDelay);
+        List <OptionMapping> args = event.getOptions();
         final Member member = ctx.getMember();
-        if(!ctx.getGuild().isLoaded()) ctx.getGuild().loadMembers();
-        if (args.contains("leaderboard")) {
+        if(!event.getGuild().isLoaded()) event.getGuild().loadMembers();
+        if (event.getOption(LEADERBOARD).getAsBoolean()) {
             Map<Long, Long> discordSocialCreditMap = new HashMap<>();
-            userService.listGuildUsers(ctx.getGuild().getIdLong()).forEach(userDto -> {
+            userService.listGuildUsers(event.getGuild().getIdLong()).forEach(userDto -> {
                 Long socialCredit = userDto.getSocialCredit() == null ? 0L : userDto.getSocialCredit();
                 discordSocialCreditMap.put(userDto.getDiscordId(), socialCredit);
             });
@@ -46,35 +51,36 @@ public class SocialCreditCommand implements IModerationCommand {
             AtomicInteger position = new AtomicInteger();
             sortedMap.forEach((k, v) -> {
                 position.getAndIncrement();
-                ctx.getGuild()
+                event.getGuild()
                         .getMembers()
                         .stream()
                         .filter(member1 -> member1.getIdLong() == k)
                         .findFirst()
                         .ifPresent(memberById -> stringBuilder.append(String.format("#%s: %s - score: %d\n", position, memberById.getEffectiveName(), v)));
             });
-            channel.sendMessageFormat(stringBuilder.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.replyFormat(stringBuilder.toString()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         } else {
-            List<Member> mentionedMembers = message.getMentions().getMembers();
+            List<Member> mentionedMembers = event.getOption(USERS).getMentions().getMembers();
             if (mentionedMembers.isEmpty()) {
-                listSocialCreditScore(requestingUserDto, member.getEffectiveName(), deleteDelay, channel);
+                listSocialCreditScore(requestingUserDto, member.getEffectiveName(), deleteDelay, event);
             } else
                 mentionedMembers.forEach(targetMember ->
                 {
                     UserDto targetUserDto = userService.getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-                    if (args.subList(0, args.size()).stream().allMatch(s -> s.matches(Message.MentionType.USER.getPattern().pattern()))) {
-                        listSocialCreditScore(targetUserDto, targetMember.getEffectiveName(), deleteDelay, channel);
+
+                    if (event.getOptions().stream().noneMatch(optionMapping -> optionMapping.getAsMember().getUser().getAsMention().isEmpty())) {
+                        listSocialCreditScore(targetUserDto, targetMember.getEffectiveName(), deleteDelay, event);
                     } else {
                         //Check to see if the database contained an entry for the user we have made a request against
                         if (targetUserDto != null) {
                             boolean isSameGuild = requestingUserDto.getGuildId().equals(targetUserDto.getGuildId());
                             boolean requesterCanAdjustPermissions = member.isOwner();
                             if (requesterCanAdjustPermissions && isSameGuild) {
-                                String socialCreditString = args.subList(0, args.size()).stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).findFirst().get();
-                                UserDto updatedUser = validateArgumentsAndAdjustSocialCredit(ctx, targetUserDto, channel, Long.valueOf(socialCreditString), ctx.getMember().isOwner(), deleteDelay);
-                                channel.sendMessageFormat("Updated user %s's social credit by %s. New score is: %d", targetMember.getEffectiveName(), socialCreditString, updatedUser.getSocialCredit()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                                long socialCreditAdjustment = event.getOption(SOCIAL_CREDIT).getAsLong();
+                                UserDto updatedUser = validateArgumentsAndAdjustSocialCredit(targetUserDto, event, socialCreditAdjustment, ctx.getMember().isOwner(), deleteDelay);
+                                event.replyFormat("Updated user %s's social credit by %d. New score is: %d", targetMember.getEffectiveName(), socialCreditAdjustment, updatedUser.getSocialCredit()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                             } else
-                                channel.sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                                event.replyFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                         }
                     }
                 });
@@ -82,19 +88,19 @@ public class SocialCreditCommand implements IModerationCommand {
 
     }
 
-    private void listSocialCreditScore(UserDto userDto, String mentionedName, Integer deleteDelay, TextChannel channel) {
+    private void listSocialCreditScore(UserDto userDto, String mentionedName, Integer deleteDelay, SlashCommandInteractionEvent event) {
         Long socialCredit = userDto.getSocialCredit() == null ? 0L : userDto.getSocialCredit();
-        channel.sendMessageFormat("%s's social credit is: %d", mentionedName, socialCredit).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        event.replyFormat("%s's social credit is: %d", mentionedName, socialCredit).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
-    private UserDto validateArgumentsAndAdjustSocialCredit(CommandContext ctx, UserDto targetUserDto, TextChannel channel, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
+    private UserDto validateArgumentsAndAdjustSocialCredit(UserDto targetUserDto, SlashCommandInteractionEvent event, Long socialCreditScore, boolean isOwner, Integer deleteDelay) {
         if (isOwner) {
             Long socialCredit = targetUserDto.getSocialCredit() == null ? 0L : targetUserDto.getSocialCredit();
             targetUserDto.setSocialCredit(socialCredit + socialCreditScore);
             userService.updateUser(targetUserDto);
             return targetUserDto;
         } else
-            sendErrorMessage(ctx, channel, deleteDelay);
+            sendErrorMessage(event, deleteDelay);
         return targetUserDto;
     }
 
@@ -105,18 +111,15 @@ public class SocialCreditCommand implements IModerationCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Use this command to adjust the mentioned user's social credit.\n" +
-                String.format("Usage: `%ssocialcredit <@user> +/-100` to adjust the mentioned users social credit \n", prefix) +
-                String.format("Usage: `%ssocialcredit <@user>` to show the tagged user's social credit \n", prefix) +
-                String.format("Usage: `%ssocialcredit` to show your social credit \n", prefix) +
-                String.format("Usage: `%ssocialcredit leaderboard` to show the server leaderboard \n", prefix) +
-                String.format("Aliases are: '%s'", String.join(",", getAliases()));
+    public String getDescription() {
+        return "Use this command to adjust the mentioned user's social credit.";
     }
 
     @Override
-    public List<String> getAliases() {
-        return Arrays.asList("credit", "sc");
+    public List<OptionData> getOptionData() {
+        OptionData leaderboard = new OptionData(OptionType.BOOLEAN, LEADERBOARD, "Show the leaderboard");
+        OptionData users = new OptionData(OptionType.STRING, USERS, "User(s) to adjust the social credit value. Without a value will display their social credit amount");
+        OptionData creditAmount = new OptionData(OptionType.INTEGER, SOCIAL_CREDIT, "Score to add or deduct from mentioned user's social credit");
+        return List.of(users, creditAmount, leaderboard);
     }
-
 }

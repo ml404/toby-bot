@@ -1,7 +1,9 @@
 package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -16,24 +18,26 @@ import static toby.helpers.MusicPlayerHelper.nowPlaying;
 
 public class SkipCommand implements IMusicCommand {
 
+    private final String SKIP = "skip";
+
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, channel, deleteDelay)) return;
-        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(ctx.getGuild());
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
+        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
 
         if (audioPlayer.getPlayingTrack() == null) {
-            channel.sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        List<String> args = ctx.getArgs();
-        String skipValue = (!args.isEmpty()) ? args.get(0) : "";
-        int tracksToSkip = !skipValue.isEmpty() ? Integer.parseInt(skipValue) : 1;
+        int skipValue = event.getOption(SKIP).getAsInt();
+        int tracksToSkip = skipValue !=0 ? skipValue : 1;
 
         if (tracksToSkip < 0) {
-            channel.sendMessage("You're not too bright, but thanks for trying").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You're not too bright, but thanks for trying").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -42,10 +46,10 @@ public class SkipCommand implements IMusicCommand {
                 musicManager.getScheduler().nextTrack();
             }
             musicManager.getScheduler().setLooping(false);
-            channel.sendMessage(String.format("Skipped %d track(s)", tracksToSkip)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            nowPlaying(channel, musicManager.getAudioPlayer().getPlayingTrack(), deleteDelay);
+            event.replyFormat("Skipped %d track(s)", tracksToSkip).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            nowPlaying(event, musicManager.getAudioPlayer().getPlayingTrack(), deleteDelay);
         } else {
-            sendDeniedStoppableMessage(channel, musicManager, deleteDelay);
+            sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
     }
 
@@ -55,11 +59,13 @@ public class SkipCommand implements IMusicCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "skip X number of tracks \n" +
-                String.format("e.g. `%sskip 5` \n", prefix) +
-                "skips one by default";
+    public String getDescription() {
+        return "skip X number of tracks. Skips 1 by default";
     }
 
+    @Override
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.INTEGER, SKIP, "Number of tracks to skip"));
+    }
 }
 

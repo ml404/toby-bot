@@ -1,8 +1,10 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
@@ -11,118 +13,126 @@ import toby.jpa.service.IConfigService;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
+
+import static toby.jpa.dto.ConfigDto.Configurations.*;
 
 public class SetConfigCommand implements IModerationCommand {
 
     private final IConfigService configService;
+    private final String CONFIG_NAME = "name";
+    private final String CONFIG_VALUE = "value";
 
     public SetConfigCommand(IConfigService configService) {
         this.configService = configService;
     }
 
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        List<String> args = ctx.getArgs();
-        TextChannel channel = ctx.getChannel();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
+        List<OptionMapping> args = event.getOptions();
         final Member member = ctx.getMember();
 
         if (!member.isOwner()) {
-            channel.sendMessage("This is currently reserved for the owner of the server only, this may change in future").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
         if (args.isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        validateArgumentsAndUpdateConfigs(ctx, channel, prefix, args, deleteDelay);
+        validateArgumentsAndUpdateConfigs(event, deleteDelay);
     }
 
 
-    private void validateArgumentsAndUpdateConfigs(CommandContext ctx, TextChannel channel, String prefix, List<String> args, Integer deleteDelay) {
-        String valuesToAdjust = args.stream().filter(s -> !s.matches(Message.MentionType.USER.getPattern().pattern())).collect(Collectors.joining(" "));
+    private void validateArgumentsAndUpdateConfigs(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        String configNameString = event.getOption(CONFIG_NAME).getAsString().toUpperCase();
 
-
-        Map<String, String> configMap = Arrays.stream(valuesToAdjust.split(","))
-                .map(s -> s.split("=", 2))
-                .filter(strings -> ConfigDto.Configurations.isValidEnum(strings[0].toUpperCase().trim()) && (strings[1] != null))
-                .collect(Collectors.toMap(s -> s[0].toUpperCase().trim(), s -> s[1].trim()));
-
-        if (configMap.isEmpty()) {
-            channel.sendMessage(getHelp(prefix)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        if (configNameString.isEmpty()) {
+            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        if (configMap.containsKey(ConfigDto.Configurations.PREFIX.name())) {
-            String newPrefix = configMap.get(ConfigDto.Configurations.PREFIX.name());
-            newPrefix = newPrefix.length() > 2 ? newPrefix.substring(0, 2) : newPrefix;
-            if (prefixValidation(newPrefix)) {
-                String prefixPropertyName = ConfigDto.Configurations.PREFIX.getConfigValue();
-                ConfigDto databaseConfig = configService.getConfigByName(prefixPropertyName, ctx.getGuild().getId());
-                ConfigDto newConfigDto = new ConfigDto(prefixPropertyName, newPrefix, ctx.getGuild().getId());
+        ConfigDto.Configurations configName = valueOf(configNameString);
 
-                if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
-                    configService.updateConfig(newConfigDto);
-                } else {
-                    configService.createNewConfig(newConfigDto);
-                }
-                channel.sendMessageFormat("Set prefix to '%s'", newPrefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-
+        switch (configName) {
+            case PREFIX -> setPrefix(event, deleteDelay);
+            case MOVE -> setMove(event, deleteDelay);
+            case VOLUME -> setVolume(event, deleteDelay);
+            case DELETE_DELAY -> setDeleteDelay(event, deleteDelay);
+            default -> {
             }
         }
-        if (configMap.containsKey(ConfigDto.Configurations.MOVE.name())) {
-            String newDefaultMoveChannel = configMap.get(ConfigDto.Configurations.MOVE.name());
-            boolean newDefaultVoiceChannelExists = !ctx.getGuild().getVoiceChannelsByName(newDefaultMoveChannel, true).isEmpty();
-            if (newDefaultVoiceChannelExists) {
-                String movePropertyName = ConfigDto.Configurations.MOVE.getConfigValue();
-                ConfigDto databaseConfig = configService.getConfigByName(movePropertyName, ctx.getGuild().getId());
-                ConfigDto newConfigDto = new ConfigDto(movePropertyName, newDefaultMoveChannel, ctx.getGuild().getId());
-                if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
-                    configService.updateConfig(newConfigDto);
-                } else {
-                    configService.createNewConfig(newConfigDto);
-                }
-                channel.sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
 
-            }
+    private void setDeleteDelay(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        String newDefaultDelay = event.getOption("Config Value").getAsString();
+        if (!newDefaultDelay.matches("\\d+")) {
+            event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
         }
+        String deletePropertyName = DELETE_DELAY.getConfigValue();
+        ConfigDto databaseConfig = configService.getConfigByName(deletePropertyName, event.getGuild().getId());
+        ConfigDto newConfigDto = new ConfigDto(deletePropertyName, newDefaultDelay, event.getGuild().getId());
+        if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
+            configService.updateConfig(newConfigDto);
+        } else {
+            configService.createNewConfig(newConfigDto);
+        }
+        event.replyFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
 
-        if (configMap.containsKey(ConfigDto.Configurations.VOLUME.name())) {
-            String newDefaultVolume = configMap.get(ConfigDto.Configurations.VOLUME.name());
-            String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-            ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, ctx.getGuild().getId());
-            ConfigDto newConfigDto = new ConfigDto(volumePropertyName, newDefaultVolume, ctx.getGuild().getId());
+    private void setVolume(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        String newDefaultVolume = event.getOption("Config Value").getAsString();
+        String volumePropertyName = VOLUME.getConfigValue();
+        ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
+        ConfigDto newConfigDto = new ConfigDto(volumePropertyName, newDefaultVolume, event.getGuild().getId());
+        if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
+            configService.updateConfig(newConfigDto);
+        } else {
+            configService.createNewConfig(newConfigDto);
+        }
+        event.replyFormat("Set default volume to '%s'", newDefaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
+
+    private void setMove(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        String newDefaultMoveChannel = event.getOption("Config Value").getAsString();
+        boolean newDefaultVoiceChannelExists = !event.getGuild().getVoiceChannelsByName(newDefaultMoveChannel, true).isEmpty();
+        if (newDefaultVoiceChannelExists) {
+            String movePropertyName = MOVE.getConfigValue();
+            ConfigDto databaseConfig = configService.getConfigByName(movePropertyName, event.getGuild().getId());
+            ConfigDto newConfigDto = new ConfigDto(movePropertyName, newDefaultMoveChannel, event.getGuild().getId());
             if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
                 configService.updateConfig(newConfigDto);
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            channel.sendMessageFormat("Set default volume to '%s'", newDefaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-
+            event.replyFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         }
+    }
 
-        if (configMap.containsKey(ConfigDto.Configurations.DELETE_DELAY.name())) {
-            String newDefaultDelay = configMap.get(ConfigDto.Configurations.DELETE_DELAY.name());
-            if(!newDefaultDelay.matches("\\d+")){
-                channel.sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-                return;
-            }
-            String deletePropertyName = ConfigDto.Configurations.DELETE_DELAY.getConfigValue();
-            ConfigDto databaseConfig = configService.getConfigByName(deletePropertyName, ctx.getGuild().getId());
-            ConfigDto newConfigDto = new ConfigDto(deletePropertyName, newDefaultDelay, ctx.getGuild().getId());
+    private void setPrefix(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        String newPrefix = event.getOption("Config Value").getAsString();
+        newPrefix = newPrefix.length() > 2 ? newPrefix.substring(0, 2) : newPrefix;
+        if (prefixValidation(newPrefix)) {
+            String prefixPropertyName = PREFIX.getConfigValue();
+            ConfigDto databaseConfig = configService.getConfigByName(prefixPropertyName, event.getGuild().getId());
+            ConfigDto newConfigDto = new ConfigDto(prefixPropertyName, newPrefix, event.getGuild().getId());
+
             if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
                 configService.updateConfig(newConfigDto);
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            channel.sendMessageFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.replyFormat("Set prefix to '%s'", newPrefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+
         }
     }
+
 
     private boolean prefixValidation(String newPrefix) {
         boolean nonAlphanumericPrefix1 = newPrefix.matches("[^a-zA-Z\\d*\\s]");
@@ -138,15 +148,15 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Use this command to set the configuration used for your server\n" +
-                String.format("Usage: `%ssetConfig prefix=? move=i have a bad opinion volume=10` \n", prefix) +
-                String.format("Aliases are: %s \n", String.join(",", getAliases())) +
-                String.format("Adjustable values are as follows: %s", Arrays.stream(ConfigDto.Configurations.values()).map(Enum::name).map(String::toLowerCase).collect(Collectors.joining(",")));
+    public String getDescription() {
+        return "Use this command to set the configuration used for your server";
     }
 
     @Override
-    public List<String> getAliases(){
-        return Arrays.asList("conf", "config");
+    public List<OptionData> getOptionData() {
+        OptionData configName = new OptionData(OptionType.STRING, CONFIG_NAME, "What config to adjust for the server", true);
+        OptionData configValue = new OptionData(OptionType.STRING, CONFIG_VALUE, "Value for the config you want to adjust", true);
+        Arrays.stream(values()).forEach(conf -> configName.addChoice(conf.getConfigValue(), conf.getConfigValue()));
+        return List.of(configName, configValue);
     }
 }

@@ -6,12 +6,17 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.guild.GuildAvailableEvent;
+import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMoveEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.managers.AudioManager;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,14 +75,6 @@ public class Handler extends ListenerAdapter {
             return;
         }
 
-        String prefix = configService.getConfigByName("PREFIX", event.getGuild().getId()).getValue();
-        String raw = event.getMessage().getContentRaw();
-
-        if (raw.startsWith(prefix)) {
-            event.getGuild().loadMembers();
-            manager.handle(event);
-        }
-
         //Event specific information
         User author = event.getAuthor();                //The user that sent the message
         Message message = event.getMessage();           //The message that was received.
@@ -114,16 +111,40 @@ public class Handler extends ListenerAdapter {
 
     }
 
+    @Override
+    public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
+        User user = event.getUser();
+        if (user.isBot()) {
+            return;
+        }
+            manager.handle(event);
+    }
+
+    @Override
+    public void onGuildReady(@NotNull GuildReadyEvent event) {
+        event.getGuild().updateCommands().addCommands(manager.getAllSlashCommands()).queue();
+    }
+
+    @Override
+    public void onGuildJoin(@NotNull GuildJoinEvent event) {
+        event.getGuild().updateCommands().addCommands(manager.getAllSlashCommands()).queue();
+    }
+
+    @Override
+    public void onGuildAvailable(@NotNull GuildAvailableEvent event) {
+        event.getGuild().updateCommands().addCommands(manager.getAllSlashCommands()).queue();
+    }
+
     private void messageContainsRespond(Message message, MessageChannel channel, String name, Emoji tobyEmote, Emoji jessEmote) {
         String messageStringLowercase = message.getContentRaw().toLowerCase();
         if (messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs")) {
             message.addReaction(tobyEmote).queue();
-            channel.sendMessage(String.format("%s... that's not my name %s", name, tobyEmote)).queue();
+            channel.sendMessageFormat("%s... that's not my name %s", name, tobyEmote).queue();
         }
 
         if (messageStringLowercase.trim().contains("sigh")) {
-            channel.sendMessage(String.format("Hey %s, what's up champ?", name)).queue();
-            channel.sendMessage(String.format("%s", jessEmote)).queue();
+            channel.sendMessageFormat("Hey %s, what's up champ?", name).queue();
+            channel.sendMessageFormat("%s", jessEmote).queue();
         }
 
         if (messageStringLowercase.contains("yeah")) {
@@ -166,7 +187,7 @@ public class Handler extends ListenerAdapter {
 
         //TODO guild.getDefaultChannel no longer works if the default channel isn't viewable by guild.getPublicRole() i.e. everyone
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(requestingUserDto, guild, guild.getDefaultChannel().asTextChannel(), Integer.parseInt(deleteDelayConfig.getValue()), 0L);
+            playUserIntro(requestingUserDto, guild, null, Integer.parseInt(deleteDelayConfig.getValue()), 0L);
         }
     }
 

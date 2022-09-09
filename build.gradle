@@ -29,7 +29,7 @@ gradleLint {
 //needed by shadowJar process
 mainClassName = "toby.Application"
 group = 'com.github.ml404'
-version = '4.0-SNAPSHOT'
+version = '5.0-SNAPSHOT'
 
 java.sourceCompatibility = JavaVersion.VERSION_15
 java.targetCompatibility = JavaVersion.VERSION_15

@@ -2,50 +2,53 @@ package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class KickCommand implements IModerationCommand {
+
+    private final String USERS = "users";
+
     @Override
-    public void handle(CommandContext ctx, String prefix, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getMessage(), deleteDelay);
-        final TextChannel channel = ctx.getChannel();
-        final Message message = ctx.getMessage();
+    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        final SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         final Member member = ctx.getMember();
-        final List<String> args = ctx.getArgs();
 
-        if (message.getMentions().getMembers().isEmpty()) {
-            channel.sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        List<Member> memberOptions = event.getOption(USERS).getMentions().getMembers();
+        if (memberOptions.isEmpty()) {
+            event.getHook().sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
-        message.getMentions().getMembers().forEach(target -> {
+        memberOptions.forEach(target -> {
 
-        if (!member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS)) {
-            channel.sendMessage(String.format("You can't shoot %s", target)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-            return;
-        }
+            if (!member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS)) {
+                event.replyFormat("You can't kick %s", target).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                return;
+            }
 
-        final Member botMember = ctx.getSelfMember();
+            final Member botMember = ctx.getSelfMember();
 
-        if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
-            channel.sendMessage(String.format("I'm not allowed to shoot %s", target)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-            return;
-        }
+            if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
+                event.replyFormat("I'm not allowed to kick %s", target).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                return;
+            }
 
-        ctx.getGuild()
-                .kick(target)
-                .reason("because you told me to.")
-                .queue(
-                        (__) -> channel.sendMessage("Shot hit the mark... something about fortnite?").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
-                        (error) -> channel.sendMessageFormat("Could not shoot %s", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
-                );
+            event.getGuild()
+                    .kick(target)
+                    .reason("because you told me to.")
+                    .queue(
+                            (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
+                            (error) -> event.replyFormat("Could not kick %s", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
+                    );
         });
     }
 
@@ -55,14 +58,13 @@ public class KickCommand implements IModerationCommand {
     }
 
     @Override
-    public String getHelp(String prefix) {
-        return "Kick a member off the server.\n" +
-                String.format("Usage: `%skick <@user>`", prefix)+
-                String.format("Aliases are: '%s'",String.join(",", getAliases()));
+    public String getDescription() {
+        return "Kick a member off the server.";
 
     }
 
-    public List<String> getAliases(){
-        return Arrays.asList("shoot");
+    @Override
+    public List<OptionData> getOptionData() {
+        return List.of(new OptionData(OptionType.STRING, USERS, "User(s) to kick", true));
     }
 }
