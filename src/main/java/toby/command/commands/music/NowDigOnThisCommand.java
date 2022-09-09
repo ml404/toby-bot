@@ -64,13 +64,13 @@ public class NowDigOnThisCommand implements IMusicCommand {
     }
 
     @Override
-    public String getErrorMessage() {
-        return "I'm gonna put some dirt in your eye %s";
+    public String getErrorMessage(String name) {
+        return String.format("I'm gonna put some dirt in your eye %s", name);
     }
 
     @Override
     public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessageFormat(getErrorMessage(), event.getMember().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(getErrorMessage(event.getMember().getNickname())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override

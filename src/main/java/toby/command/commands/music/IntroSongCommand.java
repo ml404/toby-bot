@@ -53,7 +53,7 @@ public class IntroSongCommand implements IMusicCommand {
         if (introVolume < 1) introVolume = 1;
         if (introVolume > 100) introVolume = 100;
         List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
-        if (!requestingUserDto.isSuperUser() && mentionedMembers.isEmpty()) {
+        if (!requestingUserDto.isSuperUser() && !mentionedMembers.isEmpty()) {
             sendErrorMessage(event, deleteDelay);
             return;
         }
@@ -63,7 +63,7 @@ public class IntroSongCommand implements IMusicCommand {
         if (optionalAttachment.isPresent() && URLHelper.isValidURL(link)) {
             event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else if (!link.isEmpty()) {
-            setIntroViaUrl(ctx, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
+            setIntroViaUrl(event, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
         } else {
             if(optionalAttachment.isPresent()) setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, optionalAttachment.get(), introVolume);
         }
@@ -94,8 +94,7 @@ public class IntroSongCommand implements IMusicCommand {
             persistMusicFile(event, requestingUserDto, deleteDelay, attachment.getFileName(), introVolume, inputStream, event.getUser().getName());
     }
 
-    private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, Optional<URI> optionalURI, int introVolume) {
-        SlashCommandInteractionEvent event = ctx.getEvent();
+    private void setIntroViaUrl(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Optional<URI> optionalURI, int introVolume) {
         List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         String urlString = optionalURI.map(URI::toString).orElse("");
 
@@ -105,7 +104,7 @@ public class IntroSongCommand implements IMusicCommand {
                 persistMusicUrl(event, userDto, deleteDelay, urlString, urlString, member.getEffectiveName(), introVolume);
             });
         } else
-            persistMusicUrl(event, requestingUserDto, deleteDelay, urlString, urlString, ctx.getAuthor().getName(), introVolume);
+            persistMusicUrl(event, requestingUserDto, deleteDelay, urlString, urlString, event.getUser().getName(), introVolume);
     }
 
 
