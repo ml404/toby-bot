@@ -75,7 +75,7 @@ public class PlayCommand implements IMusicCommand {
         type.addChoice(LINK, LINK);
         type.addChoice(INTRO, INTRO);
         OptionData link = new OptionData(OptionType.STRING, LINK, "link you would like to play");
-        OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds (defaults to 0)");
+        OptionData startPosition = new OptionData(OptionType.NUMBER, START_POSITION, "Start position of the track in seconds (defaults to 0)");
         OptionData volume = new OptionData(OptionType.INTEGER, VOLUME, "Volume to play at");
         return List.of(type,link, startPosition, volume);
     }

@@ -76,7 +76,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
     @Override
     public List<OptionData> getOptionData() {
         OptionData linkArg = new OptionData(OptionType.STRING, LINK, "Link to play that cannot be stopped unless requested by a super user", true);
-        OptionData startPositionArg = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds");
+        OptionData startPositionArg = new OptionData(OptionType.NUMBER, START_POSITION, "Start position of the track in seconds");
         return List.of(linkArg, startPositionArg);
     }
 }
