@@ -2,6 +2,7 @@ package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -34,7 +35,7 @@ public class SkipCommand implements IMusicCommand {
             event.getHook().sendMessage("There is no track playing currently").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        int tracksToSkip = Optional.ofNullable(event.getOption(SKIP).getAsInt()).orElse(1);
+        int tracksToSkip = Optional.ofNullable(event.getOption(SKIP)).map(OptionMapping::getAsInt).orElse(1);
 
         if (tracksToSkip < 0) {
             event.getHook().sendMessage("You're not too bright, but thanks for trying").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));

@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -38,7 +39,7 @@ public class BrotherCommand implements IMiscCommand {
     }
 
     private void determineBrother(SlashCommandInteractionEvent event, Emoji tobyEmote, int deleteDelay) {
-        Optional<Mentions> optionalMentions = Optional.ofNullable(event.getOption(BROTHER).getMentions());
+        Optional<Mentions> optionalMentions = Optional.ofNullable(event.getOption(BROTHER)).map(OptionMapping::getMentions);
         if (optionalMentions.isEmpty()) {
             BrotherDto brother = brotherService.getBrotherById(event.getUser().getIdLong());
             if (brother!=null) {

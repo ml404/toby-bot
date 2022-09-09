@@ -3,8 +3,10 @@ package toby.command.commands.moderation;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.VoiceChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -36,17 +38,17 @@ public class MoveCommand implements IModerationCommand {
         final Member member = ctx.getMember();
         Guild guild = event.getGuild();
 
-        List<Member> memberList = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers()).orElse(Collections.emptyList());
+        List<Member> memberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         if (memberList.isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }
 
-        Optional<String> channelNameOptional = Optional.ofNullable(event.getOption(CHANNEL).getAsString());
+        Optional<String> channelNameOptional = Optional.ofNullable(event.getOption(CHANNEL)).map(OptionMapping::getAsString);
         ConfigDto channelConfig = configService.getConfigByName(CHANNEL, guild.getId());
         String channelName = channelNameOptional.orElse("");
         Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
-        if (!voiceChannelOptional.isPresent()) {
+        if (voiceChannelOptional.isEmpty()) {
             event.getHook().sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;
         }

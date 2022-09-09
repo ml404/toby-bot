@@ -2,7 +2,9 @@ package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -23,7 +25,7 @@ public class KickCommand implements IModerationCommand {
         event.deferReply().queue();
         final Member member = ctx.getMember();
 
-        Optional<List<Member>> optionalMemberList = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers());
+        Optional<List<Member>> optionalMemberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers);
         if (optionalMemberList.isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more Users to shoot").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return;

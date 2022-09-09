@@ -1,6 +1,7 @@
 package toby.command.commands.music;
 
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -47,25 +48,24 @@ public class IntroSongCommand implements IMusicCommand {
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         int defaultVolume = Integer.parseInt(configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue());
-        Optional<Integer> volumeOptional = Optional.ofNullable(event.getOption(VOLUME).getAsInt());
-        int introVolume = volumeOptional.isPresent() ? volumeOptional.get() : defaultVolume;
+        Optional<Integer> volumeOptional = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt);
+        int introVolume = volumeOptional.orElse(defaultVolume);
         if (introVolume < 1) introVolume = 1;
         if (introVolume > 100) introVolume = 100;
-        Optional<List<Member>> optionalMemberList = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers());
-        if (!requestingUserDto.isSuperUser() && optionalMemberList.orElse(Collections.emptyList()).size() > 0) {
+        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
+        if (!requestingUserDto.isSuperUser() && mentionedMembers.isEmpty()) {
             sendErrorMessage(event, deleteDelay);
             return;
         }
-        OptionMapping attachment = ctx.getEvent().getOption(ATTACHMENT);
-        Message.Attachment fileAttachment = attachment.getAsAttachment();
-        String link = ctx.getEvent().getOption(LINK).getAsString();
+        Optional<Message.Attachment> optionalAttachment = Optional.ofNullable(event.getOption(ATTACHMENT)).map(OptionMapping::getAsAttachment);
+        String link = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString).orElse("");
 
-        if (attachment != null && URLHelper.isValidURL(link)) {
+        if (optionalAttachment.isPresent() && URLHelper.isValidURL(link)) {
             event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else if (!link.isEmpty()) {
             setIntroViaUrl(ctx, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
         } else {
-            setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, fileAttachment, introVolume);
+            if(optionalAttachment.isPresent()) setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, optionalAttachment.get(), introVolume);
         }
     }
 
@@ -83,7 +83,7 @@ public class IntroSongCommand implements IMusicCommand {
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
-        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers()).orElse(Collections.emptyList());
+        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
             InputStream finalInputStream = inputStream;
             mentionedMembers.forEach(member -> {
@@ -94,10 +94,10 @@ public class IntroSongCommand implements IMusicCommand {
             persistMusicFile(event, requestingUserDto, deleteDelay, attachment.getFileName(), introVolume, inputStream, event.getUser().getName());
     }
 
-    private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, URI url, int introVolume) {
+    private void setIntroViaUrl(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay, Optional<URI> optionalURI, int introVolume) {
         SlashCommandInteractionEvent event = ctx.getEvent();
-        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers()).orElse(Collections.emptyList());
-        String urlString = url.toString();
+        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
+        String urlString = optionalURI.map(URI::toString).orElse("");
 
         if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
             mentionedMembers.forEach(member -> {

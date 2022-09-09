@@ -49,15 +49,15 @@ public class HelpCommand implements IMiscCommand {
             return;
         }
 
-        Optional<String> searchOptional = Optional.ofNullable(event.getOption("Command").getAsString());
-        ICommand command = searchOptional.isPresent() ? manager.getCommand(searchOptional.get()) : null;
+        Optional<String> searchOptional = Optional.ofNullable(event.getOption(COMMAND)).map(OptionMapping::getAsString);
+        Optional<ICommand> command = searchOptional.map(manager::getCommand);
 
-        if (command == null) {
-            event.getHook().sendMessage("Nothing found for " + searchOptional.get()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        if (command.isEmpty()) {
+            event.getHook().sendMessage("Nothing found for command '%s" + searchOptional.get()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        event.getHook().sendMessage(command.getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(command.get().getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override

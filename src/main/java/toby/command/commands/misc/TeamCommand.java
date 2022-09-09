@@ -27,7 +27,7 @@ public class TeamCommand implements IMiscCommand {
         cleanupTemporaryChannels(event.getGuild().getChannels());
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         List<OptionMapping> args = event.getOptions();
-        if (event.getOption(CLEANUP).getAsBoolean()) {
+        if (Optional.ofNullable(event.getOption(CLEANUP)).map(OptionMapping::getAsBoolean).orElse(false)) {
             return;
         }
         if (args.isEmpty()) {
@@ -35,8 +35,8 @@ public class TeamCommand implements IMiscCommand {
             return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
-        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(TEAM_MEMBERS).getMentions().getMembers()).orElse(Collections.emptyList());
-        int listsToInitialise = Optional.ofNullable(event.getOption(TEAM_SIZE).getAsInt()).orElse(2);
+        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(TEAM_MEMBERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
+        int listsToInitialise = Optional.ofNullable(event.getOption(TEAM_SIZE)).map(OptionMapping::getAsInt).orElse(2);
         listsToInitialise = Math.min(listsToInitialise, mentionedMembers.size());
         List<List<Member>> teams = split(mentionedMembers, listsToInitialise);
 

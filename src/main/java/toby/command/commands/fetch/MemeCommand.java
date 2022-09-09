@@ -47,18 +47,18 @@ public class MemeCommand implements IFetchCommand {
         if (args.size() == 0) {
             event.getHook().sendMessageFormat((getDescription())).setEphemeral(true).queue();
         } else {
-            Optional<String> subredditArgOptional = Optional.ofNullable(event.getOption(SUBREDDIT).getAsString());
+            Optional<String> subredditArgOptional = Optional.ofNullable(event.getOption(SUBREDDIT)).map(OptionMapping::getAsString);
             String timePeriod;
-            Integer limit;
+            int limit;
             try {
-                Optional<String> timePeriodOptional = Optional.ofNullable(event.getOption(TIME_PERIOD).getAsString());
+                Optional<String> timePeriodOptional = Optional.ofNullable(event.getOption(TIME_PERIOD)).map(OptionMapping::getAsString);
                 timePeriod = RedditAPIDto.TimePeriod.valueOf(timePeriodOptional.orElse("day")).toString().toLowerCase();
             } catch (Error e) {
                 timePeriod = "day";
                 event.getHook().sendMessageFormat(String.format("Using default time period of %s", timePeriod)).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             try {
-                limit = Optional.ofNullable(event.getOption(LIMIT).getAsInt()).orElse(5);
+                limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
             } catch (Error e) {
                 limit = 5;
             } catch (NumberFormatException e) {

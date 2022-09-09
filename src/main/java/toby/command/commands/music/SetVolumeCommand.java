@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -41,7 +42,7 @@ public class SetVolumeCommand implements IMusicCommand {
 
     private void setNewVolume(SlashCommandInteractionEvent event, Member member, Integer deleteDelay) {
         Guild guild = event.getGuild();
-        int volumeArg = Optional.ofNullable(event.getOption(VOLUME).getAsInt()).orElse(0);
+        int volumeArg = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(0);
         if (volumeArg > 0) {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();

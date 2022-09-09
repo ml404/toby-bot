@@ -1,7 +1,9 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.jetbrains.annotations.Nullable;
@@ -59,8 +61,8 @@ public class AdjustUserCommand implements IModerationCommand {
     }
 
     private void validateArgumentsAndUpdateUser(SlashCommandInteractionEvent event, UserDto targetUserDto, Boolean isOwner, int deleteDelay) {
-        Optional<String> permissionNameOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME).getAsString());
-        Optional<Boolean> permissionValueOptional = Optional.ofNullable(event.getOption(PERMISSION_VALUE).getAsBoolean());
+        Optional<String> permissionNameOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString);
+        Optional<Boolean> permissionValueOptional = Optional.ofNullable(event.getOption(PERMISSION_VALUE)).map(OptionMapping::getAsBoolean);
         
 
         if (permissionNameOptional.isEmpty() || permissionValueOptional.isEmpty()) {
@@ -68,7 +70,7 @@ public class AdjustUserCommand implements IModerationCommand {
             return;
         }
         String permissionName = permissionNameOptional.get();
-        Boolean permissionValue = permissionValueOptional.get();
+        boolean permissionValue = permissionValueOptional.get();
         if (permissionName.equals(UserDto.Permissions.MUSIC.name()))
             targetUserDto.setMusicPermission(permissionValue);
         if (permissionName.equals(UserDto.Permissions.DIG.name()))
@@ -97,13 +99,13 @@ public class AdjustUserCommand implements IModerationCommand {
             return null;
         }
 
-        Optional<List<Member>> mentionedMembersOptional = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers());
+        Optional<List<Member>> mentionedMembersOptional = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers);
         if (mentionedMembersOptional.isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more Users to adjust permissions of").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }
 
-        if (Optional.ofNullable(event.getOption(PERMISSION_NAME).getAsString()).isEmpty()) {
+        if (Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString).isEmpty()) {
             event.getHook().sendMessage("You must mention 1 or more permissions to adjust of the user you've mentioned.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             return null;
         }

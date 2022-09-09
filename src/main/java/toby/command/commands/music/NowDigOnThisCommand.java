@@ -1,6 +1,7 @@
 package toby.command.commands.music;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -27,7 +28,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         if (requestingUserDto.hasDigPermission()) {
-            Optional<String> linkOptional = Optional.ofNullable(event.getOption(LINK).getAsString());
+            Optional<String> linkOptional = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString);
             if (linkOptional.isEmpty()) {
                 event.getHook().sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 return;
@@ -35,7 +36,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
             String link = linkOptional.get();
             if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + linkOptional;
-            Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION).getAsLong()).orElse(0L));
+            Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
             PlayerManager.getInstance().loadAndPlay(event, link, false, deleteDelay, startPosition);
         } else
             sendErrorMessage(event, deleteDelay);

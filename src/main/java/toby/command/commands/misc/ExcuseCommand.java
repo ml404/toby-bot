@@ -1,7 +1,9 @@
 package toby.command.commands.misc;
 
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -10,10 +12,7 @@ import toby.jpa.dto.ExcuseDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IExcuseService;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 
 public class ExcuseCommand implements IMiscCommand {
@@ -44,7 +43,7 @@ public class ExcuseCommand implements IMiscCommand {
         if (event.getOptions().isEmpty()) {
             lookupExcuse(event, deleteDelay);
         } else {
-            Optional<String> actionOptional = Optional.ofNullable(event.getOption(ACTION).getAsString());
+            Optional<String> actionOptional = Optional.ofNullable(event.getOption(ACTION)).map(OptionMapping::getAsString);
             if (actionOptional.isPresent()) {
                 String action = actionOptional.get();
                 if (action.equals(PENDING)) {
@@ -52,15 +51,15 @@ public class ExcuseCommand implements IMiscCommand {
                 } else if (action.equals(ALL)) {
                     listAllExcuses(event, guildId, deleteDelay);
                 } else if (action.equals(APPROVE)) {
-                    Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID).getAsInt());
+                    Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID)).map(OptionMapping::getAsInt);
                     excuseIdOptional.ifPresent(excuseId -> approvePendingExcuse(requestingUserDto, event, excuseId, deleteDelay));
                 } else if (action.equals(DELETE)) {
-                    Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID).getAsInt());
+                    Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID)).map(OptionMapping::getAsInt);
                     excuseIdOptional.ifPresent(excuseId -> deleteExcuse(requestingUserDto, event, excuseId, deleteDelay));
                 }
             } else {
-                Optional<Mentions> authorOptionMapping = Optional.ofNullable(event.getOption(AUTHOR).getMentions());
-                String author = authorOptionMapping.isEmpty() ? ctx.getAuthor().getName() : authorOptionMapping.get().getMembers().stream().findFirst().get().getEffectiveName();
+                List<Member> memberList = Optional.ofNullable(event.getOption(AUTHOR)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
+                String author = memberList.isEmpty() ? ctx.getAuthor().getName() : memberList.stream().findFirst().get().getEffectiveName();
                 createNewExcuse(event, author, deleteDelay);
             }
         }
@@ -119,7 +118,7 @@ public class ExcuseCommand implements IMiscCommand {
 
 
     private void createNewExcuse(SlashCommandInteractionEvent event, String author, Integer deleteDelay) {
-        Optional<String> excuseMessageOptional = Optional.ofNullable(event.getOption(EXCUSE).getAsString());
+        Optional<String> excuseMessageOptional = Optional.ofNullable(event.getOption(EXCUSE)).map(OptionMapping::getAsString);
         if (excuseMessageOptional.isPresent()) {
             String excuseMessage = excuseMessageOptional.get();
             long guildId = event.getGuild().getIdLong();

@@ -1,7 +1,9 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -51,7 +53,7 @@ public class UserInfoCommand implements IMiscCommand {
             }
         } else {
             if (requestingUserDto.isSuperUser()) {
-                List<Member> memberList = Optional.ofNullable(event.getOption(USERS).getMentions().getMembers()).orElse(Collections.emptyList());
+                List<Member> memberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
                 memberList.forEach(member -> {
                     UserDto mentionedUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
                     event.getHook().sendMessageFormat("Here are the permissions for '%s': '%s'.", member.getEffectiveName(), mentionedUser).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));

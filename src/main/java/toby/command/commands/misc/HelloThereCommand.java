@@ -19,6 +19,8 @@ import java.util.Optional;
 public class HelloThereCommand implements IMiscCommand {
 
     private final IConfigService configService;
+    private final String DATE = "date";
+    private String DATE_FORMAT;
 
     public HelloThereCommand(IConfigService configService) {
         this.configService = configService;
@@ -31,7 +33,8 @@ public class HelloThereCommand implements IMiscCommand {
         event.deferReply().queue();
         List <OptionMapping> args = ctx.getEvent().getOptions();
 
-        String dateformat = configService.getConfigByName("DATEFORMAT", event.getGuild().getId()).getValue();
+        DATE_FORMAT = "DATEFORMAT";
+        String dateformat = configService.getConfigByName(DATE_FORMAT, event.getGuild().getId()).getValue();
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(dateformat);
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 
@@ -39,7 +42,7 @@ public class HelloThereCommand implements IMiscCommand {
             event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else
             try {
-                LocalDate dateGiven = LocalDate.parse(Optional.ofNullable(event.getOption("date").getAsString()).get(), dateTimeFormatter);
+                LocalDate dateGiven = LocalDate.parse(Optional.ofNullable(event.getOption(DATE)).map(OptionMapping::getAsString).orElse(LocalDate.now().toString()), dateTimeFormatter);
                 if (dateGiven.isBefore(EP3Date)) {
                     event.getHook().sendMessage("Hello.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 } else {

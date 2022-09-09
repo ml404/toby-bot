@@ -37,7 +37,7 @@ public class SetConfigCommand implements IModerationCommand {
         final Member member = ctx.getMember();
 
         if (!member.isOwner()) {
-            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
@@ -50,7 +50,7 @@ public class SetConfigCommand implements IModerationCommand {
 
 
     private void validateArgumentsAndUpdateConfigs(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        Optional<String> configNameStringOptional = Optional.ofNullable(event.getOption(CONFIG_NAME).getAsString().toUpperCase());
+        Optional<String> configNameStringOptional = Optional.ofNullable(event.getOption(CONFIG_NAME)).map(optionMapping -> optionMapping.getAsString().toUpperCase());
 
         if (configNameStringOptional.isEmpty()) {
             event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -70,9 +70,9 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     private void setDeleteDelay(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newDefaultDelay = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).orElse("");
+        String newDefaultDelay = Optional.ofNullable(event.getOption(CONFIG_VALUE)).map(OptionMapping::getAsString).orElse("");
         if (!newDefaultDelay.matches("\\d+")) {
-            event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds).").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds)").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
         String deletePropertyName = DELETE_DELAY.getConfigValue();
@@ -87,7 +87,11 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     private void setVolume(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newDefaultVolume = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).get();
+        String newDefaultVolume = Optional.ofNullable(event.getOption(CONFIG_VALUE)).map(OptionMapping::getAsString).orElse("");
+        if (!newDefaultVolume.matches("\\d+")) {
+            event.getHook().sendMessage("Value given for default volume of TobyBot music was not valid (a whole number representing percent)").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            return;
+        }
         String volumePropertyName = VOLUME.getConfigValue();
         ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
         ConfigDto newConfigDto = new ConfigDto(volumePropertyName, newDefaultVolume, event.getGuild().getId());
@@ -100,24 +104,25 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     private void setMove(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newDefaultMoveChannel = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).get();
-        boolean newDefaultVoiceChannelExists = !event.getGuild().getVoiceChannelsByName(newDefaultMoveChannel, true).isEmpty();
-        if (newDefaultVoiceChannelExists) {
-            String movePropertyName = MOVE.getConfigValue();
-            ConfigDto databaseConfig = configService.getConfigByName(movePropertyName, event.getGuild().getId());
-            ConfigDto newConfigDto = new ConfigDto(movePropertyName, newDefaultMoveChannel, event.getGuild().getId());
-            if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
-                configService.updateConfig(newConfigDto);
-            } else {
-                configService.createNewConfig(newConfigDto);
+        Optional<String> newDefaultMoveChannel = Optional.ofNullable(event.getOption(CONFIG_VALUE)).map(OptionMapping::getAsString);
+        if (newDefaultMoveChannel.isPresent()) {
+            boolean newDefaultVoiceChannelExists = !event.getGuild().getVoiceChannelsByName(newDefaultMoveChannel.get(), true).isEmpty();
+            if (newDefaultVoiceChannelExists) {
+                String movePropertyName = MOVE.getConfigValue();
+                ConfigDto databaseConfig = configService.getConfigByName(movePropertyName, event.getGuild().getId());
+                ConfigDto newConfigDto = new ConfigDto(movePropertyName, newDefaultMoveChannel.get(), event.getGuild().getId());
+                if (databaseConfig != null && Objects.equals(databaseConfig.getGuildId(), newConfigDto.getGuildId())) {
+                    configService.updateConfig(newConfigDto);
+                } else {
+                    configService.createNewConfig(newConfigDto);
+                }
+                event.getHook().sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
-            event.getHook().sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-
         }
     }
 
     private void setPrefix(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String newPrefix = Optional.ofNullable(event.getOption(CONFIG_VALUE).getAsString()).get();
+        String newPrefix = Optional.ofNullable(event.getOption(CONFIG_VALUE)).map(OptionMapping::getAsString).get();
         newPrefix = newPrefix.length() > 2 ? newPrefix.substring(0, 2) : newPrefix;
         if (prefixValidation(newPrefix)) {
             String prefixPropertyName = PREFIX.getConfigValue();
@@ -129,7 +134,7 @@ public class SetConfigCommand implements IModerationCommand {
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            event.getHook().sendMessageFormat("Set prefix to '%s'", newPrefix).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Set prefix to '%s'", newPrefix).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
         }
     }

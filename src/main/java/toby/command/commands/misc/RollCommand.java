@@ -1,6 +1,7 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.jetbrains.annotations.NotNull;
@@ -22,9 +23,9 @@ public class RollCommand implements IMiscCommand {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        Optional<Integer> diceOptional = Optional.ofNullable(event.getOption(DICE_NUMBER).getAsInt());
+        Optional<Integer> diceOptional = Optional.ofNullable(event.getOption(DICE_NUMBER)).map(OptionMapping::getAsInt);
         Random rand = ThreadLocalRandom.current();
-        int diceRoll = diceOptional.isPresent() ? diceOptional.get() : 6;
+        int diceRoll = diceOptional.orElse(6);
         int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
         event.getHook().sendMessageFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
