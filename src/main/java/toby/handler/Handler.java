@@ -16,6 +16,8 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.managers.AudioManager;
+import net.dv8tion.jda.internal.JDAImpl;
+import net.dv8tion.jda.internal.interactions.command.SlashCommandInteractionImpl;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
+import toby.command.commands.music.PlayCommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
@@ -189,7 +192,9 @@ public class Handler extends ListenerAdapter {
         //TODO guild.getDefaultChannel no longer works if the default channel isn't viewable by guild.getPublicRole() i.e. everyone
         // Event being null here may cause intros to not work, let's see
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntro(requestingUserDto, guild, null, Integer.parseInt(deleteDelayConfig.getValue()), 0L);
+            new PlayCommand().getSlashCommand();
+            SlashCommandInteractionEvent slashEvent = new SlashCommandInteractionEvent(event.getJDA(), event.getResponseNumber(), new SlashCommandInteractionImpl((JDAImpl) event.getJDA(), new PlayCommand().getSlashCommand().toData()));
+            playUserIntro(requestingUserDto, guild, slashEvent, Integer.parseInt(deleteDelayConfig.getValue()), 0L);
         }
     }
 

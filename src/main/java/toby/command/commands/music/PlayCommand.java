@@ -33,7 +33,7 @@ public class PlayCommand implements IMusicCommand {
             return;
         }
 
-        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse("link");
+        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(INTRO);
 
         if (type.isEmpty()) {
             event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
