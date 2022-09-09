@@ -18,6 +18,7 @@ import static toby.helpers.MusicPlayerHelper.*;
 
 public class PlayCommand implements IMusicCommand {
 
+    private static final String VOLUME = "volume";
     private final String TYPE = "type";
     private final String START_POSITION = "start";
     private final String LINK = "link";
@@ -70,11 +71,12 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro). Defaults to link");
+        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro). Defaults to intro");
         type.addChoice(LINK, LINK);
         type.addChoice(INTRO, INTRO);
         OptionData link = new OptionData(OptionType.STRING, LINK, "link you would like to play");
         OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds (defaults to 0)");
-        return List.of(type,link, startPosition);
+        OptionData volume = new OptionData(OptionType.INTEGER, VOLUME, "Volume to play at");
+        return List.of(type,link, startPosition, volume);
     }
 }

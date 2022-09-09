@@ -44,6 +44,6 @@ public class RollCommand implements IMiscCommand {
     @Override
     @NotNull
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.NUMBER, DICE_NUMBER, "What sided dice would you like to roll?"));
+        return List.of(new OptionData(OptionType.INTEGER, DICE_NUMBER, "What sided dice would you like to roll?"));
     }
 }
