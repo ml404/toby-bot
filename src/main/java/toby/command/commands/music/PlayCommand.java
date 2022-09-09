@@ -47,7 +47,7 @@ public class PlayCommand implements IMusicCommand {
         Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
 
         if (type.equals(INTRO)) {
-            playUserIntro(requestingUserDto, guild, event, deleteDelay, startPosition);
+            playUserIntroWithEvent(requestingUserDto, guild, event, deleteDelay, startPosition);
         } else {
             String link = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString).orElse("");
             if (link.contains("youtube") && !isUrl(link)) {
