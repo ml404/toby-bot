@@ -1,6 +1,9 @@
 package toby.command.commands.misc;
 
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -9,7 +12,9 @@ import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 
 public class UserInfoCommand implements IMiscCommand {
@@ -34,33 +39,34 @@ public class UserInfoCommand implements IMiscCommand {
     private void printUserInfo(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay) {
         if (event.getOptions().isEmpty()) {
             if (requestingUserDto != null) {
-                event.replyFormat("Here are your permissions: '%s'.", requestingUserDto).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessageFormat("Here are your permissions: '%s'.", requestingUserDto).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 MusicDto musicDto = requestingUserDto.getMusicDto();
                 if (musicDto != null) {
                     if (musicDto.getFileName() == null || musicDto.getFileName().isBlank()) {
                         event.getHook().sendMessage("There is no intro music file associated with your user.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
                     } else if (musicDto.getFileName() != null) {
-                        event.replyFormat("Your intro song is currently set as: '%s'.", musicDto.getFileName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                        event.getHook().sendMessageFormat("Your intro song is currently set as: '%s'.", musicDto.getFileName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     }
                 } else
                     event.getHook().sendMessage("I was unable to retrieve your music file.").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             }
         } else {
             if (requestingUserDto.isSuperUser()) {
-                event.getOption(USERS).getMentions().getMembers().stream().forEach(member -> {
+                List<Member> memberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
+                memberList.forEach(member -> {
                     UserDto mentionedUser = userService.getUserById(member.getIdLong(), member.getGuild().getIdLong());
-                    event.replyFormat("Here are the permissions for '%s': '%s'.", member.getEffectiveName(), mentionedUser).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                    event.getHook().sendMessageFormat("Here are the permissions for '%s': '%s'.", member.getEffectiveName(), mentionedUser).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                     MusicDto musicDto = mentionedUser.getMusicDto();
                     if (musicDto != null) {
                         if (musicDto.getFileName() == null || musicDto.getFileName().isBlank()) {
-                            event.replyFormat("There is no intro music file associated with '%s'.", member.getEffectiveName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                            event.getHook().sendMessageFormat("There is no intro music file associated with '%s'.", member.getEffectiveName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
 
                         } else if (musicDto.getFileName() != null) {
-                            event.replyFormat("Their intro song is currently set as: '%s'.", musicDto.getFileName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                            event.getHook().sendMessageFormat("Their intro song is currently set as: '%s'.", musicDto.getFileName()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                         }
                     } else
-                        event.replyFormat("I was unable to retrieve an associated music file for '%s'.", member.getNickname()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                        event.getHook().sendMessageFormat("I was unable to retrieve an associated music file for '%s'.", member.getNickname()).setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
                 });
             }
             else event.getHook().sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner").setEphemeral(true).queue();

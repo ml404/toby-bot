@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -15,6 +16,7 @@ import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public class SetVolumeCommand implements IMusicCommand {
@@ -40,7 +42,7 @@ public class SetVolumeCommand implements IMusicCommand {
 
     private void setNewVolume(SlashCommandInteractionEvent event, Member member, Integer deleteDelay) {
         Guild guild = event.getGuild();
-        int volumeArg = event.getOption(VOLUME).getAsInt();
+        int volumeArg = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(0);
         if (volumeArg > 0) {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
@@ -50,13 +52,13 @@ public class SetVolumeCommand implements IMusicCommand {
                 }
                 int oldVolume = audioPlayer.getVolume();
                 if (volumeArg == oldVolume) {
-                    event.replyFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                     return;
                 }
                 audioPlayer.setVolume(volumeArg);
-                event.replyFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else {
-                event.replyFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
         } else event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }

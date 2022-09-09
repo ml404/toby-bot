@@ -2,6 +2,7 @@ package toby.command.commands.music;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -10,6 +11,7 @@ import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
+import java.util.Optional;
 
 import static toby.helpers.MusicPlayerHelper.*;
 
@@ -31,8 +33,7 @@ public class PlayCommand implements IMusicCommand {
             return;
         }
 
-        String type = event.getOption(TYPE).getAsString();
-        String link = event.getOption(LINK).getAsString();
+        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(INTRO);
 
         if (type.isEmpty()) {
             event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -43,11 +44,12 @@ public class PlayCommand implements IMusicCommand {
         Guild guild = event.getGuild();
         int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
-        Long startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION).getAsLong());
+        Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
 
         if (type.equals(INTRO)) {
-            playUserIntro(requestingUserDto, guild, event, deleteDelay, startPosition);
+            playUserIntroWithEvent(requestingUserDto, guild, event, deleteDelay, startPosition);
         } else {
+            String link = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString).orElse("");
             if (link.contains("youtube") && !isUrl(link)) {
                 link = "ytsearch:" + link;
             }
@@ -68,11 +70,11 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro)", true);
+        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro). Defaults to link");
         type.addChoice(LINK, LINK);
         type.addChoice(INTRO, INTRO);
         OptionData link = new OptionData(OptionType.STRING, LINK, "link you would like to play");
-        OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds", false);
+        OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds (defaults to 0)");
         return List.of(type,link, startPosition);
     }
 }

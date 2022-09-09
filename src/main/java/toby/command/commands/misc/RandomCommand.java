@@ -1,6 +1,7 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -8,6 +9,7 @@ import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 public class RandomCommand implements IMiscCommand {
@@ -23,8 +25,8 @@ public class RandomCommand implements IMiscCommand {
         if (ctx.getEvent().getOptions().isEmpty()) {
             event.getHook().sendMessage(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
         }
-        List<String> args = List.of(event.getOption(LIST).getAsString().split(","));
-        event.getHook().sendMessage(getRandomElement(args)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        List<String> stringList = List.of(Optional.ofNullable(event.getOption(LIST)).map(OptionMapping::getAsString).orElse("").split(","));
+        event.getHook().sendMessage(getRandomElement(stringList)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
     }
 
     public static String getRandomElement(List<?> args) {
@@ -44,6 +46,6 @@ public class RandomCommand implements IMiscCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from"));
+        return List.of(new OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from", true));
     }
 }

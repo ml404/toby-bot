@@ -21,7 +21,7 @@ public class EventWaiterCommand implements IMiscCommand {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         Emoji emoteById = event.getGuild().getJDA().getEmojiById(Emotes.TOBY);
-//        event.replyFormat("React with %s", emoteById)
+//        event.getHook().sendMessageFormat("React with %s", emoteById)
 //                .queue(message -> {
 //                    message.addReaction(emoteById).queue();
 //
@@ -29,7 +29,7 @@ public class EventWaiterCommand implements IMiscCommand {
 //                            MessageReceivedEvent.class,
 //                            e -> e.getMessageIdLong() == message.getIdLong() && !e.getAuthor().isBot(),
 //                            e -> {
-//                                event.replyFormat("%s was the first to react", e.getAuthor().getName().queue();
+//                                event.getHook().sendMessageFormat("%s was the first to react", e.getAuthor().getName().queue();
 //                            },
 //                            5L, TimeUnit.SECONDS,
 //                            () -> channel.sendMessage("You waited too long").queue()

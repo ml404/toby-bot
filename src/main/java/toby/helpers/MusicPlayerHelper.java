@@ -3,6 +3,7 @@ package toby.helpers;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.ICommand;
 import toby.command.commands.music.QueueCommand;
@@ -21,7 +22,7 @@ public class MusicPlayerHelper {
 
     public static final int SECOND_MULTIPLIER = 1000;
 
-    public static void playUserIntro(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition) {
+    public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition) {
         MusicDto musicDto = dbUser.getMusicDto();
         PlayerManager instance = PlayerManager.getInstance();
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
@@ -42,6 +43,27 @@ public class MusicPlayerHelper {
         }
     }
 
+    public static void playUserIntroWithChannel(UserDto dbUser, Guild guild, TextChannel channel, int deleteDelay, Long startPosition) {
+        MusicDto musicDto = dbUser.getMusicDto();
+        PlayerManager instance = PlayerManager.getInstance();
+        int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
+        if (musicDto != null && musicDto.getFileName() != null) {
+            Integer introVolume = musicDto.getIntroVolume();
+            instance.setPreviousVolume(currentVolume);
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
+            instance.loadAndPlayChannel(channel,
+                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    true,
+                    0,
+                    startPosition);
+        } else if (musicDto != null) {
+            Integer introVolume = musicDto.getIntroVolume();
+            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
+            instance.setPreviousVolume(currentVolume);
+            instance.loadAndPlayChannel(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition);
+        }
+    }
+
     public static void nowPlaying(SlashCommandInteractionEvent event, AudioTrack track, Integer deleteDelay) {
         AudioTrackInfo info = track.getInfo();
         long duration = track.getDuration();
@@ -50,7 +72,7 @@ public class MusicPlayerHelper {
         event.getHook().sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    public static Long adjustTrackPlayingTimes(long startTime) {
+    public static Long adjustTrackPlayingTimes(Long startTime) {
         Map<String, Long> adjustmentMap = new HashMap<>();
 
         if (startTime > 0L) adjustmentMap.put(MusicDto.Adjustment.START.name(), startTime);

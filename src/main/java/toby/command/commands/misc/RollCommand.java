@@ -10,6 +10,7 @@ import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -22,9 +23,9 @@ public class RollCommand implements IMiscCommand {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        OptionMapping arg = event.getOption(DICE_NUMBER);
+        Optional<Integer> diceOptional = Optional.ofNullable(event.getOption(DICE_NUMBER)).map(OptionMapping::getAsInt);
         Random rand = ThreadLocalRandom.current();
-        int diceRoll = arg != null ? Integer.parseInt(arg.getAsString()) : 6;
+        int diceRoll = diceOptional.orElse(6);
         int roll = rand.nextInt(diceRoll) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
         event.getHook().sendMessageFormat("You chose to roll a '%d' sided dice. You rolled a '%d'", diceRoll, roll).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }

@@ -2,6 +2,7 @@ package toby.helpers;
 
 import java.net.URI;
 import java.net.URL;
+import java.util.Optional;
 
 public class URLHelper {
 
@@ -18,15 +19,15 @@ public class URLHelper {
         }
     }
 
-    public static URI fromUrlString(String url){
+    public static Optional<URI> fromUrlString(String url){
         /* Try creating a valid URL */
         try {
-            return new URL(url).toURI();
+            return Optional.of(new URL(url).toURI());
         }
         // If there was an Exception
         // while creating URL object
         catch (Exception e) {
-            return null;
+            return Optional.empty();
         }
     }
 }

@@ -10,6 +10,7 @@ import toby.jpa.dto.UserDto;
 import toby.managers.CommandManager;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class HelpCommand implements IMiscCommand {
@@ -44,19 +45,19 @@ public class HelpCommand implements IMiscCommand {
             manager.getFetchCommands().forEach(commandConsumer);
 
 
-            event.replyFormat(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat(builder.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        String search = event.getOption("Command").getAsString();
-        ICommand command = manager.getCommand(search);
+        Optional<String> searchOptional = Optional.ofNullable(event.getOption(COMMAND)).map(OptionMapping::getAsString);
+        Optional<ICommand> command = searchOptional.map(manager::getCommand);
 
-        if (command == null) {
-            event.getHook().sendMessage("Nothing found for " + search).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        if (command.isEmpty()) {
+            event.getHook().sendMessage("Nothing found for command '%s" + searchOptional.get()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
 
-        event.getHook().sendMessage(command.getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(command.get().getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     @Override

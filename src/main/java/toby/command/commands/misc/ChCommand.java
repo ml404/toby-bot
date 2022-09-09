@@ -1,6 +1,7 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
@@ -9,6 +10,7 @@ import toby.jpa.dto.UserDto;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ChCommand implements IMiscCommand {
@@ -20,7 +22,7 @@ public class ChCommand implements IMiscCommand {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        String message = event.getOption(MESSAGE).getAsString();
+        String message = Optional.ofNullable(event.getOption(MESSAGE)).map(OptionMapping::getAsString).orElse("");
 
         String newMessage = Arrays.stream(message.split(" ")).map(s -> {
                     int vowelIndex = 0;

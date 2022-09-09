@@ -53,7 +53,7 @@ public class EightBallCommand implements IMiscCommand {
         };
 
         if(requestingUserDto.getDiscordId().equals(TOMS_DISCORD_ID)){
-            event.replyFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             Long socialCredit = requestingUserDto.getSocialCredit();
             int deductedSocialCredit = -5 * choice;
             requestingUserDto.setSocialCredit(socialCredit + deductedSocialCredit);
