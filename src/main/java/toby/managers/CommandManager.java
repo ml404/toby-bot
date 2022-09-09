@@ -153,7 +153,7 @@ public class CommandManager {
         int introVolume = Integer.parseInt(defaultVolume);
 
         UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(), event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
-        String invoke = event.getCommandString().toLowerCase();
+        String invoke = event.getName().toLowerCase();
         ICommand cmd = this.getCommand(invoke);
 
         if (cmd != null) {
