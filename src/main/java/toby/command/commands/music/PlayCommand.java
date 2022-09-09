@@ -69,11 +69,11 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro)", true);
+        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro). Defaults to link");
         type.addChoice(LINK, LINK);
         type.addChoice(INTRO, INTRO);
         OptionData link = new OptionData(OptionType.STRING, LINK, "link you would like to play");
-        OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds", false);
+        OptionData startPosition = new OptionData(OptionType.INTEGER, START_POSITION, "Start position of the track in seconds (defaults to 0)");
         return List.of(type,link, startPosition);
     }
 }
