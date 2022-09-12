@@ -34,7 +34,7 @@ public class PlayCommand implements IMusicCommand {
             return;
         }
 
-        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(INTRO);
+        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(LINK);
 
         if (type.isEmpty()) {
             event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
@@ -71,12 +71,12 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro). Defaults to intro");
+        OptionData type = new OptionData(OptionType.STRING, TYPE, "Type of thing you're playing (link or intro). Defaults to link");
         type.addChoice(LINK, LINK);
         type.addChoice(INTRO, INTRO);
         OptionData link = new OptionData(OptionType.STRING, LINK, "link you would like to play");
         OptionData startPosition = new OptionData(OptionType.NUMBER, START_POSITION, "Start position of the track in seconds (defaults to 0)");
         OptionData volume = new OptionData(OptionType.INTEGER, VOLUME, "Volume to play at");
-        return List.of(type,link, startPosition, volume);
+        return List.of(link, type, startPosition, volume);
     }
 }
