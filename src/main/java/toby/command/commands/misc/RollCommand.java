@@ -36,12 +36,14 @@ public class RollCommand implements IMiscCommand {
         int modifier = diceModifierOptional.orElse(0);
         InteractionHook interactionHook = event.getHook();
         int rollTotal = 0;
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < diceToRoll; i++) {
             int roll = rand.nextInt(diceValue) + 1; //This results in 1 - 6 (instead of 0 - 5) for default value
-            rollTotal+=roll;
-            interactionHook.sendMessageFormat("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll);
+            rollTotal += roll;
+            sb.append(String.format("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll));
         }
-        interactionHook.sendMessageFormat("Your final roll total was '%d' + '%d'.", rollTotal, modifier).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        sb.append("Your final roll total was '%d' + '%d'.", rollTotal, modifier);
+        interactionHook.sendMessageFormat(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
     }
 
