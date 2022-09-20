@@ -1,7 +1,6 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
@@ -34,7 +33,6 @@ public class RollCommand implements IMiscCommand {
         Integer diceToRollInput = diceToRollOptional.orElse(1);
         int diceToRoll = (diceToRollInput < 1) ? 1 : diceToRollInput;
         int modifier = diceModifierOptional.orElse(0);
-        InteractionHook interactionHook = event.getHook();
         int rollTotal = 0;
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < diceToRoll; i++) {
@@ -42,8 +40,8 @@ public class RollCommand implements IMiscCommand {
             rollTotal += roll;
             sb.append(String.format("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll));
         }
-        sb.append("Your final roll total was '%d' + '%d'.", rollTotal, modifier);
-        interactionHook.sendMessageFormat(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        sb.append(String.format("Your final roll total was '%d' + '%d'.", rollTotal, modifier));
+        event.getHook().sendMessageFormat(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
     }
 
