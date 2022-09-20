@@ -116,7 +116,9 @@ public class PlayerManager {
                 scheduler.queue(track, startPosition);
                 scheduler.setPreviousVolume(previousVolume);
 
-                event.getHook().sendMessage("Adding to queue: `")
+                //TODO not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out
+                event.deferReply()
+                        .addContent("Adding to queue: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
