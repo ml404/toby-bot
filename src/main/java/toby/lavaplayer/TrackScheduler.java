@@ -59,7 +59,6 @@ public class TrackScheduler extends AudioEventAdapter {
         if (endReason.mayStartNext) {
             int volume = (int) track.getUserData();
             if (isLooping) {
-                player.setVolume(volume);
                 this.player.startTrack(track.makeClone(), false);
                 return;
             }
@@ -68,8 +67,8 @@ public class TrackScheduler extends AudioEventAdapter {
                 player.setVolume(previousVolume);
                 event.getHook().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
-            player.setVolume(volume);
             nextTrack();
+            this.player.setVolume(volume);
             nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
         }
     }
