@@ -65,11 +65,11 @@ public class MusicPlayerHelper {
         }
     }
 
-    public static void nowPlaying(SlashCommandInteractionEvent event, AudioTrack track, Integer deleteDelay) {
+    public static void nowPlaying(SlashCommandInteractionEvent event, AudioTrack track, Integer deleteDelay, int volume) {
         AudioTrackInfo info = track.getInfo();
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);
-        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) ", info.title, info.author, songDuration, info.uri);
+        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) with volume `%d`", info.title, info.author, songDuration, info.uri, volume);
         event.getHook().sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 

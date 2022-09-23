@@ -1,6 +1,7 @@
 package toby.command.commands.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -48,7 +49,8 @@ public class SkipCommand implements IMusicCommand {
             }
             musicManager.getScheduler().setLooping(false);
             event.getHook().sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(message -> ICommand.deleteAfter(message, deleteDelay));
-            nowPlaying(event, musicManager.getAudioPlayer().getPlayingTrack(), deleteDelay);
+            AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
+            nowPlaying(event, playingTrack, deleteDelay, (int) playingTrack.getUserData());
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
