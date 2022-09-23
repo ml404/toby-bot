@@ -71,7 +71,7 @@ public class PlayerManager {
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
                         .addContent("`")
-                        .addContent(String.format(" starting at '%s ms'", startPosition))
+                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
@@ -124,7 +124,7 @@ public class PlayerManager {
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
                         .addContent("`")
-                        .addContent(String.format(" starting at '%s ms'", startPosition))
+                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
