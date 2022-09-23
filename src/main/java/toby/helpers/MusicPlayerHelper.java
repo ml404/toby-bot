@@ -22,7 +22,7 @@ public class MusicPlayerHelper {
 
     public static final int SECOND_MULTIPLIER = 1000;
 
-    public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition) {
+    public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
         PlayerManager instance = PlayerManager.getInstance();
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
@@ -34,12 +34,13 @@ public class MusicPlayerHelper {
                     String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
-                    startPosition);
+                    startPosition,
+                    volume);
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition);
+            instance.loadAndPlay(event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, volume);
         }
     }
 

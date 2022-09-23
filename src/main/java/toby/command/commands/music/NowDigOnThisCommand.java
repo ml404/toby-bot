@@ -21,6 +21,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     private final String LINK = "link";
     private final String START_POSITION = "start";
+    private final String VOLUME = "volume";
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
@@ -37,7 +38,9 @@ public class NowDigOnThisCommand implements IMusicCommand {
             String link = linkOptional.get();
             if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + linkOptional;
             Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
-            PlayerManager.getInstance().loadAndPlay(event, link, false, deleteDelay, startPosition);
+            PlayerManager instance = PlayerManager.getInstance();
+            int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(instance.getMusicManager(event.getGuild()).getAudioPlayer().getVolume());
+            instance.loadAndPlay(event, link, false, deleteDelay, startPosition, volume);
         } else
             sendErrorMessage(event, deleteDelay);
     }
@@ -77,6 +80,8 @@ public class NowDigOnThisCommand implements IMusicCommand {
     public List<OptionData> getOptionData() {
         OptionData linkArg = new OptionData(OptionType.STRING, LINK, "Link to play that cannot be stopped unless requested by a super user", true);
         OptionData startPositionArg = new OptionData(OptionType.NUMBER, START_POSITION, "Start position of the track in seconds");
-        return List.of(linkArg, startPositionArg);
+        OptionData volume = new OptionData(OptionType.INTEGER, VOLUME, "Volume to play at");
+
+        return List.of(linkArg, volume, startPositionArg);
     }
 }

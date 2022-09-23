@@ -34,8 +34,9 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = new LinkedBlockingQueue<>();
     }
 
-    public void queue(AudioTrack track, long startPosition) {
+    public void queue(AudioTrack track, long startPosition, int volume) {
         track.setPosition(startPosition);
+        track.setUserData(volume);
         if (!this.player.startTrack(track, true)) {
             this.queue.offer(track);
         }
@@ -48,6 +49,8 @@ public class TrackScheduler extends AudioEventAdapter {
 
     public void nextTrack() {
         AudioTrack track = this.queue.poll();
+        int volume = (int) track.getUserData();
+        this.player.setVolume(volume);
         this.player.startTrack(track, false);
     }
 
