@@ -39,7 +39,11 @@ public class NowDigOnThisCommand implements IMusicCommand {
             if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + linkOptional;
             Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
             PlayerManager instance = PlayerManager.getInstance();
+            GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
             int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(instance.getMusicManager(event.getGuild()).getAudioPlayer().getVolume());
+            if (musicManager.getScheduler().getQueue().isEmpty()) {
+                musicManager.getAudioPlayer().setVolume(volume);
+            }
             instance.loadAndPlay(event, link, false, deleteDelay, startPosition, volume);
         } else
             sendErrorMessage(event, deleteDelay);

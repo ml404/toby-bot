@@ -68,7 +68,6 @@ public class TrackScheduler extends AudioEventAdapter {
                 event.getHook().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             nextTrack();
-            this.player.setVolume(volume);
             nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
         }
     }

@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
+import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
@@ -43,11 +44,15 @@ public class PlayCommand implements IMusicCommand {
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         PlayerManager instance = PlayerManager.getInstance();
         Guild guild = event.getGuild();
-        int currentVolume = instance.getMusicManager(guild).getAudioPlayer().getVolume();
+        GuildMusicManager musicManager = instance.getMusicManager(guild);
+        int currentVolume = musicManager.getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
         Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
         int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(currentVolume);
 
+        if (musicManager.getScheduler().getQueue().isEmpty()) {
+            musicManager.getAudioPlayer().setVolume(volume);
+        }
         if (type.equals(INTRO)) {
             playUserIntroWithEvent(requestingUserDto, guild, event, deleteDelay, startPosition, volume);
         } else {
