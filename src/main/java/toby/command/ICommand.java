@@ -29,12 +29,12 @@ public interface ICommand {
     }
 
 
-    default String getErrorMessage() {
-        return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: %s";
+    default String getErrorMessage(String serverOwner) {
+        return String.format("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: %s", serverOwner);
     }
 
     default void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessageFormat(getErrorMessage(), event.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat(getErrorMessage(event.getGuild().getOwner().getEffectiveName()), event.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     default SlashCommandData getSlashCommand(){

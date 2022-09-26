@@ -57,11 +57,13 @@ public class PlayerManager {
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
 
             private final TrackScheduler scheduler = musicManager.getScheduler();
+            final int volume = musicManager.getAudioPlayer().getVolume();
 
             @Override
             public void trackLoaded(AudioTrack track) {
+
                 scheduler.setDeleteDelay(deleteDelay);
-                scheduler.queue(track, startPosition);
+                scheduler.queue(track, startPosition, volume);
                 scheduler.setPreviousVolume(previousVolume);
 
                 channel.sendMessage("Adding to queue: `")
@@ -69,7 +71,7 @@ public class PlayerManager {
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
                         .addContent("`")
-                        .addContent(String.format(" starting at '%s ms'", startPosition))
+                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
@@ -86,7 +88,7 @@ public class PlayerManager {
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
                 for (final AudioTrack track : tracks) {
-                    scheduler.queue(track);
+                    scheduler.queue(track, startPosition, volume);
                 }
             }
 
@@ -102,7 +104,7 @@ public class PlayerManager {
         });
     }
 
-    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition) {
+    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition, int volume) {
         final GuildMusicManager musicManager = this.getMusicManager(event.getGuild());
         this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
@@ -113,16 +115,16 @@ public class PlayerManager {
             public void trackLoaded(AudioTrack track) {
                 scheduler.setEvent(event);
                 scheduler.setDeleteDelay(deleteDelay);
-                scheduler.queue(track, startPosition);
+                scheduler.queue(track, startPosition, volume);
                 scheduler.setPreviousVolume(previousVolume);
 
-                event.deferReply()
-                        .addContent("Adding to queue: `")
+                //TODO not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out
+                event.getChannel().asTextChannel().sendMessage("Adding to queue: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
                         .addContent("`")
-                        .addContent(String.format(" starting at '%s ms'", startPosition))
+                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
 
@@ -140,7 +142,7 @@ public class PlayerManager {
                         .queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
                 for (final AudioTrack track : tracks) {
-                    scheduler.queue(track);
+                    scheduler.queue(track, startPosition, volume);
                 }
             }
 

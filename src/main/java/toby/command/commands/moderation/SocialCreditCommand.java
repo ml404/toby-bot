@@ -118,7 +118,7 @@ public class SocialCreditCommand implements IModerationCommand {
     public List<OptionData> getOptionData() {
         OptionData leaderboard = new OptionData(OptionType.BOOLEAN, LEADERBOARD, "Show the leaderboard");
         OptionData users = new OptionData(OptionType.STRING, USERS, "User(s) to adjust the social credit value. Without a value will display their social credit amount");
-        OptionData creditAmount = new OptionData(OptionType.INTEGER, SOCIAL_CREDIT, "Score to add or deduct from mentioned user's social credit");
+        OptionData creditAmount = new OptionData(OptionType.NUMBER, SOCIAL_CREDIT, "Score to add or deduct from mentioned user's social credit");
         return List.of(users, creditAmount, leaderboard);
     }
 }

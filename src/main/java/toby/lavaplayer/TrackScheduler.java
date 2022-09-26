@@ -34,8 +34,9 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = new LinkedBlockingQueue<>();
     }
 
-    public void queue(AudioTrack track, long startPosition) {
+    public void queue(AudioTrack track, long startPosition, int volume) {
         track.setPosition(startPosition);
+        track.setUserData(volume);
         if (!this.player.startTrack(track, true)) {
             this.queue.offer(track);
         }
@@ -48,12 +49,15 @@ public class TrackScheduler extends AudioEventAdapter {
 
     public void nextTrack() {
         AudioTrack track = this.queue.poll();
+        int volume = (int) track.getUserData();
+        this.player.setVolume(volume);
         this.player.startTrack(track, false);
     }
 
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
         if (endReason.mayStartNext) {
+            int volume = (int) track.getUserData();
             if (isLooping) {
                 this.player.startTrack(track.makeClone(), false);
                 return;
@@ -64,7 +68,7 @@ public class TrackScheduler extends AudioEventAdapter {
                 event.getHook().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             }
             nextTrack();
-            nowPlaying(event, player.getPlayingTrack(), deleteDelay);
+            nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
         }
     }
 
