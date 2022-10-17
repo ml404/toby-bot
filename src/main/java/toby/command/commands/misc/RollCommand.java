@@ -40,7 +40,7 @@ public class RollCommand implements IMiscCommand {
             rollTotal += roll;
             sb.append(String.format("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll));
         }
-        sb.append(String.format("Your final roll total was '%d' + '%d'.", rollTotal, modifier));
+        sb.append(String.format("Your final roll total was '%d' + '%d' modifier = '%d'.", rollTotal, modifier, rollTotal + modifier));
         event.getHook().sendMessageFormat(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
 
     }
