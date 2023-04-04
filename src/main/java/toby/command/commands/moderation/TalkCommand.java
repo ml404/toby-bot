@@ -1,9 +1,9 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.AudioChannel;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -17,7 +17,7 @@ public class TalkCommand implements IModerationCommand {
         event.deferReply().queue();
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
-        final AudioChannel memberChannel = memberVoiceState.getChannel();
+        AudioChannelUnion memberChannel = memberVoiceState.getChannel();
 
         memberChannel.getMembers().forEach(target -> {
 

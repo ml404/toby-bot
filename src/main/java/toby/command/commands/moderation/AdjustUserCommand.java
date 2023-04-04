@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import org.jetbrains.annotations.Nullable;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
@@ -92,7 +91,6 @@ public class AdjustUserCommand implements IModerationCommand {
         event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
-    @Nullable
     private List<Member> channelAndArgumentValidation(UserDto requestingUserDto, SlashCommandInteractionEvent event, Member member, int deleteDelay) {
         if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
             event.getHook().sendMessage("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").setEphemeral(true).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
