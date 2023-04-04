@@ -1,6 +1,5 @@
 package toby.managers;
 
-import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
@@ -42,7 +41,7 @@ public class CommandManager {
     private final IExcuseService excuseService;
 
     @Autowired
-    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService, EventWaiter waiter) {
+    public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService) {
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;

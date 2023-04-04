@@ -3,8 +3,8 @@ package toby.command.commands;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.sharding.ShardManager;
 
@@ -28,9 +28,9 @@ public interface ICommandContext {
     SlashCommandInteractionEvent getEvent();
 
     /**
-     * Returns the {@link net.dv8tion.jda.api.entities.TextChannel channel} that the message for this event was send in
+     * Returns the {@link TextChannel channel} that the message for this event was send in
      *
-     * @return the {@link net.dv8tion.jda.api.entities.TextChannel channel} that the message for this event was send in
+     * @return the {@link TextChannel channel} that the message for this event was send in
      */
     default TextChannel getChannel() {
         return this.getEvent().getChannel().asTextChannel();

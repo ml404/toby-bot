@@ -1,10 +1,10 @@
 package toby.command.commands.music;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.AudioChannel;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
@@ -48,7 +48,7 @@ public class LeaveCommand implements IMusicCommand {
 
         Guild guild = event.getGuild();
         final AudioManager audioManager = guild.getAudioManager();
-        final AudioChannel memberChannel = memberVoiceState.getChannel();
+        AudioChannelUnion memberChannel = memberVoiceState.getChannel();
 
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {

@@ -1,19 +1,22 @@
 package toby.handler;
 
-import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceJoinEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceLeaveEvent;
-import net.dv8tion.jda.api.events.guild.voice.GuildVoiceMoveEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.jetbrains.annotations.NotNull;
@@ -52,8 +55,8 @@ public class Handler extends ListenerAdapter {
     private final CommandManager manager;
 
     @Autowired
-    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService, EventWaiter waiter) {
-        manager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService, waiter);
+    public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService) {
+        manager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService);
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
@@ -117,7 +120,7 @@ public class Handler extends ListenerAdapter {
         if (user.isBot()) {
             return;
         }
-            manager.handle(event);
+        manager.handle(event);
     }
 
     @Override
@@ -155,7 +158,7 @@ public class Handler extends ListenerAdapter {
             channel.sendMessage("Don't talk to me").queue();
         }
 
-        if(messageStringLowercase.contains("covid") || messageStringLowercase.contains("corona")){
+        if (messageStringLowercase.contains("covid") || messageStringLowercase.contains("corona")) {
             channel.sendMessage("""
                     It is the 2nd millennium, for more than two years humanity has sat immobile on it's fat arse whilst COVID roams the planet. They are the masters of Netflix by the will of the settee, and masters of ordering Chinese takeaway through the might of their wallets. They are fattening imbeciles imbued with energy from last nights curry. They are the isolated ones for whom more than a million people wear masks every day.
 
@@ -165,9 +168,20 @@ public class Handler extends ListenerAdapter {
         }
     }
 
-    //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server, then play the associated user's intro song
+
     @Override
-    public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
+    public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event) {
+        if (event.getVoiceState().inAudioChannel()) {
+            onGuildVoiceJoin(event);
+        }
+        if (!event.getVoiceState().inAudioChannel()) {
+            onGuildVoiceLeave(event);
+        }
+    }
+
+    //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server, then play the associated user's intro song
+
+    public void onGuildVoiceJoin(GuildVoiceUpdateEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
@@ -191,8 +205,7 @@ public class Handler extends ListenerAdapter {
         }
     }
 
-    @Override
-    public void onGuildVoiceMove(GuildVoiceMoveEvent event) {
+    public void onGuildVoiceMove(GuildVoiceUpdateEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
@@ -208,9 +221,9 @@ public class Handler extends ListenerAdapter {
         deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.getChannelLeft());
     }
 
+
     //Auto leaving voice channel when it becomes empty
-    @Override
-    public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
+    public void onGuildVoiceLeave(GuildVoiceUpdateEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();

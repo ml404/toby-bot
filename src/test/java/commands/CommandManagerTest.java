@@ -1,6 +1,5 @@
 package commands;
 
-import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,9 +42,6 @@ public class CommandManagerTest {
     @Mock
     IExcuseService excuseService;
 
-    @Mock
-    EventWaiter waiter;
-
 
     private AutoCloseable closeable;
 
@@ -62,7 +58,7 @@ public class CommandManagerTest {
 
     @Test
     public void testCommandManagerFindsAllCommands() {
-        CommandManager commandManager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService, waiter);
+        CommandManager commandManager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService);
 
         List<Class<? extends ICommand>> availableCommands = Arrays.asList(HelpCommand.class,
                 SetConfigCommand.class,

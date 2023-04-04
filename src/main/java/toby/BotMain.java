@@ -1,6 +1,5 @@
 package toby;
 
-import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import me.duncte123.botcommons.messaging.EmbedUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
@@ -10,7 +9,6 @@ import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import toby.handler.Handler;
 import toby.jpa.service.*;
@@ -28,8 +26,7 @@ public class BotMain {
                    IBrotherService brotherService,
                    IUserService userService,
                    IMusicFileService musicFileService,
-                   IExcuseService excuseService,
-                   EventWaiter waiter) throws LoginException {
+                   IExcuseService excuseService) throws LoginException {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
@@ -50,7 +47,7 @@ public class BotMain {
                         CacheFlag.CLIENT_STATUS,
                         CacheFlag.ACTIVITY
                 )).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI);
-        builder.addEventListeners(new Handler(configService, brotherService, userService, musicFileService, excuseService, waiter), waiter);
+        builder.addEventListeners(new Handler(configService, brotherService, userService, musicFileService, excuseService));
         setJda(builder.build());
     }
 
@@ -60,11 +57,6 @@ public class BotMain {
 
     public static void setJda(JDA jda) {
         BotMain.jda = jda;
-    }
-
-    @Bean
-    public static EventWaiter eventWaiter() {
-        return new EventWaiter();
     }
 
 }
