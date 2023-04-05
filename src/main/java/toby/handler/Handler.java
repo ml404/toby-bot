@@ -171,11 +171,14 @@ public class Handler extends ListenerAdapter {
 
     @Override
     public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event) {
-        if (event.getVoiceState().inAudioChannel()) {
+        if (event.getChannelJoined() != null) {
             onGuildVoiceJoin(event);
         }
-        if (!event.getVoiceState().inAudioChannel()) {
+        if (event.getChannelLeft() != null) {
             onGuildVoiceLeave(event);
+        }
+        if (event.getChannelJoined() == null && event.getChannelLeft() == null) {
+            onGuildVoiceMove(event);
         }
     }
 
