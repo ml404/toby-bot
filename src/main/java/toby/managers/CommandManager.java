@@ -1,8 +1,11 @@
 package toby.managers;
 
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.internal.utils.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
@@ -21,10 +24,7 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static toby.helpers.UserDtoHelper.calculateUserDto;
@@ -39,6 +39,8 @@ public class CommandManager {
     private final List<CommandData> slashCommands = new ArrayList<>();
     private final IMusicFileService musicFileService;
     private final IExcuseService excuseService;
+
+    private final Map<User, Pair<ICommand, CommandContext>> lastCommands = new HashMap<>();
 
     @Autowired
     public CommandManager(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService) {
@@ -111,7 +113,7 @@ public class CommandManager {
         return slashCommands;
     }
 
-    public List<ICommand> getAllCommands(){
+    public List<ICommand> getAllCommands() {
         return commands;
     }
 
@@ -155,11 +157,12 @@ public class CommandManager {
         String invoke = event.getName().toLowerCase();
         ICommand cmd = this.getCommand(invoke);
 
+        // Build the response embed
         if (cmd != null) {
             event.getChannel().sendTyping().queue();
             CommandContext ctx = new CommandContext(event);
+            lastCommands.put(event.getUser(), Pair.of(cmd, ctx));
             cmd.handle(ctx, requestingUserDto, deleteDelay);
-            attributeSocialCredit(ctx, userService, requestingUserDto, deleteDelay);
         }
     }
 
@@ -171,5 +174,43 @@ public class CommandManager {
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
         ctx.getEvent().replyFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
+
+    public void handle(ButtonInteractionEvent event) {
+        Integer deleteDelay = Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId()).getValue());
+
+        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+        String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
+        int introVolume = Integer.parseInt(defaultVolume);
+        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(), event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
+        // Dispatch the simulated SlashCommandInteractionEvent
+        if (event.getComponentId().equals("resend_last_request")) {
+            Pair<ICommand, CommandContext> iCommandCommandContextPair = lastCommands.get(event.getUser());
+            ICommand cmd = iCommandCommandContextPair.getLeft();
+            // Resend the last request
+            if (cmd != null) {
+                event.getChannel().sendTyping().queue();
+                cmd.handle(iCommandCommandContextPair.getRight(), requestingUserDto, deleteDelay);
+                event.deferEdit().queue();
+            }
+        } else {
+            //button name that should be something like 'roll: 20,1,0'
+            String invoke = event.getComponentId().toLowerCase();
+            String[] split = invoke.split(":");
+            String commandName = split[0];
+            String options = split[1];
+            ICommand cmd = this.getCommand(commandName);
+            if (cmd != null) {
+                event.getChannel().sendTyping().queue();
+                // Create a simulated SlashCommandInteractionImpl
+                if (cmd.getName().equals("roll")) {
+                    RollCommand rollCommand = (RollCommand) cmd;
+                    String[] optionArray = options.split(",");
+                    rollCommand.handleDiceRoll(deleteDelay, event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim()));
+                    CommandContext ctx = new CommandContext(event);
+                    cmd.handle(ctx, requestingUserDto, deleteDelay);
+                }
+            }
+        }
     }
 }
