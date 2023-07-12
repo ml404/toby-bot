@@ -206,9 +206,7 @@ public class CommandManager {
                 if (cmd.getName().equals("roll")) {
                     RollCommand rollCommand = (RollCommand) cmd;
                     String[] optionArray = options.split(",");
-                    rollCommand.handleDiceRoll(deleteDelay, event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim()));
-                    CommandContext ctx = new CommandContext(event);
-                    cmd.handle(ctx, requestingUserDto, deleteDelay);
+                    rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 }
             }
         }
