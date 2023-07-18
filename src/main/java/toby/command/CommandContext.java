@@ -2,13 +2,15 @@ package toby.command;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import toby.command.commands.ICommandContext;
 
 public class CommandContext implements ICommandContext {
-    private final SlashCommandInteractionEvent event;
+    IReplyCallback interaction;
 
-    public CommandContext(SlashCommandInteractionEvent event) {
-        this.event = event;
+    public CommandContext(IReplyCallback interaction) {
+        this.interaction = interaction;
     }
 
     @Override
@@ -18,7 +20,10 @@ public class CommandContext implements ICommandContext {
 
     @Override
     public SlashCommandInteractionEvent getEvent() {
-        return this.event;
+        return (SlashCommandInteractionEvent) this.interaction;
     }
 
+    public ButtonInteractionEvent getButtonInteractionEvent() {
+        return (ButtonInteractionEvent) this.interaction;
+    }
 }
