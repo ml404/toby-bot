@@ -13,7 +13,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import toby.command.ICommand;
 
 import java.util.HashMap;
@@ -104,7 +104,7 @@ public class PlayerManager {
         });
     }
 
-    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition, int volume) {
+    public void loadAndPlay(IReplyCallback event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition, int volume) {
         final GuildMusicManager musicManager = this.getMusicManager(event.getGuild());
         this.currentlyStoppable = isSkippable;
         this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
@@ -119,7 +119,7 @@ public class PlayerManager {
                 scheduler.setPreviousVolume(previousVolume);
 
                 //TODO not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out
-                event.getChannel().asTextChannel().sendMessage("Adding to queue: `")
+                event.getHook().sendMessage("Adding to queue: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
