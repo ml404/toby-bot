@@ -4,63 +4,36 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.transaction.annotation.Transactional;
 import toby.Application;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
-import toby.jpa.persistence.IMusicFilePersistence;
-import toby.jpa.persistence.IUserPersistence;
-import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
-import toby.jpa.service.impl.MusicFileServiceImpl;
-import toby.jpa.service.impl.UserServiceImpl;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = Application.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class UserServiceImplIntegrationTest {
-
-    @Bean
-    public IUserService userService() {
-        return new UserServiceImpl();
-    }
-
     @Autowired
     private IUserService userService;
-
-    @Autowired
-    private IUserPersistence userPersistence;
-
-    @Bean
-    public IMusicFileService musicFileService() {
-        return new MusicFileServiceImpl();
-    }
-
-    @Autowired
-    private IMusicFileService musicFileService;
-
-    @Autowired
-    private IMusicFilePersistence musicFilePersistence;
 
 
     @BeforeEach
     public void setUp() {
-        userService.deleteUserById(1L, 1L);
-        musicFileService.deleteMusicFileById("1_1");
+        userService.deleteUserById(6L, 1L);
     }
 
     @AfterEach
     public void tearDown(){
-        userService.deleteUserById(1L, 1L);
-        musicFileService.deleteMusicFileById("1_1");
+        userService.deleteUserById(6L, 1L);
     }
 
     @Test
     public void whenValidDiscordIdAndGuild_thenUserShouldBeFound() {
         UserDto userDto = new UserDto();
-        userDto.setDiscordId(1L);
+        userDto.setDiscordId(6L);
         userDto.setGuildId(1L);
         MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, 0, null);
         userDto.setMusicDto(musicDto);
@@ -77,15 +50,16 @@ public class UserServiceImplIntegrationTest {
     }
 
     @Test
-    @Transactional
     public void testUpdate_thenNewUserValuesShouldBeReturned() {
         UserDto userDto1 = new UserDto();
-        userDto1.setDiscordId(1L);
+        userDto1.setDiscordId(6L);
         userDto1.setGuildId(1L);
         MusicDto musicDto1 = new MusicDto(userDto1.getDiscordId(), userDto1.getGuildId(), null, 0, null);
         userDto1.setMusicDto(musicDto1);
         userDto1 = userService.createNewUser(userDto1);
         UserDto dbUser1 = userService.getUserById(userDto1.getDiscordId(), userDto1.getGuildId());
+
+        int dbSize = userService.listGuildUsers(1L).size();
 
         assertEquals(dbUser1.getDiscordId(),userDto1.getDiscordId());
         assertEquals(dbUser1.getGuildId(),userDto1.getGuildId());
@@ -96,7 +70,7 @@ public class UserServiceImplIntegrationTest {
         assertNotNull(dbUser1.getMusicDto());
 
         UserDto userDto2 = new UserDto();
-        userDto2.setDiscordId(1L);
+        userDto2.setDiscordId(6L);
         userDto2.setGuildId(1L);
         MusicDto musicDto2 = new MusicDto(userDto2.getDiscordId(), userDto2.getGuildId(), null, 0, null);
         userDto2.setMusicDto(musicDto2);
@@ -113,14 +87,14 @@ public class UserServiceImplIntegrationTest {
         assertFalse(dbUser2.hasDigPermission());
         assertFalse(dbUser2.isSuperUser());
         assertNotNull(dbUser2.getMusicDto());
-        assertEquals(1, guildMemberSize);
+        assertEquals(dbSize, guildMemberSize);
     }
 
 
     @Test
     public void whenMusicFileExistsWithSameDiscordIdAndGuild_thenUserShouldBeFoundWithMusicFile() {
         UserDto userDto = new UserDto();
-        userDto.setDiscordId(1L);
+        userDto.setDiscordId(6L);
         userDto.setGuildId(1L);
         MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), "test", 0, null);
         userDto.setMusicDto(musicDto);
@@ -142,7 +116,7 @@ public class UserServiceImplIntegrationTest {
     @Test
     public void whenMusicFileExistsWithSameDiscordIdAndGuildAndUpdatedOnce_thenUserShouldBeFoundWithMusicFile() {
         UserDto userDto = new UserDto();
-        userDto.setDiscordId(1L);
+        userDto.setDiscordId(6L);
         userDto.setGuildId(1L);
         MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, 0, null);
         userDto.setMusicDto(musicDto);

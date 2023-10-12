@@ -4,16 +4,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import toby.Application;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.persistence.IMusicFilePersistence;
 import toby.jpa.persistence.IUserPersistence;
 import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
-import toby.jpa.service.impl.MusicFileServiceImpl;
-import toby.jpa.service.impl.UserServiceImpl;
 
 import java.io.IOException;
 import java.net.URL;
@@ -21,12 +19,8 @@ import java.net.URL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = Application.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class MusicFileServiceImplIntegrationTest {
-
-    @Bean
-    public IMusicFileService musicFileService() {
-        return new MusicFileServiceImpl();
-    }
 
     @Autowired
     private IMusicFileService musicFileService;
@@ -34,11 +28,6 @@ public class MusicFileServiceImplIntegrationTest {
     @Autowired
     private IMusicFilePersistence musicPersistence;
 
-
-    @Bean
-    public IUserService userService() {
-        return new UserServiceImpl();
-    }
 
     @Autowired
     private IUserService userService;
@@ -50,12 +39,10 @@ public class MusicFileServiceImplIntegrationTest {
 
     @BeforeEach
     public void setUp() {
-        musicFileService.deleteMusicFileById("1_1");
     }
 
     @AfterEach
     public void tearDown(){
-        musicFileService.deleteMusicFileById("1_1");
     }
 
     @Test

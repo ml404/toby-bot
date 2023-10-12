@@ -4,23 +4,18 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import toby.Application;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.persistence.IBrotherPersistence;
 import toby.jpa.service.IBrotherService;
-import toby.jpa.service.impl.BrotherServiceImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = Application.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class BrotherServiceImplIntegrationTest {
-
-    @Bean
-    public IBrotherService brotherService() {
-        return new BrotherServiceImpl();
-    }
 
     @Autowired
     private IBrotherService brotherService;
@@ -31,18 +26,17 @@ public class BrotherServiceImplIntegrationTest {
 
     @BeforeEach
     public void setUp() {
-        brotherPersistence.deleteBrotherById(1L);
-
+        brotherService.deleteBrotherById(6L);
     }
 
     @AfterEach
     public void cleanDb(){
-        brotherPersistence.deleteBrotherById(1L);
+        brotherService.deleteBrotherById(6L);
     }
 
     @Test
     public void whenValidDiscordId_thenBrotherShouldBeFound() {
-        BrotherDto brotherDto = new BrotherDto(1L, "a");
+        BrotherDto brotherDto = new BrotherDto(6L, "a");
         brotherService.createNewBrother(brotherDto);
         BrotherDto dbBrother = brotherService.getBrotherById(brotherDto.getDiscordId());
 
@@ -53,11 +47,11 @@ public class BrotherServiceImplIntegrationTest {
     @Test
     public void testUpdate_thenNewBrotherShouldBeReturned() {
         int originalBrotherSize = brotherService.listBrothers().size();
-        BrotherDto brotherDto = new BrotherDto(1L, "a");
+        BrotherDto brotherDto = new BrotherDto(6L, "a");
         brotherService.createNewBrother(brotherDto);
         BrotherDto dbBrother1 = brotherService.getBrotherById(brotherDto.getDiscordId());
 
-        BrotherDto brotherDtoUpdated = new BrotherDto(1L, "b");
+        BrotherDto brotherDtoUpdated = new BrotherDto(6L, "b");
         brotherService.updateBrother(brotherDtoUpdated);
         BrotherDto dbBrother2 = brotherService.getBrotherById(brotherDto.getDiscordId());
 

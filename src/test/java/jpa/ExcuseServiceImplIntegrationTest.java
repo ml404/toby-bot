@@ -4,24 +4,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.transaction.annotation.Transactional;
 import toby.Application;
 import toby.jpa.dto.ExcuseDto;
 import toby.jpa.persistence.IExcusePersistence;
 import toby.jpa.service.IExcuseService;
-import toby.jpa.service.impl.ExcuseServiceImpl;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = Application.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class ExcuseServiceImplIntegrationTest {
-
-    @Bean
-    public IExcuseService excuseService() {
-        return new ExcuseServiceImpl();
-    }
 
     @Autowired
     private IExcuseService excuseService;
@@ -32,6 +27,7 @@ public class ExcuseServiceImplIntegrationTest {
 
     @BeforeEach
     public void setUp() {
+        excuseService.deleteExcuseByGuildId(1L);
     }
 
     @AfterEach
@@ -98,6 +94,9 @@ public class ExcuseServiceImplIntegrationTest {
         assertEquals(dbExcuse2.getExcuse(), excuseDto2.getExcuse());
         assertEquals(dbExcuse2.getAuthor(), excuseDto2.getAuthor());
         assertTrue(dbExcuse2.isApproved());
+
+        excuseService.deleteExcuseById(excuseDto1.getId());
+        excuseService.deleteExcuseById(excuseDto2.getId());
 
     }
 }
