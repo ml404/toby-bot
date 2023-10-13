@@ -50,7 +50,7 @@ configurations {
     configureEach {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
     }
-    implementation.exclude module: "spring-boot-starter-tomcat"
+//    implementation.exclude module: "spring-boot-starter-tomcat"
 }
 
 dependencies {
@@ -73,7 +73,6 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.2.27'
     implementation('org.springframework.boot:spring-boot-starter-web')
     implementation('org.springframework.boot:spring-boot-starter-web-services')
-    implementation('org.springframework.boot:spring-boot-starter-webflux')
     implementation('org.springframework.boot:spring-boot-starter-actuator')
     implementation('org.springframework.boot:spring-boot-autoconfigure')
     implementation('org.springframework:spring-jdbc')

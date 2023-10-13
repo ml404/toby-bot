@@ -1,10 +1,6 @@
 package toby.jpa.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
@@ -14,22 +10,25 @@ import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
 
 @RestController
+@RequestMapping("/")
 public class BotController {
 
-    @Autowired
     public IUserService userService;
 
-    @Autowired
     public IMusicFileService musicFileService;
 
-    @Autowired
     public IConfigService configService;
 
-    @Autowired
     public IBrotherService brotherService;
 
+    public BotController(IUserService userService, IMusicFileService musicFileService, IConfigService configService, IBrotherService brotherService) {
+        this.userService = userService;
+        this.musicFileService = musicFileService;
+        this.configService = configService;
+        this.brotherService = brotherService;
+    }
+
     @GetMapping("/")
-    @ResponseBody
     public String index() {
         return "Welcome to TobyBot \n" +
                 "To find out more, please visit https://github.com/ml404/toby-bot#readme";
