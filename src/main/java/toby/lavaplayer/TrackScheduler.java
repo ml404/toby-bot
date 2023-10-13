@@ -4,7 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
-import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.ICommand;
 
 import java.util.concurrent.BlockingQueue;
@@ -16,7 +16,7 @@ public class TrackScheduler extends AudioEventAdapter {
     private final AudioPlayer player;
     private BlockingQueue<AudioTrack> queue;
     private boolean isLooping;
-    private IReplyCallback event;
+    private SlashCommandInteractionEvent event;
     private Integer deleteDelay;
     private Integer previousVolume;
 
@@ -41,7 +41,6 @@ public class TrackScheduler extends AudioEventAdapter {
             this.queue.offer(track);
         }
     }
-
     public void queue(AudioTrack track) {
         if (!this.player.startTrack(track, true)) {
             this.queue.offer(track);
@@ -57,7 +56,6 @@ public class TrackScheduler extends AudioEventAdapter {
 
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
-        event.deferReply().queue();
         if (endReason.mayStartNext) {
             int volume = (int) track.getUserData();
             if (isLooping) {
@@ -73,6 +71,14 @@ public class TrackScheduler extends AudioEventAdapter {
             nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
         }
     }
+
+//    @Override
+//    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
+////        if(track.getPosition() == 0L) {
+////            getCurrentTextChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+////            nextTrack();
+////        }
+//    }
 
     public boolean stopTrack(boolean isStoppable) {
         if (isStoppable) {
@@ -95,12 +101,12 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = queue;
     }
 
-    public IReplyCallback getEvent() {
+    public SlashCommandInteractionEvent getEvent() {
         return event;
     }
 
-    public void setEvent(IReplyCallback event) {
-        this.event = event;
+    public void setEvent(SlashCommandInteractionEvent currentTextChannel) {
+        this.event = currentTextChannel;
     }
 
     public void setDeleteDelay(Integer deleteDelay) {

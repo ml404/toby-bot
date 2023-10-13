@@ -2,13 +2,9 @@ package toby.helpers;
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import toby.command.ICommand;
 import toby.command.commands.music.QueueCommand;
 import toby.jpa.dto.MusicDto;
@@ -70,21 +66,12 @@ public class MusicPlayerHelper {
         }
     }
 
-    public static void nowPlaying(IReplyCallback event, AudioTrack track, Integer deleteDelay, int volume) {
-        event.deferReply().queue();
+    public static void nowPlaying(SlashCommandInteractionEvent event, AudioTrack track, Integer deleteDelay, int volume) {
         AudioTrackInfo info = track.getInfo();
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);
-        String nowPlaying = String.format("`%s` by `%s` `[%s]` (Link: <%s>) with volume `%d`", info.title, info.author, songDuration, info.uri, volume);
-        EmbedBuilder embedBuilder = new EmbedBuilder()
-                .addField(new MessageEmbed.Field("Now Playing", nowPlaying, true))
-                .setColor(0x00FF00); // Green color
-        Button pause = Button.primary("pause: ", "Pause");
-        Button resume = Button.primary("resume: ", "Resume");
-        Button stop = Button.primary("stop: ", "Stop");
-        Button skip = Button.primary("skip: ", "Skip");
-        Button loop = Button.primary("loop: ", "Loop");
-        event.getHook().sendMessageEmbeds(embedBuilder.build()).addActionRow(pause, resume, stop, skip, loop).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) with volume `%d`", info.title, info.author, songDuration, info.uri, volume);
+        event.getHook().sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
     public static Long adjustTrackPlayingTimes(Long startTime) {

@@ -208,8 +208,6 @@ public class CommandManager {
                     String[] optionArray = options.split(",");
                     rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
                 }
-                CommandContext commandContext = new CommandContext(event);
-                cmd.handle(commandContext, requestingUserDto, deleteDelay);
             }
         }
     }
