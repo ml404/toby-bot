@@ -202,7 +202,7 @@ public class Handler extends ListenerAdapter {
         ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
 
         int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
-        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
         if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
             audioPlayer.setVolume(defaultVolume);
@@ -226,7 +226,7 @@ public class Handler extends ListenerAdapter {
         int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembersInOldChannel = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
         closeAudioManagerIfChannelEmpty(guild, audioManager, defaultVolume, nonBotConnectedMembersInOldChannel, event.getChannelLeft());
-        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
+        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
         if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
             audioManager.openAudioConnection(event.getChannelJoined());
