@@ -7,9 +7,9 @@ import java.util.ArrayList;
 
 public class Cache <K, T> {
 
-    private long timeToLiveInMillis;
+    private final long timeToLiveInMillis;
 
-    private LRUMap cacheMap;
+    private final LRUMap<K, CachedObject> cacheMap;
 
     protected class CachedObject {
         public long lastAccessed = System.currentTimeMillis();
@@ -24,21 +24,19 @@ public class Cache <K, T> {
                  int maxItems) {
         this.timeToLiveInMillis = timeToLiveInSeconds * 1000;
 
-        cacheMap = new LRUMap(maxItems);
+        cacheMap = new LRUMap<>(maxItems);
 
         if (timeToLiveInMillis > 0 && timerIntervalInSeconds > 0) {
 
-            Thread t = new Thread(new Runnable() {
-                public void run() {
-                    while (true) {
-                        try {
-                            Thread.sleep(timerIntervalInSeconds * 1000);
-                        }
-                        catch (InterruptedException ex) {
-                        }
-
-                        cleanup();
+            Thread t = new Thread(() -> {
+                while (true) {
+                    try {
+                        Thread.sleep(timerIntervalInSeconds * 1000);
                     }
+                    catch (InterruptedException ignored) {
+                    }
+
+                    cleanup();
                 }
             });
 
@@ -55,7 +53,7 @@ public class Cache <K, T> {
 
     public T get(K key) {
         synchronized (cacheMap) {
-            CachedObject c = (CachedObject) cacheMap.get(key);
+            CachedObject c = cacheMap.get(key);
 
             if (c == null)
                 return null;
@@ -78,22 +76,21 @@ public class Cache <K, T> {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public void cleanup() {
 
         long now = System.currentTimeMillis();
-        ArrayList<K> keysToDelete = null;
+        ArrayList<K> keysToDelete;
 
         synchronized (cacheMap) {
-            MapIterator itr = cacheMap.mapIterator();
+            MapIterator<K, CachedObject> itr = cacheMap.mapIterator();
 
-            keysToDelete = new ArrayList<K>((cacheMap.size() / 2) + 1);
-            K key = null;
-            CachedObject c = null;
+            keysToDelete = new ArrayList<>((cacheMap.size() / 2) + 1);
+            K key;
+            CachedObject c;
 
             while (itr.hasNext()) {
-                key = (K) itr.next();
-                c = (CachedObject) itr.getValue();
+                key = itr.next();
+                c = itr.getValue();
 
                 if (c != null && (now > (timeToLiveInMillis + c.lastAccessed))) {
                     keysToDelete.add(key);

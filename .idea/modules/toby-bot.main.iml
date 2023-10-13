@@ -20,7 +20,6 @@
     <orderEntry type="library" name="Gradle: org.postgresql:postgresql:42.2.27" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-web-services:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-web:3.1.4" level="project" />
-    <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-jetty:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-webflux:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-actuator:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-autoconfigure:3.1.4" level="project" />
@@ -50,14 +49,6 @@
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-webmvc:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-web:6.0.12" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-servlets:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-jetty-server:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-jakarta-server:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-webapp:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: jakarta.servlet:jakarta.servlet-api:6.0.0" level="project" />
-    <orderEntry type="library" name="Gradle: jakarta.websocket:jakarta.websocket-api:2.1.1" level="project" />
-    <orderEntry type="library" name="Gradle: jakarta.websocket:jakarta.websocket-client-api:2.1.1" level="project" />
-    <orderEntry type="library" name="Gradle: org.apache.tomcat.embed:tomcat-embed-el:10.1.13" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-webflux:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-reactor-netty:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-actuator-autoconfigure:3.1.4" level="project" />
@@ -89,16 +80,6 @@
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2" level="project" />
     <orderEntry type="library" name="Gradle: jakarta.annotation:jakarta.annotation-api:2.1.1" level="project" />
     <orderEntry type="library" name="Gradle: org.yaml:snakeyaml:1.33" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-http:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-io:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-util:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-jetty-common:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-servlet:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-servlet:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-jetty-api:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-annotations:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-jakarta-client:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-xml:11.0.16" level="project" />
     <orderEntry type="library" name="Gradle: io.projectreactor:reactor-core:3.5.10" level="project" />
     <orderEntry type="library" name="Gradle: io.projectreactor.netty:reactor-netty-http:1.1.11" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-actuator:3.1.4" level="project" />
@@ -106,15 +87,6 @@
     <orderEntry type="library" name="Gradle: org.springframework:spring-jcl:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: com.squareup.okio:okio-jvm:3.0.0" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-common:1.8.22" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-core-common:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-core-server:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-security:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-plus:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.ow2.asm:asm-commons:9.5" level="project" />
-    <orderEntry type="library" name="Gradle: org.ow2.asm:asm:9.5" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-jakarta-common:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty.websocket:websocket-core-client:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-client:11.0.16" level="project" />
     <orderEntry type="library" name="Gradle: org.reactivestreams:reactive-streams:1.0.4" level="project" />
     <orderEntry type="library" name="Gradle: io.projectreactor.netty:reactor-netty-core:1.1.11" level="project" />
     <orderEntry type="library" name="Gradle: io.netty:netty-codec-http2:4.1.97.Final" level="project" />
@@ -123,11 +95,6 @@
     <orderEntry type="library" name="Gradle: io.netty:netty-resolver-dns:4.1.97.Final" level="project" />
     <orderEntry type="library" name="Gradle: io.netty:netty-transport-native-epoll:linux-x86_64:4.1.97.Final" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-server:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-jndi:11.0.16" level="project" />
-    <orderEntry type="library" name="Gradle: jakarta.transaction:jakarta.transaction-api:2.0.1" level="project" />
-    <orderEntry type="library" name="Gradle: org.ow2.asm:asm-tree:9.5" level="project" />
-    <orderEntry type="library" name="Gradle: org.eclipse.jetty:jetty-alpn-client:11.0.16" level="project" />
     <orderEntry type="library" name="Gradle: io.netty:netty-handler-proxy:4.1.97.Final" level="project" />
     <orderEntry type="library" name="Gradle: io.netty:netty-handler:4.1.97.Final" level="project" />
     <orderEntry type="library" name="Gradle: io.netty:netty-codec:4.1.97.Final" level="project" />
@@ -146,6 +113,7 @@
     <orderEntry type="library" scope="RUNTIME" name="Gradle: net.sf.trove4j:trove4j:3.0.3" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: net.iharder:base64:2.3.9" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.checkerframework:checker-qual:3.5.0" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Gradle: jakarta.transaction:jakarta.transaction-api:2.0.1" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.jboss.logging:jboss-logging:3.5.3.Final" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.hibernate.common:hibernate-commons-annotations:6.0.6.Final" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: io.smallrye:jandex:3.0.5" level="project" />
