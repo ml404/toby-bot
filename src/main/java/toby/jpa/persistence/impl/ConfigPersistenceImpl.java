@@ -1,13 +1,13 @@
 package toby.jpa.persistence.impl;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.persistence.IConfigPersistence;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 import java.util.List;
 import java.util.stream.Collectors;
 

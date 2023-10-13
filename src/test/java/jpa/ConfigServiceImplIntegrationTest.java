@@ -1,26 +1,20 @@
 package jpa;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import toby.Application;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.persistence.IConfigPersistence;
 import toby.jpa.service.IConfigService;
-import toby.jpa.service.impl.ConfigServiceImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = Application.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 public class ConfigServiceImplIntegrationTest {
-
-    @Bean
-    public IConfigService configService() {
-        return new ConfigServiceImpl();
-    }
 
     @Autowired
     private IConfigService configService;
@@ -33,12 +27,6 @@ public class ConfigServiceImplIntegrationTest {
     public void setUp() {
 
     }
-
-    @AfterEach
-    public void tearDown(){
-        configService.deleteAll("test");
-    }
-
     @Test
     public void whenValidNameAndGuild_thenConfigShouldBeFound() {
         ConfigDto configDto = new ConfigDto("TOKEN", "1234", "test");

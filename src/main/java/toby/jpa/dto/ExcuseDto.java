@@ -1,10 +1,10 @@
 package toby.jpa.dto;
 
+import jakarta.persistence.*;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.*;
 import java.io.Serializable;
 
 @NamedQueries({

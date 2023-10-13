@@ -1,12 +1,12 @@
 package toby.jpa.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.*;
 import java.io.Serializable;
 
 @NamedQueries({

@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.ICommand;
 import toby.command.commands.music.QueueCommand;
-import toby.jpa.controller.ConsumeWebService;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
@@ -20,6 +19,8 @@ import java.util.Map;
 
 public class MusicPlayerHelper {
 
+    private static final String webUrl = "https://gibe-toby-bot.herokuapp.com/";
+
     public static final int SECOND_MULTIPLIER = 1000;
 
     public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
@@ -31,7 +32,7 @@ public class MusicPlayerHelper {
             instance.setPreviousVolume(currentVolume);
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlay(event,
-                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    String.format(webUrl + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
                     startPosition,
@@ -53,7 +54,7 @@ public class MusicPlayerHelper {
             instance.setPreviousVolume(currentVolume);
             PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlayChannel(channel,
-                    String.format(ConsumeWebService.getWebUrl() + "/music?id=%s", musicDto.getId()),
+                    String.format(webUrl + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
                     startPosition);

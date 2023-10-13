@@ -1,9 +1,9 @@
 package toby.jpa.dto;
 
+import jakarta.persistence.*;
 import org.apache.commons.lang3.EnumUtils;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.*;
 import java.io.Serializable;
 
 
