@@ -7,8 +7,6 @@ import org.springframework.context.annotation.ComponentScan;
 
 
 @SpringBootApplication
-@ComponentScan("toby")
-@EnableCaching
 public class Application {
 
     public static void main(String[] args) {

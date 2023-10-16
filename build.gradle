@@ -62,13 +62,13 @@ dependencies {
     implementation group: 'net.dv8tion', name: 'JDA', version: '5.0.0-beta.6'
     implementation 'dev.arbjerg:lavaplayer:2.0.2'
     implementation 'dev.arbjerg:lavaplayer-natives:2.0.2'
-    runtimeOnly('org.hibernate.orm:hibernate-core')
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     // https://mvnrepository.com/artifact/me.duncte123/botCommons
     implementation group: 'me.duncte123', name: 'botCommons', version: '2.0.122'
     implementation 'com.google.code.gson:gson:2.8.9'
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
     implementation 'org.postgresql:postgresql:42.2.27'
+    implementation('org.springframework.boot:spring-boot-starter-test')
     implementation('org.springframework.boot:spring-boot-starter-web')
     implementation('org.springframework.boot:spring-boot-starter-web-services')
     implementation('org.springframework.boot:spring-boot-starter-actuator')
@@ -76,6 +76,8 @@ dependencies {
     implementation('org.springframework:spring-jdbc')
     implementation('org.springframework:spring-orm')
     implementation('org.springframework:spring-context')
+    // https://mvnrepository.com/artifact/org.springframework.data/spring-data-jpa
+    implementation 'org.springframework.data:spring-data-jpa'
     // https://mvnrepository.com/artifact/com.h2database/h2
     implementation group: 'com.h2database', name: 'h2', version: '2.2.224'
     // https://mvnrepository.com/artifact/org.jsoup/jsoup

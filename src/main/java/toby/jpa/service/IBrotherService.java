@@ -1,15 +1,14 @@
 package toby.jpa.service;
 
+import org.springframework.stereotype.Service;
 import toby.jpa.dto.BrotherDto;
 
-import java.util.List;
+import java.util.Optional;
 
-public interface IBrotherService {
-
-    List<BrotherDto> listBrothers();
+public interface IBrotherService  {
+    Iterable<BrotherDto> listBrothers();
     BrotherDto createNewBrother(BrotherDto brotherDto);
-    BrotherDto getBrotherById(Long discordId);
-    BrotherDto getUserByName(String name);
+    Optional<BrotherDto> getBrotherById(Long discordId);
     BrotherDto updateBrother(BrotherDto brotherDto);
     void deleteBrother(BrotherDto brotherDto);
     void deleteBrotherById(Long discordId);
