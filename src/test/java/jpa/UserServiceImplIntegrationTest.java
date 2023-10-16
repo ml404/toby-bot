@@ -6,15 +6,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import toby.Application;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = Application.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@ActiveProfiles("test")
 public class UserServiceImplIntegrationTest {
     @Autowired
     private IUserService userService;
@@ -152,5 +156,11 @@ public class UserServiceImplIntegrationTest {
         assertEquals(dbMusicFileDto.getId(), musicDto.getId());
         assertEquals(dbMusicFileDto.getFileName(), musicDto.getFileName());
 
+    }
+
+    @Test
+    public void testSQLFileWorks(){
+        List<UserDto> userDtos = userService.listGuildUsers(1L);
+        assertEquals(5, userDtos.size());
     }
 }
