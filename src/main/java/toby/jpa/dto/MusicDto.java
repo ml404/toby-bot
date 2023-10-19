@@ -128,12 +128,9 @@ public class MusicDto implements Serializable {
 
         /* Check if o is an instance of MusicDto or not
           "null instanceof [type]" also returns false */
-        if (!(o instanceof MusicDto)) {
+        if (!(o instanceof MusicDto other)) {
             return false;
         }
-
-        // typecast o to MusicDto so that we can compare data members
-        MusicDto other = (MusicDto) o;
 
         // Compare the data members and return accordingly
         return new EqualsBuilder()

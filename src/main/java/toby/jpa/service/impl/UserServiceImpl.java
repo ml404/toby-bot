@@ -18,7 +18,7 @@ public class UserServiceImpl implements IUserService {
     IUserPersistence userService;
 
     @Override
-    @CacheEvict(value = "users", allEntries = true)
+    @Cacheable(value = "users")
     public List<UserDto> listGuildUsers(Long guildId) {
         return userService.listGuildUsers(guildId);
     }
@@ -30,13 +30,13 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    @Cacheable(value = "users", key = "#discordId+#guildId")
+    @CachePut(value = "users", key = "#discordId+#guildId")
     public UserDto getUserById(Long discordId, Long guildId) {
         return userService.getUserById(discordId, guildId);
     }
 
     @Override
-    @CacheEvict(value = "users", key = "#userDto.discordId+#userDto.guildId")
+    @CachePut(value = "users", key = "#userDto.discordId+#userDto.guildId")
     public UserDto updateUser(UserDto userDto) {
         return userService.updateUser(userDto);
     }
@@ -53,5 +53,10 @@ public class UserServiceImpl implements IUserService {
         userService.deleteUserById(discordId, guildId);
     }
 
+    @Override
+    @CacheEvict(value = "users", allEntries = true)
+    public void clearCache() {
+
+    }
 
 }

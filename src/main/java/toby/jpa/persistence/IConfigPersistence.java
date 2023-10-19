@@ -11,4 +11,5 @@ public interface IConfigPersistence {
     ConfigDto createNewConfig(ConfigDto configDto);
     ConfigDto updateConfig(ConfigDto configDto);
     void deleteAll(String guildId);
+    void deleteConfig(String guildId, String name);
 }

@@ -12,13 +12,10 @@ import java.io.Serializable;
                 query = "select a from ConfigDto as a"),
 
         @NamedQuery(name = "ConfigDto.getGuildAll",
-                query = "select a from ConfigDto as a WHERE a.guildId = :guild_id "),
+                query = "select a from ConfigDto as a WHERE a.guildId = :guildId "),
 
         @NamedQuery(name =  "ConfigDto.getValue",
-                query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guild_id OR a.guildId = 'all')"),
-
-        @NamedQuery(name =  "ConfigDto.deleteAll",
-                query = "delete from ConfigDto as a WHERE a.guildId = :guild_id ")
+                query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guildId OR a.guildId = 'all')")
 })
 
 @Entity
@@ -29,7 +26,7 @@ public class ConfigDto implements Serializable {
     @Id
     @Column(name = "name")
     private String name;
-    @Column(name = "value")
+    @Column(name = "\"value\"")
     private String value;
     @Id
     @Column(name = "guild_id")
@@ -58,7 +55,7 @@ public class ConfigDto implements Serializable {
     }
 
     public ConfigDto(){
-    };
+    }
 
     public ConfigDto(String name, String value, String guildId) {
         this.name = name;
@@ -93,12 +90,10 @@ public class ConfigDto implements Serializable {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("ConfigDto{");
-        sb.append("name='").append(name);
-        sb.append(", value=").append(value);
-        sb.append(", guildId=").append(guildId);
-        sb.append('}');
-        return sb.toString();
+        return "ConfigDto{" + "name='" + name +
+                ", value=" + value +
+                ", guildId=" + guildId +
+                '}';
     }
 
 }

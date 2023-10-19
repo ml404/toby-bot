@@ -14,5 +14,6 @@ public interface IExcuseService {
     ExcuseDto updateExcuse(ExcuseDto excuseDto);
     void deleteExcuseByGuildId(Long guildId);
     void deleteExcuseById(Integer id);
+    void clearCache();
 
 }

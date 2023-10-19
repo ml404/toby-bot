@@ -37,8 +37,7 @@ public class BotController {
     @GetMapping("/brother")
     @ResponseBody
     public BrotherDto getBrother(@RequestParam("discordId") String discordId){
-
-        return brotherService.getUserByName(discordId);
+        return brotherService.getBrotherById(Long.valueOf(discordId)).get();
     }
 
     @GetMapping("/config")

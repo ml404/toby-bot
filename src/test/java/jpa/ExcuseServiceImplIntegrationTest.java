@@ -1,40 +1,42 @@
 package jpa;
 
+import org.apache.commons.collections4.IterableUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.ActiveProfiles;
 import toby.Application;
 import toby.jpa.dto.ExcuseDto;
-import toby.jpa.persistence.IExcusePersistence;
 import toby.jpa.service.IExcuseService;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = Application.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@ActiveProfiles("test")
 public class ExcuseServiceImplIntegrationTest {
 
     @Autowired
     private IExcuseService excuseService;
 
-    @Autowired
-    private IExcusePersistence excusePersistence;
-
 
     @BeforeEach
     public void setUp() {
-        excuseService.deleteExcuseByGuildId(1L);
+        excuseService.clearCache();
     }
 
     @AfterEach
     public void tearDown() {
-        excuseService.deleteExcuseByGuildId(1L);
     }
 
+
+    @Test
+    public void testDataSQL() {
+        assertEquals(2, IterableUtils.toList(excuseService.listAllGuildExcuses(1L)).size());
+    }
     @Test
     public void whenValidIdAndGuild_thenExcuseShouldBeFound() {
         ExcuseDto excuseDto = new ExcuseDto();
@@ -50,10 +52,10 @@ public class ExcuseServiceImplIntegrationTest {
         assertEquals(dbExcuse.getAuthor(), excuseDto.getAuthor());
         assertEquals(dbExcuse.getExcuse(), excuseDto.getExcuse());
         assertFalse(dbExcuse.isApproved());
+        excuseService.deleteExcuseById(excuseDto.getId());
     }
 
     @Test
-    @Transactional
     public void testUpdate_thenNewExcuseValuesShouldBeReturned() {
         ExcuseDto excuseDto1 = new ExcuseDto();
         excuseDto1.setGuildId(1L);
@@ -67,8 +69,8 @@ public class ExcuseServiceImplIntegrationTest {
         int approvedExcusesSize = excuseService.listApprovedGuildExcuses(excuseDto1.getGuildId()).size();
 
 
-        assertEquals(1, pendingExcusesSize);
-        assertEquals(0, approvedExcusesSize);
+        assertEquals(2, pendingExcusesSize);
+        assertEquals(1, approvedExcusesSize);
         assertEquals(dbExcuse1.getGuildId(), excuseDto1.getGuildId());
         assertEquals(dbExcuse1.getExcuse(), excuseDto1.getExcuse());
         assertEquals(dbExcuse1.getAuthor(), excuseDto1.getAuthor());
@@ -83,20 +85,18 @@ public class ExcuseServiceImplIntegrationTest {
         excuseDto2.setApproved(true);
 
         excuseDto2 = excuseService.updateExcuse(excuseDto2);
+        excuseService.clearCache();
         ExcuseDto dbExcuse2 = excuseService.getExcuseById(excuseDto2.getId());
 
         pendingExcusesSize = excuseService.listPendingGuildExcuses(excuseDto2.getGuildId()).size();
         approvedExcusesSize = excuseService.listApprovedGuildExcuses(excuseDto2.getGuildId()).size();
 
-        assertEquals(0, pendingExcusesSize);
-        assertEquals(1, approvedExcusesSize);
+        assertEquals(1, pendingExcusesSize);
+        assertEquals(2, approvedExcusesSize);
         assertEquals(dbExcuse2.getGuildId(), excuseDto2.getGuildId());
         assertEquals(dbExcuse2.getExcuse(), excuseDto2.getExcuse());
         assertEquals(dbExcuse2.getAuthor(), excuseDto2.getAuthor());
         assertTrue(dbExcuse2.isApproved());
-
         excuseService.deleteExcuseById(excuseDto1.getId());
-        excuseService.deleteExcuseById(excuseDto2.getId());
-
     }
 }

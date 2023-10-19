@@ -21,7 +21,6 @@ import toby.managers.CommandManager;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -98,7 +97,7 @@ public class CommandManagerTest {
                 EightBallCommand.class
                 );
 
-        assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).collect(Collectors.toList())));
+        assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).toList()));
         assertEquals(34, commandManager.getAllCommands().size());
         assertEquals(34, commandManager.getAllSlashCommands().size());
     }

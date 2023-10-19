@@ -41,9 +41,9 @@ public class BrotherCommand implements IMiscCommand {
     private void determineBrother(SlashCommandInteractionEvent event, Emoji tobyEmote, int deleteDelay) {
         Optional<Mentions> optionalMentions = Optional.ofNullable(event.getOption(BROTHER)).map(OptionMapping::getMentions);
         if (optionalMentions.isEmpty()) {
-            BrotherDto brother = brotherService.getBrotherById(event.getUser().getIdLong());
-            if (brother!=null) {
-                event.getHook().sendMessageFormat("Of course you're my brother %s.", brother.getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            Optional<BrotherDto> brother = brotherService.getBrotherById(event.getUser().getIdLong());
+            if (brother.isPresent()) {
+                event.getHook().sendMessageFormat("Of course you're my brother %s.", brother.get().getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else if (tobyId.equals(event.getUser().getIdLong())) {
                 event.getHook().sendMessageFormat("You're not my fucking brother Toby, you're me %s", tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else

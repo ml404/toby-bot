@@ -124,12 +124,9 @@ public class ExcuseDto implements Serializable {
 
         /* Check if o is an instance of ExcuseDto or not
           "null instanceof [type]" also returns false */
-        if (!(o instanceof ExcuseDto)) {
+        if (!(o instanceof ExcuseDto other)) {
             return false;
         }
-
-        // typecast o to ExcuseDto so that we can compare data members
-        ExcuseDto other = (ExcuseDto) o;
 
         // Compare the data members and return accordingly
         return new EqualsBuilder()

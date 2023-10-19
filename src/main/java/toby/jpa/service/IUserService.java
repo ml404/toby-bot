@@ -13,4 +13,6 @@ public interface IUserService {
     void deleteUser(UserDto userDto);
     void deleteUserById(Long discordId, Long guildId);
 
+    void clearCache();
+
 }
