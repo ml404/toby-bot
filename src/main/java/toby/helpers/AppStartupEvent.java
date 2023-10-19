@@ -15,6 +15,5 @@ public class AppStartupEvent implements ApplicationListener<ApplicationReadyEven
     IBrotherService brotherService;
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
-        brotherService.listBrothers().forEach(brotherDto -> System.out.println(brotherDto.getBrotherName()));
     }
 }

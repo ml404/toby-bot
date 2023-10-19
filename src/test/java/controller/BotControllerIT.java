@@ -1,6 +1,5 @@
 package controller;
 
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +13,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = Application.class)
+@SpringBootTest(classes = Application.class)
 @AutoConfigureMockMvc
 public class BotControllerIT {
 
@@ -27,8 +26,8 @@ public class BotControllerIT {
 
     @Test
     public void getIndex() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/")).andExpect(status().isOk())
+        mockMvc.perform(MockMvcRequestBuilders.get("/"))
+                .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Welcome to TobyBot \nTo find out more, please visit https://github.com/ml404/toby-bot#readme")));
     }
 }
-

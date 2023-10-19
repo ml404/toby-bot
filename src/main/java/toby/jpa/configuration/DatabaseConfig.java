@@ -4,15 +4,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.JpaVendorAdapter;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
 import javax.sql.DataSource;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Properties;
 
 @Configuration
 @Profile("prod")
@@ -31,44 +26,4 @@ public class DatabaseConfig {
         dataSource.setPassword(password);
         return dataSource;
     }
-
-    @Bean
-    public JpaVendorAdapter vendorAdapter() {
-        HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-        vendorAdapter.setGenerateDdl(true);
-        vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQLDialect");
-        vendorAdapter.setShowSql(true);
-
-        return vendorAdapter;
-    }
-
-    @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory() throws URISyntaxException {
-        LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setPackagesToScan("toby.jpa.dto");
-        em.setDataSource(dataSource());
-        em.setJpaVendorAdapter(vendorAdapter());
-        em.setPersistenceUnitName("database");
-        em.setJpaProperties(additionalProperties());
-
-        return em;
-    }
-
-
-    @Bean
-    public Properties additionalProperties() throws URISyntaxException {
-        Properties properties = new Properties();
-        properties.setProperty("hibernate.hbm2ddl.auto", "update");
-        properties.setProperty("hibernate.show_sql", "true");
-        properties.setProperty("hibernate.jdbc.fetch_size", "100");
-
-        return properties;
-    }
-
-    @Bean
-    public JpaTransactionManager transactionManager() {
-        return new JpaTransactionManager();
-    }
-
-
 }
