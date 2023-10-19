@@ -25,4 +25,5 @@ jobs:
       - name: Build with Gradle
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TOKEN: ${{ secrets.TOKEN }}
         run: ./gradlew build
