@@ -79,7 +79,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.springframework.data/spring-data-jpa
     implementation 'org.springframework.data:spring-data-jpa'
     // https://mvnrepository.com/artifact/com.h2database/h2
-    implementation group: 'com.h2database', name: 'h2', version: '2.2.224'
+    testImplementation group: 'com.h2database', name: 'h2', version: '2.2.224'
     // https://mvnrepository.com/artifact/org.jsoup/jsoup
     implementation group: 'org.jsoup', name: 'jsoup', version: '1.15.3'
     // https://mvnrepository.com/artifact/jakarta.persistence/jakarta.persistence-api

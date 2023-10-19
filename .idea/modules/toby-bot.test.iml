@@ -29,9 +29,9 @@
     <orderEntry type="library" name="Gradle: org.springframework:spring-orm:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-jdbc:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-context:6.0.12" level="project" />
-    <orderEntry type="library" name="Gradle: com.h2database:h2:2.2.224" level="project" />
     <orderEntry type="library" name="Gradle: org.jsoup:jsoup:1.15.3" level="project" />
     <orderEntry type="library" name="Gradle: jakarta.persistence:jakarta.persistence-api:3.1.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.h2database:h2:2.2.224" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.jupiter:junit-jupiter-api:5.8.2" level="project" />
     <orderEntry type="library" name="Gradle: org.mockito:mockito-inline:4.2.0" level="project" />
     <orderEntry type="library" name="Gradle: com.squareup.okhttp3:okhttp:4.10.0" level="project" />
