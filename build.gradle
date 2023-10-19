@@ -67,7 +67,9 @@ dependencies {
     implementation group: 'me.duncte123', name: 'botCommons', version: '2.0.122'
     implementation 'com.google.code.gson:gson:2.8.9'
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
-    implementation 'org.postgresql:postgresql:42.2.27'
+    implementation 'org.postgresql:postgresql'
+    // https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core
+    implementation 'org.hibernate.orm:hibernate-core:6.3.1.Final'
     implementation('org.springframework.boot:spring-boot-starter-test')
     implementation('org.springframework.boot:spring-boot-starter-web')
     implementation('org.springframework.boot:spring-boot-starter-web-services')
