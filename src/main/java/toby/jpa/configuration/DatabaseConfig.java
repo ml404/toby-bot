@@ -5,9 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
 import javax.sql.DataSource;
 import java.net.URI;
@@ -33,21 +31,10 @@ public class DatabaseConfig {
     }
 
     @Bean
-    public JpaVendorAdapter vendorAdapter() {
-        HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-        vendorAdapter.setGenerateDdl(true);
-        vendorAdapter.setDatabasePlatform("org.hibernate.dialect.PostgreSQLDialect");
-        vendorAdapter.setShowSql(true);
-
-        return vendorAdapter;
-    }
-
-    @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() throws URISyntaxException {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setPackagesToScan("toby.jpa.dto");
         em.setDataSource(dataSource());
-        em.setJpaVendorAdapter(vendorAdapter());
         em.setPersistenceUnitName("database");
         em.setJpaProperties(additionalProperties());
 
