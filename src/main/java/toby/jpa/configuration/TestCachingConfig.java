@@ -12,8 +12,8 @@ import java.util.Arrays;
 
 @Configuration
 @EnableCaching
-@Profile("prod")
-public class CachingConfig {
+@Profile("test")
+public class TestCachingConfig {
 
     @Bean
     public CacheManager cacheManager() {

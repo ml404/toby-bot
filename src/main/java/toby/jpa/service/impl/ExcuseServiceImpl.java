@@ -18,19 +18,18 @@ public class ExcuseServiceImpl implements IExcuseService {
     IExcusePersistence excuseService;
 
     @Override
-    @CacheEvict(value = "excuses", allEntries = true)
+    @Cacheable(value = "excuses")
     public List<ExcuseDto> listAllGuildExcuses(Long guildId) {
         return excuseService.listAllGuildExcuses(guildId);
     }
 
     @Override
-    @CacheEvict(value = "excuses", allEntries = true)
+    @Cacheable(value = "excuses")
     public List<ExcuseDto> listApprovedGuildExcuses(Long guildId) {
         return excuseService.listApprovedGuildExcuses(guildId);
     }
 
     @Override
-    @CacheEvict(value = "excuses", allEntries = true)
     public List<ExcuseDto> listPendingGuildExcuses(Long guildId) {
         return excuseService.listPendingGuildExcuses(guildId);
     }
@@ -42,18 +41,19 @@ public class ExcuseServiceImpl implements IExcuseService {
     }
 
     @Override
-    @Cacheable(value = "excuses", key = "#id")
+    @CachePut(value = "excuses", key = "#id")
     public ExcuseDto getExcuseById(Integer id) {
         return excuseService.getExcuseById(id);
     }
 
     @Override
-    @CacheEvict(value = "excuses", key = "#excuseDto.id")
+    @CachePut(value = "excuses", key = "#excuseDto.id")
     public ExcuseDto updateExcuse(ExcuseDto excuseDto) {
         return excuseService.updateExcuse(excuseDto);
     }
 
     @Override
+    @CacheEvict(value = "excuses", allEntries = true)
     public void deleteExcuseByGuildId(Long guildId) {
         excuseService.deleteAllExcusesForGuild(guildId);
     }
@@ -62,6 +62,12 @@ public class ExcuseServiceImpl implements IExcuseService {
     @CacheEvict(value = "excuses", key = "#id")
     public void deleteExcuseById(Integer id) {
         excuseService.deleteExcuseById(id);
+    }
+
+    @Override
+    @CacheEvict(value = "excuses", allEntries = true)
+    public void clearCache() {
+
     }
 
 

@@ -39,6 +39,20 @@ public class MusicFilePersistenceImpl implements IMusicFilePersistence {
 
     @Override
     public MusicDto getMusicFileById(String id) {
+        // Create a native SQL query to retrieve the size of the music_blob column
+        String sql = "SELECT LENGTH(music_blob) AS data_size FROM music_files WHERE id = :id";
+
+        Query sizeQ = em.createNativeQuery(sql);
+        sizeQ.setParameter("id", id);
+
+        // Execute the query
+        Object result = sizeQ.getSingleResult();
+
+        // Handle the result (assuming it's a Long)
+        if (result instanceof Long dataSize) {
+            System.out.println("Data size in bytes: " + dataSize);
+        }
+
         Query q = em.createNamedQuery("MusicDto.getById", MusicDto.class);
         q.setParameter("id", id);
         return (MusicDto) q.getSingleResult();

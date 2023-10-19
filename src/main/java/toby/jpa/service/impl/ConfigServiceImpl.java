@@ -18,19 +18,19 @@ public class ConfigServiceImpl implements IConfigService {
     IConfigPersistence configService;
 
     @Override
-    @CacheEvict(value="configs", allEntries=true)
+    @Cacheable(value="configs")
     public List<ConfigDto> listAllConfig() {
         return configService.listAllConfig();
     }
 
     @Override
-    @CacheEvict(value="configs", allEntries=true)
+    @Cacheable(value="configs")
     public List<ConfigDto> listGuildConfig(String guildId) {
         return configService.listGuildConfig(guildId);
     }
 
     @Override
-    @Cacheable(value = "configs", key = "#name+#guildId")
+    @CachePut(value = "configs", key = "#name+#guildId")
     public ConfigDto getConfigByName(String name, String guildId) {
         return configService.getConfigByName(name, guildId);
     }
@@ -42,7 +42,7 @@ public class ConfigServiceImpl implements IConfigService {
     }
 
     @Override
-    @CacheEvict(value="configs", key="#configDto.name+#configDto.guildId")
+    @CachePut(value="configs", key="#configDto.name+#configDto.guildId")
     public ConfigDto updateConfig(ConfigDto configDto) {
         return configService.updateConfig(configDto);
     }
@@ -51,5 +51,17 @@ public class ConfigServiceImpl implements IConfigService {
     @CacheEvict(value="configs", allEntries = true)
     public void deleteAll(String guildId){
         configService.deleteAll(guildId);
+    }
+
+    @Override
+    @CacheEvict(value = "configs", key="#configDto.name+#configDto.guildId")
+    public void deleteConfig(String guildId, String name) {
+        configService.deleteConfig(guildId, name);
+    }
+
+    @Override
+    @CacheEvict(value = "configs", allEntries = true)
+    public void clearCache() {
+
     }
 }

@@ -17,13 +17,14 @@ CREATE TABLE public.excuse (
     author character varying NOT NULL,
     excuse character varying(200) NOT NULL,
     approved boolean NOT NULL,
-    id integer NOT NULL
+    id bigint AUTO_INCREMENT PRIMARY KEY
 );
+
 
 DROP TABLE IF EXISTS public.music_files;
 CREATE TABLE public.music_files (
     file_name character varying(100),
-    music_blob character varying(200),
+    music_blob blob,
     id character varying(100) NOT NULL,
     file_vol integer
 );

@@ -3,7 +3,6 @@ package toby.jpa.service.impl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.persistence.IMusicFilePersistence;
@@ -23,7 +22,7 @@ public class MusicFileServiceImpl implements IMusicFileService {
     }
 
     @Override
-    @Cacheable(value = "music", key = "#id")
+    @CachePut(value = "music", key = "#id")
     public MusicDto getMusicFileById(String id) {
         return musicFileService.getMusicFileById(id);
     }
@@ -44,5 +43,11 @@ public class MusicFileServiceImpl implements IMusicFileService {
     @CacheEvict(value = "music", key = "#id")
     public void deleteMusicFileById(String id) {
         musicFileService.deleteMusicFileById(id);
+    }
+
+    @Override
+    @CacheEvict(value = "music", allEntries = true)
+    public void clearCache() {
+
     }
 }

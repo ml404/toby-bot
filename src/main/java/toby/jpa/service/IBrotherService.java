@@ -1,6 +1,5 @@
 package toby.jpa.service;
 
-import org.springframework.stereotype.Service;
 import toby.jpa.dto.BrotherDto;
 
 import java.util.Optional;
@@ -12,5 +11,6 @@ public interface IBrotherService  {
     BrotherDto updateBrother(BrotherDto brotherDto);
     void deleteBrother(BrotherDto brotherDto);
     void deleteBrotherById(Long discordId);
+    void clearCache();
 
 }

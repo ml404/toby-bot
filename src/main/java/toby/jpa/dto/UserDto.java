@@ -20,7 +20,7 @@ import java.io.Serializable;
 })
 
 @Entity
-@Table(name = "user", schema = "public")
+@Table(name = "\"user\"", schema = "public")
 @Transactional
 public class UserDto implements Serializable {
 
@@ -73,8 +73,6 @@ public class UserDto implements Serializable {
 
     public UserDto() {
     }
-
-    ;
 
     public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission, Long socialCredit, MusicDto musicDto) {
         this.discordId = discordId;
@@ -155,16 +153,14 @@ public class UserDto implements Serializable {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("User{");
-        sb.append("discordId='").append(discordId);
-        sb.append("', guildId='").append(guildId);
-        sb.append("', socialCredit='").append(socialCredit);
-        sb.append("', superUser='").append(superUser);
-        sb.append("', musicPermission='").append(musicPermission);
-        sb.append("', digPermission='").append(digPermission);
-        sb.append("', memePermission='").append(memePermission);
-        sb.append('}');
-        return sb.toString();
+        return "User{" + "discordId='" + discordId +
+                "', guildId='" + guildId +
+                "', socialCredit='" + socialCredit +
+                "', superUser='" + superUser +
+                "', musicPermission='" + musicPermission +
+                "', digPermission='" + digPermission +
+                "', memePermission='" + memePermission +
+                '}';
     }
 
     @Override
@@ -176,12 +172,9 @@ public class UserDto implements Serializable {
 
         /* Check if o is an instance of UserDto or not
           "null instanceof [type]" also returns false */
-        if (!(o instanceof UserDto)) {
+        if (!(o instanceof UserDto other)) {
             return false;
         }
-
-        // typecast o to UserDto so that we can compare data members
-        UserDto other = (UserDto) o;
 
         // Compare the data members and return accordingly
         return new EqualsBuilder()

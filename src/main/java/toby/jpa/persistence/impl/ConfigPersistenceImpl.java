@@ -1,15 +1,12 @@
 package toby.jpa.persistence.impl;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
+import jakarta.persistence.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.persistence.IConfigPersistence;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Repository
 @Transactional
@@ -32,10 +29,10 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
     public ConfigDto getConfigByName(String name, String guildId) {
         Query q = em.createNamedQuery("ConfigDto.getValue", ConfigDto.class);
         q.setParameter("name", name);
-        q.setParameter("guild_id", guildId);
+        q.setParameter("guildId", guildId);
 
         List<ConfigDto> allInclusiveConfig = q.getResultList();
-        List<ConfigDto> serverSpecificConfig = allInclusiveConfig.stream().filter(configDto -> configDto.getGuildId().equals(guildId)).collect(Collectors.toList());
+        List<ConfigDto> serverSpecificConfig = allInclusiveConfig.stream().filter(configDto -> configDto.getGuildId().equals(guildId)).toList();
         return !serverSpecificConfig.isEmpty() ? serverSpecificConfig.get(0) : !allInclusiveConfig.isEmpty() ? allInclusiveConfig.get(0) : new ConfigDto();
 
     }
@@ -52,7 +49,7 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
     @SuppressWarnings(value = "unchecked")
     public List<ConfigDto> listGuildConfig(String guildId) {
         Query q = em.createNamedQuery("ConfigDto.getGuildAll", ConfigDto.class);
-        q.setParameter("guild_id", guildId);
+        q.setParameter("guildId", guildId);
         return q.getResultList();
     }
 
@@ -64,8 +61,7 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
             return persistConfigDto(configDto);
         } else if (!configDto.getGuildId().equals(databaseConfig.getGuildId())) {
             return persistConfigDto(configDto);
-        } else
-            return databaseConfig;
+        } else return databaseConfig;
     }
 
     @Override
@@ -76,9 +72,20 @@ public class ConfigPersistenceImpl implements IConfigPersistence {
     }
 
     @Override
-    public void deleteAll(String guildId){
-        String deletionString = String.format("DELETE FROM ConfigDto where guild_id = '%s'", guildId);
-        em.createQuery(deletionString);
+    public void deleteAll(String guildId) {
+        String deletionString = "DELETE FROM ConfigDto c WHERE c.guildId = :guildId";
+        Query query = em.createQuery(deletionString);
+        query.setParameter("guildId", guildId);
+        query.executeUpdate();
+    }
+
+    @Override
+    public void deleteConfig(String guildId, String name) {
+        String deletionString = "DELETE FROM ConfigDto c WHERE c.guildId = :guildId AND c.name = :name";
+        Query query = em.createQuery(deletionString);
+        query.setParameter("guildId", guildId);
+        query.setParameter("name", name);
+        query.executeUpdate();
     }
 
     private ConfigDto persistConfigDto(ConfigDto configDto) {

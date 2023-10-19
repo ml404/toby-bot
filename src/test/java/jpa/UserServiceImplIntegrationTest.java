@@ -1,5 +1,6 @@
 package jpa;
 
+import org.apache.commons.collections4.IterableUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,8 +13,6 @@ import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = Application.class)
@@ -23,15 +22,18 @@ public class UserServiceImplIntegrationTest {
     @Autowired
     private IUserService userService;
 
-
     @BeforeEach
     public void setUp() {
-        userService.deleteUserById(6L, 1L);
+        userService.clearCache();
     }
 
     @AfterEach
     public void tearDown(){
-        userService.deleteUserById(6L, 1L);
+    }
+
+    @Test
+    public void testDataSQL() {
+        assertEquals(3, IterableUtils.toList(userService.listGuildUsers(1L)).size());
     }
 
     @Test
@@ -51,6 +53,7 @@ public class UserServiceImplIntegrationTest {
         assertTrue(dbUser.hasDigPermission());
         assertFalse(dbUser.isSuperUser());
         assertNotNull(dbUser.getMusicDto());
+        userService.deleteUserById(6L, 1L);
     }
 
     @Test
@@ -80,6 +83,8 @@ public class UserServiceImplIntegrationTest {
         userDto2.setMusicDto(musicDto2);
         userDto2.setDigPermission(false);
         userDto2 = userService.updateUser(userDto2);
+        userService.clearCache(); // Clear the cache
+
         UserDto dbUser2 = userService.getUserById(userDto2.getDiscordId(), userDto2.getGuildId());
 
         int guildMemberSize = userService.listGuildUsers(userDto2.getGuildId()).size();
@@ -92,6 +97,8 @@ public class UserServiceImplIntegrationTest {
         assertFalse(dbUser2.isSuperUser());
         assertNotNull(dbUser2.getMusicDto());
         assertEquals(dbSize, guildMemberSize);
+        userService.deleteUserById(6L, 1L);
+
     }
 
 
@@ -115,6 +122,8 @@ public class UserServiceImplIntegrationTest {
         assertNotNull(dbMusicFileDto);
         assertEquals(dbMusicFileDto.getId(), musicDto.getId());
         assertEquals(dbMusicFileDto.getFileName(), musicDto.getFileName());
+        userService.deleteUserById(6L, 1L);
+
     }
 
     @Test
@@ -126,6 +135,7 @@ public class UserServiceImplIntegrationTest {
         userDto.setMusicDto(musicDto);
         userService.createNewUser(userDto);
         UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
+        userService.clearCache();
 
         assertEquals(dbUser.getDiscordId(),userDto.getDiscordId());
         assertEquals(dbUser.getGuildId(),userDto.getGuildId());
@@ -155,12 +165,7 @@ public class UserServiceImplIntegrationTest {
         assertNotNull(dbMusicFileDto);
         assertEquals(dbMusicFileDto.getId(), musicDto.getId());
         assertEquals(dbMusicFileDto.getFileName(), musicDto.getFileName());
+        userService.deleteUserById(6L, 1L);
 
-    }
-
-    @Test
-    public void testSQLFileWorks(){
-        List<UserDto> userDtos = userService.listGuildUsers(1L);
-        assertEquals(5, userDtos.size());
     }
 }

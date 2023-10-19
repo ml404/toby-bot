@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import toby.handler.Handler;
 import toby.jpa.service.*;
 
-import javax.security.auth.login.LoginException;
 import java.util.EnumSet;
 
 @Service
@@ -26,15 +25,22 @@ public class BotMain {
                    IBrotherService brotherService,
                    IUserService userService,
                    IMusicFileService musicFileService,
-                   IExcuseService excuseService) throws LoginException {
+                   IExcuseService excuseService) {
         EmbedUtils.setEmbedBuilder(
                 () -> new EmbedBuilder()
                         .setColor(0x3883d9)
                         .setFooter("TobyBot")
         );
 
-        String token = configService.getConfigByName("TOKEN", "all").getValue();
-        JDABuilder builder = JDABuilder.createDefault(token,
+        // Fetch the Discord token from the environment
+        String discordToken = System.getenv("TOKEN");
+
+        if (discordToken == null) {
+            System.err.println("DISCORD_TOKEN environment variable is not set.");
+            System.exit(1);
+        }
+
+        JDABuilder builder = JDABuilder.createDefault(discordToken,
                         GatewayIntent.GUILD_MEMBERS,
                         GatewayIntent.GUILD_MESSAGES,
                         GatewayIntent.GUILD_MESSAGE_REACTIONS,

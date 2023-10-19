@@ -10,4 +10,6 @@ public interface IMusicFileService {
     void deleteMusicFile(MusicDto musicDto);
     void deleteMusicFileById(String id);
 
+    void clearCache();
+
 }
