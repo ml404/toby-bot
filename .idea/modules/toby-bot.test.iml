@@ -10,7 +10,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="toby-bot.main" />
-    <orderEntry type="library" name="Gradle: net.dv8tion:JDA:5.0.0-beta.6" level="project" />
+    <orderEntry type="library" name="Gradle: net.dv8tion:JDA:5.0.0-beta.15" level="project" />
     <orderEntry type="library" name="Gradle: me.duncte123:botCommons:2.0.122" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains:annotations:24.0.0" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.13.0" level="project" />
