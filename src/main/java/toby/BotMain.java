@@ -41,6 +41,7 @@ public class BotMain {
         }
 
         JDABuilder builder = JDABuilder.createDefault(discordToken,
+                        GatewayIntent.MESSAGE_CONTENT,
                         GatewayIntent.GUILD_MEMBERS,
                         GatewayIntent.GUILD_MESSAGES,
                         GatewayIntent.GUILD_MESSAGE_REACTIONS,

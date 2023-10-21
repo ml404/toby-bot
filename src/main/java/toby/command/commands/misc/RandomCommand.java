@@ -24,6 +24,7 @@ public class RandomCommand implements IMiscCommand {
         ICommand.deleteAfter(event.getHook(), deleteDelay);
         if (ctx.getEvent().getOptions().isEmpty()) {
             event.getHook().sendMessage(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            return;
         }
         List<String> stringList = List.of(Optional.ofNullable(event.getOption(LIST)).map(OptionMapping::getAsString).orElse("").split(","));
         event.getHook().sendMessage(getRandomElement(stringList)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
