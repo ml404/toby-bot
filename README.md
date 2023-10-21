@@ -32,9 +32,10 @@ Ensure you have the following prerequisites set up before getting started:
    git clone https://github.com/ml404/toby-bot.git
    ```
 
-2. Customize the bot's configuration by editing `application.properties` or `application.yml`. Provide your Discord bot token and database connection details.
+2. Customize the bot's configuration by editing `application.properties`. 
+Provide your Discord bot token and database connection details via environment variables
 
-3. Build the project using your chosen build tool:
+3. Build the project:
 
    ```shell
    gradle clean build
