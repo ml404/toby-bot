@@ -37,19 +37,13 @@ Ensure you have the following prerequisites set up before getting started:
 3. Build the project using your chosen build tool:
 
    ```shell
-   mvn clean install
-   ```
-
-   or
-
-   ```shell
    gradle clean build
    ```
 
 4. Start the bot:
 
    ```shell
-   java -jar target/toby-bot-5.0-SNAPSHOT.jar
+   java -jar build/libs/toby-bot-5.0-SNAPSHOT.jar -Dspring.profiles.active=prod
    ```
 
 ## Usage
