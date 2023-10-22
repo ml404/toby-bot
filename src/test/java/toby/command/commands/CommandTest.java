@@ -27,6 +27,9 @@ public interface CommandTest {
     InteractionHook interactionHook = mock(InteractionHook.class);
 
     @Mock
+    Message message = mock(Message.class);
+
+    @Mock
     Guild guild = mock(Guild.class);
 
     @Mock
@@ -70,6 +73,7 @@ public interface CommandTest {
         reset(interactionHook);
         reset(messageCreateAction);
         reset(jda);
+        reset(message);
     }
 
 }
