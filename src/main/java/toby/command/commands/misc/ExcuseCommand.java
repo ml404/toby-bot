@@ -75,17 +75,7 @@ public class ExcuseCommand implements IMiscCommand {
         }
         createAndAddStringBuilder();
         stringBuilderList.get(0).append("Listing all approved excuses below: \n");
-        excuseDtos.forEach(excuseDto -> {
-            StringBuilder sb = stringBuilderList.get(stringBuilderList.size() - 1);
-            String excuseString = String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor());
-            if (sb.length() + excuseString.length() >= 2000) {
-                createAndAddStringBuilder();
-                sb = stringBuilderList.get(stringBuilderList.size() - 1);
-
-            }
-            sb.append(excuseString);
-        });
-        stringBuilderList.forEach(sb -> event.getHook().sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay)));
+        printOutExcuses(event, deleteDelay, excuseDtos);
     }
 
     private void createAndAddStringBuilder() {
@@ -142,9 +132,9 @@ public class ExcuseCommand implements IMiscCommand {
             event.getHook().sendMessage("There are no excuses pending approval, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        Random random = new Random();
-        ExcuseDto excuseDto = excuseDtos.get(random.nextInt(excuseDtos.size()));
-        event.getHook().sendMessageFormat("Excuse #%d: '%s' - %s.", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        createAndAddStringBuilder();
+        stringBuilderList.get(0).append("Listing all pending excuses below: \n");
+        printOutExcuses(event, deleteDelay, excuseDtos);
     }
 
     private void deleteExcuse(UserDto requestingUserDto, SlashCommandInteractionEvent event, int excuseId, Integer deleteDelay) {
@@ -152,6 +142,20 @@ public class ExcuseCommand implements IMiscCommand {
             excuseService.deleteExcuseById(excuseId);
             event.getHook().sendMessageFormat("deleted excuse with id '%d'.", excuseId).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else sendErrorMessage(event, deleteDelay);
+    }
+
+    private void printOutExcuses(SlashCommandInteractionEvent event, Integer deleteDelay, List<ExcuseDto> excuseDtos) {
+        excuseDtos.forEach(excuseDto -> {
+            StringBuilder sb = stringBuilderList.get(stringBuilderList.size() - 1);
+            String excuseString = String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor());
+            if (sb.length() + excuseString.length() >= 2000) {
+                createAndAddStringBuilder();
+                sb = stringBuilderList.get(stringBuilderList.size() - 1);
+
+            }
+            sb.append(excuseString);
+        });
+        stringBuilderList.forEach(sb -> event.getHook().sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay)));
     }
 
     @Override

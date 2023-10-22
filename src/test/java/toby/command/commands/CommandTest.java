@@ -2,6 +2,7 @@ package toby.command.commands;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -35,6 +36,10 @@ public interface CommandTest {
     JDA jda = mock(JDA.class);
 
     @Mock
+    Member member = mock(Member.class);
+
+
+    @Mock
     WebhookMessageCreateAction<Message> messageCreateAction = mock(WebhookMessageCreateActionImpl.class);
 
     @BeforeEach
@@ -52,6 +57,8 @@ public interface CommandTest {
         when(messageCreateAction.setEphemeral(anyBoolean())).thenReturn(messageCreateAction);
         when(guild.getJDA()).thenReturn(jda);
         when(guild.getIdLong()).thenReturn(1L);
+        when(guild.getOwner()).thenReturn(member);
+
 
     }
 
