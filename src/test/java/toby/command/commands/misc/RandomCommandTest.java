@@ -1,13 +1,12 @@
-package commands.misc;
+package toby.command.commands.misc;
 
-import commands.CommandTest;
+import toby.command.commands.CommandTest;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.command.commands.misc.RandomCommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;

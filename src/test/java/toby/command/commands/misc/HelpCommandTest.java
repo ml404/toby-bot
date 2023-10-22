@@ -1,6 +1,6 @@
-package commands.misc;
+package toby.command.commands.misc;
 
-import commands.CommandTest;
+import toby.command.commands.CommandTest;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,8 +8,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.command.commands.misc.HelpCommand;
-import toby.command.commands.misc.IMiscCommand;
 import toby.command.commands.music.IMusicCommand;
 import toby.command.commands.music.PlayCommand;
 import toby.jpa.dto.UserDto;

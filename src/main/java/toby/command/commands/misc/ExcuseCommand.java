@@ -21,15 +21,16 @@ public class ExcuseCommand implements IMiscCommand {
     public static final String ALL = "all";
     public static final String APPROVE = "approve";
     public static final String DELETE = "delete";
+    public static final String EXISTING_EXCUSE_MESSAGE = "I've heard that one before, keep up.";
     private final IExcuseService excuseService;
     private final String EXCUSE_ID = "id";
     private final String EXCUSE = "excuse";
     private final String AUTHOR = "author";
     private final String ACTION = "action";
-    private List<StringBuilder> stringBuilderList;
+    private final List<StringBuilder> stringBuilderList;
 
     public ExcuseCommand(IExcuseService excuseService) {
-
+        this.stringBuilderList = new ArrayList<>();
         this.excuseService = excuseService;
     }
 
@@ -40,22 +41,23 @@ public class ExcuseCommand implements IMiscCommand {
         event.deferReply().queue();
         Long guildId = event.getGuild().getIdLong();
 
-        if (event.getOptions().isEmpty()) {
+         if (event.getOptions().isEmpty()) {
             lookupExcuse(event, deleteDelay);
         } else {
             Optional<String> actionOptional = Optional.ofNullable(event.getOption(ACTION)).map(OptionMapping::getAsString);
             if (actionOptional.isPresent()) {
                 String action = actionOptional.get();
-                if (action.equals(PENDING)) {
-                    lookupPendingExcuses(event, guildId, deleteDelay);
-                } else if (action.equals(ALL)) {
-                    listAllExcuses(event, guildId, deleteDelay);
-                } else if (action.equals(APPROVE)) {
-                    Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID)).map(OptionMapping::getAsInt);
-                    excuseIdOptional.ifPresent(excuseId -> approvePendingExcuse(requestingUserDto, event, excuseId, deleteDelay));
-                } else if (action.equals(DELETE)) {
-                    Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID)).map(OptionMapping::getAsInt);
-                    excuseIdOptional.ifPresent(excuseId -> deleteExcuse(requestingUserDto, event, excuseId, deleteDelay));
+                switch (action) {
+                    case PENDING -> lookupPendingExcuses(event, guildId, deleteDelay);
+                    case ALL -> listAllExcuses(event, guildId, deleteDelay);
+                    case APPROVE -> {
+                        Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID)).map(OptionMapping::getAsInt);
+                        excuseIdOptional.ifPresent(excuseId -> approvePendingExcuse(requestingUserDto, event, excuseId, deleteDelay));
+                    }
+                    case DELETE -> {
+                        Optional<Integer> excuseIdOptional = Optional.ofNullable(event.getOption(EXCUSE_ID)).map(OptionMapping::getAsInt);
+                        excuseIdOptional.ifPresent(excuseId -> deleteExcuse(requestingUserDto, event, excuseId, deleteDelay));
+                    }
                 }
             } else {
                 List<Member> memberList = Optional.ofNullable(event.getOption(AUTHOR)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
@@ -71,9 +73,8 @@ public class ExcuseCommand implements IMiscCommand {
             event.getHook().sendMessage("There are no approved excuses, consider submitting some.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
             return;
         }
-        event.getHook().sendMessage("Listing all approved excuses below:").queue(message -> ICommand.deleteAfter(message, deleteDelay));
-        stringBuilderList = new ArrayList<>();
         createAndAddStringBuilder();
+        stringBuilderList.get(0).append("Listing all approved excuses below: \n");
         excuseDtos.forEach(excuseDto -> {
             StringBuilder sb = stringBuilderList.get(stringBuilderList.size() - 1);
             String excuseString = String.format("Excuse #%d: '%s' - %s. \n", excuseDto.getId(), excuseDto.getExcuse(), excuseDto.getAuthor());
@@ -87,9 +88,8 @@ public class ExcuseCommand implements IMiscCommand {
         stringBuilderList.forEach(sb -> event.getHook().sendMessage(sb.toString()).queue(message -> ICommand.deleteAfter(message, deleteDelay)));
     }
 
-    private List<StringBuilder> createAndAddStringBuilder() {
+    private void createAndAddStringBuilder() {
         stringBuilderList.add(new StringBuilder(2000));
-        return stringBuilderList;
     }
 
     private void approvePendingExcuse(UserDto requestingUserDto, SlashCommandInteractionEvent event, int pendingExcuse, Integer deleteDelay) {
@@ -100,7 +100,7 @@ public class ExcuseCommand implements IMiscCommand {
                 excuseService.updateExcuse(excuseById);
                 event.getHook().sendMessageFormat("approved excuse '%s'.", excuseById.getExcuse()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
             } else
-                event.getHook().sendMessage("I've heard that excuse before, keep up.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessage(EXISTING_EXCUSE_MESSAGE).queue(message -> ICommand.deleteAfter(message, deleteDelay));
         } else
             sendErrorMessage(event, deleteDelay);
     }
@@ -124,7 +124,7 @@ public class ExcuseCommand implements IMiscCommand {
             long guildId = event.getGuild().getIdLong();
             Optional<ExcuseDto> existingExcuse = excuseService.listAllGuildExcuses(guildId).stream().filter(excuseDto -> excuseDto.getExcuse().equals(excuseMessage)).findFirst();
             if (existingExcuse.isPresent()) {
-                event.getHook().sendMessage("I've heard that one before, keep up.").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+                event.getHook().sendMessage(EXISTING_EXCUSE_MESSAGE).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
             } else {
                 ExcuseDto excuseDto = new ExcuseDto();
                 excuseDto.setGuildId(guildId);
@@ -173,7 +173,7 @@ public class ExcuseCommand implements IMiscCommand {
                         .addChoice(APPROVE, APPROVE)
                         .addChoice(DELETE, DELETE),
                 new OptionData(OptionType.INTEGER, EXCUSE_ID, "Use in combination with a approve action for pending IDs, or delete action for an approved ID"),
-                new OptionData(OptionType.STRING, EXCUSE, "Use in combination with a approve being true. Max 200 characters"),
+                new OptionData(OptionType.STRING, EXCUSE, "Use in combination with an approve being true. Max 200 characters"),
                 new OptionData(OptionType.USER, AUTHOR, "Who made this excuse? Leave blank to attribute to the user who called the command")
         );
     }

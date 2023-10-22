@@ -1,10 +1,11 @@
 package toby.command.commands.misc;
 
-import commands.CommandTest;
+import toby.command.commands.CommandTest;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -33,6 +34,11 @@ public class UserInfoCommandTest implements CommandTest {
         userService = mock(IUserService.class);
         userInfoCommand = new UserInfoCommand(userService);
         when(event.getGuild()).thenReturn(mock(Guild.class));
+    }
+
+    @AfterEach
+    public void tearDown(){
+        tearDownCommonMocks();
     }
 
     @Test
@@ -115,5 +121,6 @@ public class UserInfoCommandTest implements CommandTest {
 
         // Verify interactions
         verify(interactionHook, times(1)).sendMessage(anyString());
+
     }
 }
