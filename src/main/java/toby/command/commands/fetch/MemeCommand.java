@@ -11,7 +11,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.dto.web.RedditAPIDto;
 import toby.jpa.dto.UserDto;
 
@@ -19,6 +18,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class MemeCommand implements IFetchCommand {
 
@@ -29,7 +31,7 @@ public class MemeCommand implements IFetchCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
-        ICommand.deleteAfter(event.getHook(), deleteDelay);
+        deleteAfter(event.getHook(), deleteDelay);
 
         Gson gson = new Gson();
         List<OptionMapping> args = event.getOptions();
@@ -40,7 +42,7 @@ public class MemeCommand implements IFetchCommand {
             event.getHook().sendMessageFormat(
                             "You do not have adequate permissions to use this command, talk to the server owner: %s",
                             event.getGuild().getOwner().getNickname())
-                    .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    .queue(getConsumer(deleteDelay));
             return;
         }
 
@@ -55,7 +57,7 @@ public class MemeCommand implements IFetchCommand {
                 timePeriod = RedditAPIDto.TimePeriod.valueOf(timePeriodOptional.orElse("day")).toString().toLowerCase();
             } catch (Error e) {
                 timePeriod = "day";
-                event.getHook().sendMessageFormat(String.format("Using default time period of %s", timePeriod)).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat(String.format("Using default time period of %s", timePeriod)).setEphemeral(true).queue(getConsumer(deleteDelay));
             }
             try {
                 limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
@@ -63,15 +65,15 @@ public class MemeCommand implements IFetchCommand {
                 limit = 5;
             } catch (NumberFormatException e) {
                 limit = 5;
-                event.getHook().sendMessageFormat("Invalid number supplied, using default value %d", limit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Invalid number supplied, using default value %d", limit).queue(getConsumer(deleteDelay));
             }
             String subredditArg = subredditArgOptional.orElse("");
             if (subredditArg.equals("sneakybackgroundfeet")) {
-                event.getHook().sendMessageFormat("Don't talk to me.").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Don't talk to me.").setEphemeral(true).queue(getConsumer(deleteDelay));
             } else {
                 WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
-                        event.getHook().sendMessageFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        event.getHook().sendMessageFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(getConsumer(deleteDelay));
                         return;
                     }
                     final JsonNode parentData = json.get("data");
@@ -80,9 +82,9 @@ public class MemeCommand implements IFetchCommand {
                     JsonNode meme = children.get(random.nextInt(children.size()));
                     RedditAPIDto redditAPIDto = gson.fromJson(meme.get("data").toString(), RedditAPIDto.class);
                     if (redditAPIDto.isNsfw()) {
-                        event.getHook().sendMessageFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", member).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        event.getHook().sendMessageFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", member).queue(getConsumer(deleteDelay));
                     } else if (redditAPIDto.getVideo()) {
-                        event.getHook().sendMessageFormat("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        event.getHook().sendMessageFormat("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(getConsumer(deleteDelay));
                     } else {
                         String title = redditAPIDto.getTitle();
                         String url = redditAPIDto.getUrl();

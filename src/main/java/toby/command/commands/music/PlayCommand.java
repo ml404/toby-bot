@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -14,6 +13,8 @@ import toby.lavaplayer.PlayerManager;
 import java.util.List;
 import java.util.Optional;
 
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 import static toby.helpers.MusicPlayerHelper.*;
 
 
@@ -27,7 +28,7 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         if (!requestingUserDto.hasMusicPermission()) {
@@ -38,7 +39,7 @@ public class PlayCommand implements IMusicCommand {
         String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(LINK);
 
         if (type.isEmpty()) {
-            event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(getConsumer(deleteDelay));
             return;
         }
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;

@@ -12,11 +12,15 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class RollCommand implements IMiscCommand {
 
@@ -26,7 +30,7 @@ public class RollCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         Optional<Integer> diceValueOptional = Optional.ofNullable(event.getOption(DICE_NUMBER)).map(OptionMapping::getAsInt);
         Optional<Integer> diceToRollOptional = Optional.ofNullable(event.getOption(DICE_TO_ROLL)).map(OptionMapping::getAsInt);
@@ -35,7 +39,7 @@ public class RollCommand implements IMiscCommand {
         Integer diceToRollInput = diceToRollOptional.orElse(1);
         int diceToRoll = (diceToRollInput < 1) ? 1 : diceToRollInput;
         int modifier = diceModifierOptional.orElse(0);
-        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(getConsumer(deleteDelay));
     }
 
     public WebhookMessageCreateAction<Message> handleDiceRoll(IReplyCallback event, int diceValue, int diceToRoll, int modifier) {

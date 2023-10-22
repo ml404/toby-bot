@@ -2,7 +2,6 @@ package toby.command.commands.fetch;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.command.commands.misc.RandomCommand;
 import toby.helpers.Cache;
 import toby.helpers.WikiFetcher;
@@ -10,6 +9,9 @@ import toby.jpa.dto.UserDto;
 
 import java.io.IOException;
 import java.util.List;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class DbdRandomKillerCommand implements IFetchCommand {
 
@@ -26,16 +28,16 @@ public class DbdRandomKillerCommand implements IFetchCommand {
     @Override
     @SuppressWarnings("unchecked")
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery);
-            event.getHook().sendMessageFormat(RandomCommand.getRandomElement(dbdKillers)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat(RandomCommand.getRandomElement(dbdKillers)).queue(getConsumer(deleteDelay));
 
         } catch (IOException ignored) {
-            event.getHook().sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.").queue(getConsumer(deleteDelay));
         }
     }
 

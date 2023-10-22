@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -16,6 +15,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 import static toby.jpa.dto.ConfigDto.Configurations.*;
 
 public class SetConfigCommand implements IModerationCommand {
@@ -30,19 +31,19 @@ public class SetConfigCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         List<OptionMapping> args = event.getOptions();
         final Member member = ctx.getMember();
 
         if (!member.isOwner()) {
-            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
 
         if (args.isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
             return;
         }
         validateArgumentsAndUpdateConfigs(event, deleteDelay);
@@ -53,7 +54,7 @@ public class SetConfigCommand implements IModerationCommand {
         Optional<String> configNameStringOptional = Optional.ofNullable(event.getOption(CONFIG_NAME)).map(optionMapping -> optionMapping.getAsString().toUpperCase());
 
         if (configNameStringOptional.isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
             return;
         }
 
@@ -72,7 +73,7 @@ public class SetConfigCommand implements IModerationCommand {
     private void setDeleteDelay(SlashCommandInteractionEvent event, Integer deleteDelay) {
         String newDefaultDelay = Optional.ofNullable(event.getOption(CONFIG_VALUE)).map(OptionMapping::getAsString).orElse("");
         if (!newDefaultDelay.matches("\\d+")) {
-            event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds)").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Value given for default delete message delay for TobyBot music messages was not valid (a whole number representing seconds)").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
         String deletePropertyName = DELETE_DELAY.getConfigValue();
@@ -83,13 +84,13 @@ public class SetConfigCommand implements IModerationCommand {
         } else {
             configService.createNewConfig(newConfigDto);
         }
-        event.getHook().sendMessageFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("Set default delete message delay for TobyBot music messages to '%s' seconds", newDefaultDelay).queue(getConsumer(deleteDelay));
     }
 
     private void setVolume(SlashCommandInteractionEvent event, Integer deleteDelay) {
         String newDefaultVolume = Optional.ofNullable(event.getOption(CONFIG_VALUE)).map(OptionMapping::getAsString).orElse("");
         if (!newDefaultVolume.matches("\\d+")) {
-            event.getHook().sendMessage("Value given for default volume of TobyBot music was not valid (a whole number representing percent)").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("Value given for default volume of TobyBot music was not valid (a whole number representing percent)").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
         String volumePropertyName = VOLUME.getConfigValue();
@@ -100,7 +101,7 @@ public class SetConfigCommand implements IModerationCommand {
         } else {
             configService.createNewConfig(newConfigDto);
         }
-        event.getHook().sendMessageFormat("Set default volume to '%s'", newDefaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("Set default volume to '%s'", newDefaultVolume).queue(getConsumer(deleteDelay));
     }
 
     private void setMove(SlashCommandInteractionEvent event, Integer deleteDelay) {
@@ -116,7 +117,7 @@ public class SetConfigCommand implements IModerationCommand {
                 } else {
                     configService.createNewConfig(newConfigDto);
                 }
-                event.getHook().sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannel).setEphemeral(true).queue(getConsumer(deleteDelay));
             }
         }
     }
@@ -134,7 +135,7 @@ public class SetConfigCommand implements IModerationCommand {
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            event.getHook().sendMessageFormat("Set prefix to '%s'", newPrefix).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Set prefix to '%s'", newPrefix).setEphemeral(true).queue(getConsumer(deleteDelay));
 
         }
     }

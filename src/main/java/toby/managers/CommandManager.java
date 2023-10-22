@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.getConsumerForHook;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -173,7 +175,7 @@ public class CommandManager {
         int awardedSocialCredit = socialCredit * 5;
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
-        ctx.getEvent().replyFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        ctx.getEvent().replyFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(getConsumerForHook(deleteDelay));
     }
 
     public void handle(ButtonInteractionEvent event) {
@@ -206,7 +208,7 @@ public class CommandManager {
                 if (cmd.getName().equals("roll")) {
                     RollCommand rollCommand = (RollCommand) cmd;
                     String[] optionArray = options.split(",");
-                    rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(getConsumer(deleteDelay));
                 }
             }
             CommandContext commandContext = new CommandContext(event);

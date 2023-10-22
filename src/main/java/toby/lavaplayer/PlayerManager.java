@@ -14,11 +14,12 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.ICommand;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static toby.command.ICommand.getConsumer;
 
 public class PlayerManager {
     private static PlayerManager INSTANCE;
@@ -72,7 +73,7 @@ public class PlayerManager {
                         .addContent(track.getInfo().author)
                         .addContent("`")
                         .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        .queue(getConsumer(deleteDelay));
             }
 
             @Override
@@ -85,7 +86,7 @@ public class PlayerManager {
                         .addContent("` tracks from playlist `")
                         .addContent(playlist.getName())
                         .addContent("`")
-                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        .queue(getConsumer(deleteDelay));
 
                 for (final AudioTrack track : tracks) {
                     scheduler.queue(track, startPosition, volume);
@@ -94,12 +95,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(getConsumer(deleteDelay));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-               channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+               channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
             }
         });
     }
@@ -125,7 +126,7 @@ public class PlayerManager {
                         .addContent(track.getInfo().author)
                         .addContent("`")
                         .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        .queue(getConsumer(deleteDelay));
             }
 
             @Override
@@ -139,7 +140,7 @@ public class PlayerManager {
                         .addContent("` tracks from playlist `")
                         .addContent(playlist.getName())
                         .addContent("`")
-                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        .queue(getConsumer(deleteDelay));
 
                 for (final AudioTrack track : tracks) {
                     scheduler.queue(track, startPosition, volume);
@@ -148,12 +149,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                event.getHook().sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(getConsumer(deleteDelay));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                event.getHook().sendMessageFormat("Could not play: %s", exception.getMessage()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
             }
         });
     }

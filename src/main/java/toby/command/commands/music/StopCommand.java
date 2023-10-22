@@ -7,6 +7,7 @@ import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
+import static toby.command.ICommand.getConsumer;
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 
@@ -24,7 +25,7 @@ public class StopCommand implements IMusicCommand {
             musicManager.getScheduler().getQueue().clear();
             musicManager.getScheduler().setLooping(false);
             musicManager.getAudioPlayer().setPaused(false);
-            event.getHook().sendMessage("The player has been stopped and the queue has been cleared").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("The player has been stopped and the queue has been cleared").queue(getConsumer(deleteDelay));
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }

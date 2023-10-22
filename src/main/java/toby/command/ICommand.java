@@ -6,11 +6,13 @@ import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import org.jetbrains.annotations.NotNull;
 import toby.jpa.dto.UserDto;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public interface ICommand {
 
@@ -35,6 +37,16 @@ public interface ICommand {
 
     default void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
         event.getHook().sendMessageFormat(getErrorMessage(event.getGuild().getOwner().getEffectiveName()), event.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+    }
+
+
+    @NotNull
+    static Consumer<Message> getConsumer(Integer deleteDelay) {
+        return message -> ICommand.deleteAfter(message, deleteDelay);
+    }
+    @NotNull
+    static Consumer<InteractionHook> getConsumerForHook(Integer deleteDelay) {
+        return hook -> ICommand.deleteAfter(hook, deleteDelay);
     }
 
     default SlashCommandData getSlashCommand(){

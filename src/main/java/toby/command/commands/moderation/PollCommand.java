@@ -21,7 +21,7 @@ public class PollCommand implements IModerationCommand {
 //            List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
 //            SlashCommandInteractionEvent event = ctx.getEvent();
 //            if (pollArgs.size() > 10) {
-//                event.getHook().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+//                event.getHook().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(getConsumer(deleteDelay));
 //                return;
 //            }
 //            List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
