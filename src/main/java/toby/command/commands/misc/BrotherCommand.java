@@ -1,14 +1,15 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.BrotherDto;
 import toby.jpa.dto.UserDto;
@@ -16,6 +17,8 @@ import toby.jpa.service.IBrotherService;
 
 import java.util.List;
 import java.util.Optional;
+
+import static toby.command.ICommand.getConsumer;
 
 
 public class BrotherCommand implements IMiscCommand {
@@ -39,16 +42,28 @@ public class BrotherCommand implements IMiscCommand {
     }
 
     private void determineBrother(SlashCommandInteractionEvent event, Emoji tobyEmote, int deleteDelay) {
+        InteractionHook hook = event.getHook();
+        if (tobyId.equals(event.getUser().getIdLong())) {
+            hook.sendMessageFormat("You're not my fucking brother Toby, you're me %s", tobyEmote).queue(getConsumer(deleteDelay));
+            return;
+        }
         Optional<Mentions> optionalMentions = Optional.ofNullable(event.getOption(BROTHER)).map(OptionMapping::getMentions);
         if (optionalMentions.isEmpty()) {
             Optional<BrotherDto> brother = brotherService.getBrotherById(event.getUser().getIdLong());
-            if (brother.isPresent()) {
-                event.getHook().sendMessageFormat("Of course you're my brother %s.", brother.get().getBrotherName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-            } else if (tobyId.equals(event.getUser().getIdLong())) {
-                event.getHook().sendMessageFormat("You're not my fucking brother Toby, you're me %s", tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
-            } else
-                event.getHook().sendMessageFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            brother.ifPresentOrElse(
+                    brotherDto -> hook.sendMessageFormat("Of course you're my brother %s.", brotherDto.getBrotherName()).queue(getConsumer(deleteDelay)),
+                    () -> hook.sendMessageFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(getConsumer(deleteDelay))
+            );
+            return;
         }
+        List<Member> mentions = optionalMentions.get().getMembers();
+        mentions.forEach(member -> {
+            Optional<BrotherDto> brother = brotherService.getBrotherById(member.getIdLong());
+            brother.ifPresentOrElse(
+                    brotherDto -> hook.sendMessageFormat("Of course you're my brother %s.", brotherDto.getBrotherName()).queue(getConsumer(deleteDelay)),
+                    () -> hook.sendMessageFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(getConsumer(deleteDelay))
+            );
+        });
     }
 
     @Override

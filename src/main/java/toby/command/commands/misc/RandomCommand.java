@@ -5,12 +5,14 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class RandomCommand implements IMiscCommand {
 
@@ -21,12 +23,13 @@ public class RandomCommand implements IMiscCommand {
 
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        ICommand.deleteAfter(event.getHook(), deleteDelay);
+        deleteAfter(event.getHook(), deleteDelay);
         if (ctx.getEvent().getOptions().isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+            return;
         }
         List<String> stringList = List.of(Optional.ofNullable(event.getOption(LIST)).map(OptionMapping::getAsString).orElse("").split(","));
-        event.getHook().sendMessage(getRandomElement(stringList)).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+        event.getHook().sendMessage(getRandomElement(stringList)).queue(getConsumer(deleteDelay));
     }
 
     public static String getRandomElement(List<?> args) {

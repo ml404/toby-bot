@@ -13,6 +13,7 @@ import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
+import static toby.command.ICommand.getConsumer;
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class PauseCommand implements IMusicCommand {
@@ -38,10 +39,10 @@ public class PauseCommand implements IMusicCommand {
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
                         .addContent("`")
-                        .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                        .queue(getConsumer(deleteDelay));
                 audioPlayer.setPaused(true);
             } else {
-                event.getHook().sendMessageFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(getConsumer(deleteDelay));
             }
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);

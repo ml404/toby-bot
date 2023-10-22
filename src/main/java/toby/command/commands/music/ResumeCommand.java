@@ -9,6 +9,8 @@ import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
+import static toby.command.ICommand.getConsumer;
+
 
 public class ResumeCommand implements IMusicCommand {
     @Override
@@ -30,7 +32,7 @@ public class ResumeCommand implements IMusicCommand {
                     .addContent("` by `")
                     .addContent(track.getInfo().author)
                     .addContent("`")
-                    .queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    .queue(getConsumer(deleteDelay));
             audioPlayer.setPaused(false);
         }
     }

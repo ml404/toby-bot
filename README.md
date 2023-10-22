@@ -32,15 +32,10 @@ Ensure you have the following prerequisites set up before getting started:
    git clone https://github.com/ml404/toby-bot.git
    ```
 
-2. Customize the bot's configuration by editing `application.properties` or `application.yml`. Provide your Discord bot token and database connection details.
+2. Customize the bot's configuration by editing `application.properties`. 
+Provide your Discord bot token and database connection details via environment variables
 
-3. Build the project using your chosen build tool:
-
-   ```shell
-   mvn clean install
-   ```
-
-   or
+3. Build the project:
 
    ```shell
    gradle clean build
@@ -49,7 +44,7 @@ Ensure you have the following prerequisites set up before getting started:
 4. Start the bot:
 
    ```shell
-   java -jar target/toby-bot-5.0-SNAPSHOT.jar
+   java -jar build/libs/toby-bot-5.0-SNAPSHOT.jar -Dspring.profiles.active=prod
    ```
 
 ## Usage

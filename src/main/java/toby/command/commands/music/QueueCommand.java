@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -16,11 +15,14 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
+
 public class QueueCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
@@ -32,7 +34,7 @@ public class QueueCommand implements IMusicCommand {
         }
 
         if (queue.isEmpty()) {
-            event.getHook().sendMessage("The queue is currently empty").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("The queue is currently empty").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
 
@@ -61,7 +63,7 @@ public class QueueCommand implements IMusicCommand {
                     .addContent("` more...");
         }
 
-        messageAction.setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        messageAction.setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
     public static String formatTime(long timeInMillis) {

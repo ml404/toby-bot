@@ -22,37 +22,37 @@ public class BrotherServiceImpl implements IBrotherService {
     @Override
     @Cacheable(value = "brothers")
     public Iterable<BrotherDto> listBrothers() {
-        return brotherService.findAll();
+        return brotherService.listBrothers();
     }
 
     @Override
     @CachePut(value = "brothers", key = "#brotherDto.discordId")
     public BrotherDto createNewBrother(BrotherDto brotherDto) {
-        return brotherService.save(brotherDto);
+        return brotherService.createNewBrother(brotherDto);
     }
 
     @Override
     @Cacheable(value = "brothers", key = "#discordId")
     public Optional<BrotherDto> getBrotherById(Long discordId) {
-        return brotherService.findById(discordId);
+        return Optional.ofNullable(brotherService.getBrotherById(discordId));
     }
 
     @Override
     @CachePut(value = "brothers", key = "#brotherDto.discordId")
     public BrotherDto updateBrother(BrotherDto brotherDto) {
-        return brotherService.save(brotherDto);
+        return brotherService.updateBrother(brotherDto);
     }
 
     @Override
     @CacheEvict(value = "brothers", key = "#brotherDto.discordId")
     public void deleteBrother(BrotherDto brotherDto) {
-        brotherService.delete(brotherDto);
+        brotherService.deleteBrother(brotherDto);
     }
 
     @Override
     @CacheEvict(value = "brothers", key = "#discordId")
     public void deleteBrotherById(Long discordId) {
-        brotherService.deleteById(discordId);
+        brotherService.deleteBrotherById(discordId);
     }
 
     @CacheEvict(value = "brothers", allEntries = true)

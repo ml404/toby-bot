@@ -5,7 +5,6 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.ICommand;
 import toby.command.commands.music.QueueCommand;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
@@ -16,6 +15,8 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+import static toby.command.ICommand.getConsumer;
 
 public class MusicPlayerHelper {
 
@@ -71,7 +72,7 @@ public class MusicPlayerHelper {
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);
         String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) with volume `%d`", info.title, info.author, songDuration, info.uri, volume);
-        event.getHook().sendMessage(nowPlaying).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessage(nowPlaying).queue(getConsumer(deleteDelay));
     }
 
     public static Long adjustTrackPlayingTimes(Long startTime) {

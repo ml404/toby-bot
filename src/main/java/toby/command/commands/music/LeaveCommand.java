@@ -8,13 +8,14 @@ import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class LeaveCommand implements IMusicCommand {
@@ -26,7 +27,7 @@ public class LeaveCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member self = ctx.getSelfMember();
@@ -38,7 +39,7 @@ public class LeaveCommand implements IMusicCommand {
         }
 
         if (!selfVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(getConsumer(deleteDelay));
             return;
         }
 
@@ -60,7 +61,7 @@ public class LeaveCommand implements IMusicCommand {
             musicManager.getAudioPlayer().stopTrack();
             musicManager.getAudioPlayer().setVolume(defaultVolume);
             audioManager.closeAudioConnection();
-            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(getConsumer(deleteDelay));
         } else {
             sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }

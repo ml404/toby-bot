@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
@@ -18,6 +17,9 @@ import toby.jpa.service.IConfigService;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class MoveCommand implements IModerationCommand {
 
@@ -32,7 +34,7 @@ public class MoveCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
@@ -40,7 +42,7 @@ public class MoveCommand implements IModerationCommand {
 
         List<Member> memberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         if (memberList.isEmpty()) {
-            event.getHook().sendMessage("You must mention 1 or more Users to move").queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to move").queue(getConsumer(deleteDelay));
             return;
         }
 
@@ -49,7 +51,7 @@ public class MoveCommand implements IModerationCommand {
         String channelName = channelNameOptional.orElse("");
         Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
         if (voiceChannelOptional.isEmpty()) {
-            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(getConsumer(deleteDelay));
             return;
         }
 
@@ -60,25 +62,25 @@ public class MoveCommand implements IModerationCommand {
             VoiceChannel voiceChannel = voiceChannelOptional.get();
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
-                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay)),
-                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay))
+                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(getConsumer(deleteDelay)),
+                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(getConsumer(deleteDelay))
                     );
         });
     }
 
     private boolean doChannelValidation(CommandContext ctx, SlashCommandInteractionEvent event, Member member, Member target, int deleteDelay) {
         if (!target.getVoiceState().inAudioChannel()) {
-            event.getHook().sendMessageFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessageFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(getConsumer(deleteDelay));
             return true;
         }
         if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.getHook().sendMessageFormat("You can't move '%s'", target.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessageFormat("You can't move '%s'", target.getEffectiveName()).queue(getConsumer(deleteDelay));
             return true;
         }
         final Member botMember = ctx.getSelfMember();
 
         if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.getHook().sendMessageFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(message1 -> ICommand.deleteAfter(message1, deleteDelay));
+            event.getHook().sendMessageFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(getConsumer(deleteDelay));
             return true;
         }
         return false;

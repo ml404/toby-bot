@@ -2,11 +2,13 @@ package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
 import java.util.Random;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class EightBallCommand implements IMiscCommand {
 
@@ -23,7 +25,7 @@ public class EightBallCommand implements IMiscCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        ICommand.deleteAfter(event.getHook(), deleteDelay);
+        deleteAfter(event.getHook(), deleteDelay);
 
         Random r = new Random();
 
@@ -53,15 +55,15 @@ public class EightBallCommand implements IMiscCommand {
         };
 
         if(requestingUserDto.getDiscordId().equals(TOMS_DISCORD_ID)){
-            event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(getConsumer(deleteDelay));
             Long socialCredit = requestingUserDto.getSocialCredit();
             int deductedSocialCredit = -5 * choice;
             requestingUserDto.setSocialCredit(socialCredit + deductedSocialCredit);
-            event.getHook().sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(getConsumer(deleteDelay));
             userService.updateUser(requestingUserDto);
             return;
         }
-        event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(getConsumer(deleteDelay));
     }
 
     @Override

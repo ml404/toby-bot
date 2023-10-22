@@ -1,0 +1,15 @@
+*.log
+.DS_Store
+.idea/
+.gradle/
+.m2/
+target/
+logs/
+logs/*
+test/
+tests/
+docs/
+*.bak
+*.tmp
+*.sql
+*.mp3

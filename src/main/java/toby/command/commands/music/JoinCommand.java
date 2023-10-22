@@ -7,11 +7,13 @@ import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 import toby.lavaplayer.PlayerManager;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class JoinCommand implements IMusicCommand {
     private final IConfigService configService;
@@ -22,7 +24,7 @@ public class JoinCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member self = ctx.getSelfMember();
@@ -44,7 +46,7 @@ public class JoinCommand implements IMusicCommand {
             ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
             int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
             PlayerManager.getInstance().getMusicManager(event.getGuild()).getAudioPlayer().setVolume(defaultVolume);
-            event.getHook().sendMessageFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessageFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(getConsumer(deleteDelay));
         }
     }
 
@@ -54,7 +56,7 @@ public class JoinCommand implements IMusicCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
 
         if (selfVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("I'm already in a voice channel").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("I'm already in a voice channel").setEphemeral(true).queue(getConsumer(deleteDelay));
             return null;
         }
 
@@ -62,7 +64,7 @@ public class JoinCommand implements IMusicCommand {
         final GuildVoiceState memberVoiceState = member.getVoiceState();
 
         if (!memberVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+            event.getHook().sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(getConsumer(deleteDelay));
             return null;
         }
         return memberVoiceState;

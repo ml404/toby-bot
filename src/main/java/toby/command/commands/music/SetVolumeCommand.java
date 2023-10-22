@@ -18,6 +18,8 @@ import toby.lavaplayer.PlayerManager;
 import java.util.List;
 import java.util.Optional;
 
+import static toby.command.ICommand.getConsumer;
+
 
 public class SetVolumeCommand implements IMusicCommand {
 
@@ -47,20 +49,20 @@ public class SetVolumeCommand implements IMusicCommand {
             if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
                 AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
                 if (volumeArg > 100) {
-                    event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
                     return;
                 }
                 int oldVolume = audioPlayer.getVolume();
                 if (volumeArg == oldVolume) {
-                    event.getHook().sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                    event.getHook().sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
                     return;
                 }
                 audioPlayer.setVolume(volumeArg);
-                event.getHook().sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(getConsumer(deleteDelay));
             } else {
-                event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+                event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(getConsumer(deleteDelay));
             }
-        } else event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        } else event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
 
