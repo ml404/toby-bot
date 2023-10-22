@@ -1,7 +1,7 @@
 
 # Toby Bot
 
-![Toby Bot Logo](https://your-image-url.com/toby-bot-logo.png)
+![Toby Bot Logo](https://i.ibb.co/5BydjDZ/lo-fi-saitama.jpg)
 
 ## Overview
 
