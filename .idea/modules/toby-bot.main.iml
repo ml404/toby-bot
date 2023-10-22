@@ -14,7 +14,6 @@
     <orderEntry type="library" scope="PROVIDED" name="Gradle: org.jetbrains:annotations:24.0.0" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.13.0" level="project" />
     <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer:2.0.2" level="project" />
-    <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer-natives:2.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-log4j2:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.8.9" level="project" />
     <orderEntry type="library" name="Gradle: org.postgresql:postgresql:42.6.0" level="project" />
@@ -88,6 +87,7 @@
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.hibernate.orm:hibernate-core:6.3.1.Final" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Gradle: dev.arbjerg:lavaplayer-natives:2.0.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: net.sf.trove4j:trove4j:3.0.3" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: com.github.walkyst:JAADec-fork:0.1.3" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.mozilla:rhino-engine:1.7.14" level="project" />

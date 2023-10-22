@@ -13,7 +13,6 @@
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.13.0" level="project" />
     <orderEntry type="library" name="Gradle: net.dv8tion:JDA:5.0.0-beta.15" level="project" />
     <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer:2.0.2" level="project" />
-    <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer-natives:2.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-log4j2:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: me.duncte123:botCommons:2.0.122" level="project" />
     <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.8.9" level="project" />
@@ -124,6 +123,7 @@
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.hibernate.orm:hibernate-core:6.3.1.Final" level="project" />
+    <orderEntry type="library" scope="RUNTIME" name="Gradle: dev.arbjerg:lavaplayer-natives:2.0.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.junit.jupiter:junit-jupiter-engine:5.8.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.junit.jupiter:junit-jupiter:5.8.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: com.h2database:h2:2.2.224" level="project" />

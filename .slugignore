@@ -11,3 +11,5 @@ tests/
 docs/
 *.bak
 *.tmp
+*.sql
+*.mp3
