@@ -14,6 +14,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.List;
@@ -55,7 +56,79 @@ public class PlayerManager {
     public void loadAndPlayChannel(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition) {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
         this.currentlyStoppable = isSkippable;
-        this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
+        this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, getAudioLoadResultHandler(channel, trackUrl, deleteDelay, startPosition, musicManager));
+    }
+
+    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition, int volume) {
+        final GuildMusicManager musicManager = this.getMusicManager(event.getGuild());
+        this.currentlyStoppable = isSkippable;
+        this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, getResultHandlerWithEvent(event, trackUrl, deleteDelay, startPosition, volume, musicManager));
+    }
+
+    @NotNull
+    private AudioLoadResultHandler getResultHandlerWithEvent(SlashCommandInteractionEvent event, String trackUrl, Integer deleteDelay, Long startPosition, int volume, GuildMusicManager musicManager) {
+        return new AudioLoadResultHandler() {
+
+            private final TrackScheduler scheduler = musicManager.getScheduler();
+
+            @Override
+            public void trackLoaded(AudioTrack track) {
+                scheduler.setEvent(event);
+                scheduler.setDeleteDelay(deleteDelay);
+                scheduler.queue(track, startPosition, volume);
+                scheduler.setPreviousVolume(previousVolume);
+
+                // not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out as you can only acknowledge each hook once?
+                event.getChannel().sendMessage("Adding to queue: `")
+                        .addContent(track.getInfo().title)
+                        .addContent("` by `")
+                        .addContent(track.getInfo().author)
+                        .addContent("`")
+                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
+                        .queue(getConsumer(deleteDelay));
+            }
+
+            @Override
+            public void playlistLoaded(AudioPlaylist playlist) {
+                final List<AudioTrack> tracks = playlist.getTracks();
+                scheduler.setEvent(event);
+                scheduler.setDeleteDelay(deleteDelay);
+
+                event.getHook().sendMessage("Adding to queue: `")
+                        .addContent(String.valueOf(tracks.size()))
+                        .addContent("` tracks from playlist `")
+                        .addContent(playlist.getName())
+                        .addContent("`")
+                        .queue(getConsumer(deleteDelay));
+
+                for (final AudioTrack track : tracks) {
+                    scheduler.queue(track, startPosition, volume);
+                }
+            }
+
+            @Override
+            public void noMatches() {
+                event.getHook().sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(getConsumer(deleteDelay));
+            }
+
+            @Override
+            public void loadFailed(FriendlyException exception) {
+                event.getHook().sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
+            }
+        };
+    }
+
+    public static PlayerManager getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new PlayerManager();
+        }
+
+        return INSTANCE;
+    }
+
+    @NotNull
+    private AudioLoadResultHandler getAudioLoadResultHandler(TextChannel channel, String trackUrl, Integer deleteDelay, Long startPosition, GuildMusicManager musicManager) {
+        return new AudioLoadResultHandler() {
 
             private final TrackScheduler scheduler = musicManager.getScheduler();
             final int volume = musicManager.getAudioPlayer().getVolume();
@@ -100,71 +173,9 @@ public class PlayerManager {
 
             @Override
             public void loadFailed(FriendlyException exception) {
-               channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
+                channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
             }
-        });
-    }
-
-    public void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition, int volume) {
-        final GuildMusicManager musicManager = this.getMusicManager(event.getGuild());
-        this.currentlyStoppable = isSkippable;
-        this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandler() {
-
-            private final TrackScheduler scheduler = musicManager.getScheduler();
-
-            @Override
-            public void trackLoaded(AudioTrack track) {
-                scheduler.setEvent(event);
-                scheduler.setDeleteDelay(deleteDelay);
-                scheduler.queue(track, startPosition, volume);
-                scheduler.setPreviousVolume(previousVolume);
-
-                //TODO not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out
-                event.getChannel().asTextChannel().sendMessage("Adding to queue: `")
-                        .addContent(track.getInfo().title)
-                        .addContent("` by `")
-                        .addContent(track.getInfo().author)
-                        .addContent("`")
-                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(getConsumer(deleteDelay));
-            }
-
-            @Override
-            public void playlistLoaded(AudioPlaylist playlist) {
-                final List<AudioTrack> tracks = playlist.getTracks();
-                scheduler.setEvent(event);
-                scheduler.setDeleteDelay(deleteDelay);
-
-                event.getHook().sendMessage("Adding to queue: `")
-                        .addContent(String.valueOf(tracks.size()))
-                        .addContent("` tracks from playlist `")
-                        .addContent(playlist.getName())
-                        .addContent("`")
-                        .queue(getConsumer(deleteDelay));
-
-                for (final AudioTrack track : tracks) {
-                    scheduler.queue(track, startPosition, volume);
-                }
-            }
-
-            @Override
-            public void noMatches() {
-                event.getHook().sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(getConsumer(deleteDelay));
-            }
-
-            @Override
-            public void loadFailed(FriendlyException exception) {
-                event.getHook().sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
-            }
-        });
-    }
-
-    public static PlayerManager getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new PlayerManager();
-        }
-
-        return INSTANCE;
+        };
     }
 
     public boolean isCurrentlyStoppable() {

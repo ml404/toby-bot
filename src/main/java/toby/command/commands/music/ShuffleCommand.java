@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 import toby.lavaplayer.TrackScheduler;
@@ -16,13 +15,14 @@ import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.getConsumer;
 
 public class ShuffleCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
+        deleteAfter(event.getHook(), deleteDelay);
         event.deferReply().queue();
         if (requestingUserDto.hasMusicPermission()) {
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
@@ -42,6 +42,11 @@ public class ShuffleCommand implements IMusicCommand {
         }
     }
 
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
+        //no-op
+    }
+
     @NotNull
     private LinkedBlockingQueue<AudioTrack> shuffleAudioTracks(BlockingQueue<AudioTrack> queue) {
         ArrayList<AudioTrack> audioTrackArrayList = new ArrayList<>(queue);
@@ -58,5 +63,4 @@ public class ShuffleCommand implements IMusicCommand {
     public String getDescription() {
         return "Use this command to shuffle the queue";
     }
-
 }

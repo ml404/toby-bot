@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static toby.command.ICommand.getConsumer;
-import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 import static toby.helpers.MusicPlayerHelper.nowPlaying;
 
 
@@ -26,11 +25,16 @@ public class SkipCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
+        GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
 
         if (audioPlayer.getPlayingTrack() == null) {
@@ -53,7 +57,7 @@ public class SkipCommand implements IMusicCommand {
             AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
             nowPlaying(event, playingTrack, deleteDelay, (int) playingTrack.getUserData());
         } else {
-            sendDeniedStoppableMessage(event, musicManager, deleteDelay);
+            IMusicCommand.sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
     }
 

@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
-import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.ArrayList;
@@ -22,11 +21,15 @@ public class QueueCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
-        final BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
+        final BlockingQueue<AudioTrack> queue = instance.getMusicManager(ctx.getGuild()).getScheduler().getQueue();
 
         if (!requestingUserDto.hasMusicPermission()) {
             sendErrorMessage(event, deleteDelay);
@@ -81,6 +84,6 @@ public class QueueCommand implements IMusicCommand {
 
     @Override
     public String getDescription() {
-        return "shows the queued up songs";}
-
+        return "shows the queued up songs";
+    }
 }

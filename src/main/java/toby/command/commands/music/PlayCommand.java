@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
 import static toby.helpers.MusicPlayerHelper.*;
 
 
@@ -28,6 +27,11 @@ public class PlayCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
@@ -35,17 +39,11 @@ public class PlayCommand implements IMusicCommand {
             sendErrorMessage(event, deleteDelay);
             return;
         }
+        GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
 
         String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(LINK);
-
-        if (type.isEmpty()) {
-            event.getHook().sendMessage("Correct usage is `!play <youtube link>`").queue(getConsumer(deleteDelay));
-            return;
-        }
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        PlayerManager instance = PlayerManager.getInstance();
         Guild guild = event.getGuild();
-        GuildMusicManager musicManager = instance.getMusicManager(guild);
         int currentVolume = musicManager.getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);
         Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
@@ -64,6 +62,7 @@ public class PlayCommand implements IMusicCommand {
             instance.loadAndPlay(event, link, true, deleteDelay, startPosition, volume);
         }
     }
+
 
 
     @Override

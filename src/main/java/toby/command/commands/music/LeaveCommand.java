@@ -16,7 +16,6 @@ import toby.lavaplayer.PlayerManager;
 
 import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.getConsumer;
-import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class LeaveCommand implements IMusicCommand {
     private final IConfigService configService;
@@ -27,6 +26,11 @@ public class LeaveCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
@@ -50,8 +54,8 @@ public class LeaveCommand implements IMusicCommand {
         Guild guild = event.getGuild();
         final AudioManager audioManager = guild.getAudioManager();
         AudioChannelUnion memberChannel = memberVoiceState.getChannel();
+        GuildMusicManager musicManager = instance.getMusicManager(guild);
 
-        GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
             String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
             ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
@@ -63,7 +67,7 @@ public class LeaveCommand implements IMusicCommand {
             audioManager.closeAudioConnection();
             event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(getConsumer(deleteDelay));
         } else {
-            sendDeniedStoppableMessage(event, musicManager, deleteDelay);
+            IMusicCommand.sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
     }
 
@@ -77,6 +81,5 @@ public class LeaveCommand implements IMusicCommand {
     public String getDescription() {
         return "Makes the TobyBot leave the voice channel it's currently in";
     }
-
 
 }

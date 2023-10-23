@@ -15,6 +15,11 @@ import static toby.command.ICommand.getConsumer;
 public class ResumeCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
@@ -24,7 +29,7 @@ public class ResumeCommand implements IMusicCommand {
         }
 
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(event.getGuild()).getAudioPlayer();
+        AudioPlayer audioPlayer = instance.getMusicManager(ctx.getGuild()).getAudioPlayer();
         if (audioPlayer.isPaused()) {
             AudioTrack track = audioPlayer.getPlayingTrack();
             event.getHook().sendMessage("Resuming: `")
@@ -46,5 +51,4 @@ public class ResumeCommand implements IMusicCommand {
     public String getDescription() {
         return "Resumes the current song if one is paused.";
     }
-
 }

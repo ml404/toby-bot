@@ -15,6 +15,7 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
+import toby.lavaplayer.PlayerManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -71,6 +72,11 @@ public class IntroSongCommand implements IMusicCommand {
         } else {
             if(optionalAttachment.isPresent()) setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, optionalAttachment.get(), introVolume);
         }
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
+        //no-op
     }
 
     private void setIntroViaDiscordAttachment(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Message.Attachment attachment, int introVolume) {
