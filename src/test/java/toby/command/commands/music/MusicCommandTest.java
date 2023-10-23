@@ -62,6 +62,7 @@ public interface MusicCommandTest extends CommandTest {
         reset(guild);
         reset(trackScheduler);
         reset(track);
+        reset(audioPlayer);
     }
 
     default void setUpAudioChannelsWithBotAndMemberInSameChannel() {
