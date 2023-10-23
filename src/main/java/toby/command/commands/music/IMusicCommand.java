@@ -5,10 +5,25 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.jpa.dto.UserDto;
+import toby.lavaplayer.GuildMusicManager;
+import toby.lavaplayer.PlayerManager;
 
 import static toby.command.ICommand.*;
 
 public interface IMusicCommand extends ICommand {
+
+    static void sendDeniedStoppableMessage(SlashCommandInteractionEvent event, GuildMusicManager musicManager, Integer deleteDelay) {
+        if (musicManager.getScheduler().getQueue().size() > 0) {
+            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(getConsumer(deleteDelay));
+        } else {
+            long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
+            String songDuration = QueueCommand.formatTime(duration);
+            event.getHook().sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(getConsumer(deleteDelay));
+        }
+    }
+
+    void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay);
 
     static boolean isInvalidChannelStateForCommand(CommandContext ctx, Integer deleteDelay) {
         final Member self = ctx.getSelfMember();

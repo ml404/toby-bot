@@ -41,6 +41,7 @@ public class TrackScheduler extends AudioEventAdapter {
             this.queue.offer(track);
         }
     }
+
     public void queue(AudioTrack track) {
         if (!this.player.startTrack(track, true)) {
             this.queue.offer(track);
@@ -49,6 +50,7 @@ public class TrackScheduler extends AudioEventAdapter {
 
     public void nextTrack() {
         AudioTrack track = this.queue.poll();
+        assert track != null;
         int volume = (int) track.getUserData();
         this.player.setVolume(volume);
         this.player.startTrack(track, false);
@@ -65,20 +67,23 @@ public class TrackScheduler extends AudioEventAdapter {
             PlayerManager.getInstance().setCurrentlyStoppable(true);
             if (player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
-                event.getHook().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(getConsumer(deleteDelay));
+                event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(getConsumer(deleteDelay));
             }
-            nextTrack();
-            nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
+            AudioTrack audioTrack = this.queue.poll();
+            if (audioTrack != null) {
+                nextTrack();
+                nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
+            }
         }
     }
 
-//    @Override
-//    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
-////        if(track.getPosition() == 0L) {
-////            getCurrentTextChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title).queue(getConsumer(deleteDelay));
-////            nextTrack();
-////        }
-//    }
+    @Override
+    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
+        if(track.getPosition() == 0L) {
+            event.getChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(getConsumer(deleteDelay));
+            nextTrack();
+        }
+    }
 
     public boolean stopTrack(boolean isStoppable) {
         if (isStoppable) {

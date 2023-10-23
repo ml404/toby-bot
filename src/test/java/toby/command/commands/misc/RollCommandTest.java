@@ -22,7 +22,7 @@ public class RollCommandTest implements CommandTest {
     public void setUp() {
         setUpCommonMocks();
         // Customize the behavior of sendMessageEmbeds
-        doReturn(messageCreateAction)
+        doReturn(webhookMessageCreateAction)
                 .when(interactionHook)
                 .sendMessageEmbeds(any(), any(MessageEmbed[].class));
 
@@ -58,7 +58,7 @@ public class RollCommandTest implements CommandTest {
         when(number.getAsInt()).thenReturn(6);
         when(amount.getAsInt()).thenReturn(1);
         when(modifier.getAsInt()).thenReturn(0);
-        when(messageCreateAction.addActionRow(reroll, rollD20, rollD10, rollD6, rollD4)).thenReturn(messageCreateAction);
+        when(webhookMessageCreateAction.addActionRow(reroll, rollD20, rollD10, rollD6, rollD4)).thenReturn(webhookMessageCreateAction);
 
         // Act
         rollCommand.handle(ctx, userDto, deleteDelay);
@@ -66,7 +66,7 @@ public class RollCommandTest implements CommandTest {
         // Assert
         verify(event, times(1)).deferReply();
         verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(messageCreateAction, times(1)).addActionRow(eq(reroll), eq(rollD20), eq(rollD10), eq(rollD6), eq(rollD4));
+        verify(webhookMessageCreateAction, times(1)).addActionRow(eq(reroll), eq(rollD20), eq(rollD10), eq(rollD6), eq(rollD4));
     }
 
     @Test
@@ -77,6 +77,6 @@ public class RollCommandTest implements CommandTest {
         // Perform verifications as needed
         verify(event, times(1)).deferReply();
         verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(messageCreateAction, times(1)).addActionRow(any(), any(), any(), any(), any());
+        verify(webhookMessageCreateAction, times(1)).addActionRow(any(), any(), any(), any(), any());
     }
 }

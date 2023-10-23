@@ -14,11 +14,15 @@ import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import static toby.command.ICommand.getConsumer;
-import static toby.command.commands.music.NowDigOnThisCommand.sendDeniedStoppableMessage;
 
 public class PauseCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
@@ -29,12 +33,13 @@ public class PauseCommand implements IMusicCommand {
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         final Member member = ctx.getMember();
         Guild guild = event.getGuild();
-        GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
-        if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-            AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
+
+        GuildMusicManager musicManager = instance.getMusicManager(guild);
+        if (instance.isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+            AudioPlayer audioPlayer = musicManager.getAudioPlayer();
             if (!audioPlayer.isPaused()) {
                 AudioTrack track = audioPlayer.getPlayingTrack();
-                event.getHook().sendMessage("Pausing: `")
+                event.getChannel().sendMessage("Pausing: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)
@@ -42,10 +47,10 @@ public class PauseCommand implements IMusicCommand {
                         .queue(getConsumer(deleteDelay));
                 audioPlayer.setPaused(true);
             } else {
-                event.getHook().sendMessageFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(getConsumer(deleteDelay));
+                event.getChannel().sendMessageFormat("The audio player on this server is already paused. Please try using %sresume", "/").queue(getConsumer(deleteDelay));
             }
         } else {
-            sendDeniedStoppableMessage(event, musicManager, deleteDelay);
+            IMusicCommand.sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
     }
 
@@ -58,5 +63,4 @@ public class PauseCommand implements IMusicCommand {
     public String getDescription() {
         return "Pauses the current song if one is playing";
     }
-
 }

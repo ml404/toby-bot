@@ -16,12 +16,17 @@ import static toby.command.ICommand.getConsumer;
 public class NowPlayingCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         if (requestingUserDto.hasMusicPermission()) {
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-            final GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(event.getGuild());
+            GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
             final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
             final AudioTrack track = audioPlayer.getPlayingTrack();
 
@@ -56,5 +61,4 @@ public class NowPlayingCommand implements IMusicCommand {
     public String getDescription() {
         return "Shows the currently playing song";
     }
-
 }
