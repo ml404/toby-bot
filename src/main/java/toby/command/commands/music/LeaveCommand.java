@@ -42,10 +42,7 @@ public class LeaveCommand implements IMusicCommand {
             return;
         }
 
-        if (!selfVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(getConsumer(deleteDelay));
-            return;
-        }
+        if (isInvalidChannelStateForCommand(deleteDelay, event, selfVoiceState)) return;
 
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
@@ -69,6 +66,15 @@ public class LeaveCommand implements IMusicCommand {
         } else {
             IMusicCommand.sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
+    }
+
+
+    private static boolean isInvalidChannelStateForCommand(Integer deleteDelay, SlashCommandInteractionEvent event, GuildVoiceState selfVoiceState) {
+        if (!selfVoiceState.inAudioChannel()) {
+            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(getConsumer(deleteDelay));
+            return true;
+        }
+        return false;
     }
 
 
