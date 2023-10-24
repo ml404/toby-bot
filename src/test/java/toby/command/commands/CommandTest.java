@@ -78,8 +78,10 @@ public interface CommandTest {
         when(guild.getJDA()).thenReturn(jda);
         when(guild.getIdLong()).thenReturn(1L);
         when(guild.getOwner()).thenReturn(member);
+        when(guild.getId()).thenReturn("1");
         //refers to toby-bot usually
         when(guild.getSelfMember()).thenReturn(member);
+        when(member.getNickname()).thenReturn("Member Nickname");
 
 
     }

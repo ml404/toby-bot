@@ -39,10 +39,9 @@ public class PlayCommand implements IMusicCommand {
             sendErrorMessage(event, deleteDelay);
             return;
         }
-        GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
-
-        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(LINK);
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
+        GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
+        String type = Optional.ofNullable(event.getOption(TYPE)).map(OptionMapping::getAsString).orElse(LINK);
         Guild guild = event.getGuild();
         int currentVolume = musicManager.getAudioPlayer().getVolume();
         instance.setPreviousVolume(currentVolume);

@@ -49,7 +49,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
             if (musicManager.getScheduler().getQueue().isEmpty()) {
                 musicManager.getAudioPlayer().setVolume(volume);
             }
-            PlayerManager.getInstance().loadAndPlay(event, link, false, deleteDelay, startPosition, volume);
+            instance.loadAndPlay(event, link, false, deleteDelay, startPosition, volume);
         } else
             sendErrorMessage(event, deleteDelay);
     }
