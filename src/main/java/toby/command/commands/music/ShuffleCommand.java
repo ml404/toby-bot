@@ -21,6 +21,11 @@ import static toby.command.ICommand.getConsumer;
 public class ShuffleCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         deleteAfter(event.getHook(), deleteDelay);
         event.deferReply().queue();
@@ -29,7 +34,7 @@ public class ShuffleCommand implements IMusicCommand {
 
             Guild guild = event.getGuild();
 
-            TrackScheduler trackScheduler = PlayerManager.getInstance().getMusicManager(guild).getScheduler();
+            TrackScheduler trackScheduler = instance.getMusicManager(guild).getScheduler();
             BlockingQueue<AudioTrack> queue = trackScheduler.getQueue();
             if (queue.size() == 0) {
                 event.getHook().sendMessage("I can't shuffle a queue that doesn't exist").queue(getConsumer(deleteDelay));
@@ -40,11 +45,6 @@ public class ShuffleCommand implements IMusicCommand {
             event.getHook().sendMessage("The queue has been shuffled 🦧").queue(getConsumer(deleteDelay));
 
         }
-    }
-
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        //no-op
     }
 
     @NotNull
