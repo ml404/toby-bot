@@ -40,7 +40,8 @@ public interface MusicCommandTest extends CommandTest {
     AudioTrack track = mock(AudioTrack.class);
     @Mock
     TrackScheduler trackScheduler = mock(TrackScheduler.class);
-
+    @Mock
+    AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
 
     default void setupCommonMusicMocks() {
         setUpCommonMocks();
@@ -63,21 +64,20 @@ public interface MusicCommandTest extends CommandTest {
         reset(trackScheduler);
         reset(track);
         reset(audioPlayer);
+        reset(audioChannelUnion);
     }
 
     default void setUpAudioChannelsWithBotAndMemberInSameChannel() {
         GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
-        AudioManager audioManager = mock(AudioManager.class);
         when(member.getVoiceState()).thenReturn(guildVoiceState);
         when(guildVoiceState.inAudioChannel()).thenReturn(true);
         when(guildVoiceState.getChannel()).thenReturn(audioChannelUnion);
         when(guild.getAudioManager()).thenReturn(audioManager);
+        when(memberVoiceState.inAudioChannel()).thenReturn(true);
+        when(guildVoiceState.inAudioChannel()).thenReturn(true);
     }
 
     default void setUpAudioChannelsWithBotNotInChannel() {
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
-        AudioManager audioManager = mock(AudioManager.class);
         when(guild.getSelfMember()).thenReturn(botMember);
         when(member.getVoiceState()).thenReturn(memberVoiceState);
         when(botMember.getVoiceState()).thenReturn(botVoiceState);
@@ -89,7 +89,6 @@ public interface MusicCommandTest extends CommandTest {
     }
 
     default void setUpAudioChannelsWithUserNotInChannel() {
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
         AudioManager audioManager = mock(AudioManager.class);
         when(guild.getSelfMember()).thenReturn(botMember);
         when(member.getVoiceState()).thenReturn(memberVoiceState);
@@ -102,8 +101,6 @@ public interface MusicCommandTest extends CommandTest {
     }
 
     default void setUpAudioChannelsWithUserAndBotInDifferentChannels() {
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
-        AudioManager audioManager = mock(AudioManager.class);
         when(guild.getSelfMember()).thenReturn(botMember);
         when(member.getVoiceState()).thenReturn(memberVoiceState);
         when(botMember.getVoiceState()).thenReturn(botVoiceState);
