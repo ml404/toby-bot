@@ -31,6 +31,7 @@ class NowDigOnThisCommandTest implements MusicCommandTest {
     void test_nowDigOnThisCommand_withValidArguments() {
         setUpAudioChannelsWithBotAndMemberInSameChannel();
         CommandContext commandContext = new CommandContext(event);
+        requestingUserDto.setDigPermission(true);
         when(audioPlayer.isPaused()).thenReturn(false);
         when(playerManager.isCurrentlyStoppable()).thenReturn(false);
         OptionMapping linkOptionalMapping = mock(OptionMapping.class);
