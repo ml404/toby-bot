@@ -67,7 +67,7 @@ public class AdjustUserCommand implements IModerationCommand {
             event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
-        switch (UserDto.Permissions.valueOf(permissionOptional.get())) {
+        switch (UserDto.Permissions.valueOf(permissionOptional.get().toUpperCase())) {
             case MUSIC -> targetUserDto.setMusicPermission(true);
             case DIG -> targetUserDto.setDigPermission(true);
             case MEME -> targetUserDto.setMemePermission(true);
