@@ -1,9 +1,8 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
@@ -18,27 +17,19 @@ public class TalkCommand implements IModerationCommand {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
-        final GuildVoiceState memberVoiceState = member.getVoiceState();
-        AudioChannelUnion memberChannel = memberVoiceState.getChannel();
+        final Guild guild = event.getGuild();
+        member.getVoiceState().getChannel().getMembers().forEach(target -> {
+            if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
+                event.getHook().sendMessageFormat("You aren't allowed to unmute %s", target).queue(getConsumer(deleteDelay));
+                return;
+            }
+            final Member bot = guild.getSelfMember();
+            if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
+                event.getHook().sendMessageFormat("I'm not allowed to unmute %s", target).queue(getConsumer(deleteDelay));
+                return;
+            }
 
-        memberChannel.getMembers().forEach(target -> {
-
-        if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
-            event.getHook().sendMessageFormat("You aren't allowed to unmute %s", target).queue(getConsumer(deleteDelay));
-            return;
-        }
-
-        final Member bot = ctx.getSelfMember();
-
-        if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            event.getHook().sendMessageFormat("I'm not allowed to unmute %s", target).queue(getConsumer(deleteDelay));
-            return;
-        }
-
-        event.getGuild()
-                .mute(target, false)
-                .reason("Unmuted for Among Us.")
-                .queue();
+            guild.mute(target, false).reason("Unmuted").queue();
         });
     }
 
