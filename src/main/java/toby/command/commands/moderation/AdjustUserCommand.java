@@ -68,11 +68,11 @@ public class AdjustUserCommand implements IModerationCommand {
             return;
         }
         switch (UserDto.Permissions.valueOf(permissionOptional.get().toUpperCase())) {
-            case MUSIC -> targetUserDto.setMusicPermission(true);
-            case DIG -> targetUserDto.setDigPermission(true);
-            case MEME -> targetUserDto.setMemePermission(true);
+            case MUSIC -> targetUserDto.setMusicPermission(!targetUserDto.hasMusicPermission());
+            case DIG -> targetUserDto.setDigPermission(!targetUserDto.hasDigPermission());
+            case MEME -> targetUserDto.setMemePermission(!targetUserDto.hasMemePermission());
             case SUPERUSER -> {
-                if (isOwner) targetUserDto.setSuperUser(true);
+                if (isOwner) targetUserDto.setSuperUser(!targetUserDto.isSuperUser());
             }
         }
 
