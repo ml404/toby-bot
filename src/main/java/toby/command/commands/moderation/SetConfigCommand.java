@@ -48,10 +48,10 @@ public class SetConfigCommand implements IModerationCommand {
             return;
         }
         options.forEach(optionMapping -> {
-            switch (ConfigDto.Configurations.valueOf(optionMapping.getName())) {
+            switch (ConfigDto.Configurations.valueOf(optionMapping.getName().toUpperCase())) {
                 case MOVE -> setMove(event, deleteDelay);
-                case VOLUME -> setConfigAndSendMessage(event, deleteDelay, VOLUME.getConfigValue(), "Set default volume to '%s'");
-                case DELETE_DELAY -> setConfigAndSendMessage(event, deleteDelay, DELETE_DELAY.getConfigValue(), "Set default delete message delay for TobyBot music messages to '%d' seconds");
+                case VOLUME -> setConfigAndSendMessage(event, deleteDelay, VOLUME.name(), "Set default volume to '%s'");
+                case DELETE_DELAY -> setConfigAndSendMessage(event, deleteDelay, DELETE_DELAY.name(), "Set default delete message delay for TobyBot music messages to '%d' seconds");
                 default -> {
                 }
             }
@@ -60,7 +60,7 @@ public class SetConfigCommand implements IModerationCommand {
     private void setConfigAndSendMessage(SlashCommandInteractionEvent event, Integer deleteDelay, String propertyName, String messageToSend) {
         Optional<Integer> newValueOptional = Optional.ofNullable(event.getOption(propertyName)).map(OptionMapping::getAsInt);
         if (newValueOptional.isEmpty() || newValueOptional.get() < 0) {
-            event.getHook().sendMessage("Value given valid (a whole number representing percent)").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("Value given invalid (a whole number representing percent)").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
         Integer newDefaultVolume = newValueOptional.get();
