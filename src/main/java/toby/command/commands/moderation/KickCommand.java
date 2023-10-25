@@ -1,6 +1,7 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -25,7 +26,9 @@ public class KickCommand implements IModerationCommand {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
+        final Guild guild = event.getGuild();
         final Member member = ctx.getMember();
+        final Member botMember = guild.getSelfMember();
 
         Optional<List<Member>> optionalMemberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers);
         if (optionalMemberList.isEmpty()) {
@@ -40,20 +43,15 @@ public class KickCommand implements IModerationCommand {
                 return;
             }
 
-            final Member botMember = ctx.getSelfMember();
 
             if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
                 event.getHook().sendMessageFormat("I'm not allowed to kick %s", target).queue(getConsumer(deleteDelay));
                 return;
             }
 
-            event.getGuild()
-                    .kick(target)
-                    .reason("because you told me to.")
-                    .queue(
-                            (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(getConsumer(deleteDelay)),
-                            (error) -> event.getHook().sendMessageFormat("Could not kick %s", error.getMessage()).queue(getConsumer(deleteDelay))
-                    );
+            guild.kick(target).reason("because you told me to.").queue(
+                    (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(getConsumer(deleteDelay)),
+                    (error) -> event.getHook().sendMessageFormat("Could not kick %s", error.getMessage()).queue(getConsumer(deleteDelay)));
         });
     }
 
