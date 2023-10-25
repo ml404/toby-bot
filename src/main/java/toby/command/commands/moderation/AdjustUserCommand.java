@@ -1,5 +1,6 @@
 package toby.command.commands.moderation;
 
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -10,20 +11,18 @@ import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IUserService;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.getConsumer;
 import static toby.helpers.UserDtoHelper.userAdjustmentValidation;
-import static toby.jpa.dto.ConfigDto.Configurations.values;
+import static toby.jpa.dto.UserDto.Permissions.*;
 
 public class AdjustUserCommand implements IModerationCommand {
 
     private final IUserService userService;
     private final String PERMISSION_NAME = "name";
-    private final String PERMISSION_VALUE = "value";
     private final String USERS = "users";
 
     public AdjustUserCommand(IUserService userService) {
@@ -36,8 +35,9 @@ public class AdjustUserCommand implements IModerationCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
+        Guild guild = event.getGuild();
 
-        List<Member> mentionedMembers = channelAndArgumentValidation(requestingUserDto, event, member, deleteDelay);
+        List<Member> mentionedMembers = channelAndArgumentValidation(event, requestingUserDto, guild.getOwner(), member, deleteDelay);
         if (mentionedMembers == null) return;
 
         mentionedMembers.forEach(targetMember -> {
@@ -61,24 +61,20 @@ public class AdjustUserCommand implements IModerationCommand {
     }
 
     private void validateArgumentsAndUpdateUser(SlashCommandInteractionEvent event, UserDto targetUserDto, Boolean isOwner, int deleteDelay) {
-        Optional<String> permissionNameOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString);
-        Optional<Boolean> permissionValueOptional = Optional.ofNullable(event.getOption(PERMISSION_VALUE)).map(OptionMapping::getAsBoolean);
-        
+        Optional<String> permissionOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString);
 
-        if (permissionNameOptional.isEmpty() || permissionValueOptional.isEmpty()) {
-            event.getHook().sendMessage("You did not mention a valid permission to update, or give it a value").setEphemeral(true).queue(getConsumer(deleteDelay));
+        if (permissionOptional.isEmpty()) {
+            event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
-        String permissionName = permissionNameOptional.get();
-        boolean permissionValue = permissionValueOptional.get();
-        if (permissionName.equals(UserDto.Permissions.MUSIC.name()))
-            targetUserDto.setMusicPermission(permissionValue);
-        if (permissionName.equals(UserDto.Permissions.DIG.name()))
-            targetUserDto.setDigPermission(permissionValue);
-        if (permissionName.equals(UserDto.Permissions.MEME.name()))
-            targetUserDto.setMemePermission(permissionValue);
-        if (permissionName.equals(UserDto.Permissions.SUPERUSER.name()) && isOwner)
-            targetUserDto.setSuperUser(permissionValue);
+        switch (UserDto.Permissions.valueOf(permissionOptional.get())) {
+            case MUSIC -> targetUserDto.setMusicPermission(true);
+            case DIG -> targetUserDto.setDigPermission(true);
+            case MEME -> targetUserDto.setMemePermission(true);
+            case SUPERUSER -> {
+                if (isOwner) targetUserDto.setSuperUser(true);
+            }
+        }
 
         userService.updateUser(targetUserDto);
     }
@@ -92,9 +88,9 @@ public class AdjustUserCommand implements IModerationCommand {
         event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
     }
 
-    private List<Member> channelAndArgumentValidation(UserDto requestingUserDto, SlashCommandInteractionEvent event, Member member, int deleteDelay) {
+    private List<Member> channelAndArgumentValidation(SlashCommandInteractionEvent event, UserDto requestingUserDto, Member member, Member guildOwner, int deleteDelay) {
         if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
-            event.getHook().sendMessage("This command is reserved for the owner of the server and users marked as super users only, this may change in the future").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(getErrorMessage(guildOwner.getEffectiveName())).setEphemeral(true).queue(getConsumer(deleteDelay));
             return null;
         }
 
@@ -105,7 +101,7 @@ public class AdjustUserCommand implements IModerationCommand {
         }
 
         if (Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString).isEmpty()) {
-            event.getHook().sendMessage("You must mention 1 or more permissions to adjust of the user you've mentioned.").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You must mention a permission to adjust of the user you've mentioned.").setEphemeral(true).queue(getConsumer(deleteDelay));
             return null;
         }
         return mentionedMembersOptional.get();
@@ -124,12 +120,11 @@ public class AdjustUserCommand implements IModerationCommand {
     @Override
     public List<OptionData> getOptionData() {
         OptionData userOption = new OptionData(OptionType.STRING, USERS, "User(s) who you would like to adjust the permissions of.", true);
-        OptionData permissionName = new OptionData(OptionType.STRING, PERMISSION_NAME, "What permission to adjust for the user", true);
-        OptionData permissionValue = new OptionData(OptionType.BOOLEAN, PERMISSION_VALUE, "Value for the permission you want to adjust (true/false)", true);
-        Arrays.stream(values()).forEach(conf -> permissionName.addChoice(conf.getConfigValue(), conf.getConfigValue()));
-        return List.of(
-                userOption,
-                permissionName,
-                permissionValue);
+        OptionData permission = new OptionData(OptionType.STRING, PERMISSION_NAME, "What permission to adjust for the user", true);
+        permission.addChoice(MUSIC.name(), MUSIC.name());
+        permission.addChoice(MEME.name(), MEME.name());
+        permission.addChoice(DIG.name(), DIG.name());
+        permission.addChoice(SUPERUSER.name(), SUPERUSER.name());
+        return List.of(userOption, permission);
     }
 }

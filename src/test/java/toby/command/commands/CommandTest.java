@@ -43,6 +43,7 @@ public interface CommandTest {
 
     @Mock
     Member member = mock(Member.class);
+    @Mock
     Member targetMember = mock(Member.class);
     @Mock
     Member botMember = mock(Member.class);
