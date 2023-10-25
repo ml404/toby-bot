@@ -43,6 +43,9 @@ public interface CommandTest {
 
     @Mock
     Member member = mock(Member.class);
+    Member targetMember = mock(Member.class);
+    @Mock
+    Member botMember = mock(Member.class);
     @Mock
     MessageChannelUnion messageChannelUnion = mock(MessageChannelUnion.class);
 
@@ -80,11 +83,16 @@ public interface CommandTest {
         when(guild.getOwner()).thenReturn(member);
         when(guild.getId()).thenReturn("1");
         //refers to toby-bot usually
-        when(guild.getSelfMember()).thenReturn(member);
+        when(guild.getSelfMember()).thenReturn(botMember);
         when(member.getNickname()).thenReturn("Member Nickname");
         when(member.getEffectiveName()).thenReturn("Effective Name");
         when(member.getGuild()).thenReturn(guild);
-        new UserDto(1L, 1L, true, true, true, true, 0L, null);
+        when(targetMember.getNickname()).thenReturn("Target Nickname");
+        when(targetMember.getEffectiveName()).thenReturn("Target Effective Name");
+        when(targetMember.getGuild()).thenReturn(guild);
+        when(botMember.getNickname()).thenReturn("Bot Nickname");
+        when(botMember.getEffectiveName()).thenReturn("Bot Effective Name");
+        when(botMember.getGuild()).thenReturn(guild);
         when(requestingUserDto.isSuperUser()).thenReturn(true);
         when(requestingUserDto.hasMemePermission()).thenReturn(true);
         when(requestingUserDto.hasMusicPermission()).thenReturn(true);
@@ -108,6 +116,9 @@ public interface CommandTest {
         reset(jda);
         reset(message);
         reset(messageCreateAction);
+        reset(botMember);
+        reset(member);
+        reset(targetMember);
     }
 
 }

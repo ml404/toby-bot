@@ -48,11 +48,11 @@ public interface MusicCommandTest extends CommandTest {
         when(playerManager.getMusicManager(guild)).thenReturn(musicManager);
         when(musicManager.getAudioPlayer()).thenReturn(audioPlayer);
         when(musicManager.getSendHandler()).thenReturn(audioPlayerSendHandler);
+        when(musicManager.getScheduler()).thenReturn(trackScheduler);
         when(guild.getAudioManager()).thenReturn(audioManager);
         when(audioPlayer.getPlayingTrack()).thenReturn(track);
-        when(track.getInfo()).thenReturn(new AudioTrackInfo("Title", "Author", 20L, "Identifier", true, "uri"));
-        when(musicManager.getScheduler()).thenReturn(trackScheduler);
         when(trackScheduler.getQueue()).thenReturn(new ArrayBlockingQueue<>(1));
+        when(track.getInfo()).thenReturn(new AudioTrackInfo("Title", "Author", 20L, "Identifier", true, "uri"));
         when(track.getDuration()).thenReturn(1000L);
     }
 
@@ -65,16 +65,19 @@ public interface MusicCommandTest extends CommandTest {
         reset(track);
         reset(audioPlayer);
         reset(audioChannelUnion);
+        reset(memberVoiceState);
+        reset(botVoiceState);
     }
 
     default void setUpAudioChannelsWithBotAndMemberInSameChannel() {
-        GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        when(member.getVoiceState()).thenReturn(guildVoiceState);
-        when(guildVoiceState.inAudioChannel()).thenReturn(true);
-        when(guildVoiceState.getChannel()).thenReturn(audioChannelUnion);
+        when(guild.getSelfMember()).thenReturn(botMember);
+        when(member.getVoiceState()).thenReturn(memberVoiceState);
+        when(memberVoiceState.getChannel()).thenReturn(audioChannelUnion);
+        when(botMember.getVoiceState()).thenReturn(botVoiceState);
+        when(botVoiceState.getChannel()).thenReturn(audioChannelUnion);
         when(guild.getAudioManager()).thenReturn(audioManager);
         when(memberVoiceState.inAudioChannel()).thenReturn(true);
-        when(guildVoiceState.inAudioChannel()).thenReturn(true);
+        when(botVoiceState.inAudioChannel()).thenReturn(true);
     }
 
     default void setUpAudioChannelsWithBotNotInChannel() {

@@ -106,9 +106,9 @@ public class SetConfigCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData defaultVolume = new OptionData(OptionType.INTEGER, VOLUME.name(), "Default volume for audio player on your server (100 without an override)", false);
-        OptionData deleteDelay = new OptionData(OptionType.INTEGER, DELETE_DELAY.name(), "The length of time in seconds before your slash command messages are deleted from the channel they were sent in", false);
-        OptionData channelValue = new OptionData(OptionType.CHANNEL, MOVE.name(), "Value for the default move channel you want if using move command without arguments", false);
+        OptionData defaultVolume = new OptionData(OptionType.INTEGER, VOLUME.name().toLowerCase(), "Default volume for audio player on your server (100 without an override)", false);
+        OptionData deleteDelay = new OptionData(OptionType.INTEGER, DELETE_DELAY.name().toLowerCase(), "The length of time in seconds before your slash command messages are deleted", false);
+        OptionData channelValue = new OptionData(OptionType.CHANNEL, MOVE.name().toLowerCase(), "Value for the default move channel you want if using move command without arguments", false);
         return List.of(defaultVolume, deleteDelay, channelValue);
     }
 }

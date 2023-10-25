@@ -1,9 +1,8 @@
 package toby.command.commands.moderation;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
@@ -18,27 +17,22 @@ public class ShhCommand implements IModerationCommand {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
-        final GuildVoiceState memberVoiceState = member.getVoiceState();
-        final AudioChannel memberChannel = memberVoiceState.getChannel();
+        Guild guild = event.getGuild();
+        member.getVoiceState().getChannel().getMembers().forEach(target -> {
+            if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
+                event.getHook().sendMessageFormat("You aren't allowed to mute %s", target).queue(getConsumer(deleteDelay));
+                return;
+            }
 
-        memberChannel.getMembers().forEach(target -> {
+            final Member bot = guild.getSelfMember();
 
-        if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
-            event.getHook().sendMessageFormat("You aren't allowed to mute %s", target).queue(getConsumer(deleteDelay));
-            return;
-        }
-
-        final Member bot = ctx.getSelfMember();
-
-        if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            event.getHook().sendMessageFormat("I'm not allowed to mute %s", target).queue(getConsumer(deleteDelay));
-            return;
-        }
-
-        event.getGuild()
-                .mute(target, true)
-                .reason("Muted for Among Us.")
-                .queue();
+            if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
+                event.getHook().sendMessageFormat("I'm not allowed to mute %s", target).queue(getConsumer(deleteDelay));
+                return;
+            }
+            guild.mute(target, true)
+                    .reason("Muted")
+                    .queue();
         });
     }
 
