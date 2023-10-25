@@ -50,8 +50,8 @@ public class SetConfigCommand implements IModerationCommand {
         options.forEach(optionMapping -> {
             switch (ConfigDto.Configurations.valueOf(optionMapping.getName())) {
                 case MOVE -> setMove(event, deleteDelay);
-                case VOLUME -> setConfigAndSendMessage(event, deleteDelay, VOLUME.name(), "Set default volume to '%s'");
-                case DELETE_DELAY -> setConfigAndSendMessage(event, deleteDelay, DELETE_DELAY.name(), "Set default delete message delay for TobyBot music messages to '%d' seconds");
+                case VOLUME -> setConfigAndSendMessage(event, deleteDelay, VOLUME.getConfigValue(), "Set default volume to '%s'");
+                case DELETE_DELAY -> setConfigAndSendMessage(event, deleteDelay, DELETE_DELAY.getConfigValue(), "Set default delete message delay for TobyBot music messages to '%d' seconds");
                 default -> {
                 }
             }
@@ -75,7 +75,7 @@ public class SetConfigCommand implements IModerationCommand {
     }
 
     private void setMove(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        String movePropertyName = MOVE.name();
+        String movePropertyName = MOVE.getConfigValue();
         Optional<GuildChannelUnion> newDefaultMoveChannelOptional = Optional.ofNullable(event.getOption(movePropertyName)).map(OptionMapping::getAsChannel);
         if (newDefaultMoveChannelOptional.isPresent()) {
             ConfigDto databaseConfig = configService.getConfigByName(movePropertyName, event.getGuild().getId());

@@ -41,7 +41,7 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(VOLUME.name())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(false);
@@ -53,7 +53,7 @@ class SetConfigCommandTest implements CommandTest {
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(configService, times(0)).getConfigByName(VOLUME.name(), "1");
+        verify(configService, times(0)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(0)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessage(eq("This is currently reserved for the owner of the server only, this may change in future"));
     }
@@ -63,19 +63,19 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(VOLUME.name())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(true);
         when(event.getOptions()).thenReturn(List.of(volumeOptionMapping));
-        when(configService.getConfigByName(VOLUME.name(), "1")).thenReturn(null);
+        when(configService.getConfigByName(VOLUME.getConfigValue(), "1")).thenReturn(null);
 
         //Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(configService, times(1)).getConfigByName(VOLUME.name(), "1");
+        verify(configService, times(1)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(1)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default volume to '%s'"), eq(20));
     }
@@ -85,13 +85,13 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(VOLUME.name())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(true);
         when(event.getOptions()).thenReturn(List.of(volumeOptionMapping));
         ConfigDto dbConfig = mock(ConfigDto.class);
-        when(configService.getConfigByName(VOLUME.name(), "1")).thenReturn(dbConfig);
+        when(configService.getConfigByName(VOLUME.getConfigValue(), "1")).thenReturn(dbConfig);
         when(dbConfig.getGuildId()).thenReturn("1");
 
         //Act
@@ -99,7 +99,7 @@ class SetConfigCommandTest implements CommandTest {
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(configService, times(1)).getConfigByName(VOLUME.name(), "1");
+        verify(configService, times(1)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(1)).updateConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default volume to '%s'"), eq(20));
     }
@@ -109,19 +109,19 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping deleteDelayOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(DELETE_DELAY.name())).thenReturn(deleteDelayOptionMapping);
+        when(event.getOption(DELETE_DELAY.getConfigValue())).thenReturn(deleteDelayOptionMapping);
         when(deleteDelayOptionMapping.getAsInt()).thenReturn(20);
         when(deleteDelayOptionMapping.getName()).thenReturn(DELETE_DELAY.name());
         when(member.isOwner()).thenReturn(true);
         when(event.getOptions()).thenReturn(List.of(deleteDelayOptionMapping));
-        when(configService.getConfigByName(DELETE_DELAY.name(), "1")).thenReturn(null);
+        when(configService.getConfigByName(DELETE_DELAY.getConfigValue(), "1")).thenReturn(null);
 
         //Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(configService, times(1)).getConfigByName(DELETE_DELAY.name(), "1");
+        verify(configService, times(1)).getConfigByName(DELETE_DELAY.getConfigValue(), "1");
         verify(configService, times(1)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default delete message delay for TobyBot music messages to '%d' seconds"), eq(20));
     }
@@ -132,10 +132,10 @@ class SetConfigCommandTest implements CommandTest {
         CommandContext commandContext = new CommandContext(event);
         OptionMapping deleteDelayOptionMapping = mock(OptionMapping.class);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(DELETE_DELAY.name())).thenReturn(deleteDelayOptionMapping);
+        when(event.getOption(DELETE_DELAY.getConfigValue())).thenReturn(deleteDelayOptionMapping);
         when(deleteDelayOptionMapping.getAsInt()).thenReturn(20);
         when(deleteDelayOptionMapping.getName()).thenReturn(DELETE_DELAY.name());
-        when(event.getOption(VOLUME.name())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(true);
@@ -148,8 +148,8 @@ class SetConfigCommandTest implements CommandTest {
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(configService, times(1)).getConfigByName(DELETE_DELAY.name(), "1");
-        verify(configService, times(1)).getConfigByName(VOLUME.name(), "1");
+        verify(configService, times(1)).getConfigByName(DELETE_DELAY.getConfigValue(), "1");
+        verify(configService, times(1)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(2)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default volume to '%s'"), eq(20));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default delete message delay for TobyBot music messages to '%d' seconds"), eq(20));
@@ -159,22 +159,22 @@ class SetConfigCommandTest implements CommandTest {
     void testSetConfig_withMoveChannel_createsThatConfig() {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
-        OptionMapping deleteDelayOptionMapping = mock(OptionMapping.class);
+        OptionMapping moveOptionMapping = mock(OptionMapping.class);
         GuildChannelUnion guildChannelUnion = mock(GuildChannelUnion.class);
-        when(event.getOption(MOVE.name())).thenReturn(deleteDelayOptionMapping);
-        when(deleteDelayOptionMapping.getAsChannel()).thenReturn(guildChannelUnion);
+        when(event.getOption(MOVE.getConfigValue())).thenReturn(moveOptionMapping);
+        when(moveOptionMapping.getAsChannel()).thenReturn(guildChannelUnion);
+        when(moveOptionMapping.getName()).thenReturn(MOVE.name());
         when(guildChannelUnion.getName()).thenReturn("Channel Name");
-        when(deleteDelayOptionMapping.getName()).thenReturn(MOVE.name());
         when(member.isOwner()).thenReturn(true);
-        when(event.getOptions()).thenReturn(List.of(deleteDelayOptionMapping));
-        when(configService.getConfigByName(MOVE.name(), "1")).thenReturn(null);
+        when(event.getOptions()).thenReturn(List.of(moveOptionMapping));
+        when(configService.getConfigByName(MOVE.getConfigValue(), "1")).thenReturn(null);
 
         //Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(configService, times(1)).getConfigByName(MOVE.name(), "1");
+        verify(configService, times(1)).getConfigByName(MOVE.getConfigValue(), "1");
         verify(configService, times(1)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default move channel to '%s'"), eq("Channel Name"));
     }

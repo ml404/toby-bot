@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -46,19 +47,16 @@ public class MoveCommand implements IModerationCommand {
             return;
         }
 
-        Optional<String> channelNameOptional = Optional.ofNullable(event.getOption(CHANNEL)).map(OptionMapping::getAsString);
-        ConfigDto channelConfig = configService.getConfigByName(CHANNEL, guild.getId());
-        String channelName = channelNameOptional.orElse("");
-        Optional<VoiceChannel> voiceChannelOptional = (!channelName.isBlank()) ? guild.getVoiceChannelsByName(channelName, true).stream().findFirst() : guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst();
+        Optional<GuildChannelUnion> channelOptional = Optional.ofNullable(event.getOption(CHANNEL)).map(OptionMapping::getAsChannel);
+        ConfigDto channelConfig = configService.getConfigByName(ConfigDto.Configurations.MOVE.getConfigValue(), guild.getId());
+        Optional<VoiceChannel> voiceChannelOptional = channelOptional.map(GuildChannelUnion::asVoiceChannel).or(() -> guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst());
         if (voiceChannelOptional.isEmpty()) {
-            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name '%s'", channelName).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name").queue(getConsumer(deleteDelay));
             return;
         }
 
         memberList.forEach(target -> {
-
-            if (doChannelValidation(ctx, ctx.getEvent(), member, target, deleteDelay)) return;
-
+            if (doChannelValidation(ctx.getEvent(), guild.getSelfMember(), member, target, deleteDelay)) return;
             VoiceChannel voiceChannel = voiceChannelOptional.get();
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
@@ -68,7 +66,7 @@ public class MoveCommand implements IModerationCommand {
         });
     }
 
-    private boolean doChannelValidation(CommandContext ctx, SlashCommandInteractionEvent event, Member member, Member target, int deleteDelay) {
+    private boolean doChannelValidation(SlashCommandInteractionEvent event, Member botMember, Member member, Member target, int deleteDelay) {
         if (!target.getVoiceState().inAudioChannel()) {
             event.getHook().sendMessageFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(getConsumer(deleteDelay));
             return true;
@@ -77,8 +75,6 @@ public class MoveCommand implements IModerationCommand {
             event.getHook().sendMessageFormat("You can't move '%s'", target.getEffectiveName()).queue(getConsumer(deleteDelay));
             return true;
         }
-        final Member botMember = ctx.getSelfMember();
-
         if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
             event.getHook().sendMessageFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(getConsumer(deleteDelay));
             return true;
