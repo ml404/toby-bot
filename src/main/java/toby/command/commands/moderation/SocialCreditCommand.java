@@ -80,7 +80,7 @@ public class SocialCreditCommand implements IModerationCommand {
                                 UserDto updatedUser = validateArgumentsAndAdjustSocialCredit(targetUserDto, event, socialCreditAdjustment, ctx.getMember().isOwner(), deleteDelay);
                                 event.getHook().sendMessageFormat("Updated user %s's social credit by %d. New score is: %d", targetMember.getEffectiveName(), socialCreditAdjustment, updatedUser.getSocialCredit()).setEphemeral(true).queue(getConsumer(deleteDelay));
                             } else
-                                event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", member.getNickname(), targetMember.getNickname()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                                event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", member.getEffectiveName(), targetMember.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
                         }
                     }
                 });

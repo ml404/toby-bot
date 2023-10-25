@@ -33,7 +33,8 @@ Ensure you have the following prerequisites set up before getting started:
    ```
 
 2. Customize the bot's configuration by editing `application.properties`. 
-Provide your Discord bot token and database connection details via environment variables
+
+   1. Provide your Discord bot token and database connection details via environment variables
 
 3. Build the project:
 

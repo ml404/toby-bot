@@ -24,6 +24,11 @@ public class JoinCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
@@ -45,7 +50,7 @@ public class JoinCommand implements IMusicCommand {
             String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
             ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
             int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
-            PlayerManager.getInstance().getMusicManager(event.getGuild()).getAudioPlayer().setVolume(defaultVolume);
+            instance.getMusicManager(event.getGuild()).getAudioPlayer().setVolume(defaultVolume);
             event.getHook().sendMessageFormat("Connecting to `\uD83D\uDD0A %s` with volume '%s'", memberChannel.getName(), defaultVolume).queue(getConsumer(deleteDelay));
         }
     }

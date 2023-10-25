@@ -26,6 +26,11 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
@@ -39,9 +44,8 @@ public class NowDigOnThisCommand implements IMusicCommand {
             String link = linkOptional.get();
             if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + linkOptional;
             Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
-            PlayerManager instance = PlayerManager.getInstance();
             GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
-            int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(instance.getMusicManager(event.getGuild()).getAudioPlayer().getVolume());
+            int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(musicManager.getAudioPlayer().getVolume());
             if (musicManager.getScheduler().getQueue().isEmpty()) {
                 musicManager.getAudioPlayer().setVolume(volume);
             }
@@ -50,16 +54,6 @@ public class NowDigOnThisCommand implements IMusicCommand {
             sendErrorMessage(event, deleteDelay);
     }
 
-
-    public static void sendDeniedStoppableMessage(SlashCommandInteractionEvent event, GuildMusicManager musicManager, Integer deleteDelay) {
-        if (musicManager.getScheduler().getQueue().size() > 1) {
-            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(getConsumer(deleteDelay));
-        } else {
-            long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
-            String songDuration = QueueCommand.formatTime(duration);
-            event.getHook().sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(getConsumer(deleteDelay));
-        }
-    }
 
     @Override
     public String getName() {
@@ -78,7 +72,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessage(getErrorMessage(event.getMember().getNickname())).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(getConsumer(deleteDelay));
     }
 
     @Override

@@ -15,6 +15,7 @@ import toby.jpa.dto.UserDto;
 import toby.jpa.service.IConfigService;
 import toby.jpa.service.IMusicFileService;
 import toby.jpa.service.IUserService;
+import toby.lavaplayer.PlayerManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,15 +48,15 @@ public class IntroSongCommand implements IMusicCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         deleteAfter(event.getHook(), deleteDelay);
-        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-        int defaultVolume = Integer.parseInt(configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue());
-        Optional<Integer> volumeOptional = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt);
-        int introVolume = volumeOptional.orElse(defaultVolume);
-        if (introVolume < 1) introVolume = 1;
-        if (introVolume > 100) introVolume = 100;
+        int introVolume = calculateIntroVolume(event);
         List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         if (!requestingUserDto.isSuperUser() && !mentionedMembers.isEmpty()) {
             sendErrorMessage(event, deleteDelay);
@@ -69,16 +70,27 @@ public class IntroSongCommand implements IMusicCommand {
         } else if (!link.isEmpty()) {
             setIntroViaUrl(event, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
         } else {
-            if(optionalAttachment.isPresent()) setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, optionalAttachment.get(), introVolume);
+            optionalAttachment.ifPresent(attachment -> setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, attachment, introVolume));
         }
+    }
+
+    private int calculateIntroVolume(SlashCommandInteractionEvent event) {
+        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
+        int defaultVolume = Integer.parseInt(configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue());
+        Optional<Integer> volumeOptional = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt);
+        int introVolume = volumeOptional.orElse(defaultVolume);
+        if (introVolume < 1) introVolume = 1;
+        if (introVolume > 100) introVolume = 100;
+        return introVolume;
     }
 
     private void setIntroViaDiscordAttachment(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Message.Attachment attachment, int introVolume) {
         if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
             event.getHook().sendMessage("Please use mp3 files only").queue(getConsumer(deleteDelay));
             return;
-        } else if (attachment.getSize() > 300000) {
-            event.getHook().sendMessage("Please keep the file size under 300kb").queue(getConsumer(deleteDelay));
+        } else if (attachment.getSize() > 400000) {
+            event.getHook().sendMessage("Please keep the file size under 400kb").queue(getConsumer(deleteDelay));
+            return;
         }
 
         InputStream inputStream = null;
@@ -129,10 +141,7 @@ public class IntroSongCommand implements IMusicCommand {
             event.getHook().sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
-        musicFileDto.setFileName(filename);
-        musicFileDto.setIntroVolume(introVolume);
-        musicFileDto.setMusicBlob(fileContents);
-        musicFileService.updateMusicFile(musicFileDto);
+        updateMusicFileDto(filename, introVolume, fileContents, musicFileDto);
         event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
@@ -147,11 +156,15 @@ public class IntroSongCommand implements IMusicCommand {
             event.getHook().sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
+        updateMusicFileDto(filename, introVolume, urlBytes, musicFileDto);
+        event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(getConsumer(deleteDelay));
+    }
+
+    private void updateMusicFileDto(String filename, int introVolume, byte[] fileContents, MusicDto musicFileDto) {
         musicFileDto.setFileName(filename);
         musicFileDto.setIntroVolume(introVolume);
-        musicFileDto.setMusicBlob(urlBytes);
+        musicFileDto.setMusicBlob(fileContents);
         musicFileService.updateMusicFile(musicFileDto);
-        event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
 

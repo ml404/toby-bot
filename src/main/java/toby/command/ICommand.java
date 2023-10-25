@@ -1,5 +1,6 @@
 package toby.command;
 
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
@@ -36,7 +37,8 @@ public interface ICommand {
     }
 
     default void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessageFormat(getErrorMessage(event.getGuild().getOwner().getEffectiveName()), event.getGuild().getOwner().getNickname()).queue(message -> ICommand.deleteAfter(message, deleteDelay));
+        Member owner = event.getGuild().getOwner();
+        event.getHook().sendMessageFormat(getErrorMessage(owner.getEffectiveName())).queue(message -> ICommand.deleteAfter(message, deleteDelay));
     }
 
 

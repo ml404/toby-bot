@@ -221,12 +221,14 @@ public class ExcuseCommandTest implements CommandTest {
         when(actionMapping.getAsString()).thenReturn("approve");
         when(excuseService.getExcuseById(1)).thenReturn(excuseToCreate);
         when(excuseService.updateExcuse(any(ExcuseDto.class))).thenReturn(excuseToCreate);
+        when(guild.getOwner()).thenReturn(member);
+        when(member.getEffectiveName()).thenReturn("Effective Name");
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay);
 
         // Assert
         // send a message to say you're not authorised
-        verify(interactionHook, times(1)).sendMessageFormat(anyString(), any());
+        verify(interactionHook, times(1)).sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"));
         //don't do lookups
         verify(excuseService, times(0)).getExcuseById(eq(excuseToCreate.getId()));
         //don't approve
@@ -332,6 +334,8 @@ public class ExcuseCommandTest implements CommandTest {
         when(userDto.isSuperUser()).thenReturn(false);
         when(excuseMapping.getAsInt()).thenReturn(1);
         when(actionMapping.getAsString()).thenReturn("delete");
+        when(guild.getOwner()).thenReturn(member);
+        when(member.getEffectiveName()).thenReturn("Effective Name");
         when(excuseService.getExcuseById(1)).thenReturn(preUpdatedExcuse);
         when(excuseService.updateExcuse(any(ExcuseDto.class))).thenReturn(excuseToBeReturnedByUpdate);
 
@@ -342,7 +346,7 @@ public class ExcuseCommandTest implements CommandTest {
         // deleteById
         verify(excuseService, times(0)).deleteExcuseById(eq(1));
         // post error message
-        verify(interactionHook, times(1)).sendMessageFormat(anyString(), any());
+        verify(interactionHook, times(1)).sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"));
         // delete the original message
         verify(interactionHook, times(1)).deleteOriginal();
     }

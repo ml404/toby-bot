@@ -2,10 +2,9 @@ package toby.command.commands.music;
 
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
@@ -13,6 +12,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
+import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
@@ -25,8 +25,14 @@ public class SetVolumeCommand implements IMusicCommand {
 
     private final String VOLUME = "volume";
 
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+    }
+
+    @Override
+    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         ICommand.deleteAfter(event.getHook(), deleteDelay);
@@ -37,32 +43,38 @@ public class SetVolumeCommand implements IMusicCommand {
         }
 
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
+
         final Member member = ctx.getMember();
-        setNewVolume(event, member, deleteDelay);
+        setNewVolume(event, instance, member, requestingUserDto, deleteDelay);
     }
 
-
-    private void setNewVolume(SlashCommandInteractionEvent event, Member member, Integer deleteDelay) {
-        Guild guild = event.getGuild();
+    private void setNewVolume(SlashCommandInteractionEvent event, PlayerManager instance, Member member, UserDto requestingUserDto, Integer deleteDelay) {
         int volumeArg = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(0);
+        InteractionHook hook = event.getHook();
+        GuildMusicManager musicManager = instance.getMusicManager(event.getGuild());
         if (volumeArg > 0) {
-            if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-                AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
+            if (instance.isCurrentlyStoppable() || requestingUserDto.isSuperUser()) {
+                AudioPlayer audioPlayer = musicManager.getAudioPlayer();
                 if (volumeArg > 100) {
-                    event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                    hook.sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
                     return;
                 }
                 int oldVolume = audioPlayer.getVolume();
                 if (volumeArg == oldVolume) {
-                    event.getHook().sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                    hook.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
                     return;
                 }
                 audioPlayer.setVolume(volumeArg);
-                event.getHook().sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(getConsumer(deleteDelay));
+                hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(getConsumer(deleteDelay));
             } else {
-                event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(getConsumer(deleteDelay));
+                sendErrorMessage(event, deleteDelay);
             }
-        } else event.getHook().sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+        } else hook.sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+    }
+
+    @Override
+    public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
 
