@@ -141,10 +141,7 @@ public class IntroSongCommand implements IMusicCommand {
             event.getHook().sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
-        musicFileDto.setFileName(filename);
-        musicFileDto.setIntroVolume(introVolume);
-        musicFileDto.setMusicBlob(fileContents);
-        musicFileService.updateMusicFile(musicFileDto);
+        updateMusicFileDto(filename, introVolume, fileContents, musicFileDto);
         event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
@@ -159,11 +156,15 @@ public class IntroSongCommand implements IMusicCommand {
             event.getHook().sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(getConsumer(deleteDelay));
             return;
         }
+        updateMusicFileDto(filename, introVolume, urlBytes, musicFileDto);
+        event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(getConsumer(deleteDelay));
+    }
+
+    private void updateMusicFileDto(String filename, int introVolume, byte[] fileContents, MusicDto musicFileDto) {
         musicFileDto.setFileName(filename);
         musicFileDto.setIntroVolume(introVolume);
-        musicFileDto.setMusicBlob(urlBytes);
+        musicFileDto.setMusicBlob(fileContents);
         musicFileService.updateMusicFile(musicFileDto);
-        event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
 

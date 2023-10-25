@@ -82,6 +82,7 @@ public interface CommandTest {
         //refers to toby-bot usually
         when(guild.getSelfMember()).thenReturn(member);
         when(member.getNickname()).thenReturn("Member Nickname");
+        when(member.getGuild()).thenReturn(guild);
 
 
     }
