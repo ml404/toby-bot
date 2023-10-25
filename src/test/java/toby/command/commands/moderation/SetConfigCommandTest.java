@@ -41,7 +41,7 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.name().toLowerCase())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(false);
@@ -63,7 +63,7 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.name().toLowerCase())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(true);
@@ -85,7 +85,7 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.name().toLowerCase())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(true);
@@ -109,7 +109,7 @@ class SetConfigCommandTest implements CommandTest {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping deleteDelayOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(DELETE_DELAY.getConfigValue())).thenReturn(deleteDelayOptionMapping);
+        when(event.getOption(DELETE_DELAY.name().toLowerCase())).thenReturn(deleteDelayOptionMapping);
         when(deleteDelayOptionMapping.getAsInt()).thenReturn(20);
         when(deleteDelayOptionMapping.getName()).thenReturn(DELETE_DELAY.name());
         when(member.isOwner()).thenReturn(true);
@@ -132,10 +132,10 @@ class SetConfigCommandTest implements CommandTest {
         CommandContext commandContext = new CommandContext(event);
         OptionMapping deleteDelayOptionMapping = mock(OptionMapping.class);
         OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption(DELETE_DELAY.getConfigValue())).thenReturn(deleteDelayOptionMapping);
+        when(event.getOption(DELETE_DELAY.name().toLowerCase())).thenReturn(deleteDelayOptionMapping);
         when(deleteDelayOptionMapping.getAsInt()).thenReturn(20);
         when(deleteDelayOptionMapping.getName()).thenReturn(DELETE_DELAY.name());
-        when(event.getOption(VOLUME.getConfigValue())).thenReturn(volumeOptionMapping);
+        when(event.getOption(VOLUME.name().toLowerCase())).thenReturn(volumeOptionMapping);
         when(volumeOptionMapping.getAsInt()).thenReturn(20);
         when(volumeOptionMapping.getName()).thenReturn(VOLUME.name());
         when(member.isOwner()).thenReturn(true);
@@ -161,9 +161,9 @@ class SetConfigCommandTest implements CommandTest {
         CommandContext commandContext = new CommandContext(event);
         OptionMapping moveOptionMapping = mock(OptionMapping.class);
         GuildChannelUnion guildChannelUnion = mock(GuildChannelUnion.class);
-        when(event.getOption(MOVE.getConfigValue())).thenReturn(moveOptionMapping);
+        when(event.getOption(MOVE.name().toLowerCase())).thenReturn(moveOptionMapping);
         when(moveOptionMapping.getAsChannel()).thenReturn(guildChannelUnion);
-        when(moveOptionMapping.getName()).thenReturn(MOVE.name());
+        when(moveOptionMapping.getName()).thenReturn(MOVE.name().toLowerCase());
         when(guildChannelUnion.getName()).thenReturn("Channel Name");
         when(member.isOwner()).thenReturn(true);
         when(event.getOptions()).thenReturn(List.of(moveOptionMapping));
