@@ -2,7 +2,6 @@ package toby.command.commands.music;
 
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
@@ -26,6 +25,7 @@ public class SetVolumeCommand implements IMusicCommand {
 
     private final String VOLUME = "volume";
 
+
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
@@ -43,15 +43,17 @@ public class SetVolumeCommand implements IMusicCommand {
         }
 
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
+
         final Member member = ctx.getMember();
-        setNewVolume(event, member, deleteDelay, instance.getMusicManager(ctx.getGuild()));
+        setNewVolume(event, instance, member, requestingUserDto, deleteDelay);
     }
 
-    private void setNewVolume(SlashCommandInteractionEvent event, Member member, Integer deleteDelay, GuildMusicManager musicManager) {
+    private void setNewVolume(SlashCommandInteractionEvent event, PlayerManager instance, Member member, UserDto requestingUserDto, Integer deleteDelay) {
         int volumeArg = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(0);
         InteractionHook hook = event.getHook();
+        GuildMusicManager musicManager = instance.getMusicManager(event.getGuild());
         if (volumeArg > 0) {
-            if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+            if (instance.isCurrentlyStoppable() || requestingUserDto.isSuperUser()) {
                 AudioPlayer audioPlayer = musicManager.getAudioPlayer();
                 if (volumeArg > 100) {
                     hook.sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
@@ -65,9 +67,14 @@ public class SetVolumeCommand implements IMusicCommand {
                 audioPlayer.setVolume(volumeArg);
                 hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(getConsumer(deleteDelay));
             } else {
-                hook.sendMessageFormat("You aren't allowed to change the volume kid %s", Emotes.TOBY).setEphemeral(true).queue(getConsumer(deleteDelay));
+                sendErrorMessage(event, deleteDelay);
             }
         } else hook.sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+    }
+
+    @Override
+    public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
+        event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).setEphemeral(true).queue(getConsumer(deleteDelay));
     }
 
 

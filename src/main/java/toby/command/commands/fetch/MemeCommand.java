@@ -39,10 +39,7 @@ public class MemeCommand implements IFetchCommand {
         event.deferReply().queue();
 
         if (!requestingUserDto.hasMemePermission()) {
-            event.getHook().sendMessageFormat(
-                            "You do not have adequate permissions to use this command, talk to the server owner: %s",
-                            event.getGuild().getOwner().getNickname())
-                    .queue(getConsumer(deleteDelay));
+            sendErrorMessage(event, deleteDelay);
             return;
         }
 

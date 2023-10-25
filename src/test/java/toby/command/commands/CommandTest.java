@@ -47,7 +47,7 @@ public interface CommandTest {
     MessageChannelUnion messageChannelUnion = mock(MessageChannelUnion.class);
 
 
-    UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null);
+    @Mock UserDto requestingUserDto = mock(UserDto.class);
 
     @Mock
     WebhookMessageCreateAction<Message> webhookMessageCreateAction = mock(WebhookMessageCreateActionImpl.class);
@@ -82,7 +82,17 @@ public interface CommandTest {
         //refers to toby-bot usually
         when(guild.getSelfMember()).thenReturn(member);
         when(member.getNickname()).thenReturn("Member Nickname");
+        when(member.getEffectiveName()).thenReturn("Effective Name");
         when(member.getGuild()).thenReturn(guild);
+        new UserDto(1L, 1L, true, true, true, true, 0L, null);
+        when(requestingUserDto.isSuperUser()).thenReturn(true);
+        when(requestingUserDto.hasMemePermission()).thenReturn(true);
+        when(requestingUserDto.hasMusicPermission()).thenReturn(true);
+        when(requestingUserDto.hasDigPermission()).thenReturn(true);
+        when(requestingUserDto.getDiscordId()).thenReturn(1L);
+        when(requestingUserDto.getGuildId()).thenReturn(1L);
+        when(requestingUserDto.getSocialCredit()).thenReturn(0L);
+        when(requestingUserDto.getMusicDto()).thenReturn(null);
 
 
     }
@@ -91,6 +101,7 @@ public interface CommandTest {
     default void tearDownCommonMocks(){
         reset(event);
         reset(user);
+        reset(requestingUserDto);
         reset(guild);
         reset(interactionHook);
         reset(webhookMessageCreateAction);

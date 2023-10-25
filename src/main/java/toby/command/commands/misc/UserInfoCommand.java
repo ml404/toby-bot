@@ -23,7 +23,7 @@ public class UserInfoCommand implements IMiscCommand {
 
 
     private final String USERS = "users";
-    private IUserService userService;
+    private final IUserService userService;
 
     public UserInfoCommand(IUserService userService) {
 
@@ -68,7 +68,7 @@ public class UserInfoCommand implements IMiscCommand {
                             event.getHook().sendMessageFormat("Their intro song is currently set as: '%s'.", musicDto.getFileName()).setEphemeral(true).queue(getConsumer(deleteDelay));
                         }
                     } else
-                        event.getHook().sendMessageFormat("I was unable to retrieve an associated music file for '%s'.", member.getNickname()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                        event.getHook().sendMessageFormat("I was unable to retrieve an associated music file for '%s'.", member.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
                 });
             }
             else event.getHook().sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner").setEphemeral(true).queue();

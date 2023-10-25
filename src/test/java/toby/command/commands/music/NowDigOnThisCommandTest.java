@@ -31,7 +31,6 @@ class NowDigOnThisCommandTest implements MusicCommandTest {
     void test_nowDigOnThisCommand_withValidArguments() {
         setUpAudioChannelsWithBotAndMemberInSameChannel();
         CommandContext commandContext = new CommandContext(event);
-        requestingUserDto.setDigPermission(true);
         when(audioPlayer.isPaused()).thenReturn(false);
         when(playerManager.isCurrentlyStoppable()).thenReturn(false);
         OptionMapping linkOptionalMapping = mock(OptionMapping.class);
@@ -77,12 +76,12 @@ class NowDigOnThisCommandTest implements MusicCommandTest {
         queue.add(track2);
         when(trackScheduler.getQueue()).thenReturn(queue);
         when(track.getUserData()).thenReturn(1);
-        requestingUserDto.setDigPermission(false);
+        when(requestingUserDto.hasDigPermission()).thenReturn(false);
 
         //Act
         nowDigOnThisCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
-        verify(interactionHook, times(1)).sendMessage("I'm gonna put some dirt in your eye Member Nickname");
+        verify(interactionHook, times(1)).sendMessage("I'm gonna put some dirt in your eye Effective Name");
         verify(playerManager, times(0)).loadAndPlay(eq(event), eq("www.testlink.com"), eq(false), eq(0), eq(0L), eq(20));
     }
 }

@@ -72,7 +72,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessage(getErrorMessage(event.getMember().getNickname())).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(getConsumer(deleteDelay));
     }
 
     @Override

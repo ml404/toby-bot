@@ -89,7 +89,7 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(linkOptionMapping.getAsString()).thenReturn("https://www.youtube.com/");
         when(userService.listGuildUsers(1L)).thenReturn(List.of(requestingUserDto));
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
-        requestingUserDto.setMusicDto(new MusicDto(1L, 1L, "filename", 20, null));
+        when(requestingUserDto.getMusicDto()).thenReturn(new MusicDto(1L, 1L, "filename", 20, null));
 
         //Act
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
@@ -139,7 +139,7 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
         when(guild.getOwner()).thenReturn(member);
         when(member.getEffectiveName()).thenReturn("Effective Name");
-        requestingUserDto.setSuperUser(false);
+        when(requestingUserDto.isSuperUser()).thenReturn(false);
 
         //Act
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
@@ -160,7 +160,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(event.getOption("users")).thenReturn(userOptionMapping);
         when(event.getOption("attachment")).thenReturn(attachmentOptionMapping);
         setupAttachments(attachmentOptionMapping, "mp3", 1000);
-        requestingUserDto.setMusicDto(null);
         when(userService.listGuildUsers(1L)).thenReturn(List.of(requestingUserDto));
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
 
@@ -185,11 +184,9 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(event.getOption("users")).thenReturn(userOptionMapping);
         when(event.getOption("attachment")).thenReturn(attachmentOptionMapping);
         setupAttachments(attachmentOptionMapping, "mp3", 1000);
-        requestingUserDto.setMusicDto(null);
         when(userService.listGuildUsers(1L)).thenReturn(List.of(requestingUserDto));
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
         setupMentions(userOptionMapping);
-        requestingUserDto.setSuperUser(true);
 
         //Act
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
@@ -213,7 +210,7 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(event.getOption("users")).thenReturn(userOptionMapping);
         when(event.getOption("attachment")).thenReturn(attachmentOptionMapping);
         setupAttachments(attachmentOptionMapping, "mp3", 1000);
-        requestingUserDto.setMusicDto(new MusicDto(1L, 1L, "filename", 20, null));
+        when(requestingUserDto.getMusicDto()).thenReturn(new MusicDto(1L, 1L, "filename", 20, null));
         when(userService.listGuildUsers(1L)).thenReturn(List.of(requestingUserDto));
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
 
@@ -237,7 +234,7 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(event.getOption("users")).thenReturn(userOptionMapping);
         when(event.getOption("attachment")).thenReturn(attachmentOptionMapping);
         setupAttachments(attachmentOptionMapping, "notMp3", 1000);
-        requestingUserDto.setMusicDto(new MusicDto(1L, 1L, "filename", 20, null));
+        when(requestingUserDto.getMusicDto()).thenReturn(new MusicDto(1L, 1L, "filename", 20, null));
         when(userService.listGuildUsers(1L)).thenReturn(List.of(requestingUserDto));
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
         //Act
@@ -261,7 +258,7 @@ class IntroSongCommandTest implements MusicCommandTest {
         when(event.getOption("users")).thenReturn(userOptionMapping);
         when(event.getOption("attachment")).thenReturn(attachmentOptionMapping);
         setupAttachments(attachmentOptionMapping, "mp3", 500000);
-        requestingUserDto.setMusicDto(new MusicDto(1L, 1L, "filename", 20, null));
+        when(requestingUserDto.getMusicDto()).thenReturn(new MusicDto(1L, 1L, "filename", 20, null));
         when(userService.listGuildUsers(1L)).thenReturn(List.of(requestingUserDto));
         when(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(new ConfigDto("DEFAULT_VOLUME", "20", "1"));
         //Act

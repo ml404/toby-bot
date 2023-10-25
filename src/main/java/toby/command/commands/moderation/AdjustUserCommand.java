@@ -48,9 +48,9 @@ public class AdjustUserCommand implements IModerationCommand {
                 boolean requesterCanAdjustPermissions = userAdjustmentValidation(requestingUserDto, targetUserDto) || member.isOwner();
                 if (requesterCanAdjustPermissions && isSameGuild) {
                     validateArgumentsAndUpdateUser(event, targetUserDto, member.isOwner(), deleteDelay);
-                    event.getHook().sendMessageFormat("Updated user %s's permissions", targetMember.getNickname()).queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessageFormat("Updated user %s's permissions", targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
                 } else
-                    event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getNickname(), targetMember.getNickname()).queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getEffectiveName(), targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
 
             } else {
                 createNewUser(event, targetMember, deleteDelay);
@@ -89,7 +89,7 @@ public class AdjustUserCommand implements IModerationCommand {
         newDto.setDiscordId(targetMember.getIdLong());
         newDto.setGuildId(targetMember.getGuild().getIdLong());
         userService.createNewUser(newDto);
-        event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getNickname()).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
     }
 
     private List<Member> channelAndArgumentValidation(UserDto requestingUserDto, SlashCommandInteractionEvent event, Member member, int deleteDelay) {
