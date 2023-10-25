@@ -48,7 +48,7 @@ public class SetConfigCommand implements IModerationCommand {
             return;
         }
         options.forEach(optionMapping -> {
-            switch (ConfigDto.Configurations.valueOf(optionMapping.getName())) {
+            switch (ConfigDto.Configurations.valueOf(optionMapping.getName().toUpperCase())) {
                 case MOVE -> setMove(event, deleteDelay);
                 case VOLUME -> setConfigAndSendMessage(event, deleteDelay, VOLUME.getConfigValue(), "Set default volume to '%s'");
                 case DELETE_DELAY -> setConfigAndSendMessage(event, deleteDelay, DELETE_DELAY.getConfigValue(), "Set default delete message delay for TobyBot music messages to '%d' seconds");
