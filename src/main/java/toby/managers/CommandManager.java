@@ -28,7 +28,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static toby.command.ICommand.getConsumer;
-import static toby.command.ICommand.getConsumerForHook;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -66,8 +65,6 @@ public class CommandManager {
         addCommand(new UserInfoCommand(userService));
         addCommand(new RandomCommand());
         addCommand(new TeamCommand());
-        //This was an example command, replace with JDA5 style with buttons later
-        //        addCommand(new EventWaiterCommand(waiter));
         addCommand(new ExcuseCommand(excuseService));
         addCommand(new EightBallCommand(userService));
 
@@ -77,8 +74,7 @@ public class CommandManager {
         addCommand(new MoveCommand(configService));
         addCommand(new ShhCommand());
         addCommand(new TalkCommand());
-//       look at how it's done JDA5
-//       addCommand(new PollCommand());
+        addCommand(new PollCommand());
         addCommand(new AdjustUserCommand(userService));
         addCommand(new SocialCreditCommand(userService));
 
@@ -165,6 +161,7 @@ public class CommandManager {
             CommandContext ctx = new CommandContext(event);
             lastCommands.put(event.getUser(), Pair.of(cmd, ctx));
             cmd.handle(ctx, requestingUserDto, deleteDelay);
+            attributeSocialCredit(ctx, userService, requestingUserDto, deleteDelay);
         }
     }
 
@@ -175,7 +172,7 @@ public class CommandManager {
         int awardedSocialCredit = socialCredit * 5;
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
-        ctx.getEvent().replyFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(getConsumerForHook(deleteDelay));
+        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(getConsumer(deleteDelay));
     }
 
     public void handle(ButtonInteractionEvent event) {

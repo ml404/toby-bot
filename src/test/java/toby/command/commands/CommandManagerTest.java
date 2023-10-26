@@ -70,7 +70,7 @@ public class CommandManagerTest {
                 ChCommand.class,
                 ShhCommand.class,
                 TalkCommand.class,
-//                PollCommand.class,
+                PollCommand.class,
                 JoinCommand.class,
                 LeaveCommand.class,
                 PlayCommand.class,
@@ -98,7 +98,7 @@ public class CommandManagerTest {
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).toList()));
-        assertEquals(34, commandManager.getAllCommands().size());
-        assertEquals(34, commandManager.getAllSlashCommands().size());
+        assertEquals(35, commandManager.getAllCommands().size());
+        assertEquals(35, commandManager.getAllSlashCommands().size());
     }
 }

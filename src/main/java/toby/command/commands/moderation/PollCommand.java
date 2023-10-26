@@ -1,48 +1,54 @@
 package toby.command.commands.moderation;
 
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
+import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
+import static toby.command.ICommand.deleteAfter;
+import static toby.command.ICommand.getConsumer;
 
 public class PollCommand implements IModerationCommand {
 
+    public static final String QUESTION = "question";
+    public static final String CHOICES = "choices";
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
-        List<OptionMapping> args = ctx.getEvent().getOptions();
-
-//        if (!args.isEmpty()) {
-//            boolean isPresent = msg.contains("?");
-//            String question = isPresent ? msg.split("\\?", 2)[0].replaceAll("!poll", "").trim().concat("?") : "Poll";
-//            List<String> pollArgs = isPresent ? Arrays.asList(msg.split("\\?", 2)[1].split(",")) : Arrays.asList(msg.split(" ", 2)[1].split(","));
-//            SlashCommandInteractionEvent event = ctx.getEvent();
-//            if (pollArgs.size() > 10) {
-//                event.getHook().sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(getConsumer(deleteDelay));
-//                return;
-//            }
-//            List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
-//
-//            EmbedBuilder poll = new EmbedBuilder()
-//                    .setTitle(question)
-//                    .setAuthor(ctx.getAuthor().getName())
-//                    .setFooter("Please react to this poll with the emoji that aligns with the option you want to vote for");
-//
-//            for (int i = 0; i < pollArgs.size(); i++) {
-//                poll.appendDescription(String.format("%s - **%s** \n", emojiList.get(i), pollArgs.get(i).trim()));
-//            }
-//
-//            event.replyEmbeds(poll.build()).queue(message -> {
-//                for (int i = 0; i < pollArgs.size(); i++) {
-//                    message.(Emoji.fromUnicode(emojiList.get(i))).queue();
-//                }
-//            });
-//        } else {
-//            getDescription();
-//        }
+        SlashCommandInteractionEvent event = ctx.getEvent();
+        InteractionHook hook = event.getHook();
+        deleteAfter(hook, deleteDelay);
+        Optional<String> choiceOptional = Optional.ofNullable(event.getOption(CHOICES)).map(OptionMapping::getAsString);
+        if (choiceOptional.isPresent()) {
+            String question = Optional.ofNullable(event.getOption(QUESTION)).map(OptionMapping::getAsString).orElse("Poll");
+            List<String> pollArgs = choiceOptional.map(s -> List.of(s.split(","))).orElse(Collections.emptyList());
+            if (pollArgs.size() > 10) {
+                hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(getConsumer(deleteDelay));
+                return;
+            }
+            List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
+            EmbedBuilder poll = new EmbedBuilder().setTitle(question).setAuthor(ctx.getAuthor().getEffectiveName()).setFooter("Please react to this poll with the emoji that aligns with the option you want to vote for");
+            for (int i = 0; i < pollArgs.size(); i++) {
+                poll.appendDescription(String.format("%s - **%s** \n", emojiList.get(i), pollArgs.get(i).trim()));
+            }
+            event.getChannel().sendMessageEmbeds(poll.build()).queue(message -> {
+                for (int i = 0; i < pollArgs.size(); i++) {
+                    message.addReaction(Emoji.fromUnicode(emojiList.get(i))).queue();
+                }
+            });
+        } else {
+            hook.sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+        }
     }
 
     @Override
@@ -52,8 +58,13 @@ public class PollCommand implements IModerationCommand {
 
     @Override
     public String getDescription() {
-        return "Start a poll for every user in the server who has read permission in the channel you're posting to\n" +
-                String.format("`%spoll question title? (this is optional, don't have to have a question title) and then each option separated by a comma(,)`\n", "/") +
-                String.format("e.g. `%spoll question title? option1,option2`", "/");
+        return "Start a poll for every user in the server who has read permission in the channel you're posting to";
+    }
+
+    @Override
+    public List<OptionData> getOptionData() {
+        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", false);
+        OptionData choices = new OptionData(OptionType.STRING, CHOICES, "Comma delimited list of answers for the poll", true);
+        return List.of(choices, question);
     }
 }
