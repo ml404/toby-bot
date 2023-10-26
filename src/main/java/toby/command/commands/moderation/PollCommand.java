@@ -64,7 +64,7 @@ public class PollCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", false);
+        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", true);
         OptionData choices = new OptionData(OptionType.STRING, CHOICES, "Comma delimited list of answers for the poll", true);
         return List.of(question, choices);
     }
