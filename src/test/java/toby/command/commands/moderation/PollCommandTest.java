@@ -4,7 +4,6 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,10 +24,9 @@ class PollCommandTest implements CommandTest {
     @BeforeEach
     public void setup() {
         setUpCommonMocks();
-        ReplyCallbackAction replyCallbackAction = mock(ReplyCallbackAction.class);
-        doReturn(replyCallbackAction)
-                .when(event)
-                .replyEmbeds(any(), any(MessageEmbed[].class));
+        doReturn(messageCreateAction)
+                .when(messageChannelUnion)
+                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
         pollCommand = new PollCommand();
     }
 
@@ -50,7 +48,7 @@ class PollCommandTest implements CommandTest {
         pollCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(event, times(1)).replyEmbeds(any(MessageEmbed.class));
+        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
     }
 
     @Test
@@ -62,14 +60,13 @@ class PollCommandTest implements CommandTest {
         when(event.getOption("choices")).thenReturn(choicesOptionMapping);
         when(event.getOption("question")).thenReturn(questionOptionMapping);
         when(choicesOptionMapping.getAsString()).thenReturn("Choice1, Choice2");
-        when(questionOptionMapping.getAsString()).thenReturn("Question?");
+        when(questionOptionMapping.getAsString()).thenReturn("Question");
 
         //Act
         pollCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(event, times(1)).replyEmbeds(any(MessageEmbed.class));
-
+        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
     }
 
     @Test
@@ -94,13 +91,12 @@ class PollCommandTest implements CommandTest {
         when(event.getOption("choices")).thenReturn(choicesOptionMapping);
         when(choicesOptionMapping.getAsString()).thenReturn("Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1");
         when(jda.getEmojiById(Emotes.TOBY)).thenReturn((RichCustomEmoji) tobyEmote);
-        when(replyCallbackAction.setEphemeral(true)).thenReturn(replyCallbackAction);
         //Act
         pollCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
         verify(messageChannelUnion, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(event, times(1)).replyFormat(eq("Please keep the poll size under 10 items, or else %s."), eq(tobyEmote));
+        verify(interactionHook, times(1)).sendMessageFormat(eq("Please keep the poll size under 10 items, or else %s."), eq(tobyEmote));
     }
 }
