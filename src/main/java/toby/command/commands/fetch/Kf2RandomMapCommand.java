@@ -31,7 +31,6 @@ public class Kf2RandomMapCommand implements IFetchCommand {
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> kf2Maps = wikiFetcher.fetchFromWiki(cacheName, kf2WebUrl, className, "b");
-            event.deferReply().queue();
             event.getHook().sendMessage(RandomCommand.getRandomElement(kf2Maps)).queue(message -> ICommand.deleteAfter(event.getHook(), deleteDelay));
         } catch (IOException ignored) {
             event.getHook().sendMessage("Huh, the website I pull data from must have returned something unexpected.").setEphemeral(true).queue(message -> ICommand.deleteAfter(event.getHook(), deleteDelay));

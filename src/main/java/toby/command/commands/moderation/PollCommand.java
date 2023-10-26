@@ -27,6 +27,7 @@ public class PollCommand implements IModerationCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         InteractionHook hook = event.getHook();
+        event.deferReply().queue();
         deleteAfter(hook, deleteDelay);
         Optional<String> choiceOptional = Optional.ofNullable(event.getOption(CHOICES)).map(OptionMapping::getAsString);
         if (choiceOptional.isPresent()) {
