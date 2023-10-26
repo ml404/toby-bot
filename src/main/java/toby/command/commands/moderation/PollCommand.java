@@ -15,8 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.*;
 
 public class PollCommand implements IModerationCommand {
 
@@ -34,7 +33,7 @@ public class PollCommand implements IModerationCommand {
             String question = Optional.ofNullable(event.getOption(QUESTION)).map(OptionMapping::getAsString).orElse("Poll");
             List<String> pollArgs = choiceOptional.map(s -> List.of(s.split(","))).orElse(Collections.emptyList());
             if (pollArgs.size() > 10) {
-                hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(getConsumer(deleteDelay));
+                event.replyFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).setEphemeral(true).queue(getConsumerForHook(deleteDelay));
                 return;
             }
             List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
@@ -42,9 +41,9 @@ public class PollCommand implements IModerationCommand {
             for (int i = 0; i < pollArgs.size(); i++) {
                 poll.appendDescription(String.format("%s - **%s** \n", emojiList.get(i), pollArgs.get(i).trim()));
             }
-            event.getChannel().sendMessageEmbeds(poll.build()).queue(message -> {
+            event.replyEmbeds(poll.build()).queue(interactionHook -> {
                 for (int i = 0; i < pollArgs.size(); i++) {
-                    message.addReaction(Emoji.fromUnicode(emojiList.get(i))).queue();
+                    interactionHook.retrieveOriginal().complete().addReaction(Emoji.fromUnicode(emojiList.get(i))).queue();
                 }
             });
         } else {
@@ -64,7 +63,7 @@ public class PollCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", false);
+        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", true);
         OptionData choices = new OptionData(OptionType.STRING, CHOICES, "Comma delimited list of answers for the poll", true);
         return List.of(choices, question);
     }

@@ -59,21 +59,28 @@ public interface CommandTest {
     @Mock
     MessageCreateAction messageCreateAction = mock(MessageCreateAction.class);
 
+    @Mock ReplyCallbackAction replyCallbackAction = mock(ReplyCallbackAction.class);
+    @Mock
+    RestAction restAction = mock(RestAction.class);
+
 
     @BeforeEach
     default void setUpCommonMocks() {
         when(event.getHook()).thenReturn(interactionHook);
-        when(event.deferReply()).thenReturn(mock(ReplyCallbackAction.class));
+        when(event.deferReply()).thenReturn(replyCallbackAction);
         when(event.getGuild()).thenReturn(guild);
         when(event.getUser()).thenReturn(user);
+        when(event.reply(anyString())).thenReturn(replyCallbackAction);
+        when(event.replyFormat(anyString(), any())).thenReturn(replyCallbackAction);
         //refers to the user making the call
         when(event.getMember()).thenReturn(member);
         when(event.getChannel()).thenReturn(messageChannelUnion);
         when(user.getEffectiveName()).thenReturn("UserName");
         when(user.getName()).thenReturn("UserName");
-        when(interactionHook.deleteOriginal()).thenReturn(mock(RestAction.class));
+        when(interactionHook.deleteOriginal()).thenReturn(restAction);
         when(interactionHook.sendMessage(anyString())).thenReturn(webhookMessageCreateAction);
         when(interactionHook.sendMessageFormat(anyString(), any(Object[].class))).thenReturn(webhookMessageCreateAction);
+        when(interactionHook.retrieveOriginal()).thenReturn(restAction);
         when(webhookMessageCreateAction.addActionRow(anyCollection())).thenReturn(webhookMessageCreateAction);
         when(webhookMessageCreateAction.addContent(anyString())).thenReturn(webhookMessageCreateAction);
         when(webhookMessageCreateAction.setEphemeral(anyBoolean())).thenReturn(webhookMessageCreateAction);
@@ -120,6 +127,7 @@ public interface CommandTest {
         reset(botMember);
         reset(member);
         reset(targetMember);
+        reset(replyCallbackAction);
     }
 
 }
