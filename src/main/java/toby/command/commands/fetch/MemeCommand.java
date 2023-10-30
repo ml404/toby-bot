@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.dto.web.RedditAPIDto;
 import toby.jpa.dto.UserDto;
@@ -30,11 +31,13 @@ public class MemeCommand implements IFetchCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
+        handle(ctx, WebUtils.ins, requestingUserDto, deleteDelay);
+    }
+
+    public void handle(CommandContext ctx, WebUtils webUtils, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         deleteAfter(event.getHook(), deleteDelay);
-
         Gson gson = new Gson();
-        List<OptionMapping> args = event.getOptions();
         User member = ctx.getAuthor();
         event.deferReply().queue();
 
@@ -42,35 +45,15 @@ public class MemeCommand implements IFetchCommand {
             sendErrorMessage(event, deleteDelay);
             return;
         }
-
-        if (args.size() == 0) {
-            event.getHook().sendMessageFormat((getDescription())).setEphemeral(true).queue();
-        } else {
-            Optional<String> subredditArgOptional = Optional.ofNullable(event.getOption(SUBREDDIT)).map(OptionMapping::getAsString);
-            String timePeriod;
-            int limit;
-            try {
-                Optional<String> timePeriodOptional = Optional.ofNullable(event.getOption(TIME_PERIOD)).map(OptionMapping::getAsString);
-                timePeriod = RedditAPIDto.TimePeriod.valueOf(timePeriodOptional.orElse("day")).toString().toLowerCase();
-            } catch (Error e) {
-                timePeriod = "day";
-                event.getHook().sendMessageFormat(String.format("Using default time period of %s", timePeriod)).setEphemeral(true).queue(getConsumer(deleteDelay));
-            }
-            try {
-                limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
-            } catch (Error e) {
-                limit = 5;
-            } catch (NumberFormatException e) {
-                limit = 5;
-                event.getHook().sendMessageFormat("Invalid number supplied, using default value %d", limit).queue(getConsumer(deleteDelay));
-            }
-            String subredditArg = subredditArgOptional.orElse("");
+        RedditApiArgs result = getRedditApiArgs(event);
+        if (result.subredditArgOptional().isPresent()) {
+            String subredditArg = result.subredditArgOptional().get();
             if (subredditArg.equals("sneakybackgroundfeet")) {
-                event.getHook().sendMessageFormat("Don't talk to me.").setEphemeral(true).queue(getConsumer(deleteDelay));
+                event.getChannel().sendMessageFormat("Don't talk to me.").queue(getConsumer(deleteDelay));
             } else {
-                WebUtils.ins.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, limit, timePeriod)).async((json) -> {
+                webUtils.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, result.limit(), result.timePeriod())).async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
-                        event.getHook().sendMessageFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(getConsumer(deleteDelay));
+                        event.getChannel().sendMessageFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(getConsumer(deleteDelay));
                         return;
                     }
                     final JsonNode parentData = json.get("data");
@@ -96,6 +79,20 @@ public class MemeCommand implements IFetchCommand {
         }
     }
 
+    @NotNull
+    private RedditApiArgs getRedditApiArgs(SlashCommandInteractionEvent event) {
+        Optional<String> subredditArgOptional = Optional.ofNullable(event.getOption(SUBREDDIT)).map(OptionMapping::getAsString);
+        Optional<String> timePeriodOptional = Optional.ofNullable(event.getOption(TIME_PERIOD)).map(OptionMapping::getAsString);
+        String timePeriod = RedditAPIDto.TimePeriod.valueOf(timePeriodOptional.orElse("DAY")).toString().toLowerCase();
+        int limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
+
+        return new RedditApiArgs(subredditArgOptional, timePeriod, limit);
+    }
+
+    private record RedditApiArgs(Optional<String> subredditArgOptional, String timePeriod, int limit) {
+    }
+
+
     @Override
     public String getName() {
         return "meme";
@@ -110,7 +107,7 @@ public class MemeCommand implements IFetchCommand {
     public List<OptionData> getOptionData() {
         OptionData subreddit = new OptionData(OptionType.STRING, SUBREDDIT, "Which subreddit to pull the meme from", true);
         OptionData timePeriod = new OptionData(OptionType.STRING, TIME_PERIOD, "What time period filter to apply to the subreddit (e.g. day/week/month/all). Default day.", false);
-        Arrays.stream(RedditAPIDto.TimePeriod.values()).forEach(tp -> timePeriod.addChoice(tp.getTimePeriod(), tp.getTimePeriod()));
+        Arrays.stream(RedditAPIDto.TimePeriod.values()).forEach(tp -> timePeriod.addChoice(tp.getTimePeriod(), tp.name()));
         OptionData limit = new OptionData(OptionType.INTEGER, LIMIT, "Pick from top X posts of that day. Default 5.", false);
 
         return List.of(subreddit, timePeriod, limit);
