@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.error.MissingEnvironmentVariableException;
 import toby.handler.Handler;
 import toby.jpa.service.*;
 
@@ -36,8 +37,7 @@ public class BotMain {
         String discordToken = System.getenv("TOKEN");
 
         if (discordToken == null) {
-            System.err.println("DISCORD_TOKEN environment variable is not set.");
-            System.exit(1);
+            throw new MissingEnvironmentVariableException("TOKEN environment variable is not set.");
         }
 
         JDABuilder builder = JDABuilder.createDefault(discordToken,
