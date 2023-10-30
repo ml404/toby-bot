@@ -42,7 +42,7 @@ class MemeCommandTest implements CommandTest {
         when(webUtils.getJSONObject(anyString())).thenReturn(pendingRequest);
 
         //Act
-        memeCommand.handle(commandContext, webUtils, requestingUserDto, 0);
+        memeCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
