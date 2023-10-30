@@ -2,19 +2,28 @@ package toby.command.commands.fetch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import me.duncte123.botcommons.messaging.EmbedUtils;
 import me.duncte123.botcommons.web.WebUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClients;
 import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.dto.web.RedditAPIDto;
 import toby.jpa.dto.UserDto;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -51,7 +60,8 @@ public class MemeCommand implements IFetchCommand {
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 event.getChannel().sendMessageFormat("Don't talk to me.").queue(getConsumer(deleteDelay));
             } else {
-                webUtils.getJSONObject(String.format(RedditAPIDto.redditPrefix, subredditArg, result.limit(), result.timePeriod())).async((json) -> {
+                fetchRedditPost(result);
+                webUtils.getJSONObject().async((json) -> {
                     if ((json.get("data").get("dist").asInt() == 0)) {
                         event.getChannel().sendMessageFormat("I think you typo'd the subreddit: '%s', I couldn't get anything from the reddit API", subredditArg).queue(getConsumer(deleteDelay));
                         return;
@@ -87,6 +97,47 @@ public class MemeCommand implements IFetchCommand {
         int limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
 
         return new RedditApiArgs(subredditArgOptional, timePeriod, limit);
+    }
+
+    public MessageEmbed fetchRedditPost(RedditApiArgs result) {
+        HttpClient httpClient = HttpClients.createDefault();
+        String redditApiUrl = String.format(RedditAPIDto.redditPrefix, result.subredditArgOptional.get(), result.limit(), result.timePeriod());
+        try {
+            HttpGet request = new HttpGet(redditApiUrl);
+            HttpResponse response = httpClient.execute(request);
+
+            // Check the response code (200 indicates success)
+            if (response.getStatusLine().getStatusCode() == 200) {
+                // Parse the JSON response
+                JsonObject jsonResponse = JsonParser.parseReader(
+                                new InputStreamReader(response.getEntity().getContent()))
+                        .getAsJsonObject();
+
+                // Extract the data you need from the JSON
+                JsonObject post = jsonResponse.getAsJsonObject("data")
+                        .getAsJsonArray("children")
+                        .get(0)
+                        .getAsJsonObject()
+                        .getAsJsonObject("data");
+
+                String title = post.get("title").getAsString();
+                String url = post.get("url").getAsString();
+                String author = post.get("author").getAsString();
+
+                // Create a JDA EmbedBuilder and return the MessageEmbed
+                EmbedBuilder embedBuilder = new EmbedBuilder();
+                embedBuilder.setTitle(title, url);
+                embedBuilder.setAuthor(author, null, null);
+                embedBuilder.setImage(url);
+                embedBuilder.addField("subreddit", result.subredditArgOptional.get(), false);
+
+                return embedBuilder.build();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null; // Return null if there was an error
     }
 
     private record RedditApiArgs(Optional<String> subredditArgOptional, String timePeriod, int limit) {
