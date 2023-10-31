@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import toby.command.CommandContext;
 import toby.command.commands.CommandTest;
+import toby.dto.web.RedditAPIDto;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -65,6 +66,35 @@ class MemeCommandTest implements CommandTest {
         InputStream contentStream = new ByteArrayInputStream(jsonResponse.getBytes());
         when(subredditOptionMapping.getAsString()).thenReturn("raimimemes");
         when(event.getOption("subreddit")).thenReturn(subredditOptionMapping);
+        when(httpClient.execute(any())).thenReturn(httpResponse);
+        when(httpResponse.getStatusLine()).thenReturn(statusLine);
+        when(statusLine.getStatusCode()).thenReturn(200);
+        when(httpResponse.getEntity()).thenReturn(httpEntity);
+        when(httpEntity.getContent()).thenReturn(contentStream);
+
+        //Act
+        memeCommand.handle(commandContext, httpClient, requestingUserDto, 0);
+
+        //Assert
+        verify(interactionHook, times(1)).deleteOriginal();
+        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
+    }
+
+    @Test
+    void test_memeCommandWithSubredditAndTimePeriod_createsAndSendsEmbed() throws IOException {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        OptionMapping subredditOptionMapping = mock(OptionMapping.class);
+        OptionMapping timePeriodOptionMapping = mock(OptionMapping.class);
+        HttpClient httpClient = mock(HttpClient.class);
+        HttpResponse httpResponse = mock(HttpResponse.class);
+        StatusLine statusLine = mock(StatusLine.class);
+        HttpEntity httpEntity = mock(HttpEntity.class);
+        InputStream contentStream = new ByteArrayInputStream(jsonResponse.getBytes());
+        when(subredditOptionMapping.getAsString()).thenReturn("raimimemes");
+        when(timePeriodOptionMapping.getAsString()).thenReturn(RedditAPIDto.TimePeriod.DAY.name().toUpperCase());
+        when(event.getOption("subreddit")).thenReturn(subredditOptionMapping);
+        when(event.getOption("timeperiod")).thenReturn(timePeriodOptionMapping);
         when(httpClient.execute(any())).thenReturn(httpResponse);
         when(httpResponse.getStatusLine()).thenReturn(statusLine);
         when(statusLine.getStatusCode()).thenReturn(200);
