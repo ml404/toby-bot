@@ -48,7 +48,9 @@ class MemeCommandTest implements CommandTest {
 
     @AfterEach
     void tearDown() {
-    tearDownCommonMocks();
+        tearDownCommonMocks();
+        reset(messageChannelUnion);
+
     }
 
     @Test
