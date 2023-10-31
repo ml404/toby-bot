@@ -27,6 +27,7 @@ public class PollCommand implements IModerationCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         InteractionHook hook = event.getHook();
+        event.deferReply().queue();
         deleteAfter(hook, deleteDelay);
         Optional<String> choiceOptional = Optional.ofNullable(event.getOption(CHOICES)).map(OptionMapping::getAsString);
         if (choiceOptional.isPresent()) {
@@ -63,8 +64,8 @@ public class PollCommand implements IModerationCommand {
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", false);
+        OptionData question = new OptionData(OptionType.STRING, QUESTION, "Question for the poll", true);
         OptionData choices = new OptionData(OptionType.STRING, CHOICES, "Comma delimited list of answers for the poll", true);
-        return List.of(choices, question);
+        return List.of(question, choices);
     }
 }
