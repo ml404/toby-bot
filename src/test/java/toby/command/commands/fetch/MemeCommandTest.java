@@ -144,12 +144,12 @@ class MemeCommandTest implements CommandTest {
         List<Command.Choice> timePeriodChoices = timePeriod.getChoices();
         assertEquals(4, timePeriodChoices.size());
         assertEquals("day", timePeriodChoices.get(0).getName());
-        assertEquals("DAY", timePeriodChoices.get(0).getAsString());
+        assertEquals("day", timePeriodChoices.get(0).getAsString());
         assertEquals("week", timePeriodChoices.get(1).getName());
-        assertEquals("WEEK", timePeriodChoices.get(1).getAsString());
+        assertEquals("week", timePeriodChoices.get(1).getAsString());
         assertEquals("month", timePeriodChoices.get(2).getName());
-        assertEquals("MONTH", timePeriodChoices.get(2).getAsString());
+        assertEquals("month", timePeriodChoices.get(2).getAsString());
         assertEquals("all", timePeriodChoices.get(3).getName());
-        assertEquals("ALL", timePeriodChoices.get(3).getAsString());
+        assertEquals("all", timePeriodChoices.get(3).getAsString());
     }
 }
