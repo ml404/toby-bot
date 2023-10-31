@@ -68,7 +68,7 @@ public class MemeCommand implements IFetchCommand {
     private RedditApiArgs getRedditApiArgs(SlashCommandInteractionEvent event) {
         Optional<String> subredditArgOptional = Optional.ofNullable(event.getOption(SUBREDDIT)).map(OptionMapping::getAsString);
         Optional<String> timePeriodOptional = Optional.ofNullable(event.getOption(TIME_PERIOD)).map(OptionMapping::getAsString);
-        String timePeriod = RedditAPIDto.TimePeriod.valueOf(timePeriodOptional.orElse("DAY")).toString().toLowerCase();
+        String timePeriod = RedditAPIDto.TimePeriod.parseTimePeriod(timePeriodOptional.orElse("DAY")).toString();
         int limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
 
         return new RedditApiArgs(subredditArgOptional, timePeriod, limit);

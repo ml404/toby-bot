@@ -1,7 +1,10 @@
 package toby.command.commands.fetch;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
@@ -16,7 +19,9 @@ import toby.dto.web.RedditAPIDto;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class MemeCommandTest implements CommandTest {
@@ -107,5 +112,44 @@ class MemeCommandTest implements CommandTest {
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
         verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
+    }
+
+    @Test
+    public void testGetOptionData() {
+
+        List<OptionData> optionDataList = memeCommand.getOptionData();
+
+        // Check the size of the returned list
+        assertEquals(3, optionDataList.size());
+
+        // Check the properties of the OptionData objects
+        OptionData subreddit = optionDataList.get(0);
+        OptionData timePeriod = optionDataList.get(1);
+        OptionData limit = optionDataList.get(2);
+
+        assertEquals(OptionType.STRING, subreddit.getType());
+        assertEquals("Which subreddit to pull the meme from", subreddit.getDescription());
+        assertTrue(subreddit.isRequired());
+
+        assertEquals(OptionType.STRING, timePeriod.getType());
+        assertEquals("What time period filter to apply to the subreddit (e.g. day/week/month/all). Default day.", timePeriod.getDescription());
+        assertFalse(timePeriod.isRequired());
+
+        assertEquals(OptionType.INTEGER, limit.getType());
+        assertEquals("Pick from top X posts of that day. Default 5.", limit.getDescription());
+        assertFalse(limit.isRequired());
+
+        // Check the choices of the 'timePeriod' option
+        // Assuming that RedditAPIDto.TimePeriod.values() returns [DAY, WEEK, MONTH, ALL]
+        List<Command.Choice> timePeriodChoices = timePeriod.getChoices();
+        assertEquals(4, timePeriodChoices.size());
+        assertEquals("day", timePeriodChoices.get(0).getName());
+        assertEquals("DAY", timePeriodChoices.get(0).getAsString());
+        assertEquals("week", timePeriodChoices.get(1).getName());
+        assertEquals("WEEK", timePeriodChoices.get(1).getAsString());
+        assertEquals("month", timePeriodChoices.get(2).getName());
+        assertEquals("MONTH", timePeriodChoices.get(2).getAsString());
+        assertEquals("all", timePeriodChoices.get(3).getName());
+        assertEquals("ALL", timePeriodChoices.get(3).getAsString());
     }
 }

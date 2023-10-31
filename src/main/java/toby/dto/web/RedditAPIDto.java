@@ -38,6 +38,16 @@ public class RedditAPIDto {
             return this.timePeriod;
         }
 
+        public static RedditAPIDto.TimePeriod parseTimePeriod(String value) {
+            for (RedditAPIDto.TimePeriod timePeriod : RedditAPIDto.TimePeriod.values()) {
+                if (timePeriod.name().equalsIgnoreCase(value)) {
+                    return timePeriod;
+                }
+            }
+            // Handle non-enum constants here
+            throw new IllegalArgumentException("Invalid time period: " + value);
+        }
+
     }
 
     public static String redditPrefix = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s";
