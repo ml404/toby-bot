@@ -56,7 +56,7 @@ public class MemeCommand implements IFetchCommand {
             if (subredditArg.equals("sneakybackgroundfeet")) {
                 event.getChannel().sendMessageFormat("Don't talk to me.").queue(getConsumer(deleteDelay));
             } else {
-                MessageEmbed embed = fetchRedditPost(result, event, deleteDelay, HttpClients.createDefault());
+                MessageEmbed embed = fetchRedditPost(result, event, deleteDelay, httpClient);
                 event.replyEmbeds(embed).queue();
             }
         }
@@ -91,7 +91,7 @@ public class MemeCommand implements IFetchCommand {
                     .get(random.nextInt(children.size()))
                     .getAsJsonObject()
                     .getAsJsonObject("data");
-            RedditAPIDto redditAPIDto = gson.fromJson(meme.getAsJsonObject().get("data").toString(), RedditAPIDto.class);
+            RedditAPIDto redditAPIDto = gson.fromJson(meme.toString(), RedditAPIDto.class);
             if (redditAPIDto.isNsfw()) {
                 event.getHook().sendMessageFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", event.getMember()).queue(getConsumer(deleteDelay));
             } else if (redditAPIDto.getVideo()) {
