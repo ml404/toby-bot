@@ -1,6 +1,9 @@
 package toby.command.commands.fetch;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -43,9 +46,8 @@ public class MemeCommand implements IFetchCommand {
 
     public void handle(CommandContext ctx, HttpClient httpClient, UserDto requestingUserDto, Integer deleteDelay) throws IOException {
         SlashCommandInteractionEvent event = ctx.getEvent();
-        deleteAfter(event.getHook(), deleteDelay);
         event.deferReply().queue();
-
+        deleteAfter(event.getHook(), deleteDelay);
         if (!requestingUserDto.hasMemePermission()) {
             sendErrorMessage(event, deleteDelay);
             return;
@@ -57,7 +59,7 @@ public class MemeCommand implements IFetchCommand {
                 event.getChannel().sendMessageFormat("Don't talk to me.").queue(getConsumer(deleteDelay));
             } else {
                 MessageEmbed embed = fetchRedditPost(result, event, deleteDelay, httpClient);
-                event.replyEmbeds(embed).queue();
+                event.getChannel().sendMessageEmbeds(embed).queue();
             }
         }
     }

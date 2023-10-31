@@ -40,9 +40,9 @@ class MemeCommandTest implements CommandTest {
     @BeforeEach
     void setUp() {
         setUpCommonMocks();
-        doReturn(replyCallbackAction)
-                .when(event)
-                .replyEmbeds(any(), any(MessageEmbed[].class));
+        doReturn(messageCreateAction)
+                .when(messageChannelUnion)
+                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
         memeCommand = new MemeCommand();
     }
 
@@ -74,6 +74,6 @@ class MemeCommandTest implements CommandTest {
 
         //Assert
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(event, times(1)).replyEmbeds(any(), any(MessageEmbed[].class));
+        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
     }
 }
