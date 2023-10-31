@@ -68,7 +68,7 @@ public class MemeCommand implements IFetchCommand {
     private RedditApiArgs getRedditApiArgs(SlashCommandInteractionEvent event) {
         Optional<String> subredditArgOptional = Optional.ofNullable(event.getOption(SUBREDDIT)).map(OptionMapping::getAsString);
         Optional<String> timePeriodOptional = Optional.ofNullable(event.getOption(TIME_PERIOD)).map(OptionMapping::getAsString);
-        String timePeriod = RedditAPIDto.TimePeriod.valueOf(timePeriodOptional.orElse("DAY")).toString().toLowerCase();
+        String timePeriod = RedditAPIDto.TimePeriod.parseTimePeriod(timePeriodOptional.orElse("day")).getTimePeriod();
         int limit = Optional.ofNullable(event.getOption(LIMIT)).map(OptionMapping::getAsInt).orElse(5);
 
         return new RedditApiArgs(subredditArgOptional, timePeriod, limit);
@@ -136,7 +136,7 @@ public class MemeCommand implements IFetchCommand {
     public List<OptionData> getOptionData() {
         OptionData subreddit = new OptionData(OptionType.STRING, SUBREDDIT, "Which subreddit to pull the meme from", true);
         OptionData timePeriod = new OptionData(OptionType.STRING, TIME_PERIOD, "What time period filter to apply to the subreddit (e.g. day/week/month/all). Default day.", false);
-        Arrays.stream(RedditAPIDto.TimePeriod.values()).forEach(tp -> timePeriod.addChoice(tp.getTimePeriod(), tp.name().toUpperCase()));
+        Arrays.stream(RedditAPIDto.TimePeriod.values()).forEach(tp -> timePeriod.addChoice(tp.getTimePeriod(), tp.getTimePeriod()));
         OptionData limit = new OptionData(OptionType.INTEGER, LIMIT, "Pick from top X posts of that day. Default 5.", false);
 
         return List.of(subreddit, timePeriod, limit);
