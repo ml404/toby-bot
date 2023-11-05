@@ -63,7 +63,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     // https://mvnrepository.com/artifact/me.duncte123/botCommons
     implementation group: 'me.duncte123', name: 'botCommons', version: '2.0.122'
-    implementation 'com.google.code.gson:gson:2.8.9'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    // https://mvnrepository.com/artifact/org.apache.httpcomponents.client5/httpclient5
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
     implementation 'org.postgresql:postgresql'
     // https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core

@@ -15,7 +15,8 @@
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.13.0" level="project" />
     <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer:2.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-log4j2:3.1.4" level="project" />
-    <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.8.9" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.10.1" level="project" />
+    <orderEntry type="library" name="Gradle: org.apache.httpcomponents.client5:httpclient5:5.2.1" level="project" />
     <orderEntry type="library" name="Gradle: org.postgresql:postgresql:42.6.0" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-web-services:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-web:3.1.4" level="project" />
@@ -39,6 +40,8 @@
     <orderEntry type="library" name="Gradle: org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.logging.log4j:log4j-core:2.20.0" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.logging.log4j:log4j-jul:2.20.0" level="project" />
+    <orderEntry type="library" name="Gradle: org.apache.httpcomponents.core5:httpcore5-h2:5.2.2" level="project" />
+    <orderEntry type="library" name="Gradle: org.apache.httpcomponents.core5:httpcore5:5.2.2" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.ws:spring-ws-core:4.0.6" level="project" />
     <orderEntry type="library" name="Gradle: com.sun.xml.messaging.saaj:saaj-impl:3.0.2" level="project" />
     <orderEntry type="library" name="Gradle: jakarta.xml.ws:jakarta.xml.ws-api:4.0.0" level="project" />
