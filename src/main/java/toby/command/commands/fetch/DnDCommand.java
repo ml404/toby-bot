@@ -9,8 +9,8 @@ import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.http.HttpEntity;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.core5.http.ParseException;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -46,7 +46,7 @@ public class DnDCommand implements IFetchCommand {
         try (httpClient) {
             CloseableHttpResponse response = httpClient.execute(httpGet);
             if (response.getCode() == 200) {
-                String responseData = EntityUtils.toString((HttpEntity) response.getEntity());
+                String responseData = EntityUtils.toString(response.getEntity());
                 switch (type) {
                     case "spell" -> {
                         Spell spell = JsonParser.parseJSONToSpell(responseData);
@@ -54,7 +54,7 @@ public class DnDCommand implements IFetchCommand {
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | ParseException e) {
             throw new RuntimeException(e);
         }
     }
