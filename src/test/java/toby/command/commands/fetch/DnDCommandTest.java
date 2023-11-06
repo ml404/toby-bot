@@ -2,6 +2,8 @@ package toby.command.commands.fetch;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.components.ItemComponent;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +48,7 @@ class DnDCommandTest implements CommandTest {
 
 
         //Act
-        command.handleWithHttpObjects(commandContext, requestingUserDto, helper, 0);
+        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
@@ -71,13 +73,42 @@ class DnDCommandTest implements CommandTest {
 
 
         //Act
-        command.handleWithHttpObjects(commandContext, requestingUserDto, helper, 0);
+        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
+        verify(helper, times(2)).fetchFromGet(any());
         verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for the spell '%s'", "fireball");
-        verify(helper, times(1)).fetchFromGet(any());
+    }
+
+    @Test
+    void test_DnDCommandWithTypeAsSpell_AndNothingIsSomethingIsReturnedForCloseMatchQuery() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        OptionMapping typeMapping = mock(OptionMapping.class);
+        OptionMapping queryMapping = mock(OptionMapping.class);
+        when(event.getOption("type")).thenReturn(typeMapping);
+        when(event.getOption("query")).thenReturn(queryMapping);
+        when(event.getInteraction()).thenReturn(event);
+        HttpHelper helper = mock(HttpHelper.class);
+        when(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "Fireball"))).thenReturn("");
+        when(typeMapping.getAsString()).thenReturn("spells");
+        when(queryMapping.getAsString()).thenReturn("Fireball");
+        when(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "?name=Fireball"))).thenReturn("""
+                {"count":2,"results":[{"index":"delayed-blast-fireball","name":"Delayed Blast Fireball","url":"/api/spells/delayed-blast-fireball"},{"index":"fireball","name":"Fireball","url":"/api/spells/fireball"}]}""");
+        when(webhookMessageCreateAction.addActionRow(any(ItemComponent.class))).thenReturn(webhookMessageCreateAction);
+
+
+        //Act
+        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+
+        //Assert
+        verify(event, times(1)).getOption("type");
+        verify(event, times(1)).getOption("query");
+        verify(helper, times(2)).fetchFromGet(any());
+        verify(interactionHook, times(1)).sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", "Fireball");
+        verify(webhookMessageCreateAction, times(1)).addActionRow(any(StringSelectMenu.class));
     }
 
     private String getSpellJson() {
