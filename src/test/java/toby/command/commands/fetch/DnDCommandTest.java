@@ -19,9 +19,9 @@ class DnDCommandTest implements CommandTest {
     void setUp() {
         setUpCommonMocks();
         command = new DnDCommand();
-        doReturn(replyCallbackAction)
-                .when(event)
-                .replyEmbeds(any(), any(MessageEmbed[].class));
+        doReturn(messageCreateAction)
+                .when(messageChannelUnion)
+                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
 
     }
 
@@ -50,7 +50,7 @@ class DnDCommandTest implements CommandTest {
         //Assert
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
-        verify(event, times(1)).replyEmbeds(any(MessageEmbed.class));
+        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(interactionHook, times(1)).deleteOriginal();
         verify(helper, times(1)).fetchFromGet(any());
     }

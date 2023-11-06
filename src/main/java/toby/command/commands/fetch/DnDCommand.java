@@ -19,6 +19,8 @@ import toby.jpa.dto.UserDto;
 import java.util.List;
 import java.util.Map;
 
+import static toby.command.ICommand.deleteAfter;
+
 public class DnDCommand implements IFetchCommand {
 
 
@@ -33,14 +35,14 @@ public class DnDCommand implements IFetchCommand {
     @VisibleForTesting
     public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
+        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         String type = event.getOption("type").getAsString();
         String query = event.getOption("query").getAsString();
         String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
         switch (type) {
             case "spell" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
-                event.replyEmbeds(createSpellEmbed(spell)).queue();
-                ICommand.deleteAfter(event.getHook(), deleteDelay);
+                event.getChannel().sendMessageEmbeds(createSpellEmbed(spell)).queue();
             }
         }
     }
@@ -138,7 +140,7 @@ public class DnDCommand implements IFetchCommand {
     @Override
     public List<OptionData> getOptionData() {
         OptionData type = new OptionData(OptionType.STRING, "type", "What type of are you looking up", true);
-        type.addChoice("spell", "spell");
+        type.addChoice("spell", "spells");
         OptionData query = new OptionData(OptionType.STRING, "query", "What is the thing you are looking up?", true);
         return List.of(type, query);
     }
