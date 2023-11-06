@@ -3,6 +3,7 @@ package toby.command.commands.fetch;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
@@ -32,53 +33,54 @@ public class DnDCommand implements IFetchCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleWithHttpObjects(ctx.getEvent(), ctx.getEvent().getOption(TYPE).getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
+        OptionMapping typeOptionMapping = ctx.getEvent().getOption(TYPE);
+        handleWithHttpObjects(ctx.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
 
     }
 
     @VisibleForTesting
-    public void handleWithHttpObjects(SlashCommandInteractionEvent event, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
+    public void handleWithHttpObjects(SlashCommandInteractionEvent event, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
         event.deferReply().queue();
-        doLookUpAndReply(event.getHook(), type, query, httpHelper, deleteDelay);
+        doLookUpAndReply(event.getHook(), typeName, typeValue, query, httpHelper, deleteDelay);
     }
 
-    public static void doLookUpAndReply(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
-        switch (type) {
-            case "spells" -> {
+    public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
+        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, query));
+        switch (typeName) {
+            case "spell" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 if (spell != null) {
                     EmbedBuilder spellEmbed = createEmbedFromSpell(spell);
                     hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
-            case "conditions" -> {
+            case "condition", "rule" -> {
                 Information condition = JsonParser.parseJsonToInformation(responseData);
                 if (condition != null) {
                     EmbedBuilder conditionEmbed = createEmbedFromInformation(condition);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
             default -> hook.sendMessage("Something went wrong.").queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
-    private static void queryNonMatchRetry(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
+    private static void queryNonMatchRetry(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
+        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + query));
         QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
         if (queryResult != null && queryResult.count() > 0) {
-            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD%s", type)).setPlaceholder("Choose an option");
+            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD%s", typeName)).setPlaceholder("Choose an option");
             queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
             hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
                     .addActionRow(builder.build())
                     .queue();
 
         } else {
-            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(invokeDeleteOnMessageResponse(deleteDelay));
+            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", typeName, query).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
@@ -210,6 +212,7 @@ public class DnDCommand implements IFetchCommand {
         OptionData type = new OptionData(OptionType.STRING, TYPE, "What type of are you looking up", true);
         type.addChoice("spell", "spells");
         type.addChoice("condition", "conditions");
+        type.addChoice("rule", "rule-sections");
         OptionData query = new OptionData(OptionType.STRING, QUERY, "What is the thing you are looking up?", true);
         return List.of(type, query);
     }

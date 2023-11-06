@@ -44,11 +44,13 @@ class DnDCommandTest implements CommandTest {
         HttpHelper helper = mock(HttpHelper.class);
         when(helper.fetchFromGet(anyString())).thenReturn(getSpellJson());
         when(typeMapping.getAsString()).thenReturn("spells");
+        when(typeMapping.getName()).thenReturn("spell");
         when(queryMapping.getAsString()).thenReturn("fireball");
 
 
         //Act
-        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
+        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
@@ -68,17 +70,20 @@ class DnDCommandTest implements CommandTest {
         HttpHelper helper = mock(HttpHelper.class);
         when(helper.fetchFromGet(anyString())).thenReturn("");
         when(typeMapping.getAsString()).thenReturn("spells");
+        when(typeMapping.getName()).thenReturn("spell");
         when(queryMapping.getAsString()).thenReturn("fireball");
 
 
         //Act
-        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
+        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
         verify(helper, times(2)).fetchFromGet(any());
-        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for %s '%s'", "spells", "fireball");
+        verify(interactionHook, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
+        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for %s '%s'", "spell", "fireball");
     }
 
     @Test
@@ -93,6 +98,7 @@ class DnDCommandTest implements CommandTest {
         HttpHelper helper = mock(HttpHelper.class);
         when(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "Fireball"))).thenReturn("");
         when(typeMapping.getAsString()).thenReturn("spells");
+        when(typeMapping.getName()).thenReturn("spell");
         when(queryMapping.getAsString()).thenReturn("Fireball");
         when(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "?name=Fireball"))).thenReturn("""
                 {"count":2,"results":[{"index":"delayed-blast-fireball","name":"Delayed Blast Fireball","url":"/api/spells/delayed-blast-fireball"},{"index":"fireball","name":"Fireball","url":"/api/spells/fireball"}]}""");
@@ -100,7 +106,8 @@ class DnDCommandTest implements CommandTest {
 
 
         //Act
-        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
+        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
@@ -122,17 +129,85 @@ class DnDCommandTest implements CommandTest {
         HttpHelper helper = mock(HttpHelper.class);
         when(helper.fetchFromGet(anyString())).thenReturn(getConditionJson());
         when(typeMapping.getAsString()).thenReturn("conditions");
+        when(typeMapping.getName()).thenReturn("condition");
         when(queryMapping.getAsString()).thenReturn("grappled");
 
 
         //Act
-        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
+        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
         verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(helper, times(1)).fetchFromGet(any());
+    }
+
+    @Test
+    void test_DnDCommandWithTypeAsCondition_AndNothingIsReturnedForQuery() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        noQueryReturn("conditions", "condition", commandContext);
+    }
+
+    @Test
+    void test_DnDCommandWithTypeAsRule() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        OptionMapping typeMapping = mock(OptionMapping.class);
+        OptionMapping queryMapping = mock(OptionMapping.class);
+        when(event.getOption("type")).thenReturn(typeMapping);
+        when(event.getOption("query")).thenReturn(queryMapping);
+        when(event.getInteraction()).thenReturn(event);
+        HttpHelper helper = mock(HttpHelper.class);
+        when(helper.fetchFromGet(anyString())).thenReturn(getConditionJson());
+        when(typeMapping.getAsString()).thenReturn("rule-sections");
+        when(typeMapping.getName()).thenReturn("rule");
+        when(queryMapping.getAsString()).thenReturn("cover");
+
+
+        //Act
+        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
+        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+
+        //Assert
+        verify(event, times(1)).getOption("type");
+        verify(event, times(1)).getOption("query");
+        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        verify(helper, times(1)).fetchFromGet(any());
+    }
+
+    @Test
+    void test_DnDCommandWithTypeAsRule_AndNothingIsReturnedForQuery() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        noQueryReturn("rule-sections", "rule", commandContext);
+    }
+
+    private void noQueryReturn(String conditions, String condition, CommandContext commandContext) {
+        OptionMapping typeMapping = mock(OptionMapping.class);
+        OptionMapping queryMapping = mock(OptionMapping.class);
+        when(event.getOption("type")).thenReturn(typeMapping);
+        when(event.getOption("query")).thenReturn(queryMapping);
+        when(event.getInteraction()).thenReturn(event);
+        HttpHelper helper = mock(HttpHelper.class);
+        when(helper.fetchFromGet(anyString())).thenReturn("");
+        when(typeMapping.getAsString()).thenReturn(conditions);
+        when(typeMapping.getName()).thenReturn(condition);
+        when(queryMapping.getAsString()).thenReturn("nerd");
+
+
+        //Act
+        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
+        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+
+        //Assert
+        verify(event, times(1)).getOption("type");
+        verify(event, times(1)).getOption("query");
+        verify(interactionHook, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
+        verify(helper, times(2)).fetchFromGet(any());
+        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for %s '%s'", condition, "nerd");
     }
 
     private String getSpellJson() {

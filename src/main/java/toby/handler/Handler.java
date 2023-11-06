@@ -275,19 +275,26 @@ public class Handler extends ListenerAdapter {
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
         event.deferReply().queue();
-        if (event.getComponentId().equals("DnDspells")) {
-            sendDndApiRequest(event, "spells");
+        determineDnDRequestType(event);
+    }
+
+    private void determineDnDRequestType(StringSelectInteractionEvent event) {
+        if (event.getComponentId().equals("DnDspell")) {
+            sendDndApiRequest(event, "spell", "spells");
         }
-        if (event.getComponentId().equals("DnDconditions")) {
-            sendDndApiRequest(event, "conditions");
+        if (event.getComponentId().equals("DnDcondition")) {
+            sendDndApiRequest(event, "condition", "conditions");
+        }
+        if (event.getComponentId().equals("DnDrule")) {
+            sendDndApiRequest(event, "rule", "rule-sections");
         }
     }
 
-    private void sendDndApiRequest(StringSelectInteractionEvent event, String spells) {
+    private void sendDndApiRequest(StringSelectInteractionEvent event, String typeName, String typeValue) {
         String selectedValue = event.getValues().get(0); // Get the selected option
         ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
         event.getMessage().delete().queue();
-        doLookUpAndReply(event.getHook(), spells, selectedValue, new HttpHelper(), Integer.valueOf(deleteDelayConfig.getValue()));
+        doLookUpAndReply(event.getHook(), typeName, typeValue, selectedValue, new HttpHelper(), Integer.valueOf(deleteDelayConfig.getValue()));
     }
 
 }
