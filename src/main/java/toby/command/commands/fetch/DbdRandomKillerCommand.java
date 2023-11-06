@@ -10,8 +10,7 @@ import toby.jpa.dto.UserDto;
 import java.io.IOException;
 import java.util.List;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class DbdRandomKillerCommand implements IFetchCommand {
 
@@ -28,22 +27,21 @@ public class DbdRandomKillerCommand implements IFetchCommand {
     @Override
     @SuppressWarnings("unchecked")
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         try {
             WikiFetcher wikiFetcher = new WikiFetcher(cache);
             List<String> dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery);
-            event.getHook().sendMessageFormat(RandomCommand.getRandomElement(dbdKillers)).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat(RandomCommand.getRandomElement(dbdKillers)).queue(invokeDeleteOnMessageResponse(deleteDelay));
 
         } catch (IOException ignored) {
-            event.getHook().sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.").queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
     @Override
     public String getName() {
-        return "dbd";
+        return "dbd-killer";
     }
 
     @Override

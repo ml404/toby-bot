@@ -49,8 +49,6 @@ class EightBallCommandTest implements CommandTest {
         // For example:
         verify(event.getHook()).sendMessageFormat(eq("MAGIC 8-BALL SAYS: %s."), anyString());
 
-        // You can also verify that ICommand.deleteAfter was called with the expected arguments.
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -73,6 +71,5 @@ class EightBallCommandTest implements CommandTest {
         verify(userService, times(1)).updateUser(any(UserDto.class));
 
         // You can also verify that ICommand.deleteAfter was called with the expected arguments.
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 }

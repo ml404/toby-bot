@@ -52,7 +52,6 @@ class JoinCommandTest implements MusicCommandTest {
         verify(audioManager, times(1)).openAudioConnection(audioChannelUnion);
         verify(playerManager, times(1)).getMusicManager(guild);
         verify(musicManager.getAudioPlayer(), times(1)).setVolume(100);
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getHook(), times(1)).sendMessageFormat(eq("Connecting to `\uD83D\uDD0A %s` with volume '%s'"), eq("Channel Name"), eq(100));
     }
 }

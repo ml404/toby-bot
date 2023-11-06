@@ -9,7 +9,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.MusicPlayerHelper.nowPlaying;
 
 public class TrackScheduler extends AudioEventAdapter {
@@ -67,7 +67,7 @@ public class TrackScheduler extends AudioEventAdapter {
             PlayerManager.getInstance().setCurrentlyStoppable(true);
             if (player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
-                event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(getConsumer(deleteDelay));
+                event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
@@ -80,7 +80,7 @@ public class TrackScheduler extends AudioEventAdapter {
     @Override
     public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
         if(track.getPosition() == 0L) {
-            event.getChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(getConsumer(deleteDelay));
+            event.getChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(invokeDeleteOnMessageResponse(deleteDelay));
             nextTrack();
         }
     }

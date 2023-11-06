@@ -15,11 +15,11 @@ public interface IMusicCommand extends ICommand {
 
     static void sendDeniedStoppableMessage(SlashCommandInteractionEvent event, GuildMusicManager musicManager, Integer deleteDelay) {
         if (musicManager.getScheduler().getQueue().size() > 0) {
-            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else {
             long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
             String songDuration = QueueCommand.formatTime(duration);
-            event.getHook().sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
@@ -30,19 +30,19 @@ public interface IMusicCommand extends ICommand {
         final GuildVoiceState selfVoiceState = self.getVoiceState();
         SlashCommandInteractionEvent event = ctx.getEvent();
         if (!selfVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("I need to be in a voice channel for this to work").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("I need to be in a voice channel for this to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
 
         final Member member = ctx.getMember();
         final GuildVoiceState memberVoiceState = member.getVoiceState();
         if (!memberVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
 
         if (!memberVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.getHook().sendMessage("You need to be in the same voice channel as me for this to work").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You need to be in the same voice channel as me for this to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
         return false;

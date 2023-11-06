@@ -36,7 +36,6 @@ class QueueCommandTest implements MusicCommandTest {
         queueCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getHook(), times(1)).sendMessage("The queue is currently empty");
     }
 
@@ -54,7 +53,6 @@ class QueueCommandTest implements MusicCommandTest {
         queueCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getHook(), times(1)).sendMessage("**Current Queue:**\n");
         verify(webhookMessageCreateAction, times(1)).addContent("#");
         verify(webhookMessageCreateAction, times(1)).addContent("1");
@@ -85,7 +83,6 @@ class QueueCommandTest implements MusicCommandTest {
         queueCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getHook(), times(1)).sendMessage("**Current Queue:**\n");
         verify(webhookMessageCreateAction, times(2)).addContent("#");
         verify(webhookMessageCreateAction, times(1)).addContent("1");

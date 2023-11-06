@@ -50,7 +50,6 @@ class TeamCommandTest implements CommandTest {
 
         verify(event, times(1)).deferReply();
         verify(event.getHook()).sendMessage("Return X teams from a list of tagged users.");
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -97,7 +96,6 @@ class TeamCommandTest implements CommandTest {
         verify(event, times(1)).deferReply();
         verify(interactionHook, times(2)).sendMessageFormat(eq("Moved %s to '%s'"), anyString(), anyString());
         verify(interactionHook, times(1)).sendMessage(anyString());
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     private static void guildMoveVoiceMemberMocking(VoiceChannel createdVoiceChannel, Member member) {

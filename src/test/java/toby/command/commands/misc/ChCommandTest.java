@@ -50,8 +50,5 @@ class ChCommandTest implements CommandTest {
         // You can use Mockito.verify() to check if event.getHook().sendMessage(...) was called with the expected message content.
         // For example:
         verify(event.getHook()).sendMessage("Oh! I think you mean: 'chello chorld'");
-
-        // You can also verify that ICommand.deleteAfter was called with the expected arguments.
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 }

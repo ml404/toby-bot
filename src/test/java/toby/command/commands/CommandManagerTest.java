@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import toby.command.ICommand;
 import toby.command.commands.fetch.DbdRandomKillerCommand;
+import toby.command.commands.fetch.DnDCommand;
 import toby.command.commands.fetch.Kf2RandomMapCommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
@@ -65,6 +66,7 @@ public class CommandManagerTest {
                 MoveCommand.class,
                 RollCommand.class,
                 MemeCommand.class,
+                DnDCommand.class,
                 HelloThereCommand.class,
                 BrotherCommand.class,
                 ChCommand.class,
@@ -98,7 +100,7 @@ public class CommandManagerTest {
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).toList()));
-        assertEquals(35, commandManager.getAllCommands().size());
-        assertEquals(35, commandManager.getAllSlashCommands().size());
+        assertEquals(36, commandManager.getAllCommands().size());
+        assertEquals(36, commandManager.getAllSlashCommands().size());
     }
 }

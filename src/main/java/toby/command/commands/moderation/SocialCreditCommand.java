@@ -16,8 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Map.Entry.comparingByValue;
 import static java.util.stream.Collectors.toMap;
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class SocialCreditCommand implements IModerationCommand {
 
@@ -34,7 +33,6 @@ public class SocialCreditCommand implements IModerationCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
         final Member member = ctx.getMember();
         if (!event.getGuild().isLoaded()) event.getGuild().loadMembers();
         if (Optional.ofNullable(event.getOption(LEADERBOARD)).map(OptionMapping::getAsBoolean).orElse(false)) {
@@ -60,12 +58,12 @@ public class SocialCreditCommand implements IModerationCommand {
                 Optional<Long> scOptional = Optional.ofNullable(event.getOption(SOCIAL_CREDIT)).map(OptionMapping::getAsLong);
                 if (scOptional.isPresent()) {
                     UserDto updatedUser = updateUserSocialCredit(targetUserDto, scOptional.get());
-                    event.getHook().sendMessageFormat("Updated user %s's social credit by %d. New score is: %d", user.getEffectiveName(), scOptional.get(), updatedUser.getSocialCredit()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessageFormat("Updated user %s's social credit by %d. New score is: %d", user.getEffectiveName(), scOptional.get(), updatedUser.getSocialCredit()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 } else {
                     listSocialCreditScore(event, targetUserDto, user.getEffectiveName(), deleteDelay);
                 }
             } else
-                event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", requestingMember.getEffectiveName(), user.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", requestingMember.getEffectiveName(), user.getEffectiveName()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
@@ -94,12 +92,12 @@ public class SocialCreditCommand implements IModerationCommand {
                     .findFirst()
                     .ifPresent(memberById -> stringBuilder.append(String.format("#%s: %s - score: %d\n", position, memberById.getEffectiveName(), v)));
         });
-        event.getHook().sendMessageFormat(stringBuilder.toString()).setEphemeral(true).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat(stringBuilder.toString()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     private void listSocialCreditScore(SlashCommandInteractionEvent event, UserDto userDto, String mentionedName, Integer deleteDelay) {
         Long socialCredit = userDto.getSocialCredit() == null ? 0L : userDto.getSocialCredit();
-        event.getHook().sendMessageFormat("%s's social credit is: %d", mentionedName, socialCredit).setEphemeral(true).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat("%s's social credit is: %d", mentionedName, socialCredit).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     private UserDto updateUserSocialCredit(UserDto targetUserDto, Long socialCreditScore) {

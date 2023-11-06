@@ -46,8 +46,8 @@ class MemeCommandTest implements CommandTest {
     @BeforeEach
     void setUp() {
         setUpCommonMocks();
-        doReturn(messageCreateAction)
-                .when(messageChannelUnion)
+        doReturn(webhookMessageCreateAction)
+                .when(interactionHook)
                 .sendMessageEmbeds(any(), any(MessageEmbed[].class));
         memeCommand = new MemeCommand();
     }
@@ -81,8 +81,7 @@ class MemeCommandTest implements CommandTest {
         memeCommand.handle(commandContext, httpClient, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
-        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
+        verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
     }
 
     @Test
@@ -110,8 +109,7 @@ class MemeCommandTest implements CommandTest {
         memeCommand.handle(commandContext, httpClient, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
-        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
+        verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
     }
 
     @Test

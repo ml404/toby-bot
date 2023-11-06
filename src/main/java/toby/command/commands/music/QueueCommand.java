@@ -14,8 +14,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class QueueCommand implements IMusicCommand {
 
@@ -26,7 +25,6 @@ public class QueueCommand implements IMusicCommand {
 
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final BlockingQueue<AudioTrack> queue = instance.getMusicManager(ctx.getGuild()).getScheduler().getQueue();
@@ -37,7 +35,7 @@ public class QueueCommand implements IMusicCommand {
         }
 
         if (queue.isEmpty()) {
-            event.getHook().sendMessage("The queue is currently empty").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("The queue is currently empty").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
@@ -66,7 +64,7 @@ public class QueueCommand implements IMusicCommand {
                     .addContent("` more...");
         }
 
-        messageAction.setEphemeral(true).queue(getConsumer(deleteDelay));
+        messageAction.setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public static String formatTime(long timeInMillis) {

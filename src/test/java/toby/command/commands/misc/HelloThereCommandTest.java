@@ -51,7 +51,6 @@ class HelloThereCommandTest implements CommandTest {
         command.handle(new CommandContext(event), requestingUserDto, 0);
 
         verify(interactionHook, times(1)).sendMessage("General Kenobi.");
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -72,7 +71,6 @@ class HelloThereCommandTest implements CommandTest {
         command.handle(new CommandContext(event), requestingUserDto, 0);
 
         verify(interactionHook, times(1)).sendMessage("Hello.");
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -89,7 +87,6 @@ class HelloThereCommandTest implements CommandTest {
         command.handle(new CommandContext(event), requestingUserDto, 0);
 
         verify(interactionHook, times(1)).sendMessage("I have a bad understanding of time, let me know what the date is so I can greet you appropriately");
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -109,6 +106,5 @@ class HelloThereCommandTest implements CommandTest {
         command.handle(new CommandContext(event), requestingUserDto, 0);
 
         verify(interactionHook, times(1)).sendMessageFormat("I don't recognise the format of the date you gave me, please use this format %s", "yyyy/MM/dd");
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 }

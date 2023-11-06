@@ -14,8 +14,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 
 public class HelloThereCommand implements IMiscCommand {
@@ -30,7 +29,6 @@ public class HelloThereCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         List <OptionMapping> args = ctx.getEvent().getOptions();
@@ -41,17 +39,17 @@ public class HelloThereCommand implements IMiscCommand {
         LocalDate EP3Date = LocalDate.parse("2005/05/19", dateTimeFormatter);
 
         if (args.isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else
             try {
                 LocalDate dateGiven = LocalDate.parse(Optional.ofNullable(event.getOption(DATE)).map(OptionMapping::getAsString).orElse(LocalDate.now().toString()), dateTimeFormatter);
                 if (dateGiven.isBefore(EP3Date)) {
-                    event.getHook().sendMessage("Hello.").queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessage("Hello.").queue(invokeDeleteOnMessageResponse(deleteDelay));
                 } else {
-                    event.getHook().sendMessage("General Kenobi.").queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessage("General Kenobi.").queue(invokeDeleteOnMessageResponse(deleteDelay));
                 }
             } catch (DateTimeParseException e) {
-                event.getHook().sendMessageFormat("I don't recognise the format of the date you gave me, please use this format %s", dateformat).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("I don't recognise the format of the date you gave me, please use this format %s", dateformat).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
     }

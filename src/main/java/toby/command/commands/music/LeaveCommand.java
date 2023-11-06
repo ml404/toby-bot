@@ -14,8 +14,7 @@ import toby.jpa.service.IConfigService;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class LeaveCommand implements IMusicCommand {
     private final IConfigService configService;
@@ -31,7 +30,6 @@ public class LeaveCommand implements IMusicCommand {
 
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member self = ctx.getSelfMember();
@@ -62,7 +60,7 @@ public class LeaveCommand implements IMusicCommand {
             musicManager.getAudioPlayer().stopTrack();
             musicManager.getAudioPlayer().setVolume(defaultVolume);
             audioManager.closeAudioConnection();
-            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else {
             IMusicCommand.sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }
@@ -71,7 +69,7 @@ public class LeaveCommand implements IMusicCommand {
 
     private static boolean isInvalidChannelStateForCommand(Integer deleteDelay, SlashCommandInteractionEvent event, GuildVoiceState selfVoiceState) {
         if (!selfVoiceState.inAudioChannel()) {
-            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("I'm not in a voice channel, somebody shoot this guy").queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
         return false;

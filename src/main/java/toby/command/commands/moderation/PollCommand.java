@@ -15,8 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class PollCommand implements IModerationCommand {
 
@@ -28,13 +27,12 @@ public class PollCommand implements IModerationCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
         InteractionHook hook = event.getHook();
         event.deferReply().queue();
-        deleteAfter(hook, deleteDelay);
         Optional<String> choiceOptional = Optional.ofNullable(event.getOption(CHOICES)).map(OptionMapping::getAsString);
         if (choiceOptional.isPresent()) {
             String question = Optional.ofNullable(event.getOption(QUESTION)).map(OptionMapping::getAsString).orElse("Poll");
             List<String> pollArgs = choiceOptional.map(s -> List.of(s.split(","))).orElse(Collections.emptyList());
             if (pollArgs.size() > 10) {
-                hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(getConsumer(deleteDelay));
+                hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
             List<String> emojiList = List.of("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟");
@@ -48,7 +46,7 @@ public class PollCommand implements IModerationCommand {
                 }
             });
         } else {
-            hook.sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+            hook.sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 

@@ -14,8 +14,7 @@ import toby.jpa.service.IUserService;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.UserDtoHelper.userAdjustmentValidation;
 import static toby.jpa.dto.UserDto.Permissions.*;
 
@@ -31,7 +30,6 @@ public class AdjustUserCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
@@ -48,9 +46,9 @@ public class AdjustUserCommand implements IModerationCommand {
                 boolean requesterCanAdjustPermissions = userAdjustmentValidation(requestingUserDto, targetUserDto) || member.isOwner();
                 if (requesterCanAdjustPermissions && isSameGuild) {
                     validateArgumentsAndUpdateUser(event, targetUserDto, member.isOwner(), deleteDelay);
-                    event.getHook().sendMessageFormat("Updated user %s's permissions", targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessageFormat("Updated user %s's permissions", targetMember.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 } else
-                    event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getEffectiveName(), targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
+                    event.getHook().sendMessageFormat("User '%s' is not allowed to adjust the permissions of user '%s'.", member.getEffectiveName(), targetMember.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
 
             } else {
                 createNewUser(event, targetMember, deleteDelay);
@@ -64,7 +62,7 @@ public class AdjustUserCommand implements IModerationCommand {
         Optional<String> permissionOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString);
 
         if (permissionOptional.isEmpty()) {
-            event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
         switch (UserDto.Permissions.valueOf(permissionOptional.get().toUpperCase())) {
@@ -85,23 +83,23 @@ public class AdjustUserCommand implements IModerationCommand {
         newDto.setDiscordId(targetMember.getIdLong());
         newDto.setGuildId(targetMember.getGuild().getIdLong());
         userService.createNewUser(newDto);
-        event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getEffectiveName()).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat("User %s's permissions did not exist in this server's database, they have now been created", targetMember.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     private List<Member> channelAndArgumentValidation(SlashCommandInteractionEvent event, UserDto requestingUserDto, Member member, Member guildOwner, int deleteDelay) {
         if (!member.isOwner() && !requestingUserDto.isSuperUser()) {
-            event.getHook().sendMessage(getErrorMessage(guildOwner.getEffectiveName())).setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(getErrorMessage(guildOwner.getEffectiveName())).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return null;
         }
 
         Optional<List<Member>> mentionedMembersOptional = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers);
         if (mentionedMembersOptional.isEmpty()) {
-            event.getHook().sendMessage("You must mention 1 or more Users to adjust permissions of").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to adjust permissions of").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return null;
         }
 
         if (Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString).isEmpty()) {
-            event.getHook().sendMessage("You must mention a permission to adjust of the user you've mentioned.").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You must mention a permission to adjust of the user you've mentioned.").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return null;
         }
         return mentionedMembersOptional.get();

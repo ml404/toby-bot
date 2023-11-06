@@ -13,8 +13,7 @@ import toby.lavaplayer.PlayerManager;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
 
 
@@ -31,13 +30,12 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         if (requestingUserDto.hasDigPermission()) {
             Optional<String> linkOptional = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString);
             if (linkOptional.isEmpty()) {
-                event.getHook().sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
@@ -72,7 +70,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override

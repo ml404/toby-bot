@@ -35,7 +35,6 @@ class LoopCommandTest implements MusicCommandTest {
         loopCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessageFormat(eq("The Player has been set to **%s**"), eq("looping"));
         verify(trackScheduler, times(1)).setLooping(true);
     }
@@ -53,7 +52,6 @@ class LoopCommandTest implements MusicCommandTest {
         loopCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessageFormat(eq("The Player has been set to **%s**"), eq("not looping"));
         verify(trackScheduler, times(1)).setLooping(false);
     }

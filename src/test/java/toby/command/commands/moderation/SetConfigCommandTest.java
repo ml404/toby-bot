@@ -52,7 +52,6 @@ class SetConfigCommandTest implements CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(configService, times(0)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(0)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessage(eq("This is currently reserved for the owner of the server only, this may change in future"));
@@ -74,7 +73,6 @@ class SetConfigCommandTest implements CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(configService, times(1)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(1)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default volume to '%s'"), eq(20));
@@ -98,7 +96,6 @@ class SetConfigCommandTest implements CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(configService, times(1)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(1)).updateConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default volume to '%s'"), eq(20));
@@ -120,7 +117,6 @@ class SetConfigCommandTest implements CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(configService, times(1)).getConfigByName(DELETE_DELAY.getConfigValue(), "1");
         verify(configService, times(1)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default delete message delay for TobyBot music messages to '%d' seconds"), eq(20));
@@ -147,7 +143,6 @@ class SetConfigCommandTest implements CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(configService, times(1)).getConfigByName(DELETE_DELAY.getConfigValue(), "1");
         verify(configService, times(1)).getConfigByName(VOLUME.getConfigValue(), "1");
         verify(configService, times(2)).createNewConfig(any(ConfigDto.class));
@@ -173,7 +168,6 @@ class SetConfigCommandTest implements CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(configService, times(1)).getConfigByName(MOVE.getConfigValue(), "1");
         verify(configService, times(1)).createNewConfig(any(ConfigDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Set default move channel to '%s'"), eq("Channel Name"));

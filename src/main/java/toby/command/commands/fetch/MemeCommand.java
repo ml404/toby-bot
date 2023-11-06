@@ -26,8 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class MemeCommand implements IFetchCommand {
 
@@ -47,7 +46,6 @@ public class MemeCommand implements IFetchCommand {
     public void handle(CommandContext ctx, HttpClient httpClient, UserDto requestingUserDto, Integer deleteDelay) throws IOException {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
         if (!requestingUserDto.hasMemePermission()) {
             sendErrorMessage(event, deleteDelay);
             return;
@@ -56,10 +54,10 @@ public class MemeCommand implements IFetchCommand {
         if (result.subredditArgOptional().isPresent()) {
             String subredditArg = result.subredditArgOptional().get();
             if (subredditArg.equals("sneakybackgroundfeet")) {
-                event.getChannel().sendMessageFormat("Don't talk to me.").queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("Don't talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay));
             } else {
                 MessageEmbed embed = fetchRedditPost(result, event, deleteDelay, httpClient);
-                event.getChannel().sendMessageEmbeds(embed).queue();
+                event.getHook().sendMessageEmbeds(embed).queue();
             }
         }
     }
@@ -95,9 +93,9 @@ public class MemeCommand implements IFetchCommand {
                     .getAsJsonObject("data");
             RedditAPIDto redditAPIDto = gson.fromJson(meme.toString(), RedditAPIDto.class);
             if (redditAPIDto.isNsfw()) {
-                event.getHook().sendMessageFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", event.getMember()).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy", event.getMember()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             } else if (redditAPIDto.getVideo()) {
-                event.getHook().sendMessageFormat("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("I pulled back a video, whoops. Try again maybe? Or not, up to you.").queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             String title = meme.get("title").getAsString();

@@ -19,8 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class TeamCommand implements IMiscCommand {
 
@@ -34,13 +33,12 @@ public class TeamCommand implements IMiscCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         cleanupTemporaryChannels(event.getGuild().getChannels());
-        deleteAfter(event.getHook(), deleteDelay);
         List<OptionMapping> args = event.getOptions();
         if (Optional.ofNullable(event.getOption(CLEANUP)).map(OptionMapping::getAsBoolean).orElse(false)) {
             return;
         }
         if (args.isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
         //Shuffle gives an NPE with default return of message.getMentionedMembers()
@@ -58,11 +56,11 @@ public class TeamCommand implements IMiscCommand {
             VoiceChannel createdVoiceChannel = voiceChannel.setBitrate(guild.getMaxBitrate()).complete();
             teams.get(i).forEach(target -> guild.moveVoiceMember(target, createdVoiceChannel)
                     .queue(
-                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), createdVoiceChannel.getName()).queue(getConsumer(deleteDelay)),
-                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(getConsumer(deleteDelay))
+                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), createdVoiceChannel.getName()).queue(invokeDeleteOnMessageResponse(deleteDelay)),
+                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(invokeDeleteOnMessageResponse(deleteDelay))
                     ));
         }
-        event.getHook().sendMessage(sb.toString()).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(sb.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     private void cleanupTemporaryChannels(List<GuildChannel> channels) {

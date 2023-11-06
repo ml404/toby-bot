@@ -2,12 +2,11 @@ package toby.command.commands.music;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 
 public class StopCommand implements IMusicCommand {
@@ -18,7 +17,6 @@ public class StopCommand implements IMusicCommand {
 
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
@@ -28,7 +26,7 @@ public class StopCommand implements IMusicCommand {
             musicManager.getScheduler().getQueue().clear();
             musicManager.getScheduler().setLooping(false);
             musicManager.getAudioPlayer().setPaused(false);
-            event.getHook().sendMessage("The player has been stopped and the queue has been cleared").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else {
             IMusicCommand.sendDeniedStoppableMessage(event, musicManager, deleteDelay);
         }

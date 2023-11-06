@@ -35,7 +35,6 @@ class ResumeCommandTest implements MusicCommandTest {
         resumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getHook(), times(1)).sendMessage("Resuming: `");
         verify(webhookMessageCreateAction, times(1)).addContent("Title");
         verify(webhookMessageCreateAction, times(1)).addContent("` by `");

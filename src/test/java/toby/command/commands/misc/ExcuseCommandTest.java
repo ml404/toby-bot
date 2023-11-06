@@ -60,7 +60,6 @@ public class ExcuseCommandTest implements CommandTest {
 
         // Assert
         verify(interactionHook, times(1)).sendMessageFormat(eq("Excuse #%d: '%s' - %s."), eq(excuseDto.getId()), eq(excuseDto.getExcuse()), eq(excuseDto.getAuthor()));
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -87,7 +86,6 @@ public class ExcuseCommandTest implements CommandTest {
 
         // Assert
         verify(interactionHook, times(1)).sendMessage(anyString());
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -109,7 +107,6 @@ public class ExcuseCommandTest implements CommandTest {
 
         // Assert
         verify(interactionHook, times(1)).sendMessage(eq("There are no approved excuses, consider submitting some."));
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -136,8 +133,7 @@ public class ExcuseCommandTest implements CommandTest {
         verify(excuseService, times(1)).createNewExcuse(eq(new ExcuseDto(null, 1L, "UserName", "Excuse 1", false)));
         // send a message that your excuse exists in pending form
         verify(interactionHook, times(1)).sendMessageFormat(anyString(), eq(excuseToCreate.getExcuse()), eq(excuseToCreate.getAuthor()), eq(excuseToCreate.getId()));
-        // delete the original message
-        verify(interactionHook, times(1)).deleteOriginal();
+        
     }
 
     @Test
@@ -168,8 +164,7 @@ public class ExcuseCommandTest implements CommandTest {
         verify(excuseService, times(0)).createNewExcuse(eq(new ExcuseDto(null, 1L, "UserName", "Excuse 1", false)));
         // send a message that your excuse exists in pending form
         verify(interactionHook, times(1)).sendMessage(eq("I've heard that one before, keep up."));
-        // delete the original message
-        verify(interactionHook, times(1)).deleteOriginal();
+        
     }
 
     @Test
@@ -201,8 +196,6 @@ public class ExcuseCommandTest implements CommandTest {
         verify(excuseService, times(1)).updateExcuse(eq(new ExcuseDto(1, 1L, "UserName", "Excuse 1", true)));
         // send a message that your excuse exists in pending form
         verify(interactionHook, times(1)).sendMessageFormat(anyString(), eq(excuseToBeReturnedByUpdate.getExcuse()));
-        // delete the original message
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -233,8 +226,6 @@ public class ExcuseCommandTest implements CommandTest {
         verify(excuseService, times(0)).getExcuseById(eq(excuseToCreate.getId()));
         //don't approve
         verify(excuseService, times(0)).updateExcuse(eq(new ExcuseDto(1, 1L, "UserName", "Excuse 1", true)));
-        // delete the original message
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
 
@@ -262,7 +253,6 @@ public class ExcuseCommandTest implements CommandTest {
 
         // Assert
         verify(interactionHook, times(1)).sendMessage(anyString());
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -284,7 +274,6 @@ public class ExcuseCommandTest implements CommandTest {
 
         // Assert
         verify(interactionHook, times(1)).sendMessage(eq("There are no excuses pending approval, consider submitting some."));
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test
@@ -314,8 +303,7 @@ public class ExcuseCommandTest implements CommandTest {
         verify(excuseService, times(1)).deleteExcuseById(eq(1));
         // post update about deleting entry
         verify(interactionHook, times(1)).sendMessageFormat(anyString(), eq(excuseToBeReturnedByUpdate.getId()));
-        // delete the original message
-        verify(interactionHook, times(1)).deleteOriginal();
+        
     }
 
     @Test
@@ -347,8 +335,6 @@ public class ExcuseCommandTest implements CommandTest {
         verify(excuseService, times(0)).deleteExcuseById(eq(1));
         // post error message
         verify(interactionHook, times(1)).sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"));
-        // delete the original message
-        verify(interactionHook, times(1)).deleteOriginal();
     }
 
     @Test

@@ -71,7 +71,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(1)).createNewMusicFile(any(MusicDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Successfully set %s's intro song to '%s' with volume '%d'"), eq("UserName"), eq("https://www.youtube.com/"), eq(20));
 
@@ -95,7 +94,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(1)).updateMusicFile(any(MusicDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Successfully updated %s's intro song to '%s' with volume '%d'"), eq("UserName"), eq("https://www.youtube.com/"), eq(20));
 
@@ -116,7 +114,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(1)).createNewMusicFile(any(MusicDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Successfully set %s's intro song to '%s' with volume '%d'"), eq("Another Username"), eq("https://www.youtube.com/"), eq(20));
 
@@ -145,7 +142,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"));
 
     }
@@ -167,7 +163,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(1)).createNewMusicFile(any(MusicDto.class));
         verify(userService, times(1)).updateUser(eq(requestingUserDto));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Successfully set %s's intro song to '%s' with volume '%d'"), eq("UserName"), eq("filename"), eq(20));
@@ -192,7 +187,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(userService, times(1)).createNewUser(any(UserDto.class));
         verify(musicFileService, times(1)).createNewMusicFile(any(MusicDto.class));
         verify(userService, times(1)).updateUser(eq(mentionedUserDto));
@@ -218,7 +212,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(1)).updateMusicFile(any(MusicDto.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Successfully updated %s's intro song to '%s' with volume '%d'"), eq("UserName"), eq("filename"), eq(20));
 
@@ -241,7 +234,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(0)).updateMusicFile(any(MusicDto.class));
         verify(interactionHook, times(0)).sendMessageFormat(eq("Successfully updated %s's intro song to '%s' with volume '%d'"), eq("UserName"), eq("filename"), eq(20));
         verify(interactionHook, times(1)).sendMessage(eq("Please use mp3 files only"));
@@ -265,7 +257,6 @@ class IntroSongCommandTest implements MusicCommandTest {
         introSongCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(musicFileService, times(0)).updateMusicFile(any(MusicDto.class));
         verify(interactionHook, times(0)).sendMessageFormat(eq("Successfully updated %s's intro song to '%s' with volume '%d'"), eq("UserName"), eq("filename"), eq(20));
         verify(interactionHook, times(1)).sendMessage(eq("Please keep the file size under 400kb"));

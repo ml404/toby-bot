@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static toby.command.ICommand.*;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class HelpCommand implements IMiscCommand {
 
@@ -26,7 +26,6 @@ public class HelpCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
 
         List<OptionMapping> args = ctx.getEvent().getOptions();
         SlashCommandInteractionEvent event = ctx.getEvent();
@@ -47,7 +46,7 @@ public class HelpCommand implements IMiscCommand {
             manager.getFetchCommands().forEach(commandConsumer);
 
 
-            event.getHook().sendMessageFormat(builder.toString()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat(builder.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
@@ -55,11 +54,11 @@ public class HelpCommand implements IMiscCommand {
         Optional<ICommand> command = searchOptional.map(manager::getCommand);
 
         if (command.isEmpty()) {
-            event.getHook().sendMessage("Nothing found for command '%s" + searchOptional.get()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("Nothing found for command '%s" + searchOptional.get()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
-        event.getHook().sendMessage(command.get().getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(command.get().getDescription()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override

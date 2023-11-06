@@ -36,7 +36,6 @@ class PauseCommandTest implements MusicCommandTest {
         pauseCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getChannel(), times(1)).sendMessage("Pausing: `");
         verify(messageCreateAction, times(1)).addContent("Title");
         verify(messageCreateAction, times(1)).addContent("` by `");
@@ -56,7 +55,6 @@ class PauseCommandTest implements MusicCommandTest {
         pauseCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessageFormat(eq("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!"), eq("00:00:01"), eq("00:00:01"));
     }
 
@@ -75,7 +73,6 @@ class PauseCommandTest implements MusicCommandTest {
         pauseCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("Our daddy taught us not to be ashamed of our playlists"));
     }
 }

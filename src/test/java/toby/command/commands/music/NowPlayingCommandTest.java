@@ -35,7 +35,6 @@ class NowPlayingCommandTest implements MusicCommandTest {
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage("There is no track playing currently");
 
     }
@@ -52,7 +51,6 @@ class NowPlayingCommandTest implements MusicCommandTest {
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name");
 
     }
@@ -67,7 +65,6 @@ class NowPlayingCommandTest implements MusicCommandTest {
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) "));
     }
 
@@ -85,7 +82,6 @@ class NowPlayingCommandTest implements MusicCommandTest {
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) "));
     }
 }

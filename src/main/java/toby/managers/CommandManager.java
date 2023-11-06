@@ -11,10 +11,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.command.commands.fetch.DbdRandomKillerCommand;
-import toby.command.commands.fetch.IFetchCommand;
-import toby.command.commands.fetch.Kf2RandomMapCommand;
-import toby.command.commands.fetch.MemeCommand;
+import toby.command.commands.fetch.*;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
@@ -27,7 +24,7 @@ import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -57,6 +54,7 @@ public class CommandManager {
         addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
+        addCommand(new DnDCommand());
         addCommand(new Kf2RandomMapCommand(cache));
         addCommand(new DbdRandomKillerCommand(cache));
         addCommand(new HelloThereCommand(configService));
@@ -172,7 +170,7 @@ public class CommandManager {
         int awardedSocialCredit = socialCredit * 5;
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
-        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(getConsumer(deleteDelay));
+        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public void handle(ButtonInteractionEvent event) {
@@ -205,7 +203,7 @@ public class CommandManager {
                 if (cmd.getName().equals("roll")) {
                     RollCommand rollCommand = (RollCommand) cmd;
                     String[] optionArray = options.split(",");
-                    rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(getConsumer(deleteDelay));
+                    rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 }
             }
             CommandContext commandContext = new CommandContext(event);
