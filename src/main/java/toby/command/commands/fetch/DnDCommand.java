@@ -71,7 +71,7 @@ public class DnDCommand implements IFetchCommand {
         String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
         QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
         if (queryResult != null && queryResult.count() > 0) {
-            StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
+            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD%s", type)).setPlaceholder("Choose an option");
             queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
             hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
                     .addActionRow(builder.build())
@@ -185,10 +185,6 @@ public class DnDCommand implements IFetchCommand {
         if (information.desc() != null && !information.desc().isEmpty()) {
             embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
 
-        }
-
-        if (information.url() != null) {
-            embedBuilder.setUrl("https://www.dndbeyond.com/" + information.url().replace("/api/", ""));
         }
 
         embedBuilder.setColor(0x42f5a7);
