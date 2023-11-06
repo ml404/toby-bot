@@ -41,7 +41,7 @@ public class DnDCommand implements IFetchCommand {
             case "spells" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 EmbedBuilder spellEmbed = createSpellEmbed(spell);
-                event.getInteraction().getChannel().sendMessageEmbeds(spellEmbed.build()).queue();
+                event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
             }
         }
     }

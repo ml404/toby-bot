@@ -42,7 +42,10 @@ public class BotMain {
 
         JDABuilder builder = JDABuilder.createDefault(discordToken,
                         GatewayIntent.MESSAGE_CONTENT,
+                        GatewayIntent.GUILD_MESSAGE_TYPING,
                         GatewayIntent.GUILD_MEMBERS,
+                        GatewayIntent.GUILD_WEBHOOKS,
+                        GatewayIntent.GUILD_PRESENCES,
                         GatewayIntent.GUILD_MESSAGES,
                         GatewayIntent.GUILD_MESSAGE_REACTIONS,
                         GatewayIntent.GUILD_VOICE_STATES,
