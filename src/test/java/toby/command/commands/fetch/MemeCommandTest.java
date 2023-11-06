@@ -81,7 +81,6 @@ class MemeCommandTest implements CommandTest {
         memeCommand.handle(commandContext, httpClient, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
     }
 
@@ -110,7 +109,6 @@ class MemeCommandTest implements CommandTest {
         memeCommand.handle(commandContext, httpClient, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
     }
 

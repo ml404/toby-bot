@@ -10,7 +10,6 @@ import toby.jpa.dto.UserDto;
 import java.io.IOException;
 import java.util.List;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class DbdRandomKillerCommand implements IFetchCommand {
@@ -28,7 +27,6 @@ public class DbdRandomKillerCommand implements IFetchCommand {
     @Override
     @SuppressWarnings("unchecked")
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         try {

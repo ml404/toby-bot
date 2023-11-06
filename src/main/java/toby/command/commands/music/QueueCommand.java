@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class QueueCommand implements IMusicCommand {
@@ -26,7 +25,6 @@ public class QueueCommand implements IMusicCommand {
 
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final BlockingQueue<AudioTrack> queue = instance.getMusicManager(ctx.getGuild()).getScheduler().getQueue();

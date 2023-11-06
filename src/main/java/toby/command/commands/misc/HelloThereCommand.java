@@ -14,7 +14,6 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 
@@ -30,7 +29,6 @@ public class HelloThereCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         List <OptionMapping> args = ctx.getEvent().getOptions();

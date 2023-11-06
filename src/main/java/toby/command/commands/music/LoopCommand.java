@@ -8,8 +8,6 @@ import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 import toby.lavaplayer.TrackScheduler;
 
-import static toby.command.ICommand.deleteAfter;
-
 public class LoopCommand implements IMusicCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
@@ -19,7 +17,6 @@ public class LoopCommand implements IMusicCommand {
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         final SlashCommandInteractionEvent event = ctx.getEvent();
-        deleteAfter(event.getHook(), deleteDelay);
         event.deferReply().queue();
         if (!requestingUserDto.hasMusicPermission()) {
             sendErrorMessage(event, deleteDelay);

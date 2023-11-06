@@ -14,7 +14,6 @@ import toby.jpa.dto.UserDto;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class KickCommand implements IModerationCommand {
@@ -23,7 +22,6 @@ public class KickCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Guild guild = event.getGuild();

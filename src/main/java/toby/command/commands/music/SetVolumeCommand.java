@@ -9,7 +9,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.emote.Emotes;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
@@ -35,7 +34,6 @@ public class SetVolumeCommand implements IMusicCommand {
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        ICommand.deleteAfter(event.getHook(), deleteDelay);
 
         if (!requestingUserDto.hasMusicPermission()) {
             sendErrorMessage(event, deleteDelay);

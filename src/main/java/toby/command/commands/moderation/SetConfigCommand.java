@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.jpa.dto.ConfigDto.Configurations.*;
 
@@ -29,7 +28,6 @@ public class SetConfigCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();

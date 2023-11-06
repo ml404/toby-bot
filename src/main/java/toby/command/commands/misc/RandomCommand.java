@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class RandomCommand implements IMiscCommand {
@@ -23,7 +22,6 @@ public class RandomCommand implements IMiscCommand {
 
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
         if (ctx.getEvent().getOptions().isEmpty()) {
             event.getHook().sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;

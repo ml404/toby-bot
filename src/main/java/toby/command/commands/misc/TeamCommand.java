@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class TeamCommand implements IMiscCommand {
@@ -34,7 +33,6 @@ public class TeamCommand implements IMiscCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         cleanupTemporaryChannels(event.getGuild().getChannels());
-        deleteAfter(event.getHook(), deleteDelay);
         List<OptionMapping> args = event.getOptions();
         if (Optional.ofNullable(event.getOption(CLEANUP)).map(OptionMapping::getAsBoolean).orElse(false)) {
             return;

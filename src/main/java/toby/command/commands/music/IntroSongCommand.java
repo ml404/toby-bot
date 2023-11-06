@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.FileUtils.readInputStreamToByteArray;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
@@ -55,7 +54,6 @@ public class IntroSongCommand implements IMusicCommand {
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
         int introVolume = calculateIntroVolume(event);
         List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         if (!requestingUserDto.isSuperUser() && !mentionedMembers.isEmpty()) {

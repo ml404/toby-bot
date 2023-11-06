@@ -47,7 +47,6 @@ public class MemeCommand implements IFetchCommand {
     public void handle(CommandContext ctx, HttpClient httpClient, UserDto requestingUserDto, Integer deleteDelay) throws IOException {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
         if (!requestingUserDto.hasMemePermission()) {
             sendErrorMessage(event, deleteDelay);
             return;

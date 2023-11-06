@@ -45,7 +45,6 @@ class LeaveCommandTest implements MusicCommandTest {
         command.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(event.getHook(), times(1)).sendMessageFormat(eq("Disconnecting from `\uD83D\uDD0A %s`"), eq("Channel Name"));
         verify(musicManager.getScheduler(), times(1)).setLooping(false);
         verify(musicManager.getScheduler().getQueue(), times(1)).clear();

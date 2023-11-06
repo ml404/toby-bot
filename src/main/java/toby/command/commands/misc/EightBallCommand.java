@@ -7,7 +7,6 @@ import toby.jpa.service.IUserService;
 
 import java.util.Random;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class EightBallCommand implements IMiscCommand {
@@ -25,7 +24,6 @@ public class EightBallCommand implements IMiscCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
 
         Random r = new Random();
 

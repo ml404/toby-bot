@@ -14,7 +14,6 @@ import toby.jpa.service.IUserService;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.UserDtoHelper.userAdjustmentValidation;
 import static toby.jpa.dto.UserDto.Permissions.*;
@@ -31,7 +30,6 @@ public class AdjustUserCommand implements IModerationCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();

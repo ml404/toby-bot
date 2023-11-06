@@ -42,7 +42,6 @@ class SetVolumeCommandTest implements MusicCommandTest {
         setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(audioPlayer, times(1)).setVolume(volumeArg);
         verify(interactionHook, times(1)).sendMessageFormat(eq("Changing volume from '%s' to '%s' \uD83D\uDD0A"), eq(oldVolume), eq(volumeArg));
     }
@@ -64,7 +63,6 @@ class SetVolumeCommandTest implements MusicCommandTest {
         setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(audioPlayer, times(0)).setVolume(volumeArg);
         verify(interactionHook, times(1)).sendMessageFormat(eq("New volume and old volume are the same value, somebody shoot %s"), eq("Effective Name"));
     }
@@ -86,7 +84,6 @@ class SetVolumeCommandTest implements MusicCommandTest {
         setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(audioPlayer, times(0)).setVolume(volumeArg);
         verify(interactionHook, times(1)).sendMessage(eq("Set the volume of the audio player for the server to a percent value (between 1 and 100)"));
     }
@@ -108,7 +105,6 @@ class SetVolumeCommandTest implements MusicCommandTest {
         setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(audioPlayer, times(0)).setVolume(volumeArg);
         verify(interactionHook, times(1)).sendMessage(eq("Set the volume of the audio player for the server to a percent value (between 1 and 100)"));
     }
@@ -133,7 +129,6 @@ class SetVolumeCommandTest implements MusicCommandTest {
         setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(audioPlayer, times(0)).setVolume(volumeArg);
         verify(interactionHook, times(1)).sendMessageFormat(eq("You aren't allowed to change the volume kid %s"), eq(tobyEmote));
     }
@@ -158,7 +153,6 @@ class SetVolumeCommandTest implements MusicCommandTest {
         setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(audioPlayer, times(0)).setVolume(volumeArg);
         verify(interactionHook, times(1)).sendMessageFormat(eq("You aren't allowed to change the volume kid %s"), eq(tobyEmote));
     }

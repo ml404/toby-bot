@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static toby.command.ICommand.*;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class HelpCommand implements IMiscCommand {
 
@@ -26,7 +26,6 @@ public class HelpCommand implements IMiscCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
 
         List<OptionMapping> args = ctx.getEvent().getOptions();
         SlashCommandInteractionEvent event = ctx.getEvent();

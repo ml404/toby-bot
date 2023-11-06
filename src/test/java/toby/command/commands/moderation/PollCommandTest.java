@@ -78,7 +78,6 @@ class PollCommandTest implements CommandTest {
         pollCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(messageChannelUnion, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(interactionHook, times(1)).sendMessage(eq("Start a poll for every user in the server who has read permission in the channel you're posting to"));
     }
@@ -95,7 +94,6 @@ class PollCommandTest implements CommandTest {
         pollCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(messageChannelUnion, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(interactionHook, times(1)).sendMessageFormat(eq("Please keep the poll size under 10 items, or else %s."), eq(tobyEmote));
     }

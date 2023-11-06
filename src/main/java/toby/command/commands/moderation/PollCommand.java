@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class PollCommand implements IModerationCommand {
@@ -28,7 +27,6 @@ public class PollCommand implements IModerationCommand {
         SlashCommandInteractionEvent event = ctx.getEvent();
         InteractionHook hook = event.getHook();
         event.deferReply().queue();
-        deleteAfter(hook, deleteDelay);
         Optional<String> choiceOptional = Optional.ofNullable(event.getOption(CHOICES)).map(OptionMapping::getAsString);
         if (choiceOptional.isPresent()) {
             String question = Optional.ofNullable(event.getOption(QUESTION)).map(OptionMapping::getAsString).orElse("Poll");

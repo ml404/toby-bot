@@ -34,7 +34,6 @@ class StopCommandTest implements MusicCommandTest {
         stopCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("The player has been stopped and the queue has been cleared"));
     }
 
@@ -48,7 +47,6 @@ class StopCommandTest implements MusicCommandTest {
         stopCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("I need to be in a voice channel for this to work"));
     }
 
@@ -62,7 +60,6 @@ class StopCommandTest implements MusicCommandTest {
         stopCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("You need to be in a voice channel for this command to work"));
     }
 
@@ -76,7 +73,6 @@ class StopCommandTest implements MusicCommandTest {
         stopCommand.handle(commandContext, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).deleteOriginal();
         verify(interactionHook, times(1)).sendMessage(eq("You need to be in the same voice channel as me for this to work"));
     }
 }

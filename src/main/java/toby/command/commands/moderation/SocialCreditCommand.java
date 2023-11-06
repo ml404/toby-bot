@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Map.Entry.comparingByValue;
 import static java.util.stream.Collectors.toMap;
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class SocialCreditCommand implements IModerationCommand {
@@ -34,7 +33,6 @@ public class SocialCreditCommand implements IModerationCommand {
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
-        deleteAfter(event.getHook(), deleteDelay);
         final Member member = ctx.getMember();
         if (!event.getGuild().isLoaded()) event.getGuild().loadMembers();
         if (Optional.ofNullable(event.getOption(LEADERBOARD)).map(OptionMapping::getAsBoolean).orElse(false)) {

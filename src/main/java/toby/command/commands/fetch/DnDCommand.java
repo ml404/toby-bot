@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
+import toby.command.ICommand;
 import toby.dto.web.dnd.spell.ClassInfo;
 import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.Spell;
@@ -26,12 +27,12 @@ public class DnDCommand implements IFetchCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleWithHttpObjects(ctx, requestingUserDto, new HttpHelper());
+        handleWithHttpObjects(ctx, requestingUserDto, new HttpHelper(), deleteDelay);
 
     }
 
     @VisibleForTesting
-    public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper) {
+    public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         String type = event.getOption(TYPE).getAsString();
@@ -44,7 +45,7 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder spellEmbed = createSpellEmbed(spell);
                     event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
                 } else
-                    event.getHook().sendMessageFormat("Sorry, nothing was returned for the spell '%s'", query).queue();
+                    event.getHook().sendMessageFormat("Sorry, nothing was returned for the spell '%s'", query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
             }
         }
     }

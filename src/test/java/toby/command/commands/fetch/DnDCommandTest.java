@@ -46,7 +46,7 @@ class DnDCommandTest implements CommandTest {
 
 
         //Act
-        command.handleWithHttpObjects(commandContext, requestingUserDto, helper);
+        command.handleWithHttpObjects(commandContext, requestingUserDto, helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");
@@ -71,7 +71,7 @@ class DnDCommandTest implements CommandTest {
 
 
         //Act
-        command.handleWithHttpObjects(commandContext, requestingUserDto, helper);
+        command.handleWithHttpObjects(commandContext, requestingUserDto, helper, 0);
 
         //Assert
         verify(event, times(1)).getOption("type");

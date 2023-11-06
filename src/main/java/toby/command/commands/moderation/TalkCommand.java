@@ -7,13 +7,11 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class TalkCommand implements IModerationCommand {
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
