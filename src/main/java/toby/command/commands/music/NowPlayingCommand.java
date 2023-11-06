@@ -10,7 +10,7 @@ import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 
 public class NowPlayingCommand implements IMusicCommand {
@@ -30,7 +30,7 @@ public class NowPlayingCommand implements IMusicCommand {
             final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
             AudioTrack playingTrack = audioPlayer.getPlayingTrack();
             if (playingTrack == null) {
-                event.getHook().sendMessage("There is no track playing currently").setEphemeral(true).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessage("There is no track playing currently").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
             sendNowPlayingMessage(event, playingTrack, deleteDelay);
@@ -45,10 +45,10 @@ public class NowPlayingCommand implements IMusicCommand {
             String songPosition = QueueCommand.formatTime(position);
             String songDuration = QueueCommand.formatTime(duration);
             String nowPlaying = String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) ", info.title, info.author, songPosition, songDuration, info.uri);
-            event.getHook().sendMessage(nowPlaying).setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(nowPlaying).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else {
             String nowPlaying = String.format("Now playing `%s` by `%s` (Link: <%s>) ", info.title, info.author, info.uri);
-            event.getHook().sendMessage(nowPlaying).setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(nowPlaying).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 

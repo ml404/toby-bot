@@ -16,7 +16,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class ShuffleCommand implements IMusicCommand {
     @Override
@@ -37,12 +37,12 @@ public class ShuffleCommand implements IMusicCommand {
             TrackScheduler trackScheduler = instance.getMusicManager(guild).getScheduler();
             BlockingQueue<AudioTrack> queue = trackScheduler.getQueue();
             if (queue.size() == 0) {
-                event.getHook().sendMessage("I can't shuffle a queue that doesn't exist").queue(getConsumer(deleteDelay));
+                event.getHook().sendMessage("I can't shuffle a queue that doesn't exist").queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
             LinkedBlockingQueue<AudioTrack> shuffledAudioTracks = shuffleAudioTracks(queue);
             trackScheduler.setQueue(shuffledAudioTracks);
-            event.getHook().sendMessage("The queue has been shuffled 🦧").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("The queue has been shuffled 🦧").queue(invokeDeleteOnMessageResponse(deleteDelay));
 
         }
     }

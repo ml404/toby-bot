@@ -5,12 +5,6 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
 import toby.command.ICommand;
@@ -18,10 +12,10 @@ import toby.dto.web.dnd.spell.ClassInfo;
 import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.Spell;
 import toby.dto.web.dnd.spell.SubclassInfo;
+import toby.helpers.HttpHelper;
 import toby.helpers.JsonParser;
 import toby.jpa.dto.UserDto;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -32,32 +26,25 @@ public class DnDCommand implements IFetchCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        SlashCommandInteractionEvent event = ctx.getEvent();
-        String type = event.getOption("type").getAsString();
-        String query = event.getOption("query").getAsString();
-        handleWithHttpObjects(ctx, requestingUserDto, HttpClients.createDefault(), new HttpGet(String.format(DND_5_API_URL, type, query)), deleteDelay);
+        handleWithHttpObjects(ctx, requestingUserDto, new HttpHelper(), deleteDelay);
 
     }
 
     @VisibleForTesting
-    public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, CloseableHttpClient httpClient, HttpGet httpGet, Integer deleteDelay) {
+    public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
         String type = event.getOption("type").getAsString();
-        try (httpClient) {
-            CloseableHttpResponse response = httpClient.execute(httpGet);
-            if (response.getCode() == 200) {
-                String responseData = EntityUtils.toString(response.getEntity());
-                switch (type) {
-                    case "spell" -> {
-                        Spell spell = JsonParser.parseJSONToSpell(responseData);
-                        event.replyEmbeds(createSpellEmbed(spell)).queue(ICommand.getConsumerForHook(deleteDelay));
-                    }
-                }
+        String query = event.getOption("query").getAsString();
+        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
+        switch (type) {
+            case "spell" -> {
+                Spell spell = JsonParser.parseJSONToSpell(responseData);
+                event.replyEmbeds(createSpellEmbed(spell)).queue();
+                ICommand.deleteAfter(event.getHook(), deleteDelay);
             }
-        } catch (IOException | ParseException e) {
-            throw new RuntimeException(e);
         }
     }
+
 
     private MessageEmbed createSpellEmbed(Spell spell) {
         EmbedBuilder embedBuilder = new EmbedBuilder();

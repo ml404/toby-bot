@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class KickCommand implements IModerationCommand {
 
@@ -32,26 +32,26 @@ public class KickCommand implements IModerationCommand {
 
         Optional<List<Member>> optionalMemberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers);
         if (optionalMemberList.isEmpty()) {
-            event.getHook().sendMessage("You must mention 1 or more Users to shoot").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to shoot").queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
         optionalMemberList.get().forEach(target -> {
 
             if (!member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS)) {
-                event.getHook().sendMessageFormat("You can't kick %s", target).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("You can't kick %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
 
 
             if (!botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS)) {
-                event.getHook().sendMessageFormat("I'm not allowed to kick %s", target).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("I'm not allowed to kick %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
 
             guild.kick(target).reason("because you told me to.").queue(
-                    (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(getConsumer(deleteDelay)),
-                    (error) -> event.getHook().sendMessageFormat("Could not kick %s", error.getMessage()).queue(getConsumer(deleteDelay)));
+                    (__) -> event.getHook().sendMessage("Shot hit the mark... something about fortnite?").queue(invokeDeleteOnMessageResponse(deleteDelay)),
+                    (error) -> event.getHook().sendMessageFormat("Could not kick %s", error.getMessage()).queue(invokeDeleteOnMessageResponse(deleteDelay)));
         });
     }
 

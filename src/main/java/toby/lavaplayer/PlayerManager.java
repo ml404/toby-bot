@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class PlayerManager {
     private static PlayerManager INSTANCE;
@@ -85,7 +85,7 @@ public class PlayerManager {
                         .addContent(track.getInfo().author)
                         .addContent("`")
                         .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(getConsumer(deleteDelay));
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             @Override
@@ -99,7 +99,7 @@ public class PlayerManager {
                         .addContent("` tracks from playlist `")
                         .addContent(playlist.getName())
                         .addContent("`")
-                        .queue(getConsumer(deleteDelay));
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
 
                 for (final AudioTrack track : tracks) {
                     scheduler.queue(track, startPosition, volume);
@@ -108,12 +108,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                event.getHook().sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                event.getHook().sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("Could not play: %s", exception.getMessage()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
         };
     }
@@ -138,7 +138,7 @@ public class PlayerManager {
                         .addContent(track.getInfo().author)
                         .addContent("`")
                         .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(getConsumer(deleteDelay));
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             @Override
@@ -151,7 +151,7 @@ public class PlayerManager {
                         .addContent("` tracks from playlist `")
                         .addContent(playlist.getName())
                         .addContent("`")
-                        .queue(getConsumer(deleteDelay));
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
 
                 for (final AudioTrack track : tracks) {
                     scheduler.queue(track, startPosition, volume);
@@ -160,12 +160,12 @@ public class PlayerManager {
 
             @Override
             public void noMatches() {
-                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(getConsumer(deleteDelay));
+                channel.sendMessageFormat("Nothing found for the link '%s'", trackUrl).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             @Override
             public void loadFailed(FriendlyException exception) {
-                channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(getConsumer(deleteDelay));
+                channel.sendMessageFormat("Could not play: %s", exception.getMessage()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
         };
     }

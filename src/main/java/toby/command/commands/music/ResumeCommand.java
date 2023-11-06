@@ -9,7 +9,7 @@ import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 
 public class ResumeCommand implements IMusicCommand {
@@ -37,7 +37,7 @@ public class ResumeCommand implements IMusicCommand {
                     .addContent("` by `")
                     .addContent(track.getInfo().author)
                     .addContent("`")
-                    .queue(getConsumer(deleteDelay));
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay));
             audioPlayer.setPaused(false);
         }
     }

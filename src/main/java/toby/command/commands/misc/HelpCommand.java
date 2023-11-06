@@ -47,7 +47,7 @@ public class HelpCommand implements IMiscCommand {
             manager.getFetchCommands().forEach(commandConsumer);
 
 
-            event.getHook().sendMessageFormat(builder.toString()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat(builder.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
@@ -55,11 +55,11 @@ public class HelpCommand implements IMiscCommand {
         Optional<ICommand> command = searchOptional.map(manager::getCommand);
 
         if (command.isEmpty()) {
-            event.getHook().sendMessage("Nothing found for command '%s" + searchOptional.get()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("Nothing found for command '%s" + searchOptional.get()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
-        event.getHook().sendMessage(command.get().getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(command.get().getDescription()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override

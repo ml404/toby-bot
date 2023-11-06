@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class ChCommand implements IMiscCommand {
 
@@ -41,7 +41,7 @@ public class ChCommand implements IMiscCommand {
                 }
         ).collect(Collectors.joining(" "));
 
-        event.getHook().sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
 

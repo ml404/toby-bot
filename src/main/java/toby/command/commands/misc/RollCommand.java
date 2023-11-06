@@ -20,7 +20,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class RollCommand implements IMiscCommand {
 
@@ -39,7 +39,7 @@ public class RollCommand implements IMiscCommand {
         Integer diceToRollInput = diceToRollOptional.orElse(1);
         int diceToRoll = (diceToRollInput < 1) ? 1 : diceToRollInput;
         int modifier = diceModifierOptional.orElse(0);
-        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(getConsumer(deleteDelay));
+        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public WebhookMessageCreateAction<Message> handleDiceRoll(IReplyCallback event, int diceValue, int diceToRoll, int modifier) {

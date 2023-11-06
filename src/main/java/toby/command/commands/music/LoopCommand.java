@@ -31,7 +31,7 @@ public class LoopCommand implements IMusicCommand {
         boolean newIsRepeating = !scheduler.isLooping();
         scheduler.setLooping(newIsRepeating);
 
-        event.getHook().sendMessageFormat("The Player has been set to **%s**", newIsRepeating ? "looping" : "not looping").queue(ICommand.getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat("The Player has been set to **%s**", newIsRepeating ? "looping" : "not looping").queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override

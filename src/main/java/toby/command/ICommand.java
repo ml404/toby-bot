@@ -43,11 +43,11 @@ public interface ICommand {
 
 
     @NotNull
-    static Consumer<Message> getConsumer(Integer deleteDelay) {
+    static Consumer<Message> invokeDeleteOnMessageResponse(Integer deleteDelay) {
         return message -> ICommand.deleteAfter(message, deleteDelay);
     }
     @NotNull
-    static Consumer<InteractionHook> getConsumerForHook(Integer deleteDelay) {
+    static Consumer<InteractionHook> invokeDeleteOnHookResponse(Integer deleteDelay) {
         return hook -> ICommand.deleteAfter(hook, deleteDelay);
     }
 

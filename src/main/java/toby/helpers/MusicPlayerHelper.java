@@ -16,7 +16,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class MusicPlayerHelper {
 
@@ -72,7 +72,7 @@ public class MusicPlayerHelper {
         long duration = track.getDuration();
         String songDuration = QueueCommand.formatTime(duration);
         String nowPlaying = String.format("Now playing `%s` by `%s` `[%s]` (Link: <%s>) with volume `%d`", info.title, info.author, songDuration, info.uri, volume);
-        event.getChannel().sendMessage(nowPlaying).queue(getConsumer(deleteDelay));
+        event.getChannel().sendMessage(nowPlaying).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public static Long adjustTrackPlayingTimes(Long startTime) {

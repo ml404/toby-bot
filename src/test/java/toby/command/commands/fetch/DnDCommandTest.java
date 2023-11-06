@@ -1,20 +1,13 @@
 package toby.command.commands.fetch;
 
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import toby.command.CommandContext;
 import toby.command.commands.CommandTest;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
+import toby.helpers.HttpHelper;
 
 import static org.mockito.Mockito.*;
 
@@ -26,6 +19,10 @@ class DnDCommandTest implements CommandTest {
     void setUp() {
         setUpCommonMocks();
         command = new DnDCommand();
+        doReturn(replyCallbackAction)
+                .when(event)
+                .replyEmbeds(any(), any(MessageEmbed[].class));
+
     }
 
     @AfterEach
@@ -34,34 +31,28 @@ class DnDCommandTest implements CommandTest {
     }
 
     @Test
-    void test_DnDCommandWithTypeAsSpell() throws IOException, ParseException {
+    void test_DnDCommandWithTypeAsSpell() {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
-        CloseableHttpClient closeableHttpClient = mock(CloseableHttpClient.class);
-        CloseableHttpResponse response = mock(CloseableHttpResponse.class);
-        HttpGet httpGet = mock(HttpGet.class);
         OptionMapping typeMapping = mock(OptionMapping.class);
         OptionMapping queryMapping = mock(OptionMapping.class);
         when(event.getOption("type")).thenReturn(typeMapping);
         when(event.getOption("query")).thenReturn(queryMapping);
+        HttpHelper helper = mock(HttpHelper.class);
+        when(helper.fetchFromGet(anyString())).thenReturn(getSpellJson());
         when(typeMapping.getAsString()).thenReturn("spell");
         when(queryMapping.getAsString()).thenReturn("fireball");
-        when(closeableHttpClient.execute(httpGet)).thenReturn(response);
-        when(response.getCode()).thenReturn(200);
-        HttpEntity entity = mock(HttpEntity.class);
-        when(response.getEntity()).thenReturn(entity);
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(getSpellJson().getBytes());
-        when(entity.getContent()).thenReturn(inputStream);
-        when(EntityUtils.toString(entity)).thenReturn(inputStream.toString());
 
 
         //Act
-        command.handleWithHttpObjects(commandContext, requestingUserDto, closeableHttpClient, httpGet, 0);
+        command.handleWithHttpObjects(commandContext, requestingUserDto, helper, 0);
 
         //Assert
-        verify(event, times(1)).replyEmbeds(anyCollection());
+        verify(event, times(1)).getOption("type");
+        verify(event, times(1)).getOption("query");
+        verify(event, times(1)).replyEmbeds(any(MessageEmbed.class));
         verify(interactionHook, times(1)).deleteOriginal();
-        verify(closeableHttpClient, times(1)).execute(httpGet);
+        verify(helper, times(1)).fetchFromGet(any());
     }
 
     private String getSpellJson() {

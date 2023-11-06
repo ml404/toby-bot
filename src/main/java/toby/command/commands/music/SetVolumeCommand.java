@@ -18,7 +18,7 @@ import toby.lavaplayer.PlayerManager;
 import java.util.List;
 import java.util.Optional;
 
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 
 public class SetVolumeCommand implements IMusicCommand {
@@ -56,25 +56,25 @@ public class SetVolumeCommand implements IMusicCommand {
             if (instance.isCurrentlyStoppable() || requestingUserDto.isSuperUser()) {
                 AudioPlayer audioPlayer = musicManager.getAudioPlayer();
                 if (volumeArg > 100) {
-                    hook.sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                    hook.sendMessage(getDescription()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
                     return;
                 }
                 int oldVolume = audioPlayer.getVolume();
                 if (volumeArg == oldVolume) {
-                    hook.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(getConsumer(deleteDelay));
+                    hook.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
                     return;
                 }
                 audioPlayer.setVolume(volumeArg);
-                hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(getConsumer(deleteDelay));
+                hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             } else {
                 sendErrorMessage(event, deleteDelay);
             }
-        } else hook.sendMessage(getDescription()).setEphemeral(true).queue(getConsumer(deleteDelay));
+        } else hook.sendMessage(getDescription()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override
     public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).setEphemeral(true).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat("You aren't allowed to change the volume kid %s", event.getGuild().getJDA().getEmojiById(Emotes.TOBY)).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
 

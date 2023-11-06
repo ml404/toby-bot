@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.Random;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class RandomCommand implements IMiscCommand {
 
@@ -25,11 +25,11 @@ public class RandomCommand implements IMiscCommand {
         event.deferReply().queue();
         deleteAfter(event.getHook(), deleteDelay);
         if (ctx.getEvent().getOptions().isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
         List<String> stringList = List.of(Optional.ofNullable(event.getOption(LIST)).map(OptionMapping::getAsString).orElse("").split(","));
-        event.getHook().sendMessage(getRandomElement(stringList)).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(getRandomElement(stringList)).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public static String getRandomElement(List<?> args) {

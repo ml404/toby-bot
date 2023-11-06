@@ -8,7 +8,7 @@ import toby.jpa.service.IUserService;
 import java.util.Random;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class EightBallCommand implements IMiscCommand {
 
@@ -55,15 +55,15 @@ public class EightBallCommand implements IMiscCommand {
         };
 
         if(requestingUserDto.getDiscordId().equals(TOMS_DISCORD_ID)){
-            event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay));
             Long socialCredit = requestingUserDto.getSocialCredit();
             int deductedSocialCredit = -5 * choice;
             requestingUserDto.setSocialCredit(socialCredit + deductedSocialCredit);
-            event.getHook().sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
             userService.updateUser(requestingUserDto);
             return;
         }
-        event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override

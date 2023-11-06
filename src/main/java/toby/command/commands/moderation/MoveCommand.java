@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class MoveCommand implements IModerationCommand {
 
@@ -43,7 +43,7 @@ public class MoveCommand implements IModerationCommand {
 
         List<Member> memberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
         if (memberList.isEmpty()) {
-            event.getHook().sendMessage("You must mention 1 or more Users to move").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("You must mention 1 or more Users to move").queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
@@ -51,7 +51,7 @@ public class MoveCommand implements IModerationCommand {
         ConfigDto channelConfig = configService.getConfigByName(ConfigDto.Configurations.MOVE.getConfigValue(), guild.getId());
         Optional<VoiceChannel> voiceChannelOptional = channelOptional.map(GuildChannelUnion::asVoiceChannel).or(() -> guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst());
         if (voiceChannelOptional.isEmpty()) {
-            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name").queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name").queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
 
@@ -60,23 +60,23 @@ public class MoveCommand implements IModerationCommand {
             VoiceChannel voiceChannel = voiceChannelOptional.get();
             guild.moveVoiceMember(target, voiceChannel)
                     .queue(
-                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(getConsumer(deleteDelay)),
-                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(getConsumer(deleteDelay))
+                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(invokeDeleteOnMessageResponse(deleteDelay)),
+                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(invokeDeleteOnMessageResponse(deleteDelay))
                     );
         });
     }
 
     private boolean doChannelValidation(SlashCommandInteractionEvent event, Member botMember, Member member, Member target, int deleteDelay) {
         if (!target.getVoiceState().inAudioChannel()) {
-            event.getHook().sendMessageFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
         if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.getHook().sendMessageFormat("You can't move '%s'", target.getEffectiveName()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("You can't move '%s'", target.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
         if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.getHook().sendMessageFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
         return false;

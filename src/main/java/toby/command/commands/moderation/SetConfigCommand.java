@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.jpa.dto.ConfigDto.Configurations.*;
 
 public class SetConfigCommand implements IModerationCommand {
@@ -34,7 +34,7 @@ public class SetConfigCommand implements IModerationCommand {
         event.deferReply().queue();
         final Member member = ctx.getMember();
         if (!member.isOwner()) {
-            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("This is currently reserved for the owner of the server only, this may change in future").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
         validateArgumentsAndUpdateConfigs(event, deleteDelay);
@@ -44,7 +44,7 @@ public class SetConfigCommand implements IModerationCommand {
     private void validateArgumentsAndUpdateConfigs(SlashCommandInteractionEvent event, Integer deleteDelay) {
         List<OptionMapping> options = event.getOptions();
         if (options.isEmpty()) {
-            event.getHook().sendMessage(getDescription()).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
         options.forEach(optionMapping -> {
@@ -60,7 +60,7 @@ public class SetConfigCommand implements IModerationCommand {
     private void setConfigAndSendMessage(SlashCommandInteractionEvent event, OptionMapping optionMapping, Integer deleteDelay, String messageToSend) {
         Optional<Integer> newValueOptional = Optional.ofNullable(optionMapping).map(OptionMapping::getAsInt);
         if (newValueOptional.isEmpty() || newValueOptional.get() < 0) {
-            event.getHook().sendMessage("Value given invalid (a whole number representing percent)").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("Value given invalid (a whole number representing percent)").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
         String configValue = valueOf(optionMapping.getName().toUpperCase()).getConfigValue();
@@ -72,7 +72,7 @@ public class SetConfigCommand implements IModerationCommand {
         } else {
             configService.createNewConfig(newConfigDto);
         }
-        event.getHook().sendMessageFormat(messageToSend, newDefaultVolume).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessageFormat(messageToSend, newDefaultVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     private void setMove(SlashCommandInteractionEvent event, Integer deleteDelay) {
@@ -87,10 +87,10 @@ public class SetConfigCommand implements IModerationCommand {
             } else {
                 configService.createNewConfig(newConfigDto);
             }
-            event.getHook().sendMessageFormat("Set default move channel to '%s'", newChannel.getName()).setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessageFormat("Set default move channel to '%s'", newChannel.getName()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
         else {
-            event.getHook().sendMessage("No valid channel was mentioned, so config was not updated").setEphemeral(true).queue(getConsumer(deleteDelay));
+            event.getHook().sendMessage("No valid channel was mentioned, so config was not updated").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 

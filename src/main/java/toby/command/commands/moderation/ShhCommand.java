@@ -8,7 +8,7 @@ import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class ShhCommand implements IModerationCommand {
     @Override
@@ -20,14 +20,14 @@ public class ShhCommand implements IModerationCommand {
         Guild guild = event.getGuild();
         member.getVoiceState().getChannel().getMembers().forEach(target -> {
             if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
-                event.getHook().sendMessageFormat("You aren't allowed to mute %s", target).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("You aren't allowed to mute %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
 
             final Member bot = guild.getSelfMember();
 
             if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-                event.getHook().sendMessageFormat("I'm not allowed to mute %s", target).queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("I'm not allowed to mute %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
             guild.mute(target, true)

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static toby.command.ICommand.deleteAfter;
-import static toby.command.ICommand.getConsumer;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
 
 
@@ -37,7 +37,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
         if (requestingUserDto.hasDigPermission()) {
             Optional<String> linkOptional = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString);
             if (linkOptional.isEmpty()) {
-                event.getHook().sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(getConsumer(deleteDelay));
+                event.getHook().sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(invokeDeleteOnMessageResponse(deleteDelay));
                 return;
             }
             if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
@@ -72,7 +72,7 @@ public class NowDigOnThisCommand implements IMusicCommand {
 
     @Override
     public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(getConsumer(deleteDelay));
+        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     @Override
