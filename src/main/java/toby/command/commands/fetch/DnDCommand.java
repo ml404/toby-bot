@@ -53,7 +53,7 @@ public class DnDCommand implements IFetchCommand {
                     QueryResult queryResult = JsonParser.parseJsonToSpellList(queryResponseData);
                     if (queryResult != null && queryResult.count() > 0) {
                         StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
-                        queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.url())));
+                        queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
                         hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
                                 .addActionRow(builder.build())
                                 .queue();

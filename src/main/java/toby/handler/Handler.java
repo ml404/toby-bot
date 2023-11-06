@@ -1,7 +1,6 @@
 package toby.handler;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -21,9 +20,6 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -32,12 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
-import toby.command.ICommand;
-import toby.dto.web.dnd.spell.QueryResult;
-import toby.dto.web.dnd.spell.Spell;
 import toby.emote.Emotes;
 import toby.helpers.HttpHelper;
-import toby.helpers.JsonParser;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
@@ -50,7 +42,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static toby.command.commands.fetch.DnDCommand.*;
+import static toby.command.commands.fetch.DnDCommand.doLookUpAndReply;
 import static toby.helpers.MusicPlayerHelper.playUserIntroWithChannel;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
@@ -286,6 +278,7 @@ public class Handler extends ListenerAdapter {
         if (event.getComponentId().equals("DnDSpellQuery")) {
             String selectedValue = event.getValues().get(0); // Get the selected option
             ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
+            event.getMessage().delete().queue();
             doLookUpAndReply(event.getHook(), "spells", selectedValue, new HttpHelper(), Integer.valueOf(deleteDelayConfig.getValue()));
         }
     }
