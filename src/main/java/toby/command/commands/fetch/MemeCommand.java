@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import static toby.command.ICommand.deleteAfter;
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class MemeCommand implements IFetchCommand {
@@ -55,10 +54,10 @@ public class MemeCommand implements IFetchCommand {
         if (result.subredditArgOptional().isPresent()) {
             String subredditArg = result.subredditArgOptional().get();
             if (subredditArg.equals("sneakybackgroundfeet")) {
-                event.getChannel().sendMessageFormat("Don't talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay));
+                event.getHook().sendMessageFormat("Don't talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay));
             } else {
                 MessageEmbed embed = fetchRedditPost(result, event, deleteDelay, httpClient);
-                event.getChannel().sendMessageEmbeds(embed).queue();
+                event.getHook().sendMessageEmbeds(embed).queue();
             }
         }
     }
