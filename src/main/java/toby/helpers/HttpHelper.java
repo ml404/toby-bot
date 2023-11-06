@@ -13,6 +13,7 @@ public class HttpHelper {
     public String fetchFromGet(String url) {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet httpGet = new HttpGet(url);
+            httpGet.addHeader("Accept", "application/json");
             CloseableHttpResponse response = httpClient.execute(httpGet);
             if (response.getCode() == 200) {
                 return EntityUtils.toString(response.getEntity());
