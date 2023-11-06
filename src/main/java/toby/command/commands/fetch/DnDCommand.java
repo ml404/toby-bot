@@ -1,7 +1,6 @@
 package toby.command.commands.fetch;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
@@ -18,8 +17,6 @@ import toby.jpa.dto.UserDto;
 import java.util.List;
 import java.util.Map;
 
-import static toby.command.ICommand.deleteAfter;
-
 public class DnDCommand implements IFetchCommand {
 
 
@@ -29,7 +26,6 @@ public class DnDCommand implements IFetchCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         handleWithHttpObjects(ctx, requestingUserDto, new HttpHelper());
 
     }
@@ -42,15 +38,16 @@ public class DnDCommand implements IFetchCommand {
         String query = event.getOption(QUERY).getAsString();
         String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
         switch (type) {
-            case "spell" -> {
+            case "spells" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
-                event.getHook().sendMessageEmbeds(createSpellEmbed(spell)).queue();
+                EmbedBuilder spellEmbed = createSpellEmbed(spell);
+                event.getInteraction().getChannel().sendMessageEmbeds(spellEmbed.build()).queue();
             }
         }
     }
 
 
-    private MessageEmbed createSpellEmbed(Spell spell) {
+    private EmbedBuilder createSpellEmbed(Spell spell) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (spell.name() != null) {
@@ -62,7 +59,7 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (spell.range() != null) {
-            embedBuilder.addField("Range", spell.range(), true);
+            embedBuilder.addField("Range", transformToMeters(Integer.parseInt(spell.range().split(" ")[0])) + "m", true);
         }
 
         if (spell.components() != null && !spell.components().isEmpty()) {
@@ -75,7 +72,7 @@ public class DnDCommand implements IFetchCommand {
 
         if (spell.damage() != null) {
             StringBuilder damageInfo = new StringBuilder();
-            damageInfo.append("Damage Type: ").append(spell.damage().damage_type()).append("\n");
+            damageInfo.append("Damage Type: ").append(spell.damage().damage_type().name()).append("\n");
             damageInfo.append("Damage at Slot Level:\n");
 
             // Add damage at slot level information
@@ -95,7 +92,7 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (spell.area_of_effect() != null) {
-            embedBuilder.addField("Area of Effect", "Type: " + spell.area_of_effect().type() + ", Size: " + spell.area_of_effect().size(), true);
+            embedBuilder.addField("Area of Effect", "Type: " + spell.area_of_effect().type() + ", Size: " + transformToMeters(spell.area_of_effect().size()) + "m", true);
         }
 
         if (spell.school() != null) {
@@ -126,7 +123,11 @@ public class DnDCommand implements IFetchCommand {
 
         embedBuilder.setColor(0x42f5a7);
 
-        return embedBuilder.build();
+        return embedBuilder;
+    }
+
+    private static String transformToMeters(int rangeNumber) {
+        return String.valueOf(Math.round((double) rangeNumber / 3.28));
     }
 
     @Override

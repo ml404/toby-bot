@@ -19,8 +19,8 @@ class DnDCommandTest implements CommandTest {
     void setUp() {
         setUpCommonMocks();
         command = new DnDCommand();
-        doReturn(webhookMessageCreateAction)
-                .when(interactionHook)
+        doReturn(messageCreateAction)
+                .when(messageChannelUnion)
                 .sendMessageEmbeds(any(), any(MessageEmbed[].class));
 
     }
@@ -38,9 +38,10 @@ class DnDCommandTest implements CommandTest {
         OptionMapping queryMapping = mock(OptionMapping.class);
         when(event.getOption("type")).thenReturn(typeMapping);
         when(event.getOption("query")).thenReturn(queryMapping);
+        when(event.getInteraction()).thenReturn(event);
         HttpHelper helper = mock(HttpHelper.class);
         when(helper.fetchFromGet(anyString())).thenReturn(getSpellJson());
-        when(typeMapping.getAsString()).thenReturn("spell");
+        when(typeMapping.getAsString()).thenReturn("spells");
         when(queryMapping.getAsString()).thenReturn("fireball");
 
 
@@ -50,7 +51,7 @@ class DnDCommandTest implements CommandTest {
         //Assert
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(helper, times(1)).fetchFromGet(any());
     }
 
