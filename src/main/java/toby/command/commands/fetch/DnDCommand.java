@@ -57,6 +57,10 @@ public class DnDCommand implements IFetchCommand {
         if (spell.desc() != null && !spell.desc().isEmpty()) {
             embedBuilder.setDescription(spell.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
         }
+        if(!spell.higher_level().isEmpty()){
+            embedBuilder.addField("Higher Level", spell.higher_level().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get(), false);
+
+        }
         if (spell.range() != null) {
             embedBuilder.addField("Range", transformToMeters(Integer.parseInt(spell.range().split(" ")[0])) + "m", true);
         }
@@ -89,7 +93,7 @@ public class DnDCommand implements IFetchCommand {
                 damageInfo.append("Level ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
             }
 
-            embedBuilder.addField("Damage Info", damageInfo.toString(), false);
+            embedBuilder.addField("Damage Info", damageInfo.toString(), true);
         }
 
         Dc dc = spell.dc();
