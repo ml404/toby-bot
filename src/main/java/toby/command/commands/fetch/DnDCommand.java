@@ -33,7 +33,7 @@ public class DnDCommand implements IFetchCommand {
     @VisibleForTesting
     public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper) {
         SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
+        event.getInteraction().deferReply().queue();
         String type = event.getOption(TYPE).getAsString();
         String query = event.getOption(QUERY).getAsString();
         String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
