@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.dto.web.dnd.information.Information;
 import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.Info;
 import toby.dto.web.dnd.spell.QueryResult;
@@ -46,28 +47,42 @@ public class DnDCommand implements IFetchCommand {
             case "spells" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 if (spell != null) {
-                    EmbedBuilder spellEmbed = createSpellEmbed(spell);
+                    EmbedBuilder spellEmbed = createEmbedFromSpell(spell);
                     hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
-                    QueryResult queryResult = JsonParser.parseJsonToSpellList(queryResponseData);
-                    if (queryResult != null && queryResult.count() > 0) {
-                        StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
-                        queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
-                        hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
-                                .addActionRow(builder.build())
-                                .queue();
-
-                    } else {
-                        hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
-                    }
+                    queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
                 }
             }
+            case "conditions" -> {
+                Information condition = JsonParser.parseJsonToInformation(responseData);
+                if (condition != null) {
+                    EmbedBuilder conditionEmbed = createEmbedFromInformation(condition);
+                    hook.sendMessageEmbeds(conditionEmbed.build()).queue();
+                } else {
+                    queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
+                }
+            }
+            default -> hook.sendMessage("Something went wrong.").queue();
+        }
+    }
+
+    private static void queryNonMatchRetry(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
+        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
+        QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
+        if (queryResult != null && queryResult.count() > 0) {
+            StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
+            queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
+            hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
+                    .addActionRow(builder.build())
+                    .queue();
+
+        } else {
+            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
 
-    public static EmbedBuilder createSpellEmbed(Spell spell) {
+    public static EmbedBuilder createEmbedFromSpell(Spell spell) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (spell.name() != null) {
@@ -159,6 +174,26 @@ public class DnDCommand implements IFetchCommand {
         return embedBuilder;
     }
 
+    private static EmbedBuilder createEmbedFromInformation(Information information) {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+
+        if (information.name() != null) {
+            embedBuilder.setTitle(information.name());
+        }
+
+        if (information.desc() != null && !information.desc().isEmpty()) {
+            embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
+
+        }
+
+        if (information.url() != null) {
+            embedBuilder.setUrl("https://www.dndbeyond.com/" + information.url().replace("/api/", ""));
+        }
+
+        embedBuilder.setColor(0x42f5a7);
+        return embedBuilder;
+    }
+
     private static String transformToMeters(int rangeNumber) {
         return String.valueOf(Math.round((double) rangeNumber / 3.28));
     }
@@ -177,6 +212,7 @@ public class DnDCommand implements IFetchCommand {
     public List<OptionData> getOptionData() {
         OptionData type = new OptionData(OptionType.STRING, TYPE, "What type of are you looking up", true);
         type.addChoice("spell", "spells");
+        type.addChoice("condition", "conditions");
         OptionData query = new OptionData(OptionType.STRING, QUERY, "What is the thing you are looking up?", true);
         return List.of(type, query);
     }

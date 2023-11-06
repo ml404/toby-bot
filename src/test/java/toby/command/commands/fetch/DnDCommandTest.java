@@ -56,7 +56,6 @@ class DnDCommandTest implements CommandTest {
         verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(helper, times(1)).fetchFromGet(any());
     }
-
     @Test
     void test_DnDCommandWithTypeAsSpell_AndNothingIsReturnedForQuery() {
         //Arrange
@@ -109,6 +108,31 @@ class DnDCommandTest implements CommandTest {
         verify(helper, times(2)).fetchFromGet(any());
         verify(interactionHook, times(1)).sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", "Fireball");
         verify(webhookMessageCreateAction, times(1)).addActionRow(any(StringSelectMenu.class));
+    }
+
+    @Test
+    void test_DnDCommandWithTypeAsCondition() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        OptionMapping typeMapping = mock(OptionMapping.class);
+        OptionMapping queryMapping = mock(OptionMapping.class);
+        when(event.getOption("type")).thenReturn(typeMapping);
+        when(event.getOption("query")).thenReturn(queryMapping);
+        when(event.getInteraction()).thenReturn(event);
+        HttpHelper helper = mock(HttpHelper.class);
+        when(helper.fetchFromGet(anyString())).thenReturn(getConditionJson());
+        when(typeMapping.getAsString()).thenReturn("conditions");
+        when(queryMapping.getAsString()).thenReturn("grappled");
+
+
+        //Act
+        command.handleWithHttpObjects(commandContext.getEvent(), commandContext.getEvent().getOption(DnDCommand.TYPE).getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+
+        //Assert
+        verify(event, times(1)).getOption("type");
+        verify(event, times(1)).getOption("query");
+        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        verify(helper, times(1)).fetchFromGet(any());
     }
 
     private String getSpellJson() {
@@ -196,4 +220,10 @@ class DnDCommandTest implements CommandTest {
                 }
                 """;
     }
+
+    private String getConditionJson(){
+        return """
+                {"index":"grappled","name":"Grappled","desc":["- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.","- The condition ends if the grappler is incapacitated (see the condition).","- The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."],"url":"/api/conditions/grappled"}""";
+    }
+
 }
