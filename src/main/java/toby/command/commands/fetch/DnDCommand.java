@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
 import toby.dto.web.dnd.information.Information;
@@ -30,12 +31,31 @@ public class DnDCommand implements IFetchCommand {
     public static final String DND_5_API_URL = "https://www.dnd5eapi.co/api/%s/%s";
     public static final String TYPE = "type";
     public static final String QUERY = "query";
+    public static final String SPELL_NAME = "spell";
+    public static final String CONDITION_NAME = "condition";
+    public static final String RULE_NAME = "rule";
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
         OptionMapping typeOptionMapping = ctx.getEvent().getOption(TYPE);
-        handleWithHttpObjects(ctx.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
+        handleWithHttpObjects(ctx.getEvent(), getName(typeOptionMapping), typeOptionMapping.getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
 
+    }
+
+    @NotNull
+    private static String getName(OptionMapping typeOptionMapping) {
+        switch (typeOptionMapping.getAsString()) {
+            case "spells" -> {
+                return "spell";
+            }
+            case "conditions" -> {
+                return "condition";
+            }
+            case "rule-sections" -> {
+                return "rule";
+            }
+        }
+        return "";
     }
 
     @VisibleForTesting
@@ -210,9 +230,9 @@ public class DnDCommand implements IFetchCommand {
     @Override
     public List<OptionData> getOptionData() {
         OptionData type = new OptionData(OptionType.STRING, TYPE, "What type of are you looking up", true);
-        type.addChoice("spell", "spells");
-        type.addChoice("condition", "conditions");
-        type.addChoice("rule", "rule-sections");
+        type.addChoice(SPELL_NAME, "spells");
+        type.addChoice(CONDITION_NAME, "conditions");
+        type.addChoice(RULE_NAME, "rule-sections");
         OptionData query = new OptionData(OptionType.STRING, QUERY, "What is the thing you are looking up?", true);
         return List.of(type, query);
     }
