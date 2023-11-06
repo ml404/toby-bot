@@ -9,10 +9,9 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.dto.web.dnd.information.Information;
-import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.ApiInfo;
+import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.QueryResult;
 import toby.dto.web.dnd.spell.Spell;
 import toby.helpers.HttpHelper;
@@ -21,6 +20,8 @@ import toby.jpa.dto.UserDto;
 
 import java.util.List;
 import java.util.Map;
+
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
 public class DnDCommand implements IFetchCommand {
 
@@ -62,7 +63,7 @@ public class DnDCommand implements IFetchCommand {
                     queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
                 }
             }
-            default -> hook.sendMessage("Something went wrong.").queue();
+            default -> hook.sendMessage("Something went wrong.").queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
@@ -77,7 +78,7 @@ public class DnDCommand implements IFetchCommand {
                     .queue();
 
         } else {
-            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
+            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
