@@ -16,6 +16,7 @@ import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -28,6 +29,7 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
+import toby.helpers.HttpHelper;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
@@ -40,6 +42,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static toby.command.commands.fetch.DnDCommand.doLookUpAndReply;
 import static toby.helpers.MusicPlayerHelper.playUserIntroWithChannel;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
@@ -125,7 +128,7 @@ public class Handler extends ListenerAdapter {
     }
 
     @Override
-    public void onButtonInteraction(ButtonInteractionEvent event){
+    public void onButtonInteraction(ButtonInteractionEvent event) {
         User user = event.getUser();
         if (user.isBot()) {
             return;
@@ -268,5 +271,16 @@ public class Handler extends ListenerAdapter {
             channelLeft.delete().queue();
         }
     }
-}
 
+    @Override
+    public void onStringSelectInteraction(StringSelectInteractionEvent event) {
+        event.deferReply().queue();
+        if (event.getComponentId().equals("DnDSpellQuery")) {
+            String selectedValue = event.getValues().get(0); // Get the selected option
+            ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
+            event.getMessage().delete().queue();
+            doLookUpAndReply(event.getHook(), "spells", selectedValue, new HttpHelper(), Integer.valueOf(deleteDelayConfig.getValue()));
+        }
+    }
+
+}

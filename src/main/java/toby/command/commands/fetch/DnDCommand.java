@@ -2,15 +2,18 @@ package toby.command.commands.fetch;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.dto.web.dnd.spell.ClassInfo;
 import toby.dto.web.dnd.spell.Dc;
+import toby.dto.web.dnd.spell.Info;
+import toby.dto.web.dnd.spell.QueryResult;
 import toby.dto.web.dnd.spell.Spell;
-import toby.dto.web.dnd.spell.SubclassInfo;
 import toby.helpers.HttpHelper;
 import toby.helpers.JsonParser;
 import toby.jpa.dto.UserDto;
@@ -27,31 +30,44 @@ public class DnDCommand implements IFetchCommand {
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleWithHttpObjects(ctx, requestingUserDto, new HttpHelper(), deleteDelay);
+        handleWithHttpObjects(ctx.getEvent(), ctx.getEvent().getOption(TYPE).getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
 
     }
 
     @VisibleForTesting
-    public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper, Integer deleteDelay) {
-        SlashCommandInteractionEvent event = ctx.getEvent();
+    public void handleWithHttpObjects(SlashCommandInteractionEvent event, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
         event.deferReply().queue();
-        String type = event.getOption(TYPE).getAsString();
-        String query = event.getOption(QUERY).getAsString();
+        doLookUpAndReply(event.getHook(), type, query, httpHelper, deleteDelay);
+    }
+
+    public static void doLookUpAndReply(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
         String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
         switch (type) {
             case "spells" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 if (spell != null) {
                     EmbedBuilder spellEmbed = createSpellEmbed(spell);
-                    event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
-                } else
-                    event.getHook().sendMessageFormat("Sorry, nothing was returned for the spell '%s'", query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
+                    hook.sendMessageEmbeds(spellEmbed.build()).queue();
+                } else {
+                    String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
+                    QueryResult queryResult = JsonParser.parseJsonToSpellList(queryResponseData);
+                    if (queryResult != null && queryResult.count() > 0) {
+                        StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
+                        queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
+                        hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
+                                .addActionRow(builder.build())
+                                .queue();
+
+                    } else {
+                        hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
+                    }
+                }
             }
         }
     }
 
 
-    private EmbedBuilder createSpellEmbed(Spell spell) {
+    public static EmbedBuilder createSpellEmbed(Spell spell) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (spell.name() != null) {
@@ -116,19 +132,19 @@ public class DnDCommand implements IFetchCommand {
             embedBuilder.addField("School", spell.school().name(), true);
         }
 
-        List<ClassInfo> spellClasses = spell.classes();
+        List<Info> spellClasses = spell.classes();
         if (spellClasses != null && !spellClasses.isEmpty()) {
             StringBuilder classesInfo = new StringBuilder();
-            for (ClassInfo classInfo : spellClasses) {
+            for (Info classInfo : spellClasses) {
                 classesInfo.append(classInfo.name()).append("\n");
             }
             embedBuilder.addField("Classes", classesInfo.toString(), true);
         }
 
-        List<SubclassInfo> subclasses = spell.subclasses();
+        List<Info> subclasses = spell.subclasses();
         if (subclasses != null && !subclasses.isEmpty()) {
             StringBuilder subclassesInfo = new StringBuilder();
-            for (SubclassInfo subclassInfo : subclasses) {
+            for (Info subclassInfo : subclasses) {
                 subclassesInfo.append(subclassInfo.name()).append("\n");
             }
             embedBuilder.addField("Subclasses", subclassesInfo.toString(), true);

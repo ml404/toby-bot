@@ -1,13 +1,12 @@
 package toby.helpers;
 
 import org.junit.jupiter.api.Test;
-import toby.command.commands.CommandTest;
 import toby.dto.web.dnd.spell.*;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonParserTest {
 
@@ -123,12 +122,12 @@ class JsonParserTest {
                 new AreaOfEffect("sphere", 20),
                 new School("evocation", "Evocation", "/api/magic-schools/evocation"),
                 List.of(
-                        new ClassInfo("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
-                        new ClassInfo("wizard", "Wizard", "/api/classes/wizard")
+                        new Info("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
+                        new Info("wizard", "Wizard", "/api/classes/wizard")
                 ),
                 List.of(
-                        new SubclassInfo("lore", "Lore", "/api/subclasses/lore"),
-                        new SubclassInfo("fiend", "Fiend", "/api/subclasses/fiend")
+                        new Info("lore", "Lore", "/api/subclasses/lore"),
+                        new Info("fiend", "Fiend", "/api/subclasses/fiend")
                 ),
                 "/api/spells/fireball"
         );
@@ -136,5 +135,16 @@ class JsonParserTest {
         Spell spell = JsonParser.parseJSONToSpell(data);
 
         assertEquals(expectedSpell, spell);
+    }
+
+    @Test
+    public void test_invalidSpellQuery_returnsListOfCloseApproximations(){
+        QueryResult queryResult = JsonParser.parseJsonToSpellList("""
+                {"count":1,"results":[{"index":"bless","name":"Bless","url":"/api/spells/bless"}]}""");
+
+        assertEquals(1, queryResult.count());
+        assertEquals(1, queryResult.results().size());
+        assertEquals("Bless", queryResult.results().get(0).name());
+
     }
 }
