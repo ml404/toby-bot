@@ -35,6 +35,7 @@ public class DnDCommand implements IFetchCommand {
     @VisibleForTesting
     public void handleWithHttpObjects(CommandContext ctx, UserDto requestingUserDto, HttpHelper httpHelper, Integer deleteDelay) {
         SlashCommandInteractionEvent event = ctx.getEvent();
+        event.deferReply().queue();
         deleteAfter(ctx.getEvent().getHook(), deleteDelay);
         String type = event.getOption("type").getAsString();
         String query = event.getOption("query").getAsString();
