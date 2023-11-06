@@ -51,7 +51,7 @@ class DnDCommandTest implements CommandTest {
         //Assert
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
-        verify(event, times(1)).replyEmbeds(any(MessageEmbed.class));
+        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(helper, times(1)).fetchFromGet(any());
     }
 
