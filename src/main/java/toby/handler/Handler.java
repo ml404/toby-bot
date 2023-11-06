@@ -1,7 +1,6 @@
 package toby.handler;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -21,8 +20,6 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -31,12 +28,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
-import toby.command.ICommand;
-import toby.dto.web.dnd.spell.QueryResult;
-import toby.dto.web.dnd.spell.Spell;
+import toby.command.commands.fetch.DnDCommand;
 import toby.emote.Emotes;
 import toby.helpers.HttpHelper;
-import toby.helpers.JsonParser;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
@@ -49,8 +43,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static toby.command.commands.fetch.DnDCommand.DND_5_API_URL;
-import static toby.command.commands.fetch.DnDCommand.createSpellEmbed;
 import static toby.helpers.MusicPlayerHelper.playUserIntroWithChannel;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
@@ -285,31 +277,7 @@ public class Handler extends ListenerAdapter {
         if (event.getComponentId().equals("DnDSpellQuery")) {
             String selectedValue = event.getValues().get(0); // Get the selected option
             ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
-            dndWorkFlow(event, "spells", selectedValue, deleteDelayConfig);
-        }
-
-    }
-
-    private static void dndWorkFlow(StringSelectInteractionEvent event, String type, String query, ConfigDto deleteDelayConfig) {
-        HttpHelper httpHelper = new HttpHelper();
-        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
-        Spell spell = JsonParser.parseJSONToSpell(responseData);
-        if (spell != null) {
-            EmbedBuilder spellEmbed = createSpellEmbed(spell);
-            event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
-        } else {
-            String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
-            QueryResult queryResult = JsonParser.parseJsonToSpellList(queryResponseData);
-            if (queryResult != null && queryResult.count() > 0) {
-                StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
-                queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.name(), info.url())));
-                event.getHook().sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
-                        .addActionRow(builder.build())
-                        .queue();
-
-            } else {
-                event.getHook().sendMessageFormat("Sorry, nothing was returned for the spell '%s'", query).queue(ICommand.invokeDeleteOnMessageResponse(Integer.valueOf(deleteDelayConfig.getValue())));
-            }
+            DnDCommand.doLookUpAndReply(event.getHook(), "spells", selectedValue, new HttpHelper(), Integer.valueOf(deleteDelayConfig.getValue()));
         }
     }
 }

@@ -2,6 +2,7 @@ package toby.command.commands.fetch;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
@@ -36,25 +37,29 @@ public class DnDCommand implements IFetchCommand {
     @VisibleForTesting
     public void handleWithHttpObjects(SlashCommandInteractionEvent event, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
         event.deferReply().queue();
+        doLookUpAndReply(event.getHook(), type, query, httpHelper, deleteDelay);
+    }
+
+    public static void doLookUpAndReply(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
         String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
         switch (type) {
             case "spells" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 if (spell != null) {
                     EmbedBuilder spellEmbed = createSpellEmbed(spell);
-                    event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
+                    hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name="+query));
+                    String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name="+ query));
                     QueryResult queryResult = JsonParser.parseJsonToSpellList(queryResponseData);
                     if (queryResult!=null && queryResult.count() > 0) {
                         StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
                         queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.url())));
-                        event.getHook().sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
+                        hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
                                 .addActionRow(builder.build())
                                 .queue();
 
                     } else {
-                        event.getHook().sendMessageFormat("Sorry, nothing was returned for the spell '%s'", query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
+                        hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(ICommand.invokeDeleteOnMessageResponse(deleteDelay));
                     }
                 }
             }
@@ -62,7 +67,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
 
-    public static EmbedBuilder createSpellEmbed(Spell spell) {
+    private static EmbedBuilder createSpellEmbed(Spell spell) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (spell.name() != null) {

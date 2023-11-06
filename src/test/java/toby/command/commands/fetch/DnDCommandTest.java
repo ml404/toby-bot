@@ -79,7 +79,7 @@ class DnDCommandTest implements CommandTest {
         verify(event, times(1)).getOption("type");
         verify(event, times(1)).getOption("query");
         verify(helper, times(2)).fetchFromGet(any());
-        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for the spell '%s'", "fireball");
+        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for %s '%s'", "spells", "fireball");
     }
 
     @Test
