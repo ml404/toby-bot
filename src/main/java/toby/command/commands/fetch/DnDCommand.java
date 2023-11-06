@@ -57,13 +57,22 @@ public class DnDCommand implements IFetchCommand {
         if (spell.desc() != null && !spell.desc().isEmpty()) {
             embedBuilder.setDescription(spell.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
         }
-
         if (spell.range() != null) {
             embedBuilder.addField("Range", transformToMeters(Integer.parseInt(spell.range().split(" ")[0])) + "m", true);
         }
 
         if (spell.components() != null && !spell.components().isEmpty()) {
             embedBuilder.addField("Components", String.join(", ", spell.components()), true);
+        }
+
+        if (!spell.duration().isEmpty()) {
+            embedBuilder.addField("Duration", spell.duration(), true);
+        }
+
+        embedBuilder.addField("Concentration", String.valueOf(spell.concentration()), true);
+
+        if (!spell.casting_time().isEmpty()) {
+            embedBuilder.addField("Casting Time", spell.casting_time(), true);
         }
 
         if (spell.level() >= 0) {
@@ -118,7 +127,7 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (spell.url() != null) {
-            embedBuilder.addField("More Info", spell.url(), false);
+            embedBuilder.setUrl("https://www.dndbeyond.com/" + spell.url().replace("/api/", ""));
         }
 
         embedBuilder.setColor(0x42f5a7);
