@@ -43,7 +43,7 @@ public class DbdRandomKillerCommand implements IFetchCommand {
 
     @Override
     public String getName() {
-        return "dbd";
+        return "dbd-killer";
     }
 
     @Override

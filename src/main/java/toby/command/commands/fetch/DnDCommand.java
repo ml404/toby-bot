@@ -40,8 +40,11 @@ public class DnDCommand implements IFetchCommand {
         switch (type) {
             case "spells" -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
-                EmbedBuilder spellEmbed = createSpellEmbed(spell);
-                event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
+                if (spell != null) {
+                    EmbedBuilder spellEmbed = createSpellEmbed(spell);
+                    event.getHook().sendMessageEmbeds(spellEmbed.build()).queue();
+                } else
+                    event.getHook().sendMessageFormat("Sorry, nothing was returned for the spell '%s'", query).queue();
             }
         }
     }
@@ -57,7 +60,7 @@ public class DnDCommand implements IFetchCommand {
         if (spell.desc() != null && !spell.desc().isEmpty()) {
             embedBuilder.setDescription(spell.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
         }
-        if(!spell.higher_level().isEmpty()){
+        if (!spell.higher_level().isEmpty()) {
             embedBuilder.addField("Higher Level", spell.higher_level().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get(), false);
 
         }

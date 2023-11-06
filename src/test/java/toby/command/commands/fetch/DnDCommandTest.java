@@ -55,6 +55,31 @@ class DnDCommandTest implements CommandTest {
         verify(helper, times(1)).fetchFromGet(any());
     }
 
+    @Test
+    void test_DnDCommandWithTypeAsSpell_AndNothingIsReturnedForQuery() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        OptionMapping typeMapping = mock(OptionMapping.class);
+        OptionMapping queryMapping = mock(OptionMapping.class);
+        when(event.getOption("type")).thenReturn(typeMapping);
+        when(event.getOption("query")).thenReturn(queryMapping);
+        when(event.getInteraction()).thenReturn(event);
+        HttpHelper helper = mock(HttpHelper.class);
+        when(helper.fetchFromGet(anyString())).thenReturn("");
+        when(typeMapping.getAsString()).thenReturn("spells");
+        when(queryMapping.getAsString()).thenReturn("fireball");
+
+
+        //Act
+        command.handleWithHttpObjects(commandContext, requestingUserDto, helper);
+
+        //Assert
+        verify(event, times(1)).getOption("type");
+        verify(event, times(1)).getOption("query");
+        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for the spell '%s'", "fireball");
+        verify(helper, times(1)).fetchFromGet(any());
+    }
+
     private String getSpellJson() {
         return """
                 {
