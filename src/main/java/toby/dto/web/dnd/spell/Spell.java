@@ -19,8 +19,8 @@ public record Spell(
         Dc dc,
         AreaOfEffect area_of_effect,
         School school,
-        List<Info> classes,
-        List<Info> subclasses,
+        List<ApiInfo> classes,
+        List<ApiInfo> subclasses,
         String url) {
 }
 

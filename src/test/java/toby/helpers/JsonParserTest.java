@@ -1,6 +1,7 @@
 package toby.helpers;
 
 import org.junit.jupiter.api.Test;
+import toby.dto.web.dnd.information.Information;
 import toby.dto.web.dnd.spell.*;
 
 import java.util.List;
@@ -122,12 +123,12 @@ class JsonParserTest {
                 new AreaOfEffect("sphere", 20),
                 new School("evocation", "Evocation", "/api/magic-schools/evocation"),
                 List.of(
-                        new Info("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
-                        new Info("wizard", "Wizard", "/api/classes/wizard")
+                        new ApiInfo("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
+                        new ApiInfo("wizard", "Wizard", "/api/classes/wizard")
                 ),
                 List.of(
-                        new Info("lore", "Lore", "/api/subclasses/lore"),
-                        new Info("fiend", "Fiend", "/api/subclasses/fiend")
+                        new ApiInfo("lore", "Lore", "/api/subclasses/lore"),
+                        new ApiInfo("fiend", "Fiend", "/api/subclasses/fiend")
                 ),
                 "/api/spells/fireball"
         );
@@ -138,13 +139,23 @@ class JsonParserTest {
     }
 
     @Test
-    public void test_invalidSpellQuery_returnsListOfCloseApproximations(){
-        QueryResult queryResult = JsonParser.parseJsonToSpellList("""
+    public void test_invalidSpellQuery_returnsListOfCloseApproximations() {
+        QueryResult queryResult = JsonParser.parseJsonToQueryResult("""
                 {"count":1,"results":[{"index":"bless","name":"Bless","url":"/api/spells/bless"}]}""");
 
         assertEquals(1, queryResult.count());
         assertEquals(1, queryResult.results().size());
         assertEquals("Bless", queryResult.results().get(0).name());
 
+    }
+
+    @Test
+    public void test_conditionQuery_returnsConditionObject() {
+        Information condition = JsonParser.parseJsonToInformation("""
+                {"index":"grappled","name":"Grappled","desc":["- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.","- The information ends if the grappler is incapacitated (see the information).","- The information also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."],"url":"/api/conditions/grappled"}""");
+        assertEquals(3, condition.desc().size());
+        assertEquals("grappled", condition.index());
+        assertEquals("Grappled", condition.name());
+        assertEquals("/api/conditions/grappled", condition.url());
     }
 }
