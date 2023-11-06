@@ -49,9 +49,9 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder spellEmbed = createSpellEmbed(spell);
                     hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name="+ query));
+                    String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
                     QueryResult queryResult = JsonParser.parseJsonToSpellList(queryResponseData);
-                    if (queryResult!=null && queryResult.count() > 0) {
+                    if (queryResult != null && queryResult.count() > 0) {
                         StringSelectMenu.Builder builder = StringSelectMenu.create("DnDSpellQuery").setPlaceholder("Choose an option");
                         queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.url())));
                         hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
@@ -67,7 +67,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
 
-    private static EmbedBuilder createSpellEmbed(Spell spell) {
+    public static EmbedBuilder createSpellEmbed(Spell spell) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (spell.name() != null) {
