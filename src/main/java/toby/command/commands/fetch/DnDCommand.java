@@ -12,7 +12,7 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.dto.web.dnd.information.Information;
 import toby.dto.web.dnd.spell.Dc;
-import toby.dto.web.dnd.spell.Info;
+import toby.dto.web.dnd.spell.ApiInfo;
 import toby.dto.web.dnd.spell.QueryResult;
 import toby.dto.web.dnd.spell.Spell;
 import toby.helpers.HttpHelper;
@@ -147,19 +147,19 @@ public class DnDCommand implements IFetchCommand {
             embedBuilder.addField("School", spell.school().name(), true);
         }
 
-        List<Info> spellClasses = spell.classes();
+        List<ApiInfo> spellClasses = spell.classes();
         if (spellClasses != null && !spellClasses.isEmpty()) {
             StringBuilder classesInfo = new StringBuilder();
-            for (Info classInfo : spellClasses) {
+            for (ApiInfo classInfo : spellClasses) {
                 classesInfo.append(classInfo.name()).append("\n");
             }
             embedBuilder.addField("Classes", classesInfo.toString(), true);
         }
 
-        List<Info> subclasses = spell.subclasses();
+        List<ApiInfo> subclasses = spell.subclasses();
         if (subclasses != null && !subclasses.isEmpty()) {
             StringBuilder subclassesInfo = new StringBuilder();
-            for (Info subclassInfo : subclasses) {
+            for (ApiInfo subclassInfo : subclasses) {
                 subclassesInfo.append(subclassInfo.name()).append("\n");
             }
             embedBuilder.addField("Subclasses", subclassesInfo.toString(), true);

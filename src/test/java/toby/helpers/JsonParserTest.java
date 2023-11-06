@@ -123,12 +123,12 @@ class JsonParserTest {
                 new AreaOfEffect("sphere", 20),
                 new School("evocation", "Evocation", "/api/magic-schools/evocation"),
                 List.of(
-                        new Info("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
-                        new Info("wizard", "Wizard", "/api/classes/wizard")
+                        new ApiInfo("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
+                        new ApiInfo("wizard", "Wizard", "/api/classes/wizard")
                 ),
                 List.of(
-                        new Info("lore", "Lore", "/api/subclasses/lore"),
-                        new Info("fiend", "Fiend", "/api/subclasses/fiend")
+                        new ApiInfo("lore", "Lore", "/api/subclasses/lore"),
+                        new ApiInfo("fiend", "Fiend", "/api/subclasses/fiend")
                 ),
                 "/api/spells/fireball"
         );
