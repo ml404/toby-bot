@@ -19,9 +19,9 @@ class DnDCommandTest implements CommandTest {
     void setUp() {
         setUpCommonMocks();
         command = new DnDCommand();
-        doReturn(replyCallbackAction)
-                .when(event)
-                .replyEmbeds(any(), any(MessageEmbed[].class));
+        doReturn(webhookMessageCreateAction)
+                .when(interactionHook)
+                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
 
     }
 
