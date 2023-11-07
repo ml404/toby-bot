@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static toby.command.commands.fetch.DnDCommand.doLookUpAndReply;
+import static toby.command.commands.fetch.DnDCommand.*;
 import static toby.helpers.MusicPlayerHelper.playUserIntroWithChannel;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
@@ -280,13 +280,13 @@ public class Handler extends ListenerAdapter {
 
     private void determineDnDRequestType(StringSelectInteractionEvent event) {
         if (event.getComponentId().equals("DnDspell")) {
-            sendDndApiRequest(event, "spell", "spells");
+            sendDndApiRequest(event, SPELL_NAME, "spells");
         }
         if (event.getComponentId().equals("DnDcondition")) {
-            sendDndApiRequest(event, "condition", "conditions");
+            sendDndApiRequest(event, CONDITION_NAME, "conditions");
         }
         if (event.getComponentId().equals("DnDrule")) {
-            sendDndApiRequest(event, "rule", "rule-sections");
+            sendDndApiRequest(event, RULE_NAME, "rule-sections");
         }
     }
 

@@ -46,13 +46,13 @@ public class DnDCommand implements IFetchCommand {
     private static String getName(OptionMapping typeOptionMapping) {
         switch (typeOptionMapping.getAsString()) {
             case "spells" -> {
-                return "spell";
+                return SPELL_NAME;
             }
             case "conditions" -> {
-                return "condition";
+                return CONDITION_NAME;
             }
             case "rule-sections" -> {
-                return "rule";
+                return RULE_NAME;
             }
         }
         return "";
@@ -67,7 +67,7 @@ public class DnDCommand implements IFetchCommand {
     public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
         String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, query));
         switch (typeName) {
-            case "spell" -> {
+            case SPELL_NAME -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 if (spell != null) {
                     EmbedBuilder spellEmbed = createEmbedFromSpell(spell);
@@ -76,7 +76,7 @@ public class DnDCommand implements IFetchCommand {
                     queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
-            case "condition", "rule" -> {
+            case CONDITION_NAME, RULE_NAME -> {
                 Information information = JsonParser.parseJsonToInformation(responseData);
                 if (information != null) {
                     EmbedBuilder conditionEmbed = createEmbedFromInformation(information, typeName);
@@ -205,9 +205,9 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (information.desc() != null && !information.desc().isEmpty()) {
-            if (typeName.equals("condition"))
+            if (typeName.equals(CONDITION_NAME))
                 embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
-            if (typeName.equals("rule")) embedBuilder.setDescription(information.desc().get(0));
+            if (typeName.equals(RULE_NAME)) embedBuilder.setDescription(information.desc().get(0));
         }
 
         embedBuilder.setColor(0x42f5a7);
