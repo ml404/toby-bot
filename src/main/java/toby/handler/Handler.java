@@ -38,6 +38,7 @@ import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
 
 import javax.annotation.Nonnull;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -275,10 +276,14 @@ public class Handler extends ListenerAdapter {
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
         event.deferReply().queue();
-        determineDnDRequestType(event);
+        try {
+            determineDnDRequestType(event);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private void determineDnDRequestType(StringSelectInteractionEvent event) {
+    private void determineDnDRequestType(StringSelectInteractionEvent event) throws UnsupportedEncodingException {
         if (event.getComponentId().equals("DnDspell")) {
             sendDndApiRequest(event, SPELL_NAME, "spells");
         }
@@ -288,9 +293,12 @@ public class Handler extends ListenerAdapter {
         if (event.getComponentId().equals("DnDrule")) {
             sendDndApiRequest(event, RULE_NAME, "rule-sections");
         }
+        if (event.getComponentId().equals("DnDfeature")) {
+            sendDndApiRequest(event, FEATURE_NAME, "features");
+        }
     }
 
-    private void sendDndApiRequest(StringSelectInteractionEvent event, String typeName, String typeValue) {
+    private void sendDndApiRequest(StringSelectInteractionEvent event, String typeName, String typeValue) throws UnsupportedEncodingException {
         String selectedValue = event.getValues().get(0); // Get the selected option
         ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
         event.getMessage().delete().queue();
