@@ -11,7 +11,8 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
-import toby.dto.web.dnd.information.Information;
+import toby.dto.web.dnd.misc.Information;
+import toby.dto.web.dnd.misc.Rule;
 import toby.dto.web.dnd.spell.ApiInfo;
 import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.QueryResult;
@@ -76,10 +77,19 @@ public class DnDCommand implements IFetchCommand {
                     queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
-            case CONDITION_NAME, RULE_NAME -> {
+            case CONDITION_NAME -> {
                 Information information = JsonParser.parseJsonToInformation(responseData);
                 if (information != null) {
                     EmbedBuilder conditionEmbed = createEmbedFromInformation(information, typeName);
+                    hook.sendMessageEmbeds(conditionEmbed.build()).queue();
+                } else {
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
+                }
+            }
+            case RULE_NAME -> {
+                Rule rule = JsonParser.parseJsonToRule(responseData);
+                if (rule != null) {
+                    EmbedBuilder conditionEmbed = createEmbedFromRule(rule);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
                     queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
@@ -208,6 +218,21 @@ public class DnDCommand implements IFetchCommand {
             if (typeName.equals(CONDITION_NAME))
                 embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
             if (typeName.equals(RULE_NAME)) embedBuilder.setDescription(information.desc().get(0));
+        }
+
+        embedBuilder.setColor(0x42f5a7);
+        return embedBuilder;
+    }
+
+    private static EmbedBuilder createEmbedFromRule(Rule rule) {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+
+        if (rule.name() != null) {
+            embedBuilder.setTitle(rule.name());
+        }
+
+        if (rule.desc() != null && !rule.desc().isEmpty()) {
+            embedBuilder.setDescription(rule.desc());
         }
 
         embedBuilder.setColor(0x42f5a7);

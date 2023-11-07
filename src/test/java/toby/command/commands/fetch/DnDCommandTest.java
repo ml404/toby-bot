@@ -161,7 +161,7 @@ class DnDCommandTest implements CommandTest {
         when(event.getOption("query")).thenReturn(queryMapping);
         when(event.getInteraction()).thenReturn(event);
         HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn(getConditionJson());
+        when(helper.fetchFromGet(anyString())).thenReturn(getRuleJson());
         when(typeMapping.getAsString()).thenReturn("rule-sections");
         when(typeMapping.getName()).thenReturn("rule");
         when(queryMapping.getAsString()).thenReturn("cover");
@@ -299,6 +299,11 @@ class DnDCommandTest implements CommandTest {
     private String getConditionJson(){
         return """
                 {"index":"grappled","name":"Grappled","desc":["- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.","- The condition ends if the grappler is incapacitated (see the condition).","- The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."],"url":"/api/conditions/grappled"}""";
+    }
+
+    private String getRuleJson(){
+        return """
+                {"name":"Cover","index":"cover","desc":"## Cover\\n\\nWalls, trees, creatures, and other obstacles can provide cover during combat, making a target more difficult to harm. A target can benefit from cover only when an attack or other effect originates on the opposite side of the cover.\\n\\nThere are three degrees of cover. If a target is behind multiple sources of cover, only the most protective degree of cover applies; the degrees aren't added together. For example, if a target is behind a creature that gives half cover and a tree trunk that gives three-quarters cover, the target has three-quarters cover.\\n\\nA target with **half cover** has a +2 bonus to AC and Dexterity saving throws. A target has half cover if an obstacle blocks at least half of its body. The obstacle might be a low wall, a large piece of furniture, a narrow tree trunk, or a creature, whether that creature is an enemy or a friend.\\n\\nA target with **three-quarters cover** has a +5 bonus to AC and Dexterity saving throws. A target has three-quarters cover if about three-quarters of it is covered by an obstacle. The obstacle might be a portcullis, an arrow slit, or a thick tree trunk.\\n\\nA target with **total cover** can't be targeted directly by an attack or a spell, although some spells can reach such a target by including it in an area of effect. A target has total cover if it is completely concealed by an obstacle.\\n","url":"/api/rule-sections/cover"}""";
     }
 
 }
