@@ -3,13 +3,16 @@ package toby.command.commands.fetch;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
-import toby.dto.web.dnd.information.Information;
+import toby.dto.web.dnd.misc.Information;
+import toby.dto.web.dnd.misc.Rule;
 import toby.dto.web.dnd.spell.ApiInfo;
 import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.QueryResult;
@@ -29,56 +32,85 @@ public class DnDCommand implements IFetchCommand {
     public static final String DND_5_API_URL = "https://www.dnd5eapi.co/api/%s/%s";
     public static final String TYPE = "type";
     public static final String QUERY = "query";
+    public static final String SPELL_NAME = "spell";
+    public static final String CONDITION_NAME = "condition";
+    public static final String RULE_NAME = "rule";
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleWithHttpObjects(ctx.getEvent(), ctx.getEvent().getOption(TYPE).getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
+        OptionMapping typeOptionMapping = ctx.getEvent().getOption(TYPE);
+        handleWithHttpObjects(ctx.getEvent(), getName(typeOptionMapping), typeOptionMapping.getAsString(), ctx.getEvent().getOption(QUERY).getAsString(), new HttpHelper(), deleteDelay);
 
+    }
+
+    @NotNull
+    private static String getName(OptionMapping typeOptionMapping) {
+        switch (typeOptionMapping.getAsString()) {
+            case "spells" -> {
+                return SPELL_NAME;
+            }
+            case "conditions" -> {
+                return CONDITION_NAME;
+            }
+            case "rule-sections" -> {
+                return RULE_NAME;
+            }
+        }
+        return "";
     }
 
     @VisibleForTesting
-    public void handleWithHttpObjects(SlashCommandInteractionEvent event, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
+    public void handleWithHttpObjects(SlashCommandInteractionEvent event, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
         event.deferReply().queue();
-        doLookUpAndReply(event.getHook(), type, query, httpHelper, deleteDelay);
+        doLookUpAndReply(event.getHook(), typeName, typeValue, query, httpHelper, deleteDelay);
     }
 
-    public static void doLookUpAndReply(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, query));
-        switch (type) {
-            case "spells" -> {
+    public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
+        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, query));
+        switch (typeName) {
+            case SPELL_NAME -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
                 if (spell != null) {
                     EmbedBuilder spellEmbed = createEmbedFromSpell(spell);
                     hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
-            case "conditions" -> {
-                Information condition = JsonParser.parseJsonToInformation(responseData);
-                if (condition != null) {
-                    EmbedBuilder conditionEmbed = createEmbedFromInformation(condition);
+            case CONDITION_NAME -> {
+                Information information = JsonParser.parseJsonToInformation(responseData);
+                if (information != null) {
+                    EmbedBuilder conditionEmbed = createEmbedFromInformation(information, typeName);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, type, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
+                }
+            }
+            case RULE_NAME -> {
+                Rule rule = JsonParser.parseJsonToRule(responseData);
+                if (rule != null) {
+                    EmbedBuilder conditionEmbed = createEmbedFromRule(rule);
+                    hook.sendMessageEmbeds(conditionEmbed.build()).queue();
+                } else {
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
             default -> hook.sendMessage("Something went wrong.").queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
-    private static void queryNonMatchRetry(InteractionHook hook, String type, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, type, "?name=" + query));
+    private static void queryNonMatchRetry(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
+        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + query));
         QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
         if (queryResult != null && queryResult.count() > 0) {
-            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD%s", type)).setPlaceholder("Choose an option");
+            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD%s", typeName)).setPlaceholder("Choose an option");
             queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
             hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
                     .addActionRow(builder.build())
                     .queue();
 
         } else {
-            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", type, query).queue(invokeDeleteOnMessageResponse(deleteDelay));
+            hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", typeName, query).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 
@@ -175,7 +207,7 @@ public class DnDCommand implements IFetchCommand {
         return embedBuilder;
     }
 
-    private static EmbedBuilder createEmbedFromInformation(Information information) {
+    private static EmbedBuilder createEmbedFromInformation(Information information, String typeName) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (information.name() != null) {
@@ -183,8 +215,24 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (information.desc() != null && !information.desc().isEmpty()) {
-            embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
+            if (typeName.equals(CONDITION_NAME))
+                embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
+            if (typeName.equals(RULE_NAME)) embedBuilder.setDescription(information.desc().get(0));
+        }
 
+        embedBuilder.setColor(0x42f5a7);
+        return embedBuilder;
+    }
+
+    private static EmbedBuilder createEmbedFromRule(Rule rule) {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+
+        if (rule.name() != null) {
+            embedBuilder.setTitle(rule.name());
+        }
+
+        if (rule.desc() != null && !rule.desc().isEmpty()) {
+            embedBuilder.setDescription(rule.desc());
         }
 
         embedBuilder.setColor(0x42f5a7);
@@ -208,8 +256,9 @@ public class DnDCommand implements IFetchCommand {
     @Override
     public List<OptionData> getOptionData() {
         OptionData type = new OptionData(OptionType.STRING, TYPE, "What type of are you looking up", true);
-        type.addChoice("spell", "spells");
-        type.addChoice("condition", "conditions");
+        type.addChoice(SPELL_NAME, "spells");
+        type.addChoice(CONDITION_NAME, "conditions");
+        type.addChoice(RULE_NAME, "rule-sections");
         OptionData query = new OptionData(OptionType.STRING, QUERY, "What is the thing you are looking up?", true);
         return List.of(type, query);
     }

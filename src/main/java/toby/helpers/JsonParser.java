@@ -1,7 +1,8 @@
 package toby.helpers;
 
 import com.google.gson.Gson;
-import toby.dto.web.dnd.information.Information;
+import toby.dto.web.dnd.misc.Information;
+import toby.dto.web.dnd.misc.Rule;
 import toby.dto.web.dnd.spell.QueryResult;
 import toby.dto.web.dnd.spell.Spell;
 
@@ -16,6 +17,12 @@ public class JsonParser {
         Gson gson = new Gson();
         return gson.fromJson(jsonData, Information.class);
     }
+
+    public static Rule parseJsonToRule(String jsonData) {
+        Gson gson = new Gson();
+        return gson.fromJson(jsonData, Rule.class);
+    }
+
 
     public static QueryResult parseJsonToQueryResult(String jsonData) {
         Gson gson = new Gson();
