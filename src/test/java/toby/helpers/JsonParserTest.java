@@ -42,7 +42,7 @@ class JsonParserTest {
                 new Dc(new ApiInfo("dex", "DEX", "/api/ability-scores/dex"),
                         "half"),
                 new AreaOfEffect("sphere", 20),
-                new School("evocation", "Evocation", "/api/magic-schools/evocation"),
+                new ApiInfo("evocation", "Evocation", "/api/magic-schools/evocation"),
                 List.of(
                         new ApiInfo("sorcerer", "Sorcerer", "/api/classes/sorcerer"),
                         new ApiInfo("wizard", "Wizard", "/api/classes/wizard")

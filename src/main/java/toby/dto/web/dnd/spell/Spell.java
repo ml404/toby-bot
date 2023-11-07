@@ -18,7 +18,7 @@ public record Spell(
         Damage damage,
         Dc dc,
         AreaOfEffect areaOfEffect,
-        School school,
+        ApiInfo school,
         List<ApiInfo> classes,
         List<ApiInfo> subclasses,
         String url) {

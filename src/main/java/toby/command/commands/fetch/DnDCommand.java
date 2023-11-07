@@ -169,11 +169,11 @@ public class DnDCommand implements IFetchCommand {
 
         if (spell.damage() != null) {
             StringBuilder damageInfo = new StringBuilder();
-            damageInfo.append("Damage Type: ").append(spell.damage().damage_type().name()).append("\n");
+            damageInfo.append("Damage Type: ").append(spell.damage().damageType().name()).append("\n");
             damageInfo.append("Damage at Slot Level:\n");
 
             // Add damage at slot level information
-            for (Map.Entry<String, String> entry : spell.damage().damage_at_slot_level().entrySet()) {
+            for (Map.Entry<String, String> entry : spell.damage().damageAtSlotLevel().entrySet()) {
                 damageInfo.append("Level ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
             }
 
@@ -183,8 +183,8 @@ public class DnDCommand implements IFetchCommand {
         Dc dc = spell.dc();
         if (dc != null) {
             embedBuilder.addField("DC Type", dc.dcType().name(), true);
-            if (dc.dc_success() != null) {
-                embedBuilder.addField("DC Success", dc.dc_success(), true);
+            if (dc.dcSuccess() != null) {
+                embedBuilder.addField("DC Success", dc.dcSuccess(), true);
             }
         }
 
