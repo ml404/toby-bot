@@ -77,9 +77,9 @@ public class DnDCommand implements IFetchCommand {
                 }
             }
             case "condition", "rule" -> {
-                Information condition = JsonParser.parseJsonToInformation(responseData);
-                if (condition != null) {
-                    EmbedBuilder conditionEmbed = createEmbedFromInformation(condition);
+                Information information = JsonParser.parseJsonToInformation(responseData);
+                if (information != null) {
+                    EmbedBuilder conditionEmbed = createEmbedFromInformation(information, typeName);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
                     queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
@@ -197,7 +197,7 @@ public class DnDCommand implements IFetchCommand {
         return embedBuilder;
     }
 
-    private static EmbedBuilder createEmbedFromInformation(Information information) {
+    private static EmbedBuilder createEmbedFromInformation(Information information, String typeName) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (information.name() != null) {
@@ -205,8 +205,9 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (information.desc() != null && !information.desc().isEmpty()) {
-            embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
-
+            if (typeName.equals("condition"))
+                embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
+            if (typeName.equals("rule")) embedBuilder.setDescription(information.desc().get(0));
         }
 
         embedBuilder.setColor(0x42f5a7);
