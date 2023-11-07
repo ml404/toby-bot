@@ -1,4 +1,4 @@
-package toby.dto.web.dnd.misc;
+package toby.dto.web.dnd;
 
 import java.util.List;
 

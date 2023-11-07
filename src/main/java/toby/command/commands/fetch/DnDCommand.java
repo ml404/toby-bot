@@ -11,8 +11,9 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
-import toby.dto.web.dnd.misc.Information;
-import toby.dto.web.dnd.misc.Rule;
+import toby.dto.web.dnd.Feature;
+import toby.dto.web.dnd.Information;
+import toby.dto.web.dnd.Rule;
 import toby.dto.web.dnd.spell.ApiInfo;
 import toby.dto.web.dnd.spell.Dc;
 import toby.dto.web.dnd.spell.QueryResult;
@@ -35,6 +36,7 @@ public class DnDCommand implements IFetchCommand {
     public static final String SPELL_NAME = "spell";
     public static final String CONDITION_NAME = "condition";
     public static final String RULE_NAME = "rule";
+    public static final String FEATURE_NAME = "feature";
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
@@ -55,6 +57,9 @@ public class DnDCommand implements IFetchCommand {
             case "rule-sections" -> {
                 return RULE_NAME;
             }
+            case "features" -> {
+                return FEATURE_NAME;
+            }
         }
         return "";
     }
@@ -63,10 +68,13 @@ public class DnDCommand implements IFetchCommand {
     public void handleWithHttpObjects(SlashCommandInteractionEvent event, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
         event.deferReply().queue();
         doLookUpAndReply(event.getHook(), typeName, typeValue, query, httpHelper, deleteDelay);
+
     }
 
     public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String responseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, query));
+        String queryFormatted = query.replace(" ", "%20");
+        String url = String.format(DND_5_API_URL, typeValue, queryFormatted);
+        String responseData = httpHelper.fetchFromGet(url);
         switch (typeName) {
             case SPELL_NAME -> {
                 Spell spell = JsonParser.parseJSONToSpell(responseData);
@@ -74,16 +82,16 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder spellEmbed = createEmbedFromSpell(spell);
                     hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
                 }
             }
             case CONDITION_NAME -> {
                 Information information = JsonParser.parseJsonToInformation(responseData);
                 if (information != null) {
-                    EmbedBuilder conditionEmbed = createEmbedFromInformation(information, typeName);
+                    EmbedBuilder conditionEmbed = createEmbedFromInformation(information);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
                 }
             }
             case RULE_NAME -> {
@@ -92,7 +100,16 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder conditionEmbed = createEmbedFromRule(rule);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
+                }
+            }
+            case FEATURE_NAME -> {
+                Feature feature = JsonParser.parseJsonToFeature(responseData);
+                if (feature != null) {
+                    EmbedBuilder conditionEmbed = createEmbedFromFeature(feature);
+                    hook.sendMessageEmbeds(conditionEmbed.build()).queue();
+                } else {
+                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
                 }
             }
             default -> hook.sendMessage("Something went wrong.").queue(invokeDeleteOnMessageResponse(deleteDelay));
@@ -123,10 +140,10 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (spell.desc() != null && !spell.desc().isEmpty()) {
-            embedBuilder.setDescription(spell.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
+            embedBuilder.setDescription(transformListToString(spell.desc()));
         }
-        if (!spell.higher_level().isEmpty()) {
-            embedBuilder.addField("Higher Level", spell.higher_level().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get(), false);
+        if (!spell.higherLevel().isEmpty()) {
+            embedBuilder.addField("Higher Level", transformListToString(spell.higherLevel()), false);
 
         }
         if (spell.range() != null) {
@@ -143,8 +160,8 @@ public class DnDCommand implements IFetchCommand {
 
         embedBuilder.addField("Concentration", String.valueOf(spell.concentration()), true);
 
-        if (!spell.casting_time().isEmpty()) {
-            embedBuilder.addField("Casting Time", spell.casting_time(), true);
+        if (!spell.castingTime().isEmpty()) {
+            embedBuilder.addField("Casting Time", spell.castingTime(), true);
         }
 
         if (spell.level() >= 0) {
@@ -166,14 +183,14 @@ public class DnDCommand implements IFetchCommand {
 
         Dc dc = spell.dc();
         if (dc != null) {
-            embedBuilder.addField("DC Type", dc.dc_type().name(), true);
+            embedBuilder.addField("DC Type", dc.dcType().name(), true);
             if (dc.dc_success() != null) {
                 embedBuilder.addField("DC Success", dc.dc_success(), true);
             }
         }
 
-        if (spell.area_of_effect() != null) {
-            embedBuilder.addField("Area of Effect", "Type: " + spell.area_of_effect().type() + ", Size: " + transformToMeters(spell.area_of_effect().size()) + "m", true);
+        if (spell.areaOfEffect() != null) {
+            embedBuilder.addField("Area of Effect", "Type: " + spell.areaOfEffect().type() + ", Size: " + transformToMeters(spell.areaOfEffect().size()) + "m", true);
         }
 
         if (spell.school() != null) {
@@ -207,7 +224,7 @@ public class DnDCommand implements IFetchCommand {
         return embedBuilder;
     }
 
-    private static EmbedBuilder createEmbedFromInformation(Information information, String typeName) {
+    private static EmbedBuilder createEmbedFromInformation(Information information) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         if (information.name() != null) {
@@ -215,9 +232,7 @@ public class DnDCommand implements IFetchCommand {
         }
 
         if (information.desc() != null && !information.desc().isEmpty()) {
-            if (typeName.equals(CONDITION_NAME))
-                embedBuilder.setDescription(information.desc().stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get());
-            if (typeName.equals(RULE_NAME)) embedBuilder.setDescription(information.desc().get(0));
+            embedBuilder.setDescription(transformListToString(information.desc()));
         }
 
         embedBuilder.setColor(0x42f5a7);
@@ -237,6 +252,38 @@ public class DnDCommand implements IFetchCommand {
 
         embedBuilder.setColor(0x42f5a7);
         return embedBuilder;
+    }
+
+    private static EmbedBuilder createEmbedFromFeature(Feature feature) {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+
+        if (feature.name() != null) {
+            embedBuilder.setTitle(feature.name());
+        }
+
+        if (feature.desc() != null && !feature.desc().isEmpty()) {
+            embedBuilder.setDescription(transformListToString(feature.desc()));
+        }
+
+        if (feature.classInfo() != null) {
+            embedBuilder.addField("Class", feature.classInfo().name(), true);
+        }
+
+        if (feature.level() > 0) {
+            embedBuilder.addField("Level", String.valueOf(feature.level()), true);
+        }
+
+        if (feature.prerequisites().size() > 0) {
+            embedBuilder.addField("Prerequisites", transformListToString(feature.prerequisites()), false);
+        }
+
+        embedBuilder.setColor(0x42f5a7);
+        return embedBuilder;
+    }
+
+    @NotNull
+    private static String transformListToString(List<String> feature) {
+        return feature.stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get();
     }
 
     private static String transformToMeters(int rangeNumber) {
@@ -259,6 +306,7 @@ public class DnDCommand implements IFetchCommand {
         type.addChoice(SPELL_NAME, "spells");
         type.addChoice(CONDITION_NAME, "conditions");
         type.addChoice(RULE_NAME, "rule-sections");
+        type.addChoice(FEATURE_NAME, "features");
         OptionData query = new OptionData(OptionType.STRING, QUERY, "What is the thing you are looking up?", true);
         return List.of(type, query);
     }
