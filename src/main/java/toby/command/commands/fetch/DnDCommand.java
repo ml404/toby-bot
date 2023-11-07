@@ -72,8 +72,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
     public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String queryFormatted = query.replace(" ", "%20");
-        String url = String.format(DND_5_API_URL, typeValue, queryFormatted);
+        String url = String.format(DND_5_API_URL, typeValue, replaceSpaceWithUrlEncode(query));
         String responseData = httpHelper.fetchFromGet(url);
         switch (typeName) {
             case SPELL_NAME -> {
@@ -82,7 +81,7 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder spellEmbed = createEmbedFromSpell(spell);
                     hook.sendMessageEmbeds(spellEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
             case CONDITION_NAME -> {
@@ -91,7 +90,7 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder conditionEmbed = createEmbedFromInformation(information);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
             case RULE_NAME -> {
@@ -100,7 +99,7 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder conditionEmbed = createEmbedFromRule(rule);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
             case FEATURE_NAME -> {
@@ -109,7 +108,7 @@ public class DnDCommand implements IFetchCommand {
                     EmbedBuilder conditionEmbed = createEmbedFromFeature(feature);
                     hook.sendMessageEmbeds(conditionEmbed.build()).queue();
                 } else {
-                    queryNonMatchRetry(hook, typeName, typeValue, queryFormatted, httpHelper, deleteDelay);
+                    queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay);
                 }
             }
             default -> hook.sendMessage("Something went wrong.").queue(invokeDeleteOnMessageResponse(deleteDelay));
@@ -117,7 +116,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
     private static void queryNonMatchRetry(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + query));
+        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + replaceSpaceWithUrlEncode(query)));
         QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
         if (queryResult != null && queryResult.count() > 0) {
             StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD%s", typeName)).setPlaceholder("Choose an option");
@@ -284,6 +283,11 @@ public class DnDCommand implements IFetchCommand {
     @NotNull
     private static String transformListToString(List<String> feature) {
         return feature.stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get();
+    }
+
+    @NotNull
+    private static String replaceSpaceWithUrlEncode(String query) {
+        return query.replace(" ", "%20");
     }
 
     private static String transformToMeters(int rangeNumber) {
