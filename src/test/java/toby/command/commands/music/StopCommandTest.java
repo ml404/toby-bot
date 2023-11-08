@@ -15,13 +15,13 @@ class StopCommandTest implements MusicCommandTest {
 
     @BeforeEach
     void setUp() {
-        setUpCommonMocks();
+        setupCommonMusicMocks();
         stopCommand = new StopCommand();
     }
 
     @AfterEach
     void tearDown() {
-        tearDownCommonMocks();
+        tearDownCommonMusicMocks();
     }
 
     @Test

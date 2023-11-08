@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.interactions.Interaction;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.AudioManager;
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
 import org.mockito.Mock;
 import toby.command.CommandTest;
 import toby.lavaplayer.AudioPlayerSendHandler;
@@ -46,6 +47,8 @@ public interface MusicCommandTest extends CommandTest {
     AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
     @Mock
     Interaction interaction = mock(Interaction.class);
+    @Mock
+    AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
 
     default void setupCommonMusicMocks() {
         setUpCommonMocks();
@@ -63,6 +66,8 @@ public interface MusicCommandTest extends CommandTest {
         Button pausePlay = Button.primary("pause/play", "⏯");
         Button stop = Button.primary("stop", "⏹");
         when(webhookMessageCreateAction.addActionRow(pausePlay, stop)).thenReturn(webhookMessageCreateAction);
+        when(webhookMessageCreateAction.complete()).thenReturn(message);
+        when(message.delete()).thenReturn(auditableRestAction);
     }
 
     default void tearDownCommonMusicMocks() {
@@ -77,6 +82,7 @@ public interface MusicCommandTest extends CommandTest {
         reset(memberVoiceState);
         reset(botVoiceState);
         reset(interaction);
+        reset(message);
     }
 
     default void setUpAudioChannelsWithBotAndMemberInSameChannel() {

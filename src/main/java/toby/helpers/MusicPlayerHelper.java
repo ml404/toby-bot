@@ -32,7 +32,7 @@ public class MusicPlayerHelper {
     private static final String webUrl = "https://gibe-toby-bot.herokuapp.com/";
 
     public static final int SECOND_MULTIPLIER = 1000;
-    private static WebhookMessageCreateAction<Message> nowPlayingMessageAction;
+    private static final Map<Long, WebhookMessageCreateAction<Message>> guildLastNowPlayingMessageAction = new HashMap<>();
 
     public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
@@ -97,9 +97,11 @@ public class MusicPlayerHelper {
         String nowPlaying = getNowPlayingString(track, volume);
         Button pausePlay = Button.primary("pause/play", "⏯");
         Button stop = Button.primary("stop", "⏹");
-        resetNowPlayingMessage();
-        nowPlayingMessageAction = hook.sendMessage(nowPlaying).addActionRow(pausePlay, stop);
+        long guildId = hook.getInteraction().getGuild().getIdLong();
+        resetNowPlayingMessage(guildId);
+        WebhookMessageCreateAction<Message> nowPlayingMessageAction = hook.sendMessage(nowPlaying).addActionRow(pausePlay, stop);
         nowPlayingMessageAction.queue(invokeDeleteOnMessageResponse(deriveDeleteDelayFromTrack(track)));
+        guildLastNowPlayingMessageAction.put(guildId, nowPlayingMessageAction);
     }
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
@@ -119,7 +121,7 @@ public class MusicPlayerHelper {
             musicManager.getAudioPlayer().setPaused(false);
             hook.deleteOriginal().queue();
             hook.sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            resetNowPlayingMessage();
+            resetNowPlayingMessage(event.getGuild().getIdLong());
         } else {
             IMusicCommand.sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
         }
@@ -225,14 +227,15 @@ public class MusicPlayerHelper {
         return (int) (track.getDuration() / 1000);
     }
 
-    private static void resetNowPlayingMessage() {
+    private static void resetNowPlayingMessage(long guildId) {
+        WebhookMessageCreateAction<Message> nowPlayingMessageAction = guildLastNowPlayingMessageAction.get(guildId);
         if (nowPlayingMessageAction != null) {
-            deleteAndResetNowPlayingMessage();
+            deleteAndResetNowPlayingMessage(guildId, nowPlayingMessageAction);
         }
     }
 
-    private static void deleteAndResetNowPlayingMessage() {
+    private static void deleteAndResetNowPlayingMessage(long guildId, WebhookMessageCreateAction<Message> nowPlayingMessageAction) {
         nowPlayingMessageAction.complete().delete().queue();
-        nowPlayingMessageAction = null;
+        guildLastNowPlayingMessageAction.remove(guildId);
     }
 }
