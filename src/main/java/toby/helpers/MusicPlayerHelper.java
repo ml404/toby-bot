@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
@@ -17,9 +18,7 @@ import toby.lavaplayer.PlayerManager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
@@ -90,15 +89,26 @@ public class MusicPlayerHelper {
         // Get the previous "Now Playing" message if it exists
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
 
+        Timer timer = new Timer();
         if (previousNowPlayingMessage != null) {
             // Update the existing "Now Playing" message
-            previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop).queue();
+            scheduleMessageUpdateAtFixedRate(timer, previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop));
             hook.deleteOriginal().queue();
         } else {
-            // Send a new "Now Playing" message and store it
             Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
             guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
+            scheduleMessageUpdateAtFixedRate(timer, nowPlayingMessage.editMessage(getNowPlayingString(track, volume)));
         }
+    }
+
+    private static void scheduleMessageUpdateAtFixedRate(Timer timer, MessageEditAction messageEditAction) {
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                messageEditAction.queue();
+                ;
+            }
+        }, 1000, 1000);
     }
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
