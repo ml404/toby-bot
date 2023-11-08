@@ -24,7 +24,7 @@ public class MenuContext implements ICommandContext {
         return (SlashCommandInteractionEvent) this.interaction;
     }
 
-    public StringSelectInteractionEvent getStringSelectInteractionEvent(){
+    public StringSelectInteractionEvent getSelectEvent(){
         return (StringSelectInteractionEvent) this.interaction;
     }
 

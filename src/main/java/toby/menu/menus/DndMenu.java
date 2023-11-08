@@ -12,7 +12,7 @@ import static toby.command.commands.fetch.DnDCommand.*;
 public class DndMenu implements IMenu {
     @Override
     public void handle(MenuContext ctx, Integer deleteDelay) {
-        StringSelectInteractionEvent event = ctx.getStringSelectInteractionEvent();
+        StringSelectInteractionEvent event = ctx.getSelectEvent();
         event.deferReply().queue();
         try {
             determineDnDRequestType(event, deleteDelay);
