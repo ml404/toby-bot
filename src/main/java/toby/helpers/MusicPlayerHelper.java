@@ -32,7 +32,7 @@ public class MusicPlayerHelper {
     private static final String webUrl = "https://gibe-toby-bot.herokuapp.com/";
 
     public static final int SECOND_MULTIPLIER = 1000;
-    private static final Map<Long, WebhookMessageCreateAction<Message>> guildLastNowPlayingMessageAction = new HashMap<>();
+    private static final Map<Long, Message> guildLastNowPlayingMessage = new HashMap<>();
 
     public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
@@ -100,8 +100,9 @@ public class MusicPlayerHelper {
         long guildId = hook.getInteraction().getGuild().getIdLong();
         resetNowPlayingMessage(guildId);
         WebhookMessageCreateAction<Message> nowPlayingMessageAction = hook.sendMessage(nowPlaying).addActionRow(pausePlay, stop);
+        Message message = nowPlayingMessageAction.complete();
+        guildLastNowPlayingMessage.put(guildId, message);
         nowPlayingMessageAction.queue(invokeDeleteOnMessageResponse(deriveDeleteDelayFromTrack(track)));
-        guildLastNowPlayingMessageAction.put(guildId, nowPlayingMessageAction);
     }
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
@@ -228,15 +229,14 @@ public class MusicPlayerHelper {
     }
 
     private static void resetNowPlayingMessage(long guildId) {
-        WebhookMessageCreateAction<Message> nowPlayingMessageAction = guildLastNowPlayingMessageAction.get(guildId);
-        if (nowPlayingMessageAction != null) {
-            deleteAndResetNowPlayingMessage(guildId, nowPlayingMessageAction);
+        Message message = guildLastNowPlayingMessage.get(guildId);
+        if (message != null) {
+            deleteAndResetNowPlayingMessage(guildId, message);
         }
     }
 
-    private static void deleteAndResetNowPlayingMessage(long guildId, WebhookMessageCreateAction<Message> nowPlayingMessageAction) {
-        nowPlayingMessageAction.queue(message -> message.delete().queue());
-        nowPlayingMessageAction.complete().delete().queue();
-        guildLastNowPlayingMessageAction.remove(guildId);
+    private static void deleteAndResetNowPlayingMessage(long guildId, Message nowPlayingMessageAction) {
+        nowPlayingMessageAction.delete().queue();
+        guildLastNowPlayingMessage.remove(guildId);
     }
 }
