@@ -12,7 +12,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
 class PlayCommandTest implements MusicCommandTest {
 
@@ -26,6 +25,7 @@ class PlayCommandTest implements MusicCommandTest {
 
     @AfterEach
     void tearDown() {
+        tearDownCommonMusicMocks();
     }
 
     @Test
