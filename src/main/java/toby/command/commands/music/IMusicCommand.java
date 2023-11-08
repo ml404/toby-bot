@@ -3,23 +3,25 @@ package toby.command.commands.music;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
-import static toby.command.ICommand.*;
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+import static toby.helpers.MusicPlayerHelper.formatTime;
 
 public interface IMusicCommand extends ICommand {
 
-    static void sendDeniedStoppableMessage(SlashCommandInteractionEvent event, GuildMusicManager musicManager, Integer deleteDelay) {
+    static void sendDeniedStoppableMessage(InteractionHook interactionHook, GuildMusicManager musicManager, Integer deleteDelay) {
         if (musicManager.getScheduler().getQueue().size() > 0) {
-            event.getHook().sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(invokeDeleteOnMessageResponse(deleteDelay));
+            interactionHook.sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else {
             long duration = musicManager.getAudioPlayer().getPlayingTrack().getDuration();
-            String songDuration = QueueCommand.formatTime(duration);
-            event.getHook().sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(invokeDeleteOnMessageResponse(deleteDelay));
+            String songDuration = formatTime(duration);
+            interactionHook.sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 

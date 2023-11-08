@@ -16,9 +16,11 @@ import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.helpers.Cache;
+import toby.helpers.MusicPlayerHelper;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
+import toby.lavaplayer.PlayerManager;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -190,7 +192,11 @@ public class CommandManager {
                 cmd.handle(iCommandCommandContextPair.getRight(), requestingUserDto, deleteDelay);
                 event.deferEdit().queue();
             }
-        } else {
+        }
+        if (event.getComponentId().equals("pause/play")){
+            MusicPlayerHelper.changePauseStatusOnTrack(event.getHook(), PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
+        }
+        else {
             //button name that should be something like 'roll: 20,1,0'
             String invoke = event.getComponentId().toLowerCase();
             String[] split = invoke.split(":");

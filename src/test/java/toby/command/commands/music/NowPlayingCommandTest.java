@@ -60,12 +60,14 @@ class NowPlayingCommandTest implements MusicCommandTest {
         //Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel();
         CommandContext commandContext = new CommandContext(event);
+        when(track.getUserData()).thenReturn(1);
+
 
         //Act
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) "));
+        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) with volume '1'"));
     }
 
     @Test
@@ -76,12 +78,13 @@ class NowPlayingCommandTest implements MusicCommandTest {
         AudioTrackInfo audioTrackInfo = new AudioTrackInfo("Title", "Author", 1000L, "Identifier", false, "uri");
         when(audioPlayer.getPlayingTrack()).thenReturn(track);
         when(track.getInfo()).thenReturn(audioTrackInfo);
+        when(track.getUserData()).thenReturn(1);
         when(track.getPosition()).thenReturn(1000L);
         when(track.getDuration()).thenReturn(3000L);
         //Act
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) "));
+        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) with volume '1'"));
     }
 }

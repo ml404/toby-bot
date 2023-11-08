@@ -15,20 +15,18 @@ public class DndMenu implements IMenu {
         StringSelectInteractionEvent event = ctx.getSelectEvent();
         event.deferReply().queue();
         try {
-            determineDnDRequestType(event, deleteDelay);
+            determineDnDRequestType(event, deleteDelay, getType(event));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void determineDnDRequestType(StringSelectInteractionEvent event, Integer deleteDelay) throws UnsupportedEncodingException {
-        String type = event.getComponentId().split(":")[1];
-
+    private void determineDnDRequestType(StringSelectInteractionEvent event, Integer deleteDelay, String type) throws UnsupportedEncodingException {
         switch (type) {
-            case "spell" -> sendDndApiRequest(event, SPELL_NAME, "spells", deleteDelay);
-            case "condition" -> sendDndApiRequest(event, CONDITION_NAME, "conditions", deleteDelay);
-            case "rule" -> sendDndApiRequest(event, RULE_NAME, "rule-sections", deleteDelay);
-            case "feature" -> sendDndApiRequest(event, FEATURE_NAME, "features", deleteDelay);
+            case SPELL_NAME -> sendDndApiRequest(event, SPELL_NAME, "spells", deleteDelay);
+            case CONDITION_NAME-> sendDndApiRequest(event, CONDITION_NAME, "conditions", deleteDelay);
+            case RULE_NAME-> sendDndApiRequest(event, RULE_NAME, "rule-sections", deleteDelay);
+            case FEATURE_NAME -> sendDndApiRequest(event, FEATURE_NAME, "features", deleteDelay);
         }
     }
 
@@ -36,6 +34,10 @@ public class DndMenu implements IMenu {
         String query = event.getValues().get(0); // Get the selected option
         event.getMessage().delete().queue();
         doLookUpAndReply(event.getHook(), typeName, typeValue, query, new HttpHelper(), deleteDelay);
+    }
+
+    private static String getType(StringSelectInteractionEvent event) {
+        return event.getComponentId().split(":")[1];
     }
 
     public String getName() {

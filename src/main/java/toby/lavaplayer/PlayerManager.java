@@ -79,7 +79,7 @@ public class PlayerManager {
                 scheduler.setPreviousVolume(previousVolume);
 
                 // not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out as you can only acknowledge each hook once?
-                event.getChannel().sendMessage("Adding to queue: `")
+                event.getHook().sendMessage("Adding to queue: `")
                         .addContent(track.getInfo().title)
                         .addContent("` by `")
                         .addContent(track.getInfo().author)

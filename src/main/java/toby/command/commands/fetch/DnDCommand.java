@@ -48,18 +48,10 @@ public class DnDCommand implements IFetchCommand {
     @NotNull
     private static String getName(OptionMapping typeOptionMapping) {
         switch (typeOptionMapping.getAsString()) {
-            case "spells" -> {
-                return SPELL_NAME;
-            }
-            case "conditions" -> {
-                return CONDITION_NAME;
-            }
-            case "rule-sections" -> {
-                return RULE_NAME;
-            }
-            case "features" -> {
-                return FEATURE_NAME;
-            }
+            case "spells" -> { return SPELL_NAME; }
+            case "conditions" -> { return CONDITION_NAME; }
+            case "rule-sections" -> { return RULE_NAME; }
+            case "features" -> { return FEATURE_NAME; }
         }
         return "";
     }

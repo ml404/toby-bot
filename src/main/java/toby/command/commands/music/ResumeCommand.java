@@ -1,15 +1,14 @@
 package toby.command.commands.music;
 
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.PlayerManager;
 
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+import static toby.command.commands.music.IMusicCommand.isInvalidChannelStateForCommand;
+import static toby.helpers.MusicPlayerHelper.changePauseStatusOnTrack;
 
 
 public class ResumeCommand implements IMusicCommand {
@@ -27,19 +26,8 @@ public class ResumeCommand implements IMusicCommand {
             sendErrorMessage(event, deleteDelay);
             return;
         }
-
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        AudioPlayer audioPlayer = instance.getMusicManager(ctx.getGuild()).getAudioPlayer();
-        if (audioPlayer.isPaused()) {
-            AudioTrack track = audioPlayer.getPlayingTrack();
-            event.getHook().sendMessage("Resuming: `")
-                    .addContent(track.getInfo().title)
-                    .addContent("` by `")
-                    .addContent(track.getInfo().author)
-                    .addContent("`")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay));
-            audioPlayer.setPaused(false);
-        }
+        if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
+        changePauseStatusOnTrack(event.getHook(),instance.getMusicManager(ctx.getGuild()), deleteDelay);
     }
 
     @Override

@@ -72,7 +72,7 @@ public class TrackScheduler extends AudioEventAdapter {
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
-                nowPlaying(event, player.getPlayingTrack(), deleteDelay, volume);
+                nowPlaying(event.getHook(), PlayerManager.getInstance(), volume, deleteDelay);
             }
         }
     }
