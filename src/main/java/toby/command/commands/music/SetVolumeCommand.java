@@ -62,6 +62,7 @@ public class SetVolumeCommand implements IMusicCommand {
                     hook.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member.getEffectiveName()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
                     return;
                 }
+                instance.setPreviousVolume(oldVolume);
                 audioPlayer.setVolume(volumeArg);
                 hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             } else {
