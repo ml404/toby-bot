@@ -27,7 +27,7 @@ public class ResumeCommand implements IMusicCommand {
             return;
         }
         if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        changePauseStatusOnTrack(event.getHook(),instance.getMusicManager(ctx.getGuild()), deleteDelay);
+        changePauseStatusOnTrack(event,instance.getMusicManager(ctx.getGuild()), deleteDelay);
     }
 
     @Override

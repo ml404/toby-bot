@@ -34,7 +34,7 @@ public class PauseCommand implements IMusicCommand {
 
         GuildMusicManager musicManager = instance.getMusicManager(guild);
         if (instance.isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
-            changePauseStatusOnTrack(event.getHook(), musicManager, deleteDelay);
+            changePauseStatusOnTrack(event, musicManager, deleteDelay);
         } else {
             sendDeniedStoppableMessage(event.getHook(), musicManager, deleteDelay);
         }

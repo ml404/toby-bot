@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
@@ -72,18 +73,20 @@ public class MusicPlayerHelper {
         }
     }
 
-    public static void nowPlaying(InteractionHook hook, PlayerManager playerManager, Integer deleteDelay) {
-        GuildMusicManager musicManager = playerManager.getMusicManager(hook.getInteraction().getGuild());
+    public static void nowPlaying(IReplyCallback event, PlayerManager playerManager, Integer deleteDelay) {
+        GuildMusicManager musicManager = playerManager.getMusicManager(event.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
         AudioTrack track = audioPlayer.getPlayingTrack();
+        InteractionHook hook = event.getHook();
         if (checkForPlayingTrack(track, hook, deleteDelay)) return;
         checkTrackAndSendMessage(track, hook, (int) track.getUserData());
     }
 
-    public static void nowPlaying(InteractionHook hook, PlayerManager playerManager, int volume, Integer deleteDelay) {
-        GuildMusicManager musicManager = playerManager.getMusicManager(hook.getInteraction().getGuild());
+    public static void nowPlaying(IReplyCallback event, PlayerManager playerManager, int volume, Integer deleteDelay) {
+        GuildMusicManager musicManager = playerManager.getMusicManager(event.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
         AudioTrack track = audioPlayer.getPlayingTrack();
+        InteractionHook hook = event.getHook();
         if (checkForPlayingTrack(track, hook, deleteDelay)) return;
         checkTrackAndSendMessage(track, hook, volume);
     }
@@ -123,11 +126,11 @@ public class MusicPlayerHelper {
         }
     }
 
-    public static void changePauseStatusOnTrack(InteractionHook hook, GuildMusicManager musicManager, Integer deleteDelay) {
+    public static void changePauseStatusOnTrack(IReplyCallback event, GuildMusicManager musicManager, Integer deleteDelay) {
         AudioPlayer audioPlayer = musicManager.getAudioPlayer();
         boolean paused = audioPlayer.isPaused();
         String message = paused ? "Resuming: `" : "Pausing: `";
-        sendMessageAndSetPaused(audioPlayer, hook, message, deleteDelay, !paused);
+        sendMessageAndSetPaused(audioPlayer, event.getHook(), message, deleteDelay, !paused);
 
     }
 
@@ -142,8 +145,9 @@ public class MusicPlayerHelper {
         audioPlayer.setPaused(paused);
     }
 
-    public static void skipTracks(InteractionHook hook, PlayerManager playerManager, int tracksToSkip, boolean canOverrideSkips, Integer deleteDelay) {
-        GuildMusicManager musicManager = playerManager.getMusicManager(hook.getInteraction().getGuild());
+    public static void skipTracks(IReplyCallback event, PlayerManager playerManager, int tracksToSkip, boolean canOverrideSkips, Integer deleteDelay) {
+        InteractionHook hook = event.getHook();
+        GuildMusicManager musicManager = playerManager.getMusicManager(event.getGuild());
         final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
 
         if (audioPlayer.getPlayingTrack() == null) {
@@ -162,7 +166,7 @@ public class MusicPlayerHelper {
             musicManager.getScheduler().setLooping(false);
             hook.sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(invokeDeleteOnMessageResponse(deleteDelay));
             AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
-            nowPlaying(hook, playerManager, (int) playingTrack.getUserData(), deleteDelay);
+            nowPlaying(event, playerManager, (int) playingTrack.getUserData(), deleteDelay);
         }
         sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
     }

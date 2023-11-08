@@ -29,7 +29,7 @@ public class SkipCommand implements IMusicCommand {
         event.deferReply().queue();
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         int tracksToSkip = Optional.ofNullable(event.getOption(SKIP)).map(OptionMapping::getAsInt).orElse(1);
-        skipTracks(event.getHook(), instance, tracksToSkip, requestingUserDto.isSuperUser(), deleteDelay);
+        skipTracks(event, instance, tracksToSkip, requestingUserDto.isSuperUser(), deleteDelay);
     }
 
 

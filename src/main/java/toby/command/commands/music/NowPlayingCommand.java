@@ -21,7 +21,7 @@ public class NowPlayingCommand implements IMusicCommand {
         event.deferReply().queue();
         if (requestingUserDto.hasMusicPermission()) {
             if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-            nowPlaying(event.getHook(), instance, deleteDelay);
+            nowPlaying(event, instance, deleteDelay);
         } else sendErrorMessage(event, deleteDelay);
     }
 

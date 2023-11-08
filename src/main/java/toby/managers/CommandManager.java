@@ -177,7 +177,6 @@ public class CommandManager {
 
     public void handle(ButtonInteractionEvent event) {
         Integer deleteDelay = Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId()).getValue());
-
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
         int introVolume = Integer.parseInt(defaultVolume);
@@ -194,7 +193,8 @@ public class CommandManager {
             }
         }
         if (event.getComponentId().equals("pause/play")){
-            MusicPlayerHelper.changePauseStatusOnTrack(event.getHook(), PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
+            event.deferReply().queue();
+            MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
         }
         else {
             //button name that should be something like 'roll: 20,1,0'
