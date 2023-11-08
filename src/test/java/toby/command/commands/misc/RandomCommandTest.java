@@ -1,6 +1,6 @@
 package toby.command.commands.misc;
 
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

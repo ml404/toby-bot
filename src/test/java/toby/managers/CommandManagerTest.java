@@ -1,4 +1,4 @@
-package toby.command.commands;
+package toby.managers;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +18,6 @@ import toby.jpa.service.impl.BrotherServiceImpl;
 import toby.jpa.service.impl.ConfigServiceImpl;
 import toby.jpa.service.impl.MusicFileServiceImpl;
 import toby.jpa.service.impl.UserServiceImpl;
-import toby.managers.CommandManager;
 
 import java.util.Arrays;
 import java.util.List;
@@ -88,7 +87,6 @@ public class CommandManagerTest {
                 ShuffleCommand.class,
                 AdjustUserCommand.class,
                 IntroSongCommand.class,
-//                EventWaiterCommand.class,
                 UserInfoCommand.class,
                 RandomCommand.class,
                 Kf2RandomMapCommand.class,

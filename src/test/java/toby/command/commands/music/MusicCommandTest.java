@@ -8,7 +8,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.mockito.Mock;
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import toby.lavaplayer.AudioPlayerSendHandler;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import toby.command.CommandContext;
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import toby.dto.web.RedditAPIDto;
 
 import java.io.ByteArrayInputStream;
