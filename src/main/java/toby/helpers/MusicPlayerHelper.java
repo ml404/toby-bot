@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import toby.command.commands.music.IMusicCommand;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
@@ -100,16 +101,26 @@ public class MusicPlayerHelper {
                 .queue(invokeDeleteOnMessageResponse(deriveDeleteDelayFromTrack(track)));
     }
 
-    private static int deriveDeleteDelayFromTrack(AudioTrack track) {
-        return (int) (track.getDuration() / 1000);
-    }
-
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
         if (track == null) {
             hook.sendMessage("There is no track playing currently").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
         }
         return false;
+    }
+
+    public static void stopSong(IReplyCallback event, GuildMusicManager musicManager, boolean canOverrideSkips, Integer deleteDelay) {
+        InteractionHook hook = event.getHook();
+        if (PlayerManager.getInstance().isCurrentlyStoppable() || canOverrideSkips) {
+            musicManager.getScheduler().stopTrack(true);
+            musicManager.getScheduler().getQueue().clear();
+            musicManager.getScheduler().setLooping(false);
+            musicManager.getAudioPlayer().setPaused(false);
+            hook.deleteOriginal().queue();
+            hook.sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
+        } else {
+            IMusicCommand.sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
+        }
     }
 
     public static String getNowPlayingString(AudioTrack playingTrack, int volume) {
@@ -206,5 +217,9 @@ public class MusicPlayerHelper {
         } catch (URISyntaxException e) {
             return false;
         }
+    }
+
+    private static int deriveDeleteDelayFromTrack(AudioTrack track) {
+        return (int) (track.getDuration() / 1000);
     }
 }

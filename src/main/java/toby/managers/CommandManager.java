@@ -196,6 +196,10 @@ public class CommandManager {
             event.deferReply().queue();
             MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
         }
+        if (event.getComponentId().equals("stop")){
+            event.deferReply().queue();
+            MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
+        }
         else {
             //button name that should be something like 'roll: 20,1,0'
             String invoke = event.getComponentId().toLowerCase();
