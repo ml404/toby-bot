@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
@@ -18,7 +17,9 @@ import toby.lavaplayer.PlayerManager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
@@ -77,38 +78,45 @@ public class MusicPlayerHelper {
         AudioTrack track = audioPlayer.getPlayingTrack();
         InteractionHook hook = event.getHook();
         if (checkForPlayingTrack(track, hook, deleteDelay)) return;
-        checkTrackAndSendMessage(track, hook, audioPlayer.getVolume());
+        checkTrackAndSendMessage(hook, track, audioPlayer.getVolume());
     }
 
-    private static void checkTrackAndSendMessage(AudioTrack track, InteractionHook hook, int volume) {
+    private static void checkTrackAndSendMessage(InteractionHook hook, AudioTrack track, int volume) {
         String nowPlaying = getNowPlayingString(track, volume);
         Button pausePlay = Button.primary("pause/play", "⏯");
         Button stop = Button.primary("stop", "⏹");
-        long guildId = hook.getInteraction().getGuild().getIdLong();
+        Guild guild = hook.getInteraction().getGuild();
+        long guildId = guild.getIdLong();
 
         // Get the previous "Now Playing" message if it exists
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
 
-        Timer timer = new Timer();
         if (previousNowPlayingMessage != null) {
             // Update the existing "Now Playing" message
-            scheduleMessageUpdateAtFixedRate(timer, previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop));
+            previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop);
             hook.deleteOriginal().queue();
+            periodicallyUpdateMessage(track, volume, guild, previousNowPlayingMessage);
         } else {
+            // Send a new "Now Playing" message and store it
             Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
             guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
-            scheduleMessageUpdateAtFixedRate(timer, nowPlayingMessage.editMessage(getNowPlayingString(track, volume)));
+            periodicallyUpdateMessage(track, volume, guild, nowPlayingMessage);
         }
     }
 
-    private static void scheduleMessageUpdateAtFixedRate(Timer timer, MessageEditAction messageEditAction) {
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                messageEditAction.queue();
+    private static void periodicallyUpdateMessage(AudioTrack track, int volume, Guild guild, Message nowPlayingMessage) {
+        // Periodically update the message
+        GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
+        while (musicManager.getAudioPlayer().getPlayingTrack() != null) {
+            nowPlayingMessage.editMessage(getNowPlayingString(track, volume)).queue();
+            try {
+                Thread.sleep(1000); // Sleep for 1 second
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        }, 1000, 1000);
+        }
     }
+
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
         if (track == null) {
