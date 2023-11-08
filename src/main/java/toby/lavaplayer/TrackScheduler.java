@@ -65,6 +65,7 @@ public class TrackScheduler extends AudioEventAdapter {
                 .queue(invokeDeleteOnMessageResponse(deleteDelay));
 
         tracks.forEach(track -> {
+            track.setUserData(player.getVolume());
             boolean hasNotStarted = !this.player.startTrack(track, true);
             if (hasNotStarted) {
                 this.queue.offer(track);
