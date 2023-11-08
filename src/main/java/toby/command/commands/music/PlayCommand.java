@@ -63,7 +63,9 @@ public class PlayCommand implements IMusicCommand {
             }
             String finalLink = link;
             CompletableFuture<Void> loadAndPlayFuture = CompletableFuture.runAsync(() -> instance.loadAndPlay(event, finalLink, true, deleteDelay, startPosition, volume));
-            loadAndPlayFuture.thenRun(() -> MusicPlayerHelper.nowPlaying(event, instance, volume));
+            loadAndPlayFuture.thenRun(() -> {
+                if(queue.isEmpty()) MusicPlayerHelper.nowPlaying(event, instance, volume);
+            });
         }
     }
 
