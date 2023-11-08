@@ -50,6 +50,7 @@ class PauseCommandTest implements MusicCommandTest {
         CommandContext commandContext = new CommandContext(event);
         when(audioPlayer.isPaused()).thenReturn(false);
         when(playerManager.isCurrentlyStoppable()).thenReturn(false);
+        when(requestingUserDto.isSuperUser()).thenReturn(false);
 
         //Act
         pauseCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
@@ -68,6 +69,7 @@ class PauseCommandTest implements MusicCommandTest {
         ArrayBlockingQueue queue = new ArrayBlockingQueue<>(1);
         queue.add(track);
         when(trackScheduler.getQueue()).thenReturn(queue);
+        when(requestingUserDto.isSuperUser()).thenReturn(false);
 
         //Act
         pauseCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);

@@ -21,6 +21,7 @@ class SkipCommandTest implements MusicCommandTest {
     void setUp() {
         setupCommonMusicMocks();
         skipCommand = new SkipCommand();
+        when(event.deferReply(true)).thenReturn(replyCallbackAction);
     }
 
     @AfterEach
@@ -73,7 +74,6 @@ class SkipCommandTest implements MusicCommandTest {
         verify(trackScheduler, times(1)).setLooping(false);
         verify(trackScheduler, times(2)).nextTrack();
         verify(interactionHook, times(1)).sendMessageFormat(eq("Skipped %d track(s)"), eq(2));
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) with volume '0'"));
     }
 
     @NotNull

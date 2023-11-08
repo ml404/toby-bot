@@ -1,9 +1,7 @@
 package toby.command.commands.music;
 
 
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.command.CommandContext;
 import toby.jpa.dto.UserDto;
@@ -29,11 +27,10 @@ public class PauseCommand implements IMusicCommand {
             return;
         }
         if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        final Member member = ctx.getMember();
         Guild guild = event.getGuild();
 
         GuildMusicManager musicManager = instance.getMusicManager(guild);
-        if (instance.isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
+        if (instance.isCurrentlyStoppable() || requestingUserDto.isSuperUser()) {
             changePauseStatusOnTrack(event, musicManager, deleteDelay);
         } else {
             sendDeniedStoppableMessage(event.getHook(), musicManager, deleteDelay);

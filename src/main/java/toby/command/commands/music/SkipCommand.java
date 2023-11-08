@@ -26,7 +26,7 @@ public class SkipCommand implements IMusicCommand {
     @Override
     public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
         final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
+        event.deferReply(true).queue();
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
         int tracksToSkip = Optional.ofNullable(event.getOption(SKIP)).map(OptionMapping::getAsInt).orElse(1);
         skipTracks(event, instance, tracksToSkip, requestingUserDto.isSuperUser(), deleteDelay);

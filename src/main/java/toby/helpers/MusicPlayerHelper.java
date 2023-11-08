@@ -178,7 +178,6 @@ public class MusicPlayerHelper {
             }
             musicManager.getScheduler().setLooping(false);
             hook.sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            nowPlaying(event, playerManager, deleteDelay);
         } else sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
     }
 

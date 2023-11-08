@@ -4,7 +4,6 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.managers.AudioManager;
 import toby.command.CommandContext;
@@ -48,7 +47,6 @@ public class LeaveCommand implements IMusicCommand {
 
         Guild guild = event.getGuild();
         final AudioManager audioManager = guild.getAudioManager();
-        AudioChannelUnion memberChannel = memberVoiceState.getChannel();
         GuildMusicManager musicManager = instance.getMusicManager(guild);
 
         if (PlayerManager.getInstance().isCurrentlyStoppable() || member.hasPermission(Permission.KICK_MEMBERS)) {
@@ -60,7 +58,7 @@ public class LeaveCommand implements IMusicCommand {
             musicManager.getAudioPlayer().stopTrack();
             musicManager.getAudioPlayer().setVolume(defaultVolume);
             audioManager.closeAudioConnection();
-            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", memberChannel.getName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
+            event.getHook().sendMessageFormat("Disconnecting from `\uD83D\uDD0A %s`", selfVoiceState.getChannel().getName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
         } else {
             IMusicCommand.sendDeniedStoppableMessage(event.getHook(), musicManager, deleteDelay);
         }
