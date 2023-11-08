@@ -82,7 +82,7 @@ public class PlayerManager {
             public void playlistLoaded(AudioPlaylist playlist) {
                 scheduler.setEvent(event);
                 scheduler.setDeleteDelay(deleteDelay);
-                scheduler.queueTrackList(playlist);
+                scheduler.queueTrackList(playlist, volume);
 
             }
 
@@ -114,7 +114,7 @@ public class PlayerManager {
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
                 scheduler.setDeleteDelay(deleteDelay);
-                scheduler.queueTrackList(playlist);
+                scheduler.queueTrackList(playlist, volume);
             }
 
             @Override

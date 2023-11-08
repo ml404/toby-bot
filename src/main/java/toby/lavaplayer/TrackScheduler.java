@@ -55,7 +55,7 @@ public class TrackScheduler extends AudioEventAdapter {
         }
     }
 
-    public void queueTrackList(AudioPlaylist playList) {
+    public void queueTrackList(AudioPlaylist playList, int volume) {
         List<AudioTrack> tracks = playList.getTracks();
         event.getHook().sendMessage("Adding to queue: `")
                 .addContent(String.valueOf(tracks.size()))
@@ -65,7 +65,7 @@ public class TrackScheduler extends AudioEventAdapter {
                 .queue(invokeDeleteOnMessageResponse(deleteDelay));
 
         tracks.forEach(track -> {
-            track.setUserData(player.getVolume());
+            track.setUserData(volume);
             boolean hasNotStarted = !this.player.startTrack(track, true);
             if (hasNotStarted) {
                 this.queue.offer(track);
@@ -116,6 +116,7 @@ public class TrackScheduler extends AudioEventAdapter {
     @Override
     public void onTrackStart(AudioPlayer player, AudioTrack track) {
         super.onTrackStart(player, track);
+        player.setVolume((Integer) track.getUserData());
         MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
     }
 

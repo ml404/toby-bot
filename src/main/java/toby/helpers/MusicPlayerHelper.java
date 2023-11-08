@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import toby.command.commands.music.IMusicCommand;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
@@ -122,7 +121,7 @@ public class MusicPlayerHelper {
             hook.sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
             resetNowPlayingMessage(event.getGuild().getIdLong());
         } else {
-            IMusicCommand.sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
+            sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
         }
     }
 
@@ -180,8 +179,7 @@ public class MusicPlayerHelper {
             musicManager.getScheduler().setLooping(false);
             hook.sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(invokeDeleteOnMessageResponse(deleteDelay));
             nowPlaying(event, playerManager, deleteDelay);
-        }
-        sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
+        } else sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
     }
 
     public static String formatTime(long timeInMillis) {
@@ -233,7 +231,7 @@ public class MusicPlayerHelper {
     }
 
 
-    public static void resetMessages(){
+    public static void resetMessages() {
         guildLastNowPlayingMessage.clear();
     }
 
