@@ -90,7 +90,8 @@ public class TrackScheduler extends AudioEventAdapter {
                 this.player.startTrack(track.makeClone(), false);
                 return;
             }
-            PlayerManager.getInstance().setCurrentlyStoppable(true);
+            PlayerManager instance = PlayerManager.getInstance();
+            instance.setCurrentlyStoppable(true);
             if (player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
                 event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
@@ -98,7 +99,7 @@ public class TrackScheduler extends AudioEventAdapter {
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
-                nowPlaying(event, PlayerManager.getInstance(), deleteDelay);
+                nowPlaying(event, instance, deleteDelay);
             }
         }
     }

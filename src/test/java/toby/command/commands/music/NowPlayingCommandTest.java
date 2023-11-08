@@ -67,7 +67,7 @@ class NowPlayingCommandTest implements MusicCommandTest {
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) with volume '1'"));
+        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) with volume '0'"));
     }
 
     @Test
@@ -85,6 +85,6 @@ class NowPlayingCommandTest implements MusicCommandTest {
         nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) with volume '1'"));
+        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) with volume '0'"));
     }
 }
