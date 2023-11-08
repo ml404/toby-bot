@@ -219,7 +219,7 @@ public class MusicPlayerHelper {
         }
     }
 
-    private static int deriveDeleteDelayFromTrack(AudioTrack track) {
+    public static int deriveDeleteDelayFromTrack(AudioTrack track) {
         return (int) (track.getDuration() / 1000);
     }
 }

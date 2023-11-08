@@ -1,21 +1,17 @@
 package toby.command.commands.music;
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import toby.command.CommandContext;
-import toby.helpers.MusicPlayerHelper;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 
 import static toby.helpers.MusicPlayerHelper.*;
 
@@ -50,8 +46,7 @@ public class PlayCommand implements IMusicCommand {
         Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
         int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(currentVolume);
 
-        BlockingQueue<AudioTrack> queue = musicManager.getScheduler().getQueue();
-        if (queue.isEmpty()) {
+        if (musicManager.getScheduler().getQueue().isEmpty()) {
             musicManager.getAudioPlayer().setVolume(volume);
         }
         if (type.equals(INTRO)) {
@@ -61,15 +56,7 @@ public class PlayCommand implements IMusicCommand {
             if (link.contains("youtube") && !isUrl(link)) {
                 link = "ytsearch:" + link;
             }
-            String finalLink = link;
-            CompletableFuture<Void> loadAndPlayFuture = CompletableFuture.runAsync(() -> instance.loadAndPlay(event, finalLink, true, deleteDelay, startPosition, volume))
-                    .thenRun(() -> {
-                        if (queue.isEmpty()) {
-                            MusicPlayerHelper.nowPlaying(event, instance, volume);
-                        }
-                    });
-            // Wait for the CompletableFuture to complete.
-            loadAndPlayFuture.join();
+            instance.loadAndPlay(event, link, true, deleteDelay, startPosition, volume);
         }
     }
 

@@ -5,6 +5,7 @@ import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import toby.helpers.MusicPlayerHelper;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -87,6 +88,12 @@ public class TrackScheduler extends AudioEventAdapter {
             event.getChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(invokeDeleteOnMessageResponse(deleteDelay));
             nextTrack();
         }
+    }
+
+    @Override
+    public void onTrackStart(AudioPlayer player, AudioTrack track){
+        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), (Integer) track.getUserData(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
+        super.onTrackStart(player, track);
     }
 
     public boolean stopTrack(boolean isStoppable) {
