@@ -37,8 +37,10 @@ public class TrackScheduler extends AudioEventAdapter {
     public void queue(AudioTrack track, long startPosition, int volume) {
         track.setPosition(startPosition);
         track.setUserData(volume);
-        if (!this.player.startTrack(track, true)) {
-            this.queue.offer(track);
+        synchronized (queue) {
+            if (!this.player.startTrack(track, true)) {
+                this.queue.offer(track);
+            }
         }
     }
 
@@ -49,11 +51,13 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void nextTrack() {
-        AudioTrack track = this.queue.poll();
-        assert track != null;
-        int volume = (int) track.getUserData();
-        this.player.setVolume(volume);
-        this.player.startTrack(track, false);
+        synchronized (queue) {
+            AudioTrack track = this.queue.poll();
+            assert track != null;
+            int volume = (int) track.getUserData();
+            this.player.setVolume(volume);
+            this.player.startTrack(track, false);
+        }
     }
 
     @Override
@@ -79,7 +83,7 @@ public class TrackScheduler extends AudioEventAdapter {
 
     @Override
     public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
-        if(track.getPosition() == 0L) {
+        if (track.getPosition() == 0L) {
             event.getChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(invokeDeleteOnMessageResponse(deleteDelay));
             nextTrack();
         }
