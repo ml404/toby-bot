@@ -17,7 +17,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
@@ -107,35 +106,15 @@ public class PlayerManager {
 
             @Override
             public void trackLoaded(AudioTrack track) {
-
                 scheduler.setDeleteDelay(deleteDelay);
                 scheduler.queue(track, startPosition, volume);
                 scheduler.setPreviousVolume(previousVolume);
-
-                channel.sendMessage("Adding to queue: `")
-                        .addContent(track.getInfo().title)
-                        .addContent("` by `")
-                        .addContent(track.getInfo().author)
-                        .addContent("`")
-                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
-                final List<AudioTrack> tracks = playlist.getTracks();
                 scheduler.setDeleteDelay(deleteDelay);
-
-                channel.sendMessage("Adding to queue: `")
-                        .addContent(String.valueOf(tracks.size()))
-                        .addContent("` tracks from playlist `")
-                        .addContent(playlist.getName())
-                        .addContent("`")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
-
-                for (final AudioTrack track : tracks) {
-                    scheduler.queue(track, startPosition, volume);
-                }
+                scheduler.queueTrackList(playlist);
             }
 
             @Override

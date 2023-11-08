@@ -43,7 +43,7 @@ public class TrackScheduler extends AudioEventAdapter {
                 .addContent("` by `")
                 .addContent(track.getInfo().author)
                 .addContent("`")
-                .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), (int) track.getUserData()))
+                .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), volume))
                 .queue(invokeDeleteOnMessageResponse(deleteDelay));
 
         track.setPosition(startPosition);
