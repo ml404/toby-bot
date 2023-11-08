@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import toby.command.CommandContext;
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import toby.jpa.dto.ExcuseDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.IExcuseService;

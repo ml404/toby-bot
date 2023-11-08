@@ -6,7 +6,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import toby.command.CommandContext;
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import toby.jpa.dto.UserDto;
 
 import java.util.List;

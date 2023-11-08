@@ -1,15 +1,16 @@
-package toby.command;
+package toby.menu;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import toby.command.commands.ICommandContext;
 
-public class CommandContext implements ICommandContext {
+public class MenuContext implements ICommandContext {
+
     IReplyCallback interaction;
 
-    public CommandContext(IReplyCallback interaction) {
+    public MenuContext(IReplyCallback interaction) {
         this.interaction = interaction;
     }
 
@@ -23,8 +24,8 @@ public class CommandContext implements ICommandContext {
         return (SlashCommandInteractionEvent) this.interaction;
     }
 
-    public ButtonInteractionEvent getButtonInteractionEvent() {
-        return (ButtonInteractionEvent) this.interaction;
+    public StringSelectInteractionEvent getStringSelectInteractionEvent(){
+        return (StringSelectInteractionEvent) this.interaction;
     }
 
 }

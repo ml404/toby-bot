@@ -1,6 +1,6 @@
 package toby.command.commands.misc;
 
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Mentions;

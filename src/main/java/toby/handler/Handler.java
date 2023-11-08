@@ -29,21 +29,19 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.BotMain;
 import toby.emote.Emotes;
-import toby.helpers.HttpHelper;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
 import toby.managers.CommandManager;
+import toby.managers.MenuManager;
 
 import javax.annotation.Nonnull;
-import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static toby.command.commands.fetch.DnDCommand.*;
 import static toby.helpers.MusicPlayerHelper.playUserIntroWithChannel;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
@@ -57,11 +55,14 @@ public class Handler extends ListenerAdapter {
     private final IMusicFileService musicFileService;
     private final IExcuseService excuseService;
     private static final Logger LOGGER = LoggerFactory.getLogger(Handler.class);
-    private final CommandManager manager;
+    private final CommandManager commandManager;
+
+    private final MenuManager menuManager;
 
     @Autowired
     public Handler(IConfigService configService, IBrotherService brotherService, IUserService userService, IMusicFileService musicFileService, IExcuseService excuseService) {
-        manager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService);
+        commandManager = new CommandManager(configService, brotherService, userService, musicFileService, excuseService);
+        menuManager = new MenuManager(configService);
         this.configService = configService;
         this.brotherService = brotherService;
         this.userService = userService;
@@ -125,7 +126,7 @@ public class Handler extends ListenerAdapter {
         if (user.isBot()) {
             return;
         }
-        manager.handle(event);
+        commandManager.handle(event);
     }
 
     @Override
@@ -134,22 +135,22 @@ public class Handler extends ListenerAdapter {
         if (user.isBot()) {
             return;
         }
-        manager.handle(event);
+        commandManager.handle(event);
     }
 
     @Override
     public void onGuildReady(@NotNull GuildReadyEvent event) {
-        event.getGuild().updateCommands().addCommands(manager.getAllSlashCommands()).queue();
+        event.getGuild().updateCommands().addCommands(commandManager.getAllSlashCommands()).queue();
     }
 
     @Override
     public void onGuildJoin(@NotNull GuildJoinEvent event) {
-        event.getGuild().updateCommands().addCommands(manager.getAllSlashCommands()).queue();
+        event.getGuild().updateCommands().addCommands(commandManager.getAllSlashCommands()).queue();
     }
 
     @Override
     public void onGuildAvailable(@NotNull GuildAvailableEvent event) {
-        event.getGuild().updateCommands().addCommands(manager.getAllSlashCommands()).queue();
+        event.getGuild().updateCommands().addCommands(commandManager.getAllSlashCommands()).queue();
     }
 
     private void messageContainsRespond(Message message, MessageChannel channel, String name, Emoji tobyEmote, Emoji jessEmote) {
@@ -274,35 +275,7 @@ public class Handler extends ListenerAdapter {
     }
 
     @Override
-    public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        event.deferReply().queue();
-        try {
-            determineDnDRequestType(event);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+    public void onStringSelectInteraction(@NotNull StringSelectInteractionEvent event) {
+        menuManager.handle(event);
     }
-
-    private void determineDnDRequestType(StringSelectInteractionEvent event) throws UnsupportedEncodingException {
-        if (event.getComponentId().equals("DnDspell")) {
-            sendDndApiRequest(event, SPELL_NAME, "spells");
-        }
-        if (event.getComponentId().equals("DnDcondition")) {
-            sendDndApiRequest(event, CONDITION_NAME, "conditions");
-        }
-        if (event.getComponentId().equals("DnDrule")) {
-            sendDndApiRequest(event, RULE_NAME, "rule-sections");
-        }
-        if (event.getComponentId().equals("DnDfeature")) {
-            sendDndApiRequest(event, FEATURE_NAME, "features");
-        }
-    }
-
-    private void sendDndApiRequest(StringSelectInteractionEvent event, String typeName, String typeValue) throws UnsupportedEncodingException {
-        String selectedValue = event.getValues().get(0); // Get the selected option
-        ConfigDto deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId());
-        event.getMessage().delete().queue();
-        doLookUpAndReply(event.getHook(), typeName, typeValue, selectedValue, new HttpHelper(), Integer.valueOf(deleteDelayConfig.getValue()));
-    }
-
 }

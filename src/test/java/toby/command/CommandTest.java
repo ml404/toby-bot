@@ -1,4 +1,4 @@
-package toby.command.commands;
+package toby.command;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
@@ -51,7 +51,8 @@ public interface CommandTest {
     MessageChannelUnion messageChannelUnion = mock(MessageChannelUnion.class);
 
 
-    @Mock UserDto requestingUserDto = mock(UserDto.class);
+    @Mock
+    UserDto requestingUserDto = mock(UserDto.class);
 
     @Mock
     WebhookMessageCreateAction<Message> webhookMessageCreateAction = mock(WebhookMessageCreateActionImpl.class);
@@ -59,7 +60,8 @@ public interface CommandTest {
     @Mock
     MessageCreateAction messageCreateAction = mock(MessageCreateAction.class);
 
-    @Mock ReplyCallbackAction replyCallbackAction = mock(ReplyCallbackAction.class);
+    @Mock
+    ReplyCallbackAction replyCallbackAction = mock(ReplyCallbackAction.class);
     @Mock
     RestAction restAction = mock(RestAction.class);
 
@@ -67,6 +69,7 @@ public interface CommandTest {
     @BeforeEach
     default void setUpCommonMocks() {
         when(event.getHook()).thenReturn(interactionHook);
+        when(event.deferReply()).thenReturn(replyCallbackAction);
         when(event.deferReply()).thenReturn(replyCallbackAction);
         when(event.getGuild()).thenReturn(guild);
         when(event.getUser()).thenReturn(user);
@@ -114,7 +117,7 @@ public interface CommandTest {
     }
 
     @AfterEach
-    default void tearDownCommonMocks(){
+    default void tearDownCommonMocks() {
         reset(event);
         reset(user);
         reset(requestingUserDto);

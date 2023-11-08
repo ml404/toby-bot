@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import toby.command.CommandContext;
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import toby.emote.Emotes;
 
 import static org.mockito.Mockito.*;

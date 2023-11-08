@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import toby.command.CommandContext;
-import toby.command.commands.CommandTest;
+import toby.command.CommandTest;
 import toby.jpa.dto.UserDto;
 
 import java.util.ArrayList;
