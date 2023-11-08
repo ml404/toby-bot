@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import toby.command.commands.music.IMusicCommand;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
@@ -98,11 +97,18 @@ public class MusicPlayerHelper {
         Button pausePlay = Button.primary("pause/play", "⏯");
         Button stop = Button.primary("stop", "⏹");
         long guildId = hook.getInteraction().getGuild().getIdLong();
-        resetNowPlayingMessage(guildId);
-        WebhookMessageCreateAction<Message> nowPlayingMessageAction = hook.sendMessage(nowPlaying).addActionRow(pausePlay, stop);
-        Message message = nowPlayingMessageAction.complete();
-        guildLastNowPlayingMessage.put(guildId, message);
-        nowPlayingMessageAction.queue(invokeDeleteOnMessageResponse(deriveDeleteDelayFromTrack(track)));
+
+        // Get the previous "Now Playing" message if it exists
+        Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
+
+        if (previousNowPlayingMessage != null) {
+            // Update the existing "Now Playing" message
+            previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop).queue();
+        } else {
+            // Send a new "Now Playing" message and store it
+            Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
+            guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
+        }
     }
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
@@ -231,12 +237,13 @@ public class MusicPlayerHelper {
     private static void resetNowPlayingMessage(long guildId) {
         Message message = guildLastNowPlayingMessage.get(guildId);
         if (message != null) {
-            deleteAndResetNowPlayingMessage(guildId, message);
+            message.delete().queue();
         }
     }
 
-    private static void deleteAndResetNowPlayingMessage(long guildId, Message nowPlayingMessageAction) {
-        nowPlayingMessageAction.delete().queue();
-        guildLastNowPlayingMessage.remove(guildId);
+
+    public static void resetMessages(){
+        guildLastNowPlayingMessage.clear();
     }
+
 }

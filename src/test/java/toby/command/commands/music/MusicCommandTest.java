@@ -10,8 +10,10 @@ import net.dv8tion.jda.api.interactions.Interaction;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.AudioManager;
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import org.mockito.Mock;
 import toby.command.CommandTest;
+import toby.helpers.MusicPlayerHelper;
 import toby.lavaplayer.AudioPlayerSendHandler;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -49,6 +51,9 @@ public interface MusicCommandTest extends CommandTest {
     Interaction interaction = mock(Interaction.class);
     @Mock
     AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
+    @Mock
+    MessageEditAction messageEditAction = mock(MessageEditAction.class);
+
 
     default void setupCommonMusicMocks() {
         setUpCommonMocks();
@@ -67,7 +72,11 @@ public interface MusicCommandTest extends CommandTest {
         Button stop = Button.primary("stop", "⏹");
         when(webhookMessageCreateAction.addActionRow(pausePlay, stop)).thenReturn(webhookMessageCreateAction);
         when(webhookMessageCreateAction.complete()).thenReturn(message);
+        when(webhookMessageCreateAction.setActionRow(any(), any())).thenReturn(webhookMessageCreateAction);
         when(message.delete()).thenReturn(auditableRestAction);
+        when(message.editMessage(anyString())).thenReturn(messageEditAction);
+        when(messageEditAction.setActionRow(any(), any())).thenReturn(messageEditAction);
+        MusicPlayerHelper.resetMessages();
     }
 
     default void tearDownCommonMusicMocks() {
@@ -83,6 +92,7 @@ public interface MusicCommandTest extends CommandTest {
         reset(botVoiceState);
         reset(interaction);
         reset(message);
+        reset(messageEditAction);
     }
 
     default void setUpAudioChannelsWithBotAndMemberInSameChannel() {
