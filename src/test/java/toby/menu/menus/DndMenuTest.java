@@ -90,10 +90,10 @@ class DndMenuTest implements MenuTest {
 
 
     @NotNull
-    private static MenuContext mockAndCreateMenuContext(String value, String cover) {
+    private static MenuContext mockAndCreateMenuContext(String eventName, String selectedValue) {
         AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
-        when(menuEvent.getComponentId()).thenReturn(value);
-        when(menuEvent.getValues()).thenReturn(List.of(cover));
+        when(menuEvent.getComponentId()).thenReturn(eventName);
+        when(menuEvent.getValues()).thenReturn(List.of(selectedValue));
         when(menuEvent.getMessage()).thenReturn(message);
         when(message.delete()).thenReturn(auditableRestAction);
         return new MenuContext(menuEvent);
