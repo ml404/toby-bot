@@ -235,6 +235,7 @@ public class MusicPlayerHelper {
     }
 
     private static void deleteAndResetNowPlayingMessage(long guildId, WebhookMessageCreateAction<Message> nowPlayingMessageAction) {
+        nowPlayingMessageAction.queue(message -> message.delete().queue());
         nowPlayingMessageAction.complete().delete().queue();
         guildLastNowPlayingMessageAction.remove(guildId);
     }

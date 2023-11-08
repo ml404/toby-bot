@@ -2,11 +2,13 @@ package toby.lavaplayer;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
+import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import toby.helpers.MusicPlayerHelper;
 
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -36,6 +38,14 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void queue(AudioTrack track, long startPosition, int volume) {
+        event.getHook().sendMessage("Adding to queue: `")
+                .addContent(track.getInfo().title)
+                .addContent("` by `")
+                .addContent(track.getInfo().author)
+                .addContent("`")
+                .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), (int) track.getUserData()))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay));
+
         track.setPosition(startPosition);
         track.setUserData(volume);
         synchronized (queue) {
@@ -45,10 +55,22 @@ public class TrackScheduler extends AudioEventAdapter {
         }
     }
 
-    public void queue(AudioTrack track) {
-        if (!this.player.startTrack(track, true)) {
-            this.queue.offer(track);
-        }
+    public void queueTrackList(AudioPlaylist playList) {
+        List<AudioTrack> tracks = playList.getTracks();
+        event.getHook().sendMessage("Adding to queue: `")
+                .addContent(String.valueOf(tracks.size()))
+                .addContent("` tracks from playlist `")
+                .addContent(playList.getName())
+                .addContent("`")
+                .queue(invokeDeleteOnMessageResponse(deleteDelay));
+
+        tracks.forEach(track -> {
+            boolean hasNotStarted = !this.player.startTrack(track, true);
+            if (hasNotStarted) {
+                this.queue.offer(track);
+            }
+        });
+
     }
 
     public void nextTrack() {
@@ -91,9 +113,9 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     @Override
-    public void onTrackStart(AudioPlayer player, AudioTrack track){
-        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), (Integer) track.getUserData(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
+    public void onTrackStart(AudioPlayer player, AudioTrack track) {
         super.onTrackStart(player, track);
+        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), (Integer) track.getUserData(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
     }
 
     public boolean stopTrack(boolean isStoppable) {

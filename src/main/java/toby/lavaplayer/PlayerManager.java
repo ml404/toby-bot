@@ -77,33 +77,14 @@ public class PlayerManager {
                 scheduler.setDeleteDelay(deleteDelay);
                 scheduler.queue(track, startPosition, volume);
                 scheduler.setPreviousVolume(previousVolume);
-
-                // not acknowledging something being added to queue, if this is event.gethook().sendmessage() it errors out as you can only acknowledge each hook once?
-                event.getHook().sendMessage("Adding to queue: `")
-                        .addContent(track.getInfo().title)
-                        .addContent("` by `")
-                        .addContent(track.getInfo().author)
-                        .addContent("`")
-                        .addContent(String.format(" starting at '%s ms' with volume '%d'", startPosition, volume))
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
 
             @Override
             public void playlistLoaded(AudioPlaylist playlist) {
-                final List<AudioTrack> tracks = playlist.getTracks();
                 scheduler.setEvent(event);
                 scheduler.setDeleteDelay(deleteDelay);
+                scheduler.queueTrackList(playlist);
 
-                event.getHook().sendMessage("Adding to queue: `")
-                        .addContent(String.valueOf(tracks.size()))
-                        .addContent("` tracks from playlist `")
-                        .addContent(playlist.getName())
-                        .addContent("`")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay));
-
-                for (final AudioTrack track : tracks) {
-                    scheduler.queue(track, startPosition, volume);
-                }
             }
 
             @Override
@@ -186,6 +167,6 @@ public class PlayerManager {
     }
 
     public void setPreviousVolume(Integer previousVolume) {
-         this.previousVolume = previousVolume;
+        this.previousVolume = previousVolume;
     }
 }
