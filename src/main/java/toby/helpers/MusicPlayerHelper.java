@@ -104,6 +104,7 @@ public class MusicPlayerHelper {
         if (previousNowPlayingMessage != null) {
             // Update the existing "Now Playing" message
             previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop).queue();
+            hook.deleteOriginal().queue();
         } else {
             // Send a new "Now Playing" message and store it
             Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();

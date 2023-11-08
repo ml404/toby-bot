@@ -172,7 +172,7 @@ public class CommandManager {
         int awardedSocialCredit = socialCredit * 5;
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
-        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
+//        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public void handle(ButtonInteractionEvent event) {
