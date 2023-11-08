@@ -80,16 +80,7 @@ public class MusicPlayerHelper {
         AudioTrack track = audioPlayer.getPlayingTrack();
         InteractionHook hook = event.getHook();
         if (checkForPlayingTrack(track, hook, deleteDelay)) return;
-        checkTrackAndSendMessage(track, hook, (int) track.getUserData());
-    }
-
-    public static void nowPlaying(IReplyCallback event, PlayerManager playerManager, int volume, Integer deleteDelay) {
-        GuildMusicManager musicManager = playerManager.getMusicManager(event.getGuild());
-        final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
-        AudioTrack track = audioPlayer.getPlayingTrack();
-        InteractionHook hook = event.getHook();
-        if (checkForPlayingTrack(track, hook, deleteDelay)) return;
-        checkTrackAndSendMessage(track, hook, volume);
+        checkTrackAndSendMessage(track, hook, audioPlayer.getVolume());
     }
 
     private static void checkTrackAndSendMessage(AudioTrack track, InteractionHook hook, int volume) {
@@ -188,8 +179,7 @@ public class MusicPlayerHelper {
             }
             musicManager.getScheduler().setLooping(false);
             hook.sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            AudioTrack playingTrack = musicManager.getAudioPlayer().getPlayingTrack();
-            nowPlaying(event, playerManager, (int) playingTrack.getUserData(), deleteDelay);
+            nowPlaying(event, playerManager, deleteDelay);
         }
         sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
     }

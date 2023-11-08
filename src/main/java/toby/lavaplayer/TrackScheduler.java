@@ -86,7 +86,6 @@ public class TrackScheduler extends AudioEventAdapter {
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
         if (endReason.mayStartNext) {
-            int volume = (int) track.getUserData();
             if (isLooping) {
                 this.player.startTrack(track.makeClone(), false);
                 return;
@@ -99,7 +98,7 @@ public class TrackScheduler extends AudioEventAdapter {
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
-                nowPlaying(event, PlayerManager.getInstance(), volume, deleteDelay);
+                nowPlaying(event, PlayerManager.getInstance(), deleteDelay);
             }
         }
     }
@@ -115,7 +114,7 @@ public class TrackScheduler extends AudioEventAdapter {
     @Override
     public void onTrackStart(AudioPlayer player, AudioTrack track) {
         super.onTrackStart(player, track);
-        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), (Integer) track.getUserData(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
+        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
     }
 
     public boolean stopTrack(boolean isStoppable) {
