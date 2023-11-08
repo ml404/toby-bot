@@ -61,7 +61,6 @@ public class PlayCommand implements IMusicCommand {
     }
 
 
-
     @Override
     public String getName() {
         return "play";

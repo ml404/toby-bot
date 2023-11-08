@@ -16,9 +16,11 @@ import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.helpers.Cache;
+import toby.helpers.MusicPlayerHelper;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
 import toby.jpa.service.*;
+import toby.lavaplayer.PlayerManager;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -170,12 +172,11 @@ public class CommandManager {
         int awardedSocialCredit = socialCredit * 5;
         requestingUserDto.setSocialCredit(socialCreditScore + awardedSocialCredit);
         userService.updateUser(requestingUserDto);
-        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
+//        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
     public void handle(ButtonInteractionEvent event) {
         Integer deleteDelay = Integer.parseInt(configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.getConfigValue(), event.getGuild().getId()).getValue());
-
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
         int introVolume = Integer.parseInt(defaultVolume);
@@ -190,7 +191,16 @@ public class CommandManager {
                 cmd.handle(iCommandCommandContextPair.getRight(), requestingUserDto, deleteDelay);
                 event.deferEdit().queue();
             }
-        } else {
+        }
+        if (event.getComponentId().equals("pause/play")){
+            event.deferReply().queue();
+            MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
+        }
+        if (event.getComponentId().equals("stop")){
+            event.deferReply().queue();
+            MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
+        }
+        else {
             //button name that should be something like 'roll: 20,1,0'
             String invoke = event.getComponentId().toLowerCase();
             String[] split = invoke.split(":");

@@ -36,11 +36,11 @@ class PauseCommandTest implements MusicCommandTest {
         pauseCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         //Assert
-        verify(event.getChannel(), times(1)).sendMessage("Pausing: `");
-        verify(messageCreateAction, times(1)).addContent("Title");
-        verify(messageCreateAction, times(1)).addContent("` by `");
-        verify(messageCreateAction, times(1)).addContent("Author");
-        verify(messageCreateAction, times(1)).addContent("`");
+        verify(event.getHook(), times(1)).sendMessage("Pausing: `");
+        verify(webhookMessageCreateAction, times(1)).addContent("Title");
+        verify(webhookMessageCreateAction, times(1)).addContent("` by `");
+        verify(webhookMessageCreateAction, times(1)).addContent("Author");
+        verify(webhookMessageCreateAction, times(1)).addContent("`");
     }
 
     @Test

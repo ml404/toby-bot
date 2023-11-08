@@ -12,9 +12,9 @@ import toby.lavaplayer.PlayerManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+import static toby.helpers.MusicPlayerHelper.formatTime;
 
 public class QueueCommand implements IMusicCommand {
 
@@ -67,13 +67,6 @@ public class QueueCommand implements IMusicCommand {
         messageAction.setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 
-    public static String formatTime(long timeInMillis) {
-        final long hours = timeInMillis / TimeUnit.HOURS.toMillis(1);
-        final long minutes = timeInMillis / TimeUnit.MINUTES.toMillis(1);
-        final long seconds = timeInMillis % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1);
-
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-    }
 
     @Override
     public String getName() {

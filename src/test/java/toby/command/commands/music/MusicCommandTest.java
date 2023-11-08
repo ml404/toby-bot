@@ -6,9 +6,14 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
+import net.dv8tion.jda.api.interactions.Interaction;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.AudioManager;
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import org.mockito.Mock;
 import toby.command.CommandTest;
+import toby.helpers.MusicPlayerHelper;
 import toby.lavaplayer.AudioPlayerSendHandler;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
@@ -42,9 +47,18 @@ public interface MusicCommandTest extends CommandTest {
     TrackScheduler trackScheduler = mock(TrackScheduler.class);
     @Mock
     AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
+    @Mock
+    Interaction interaction = mock(Interaction.class);
+    @Mock
+    AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
+    @Mock
+    MessageEditAction messageEditAction = mock(MessageEditAction.class);
+
 
     default void setupCommonMusicMocks() {
         setUpCommonMocks();
+        when(interactionHook.getInteraction()).thenReturn(interaction);
+        when(interaction.getGuild()).thenReturn(guild);
         when(playerManager.getMusicManager(guild)).thenReturn(musicManager);
         when(musicManager.getAudioPlayer()).thenReturn(audioPlayer);
         when(musicManager.getSendHandler()).thenReturn(audioPlayerSendHandler);
@@ -54,6 +68,15 @@ public interface MusicCommandTest extends CommandTest {
         when(trackScheduler.getQueue()).thenReturn(new ArrayBlockingQueue<>(1));
         when(track.getInfo()).thenReturn(new AudioTrackInfo("Title", "Author", 20L, "Identifier", true, "uri"));
         when(track.getDuration()).thenReturn(1000L);
+        Button pausePlay = Button.primary("pause/play", "⏯");
+        Button stop = Button.primary("stop", "⏹");
+        when(webhookMessageCreateAction.addActionRow(pausePlay, stop)).thenReturn(webhookMessageCreateAction);
+        when(webhookMessageCreateAction.complete()).thenReturn(message);
+        when(webhookMessageCreateAction.setActionRow(any(), any())).thenReturn(webhookMessageCreateAction);
+        when(message.delete()).thenReturn(auditableRestAction);
+        when(message.editMessage(anyString())).thenReturn(messageEditAction);
+        when(messageEditAction.setActionRow(any(), any())).thenReturn(messageEditAction);
+        MusicPlayerHelper.resetMessages();
     }
 
     default void tearDownCommonMusicMocks() {
@@ -67,6 +90,9 @@ public interface MusicCommandTest extends CommandTest {
         reset(audioChannelUnion);
         reset(memberVoiceState);
         reset(botVoiceState);
+        reset(interaction);
+        reset(message);
+        reset(messageEditAction);
     }
 
     default void setUpAudioChannelsWithBotAndMemberInSameChannel() {
