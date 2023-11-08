@@ -119,7 +119,7 @@ public class DnDCommand implements IFetchCommand {
         String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + replaceSpaceWithUrlEncode(query)));
         QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
         if (queryResult != null && queryResult.count() > 0) {
-            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("DnD:%s", typeName)).setPlaceholder("Choose an option");
+            StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("dnd:%s", typeName)).setPlaceholder("Choose an option");
             queryResult.results().forEach(info -> builder.addOptions(SelectOption.of(info.index(), info.index())));
             hook.sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", query)
                     .addActionRow(builder.build())
