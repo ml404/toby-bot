@@ -106,7 +106,6 @@ public class MusicPlayerHelper {
             @Override
             public void run() {
                 messageEditAction.queue();
-                ;
             }
         }, 1000, 1000);
     }
