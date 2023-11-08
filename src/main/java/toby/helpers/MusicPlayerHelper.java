@@ -39,13 +39,12 @@ public class MusicPlayerHelper {
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlay(event,
                     String.format(webUrl + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
                     startPosition,
-                    volume);
+                    introVolume != null ? introVolume : volume);
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
