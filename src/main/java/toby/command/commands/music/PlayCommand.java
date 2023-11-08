@@ -15,6 +15,7 @@ import toby.lavaplayer.PlayerManager;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 
 import static toby.helpers.MusicPlayerHelper.*;
 
@@ -60,11 +61,9 @@ public class PlayCommand implements IMusicCommand {
             if (link.contains("youtube") && !isUrl(link)) {
                 link = "ytsearch:" + link;
             }
-            if (queue.isEmpty()) {
-                instance.loadAndPlay(event, link, true, deleteDelay, startPosition, volume);
-                MusicPlayerHelper.nowPlaying(event, instance, volume);
-            } else
-                instance.loadAndPlay(event, link, true, deleteDelay, startPosition, volume);
+            String finalLink = link;
+            CompletableFuture<Void> loadAndPlayFuture = CompletableFuture.runAsync(() -> instance.loadAndPlay(event, finalLink, true, deleteDelay, startPosition, volume));
+            loadAndPlayFuture.thenRun(() -> MusicPlayerHelper.nowPlaying(event, instance, volume));
         }
     }
 
