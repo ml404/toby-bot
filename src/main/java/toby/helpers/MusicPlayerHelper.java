@@ -4,11 +4,13 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import toby.command.commands.music.IMusicCommand;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
@@ -30,6 +32,7 @@ public class MusicPlayerHelper {
     private static final String webUrl = "https://gibe-toby-bot.herokuapp.com/";
 
     public static final int SECOND_MULTIPLIER = 1000;
+    private static WebhookMessageCreateAction<Message> nowPlayingMessageAction;
 
     public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
@@ -47,9 +50,8 @@ public class MusicPlayerHelper {
                     volume);
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, volume);
+            instance.loadAndPlay(event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, introVolume);
         }
     }
 
@@ -60,17 +62,16 @@ public class MusicPlayerHelper {
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.loadAndPlayChannel(channel,
                     String.format(webUrl + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
+                    introVolume,
                     startPosition);
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(introVolume != null ? introVolume : currentVolume);
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlayChannel(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition);
+            instance.loadAndPlayChannel(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, introVolume, startPosition);
         }
     }
 
@@ -96,9 +97,9 @@ public class MusicPlayerHelper {
         String nowPlaying = getNowPlayingString(track, volume);
         Button pausePlay = Button.primary("pause/play", "⏯");
         Button stop = Button.primary("stop", "⏹");
-        hook.sendMessage(nowPlaying)
-                .addActionRow(pausePlay, stop)
-                .queue(invokeDeleteOnMessageResponse(deriveDeleteDelayFromTrack(track)));
+        resetNowPlayingMessage();
+        nowPlayingMessageAction = hook.sendMessage(nowPlaying).addActionRow(pausePlay, stop);
+        nowPlayingMessageAction.queue(invokeDeleteOnMessageResponse(deriveDeleteDelayFromTrack(track)));
     }
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
@@ -118,6 +119,7 @@ public class MusicPlayerHelper {
             musicManager.getAudioPlayer().setPaused(false);
             hook.deleteOriginal().queue();
             hook.sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
+            resetNowPlayingMessage();
         } else {
             IMusicCommand.sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
         }
@@ -221,5 +223,16 @@ public class MusicPlayerHelper {
 
     public static int deriveDeleteDelayFromTrack(AudioTrack track) {
         return (int) (track.getDuration() / 1000);
+    }
+
+    private static void resetNowPlayingMessage() {
+        if (nowPlayingMessageAction != null) {
+            deleteAndResetNowPlayingMessage();
+        }
+    }
+
+    private static void deleteAndResetNowPlayingMessage() {
+        nowPlayingMessageAction.complete().delete().queue();
+        nowPlayingMessageAction = null;
     }
 }

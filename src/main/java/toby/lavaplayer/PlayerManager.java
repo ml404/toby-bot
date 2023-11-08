@@ -53,10 +53,10 @@ public class PlayerManager {
         });
     }
 
-    public synchronized void loadAndPlayChannel(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition) {
+    public synchronized void loadAndPlayChannel(TextChannel channel, String trackUrl, Boolean isSkippable, Integer deleteDelay, int volume, Long startPosition) {
         final GuildMusicManager musicManager = this.getMusicManager(channel.getGuild());
         this.currentlyStoppable = isSkippable;
-        this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, getAudioLoadResultHandler(channel, trackUrl, deleteDelay, startPosition, musicManager));
+        this.audioPlayerManager.loadItemOrdered(musicManager, trackUrl, getAudioLoadResultHandler(channel, trackUrl, deleteDelay, startPosition, volume, musicManager));
     }
 
     public synchronized void loadAndPlay(SlashCommandInteractionEvent event, String trackUrl, Boolean isSkippable, Integer deleteDelay, Long startPosition, int volume) {
@@ -119,11 +119,10 @@ public class PlayerManager {
     }
 
     @NotNull
-    private AudioLoadResultHandler getAudioLoadResultHandler(TextChannel channel, String trackUrl, Integer deleteDelay, Long startPosition, GuildMusicManager musicManager) {
+    private AudioLoadResultHandler getAudioLoadResultHandler(TextChannel channel, String trackUrl, Integer deleteDelay, Long startPosition, int volume, GuildMusicManager musicManager) {
         return new AudioLoadResultHandler() {
 
             private final TrackScheduler scheduler = musicManager.getScheduler();
-            final int volume = musicManager.getAudioPlayer().getVolume();
 
             @Override
             public void trackLoaded(AudioTrack track) {
