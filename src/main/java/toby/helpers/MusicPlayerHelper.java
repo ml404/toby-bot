@@ -124,29 +124,6 @@ public class MusicPlayerHelper {
         }
     }
 
-    private static void sendNewNowPlayingMessage(InteractionHook hook, String nowPlaying, Button pausePlay, Button stop, long guildId) {
-        // Send a new "Now Playing" message and store it
-        // Handle the case where the message couldn't be sent
-        hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).queue(message -> {
-            guildLastNowPlayingMessage.put(guildId, message);
-        }, Throwable::printStackTrace);
-    }
-
-    private static void scheduleNowPlayingUpdate(long guildId, Message nowPlayingMessage, AudioTrack track, int volume) {
-        ScheduledExecutorService scheduledExecutorService = schedulerMap.computeIfAbsent(guildId, k -> Executors.newScheduledThreadPool(1));
-        scheduledExecutorService.schedule(() -> {
-            // Get the latest "Now Playing" message content
-            String updatedNowPlaying = getNowPlayingString(track, volume);
-            // Update the existing "Now Playing" message
-            updateNowPlayingMessage(nowPlayingMessage, updatedNowPlaying);
-        }, track.getDuration() - track.getPosition(), TimeUnit.MILLISECONDS);
-    }
-
-    private static void updateNowPlayingMessage(Message nowPlayingMessage, String updatedNowPlaying) {
-        // Update the existing "Now Playing" message
-        nowPlayingMessage.editMessage(updatedNowPlaying).queue();
-    }
-
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
         if (track == null) {
             hook.sendMessage("There is no track playing currently").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
