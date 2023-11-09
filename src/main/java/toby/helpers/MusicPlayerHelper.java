@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import org.springframework.web.ErrorResponseException;
 import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
@@ -95,33 +96,28 @@ public class MusicPlayerHelper {
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
         schedulerMap.put(guildId, scheduledExecutorService);
-
         try {
             if (previousNowPlayingMessage == null) {
-                // If the previous message doesn't exist or is deleted, send a new one
-                Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
-                guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
-            } else {
-                scheduledExecutorService.scheduleAtFixedRate(() -> {
-                    // Update the existing "Now Playing" message
-                    String updatedNowPlaying = getNowPlayingString(track, volume);
-                    Message nowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
-
-                    if (nowPlayingMessage != null) {
-                        nowPlayingMessage.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
-                        hook.deleteOriginal().queue();
-                    } else {
-                        // If the message is deleted, send a new one
-                        Message newNowPlayingMessage = hook.sendMessage(updatedNowPlaying).setActionRow(pausePlay, stop).complete();
-                        guildLastNowPlayingMessage.put(guildId, newNowPlayingMessage);
-                    }
-                }, 0, 1, TimeUnit.SECONDS);
+                sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
             }
+            scheduledExecutorService.scheduleAtFixedRate(() -> {
+                // Update the existing "Now Playing" message
+                String updatedNowPlaying = getNowPlayingString(track, volume);
+                guildLastNowPlayingMessage.get(guildId).editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
+                hook.deleteOriginal().queue();
+            }, 0, 1, TimeUnit.SECONDS);
 
-        } catch (Exception e) {
-            // Log the exception
-            e.printStackTrace();
+        } catch (IllegalArgumentException | ErrorResponseException e) {
+            // Send a new "Now Playing" message and store it
+            sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
         }
+
+    }
+
+    private static void sendNewNowPlayingMessage(InteractionHook hook, String nowPlaying, Button pausePlay, Button stop, long guildId) {
+        // Send a new "Now Playing" message and store it
+        Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
+        guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
     }
 
     private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
@@ -246,10 +242,7 @@ public class MusicPlayerHelper {
 
     private static void resetNowPlayingMessage(long guildId) {
         ScheduledExecutorService scheduledExecutorService = schedulerMap.get(guildId);
-        if (scheduledExecutorService != null) {
-            scheduledExecutorService.shutdown();
-            schedulerMap.remove(guildId);
-        }
+        if (scheduledExecutorService != null) scheduledExecutorService.shutdown();
         Message message = guildLastNowPlayingMessage.get(guildId);
         if (message != null) message.delete().queue();
         guildLastNowPlayingMessage.remove(guildId);
