@@ -95,11 +95,7 @@ public class MusicPlayerHelper {
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
 
         if (previousNowPlayingMessage == null) {
-            // Send a new "Now Playing" message and store it
-            Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
-            guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
-            // Schedule the update task based on the remaining duration of the track
-            scheduleNowPlayingUpdate(guildId, nowPlayingMessage, track, volume);
+            sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
         } else {
             // Message already exists, no need to recreate it
             updateNowPlayingMessage(previousNowPlayingMessage, nowPlaying);
@@ -107,6 +103,14 @@ public class MusicPlayerHelper {
             // Re-schedule the update task based on the remaining duration of the track
             scheduleNowPlayingUpdate(guildId, previousNowPlayingMessage, track, volume);
         }
+    }
+
+    private static void sendNewNowPlayingMessage(InteractionHook hook, String nowPlaying, Button pausePlay, Button stop, long guildId) {
+        // Send a new "Now Playing" message and store it
+        // Handle the case where the message couldn't be sent
+        hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).queue(message -> {
+            guildLastNowPlayingMessage.put(guildId, message);
+        }, Throwable::printStackTrace);
     }
 
     private static void scheduleNowPlayingUpdate(long guildId, Message nowPlayingMessage, AudioTrack track, int volume) {
