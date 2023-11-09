@@ -102,7 +102,8 @@ public class MusicPlayerHelper {
             }
             scheduledExecutorService.scheduleAtFixedRate(() -> {
                 // Update the existing "Now Playing" message
-                previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop).queue();
+                String updatedNowPlaying = getNowPlayingString(track, volume);
+                guildLastNowPlayingMessage.get(guildId).editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
                 hook.deleteOriginal().queue();
             }, 0, 10, TimeUnit.SECONDS);
 
