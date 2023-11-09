@@ -100,6 +100,7 @@ public class TrackScheduler extends AudioEventAdapter {
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
+                MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
                 nowPlaying(event, instance, deleteDelay);
             }
         }

@@ -101,7 +101,6 @@ public class MusicPlayerHelper {
             }
         } catch (IllegalArgumentException | ErrorResponseException e ) {
             // Send a new "Now Playing" message and store it
-            guildLastNowPlayingMessage.remove(guildId);
             sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
         }
     }
@@ -240,8 +239,8 @@ public class MusicPlayerHelper {
     }
 
 
-    public static void resetMessages() {
-        guildLastNowPlayingMessage.clear();
+    public static void resetMessages(long guildId) {
+        guildLastNowPlayingMessage.remove(guildId);
     }
 
 }
