@@ -76,7 +76,7 @@ public interface MusicCommandTest extends CommandTest {
         when(message.delete()).thenReturn(auditableRestAction);
         when(message.editMessage(anyString())).thenReturn(messageEditAction);
         when(messageEditAction.setActionRow(any(), any())).thenReturn(messageEditAction);
-        MusicPlayerHelper.resetMessages();
+        MusicPlayerHelper.resetMessages(guild.getIdLong());
     }
 
     default void tearDownCommonMusicMocks() {
