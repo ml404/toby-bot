@@ -86,6 +86,7 @@ public class TrackScheduler extends AudioEventAdapter {
 
     @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
+        MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
         if (endReason.mayStartNext) {
             if (isLooping) {
                 this.player.startTrack(track.makeClone(), false);
@@ -97,7 +98,6 @@ public class TrackScheduler extends AudioEventAdapter {
                 player.setVolume(previousVolume);
                 event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
-            MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
