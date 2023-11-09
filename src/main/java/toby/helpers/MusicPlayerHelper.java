@@ -240,6 +240,8 @@ public class MusicPlayerHelper {
 
 
     public static void resetMessages(long guildId) {
+        Message message = guildLastNowPlayingMessage.get(guildId);
+        message.delete().queue();
         guildLastNowPlayingMessage.remove(guildId);
     }
 
