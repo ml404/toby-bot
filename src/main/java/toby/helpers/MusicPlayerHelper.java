@@ -240,7 +240,8 @@ public class MusicPlayerHelper {
     }
 
     private static void resetNowPlayingMessage(long guildId) {
-        schedulerMap.get(guildId).shutdown();
+        ScheduledExecutorService scheduledExecutorService = schedulerMap.get(guildId);
+        if (scheduledExecutorService != null) scheduledExecutorService.shutdown();
         Message message = guildLastNowPlayingMessage.get(guildId);
         if (message != null) message.delete().queue();
         guildLastNowPlayingMessage.remove(guildId);
