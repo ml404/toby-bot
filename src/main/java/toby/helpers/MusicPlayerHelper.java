@@ -99,7 +99,7 @@ public class MusicPlayerHelper {
             } else {
                 sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
             }
-        } catch (IllegalArgumentException | ErrorResponseException e ) {
+        } catch (IllegalArgumentException | ErrorResponseException e) {
             // Send a new "Now Playing" message and store it
             sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
         }
@@ -241,7 +241,7 @@ public class MusicPlayerHelper {
 
     public static void resetMessages(long guildId) {
         Message message = guildLastNowPlayingMessage.get(guildId);
-        message.delete().queue();
+        if (message != null) message.delete().queue();
         guildLastNowPlayingMessage.remove(guildId);
     }
 
