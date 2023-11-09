@@ -93,15 +93,31 @@ public class MusicPlayerHelper {
 
         // Get the previous "Now Playing" message if it exists
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+        schedulerMap.put(guildId, scheduledExecutorService);
 
-        if (previousNowPlayingMessage == null) {
-            sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
-        } else {
-            // Message already exists, no need to recreate it
-            updateNowPlayingMessage(previousNowPlayingMessage, nowPlaying);
-            hook.deleteOriginal().queue();
-            // Re-schedule the update task based on the remaining duration of the track
-            scheduleNowPlayingUpdate(guildId, previousNowPlayingMessage, track, volume);
+        try {
+            if (previousNowPlayingMessage == null) {
+                sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
+            }
+
+            scheduledExecutorService.scheduleAtFixedRate(() -> {
+                // Update the existing "Now Playing" message
+                String updatedNowPlaying = getNowPlayingString(track, volume);
+                Message nowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
+
+                if (nowPlayingMessage != null) {
+                    nowPlayingMessage.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
+                    hook.deleteOriginal().queue();
+                } else {
+                    // If the message is deleted, send a new one
+                    sendNewNowPlayingMessage(hook, updatedNowPlaying, pausePlay, stop, guildId);
+                }
+            }, 0, 1, TimeUnit.SECONDS);
+
+        } catch (Exception e) {
+            // Log the exception
+            e.printStackTrace();
         }
     }
 

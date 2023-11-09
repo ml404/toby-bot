@@ -162,11 +162,11 @@ public class DnDCommand implements IFetchCommand {
         if (spell.damage() != null) {
             StringBuilder damageInfo = new StringBuilder();
             damageInfo.append("Damage Type: ").append(spell.damage().damageType().name()).append("\n");
-            damageInfo.append("Damage at Slot Level:\n");
 
             // Add damage at slot level information
             Map<String, String> damageAtSlotLevel = spell.damage().damageAtSlotLevel();
             if(damageAtSlotLevel!=null) {
+                damageInfo.append("Damage at Slot Level:\n");
                 for (Map.Entry<String, String> entry : damageAtSlotLevel.entrySet()) {
                     damageInfo.append("Level ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
                 }
