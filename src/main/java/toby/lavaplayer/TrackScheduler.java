@@ -38,14 +38,15 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void queue(AudioTrack track, long startPosition, int volume) {
-        event.getHook().sendMessage("Adding to queue: `")
-                .addContent(track.getInfo().title)
-                .addContent("` by `")
-                .addContent(track.getInfo().author)
-                .addContent("`")
-                .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), volume))
-                .queue(invokeDeleteOnMessageResponse(deleteDelay));
-
+        if (event != null) {
+            event.getHook().sendMessage("Adding to queue: `")
+                    .addContent(track.getInfo().title)
+                    .addContent("` by `")
+                    .addContent(track.getInfo().author)
+                    .addContent("`")
+                    .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), volume))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay));
+        }
         track.setPosition(startPosition);
         track.setUserData(volume);
         synchronized (queue) {
@@ -94,7 +95,7 @@ public class TrackScheduler extends AudioEventAdapter {
             }
             PlayerManager instance = PlayerManager.getInstance();
             instance.setCurrentlyStoppable(true);
-            if (previousVolume!= null && player.getVolume() != previousVolume) {
+            if (previousVolume != null && player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
                 event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
