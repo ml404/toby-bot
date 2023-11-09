@@ -233,16 +233,13 @@ public class MusicPlayerHelper {
 
     private static void resetNowPlayingMessage(long guildId) {
         Message message = guildLastNowPlayingMessage.get(guildId);
-        if (message != null) {
-            message.delete().queue();
-        }
+        if (message != null) message.delete().queue();
+        guildLastNowPlayingMessage.remove(guildId);
     }
 
 
     public static void resetMessages(long guildId) {
-        Message message = guildLastNowPlayingMessage.get(guildId);
-        if (message != null) message.delete().queue();
-        guildLastNowPlayingMessage.remove(guildId);
+        resetNowPlayingMessage(guildId);
     }
 
 }
