@@ -97,10 +97,10 @@ public class TrackScheduler extends AudioEventAdapter {
                 player.setVolume(previousVolume);
                 event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
+            MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
-                MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
                 nowPlaying(event, instance, deleteDelay);
             }
         }
