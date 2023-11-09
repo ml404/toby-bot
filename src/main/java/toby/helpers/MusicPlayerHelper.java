@@ -99,7 +99,7 @@ public class MusicPlayerHelper {
             } else {
                 sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
             }
-        } catch (ErrorResponseException e) {
+        } catch (IllegalArgumentException | ErrorResponseException e ) {
             // Send a new "Now Playing" message and store it
             guildLastNowPlayingMessage.remove(guildId);
             sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
