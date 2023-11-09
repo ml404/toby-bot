@@ -155,7 +155,7 @@ public class DnDCommand implements IFetchCommand {
             embedBuilder.addField("Casting Time", spell.castingTime(), true);
         }
 
-        if (spell.level() >= 0) {
+        if (spell.level() > 0) {
             embedBuilder.addField("Level", String.valueOf(spell.level()), true);
         }
 
