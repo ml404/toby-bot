@@ -21,6 +21,8 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
@@ -32,6 +34,8 @@ public class MusicPlayerHelper {
 
     public static final int SECOND_MULTIPLIER = 1000;
     private static final Map<Long, Message> guildLastNowPlayingMessage = new HashMap<>();
+
+    private static final Map<Long, ScheduledExecutorService> schedulerMap = new HashMap<>();
 
     public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
@@ -90,19 +94,24 @@ public class MusicPlayerHelper {
 
         // Get the previous "Now Playing" message if it exists
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
-
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+        schedulerMap.put(guildId, scheduledExecutorService);
         try {
-            if (previousNowPlayingMessage != null) {
-                // Update the existing "Now Playing" message
-                previousNowPlayingMessage.editMessage(nowPlaying).setActionRow(pausePlay, stop).queue();
-                hook.deleteOriginal().queue();
-            } else {
+            if (previousNowPlayingMessage == null) {
                 sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
             }
+            scheduledExecutorService.scheduleAtFixedRate(() -> {
+                // Update the existing "Now Playing" message
+                String updatedNowPlaying = getNowPlayingString(track, volume);
+                guildLastNowPlayingMessage.get(guildId).editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
+                hook.deleteOriginal().queue();
+            }, 0, 1, TimeUnit.SECONDS);
+
         } catch (IllegalArgumentException | ErrorResponseException e) {
             // Send a new "Now Playing" message and store it
             sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
         }
+
     }
 
     private static void sendNewNowPlayingMessage(InteractionHook hook, String nowPlaying, Button pausePlay, Button stop, long guildId) {
@@ -232,6 +241,8 @@ public class MusicPlayerHelper {
     }
 
     private static void resetNowPlayingMessage(long guildId) {
+        ScheduledExecutorService scheduledExecutorService = schedulerMap.get(guildId);
+        if (scheduledExecutorService != null) scheduledExecutorService.shutdown();
         Message message = guildLastNowPlayingMessage.get(guildId);
         if (message != null) message.delete().queue();
         guildLastNowPlayingMessage.remove(guildId);
