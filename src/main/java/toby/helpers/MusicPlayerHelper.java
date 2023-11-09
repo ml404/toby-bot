@@ -101,6 +101,7 @@ public class MusicPlayerHelper {
             }
         } catch (ErrorResponseException e) {
             // Send a new "Now Playing" message and store it
+            guildLastNowPlayingMessage.remove(guildId);
             sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
         }
     }
