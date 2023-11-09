@@ -98,22 +98,25 @@ public class MusicPlayerHelper {
 
         try {
             if (previousNowPlayingMessage == null) {
-                sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
+                // If the previous message doesn't exist or is deleted, send a new one
+                Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
+                guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
+            } else {
+                scheduledExecutorService.scheduleAtFixedRate(() -> {
+                    // Update the existing "Now Playing" message
+                    String updatedNowPlaying = getNowPlayingString(track, volume);
+                    Message nowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
+
+                    if (nowPlayingMessage != null) {
+                        nowPlayingMessage.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
+                        hook.deleteOriginal().queue();
+                    } else {
+                        // If the message is deleted, send a new one
+                        Message newNowPlayingMessage = hook.sendMessage(updatedNowPlaying).setActionRow(pausePlay, stop).complete();
+                        guildLastNowPlayingMessage.put(guildId, newNowPlayingMessage);
+                    }
+                }, 0, 1, TimeUnit.SECONDS);
             }
-
-            scheduledExecutorService.scheduleAtFixedRate(() -> {
-                // Update the existing "Now Playing" message
-                String updatedNowPlaying = getNowPlayingString(track, volume);
-                Message nowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
-
-                if (nowPlayingMessage != null) {
-                    nowPlayingMessage.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
-                    hook.deleteOriginal().queue();
-                } else {
-                    // If the message is deleted, send a new one
-                    sendNewNowPlayingMessage(hook, updatedNowPlaying, pausePlay, stop, guildId);
-                }
-            }, 0, 1, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             // Log the exception
