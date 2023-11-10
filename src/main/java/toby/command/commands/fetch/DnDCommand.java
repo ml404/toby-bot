@@ -64,7 +64,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
     public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String url = String.format(DND_5_API_URL, typeValue, replaceSpaceWithUrlEncode(query));
+        String url = String.format(DND_5_API_URL, typeValue, replaceSpaceWithDash(query));
         String responseData = httpHelper.fetchFromGet(url);
         switch (typeName) {
             case SPELL_NAME -> {
@@ -278,6 +278,11 @@ public class DnDCommand implements IFetchCommand {
     @NotNull
     private static String transformListToString(List<String> feature) {
         return feature.stream().reduce((s1, s2) -> String.join("\n", s1, s2)).get();
+    }
+
+    @NotNull
+    private static String replaceSpaceWithDash(String query) {
+        return query.replace(" ", "-");
     }
 
     @NotNull
