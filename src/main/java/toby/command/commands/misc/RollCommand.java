@@ -42,15 +42,7 @@ public class RollCommand implements IMiscCommand {
 
     public WebhookMessageCreateAction<Message> handleDiceRoll(IReplyCallback event, int diceValue, int diceToRoll, int modifier) {
         event.deferReply().queue();
-        int rollTotal = 0;
-        Random rand = ThreadLocalRandom.current();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < diceToRoll; i++) {
-            int roll = rand.nextInt(diceValue) + 1; //This results in 1 - 20 (instead of 0 - 19) for default value
-            rollTotal += roll;
-            sb.append(String.format("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll));
-        }
-        sb.append(String.format("Your final roll total was '%d' + '%d' modifier = '%d'.", rollTotal, modifier, rollTotal + modifier));
+        StringBuilder sb = buildStringForDiceRoll(diceValue, diceToRoll, modifier);
         EmbedBuilder embedBuilder = new EmbedBuilder()
                 .addField(new MessageEmbed.Field(String.format("D%d * %d + '%d' modifier", diceValue, diceToRoll, modifier), sb.toString(), true))
                 .setColor(0x00FF00); // Green color
@@ -60,6 +52,20 @@ public class RollCommand implements IMiscCommand {
         Button rollD6 = Button.primary(getName() + ":" + "6, 1, 0", "Roll D6");
         Button rollD4 = Button.primary(getName() + ":" + "4, 1, 0", "Roll D4");
         return event.getHook().sendMessageEmbeds(embedBuilder.build()).addActionRow(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4);
+    }
+
+    @NotNull
+    public static StringBuilder buildStringForDiceRoll(int diceValue, int diceToRoll, int modifier) {
+        int rollTotal = 0;
+        Random rand = ThreadLocalRandom.current();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < diceToRoll; i++) {
+            int roll = rand.nextInt(diceValue) + 1; //This results in 1 - 20 (instead of 0 - 19) for default value
+            rollTotal += roll;
+            sb.append(String.format("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll));
+        }
+        sb.append(String.format("Your final roll total was '%d' + '%d' modifier = '%d'.", rollTotal, modifier, rollTotal + modifier));
+        return sb;
     }
 
 

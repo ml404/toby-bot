@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
+import toby.command.commands.dnd.DnDCommand;
+import toby.command.commands.dnd.InitiativeCommand;
 import toby.command.commands.fetch.*;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
@@ -56,7 +58,6 @@ public class CommandManager {
         addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
-        addCommand(new DnDCommand());
         addCommand(new Kf2RandomMapCommand(cache));
         addCommand(new DbdRandomKillerCommand(cache));
         addCommand(new HelloThereCommand(configService));
@@ -93,6 +94,10 @@ public class CommandManager {
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
         addCommand(new IntroSongCommand(userService, musicFileService, configService));
+
+        //dnd commands
+        addCommand(new InitiativeCommand());
+        addCommand(new DnDCommand());
     }
 
     private void addCommand(ICommand cmd) {

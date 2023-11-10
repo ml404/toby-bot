@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import toby.command.ICommand;
 import toby.command.commands.fetch.DbdRandomKillerCommand;
-import toby.command.commands.fetch.DnDCommand;
+import toby.command.commands.dnd.DnDCommand;
 import toby.command.commands.fetch.Kf2RandomMapCommand;
 import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;

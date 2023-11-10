@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import toby.command.CommandContext;
 import toby.command.CommandTest;
+import toby.command.commands.dnd.DnDCommand;
 import toby.helpers.HttpHelper;
 
 import static org.mockito.Mockito.*;

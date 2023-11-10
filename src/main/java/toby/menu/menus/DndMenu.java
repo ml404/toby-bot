@@ -7,7 +7,7 @@ import toby.menu.MenuContext;
 
 import java.io.UnsupportedEncodingException;
 
-import static toby.command.commands.fetch.DnDCommand.*;
+import static toby.command.commands.dnd.DnDCommand.*;
 
 public class DndMenu implements IMenu {
     @Override

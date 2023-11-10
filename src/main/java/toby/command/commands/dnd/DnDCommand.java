@@ -1,4 +1,4 @@
-package toby.command.commands.fetch;
+package toby.command.commands.dnd;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -11,6 +11,7 @@ import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import toby.command.CommandContext;
+import toby.command.commands.fetch.IFetchCommand;
 import toby.dto.web.dnd.Feature;
 import toby.dto.web.dnd.Information;
 import toby.dto.web.dnd.Rule;
@@ -27,8 +28,7 @@ import java.util.Map;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
 
-public class DnDCommand implements IFetchCommand {
-
+public class DnDCommand implements IDnDCommand, IFetchCommand{
 
     public static final String DND_5_API_URL = "https://www.dnd5eapi.co/api/%s/%s";
     public static final String TYPE = "type";
