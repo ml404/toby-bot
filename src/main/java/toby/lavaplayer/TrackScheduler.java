@@ -104,12 +104,12 @@ public class TrackScheduler extends AudioEventAdapter {
             instance.setCurrentlyStoppable(true);
             if (previousVolume != null && player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
-                event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
+                if(event!=null) event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
-                nowPlaying(event, instance, deleteDelay);
+                if(event!=null) nowPlaying(event, instance, deleteDelay);
             }
         }
     }
