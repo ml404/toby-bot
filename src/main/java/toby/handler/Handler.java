@@ -234,14 +234,18 @@ public class Handler extends ListenerAdapter {
     private void closeEmptyAudioManagerAndRejoin(GuildVoiceUpdateEvent event, Guild guild, AudioManager audioManager, int defaultVolume) {
         CompletableFuture<AudioManager> future = CompletableFuture.supplyAsync(() -> {
             checkCurrentAudioManagerForNonBotMembers(audioManager);
-            return audioManager;
+            return audioManager; // Supply the AudioManager instance
         });
+
         future.thenAcceptAsync(am -> {
+            System.out.println("Is connected: " + am.isConnected());
             if (!am.isConnected()) {
+                System.out.println("Attempting to connect...");
                 List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
                 if (!nonBotConnectedMembers.isEmpty()) {
                     PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
                     am.openAudioConnection(event.getChannelJoined());
+                    System.out.println("Audio connection opened.");
                 }
                 deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.getChannelLeft());
             }
