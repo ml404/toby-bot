@@ -52,7 +52,7 @@ class NowDigOnThisCommandTest implements MusicCommandTest {
         //Act
         nowDigOnThisCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
-        verify(playerManager, times(1)).loadAndPlay(eq(event), eq("www.testlink.com"), eq(false), eq(0), eq(0L), eq(20));
+        verify(playerManager, times(1)).loadAndPlay(eq(guild), eq(event), eq("www.testlink.com"), eq(false), eq(0), eq(0L), eq(20));
     }
 
     @Test
@@ -82,6 +82,6 @@ class NowDigOnThisCommandTest implements MusicCommandTest {
         nowDigOnThisCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
         verify(interactionHook, times(1)).sendMessage("I'm gonna put some dirt in your eye Effective Name");
-        verify(playerManager, times(0)).loadAndPlay(eq(event), eq("www.testlink.com"), eq(false), eq(0), eq(0L), eq(20));
+        verify(playerManager, times(0)).loadAndPlay(eq(guild), eq(event), eq("www.testlink.com"), eq(false), eq(0), eq(0L), eq(20));
     }
 }

@@ -5,7 +5,6 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
@@ -34,14 +33,19 @@ public class MusicPlayerHelper {
     public static final int SECOND_MULTIPLIER = 1000;
     private static final Map<Long, Message> guildLastNowPlayingMessage = new HashMap<>();
 
-    public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
+    public static void playUserIntro(UserDto dbUser, Guild guild, int deleteDelay, Long startPosition, int volume) {
+        playUserIntro(dbUser, guild, null, deleteDelay, startPosition, volume);
+    }
+
+    public static void playUserIntro(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
         PlayerManager instance = PlayerManager.getInstance();
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(event,
+            instance.loadAndPlay(guild,
+                    event,
                     String.format(webUrl + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
@@ -50,27 +54,7 @@ public class MusicPlayerHelper {
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, introVolume);
-        }
-    }
-
-    public static void playUserIntroWithChannel(UserDto dbUser, Guild guild, TextChannel channel, int deleteDelay, Long startPosition) {
-        MusicDto musicDto = dbUser.getMusicDto();
-        PlayerManager instance = PlayerManager.getInstance();
-        int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
-        if (musicDto != null && musicDto.getFileName() != null) {
-            Integer introVolume = musicDto.getIntroVolume();
-            instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlayChannel(channel,
-                    String.format(webUrl + "/music?id=%s", musicDto.getId()),
-                    true,
-                    0,
-                    introVolume,
-                    startPosition);
-        } else if (musicDto != null) {
-            Integer introVolume = musicDto.getIntroVolume();
-            instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlayChannel(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, introVolume, startPosition);
+            instance.loadAndPlay(guild, event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, introVolume);
         }
     }
 
