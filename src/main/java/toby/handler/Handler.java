@@ -238,14 +238,14 @@ public class Handler extends ListenerAdapter {
         });
 
         future.thenAcceptAsync(am -> {
-            System.out.println("Is connected: " + am.isConnected());
+            LOGGER.info("Is connected: {}", am.isConnected());
             if (!am.isConnected()) {
-                System.out.println("Attempting to connect...");
+                LOGGER.info("Attempting to connect...");
                 List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
                 if (!nonBotConnectedMembers.isEmpty()) {
                     PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
                     am.openAudioConnection(event.getChannelJoined());
-                    System.out.println("Audio connection opened.");
+                    LOGGER.info("Audio connection opened.");
                 }
                 deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.getChannelLeft());
             }
