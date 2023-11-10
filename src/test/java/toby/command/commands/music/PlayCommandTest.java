@@ -55,6 +55,6 @@ class PlayCommandTest implements MusicCommandTest {
         //Act
         playCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
 
-        verify(playerManager, times(1)).loadAndPlay(eq(event), eq("www.testlink.com"), eq(true), eq(0), eq(0L), eq(20));
+        verify(playerManager, times(1)).loadAndPlay(eq(guild), eq(event), eq("www.testlink.com"), eq(true), eq(0), eq(0L), eq(20));
     }
 }

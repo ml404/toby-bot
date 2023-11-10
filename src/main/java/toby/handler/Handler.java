@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static toby.helpers.MusicPlayerHelper.playUserIntroWithChannel;
+import static toby.helpers.MusicPlayerHelper.playUserIntro;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -219,7 +219,7 @@ public class Handler extends ListenerAdapter {
         UserDto requestingUserDto = calculateUserDto(guildId, discordId, Objects.requireNonNull(event.getMember()).isOwner(), userService, defaultVolume);
 
         if (Objects.equals(audioManager.getConnectedChannel(), event.getChannelJoined())) {
-            playUserIntroWithChannel(requestingUserDto, guild, guild.getDefaultChannel().asTextChannel(), Integer.parseInt(deleteDelayConfig.getValue()), 0L);
+            playUserIntro(requestingUserDto, guild, Integer.parseInt(deleteDelayConfig.getValue()), 0L, audioPlayer.getVolume());
         }
     }
 

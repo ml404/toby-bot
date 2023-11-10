@@ -5,7 +5,6 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
@@ -15,14 +14,13 @@ import toby.jpa.dto.MusicDto;
 import toby.jpa.dto.UserDto;
 import toby.lavaplayer.GuildMusicManager;
 import toby.lavaplayer.PlayerManager;
+import toby.lavaplayer.TrackScheduler;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
@@ -35,16 +33,19 @@ public class MusicPlayerHelper {
     public static final int SECOND_MULTIPLIER = 1000;
     private static final Map<Long, Message> guildLastNowPlayingMessage = new HashMap<>();
 
-    private static final Map<Long, ScheduledExecutorService> schedulerMap = new HashMap<>();
+    public static void playUserIntro(UserDto dbUser, Guild guild, int deleteDelay, Long startPosition, int volume) {
+        playUserIntro(dbUser, guild, null, deleteDelay, startPosition, volume);
+    }
 
-    public static void playUserIntroWithEvent(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
+    public static void playUserIntro(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
         MusicDto musicDto = dbUser.getMusicDto();
         PlayerManager instance = PlayerManager.getInstance();
         int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
         if (musicDto != null && musicDto.getFileName() != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(event,
+            instance.loadAndPlay(guild,
+                    event,
                     String.format(webUrl + "/music?id=%s", musicDto.getId()),
                     true,
                     0,
@@ -53,27 +54,7 @@ public class MusicPlayerHelper {
         } else if (musicDto != null) {
             Integer introVolume = musicDto.getIntroVolume();
             instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, introVolume);
-        }
-    }
-
-    public static void playUserIntroWithChannel(UserDto dbUser, Guild guild, TextChannel channel, int deleteDelay, Long startPosition) {
-        MusicDto musicDto = dbUser.getMusicDto();
-        PlayerManager instance = PlayerManager.getInstance();
-        int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
-        if (musicDto != null && musicDto.getFileName() != null) {
-            Integer introVolume = musicDto.getIntroVolume();
-            instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlayChannel(channel,
-                    String.format(webUrl + "/music?id=%s", musicDto.getId()),
-                    true,
-                    0,
-                    introVolume,
-                    startPosition);
-        } else if (musicDto != null) {
-            Integer introVolume = musicDto.getIntroVolume();
-            instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlayChannel(channel, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, introVolume, startPosition);
+            instance.loadAndPlay(guild, event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, introVolume);
         }
     }
 
@@ -94,18 +75,15 @@ public class MusicPlayerHelper {
 
         // Get the previous "Now Playing" message if it exists
         Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
-        schedulerMap.put(guildId, scheduledExecutorService);
         try {
             if (previousNowPlayingMessage == null) {
                 sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
             }
-            scheduledExecutorService.scheduleAtFixedRate(() -> {
-                // Update the existing "Now Playing" message
-                String updatedNowPlaying = getNowPlayingString(track, volume);
-                guildLastNowPlayingMessage.get(guildId).editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
-                hook.deleteOriginal().queue();
-            }, 0, 1, TimeUnit.SECONDS);
+            // Update the existing "Now Playing" message
+            String updatedNowPlaying = getNowPlayingString(track, volume);
+            guildLastNowPlayingMessage.get(guildId).editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
+            hook.deleteOriginal().queue();
+
 
         } catch (IllegalArgumentException | ErrorResponseException e) {
             // Send a new "Now Playing" message and store it
@@ -120,7 +98,7 @@ public class MusicPlayerHelper {
         guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
     }
 
-    private static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
+    static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
         if (track == null) {
             hook.sendMessage("There is no track playing currently").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return true;
@@ -131,9 +109,10 @@ public class MusicPlayerHelper {
     public static void stopSong(IReplyCallback event, GuildMusicManager musicManager, boolean canOverrideSkips, Integer deleteDelay) {
         InteractionHook hook = event.getHook();
         if (PlayerManager.getInstance().isCurrentlyStoppable() || canOverrideSkips) {
-            musicManager.getScheduler().stopTrack(true);
-            musicManager.getScheduler().getQueue().clear();
-            musicManager.getScheduler().setLooping(false);
+            TrackScheduler scheduler = musicManager.getScheduler();
+            scheduler.stopTrack(true);
+            scheduler.getQueue().clear();
+            scheduler.setLooping(false);
             musicManager.getAudioPlayer().setPaused(false);
             hook.deleteOriginal().queue();
             hook.sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
@@ -241,8 +220,6 @@ public class MusicPlayerHelper {
     }
 
     private static void resetNowPlayingMessage(long guildId) {
-        ScheduledExecutorService scheduledExecutorService = schedulerMap.get(guildId);
-        if (scheduledExecutorService != null) scheduledExecutorService.shutdown();
         Message message = guildLastNowPlayingMessage.get(guildId);
         if (message != null) message.delete().queue();
         guildLastNowPlayingMessage.remove(guildId);

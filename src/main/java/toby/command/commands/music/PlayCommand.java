@@ -45,18 +45,14 @@ public class PlayCommand implements IMusicCommand {
         instance.setPreviousVolume(currentVolume);
         Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
         int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(currentVolume);
-
-        if (musicManager.getScheduler().getQueue().isEmpty()) {
-            musicManager.getAudioPlayer().setVolume(volume);
-        }
         if (type.equals(INTRO)) {
-            playUserIntroWithEvent(requestingUserDto, guild, event, deleteDelay, startPosition, volume);
+            playUserIntro(requestingUserDto, guild, event, deleteDelay, startPosition, volume);
         } else {
             String link = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString).orElse("");
             if (link.contains("youtube") && !isUrl(link)) {
                 link = "ytsearch:" + link;
             }
-            instance.loadAndPlay(event, link, true, deleteDelay, startPosition, volume);
+            instance.loadAndPlay(ctx.getGuild(), event, link, true, deleteDelay, startPosition, volume);
         }
     }
 

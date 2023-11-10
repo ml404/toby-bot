@@ -38,14 +38,15 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void queue(AudioTrack track, long startPosition, int volume) {
-        event.getHook().sendMessage("Adding to queue: `")
-                .addContent(track.getInfo().title)
-                .addContent("` by `")
-                .addContent(track.getInfo().author)
-                .addContent("`")
-                .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), volume))
-                .queue(invokeDeleteOnMessageResponse(deleteDelay));
-
+        if (event != null) {
+            event.getHook().sendMessage("Adding to queue: `")
+                    .addContent(track.getInfo().title)
+                    .addContent("` by `")
+                    .addContent(track.getInfo().author)
+                    .addContent("`")
+                    .addContent(String.format(" starting at '%s ms' with volume '%d'", track.getPosition(), volume))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay));
+        }
         track.setPosition(startPosition);
         track.setUserData(volume);
         synchronized (queue) {
@@ -85,7 +86,15 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     @Override
+    public void onTrackStart(AudioPlayer player, AudioTrack track) {
+        super.onTrackStart(player, track);
+        player.setVolume((Integer) track.getUserData());
+        if (event != null) nowPlaying(event, PlayerManager.getInstance(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
+    }
+
+    @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
+        if(event!=null) MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
         if (endReason.mayStartNext) {
             if (isLooping) {
                 this.player.startTrack(track.makeClone(), false);
@@ -93,15 +102,14 @@ public class TrackScheduler extends AudioEventAdapter {
             }
             PlayerManager instance = PlayerManager.getInstance();
             instance.setCurrentlyStoppable(true);
-            if (previousVolume!= null && player.getVolume() != previousVolume) {
+            if (previousVolume != null && player.getVolume() != previousVolume) {
                 player.setVolume(previousVolume);
-                event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
+                if(event!=null) event.getChannel().sendMessageFormat("Setting volume back to '%d' \uD83D\uDD0A", previousVolume).queue(invokeDeleteOnMessageResponse(deleteDelay));
             }
-            MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
             AudioTrack audioTrack = this.queue.poll();
             if (audioTrack != null) {
                 nextTrack();
-                nowPlaying(event, instance, deleteDelay);
+                if(event!=null) nowPlaying(event, instance, deleteDelay);
             }
         }
     }
@@ -112,13 +120,6 @@ public class TrackScheduler extends AudioEventAdapter {
             event.getChannel().sendMessage(String.format("Track %s got stuck, skipping.", track.getInfo().title)).queue(invokeDeleteOnMessageResponse(deleteDelay));
             nextTrack();
         }
-    }
-
-    @Override
-    public void onTrackStart(AudioPlayer player, AudioTrack track) {
-        super.onTrackStart(player, track);
-        player.setVolume((Integer) track.getUserData());
-        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
     }
 
     public boolean stopTrack(boolean isStoppable) {
@@ -146,8 +147,8 @@ public class TrackScheduler extends AudioEventAdapter {
         return event;
     }
 
-    public void setEvent(SlashCommandInteractionEvent currentTextChannel) {
-        this.event = currentTextChannel;
+    public void setEvent(SlashCommandInteractionEvent event) {
+        this.event = event;
     }
 
     public void setDeleteDelay(Integer deleteDelay) {
