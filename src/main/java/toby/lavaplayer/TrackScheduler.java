@@ -86,8 +86,15 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     @Override
+    public void onTrackStart(AudioPlayer player, AudioTrack track) {
+        super.onTrackStart(player, track);
+        player.setVolume((Integer) track.getUserData());
+        if (event != null) nowPlaying(event, PlayerManager.getInstance(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
+    }
+
+    @Override
     public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
-        MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
+        if(event!=null) MusicPlayerHelper.resetMessages(event.getGuild().getIdLong());
         if (endReason.mayStartNext) {
             if (isLooping) {
                 this.player.startTrack(track.makeClone(), false);
@@ -115,13 +122,6 @@ public class TrackScheduler extends AudioEventAdapter {
         }
     }
 
-    @Override
-    public void onTrackStart(AudioPlayer player, AudioTrack track) {
-        super.onTrackStart(player, track);
-        player.setVolume((Integer) track.getUserData());
-        MusicPlayerHelper.nowPlaying(event, PlayerManager.getInstance(), MusicPlayerHelper.deriveDeleteDelayFromTrack(track));
-    }
-
     public boolean stopTrack(boolean isStoppable) {
         if (isStoppable) {
             player.stopTrack();
@@ -147,8 +147,8 @@ public class TrackScheduler extends AudioEventAdapter {
         return event;
     }
 
-    public void setEvent(SlashCommandInteractionEvent currentTextChannel) {
-        this.event = currentTextChannel;
+    public void setEvent(SlashCommandInteractionEvent event) {
+        this.event = event;
     }
 
     public void setDeleteDelay(Integer deleteDelay) {
