@@ -64,7 +64,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
     public static void doLookUpAndReply(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String url = String.format(DND_5_API_URL, typeValue, replaceSpaceWithUrlEncode(query));
+        String url = String.format(DND_5_API_URL, typeValue, replaceSpaceWithDash(query));
         String responseData = httpHelper.fetchFromGet(url);
         switch (typeName) {
             case SPELL_NAME -> {
@@ -108,7 +108,7 @@ public class DnDCommand implements IFetchCommand {
     }
 
     private static void queryNonMatchRetry(InteractionHook hook, String typeName, String typeValue, String query, HttpHelper httpHelper, Integer deleteDelay) {
-        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + replaceSpaceWithUrlEncode(query)));
+        String queryResponseData = httpHelper.fetchFromGet(String.format(DND_5_API_URL, typeValue, "?name=" + replaceDashWithUrlEncode(query)));
         QueryResult queryResult = JsonParser.parseJsonToQueryResult(queryResponseData);
         if (queryResult != null && queryResult.count() > 0) {
             StringSelectMenu.Builder builder = StringSelectMenu.create(String.format("dnd:%s", typeName)).setPlaceholder("Choose an option");
@@ -281,8 +281,13 @@ public class DnDCommand implements IFetchCommand {
     }
 
     @NotNull
-    private static String replaceSpaceWithUrlEncode(String query) {
-        return query.replace(" ", "%20");
+    private static String replaceSpaceWithDash(String query) {
+        return query.replace(" ", "-");
+    }
+
+    @NotNull
+    private static String replaceDashWithUrlEncode(String query) {
+        return query.replace("-", "%20");
     }
 
     private static String transformToMeters(int rangeNumber) {
