@@ -205,8 +205,8 @@ public class Handler extends ListenerAdapter {
         int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
+        checkCurrentAudioManagerForNonBotMembers(audioManager);
         if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
-            checkCurrentAudioManagerForNonBotMembers(audioManager);
             audioPlayer.setVolume(defaultVolume);
             audioManager.openAudioConnection(event.getChannelJoined());
         }
@@ -247,9 +247,11 @@ public class Handler extends ListenerAdapter {
     }
 
     private static void checkCurrentAudioManagerForNonBotMembers(AudioManager audioManager) {
-        List<Member> membersInCurrentVoiceChannel = audioManager.getConnectedChannel().asVoiceChannel().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
-        if (membersInCurrentVoiceChannel.isEmpty()) {
-            closeAudioPlayer(audioManager.getGuild(), audioManager);
+        if (audioManager.isConnected()) {
+            List<Member> membersInCurrentVoiceChannel = audioManager.getConnectedChannel().asVoiceChannel().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
+            if (membersInCurrentVoiceChannel.isEmpty()) {
+                closeAudioPlayer(audioManager.getGuild(), audioManager);
+            }
         }
     }
 
