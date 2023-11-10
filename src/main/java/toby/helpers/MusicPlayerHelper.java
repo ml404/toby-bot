@@ -5,7 +5,9 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.Interaction;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
@@ -31,7 +33,7 @@ public class MusicPlayerHelper {
     private static final String webUrl = "https://gibe-toby-bot.herokuapp.com/";
 
     public static final int SECOND_MULTIPLIER = 1000;
-    private static final Map<Long, Message> guildLastNowPlayingMessage = new HashMap<>();
+    private static final Map<Long, Map<Channel, Message>> guildLastNowPlayingMessage = new HashMap<>();
 
     public static void playUserIntro(UserDto dbUser, Guild guild, int deleteDelay, Long startPosition, int volume) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition, volume);
@@ -71,31 +73,44 @@ public class MusicPlayerHelper {
         String nowPlaying = getNowPlayingString(track, volume);
         Button pausePlay = Button.primary("pause/play", "⏯");
         Button stop = Button.primary("stop", "⏹");
-        long guildId = hook.getInteraction().getGuild().getIdLong();
+        Interaction interaction = hook.getInteraction();
+        long guildId = interaction.getGuild().getIdLong();
+        Channel channel = interaction.getChannel();
 
-        // Get the previous "Now Playing" message if it exists
-        Message previousNowPlayingMessage = guildLastNowPlayingMessage.get(guildId);
+        // Get the previous "Now Playing" messages if they exist
+        Map<Channel, Message> channelMessageMap = guildLastNowPlayingMessage.get(guildId);
         try {
-            if (previousNowPlayingMessage == null) {
-                sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
+            if (channelMessageMap == null || channelMessageMap.get(channel) == null) {
+                sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId);
+            } else {
+                // Update the existing "Now Playing" messages
+                String updatedNowPlaying = getNowPlayingString(track, volume);
+                for (Message message : channelMessageMap.values()) {
+                    try {
+                        message.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
+                    } catch (ErrorResponseException e) {
+                        // Log exception or handle accordingly
+                    }
+
+                }
+                hook.deleteOriginal().queue();
             }
-            // Update the existing "Now Playing" message
-            String updatedNowPlaying = getNowPlayingString(track, volume);
-            guildLastNowPlayingMessage.get(guildId).editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
-            hook.deleteOriginal().queue();
-
-
         } catch (IllegalArgumentException | ErrorResponseException e) {
             // Send a new "Now Playing" message and store it
-            sendNewNowPlayingMessage(hook, nowPlaying, pausePlay, stop, guildId);
+            sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId);
         }
-
     }
 
-    private static void sendNewNowPlayingMessage(InteractionHook hook, String nowPlaying, Button pausePlay, Button stop, long guildId) {
+    private static void sendNewNowPlayingMessage(InteractionHook hook, Channel channel, String nowPlaying, Button pausePlay, Button stop, long guildId) {
         // Send a new "Now Playing" message and store it
         Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
-        guildLastNowPlayingMessage.put(guildId, nowPlayingMessage);
+        // Store message in the guild's map
+        Map<Channel, Message> channelMessageMap = guildLastNowPlayingMessage.get(guildId);
+        if (channelMessageMap == null) {
+            channelMessageMap = new HashMap<>();
+        }
+        channelMessageMap.put(channel, nowPlayingMessage);
+        guildLastNowPlayingMessage.put(guildId, channelMessageMap);
     }
 
     static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
@@ -136,7 +151,8 @@ public class MusicPlayerHelper {
         }
     }
 
-    public static void changePauseStatusOnTrack(IReplyCallback event, GuildMusicManager musicManager, Integer deleteDelay) {
+    public static void changePauseStatusOnTrack(IReplyCallback event, GuildMusicManager musicManager, Integer
+            deleteDelay) {
         AudioPlayer audioPlayer = musicManager.getAudioPlayer();
         boolean paused = audioPlayer.isPaused();
         String message = paused ? "Resuming: `" : "Pausing: `";
@@ -220,8 +236,9 @@ public class MusicPlayerHelper {
     }
 
     private static void resetNowPlayingMessage(long guildId) {
-        Message message = guildLastNowPlayingMessage.get(guildId);
-        if (message != null) message.delete().queue();
+        Map<Channel, Message> channelMessageMap = guildLastNowPlayingMessage.get(guildId);
+        if (channelMessageMap != null && !channelMessageMap.isEmpty())
+            channelMessageMap.values().forEach(message -> message.delete().queue());
         guildLastNowPlayingMessage.remove(guildId);
     }
 
