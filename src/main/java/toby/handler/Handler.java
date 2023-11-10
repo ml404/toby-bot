@@ -2,10 +2,7 @@ package toby.handler;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
@@ -40,6 +37,7 @@ import toby.managers.MenuManager;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static toby.helpers.MusicPlayerHelper.playUserIntro;
@@ -198,7 +196,6 @@ public class Handler extends ListenerAdapter {
     }
 
     //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server, then play the associated user's intro song
-
     public void onGuildVoiceJoin(GuildVoiceUpdateEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
@@ -209,10 +206,12 @@ public class Handler extends ListenerAdapter {
         int defaultVolume = databaseVolumeConfig != null ? Integer.parseInt(databaseVolumeConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
         AudioPlayer audioPlayer = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer();
+        checkCurrentAudioManagerForNonBotMembers(audioManager);
         if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
             audioPlayer.setVolume(defaultVolume);
             audioManager.openAudioConnection(event.getChannelJoined());
         }
+
         Member member = event.getMember();
         long discordId = member.getUser().getIdLong();
         long guildId = member.getGuild().getIdLong();
@@ -229,14 +228,28 @@ public class Handler extends ListenerAdapter {
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
         int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
-        List<Member> nonBotConnectedMembersInOldChannel = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
-        closeAudioManagerIfChannelEmpty(guild, audioManager, defaultVolume, nonBotConnectedMembersInOldChannel, event.getChannelLeft());
-        List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
-        if (!nonBotConnectedMembers.isEmpty() && !audioManager.isConnected()) {
-            PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
-            audioManager.openAudioConnection(event.getChannelJoined());
-        }
-        deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.getChannelLeft());
+        closeEmptyAudioManagerAndRejoin(event, guild, audioManager, defaultVolume);
+    }
+
+    private void closeEmptyAudioManagerAndRejoin(GuildVoiceUpdateEvent event, Guild guild, AudioManager audioManager, int defaultVolume) {
+        CompletableFuture<AudioManager> future = CompletableFuture.supplyAsync(() -> {
+            checkCurrentAudioManagerForNonBotMembers(audioManager);
+            return audioManager; // Supply the AudioManager instance
+        });
+
+        future.thenAcceptAsync(am -> {
+            LOGGER.info("Is connected: {}", am.isConnected());
+            if (!am.isConnected()) {
+                LOGGER.info("Attempting to connect...");
+                List<Member> nonBotConnectedMembers = event.getChannelJoined().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
+                if (!nonBotConnectedMembers.isEmpty()) {
+                    PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().setVolume(defaultVolume);
+                    am.openAudioConnection(event.getChannelJoined());
+                    LOGGER.info("Audio connection opened.");
+                }
+                deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.getChannelLeft());
+            }
+        });
     }
 
 
@@ -244,28 +257,29 @@ public class Handler extends ListenerAdapter {
     public void onGuildVoiceLeave(GuildVoiceUpdateEvent event) {
         Guild guild = event.getGuild();
         AudioManager audioManager = guild.getAudioManager();
-        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-        ConfigDto databaseConfig = configService.getConfigByName(volumePropertyName, event.getGuild().getId());
-        int defaultVolume = databaseConfig != null ? Integer.parseInt(databaseConfig.getValue()) : 100;
         List<Member> nonBotConnectedMembers = event.getChannelLeft().getMembers().stream().filter(member -> !member.getUser().isBot()).collect(Collectors.toList());
-        closeAudioManagerIfChannelEmpty(guild, audioManager, defaultVolume, nonBotConnectedMembers, event.getChannelLeft());
+        checkCurrentAudioManagerForNonBotMembers(audioManager);
         deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.getChannelLeft());
     }
 
-    private void closeAudioPlayer(Guild guild, AudioManager audioManager, int defaultVolume) {
+    private static AudioManager checkCurrentAudioManagerForNonBotMembers(AudioManager audioManager) {
+        if (audioManager.isConnected()) {
+            List<Member> membersInConnectedVoiceChannel = audioManager.getConnectedChannel().getMembers().stream().filter(member -> !member.getUser().isBot()).toList();
+            if (membersInConnectedVoiceChannel.isEmpty()) {
+                closeAudioPlayer(audioManager.getGuild(), audioManager);
+            }
+        }
+        return audioManager;
+    }
+
+    private static void closeAudioPlayer(Guild guild, AudioManager audioManager) {
         GuildMusicManager musicManager = PlayerManager.getInstance().getMusicManager(guild);
         musicManager.getScheduler().setLooping(false);
         musicManager.getScheduler().getQueue().clear();
         musicManager.getAudioPlayer().stopTrack();
-        musicManager.getAudioPlayer().setVolume(defaultVolume);
         audioManager.closeAudioConnection();
     }
 
-    private void closeAudioManagerIfChannelEmpty(Guild guild, AudioManager audioManager, int defaultVolume, List<Member> nonBotConnectedMembers, AudioChannel channelLeft) {
-        if (Objects.equals(audioManager.getConnectedChannel(), channelLeft) && nonBotConnectedMembers.isEmpty()) {
-            closeAudioPlayer(guild, audioManager, defaultVolume);
-        }
-    }
 
     private void deleteTemporaryChannelIfEmpty(boolean nonBotConnectedMembersEmpty, AudioChannel channelLeft) {
         //The autogenerated channels from the team command are "Team #", so this will delete them once they become empty
