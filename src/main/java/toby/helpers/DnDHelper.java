@@ -1,18 +1,18 @@
 package toby.helpers;
 
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DnDHelper {
 
     private static final AtomicInteger initiativeIndex = new AtomicInteger(0);
+
+    private static final Map<Long, Message> currentMessageForGuild = new HashMap<>();
 
     private static LinkedList<Map.Entry<Member, Integer>> sortedEntries;
 
@@ -56,5 +56,17 @@ public class DnDHelper {
 
     public static LinkedList<Map.Entry<Member, Integer>> getSortedEntries() {
         return sortedEntries;
+    }
+
+    public static Message getCurrentMessage(long guildId) {
+        return currentMessageForGuild.get(guildId);
+    }
+
+    public static void setCurrentMessage(long guildId, Message message) {
+        currentMessageForGuild.put(guildId, message);
+    }
+
+    public static AtomicInteger getInitiativeIndex(){
+        return initiativeIndex;
     }
 }

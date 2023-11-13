@@ -5,27 +5,23 @@ import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.helpers.DnDHelper;
 import toby.jpa.dto.UserDto;
 
 import java.awt.*;
-import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
 
 import static toby.helpers.DnDHelper.createTurnOrderString;
 import static toby.helpers.DnDHelper.rollInitiativeForMembers;
 
 public class InitiativeCommand implements IDnDCommand {
-    private Message currentMessage;
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
@@ -55,9 +51,11 @@ public class InitiativeCommand implements IDnDCommand {
         embedBuilder.setTitle("Initiative Order");
         StringBuilder description = createTurnOrderString();
         embedBuilder.setDescription(description.toString());
+        long guildId = hook.getInteraction().getGuild().getIdLong();
+        Message currentMessage = DnDHelper.getCurrentMessage(guildId);
         if (currentMessage == null) {
             hook.sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(Button.primary("init:iterate", "Next")).queue(message -> currentMessage = message);
+                    .setActionRow(Button.primary("init:iterate", "Next")).queue(message -> DnDHelper.setCurrentMessage(guildId, message));
         } else {
             currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
         }

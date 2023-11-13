@@ -1,7 +1,9 @@
 package toby.managers;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
@@ -193,7 +195,8 @@ public class CommandManager {
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
         int introVolume = Integer.parseInt(defaultVolume);
-        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(), event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
+        long guildId = event.getGuild().getIdLong();
+        UserDto requestingUserDto = calculateUserDto(guildId, event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
         // Dispatch the simulated SlashCommandInteractionEvent
         if (event.getComponentId().equals("resend_last_request")) {
             Pair<ICommand, CommandContext> iCommandCommandContextPair = lastCommands.get(event.getUser());
@@ -213,9 +216,8 @@ public class CommandManager {
             event.deferReply().queue();
             MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
         }
-        if (event.getComponentId().startsWith("init:iterateButton")) {
-            String indexString = event.getComponentId().split("-")[1];
-            AtomicInteger index = new AtomicInteger(Integer.parseInt(indexString));
+        if (event.getComponentId().startsWith("init:next")) {
+            AtomicInteger index = DnDHelper.getInitiativeIndex();
             index.getAndIncrement();
             if (index.get() >= DnDHelper.getSortedEntries().size()) {
                 index.set(0);
@@ -226,10 +228,11 @@ public class CommandManager {
             StringBuilder description = createTurnOrderString();
             embedBuilder.setDescription(description.toString());
             InteractionHook hook = event.getHook();
-
+            Message currentMessage = DnDHelper.getCurrentMessage(guildId);
             if (currentMessage == null) {
                 hook.sendMessageEmbeds(embedBuilder.build())
-                        .setActionRow(Button.primary("init:iterate", "Next")).queue(message -> currentMessage = message);
+                        .setActionRow(Button.primary("init:next", Emoji.fromUnicode("➡️")️), Button.primary("init:prev",Emoji.fromUnicode("⬅️")))
+                        .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
             } else {
                 currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
             }
