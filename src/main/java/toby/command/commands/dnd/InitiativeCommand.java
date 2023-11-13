@@ -8,17 +8,14 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.helpers.DnDHelper;
+import toby.helpers.DnDHelper.TableButtons;
 import toby.jpa.dto.UserDto;
 
-import java.awt.*;
-import java.util.List;
 import java.util.*;
 
-import static toby.helpers.DnDHelper.createTurnOrderString;
 import static toby.helpers.DnDHelper.rollInitiativeForMembers;
 
 public class InitiativeCommand implements IDnDCommand {
@@ -46,21 +43,19 @@ public class InitiativeCommand implements IDnDCommand {
     }
 
     public void displayAllValues(InteractionHook hook) {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setColor(Color.GREEN);
-        embedBuilder.setTitle("Initiative Order");
-        StringBuilder description = createTurnOrderString();
-        embedBuilder.setDescription(description.toString());
+        EmbedBuilder embedBuilder = DnDHelper.getInitiativeEmbedBuilder();
         long guildId = hook.getInteraction().getGuild().getIdLong();
         Message currentMessage = DnDHelper.getCurrentMessage(guildId);
+        TableButtons initButtons = DnDHelper.getInitButtons();
         if (currentMessage == null) {
-            hook.sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(Button.primary("init:iterate", "Next")).queue(message -> DnDHelper.setCurrentMessage(guildId, message));
+                hook
+                    .sendMessageEmbeds(embedBuilder.build())
+                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next())
+                    .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
         } else {
             currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
         }
     }
-
 
 
     @Override

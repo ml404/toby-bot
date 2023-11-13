@@ -1,15 +1,10 @@
 package toby.managers;
 
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.internal.utils.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
@@ -31,14 +26,12 @@ import toby.jpa.service.*;
 import toby.lavaplayer.PlayerManager;
 
 import javax.annotation.Nullable;
-import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-import static toby.helpers.DnDHelper.createTurnOrderString;
+import static toby.helpers.DnDHelper.*;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -217,25 +210,13 @@ public class CommandManager {
             MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
         }
         if (event.getComponentId().startsWith("init:next")) {
-            AtomicInteger index = DnDHelper.getInitiativeIndex();
-            index.getAndIncrement();
-            if (index.get() >= DnDHelper.getSortedEntries().size()) {
-                index.set(0);
-            }
-            EmbedBuilder embedBuilder = new EmbedBuilder();
-            embedBuilder.setColor(Color.GREEN);
-            embedBuilder.setTitle("Initiative Order");
-            StringBuilder description = createTurnOrderString();
-            embedBuilder.setDescription(description.toString());
-            InteractionHook hook = event.getHook();
-            Message currentMessage = DnDHelper.getCurrentMessage(guildId);
-            if (currentMessage == null) {
-                hook.sendMessageEmbeds(embedBuilder.build())
-                        .setActionRow(Button.primary("init:next", Emoji.fromUnicode("➡️")️), Button.primary("init:prev",Emoji.fromUnicode("⬅️")))
-                        .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
-            } else {
-                currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
-            }
+            incrementTurnTable(event.getHook(), guildId);
+        }
+        if (event.getComponentId().startsWith("init:prev")) {
+            decrementTurnTable(event.getHook(), guildId);
+        }
+        if(event.getComponentId().startsWith("init:clear")){
+            DnDHelper.clearInitiative(guildId);
         }
         else {
             //button name that should be something like 'roll: 20,1,0'
@@ -257,4 +238,5 @@ public class CommandManager {
             cmd.handle(commandContext, requestingUserDto, deleteDelay);
         }
     }
+
 }

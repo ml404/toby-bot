@@ -1,9 +1,16 @@
 package toby.helpers;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
+import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.*;
+import java.util.List;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,7 +23,7 @@ public class DnDHelper {
 
     private static LinkedList<Map.Entry<Member, Integer>> sortedEntries;
 
-    public static List<Map.Entry<Member, Integer>> rollInitiativeForMembers(List<Member> memberList, Member dm, Map<Member, Integer> initiativeMap) {
+    public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<Member, Integer> initiativeMap) {
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         memberList.stream().filter(memberInChannel -> memberInChannel != dm).forEach(target -> {
             int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, 0);
@@ -25,8 +32,6 @@ public class DnDHelper {
 
         // Sort the list based on values
         sortedEntries.sort(Map.Entry.comparingByValue());
-
-        return sortedEntries;
     }
 
     @NotNull
@@ -54,6 +59,78 @@ public class DnDHelper {
         return rollTotal;
     }
 
+
+    public static void incrementTurnTable(InteractionHook hook, long guildId) {
+        incrementIndex();
+        EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
+        sendOrEditMessage(guildId, hook, embedBuilder);
+    }
+
+    private static void incrementIndex() {
+        initiativeIndex.getAndIncrement();
+        if (initiativeIndex.get() >= DnDHelper.getSortedEntries().size()) {
+            initiativeIndex.set(0);
+        }
+    }
+
+    public static void decrementTurnTable(InteractionHook hook, long guildId) {
+        decrementIndex();
+        EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
+        sendOrEditMessage(guildId, hook, embedBuilder);
+    }
+
+    private static void decrementIndex() {
+        initiativeIndex.getAndDecrement();
+        if (initiativeIndex.get() < 0) {
+            initiativeIndex.set(getSortedEntries().size() - 1);
+        }
+    }
+
+    @NotNull
+    public static TableButtons getInitButtons() {
+        UnicodeEmoji prevEmoji = Emoji.fromUnicode("⬅️");
+        UnicodeEmoji xEmoji = Emoji.fromUnicode("❌");
+        UnicodeEmoji nextEmoji = Emoji.fromUnicode("➡️");
+        Button prev = Button.primary("init:prev", prevEmoji);
+        Button clear = Button.primary("init:clear", xEmoji);
+        Button next = Button.primary("init:next", nextEmoji);
+        TableButtons result = new TableButtons(prev, clear, next);
+        return result;
+    }
+
+    private static void sendOrEditMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
+        Message currentMessage = DnDHelper.getCurrentMessage(guildId);
+        if (currentMessage == null) {
+            TableButtons buttons = getInitButtons();
+            hook.sendMessageEmbeds(embedBuilder.build())
+                    .setActionRow(buttons.prev(), buttons.next())
+                    .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
+        } else {
+            currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
+        }
+    }
+
+    @NotNull
+    public static EmbedBuilder getInitiativeEmbedBuilder() {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.setColor(Color.GREEN);
+        embedBuilder.setTitle("Initiative Order");
+        StringBuilder description = createTurnOrderString();
+        embedBuilder.setDescription(description.toString());
+        return embedBuilder;
+    }
+
+    public static void clearInitiative(long guildId) {
+        Message message = currentMessageForGuild.get(guildId);
+        if(message!=null) message.delete().queue();
+        currentMessageForGuild.remove(guildId);
+        initiativeIndex.setPlain(0);
+        sortedEntries.clear();
+    }
+
+    public record TableButtons(Button prev, Button stop, Button next) {
+    }
+
     public static LinkedList<Map.Entry<Member, Integer>> getSortedEntries() {
         return sortedEntries;
     }
@@ -66,7 +143,7 @@ public class DnDHelper {
         currentMessageForGuild.put(guildId, message);
     }
 
-    public static AtomicInteger getInitiativeIndex(){
+    public static AtomicInteger getInitiativeIndex() {
         return initiativeIndex;
     }
 }
