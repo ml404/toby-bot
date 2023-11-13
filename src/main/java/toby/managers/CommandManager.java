@@ -1,10 +1,13 @@
 package toby.managers;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.internal.utils.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
@@ -18,6 +21,7 @@ import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.helpers.Cache;
+import toby.helpers.DnDHelper;
 import toby.helpers.MusicPlayerHelper;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
@@ -25,10 +29,14 @@ import toby.jpa.service.*;
 import toby.lavaplayer.PlayerManager;
 
 import javax.annotation.Nullable;
+import java.awt.*;
 import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+import static toby.helpers.DnDHelper.createTurnOrderString;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -204,6 +212,27 @@ public class CommandManager {
         if (event.getComponentId().equals("stop")){
             event.deferReply().queue();
             MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
+        }
+        if (event.getComponentId().startsWith("init:iterateButton")) {
+            String indexString = event.getComponentId().split("-")[1];
+            AtomicInteger index = new AtomicInteger(Integer.parseInt(indexString));
+            index.getAndIncrement();
+            if (index.get() >= DnDHelper.getSortedEntries().size()) {
+                index.set(0);
+            }
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            embedBuilder.setColor(Color.GREEN);
+            embedBuilder.setTitle("Initiative Order");
+            StringBuilder description = createTurnOrderString();
+            embedBuilder.setDescription(description.toString());
+            InteractionHook hook = event.getHook();
+
+            if (currentMessage == null) {
+                hook.sendMessageEmbeds(embedBuilder.build())
+                        .setActionRow(Button.primary("init:iterate", "Next")).queue(message -> currentMessage = message);
+            } else {
+                currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
+            }
         }
         else {
             //button name that should be something like 'roll: 20,1,0'
