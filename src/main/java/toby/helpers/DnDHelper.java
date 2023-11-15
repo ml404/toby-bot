@@ -24,7 +24,7 @@ public class DnDHelper {
     private static LinkedList<Map.Entry<Member, Integer>> sortedEntries = new LinkedList<>();
 
     public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<Member, Integer> initiativeMap) {
-        List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm).toList();
+        List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm && !memberInChannel.getUser().isBot()).toList();
         if (nonDmMembers.isEmpty()) return;
         nonDmMembers.forEach(target -> {
             int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, 0);

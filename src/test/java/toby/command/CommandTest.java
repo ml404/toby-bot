@@ -80,6 +80,7 @@ public interface CommandTest {
         when(event.getChannel()).thenReturn(messageChannelUnion);
         when(user.getEffectiveName()).thenReturn("UserName");
         when(user.getName()).thenReturn("UserName");
+        when(user.isBot()).thenReturn(false);
         when(interactionHook.deleteOriginal()).thenReturn(restAction);
         when(interactionHook.sendMessage(anyString())).thenReturn(webhookMessageCreateAction);
         when(interactionHook.sendMessageFormat(anyString(), any(Object[].class))).thenReturn(webhookMessageCreateAction);

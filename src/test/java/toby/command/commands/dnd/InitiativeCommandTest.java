@@ -57,6 +57,8 @@ class InitiativeCommandTest implements CommandTest {
         when(interactionHook.getInteraction()).thenReturn(interaction);
         when(interaction.getGuild()).thenReturn(guild);
         when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
+        when(member.getUser()).thenReturn(user);
+
 
         //Act
         initiativeCommand.handle(commandContext, requestingUserDto, 0);
@@ -88,6 +90,7 @@ class InitiativeCommandTest implements CommandTest {
         when(interactionHook.getInteraction()).thenReturn(interaction);
         when(interaction.getGuild()).thenReturn(guild);
         when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
+        when(member.getUser()).thenReturn(user);
 
         //Act
         initiativeCommand.handle(commandContext, requestingUserDto, 0);
