@@ -21,15 +21,17 @@ public class DnDHelper {
 
     private static final Map<Long, Message> currentMessageForGuild = new HashMap<>();
 
-    private static LinkedList<Map.Entry<Member, Integer>> sortedEntries;
+    private static LinkedList<Map.Entry<Member, Integer>> sortedEntries = new LinkedList<>();
 
     public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<Member, Integer> initiativeMap) {
-        sortedEntries = new LinkedList<>(initiativeMap.entrySet());
-        memberList.stream().filter(memberInChannel -> memberInChannel != dm).forEach(target -> {
+        List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm).toList();
+        if (nonDmMembers.isEmpty()) return;
+        nonDmMembers.forEach(target -> {
             int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, 0);
             initiativeMap.put(target, diceRoll);
         });
 
+        sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
         sortedEntries.sort(Map.Entry.comparingByValue());
     }
@@ -63,11 +65,11 @@ public class DnDHelper {
     public static void incrementTurnTable(InteractionHook hook, long guildId) {
         incrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditMessage(guildId, hook, embedBuilder);
+        sendOrEditInitiativeMessage(guildId, hook, embedBuilder);
     }
 
     private static void incrementIndex() {
-        initiativeIndex.getAndIncrement();
+        getInitiativeIndex().incrementAndGet();
         if (initiativeIndex.get() >= DnDHelper.getSortedEntries().size()) {
             initiativeIndex.set(0);
         }
@@ -76,11 +78,11 @@ public class DnDHelper {
     public static void decrementTurnTable(InteractionHook hook, long guildId) {
         decrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditMessage(guildId, hook, embedBuilder);
+        sendOrEditInitiativeMessage(guildId, hook, embedBuilder);
     }
 
     private static void decrementIndex() {
-        initiativeIndex.getAndDecrement();
+        initiativeIndex.decrementAndGet();
         if (initiativeIndex.get() < 0) {
             initiativeIndex.set(getSortedEntries().size() - 1);
         }
@@ -98,15 +100,17 @@ public class DnDHelper {
         return result;
     }
 
-    private static void sendOrEditMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
+    public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
         Message currentMessage = DnDHelper.getCurrentMessage(guildId);
+        TableButtons initButtons = getInitButtons();
         if (currentMessage == null) {
-            TableButtons buttons = getInitButtons();
             hook.sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(buttons.prev(), buttons.next())
+                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next())
                     .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
         } else {
-            currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
+            hook.editOriginalEmbeds(embedBuilder.build())
+                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next())
+                    .queue();
         }
     }
 
@@ -122,7 +126,7 @@ public class DnDHelper {
 
     public static void clearInitiative(long guildId) {
         Message message = currentMessageForGuild.get(guildId);
-        if(message!=null) message.delete().queue();
+        if (message != null) message.delete().queue();
         currentMessageForGuild.remove(guildId);
         initiativeIndex.setPlain(0);
         sortedEntries.clear();

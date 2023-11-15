@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import toby.command.ICommand;
+import toby.command.commands.dnd.InitiativeCommand;
 import toby.command.commands.fetch.DbdRandomKillerCommand;
 import toby.command.commands.dnd.DnDCommand;
 import toby.command.commands.fetch.Kf2RandomMapCommand;
@@ -66,6 +67,7 @@ public class CommandManagerTest {
                 RollCommand.class,
                 MemeCommand.class,
                 DnDCommand.class,
+                InitiativeCommand.class,
                 HelloThereCommand.class,
                 BrotherCommand.class,
                 ChCommand.class,
@@ -98,7 +100,7 @@ public class CommandManagerTest {
                 );
 
         assertTrue(availableCommands.containsAll(commandManager.getAllCommands().stream().map(ICommand::getClass).toList()));
-        assertEquals(36, commandManager.getAllCommands().size());
-        assertEquals(36, commandManager.getAllSlashCommands().size());
+        assertEquals(37, commandManager.getAllCommands().size());
+        assertEquals(37, commandManager.getAllSlashCommands().size());
     }
 }

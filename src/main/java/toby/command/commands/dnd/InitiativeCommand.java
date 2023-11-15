@@ -3,15 +3,15 @@ package toby.command.commands.dnd;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.helpers.DnDHelper;
-import toby.helpers.DnDHelper.TableButtons;
 import toby.jpa.dto.UserDto;
 
 import java.util.*;
@@ -27,9 +27,8 @@ public class InitiativeCommand implements IDnDCommand {
         final Member member = ctx.getMember();
         Member dm = Optional.ofNullable(event.getOption("dm").getAsMember()).orElse(ctx.getMember());
         GuildVoiceState voiceState = member.getVoiceState();
-        List<Member> memberList = Optional
-                .ofNullable(event.getOption("channel").getAsChannel().asAudioChannel().getMembers())
-                .orElse(voiceState != null ? voiceState.getChannel().getMembers() : Collections.emptyList());
+        Optional<OptionMapping> channelOptional = Optional.ofNullable(event.getOption("channel"));
+        List<Member> memberList = getMemberList(voiceState, channelOptional);
         Map<Member, Integer> initiativeMap = new HashMap<>();
         if (memberList.isEmpty()) {
             event
@@ -38,23 +37,30 @@ public class InitiativeCommand implements IDnDCommand {
                     .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
             return;
         }
+        //If we are calling this a second time, it's better to clean slate the DnDHelper for that guild.
+        DnDHelper.clearInitiative(requestingUserDto.getGuildId());
         rollInitiativeForMembers(memberList, dm, initiativeMap);
+        if(DnDHelper.getSortedEntries().size() == 0){
+            event
+                    .reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
+                    .setEphemeral(true)
+                    .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
+            return;
+        }
         displayAllValues(event.getHook());
+    }
+
+    @NotNull
+    private static List<Member> getMemberList(GuildVoiceState voiceState, Optional<OptionMapping> channelOptional) {
+        return channelOptional
+                .map(optionMapping -> optionMapping.getAsChannel().asAudioChannel().getMembers())
+                .orElseGet(() -> voiceState != null ? voiceState.getChannel().getMembers() : Collections.emptyList());
     }
 
     public void displayAllValues(InteractionHook hook) {
         EmbedBuilder embedBuilder = DnDHelper.getInitiativeEmbedBuilder();
         long guildId = hook.getInteraction().getGuild().getIdLong();
-        Message currentMessage = DnDHelper.getCurrentMessage(guildId);
-        TableButtons initButtons = DnDHelper.getInitButtons();
-        if (currentMessage == null) {
-                hook
-                    .sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next())
-                    .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
-        } else {
-            currentMessage.editMessageEmbeds(embedBuilder.build()).queue();
-        }
+        DnDHelper.sendOrEditInitiativeMessage(guildId, hook, embedBuilder);
     }
 
 
@@ -65,14 +71,13 @@ public class InitiativeCommand implements IDnDCommand {
 
     @Override
     public String getDescription() {
-        return "Roll initiative for the mentioned members. Defaults to the voice channel connected members of the person who calls this command. \n" +
-                "Will exclude who called this method as the DM, unless another member is tagged as DM.";
+        return "Roll initiative for members in voice channel. DM is excluded from roll.";
     }
 
     @Override
     public List<OptionData> getOptionData() {
-        OptionData dm = new OptionData(OptionType.MENTIONABLE, "dm", "Who is the DM? (to be excluded from initiative roll).");
-        OptionData voiceChannel = new OptionData(OptionType.CHANNEL, "channel", "which channel is initiative being rolled for? defaults to the voice channel of the person calling this.");
+        OptionData dm = new OptionData(OptionType.MENTIONABLE, "dm", "Who is the DM? default: caller of command.");
+        OptionData voiceChannel = new OptionData(OptionType.CHANNEL, "channel", "which channel is initiative being rolled for? default: voice channel of user calling this.");
         return List.of(dm, voiceChannel);
     }
 }
