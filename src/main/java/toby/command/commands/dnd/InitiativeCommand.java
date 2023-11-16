@@ -38,13 +38,15 @@ public class InitiativeCommand implements IDnDCommand {
         if (validateArguments(deleteDelay, event, memberList, nameList)) return;
 
         //If we are calling this a second time, it's better to clean slate the DnDHelper for that guild.
+        InteractionHook hook = event.getHook();
         DnDHelper.clearInitiative(requestingUserDto.getGuildId());
         if (!nameList.isEmpty()) {
             rollInitiativeForString(nameList, initiativeMap);
-        } else
+        } else {
             rollInitiativeForMembers(memberList, dm, initiativeMap);
+        }
         if (checkForNonDmMembersInVoiceChannel(deleteDelay, event)) return;
-        displayAllValues(event.getHook());
+        displayAllValues(hook);
     }
 
     private static boolean validateArguments(Integer deleteDelay, SlashCommandInteractionEvent event, List<Member> memberList, List<String> nameList) {

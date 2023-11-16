@@ -111,20 +111,16 @@ public class DnDHelper {
     public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
         boolean hasCurrentEmbed = hasCurrentEmbed(guildId);
         TableButtons initButtons = getInitButtons();
-        hook.deleteOriginal().queue();
-        if (!hasCurrentEmbed) {
-                hook
-                    .sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
-                    .queue();
-            hasEmbedForGuildMap.put(guildId, true);
-        } else {
-                hook
-                     .editOriginalEmbeds(embedBuilder.build())
-                     .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
-                     .queue();
+        if (hasCurrentEmbed) {
+            hook.deleteOriginal().queue();
         }
+            hook
+                .sendMessageEmbeds(embedBuilder.build())
+                .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
+                .queue();
+        hasEmbedForGuildMap.put(guildId, true);
     }
+
 
     @NotNull
     public static EmbedBuilder getInitiativeEmbedBuilder() {
@@ -142,6 +138,13 @@ public class DnDHelper {
         sortedEntries.clear();
     }
 
+    public static void clearInitiative(long guildId, InteractionHook hook) {
+        hasEmbedForGuildMap.put(guildId, false);
+        initiativeIndex.setPlain(0);
+        sortedEntries.clear();
+        hook.deleteOriginal().queue();
+    }
+
     public record TableButtons(Button prev, Button clear, Button next) {
     }
 
@@ -154,7 +157,7 @@ public class DnDHelper {
     }
 
     public static void setHasEmbedForGuild(long guildId, boolean hasMessage) {
-            hasEmbedForGuildMap.put(guildId, hasMessage);
+        hasEmbedForGuildMap.put(guildId, hasMessage);
     }
 
     public static AtomicInteger getInitiativeIndex() {
