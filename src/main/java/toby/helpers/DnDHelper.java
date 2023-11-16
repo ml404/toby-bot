@@ -137,7 +137,7 @@ public class DnDHelper {
     }
 
     public static void clearInitiative(long guildId) {
-        hasEmbedForGuildMap.remove(guildId);
+        hasEmbedForGuildMap.put(guildId, false);
         initiativeIndex.setPlain(0);
         sortedEntries.clear();
     }
