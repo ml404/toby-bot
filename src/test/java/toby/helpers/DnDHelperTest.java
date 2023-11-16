@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction;
 import net.dv8tion.jda.internal.requests.restaction.AuditableRestActionImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -62,6 +63,12 @@ class DnDHelperTest {
         DnDHelper.clearInitiative(123456789L);
     }
 
+    @AfterEach
+    public void tearDown(){
+        reset(hook);
+        DnDHelper.clearInitiative(123456789L);
+    }
+
     @Test
     void testRollDiceWithModifier() {
         int result = DnDHelper.rollDiceWithModifier(20, 1, 5);
@@ -90,9 +97,15 @@ class DnDHelperTest {
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
         DnDHelper.incrementTurnTable(hook, guildId);
 
-        // Verify that setActionRow and queue are called
-        verify(webhookMessageEditAction, times(1)).setActionRow(any(), any(), any());
-        verify(webhookMessageEditAction, times(1)).queue();
+        // Verify that setActionRow is called once for initial setup with the correct buttons
+        verify(webhookMessageEditAction, times(1)).setActionRow(
+                eq(DnDHelper.getInitButtons().prev()),
+                eq(DnDHelper.getInitButtons().clear()),
+                eq(DnDHelper.getInitButtons().next())
+        );
+
+        // Verify that queue is called once
+        verify(webhookMessageEditAction, times(1)).queue(any());
 
         verify(hook, times(1)).editOriginalEmbeds(any(MessageEmbed.class));
         assertEquals(1, DnDHelper.getInitiativeIndex().get());
@@ -114,9 +127,13 @@ class DnDHelperTest {
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
         DnDHelper.decrementTurnTable(hook, guildId);
 
-        // Verify that setActionRow and queue are called
-        verify(webhookMessageEditAction, times(1)).setActionRow(any(), any(), any());
-        verify(webhookMessageEditAction, times(1)).queue();
+        // Verify that setActionRow is called once for initial setup with the correct buttons
+        verify(webhookMessageEditAction, times(1)).setActionRow(
+                eq(DnDHelper.getInitButtons().prev()),
+                eq(DnDHelper.getInitButtons().clear()),
+                eq(DnDHelper.getInitButtons().next())
+        );
+        verify(webhookMessageEditAction, times(1)).queue(any());
 
         verify(hook, times(1)).editOriginalEmbeds(any(MessageEmbed.class));
         assertEquals(2, DnDHelper.getInitiativeIndex().get());
@@ -129,7 +146,7 @@ class DnDHelperTest {
 
         assertNotNull(buttons);
         assertEquals(Emoji.fromUnicode("⬅️").getName(), buttons.prev().getEmoji().getName());
-        assertEquals(Emoji.fromUnicode("❌").getName(), buttons.stop().getEmoji().getName());
+        assertEquals(Emoji.fromUnicode("❌").getName(), buttons.clear().getEmoji().getName());
         assertEquals(Emoji.fromUnicode("➡️").getName(), buttons.next().getEmoji().getName());
     }
 

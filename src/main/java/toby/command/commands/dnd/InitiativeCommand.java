@@ -83,7 +83,7 @@ public class InitiativeCommand implements IDnDCommand {
         return namesFromArgs;
     }
 
-    public void displayAllValues(InteractionHook hook) {
+    public static void displayAllValues(InteractionHook hook) {
         EmbedBuilder embedBuilder = DnDHelper.getInitiativeEmbedBuilder();
         long guildId = hook.getInteraction().getGuild().getIdLong();
         DnDHelper.sendOrEditInitiativeMessage(guildId, hook, embedBuilder);

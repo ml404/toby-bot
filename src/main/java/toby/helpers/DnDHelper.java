@@ -27,7 +27,7 @@ public class DnDHelper {
     public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<String, Integer> initiativeMap) {
         List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm && !memberInChannel.getUser().isBot()).toList();
         if (nonDmMembers.isEmpty()) return;
-        nonDmMembers.forEach(target -> rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName()));
+        nonDmMembers.forEach(target -> rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName(), 0));
 
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
@@ -36,14 +36,14 @@ public class DnDHelper {
 
     public static void rollInitiativeForString(List<String> nameList, Map<String, Integer> initiativeMap) {
         if (nameList.isEmpty()) return;
-        nameList.forEach(name -> rollAndAddToMap(initiativeMap, name));
+        nameList.forEach(name -> rollAndAddToMap(initiativeMap, name, 0));
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
         sortedEntries.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
     }
 
-    private static void rollAndAddToMap(Map<String, Integer> initiativeMap, String name) {
-        int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, 0);
+    private static void rollAndAddToMap(Map<String, Integer> initiativeMap, String name, int modifier) {
+        int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, modifier);
         initiativeMap.put(name, diceRoll);
     }
 
@@ -118,10 +118,10 @@ public class DnDHelper {
         RestAction<Message> action;
         if (currentMessage == null) {
             action = hook.sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next());
+                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next());
         } else {
             action = hook.editOriginalEmbeds(embedBuilder.build())
-                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next());
+                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next());
         }
 
         action.queue(message -> DnDHelper.setCurrentMessage(guildId, message));
@@ -145,7 +145,7 @@ public class DnDHelper {
         sortedEntries.clear();
     }
 
-    public record TableButtons(Button prev, Button stop, Button next) {
+    public record TableButtons(Button prev, Button clear, Button next) {
     }
 
     public static LinkedList<Map.Entry<String, Integer>> getSortedEntries() {
