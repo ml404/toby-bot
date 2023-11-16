@@ -151,8 +151,7 @@ public class MusicPlayerHelper {
         }
     }
 
-    public static void changePauseStatusOnTrack(IReplyCallback event, GuildMusicManager musicManager, Integer
-            deleteDelay) {
+    public static void changePauseStatusOnTrack(IReplyCallback event, GuildMusicManager musicManager, Integer deleteDelay) {
         AudioPlayer audioPlayer = musicManager.getAudioPlayer();
         boolean paused = audioPlayer.isPaused();
         String message = paused ? "Resuming: `" : "Pausing: `";

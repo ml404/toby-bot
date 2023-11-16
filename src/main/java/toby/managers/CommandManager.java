@@ -3,6 +3,7 @@ package toby.managers;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.internal.utils.tuple.Pair;
@@ -203,12 +204,25 @@ public class CommandManager {
                 event.deferEdit().queue();
             }
         } else {
+            final InteractionHook hook = event.getHook();
             switch (componentId) {
-                case "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
+                case "pause/play" -> {
+                    event.deferReply().queue();
+                    MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
+                }
                 case "stop" -> MusicPlayerHelper.stopSong(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
-                case "init:next" -> DnDHelper.incrementTurnTable(event.getHook(), guildId);
-                case "init:prev" -> DnDHelper.decrementTurnTable(event.getHook(), guildId);
-                case "init:clear" -> DnDHelper.clearInitiative(guildId);
+                case "init:next" -> {
+                    event.deferEdit().queue();
+                    DnDHelper.incrementTurnTable(hook, guildId);
+                }
+                case "init:prev" -> {
+                    event.deferEdit().queue();
+                    DnDHelper.decrementTurnTable(hook, guildId);
+                }
+                case "init:clear" -> {
+                    event.deferEdit().queue();
+                    DnDHelper.clearInitiative(guildId);
+                }
                 default -> {
                     //button name that should be something like 'roll: 20,1,0'
                     String invoke = componentId.toLowerCase();

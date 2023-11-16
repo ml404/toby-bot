@@ -111,20 +111,19 @@ public class DnDHelper {
     }
 
     public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
-        Message currentMessage = DnDHelper.getCurrentMessage(guildId);
+        Message currentMessage = currentMessageForGuild.get(guildId);
         TableButtons initButtons = getInitButtons();
 
-        // Ensure the hook is used consistently
         RestAction<Message> action;
-        if (currentMessage == null) {
-            action = hook.sendMessageEmbeds(embedBuilder.build())
+        if (currentMessage != null) {
+            action = hook.editOriginalEmbeds(embedBuilder.build())
                     .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next());
         } else {
-            action = hook.editOriginalEmbeds(embedBuilder.build())
+            action = hook.sendMessageEmbeds(embedBuilder.build())
                     .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next());
         }
 
-        action.queue(message -> DnDHelper.setCurrentMessage(guildId, message));
+        action.queue(message -> currentMessageForGuild.put(guildId, message));
     }
 
     @NotNull
