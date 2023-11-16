@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.requests.RestAction;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
@@ -112,15 +113,18 @@ public class DnDHelper {
     public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
         Message currentMessage = DnDHelper.getCurrentMessage(guildId);
         TableButtons initButtons = getInitButtons();
+
+        // Ensure the hook is used consistently
+        RestAction<Message> action;
         if (currentMessage == null) {
-            hook.sendMessageEmbeds(embedBuilder.build())
-                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next())
-                    .queue(message -> DnDHelper.setCurrentMessage(guildId, message));
+            action = hook.sendMessageEmbeds(embedBuilder.build())
+                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next());
         } else {
-            hook.editOriginalEmbeds(embedBuilder.build())
-                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next())
-                    .queue();
+            action = hook.editOriginalEmbeds(embedBuilder.build())
+                    .setActionRow(initButtons.prev(), initButtons.stop(), initButtons.next());
         }
+
+        action.queue(message -> DnDHelper.setCurrentMessage(guildId, message));
     }
 
     @NotNull
