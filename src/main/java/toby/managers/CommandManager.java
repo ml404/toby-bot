@@ -206,23 +206,11 @@ public class CommandManager {
         } else {
             final InteractionHook hook = event.getHook();
             switch (componentId) {
-                case "pause/play" -> {
-                    event.deferReply().queue();
-                    MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
-                }
+                case "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
                 case "stop" -> MusicPlayerHelper.stopSong(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
-                case "init:next" -> {
-                    event.deferEdit().queue();
-                    DnDHelper.incrementTurnTable(hook, guildId);
-                }
-                case "init:prev" -> {
-                    event.deferEdit().queue();
-                    DnDHelper.decrementTurnTable(hook, guildId);
-                }
-                case "init:clear" -> {
-                    event.deferEdit().queue();
-                    DnDHelper.clearInitiative(guildId);
-                }
+                case "init:next" -> DnDHelper.incrementTurnTable(hook, guildId);
+                case "init:prev" -> DnDHelper.decrementTurnTable(hook, guildId);
+                case "init:clear" -> DnDHelper.clearInitiative(guildId);
                 default -> {
                     //button name that should be something like 'roll: 20,1,0'
                     String invoke = componentId.toLowerCase();
