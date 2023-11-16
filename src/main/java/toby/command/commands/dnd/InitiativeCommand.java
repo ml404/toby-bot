@@ -3,6 +3,8 @@ package toby.command.commands.dnd;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.channel.attribute.IMemberContainer;
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -26,10 +28,10 @@ public class InitiativeCommand implements IDnDCommand {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
-        Member dm = Optional.ofNullable(event.getOption("dm")).map(OptionMapping::getAsMember).orElse(ctx.getMember());
-        GuildVoiceState voiceState = member.getVoiceState();
-        Optional<OptionMapping> channelOptional = Optional.ofNullable(event.getOption("channel"));
         Optional<String> namesOptional = Optional.ofNullable(event.getOption("names")).map(OptionMapping::getAsString);
+        Member dm = Optional.ofNullable(event.getOption("dm")).map(OptionMapping::getAsMember).orElse(ctx.getMember());
+        Optional<GuildVoiceState> voiceState = Optional.ofNullable(member.getVoiceState());
+        Optional<OptionMapping> channelOptional = Optional.ofNullable(event.getOption("channel"));
         List<Member> memberList = getMemberList(voiceState, channelOptional);
         List<String> nameList = getNameList(namesOptional);
         Map<String, Integer> initiativeMap = new HashMap<>();
@@ -58,7 +60,7 @@ public class InitiativeCommand implements IDnDCommand {
 
     private static boolean checkForNonDmMembersInVoiceChannel(Integer deleteDelay, SlashCommandInteractionEvent event) {
         if (DnDHelper.getSortedEntries().size() == 0) {
-                event
+            event
                     .reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
                     .setEphemeral(true)
                     .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
@@ -68,11 +70,11 @@ public class InitiativeCommand implements IDnDCommand {
     }
 
     @NotNull
-    private static List<Member> getMemberList(GuildVoiceState voiceState, Optional<OptionMapping> channelOptional) {
+    private static List<Member> getMemberList(Optional<GuildVoiceState> voiceState, Optional<OptionMapping> channelOptional) {
+        Optional<AudioChannelUnion> audioChannelUnion = voiceState.map(GuildVoiceState::getChannel);
         return channelOptional
                 .map(optionMapping -> optionMapping.getAsChannel().asAudioChannel().getMembers())
-                .orElseGet(() -> voiceState != null ?
-                        voiceState.getChannel().getMembers() : Collections.emptyList());
+                .orElseGet(() -> audioChannelUnion.map(IMemberContainer::getMembers).orElse(Collections.emptyList()));
     }
 
     @NotNull

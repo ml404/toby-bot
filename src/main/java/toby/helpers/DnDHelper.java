@@ -38,7 +38,7 @@ public class DnDHelper {
         nameList.forEach(name -> rollAndAddToMap(initiativeMap, name));
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
-        sortedEntries.sort(Map.Entry.comparingByValue());
+        sortedEntries.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
     }
 
     private static void rollAndAddToMap(Map<String, Integer> initiativeMap, String name) {

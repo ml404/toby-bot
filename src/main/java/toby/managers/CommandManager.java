@@ -13,7 +13,10 @@ import toby.command.CommandContext;
 import toby.command.ICommand;
 import toby.command.commands.dnd.DnDCommand;
 import toby.command.commands.dnd.InitiativeCommand;
-import toby.command.commands.fetch.*;
+import toby.command.commands.fetch.DbdRandomKillerCommand;
+import toby.command.commands.fetch.IFetchCommand;
+import toby.command.commands.fetch.Kf2RandomMapCommand;
+import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
@@ -27,11 +30,9 @@ import toby.lavaplayer.PlayerManager;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-import static toby.helpers.DnDHelper.*;
 import static toby.helpers.UserDtoHelper.calculateUserDto;
 
 @Service
@@ -209,13 +210,13 @@ public class CommandManager {
             event.deferReply().queue();
             MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
         }
-        if (event.getComponentId().startsWith("init:next")) {
-            incrementTurnTable(event.getHook(), guildId);
+        if (event.getComponentId().equals("init:next")) {
+            DnDHelper.incrementTurnTable(event.getHook(), guildId);
         }
-        if (event.getComponentId().startsWith("init:prev")) {
-            decrementTurnTable(event.getHook(), guildId);
+        if (event.getComponentId().equals("init:prev")) {
+            DnDHelper.decrementTurnTable(event.getHook(), guildId);
         }
-        if(event.getComponentId().startsWith("init:clear")){
+        if(event.getComponentId().equals("init:clear")){
             DnDHelper.clearInitiative(guildId);
         }
         else {
