@@ -212,11 +212,9 @@ public class CommandManager {
         }
         if (event.getComponentId().equals("init:next")) {
             DnDHelper.incrementTurnTable(event.getHook(), guildId);
-        }
-        if (event.getComponentId().equals("init:prev")) {
+        } else if (event.getComponentId().equals("init:prev")) {
             DnDHelper.decrementTurnTable(event.getHook(), guildId);
-        }
-        if(event.getComponentId().equals("init:clear")){
+        } else if (event.getComponentId().equals("init:clear")) {
             DnDHelper.clearInitiative(guildId);
         }
         else {
