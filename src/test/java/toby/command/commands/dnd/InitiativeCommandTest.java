@@ -39,7 +39,7 @@ class InitiativeCommandTest implements CommandTest {
     }
 
     @Test
-    void test_initiativeCommandWithCorrectSetup() {
+    void test_initiativeCommandWithCorrectSetup_WithMembers() {
         //Arrange
         CommandContext commandContext = new CommandContext(event);
         OptionMapping channelOptionMapping = mock(OptionMapping.class);
@@ -54,6 +54,34 @@ class InitiativeCommandTest implements CommandTest {
         when(event.getOption("channel")).thenReturn(channelOptionMapping);
         when(event.getOption("dm")).thenReturn(dmOptionMapping);
         when(audioChannel.getMembers()).thenReturn(List.of(member));
+        when(interactionHook.getInteraction()).thenReturn(interaction);
+        when(interaction.getGuild()).thenReturn(guild);
+        when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
+        when(member.getUser()).thenReturn(user);
+
+
+        //Act
+        initiativeCommand.handle(commandContext, requestingUserDto, 0);
+
+        //Assert
+        verify(event, times(1)).deferReply();
+        verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
+        verify(webhookMessageCreateAction, times(1)).setActionRow(any(), any(), any());
+
+    }
+
+    @Test
+    void test_initiativeCommandWithCorrectSetup_WithNames() {
+        //Arrange
+        CommandContext commandContext = new CommandContext(event);
+        OptionMapping namesMapping = mock(OptionMapping.class);
+        OptionMapping dmOptionMapping = mock(OptionMapping.class);
+        Member dmMember = mock(Member.class);
+        Interaction interaction = mock(Interaction.class);
+        when(namesMapping.getAsString()).thenReturn("name1, name2, name3, name4");
+        when(dmOptionMapping.getAsMember()).thenReturn(dmMember);
+        when(event.getOption("names")).thenReturn(namesMapping);
+        when(event.getOption("dm")).thenReturn(dmOptionMapping);
         when(interactionHook.getInteraction()).thenReturn(interaction);
         when(interaction.getGuild()).thenReturn(guild);
         when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
@@ -125,7 +153,7 @@ class InitiativeCommandTest implements CommandTest {
         verify(event, times(1)).deferReply();
         verify(interactionHook, times(0)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
         verify(webhookMessageCreateAction, times(0)).setActionRow(any(), any(), any());
-        verify(event, times(1)).reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it.");
+        verify(event, times(1)).reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.");
     }
 
     @Test

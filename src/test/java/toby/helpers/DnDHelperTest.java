@@ -34,7 +34,7 @@ class DnDHelperTest {
     @Mock
     Member member;
     private List<Member> memberList;
-    private Map<Member, Integer> initiativeMap;
+    private Map<String, Integer> initiativeMap;
 
     @BeforeEach
     void setUp() {
@@ -53,6 +53,9 @@ class DnDHelperTest {
         when(user1.isBot()).thenReturn(false);
         when(user2.isBot()).thenReturn(false);
         when(user3.isBot()).thenReturn(false);
+        when(user1.getEffectiveName()).thenReturn("name 1");
+        when(user2.getEffectiveName()).thenReturn("name 2");
+        when(user3.getEffectiveName()).thenReturn("name 3");
         initiativeMap = new HashMap<>();
         AuditableRestActionImpl auditableRestAction = mock(AuditableRestActionImpl.class);
         when(message.delete()).thenReturn(auditableRestAction);

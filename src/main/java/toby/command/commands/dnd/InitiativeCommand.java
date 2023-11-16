@@ -17,6 +17,7 @@ import toby.jpa.dto.UserDto;
 import java.util.*;
 
 import static toby.helpers.DnDHelper.rollInitiativeForMembers;
+import static toby.helpers.DnDHelper.rollInitiativeForString;
 
 public class InitiativeCommand implements IDnDCommand {
 
@@ -25,36 +26,59 @@ public class InitiativeCommand implements IDnDCommand {
         final SlashCommandInteractionEvent event = ctx.getEvent();
         event.deferReply().queue();
         final Member member = ctx.getMember();
-        Member dm = Optional.ofNullable(event.getOption("dm").getAsMember()).orElse(ctx.getMember());
+        Member dm = Optional.ofNullable(event.getOption("dm")).map(OptionMapping::getAsMember).orElse(ctx.getMember());
         GuildVoiceState voiceState = member.getVoiceState();
         Optional<OptionMapping> channelOptional = Optional.ofNullable(event.getOption("channel"));
+        Optional<String> namesOptional = Optional.ofNullable(event.getOption("names")).map(OptionMapping::getAsString);
         List<Member> memberList = getMemberList(voiceState, channelOptional);
-        Map<Member, Integer> initiativeMap = new HashMap<>();
-        if (memberList.isEmpty()) {
-            event
-                    .reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it.")
-                    .setEphemeral(true)
-                    .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
-            return;
-        }
+        List<String> nameList = getNameList(namesOptional);
+        Map<String, Integer> initiativeMap = new HashMap<>();
+        if (validateArguments(deleteDelay, event, memberList, nameList)) return;
+
         //If we are calling this a second time, it's better to clean slate the DnDHelper for that guild.
         DnDHelper.clearInitiative(requestingUserDto.getGuildId());
-        rollInitiativeForMembers(memberList, dm, initiativeMap);
-        if(DnDHelper.getSortedEntries().size() == 0){
+        if (!nameList.isEmpty()) {
+            rollInitiativeForString(nameList, initiativeMap);
+        } else
+            rollInitiativeForMembers(memberList, dm, initiativeMap);
+        if (checkForNonDmMembersInVoiceChannel(deleteDelay, event)) return;
+        displayAllValues(event.getHook());
+    }
+
+    private static boolean validateArguments(Integer deleteDelay, SlashCommandInteractionEvent event, List<Member> memberList, List<String> nameList) {
+        if (memberList.isEmpty() && nameList.isEmpty()) {
             event
+                    .reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.")
+                    .setEphemeral(true)
+                    .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean checkForNonDmMembersInVoiceChannel(Integer deleteDelay, SlashCommandInteractionEvent event) {
+        if (DnDHelper.getSortedEntries().size() == 0) {
+                event
                     .reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
                     .setEphemeral(true)
                     .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
-            return;
+            return true;
         }
-        displayAllValues(event.getHook());
+        return false;
     }
 
     @NotNull
     private static List<Member> getMemberList(GuildVoiceState voiceState, Optional<OptionMapping> channelOptional) {
         return channelOptional
                 .map(optionMapping -> optionMapping.getAsChannel().asAudioChannel().getMembers())
-                .orElseGet(() -> voiceState != null ? voiceState.getChannel().getMembers() : Collections.emptyList());
+                .orElseGet(() -> voiceState != null ?
+                        voiceState.getChannel().getMembers() : Collections.emptyList());
+    }
+
+    @NotNull
+    private static List<String> getNameList(Optional<String> namesOptional) {
+        List<String> namesFromArgs = namesOptional.map(s -> Arrays.stream(s.trim().split(",")).toList()).orElse(Collections.emptyList());
+        return namesFromArgs;
     }
 
     public void displayAllValues(InteractionHook hook) {
@@ -78,6 +102,7 @@ public class InitiativeCommand implements IDnDCommand {
     public List<OptionData> getOptionData() {
         OptionData dm = new OptionData(OptionType.MENTIONABLE, "dm", "Who is the DM? default: caller of command.");
         OptionData voiceChannel = new OptionData(OptionType.CHANNEL, "channel", "which channel is initiative being rolled for? default: voice channel of user calling this.");
-        return List.of(dm, voiceChannel);
+        OptionData nameStrings = new OptionData(OptionType.STRING, "names", "to be used as an alternative for the channel option. Comma delimited.");
+        return List.of(dm, voiceChannel, nameStrings);
     }
 }

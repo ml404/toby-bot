@@ -21,19 +21,29 @@ public class DnDHelper {
 
     private static final Map<Long, Message> currentMessageForGuild = new HashMap<>();
 
-    private static LinkedList<Map.Entry<Member, Integer>> sortedEntries = new LinkedList<>();
+    private static LinkedList<Map.Entry<String, Integer>> sortedEntries = new LinkedList<>();
 
-    public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<Member, Integer> initiativeMap) {
+    public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<String, Integer> initiativeMap) {
         List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm && !memberInChannel.getUser().isBot()).toList();
         if (nonDmMembers.isEmpty()) return;
-        nonDmMembers.forEach(target -> {
-            int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, 0);
-            initiativeMap.put(target, diceRoll);
-        });
+        nonDmMembers.forEach(target -> rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName()));
 
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
         sortedEntries.sort(Map.Entry.comparingByValue());
+    }
+
+    public static void rollInitiativeForString(List<String> nameList, Map<String, Integer> initiativeMap) {
+        if (nameList.isEmpty()) return;
+        nameList.forEach(name -> rollAndAddToMap(initiativeMap, name));
+        sortedEntries = new LinkedList<>(initiativeMap.entrySet());
+        // Sort the list based on values
+        sortedEntries.sort(Map.Entry.comparingByValue());
+    }
+
+    private static void rollAndAddToMap(Map<String, Integer> initiativeMap, String name) {
+        int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, 0);
+        initiativeMap.put(name, diceRoll);
     }
 
     @NotNull
@@ -96,8 +106,7 @@ public class DnDHelper {
         Button prev = Button.primary("init:prev", prevEmoji);
         Button clear = Button.primary("init:clear", xEmoji);
         Button next = Button.primary("init:next", nextEmoji);
-        TableButtons result = new TableButtons(prev, clear, next);
-        return result;
+        return new TableButtons(prev, clear, next);
     }
 
     public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
@@ -135,7 +144,7 @@ public class DnDHelper {
     public record TableButtons(Button prev, Button stop, Button next) {
     }
 
-    public static LinkedList<Map.Entry<Member, Integer>> getSortedEntries() {
+    public static LinkedList<Map.Entry<String, Integer>> getSortedEntries() {
         return sortedEntries;
     }
 
