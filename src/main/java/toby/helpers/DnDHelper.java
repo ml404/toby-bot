@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
@@ -70,10 +71,10 @@ public class DnDHelper {
     }
 
 
-    public static void incrementTurnTable(InteractionHook hook, Message message) {
+    public static void incrementTurnTable(InteractionHook hook, ButtonInteractionEvent event) {
         incrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(hook, embedBuilder, message);
+        sendOrEditInitiativeMessage(hook, embedBuilder, event);
     }
 
     private static void incrementIndex() {
@@ -83,10 +84,10 @@ public class DnDHelper {
         }
     }
 
-    public static void decrementTurnTable(InteractionHook hook, Message message) {
+    public static void decrementTurnTable(InteractionHook hook, ButtonInteractionEvent event) {
         decrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(hook, embedBuilder, message);
+        sendOrEditInitiativeMessage(hook, embedBuilder, event);
     }
 
     private static void decrementIndex() {
@@ -107,15 +108,17 @@ public class DnDHelper {
         return new TableButtons(prev, clear, next);
     }
 
-    public static void sendOrEditInitiativeMessage(InteractionHook hook, EmbedBuilder embedBuilder, Message eventMessage) {
+    public static void sendOrEditInitiativeMessage(InteractionHook hook, EmbedBuilder embedBuilder, ButtonInteractionEvent event) {
         TableButtons initButtons = getInitButtons();
         MessageEmbed messageEmbed = embedBuilder.build();
-        if (eventMessage == null) {
+        if (event == null) {
             hook.sendMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
-            return;
+        } else {
+            Message message = event.getMessage();
+            // We came via a button press, so edit the embed
+            message.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
+            hook.setEphemeral(true).sendMessageFormat("Next turn: %s", DnDHelper.sortedEntries.get(initiativeIndex.get())).queue();
         }
-        // We came via a button press, so edit the embed
-        eventMessage.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
     }
 
 
@@ -134,7 +137,8 @@ public class DnDHelper {
         sortedEntries.clear();
     }
 
-    public static void clearInitiative(InteractionHook hook, Message message) {
+    public static void clearInitiative(InteractionHook hook, ButtonInteractionEvent event) {
+        Message message = event.getMessage();
         if (message != null) message.delete().queue();
         initiativeIndex.setPlain(0);
         sortedEntries.clear();

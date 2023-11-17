@@ -72,6 +72,7 @@ class DnDHelperTest {
         when(user2.getEffectiveName()).thenReturn("name 2");
         when(user3.getEffectiveName()).thenReturn("name 3");
         AuditableRestActionImpl auditableRestAction = mock(AuditableRestActionImpl.class);
+        event = mock(ButtonInteractionEvent.class);
         initiativeMap = new HashMap<>();
         webhookMessageEditAction = mock(WebhookMessageEditAction.class);
         webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
@@ -82,6 +83,8 @@ class DnDHelperTest {
         when(message.delete()).thenReturn(auditableRestAction);
         DnDHelper.clearInitiative();
         when(hook.deleteOriginal()).thenReturn(mock(RestAction.class));
+        when(hook.setEphemeral(true)).thenReturn(hook);
+        when(hook.sendMessageFormat(anyString(), any())).thenReturn(webhookMessageCreateAction);
     }
 
     @AfterEach
@@ -90,6 +93,8 @@ class DnDHelperTest {
         reset(webhookMessageCreateAction);
         reset(webhookMessageEditAction);
         reset(message);
+        reset(event);
+        reset(messageEditAction);
         DnDHelper.clearInitiative();
     }
 
@@ -107,8 +112,8 @@ class DnDHelperTest {
 
     @Test
     void testIncrementTurnTable() {
-        long guildId = 123456789L;
-
+        WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
+        WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
         when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
         when(hook.editOriginalComponents(any(LayoutComponent.class))).thenReturn(webhookMessageEditAction);
         when(hook.editOriginalEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageEditAction);
@@ -119,9 +124,7 @@ class DnDHelperTest {
 
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
         DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
-        DnDHelper.incrementTurnTable(hook, event.getMessage());
-
-        // Verify that setActionRow is called once for initial setup with the correct buttons
+        DnDHelper.incrementTurnTable(hook, event);
         verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 
@@ -136,8 +139,6 @@ class DnDHelperTest {
     @Test
     void testDecrementTurnTable() {
         {
-            long guildId = 123456789L;
-
             WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
             WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
             when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
@@ -150,7 +151,7 @@ class DnDHelperTest {
 
             DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
             DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
-            DnDHelper.decrementTurnTable(hook, event.getMessage());
+            DnDHelper.decrementTurnTable(hook, event);
             verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 

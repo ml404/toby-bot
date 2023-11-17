@@ -39,7 +39,7 @@ public class InitiativeCommand implements IDnDCommand {
 
         //If we are calling this a second time, it's better to clean slate the DnDHelper for that guild.
         InteractionHook hook = event.getHook();
-        DnDHelper.clearInitiative();
+        DnDHelper.clearInitiative(hook, null);
         if (!nameList.isEmpty()) {
             rollInitiativeForString(nameList, initiativeMap);
         } else {
