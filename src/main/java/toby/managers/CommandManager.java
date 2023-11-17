@@ -3,6 +3,7 @@ package toby.managers;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.internal.utils.tuple.Pair;
@@ -11,11 +12,17 @@ import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.stereotype.Service;
 import toby.command.CommandContext;
 import toby.command.ICommand;
-import toby.command.commands.fetch.*;
+import toby.command.commands.dnd.DnDCommand;
+import toby.command.commands.dnd.InitiativeCommand;
+import toby.command.commands.fetch.DbdRandomKillerCommand;
+import toby.command.commands.fetch.IFetchCommand;
+import toby.command.commands.fetch.Kf2RandomMapCommand;
+import toby.command.commands.fetch.MemeCommand;
 import toby.command.commands.misc.*;
 import toby.command.commands.moderation.*;
 import toby.command.commands.music.*;
 import toby.helpers.Cache;
+import toby.helpers.DnDHelper;
 import toby.helpers.MusicPlayerHelper;
 import toby.jpa.dto.ConfigDto;
 import toby.jpa.dto.UserDto;
@@ -56,7 +63,6 @@ public class CommandManager {
         addCommand(new HelpCommand(this));
         addCommand(new RollCommand());
         addCommand(new MemeCommand());
-        addCommand(new DnDCommand());
         addCommand(new Kf2RandomMapCommand(cache));
         addCommand(new DbdRandomKillerCommand(cache));
         addCommand(new HelloThereCommand(configService));
@@ -93,6 +99,10 @@ public class CommandManager {
         addCommand(new QueueCommand());
         addCommand(new ShuffleCommand());
         addCommand(new IntroSongCommand(userService, musicFileService, configService));
+
+        //dnd commands
+        addCommand(new InitiativeCommand());
+        addCommand(new DnDCommand());
     }
 
     private void addCommand(ICommand cmd) {
@@ -180,9 +190,11 @@ public class CommandManager {
         String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
         String defaultVolume = configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue();
         int introVolume = Integer.parseInt(defaultVolume);
-        UserDto requestingUserDto = calculateUserDto(event.getGuild().getIdLong(), event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
+        long guildId = event.getGuild().getIdLong();
+        UserDto requestingUserDto = calculateUserDto(guildId, event.getUser().getIdLong(), Objects.requireNonNull(event.getMember()).isOwner(), userService, introVolume);
         // Dispatch the simulated SlashCommandInteractionEvent
-        if (event.getComponentId().equals("resend_last_request")) {
+        String componentId = event.getComponentId();
+        if (componentId.equals("resend_last_request")) {
             Pair<ICommand, CommandContext> iCommandCommandContextPair = lastCommands.get(event.getUser());
             ICommand cmd = iCommandCommandContextPair.getLeft();
             // Resend the last request
@@ -191,33 +203,34 @@ public class CommandManager {
                 cmd.handle(iCommandCommandContextPair.getRight(), requestingUserDto, deleteDelay);
                 event.deferEdit().queue();
             }
-        }
-        if (event.getComponentId().equals("pause/play")){
-            event.deferReply().queue();
-            MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
-        }
-        if (event.getComponentId().equals("stop")){
-            event.deferReply().queue();
-            MusicPlayerHelper.stopSong(event,PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
-        }
-        else {
-            //button name that should be something like 'roll: 20,1,0'
-            String invoke = event.getComponentId().toLowerCase();
-            String[] split = invoke.split(":");
-            String commandName = split[0];
-            String options = split[1];
-            ICommand cmd = this.getCommand(commandName);
-            if (cmd != null) {
-                event.getChannel().sendTyping().queue();
-                // Create a simulated SlashCommandInteractionImpl
-                if (cmd.getName().equals("roll")) {
-                    RollCommand rollCommand = (RollCommand) cmd;
-                    String[] optionArray = options.split(",");
-                    rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(invokeDeleteOnMessageResponse(deleteDelay));
+        } else {
+            final InteractionHook hook = event.getHook();
+            switch (componentId) {
+                case "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
+                case "stop" -> MusicPlayerHelper.stopSong(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
+                case "init:next" -> DnDHelper.incrementTurnTable(hook, event, deleteDelay);
+                case "init:prev" -> DnDHelper.decrementTurnTable(hook, event, deleteDelay);
+                case "init:clear" -> DnDHelper.clearInitiative(hook, event);
+                default -> {
+                    //button name that should be something like 'roll: 20,1,0'
+                    String invoke = componentId.toLowerCase();
+                    String[] split = invoke.split(":");
+                    String commandName = split[0];
+                    String options = split[1];
+                    ICommand cmd = this.getCommand(commandName);
+                    if (cmd != null) {
+                        event.getChannel().sendTyping().queue();
+                        // Create a simulated SlashCommandInteractionImpl
+                        if (cmd.getName().equals("roll")) {
+                            RollCommand rollCommand = (RollCommand) cmd;
+                            String[] optionArray = options.split(",");
+                            rollCommand.handleDiceRoll(event, Integer.parseInt(optionArray[0].trim()), Integer.parseInt(optionArray[1].trim()), Integer.parseInt(optionArray[2].trim())).queue(invokeDeleteOnMessageResponse(deleteDelay));
+                        }
+                    }
+                    CommandContext commandContext = new CommandContext(event);
+                    cmd.handle(commandContext, requestingUserDto, deleteDelay);
                 }
             }
-            CommandContext commandContext = new CommandContext(event);
-            cmd.handle(commandContext, requestingUserDto, deleteDelay);
         }
     }
 }

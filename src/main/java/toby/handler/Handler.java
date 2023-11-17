@@ -129,6 +129,7 @@ public class Handler extends ListenerAdapter {
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
+        event.deferReply(true).queue();
         User user = event.getUser();
         if (user.isBot()) {
             return;

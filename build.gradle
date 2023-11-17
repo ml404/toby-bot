@@ -57,7 +57,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
     implementation 'org.apache.commons:commons-lang3:3.13.0'
     //https://stackoverflow.com/questions/23796404/could-not-find-method-compile-for-arguments-gradle
-    implementation group: 'net.dv8tion', name: 'JDA', version: '5.0.0-beta.15'
+    implementation group: 'net.dv8tion', name: 'JDA', version: '5.0.0-beta.17'
     implementation 'dev.arbjerg:lavaplayer:2.0.2'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.0.2'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'

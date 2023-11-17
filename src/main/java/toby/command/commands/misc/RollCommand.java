@@ -20,6 +20,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+import static toby.helpers.DnDHelper.rollDice;
 
 public class RollCommand implements IMiscCommand {
 
@@ -42,17 +43,9 @@ public class RollCommand implements IMiscCommand {
 
     public WebhookMessageCreateAction<Message> handleDiceRoll(IReplyCallback event, int diceValue, int diceToRoll, int modifier) {
         event.deferReply().queue();
-        int rollTotal = 0;
-        Random rand = ThreadLocalRandom.current();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < diceToRoll; i++) {
-            int roll = rand.nextInt(diceValue) + 1; //This results in 1 - 20 (instead of 0 - 19) for default value
-            rollTotal += roll;
-            sb.append(String.format("'%d' sided dice rolled. You got a '%d'. \n", diceValue, roll));
-        }
-        sb.append(String.format("Your final roll total was '%d' + '%d' modifier = '%d'.", rollTotal, modifier, rollTotal + modifier));
+        StringBuilder sb = buildStringForDiceRoll(diceValue, diceToRoll, modifier);
         EmbedBuilder embedBuilder = new EmbedBuilder()
-                .addField(new MessageEmbed.Field(String.format("D%d * %d + '%d' modifier", diceValue, diceToRoll, modifier), sb.toString(), true))
+                .addField(new MessageEmbed.Field(String.format("%dd%d + %d", diceToRoll, diceValue, modifier), sb.toString(), true))
                 .setColor(0x00FF00); // Green color
 
         Button rollD20 = Button.primary(getName() + ":" + "20, 1, 0", "Roll D20");
@@ -62,6 +55,13 @@ public class RollCommand implements IMiscCommand {
         return event.getHook().sendMessageEmbeds(embedBuilder.build()).addActionRow(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4);
     }
 
+    @NotNull
+    private static StringBuilder buildStringForDiceRoll(int diceValue, int diceToRoll, int modifier) {
+        StringBuilder sb = new StringBuilder();
+        int rollTotal = rollDice(diceValue, diceToRoll);
+        sb.append(String.format("Your final roll total was '%d' (%d + %d).", rollTotal + modifier, rollTotal, modifier));
+        return sb;
+    }
 
     @Override
     public String getName() {
