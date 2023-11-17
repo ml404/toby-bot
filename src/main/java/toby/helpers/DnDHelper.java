@@ -17,6 +17,8 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+
 public class DnDHelper {
 
     private static final AtomicInteger initiativeIndex = new AtomicInteger(0);
@@ -71,10 +73,10 @@ public class DnDHelper {
     }
 
 
-    public static void incrementTurnTable(InteractionHook hook, ButtonInteractionEvent event) {
+    public static void incrementTurnTable(InteractionHook hook, ButtonInteractionEvent event, Integer deleteDelay) {
         incrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(hook, embedBuilder, event);
+        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay);
     }
 
     private static void incrementIndex() {
@@ -84,10 +86,10 @@ public class DnDHelper {
         }
     }
 
-    public static void decrementTurnTable(InteractionHook hook, ButtonInteractionEvent event) {
+    public static void decrementTurnTable(InteractionHook hook, ButtonInteractionEvent event, Integer deleteDelay) {
         decrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(hook, embedBuilder, event);
+        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay);
     }
 
     private static void decrementIndex() {
@@ -108,7 +110,7 @@ public class DnDHelper {
         return new TableButtons(prev, clear, next);
     }
 
-    public static void sendOrEditInitiativeMessage(InteractionHook hook, EmbedBuilder embedBuilder, ButtonInteractionEvent event) {
+    public static void sendOrEditInitiativeMessage(InteractionHook hook, EmbedBuilder embedBuilder, ButtonInteractionEvent event, Integer deleteDelay) {
         TableButtons initButtons = getInitButtons();
         MessageEmbed messageEmbed = embedBuilder.build();
         if (event == null) {
@@ -117,7 +119,7 @@ public class DnDHelper {
             Message message = event.getMessage();
             // We came via a button press, so edit the embed
             message.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
-            hook.setEphemeral(true).sendMessageFormat("Next turn: %s", DnDHelper.sortedEntries.get(initiativeIndex.get())).queue();
+            hook.setEphemeral(true).sendMessageFormat("Next turn: %s", DnDHelper.sortedEntries.get(initiativeIndex.get()).getKey()).queue(invokeDeleteOnMessageResponse(deleteDelay));
         }
     }
 

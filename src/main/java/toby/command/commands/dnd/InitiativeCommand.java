@@ -18,6 +18,7 @@ import toby.jpa.dto.UserDto;
 
 import java.util.*;
 
+import static toby.command.ICommand.invokeDeleteOnHookResponse;
 import static toby.helpers.DnDHelper.rollInitiativeForMembers;
 import static toby.helpers.DnDHelper.rollInitiativeForString;
 
@@ -46,7 +47,7 @@ public class InitiativeCommand implements IDnDCommand {
             rollInitiativeForMembers(memberList, dm, initiativeMap);
         }
         if (checkForNonDmMembersInVoiceChannel(deleteDelay, event)) return;
-        displayAllValues(hook);
+        displayAllValues(hook, deleteDelay);
     }
 
     private static boolean validateArguments(Integer deleteDelay, SlashCommandInteractionEvent event, List<Member> memberList, List<String> nameList) {
@@ -54,7 +55,7 @@ public class InitiativeCommand implements IDnDCommand {
             event
                     .reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.")
                     .setEphemeral(true)
-                    .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
+                    .queue(invokeDeleteOnHookResponse(deleteDelay));
             return true;
         }
         return false;
@@ -65,7 +66,7 @@ public class InitiativeCommand implements IDnDCommand {
             event
                     .reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
                     .setEphemeral(true)
-                    .queue(ICommand.invokeDeleteOnHookResponse(deleteDelay));
+                    .queue(invokeDeleteOnHookResponse(deleteDelay));
             return true;
         }
         return false;
@@ -85,9 +86,9 @@ public class InitiativeCommand implements IDnDCommand {
         return namesFromArgs;
     }
 
-    public static void displayAllValues(InteractionHook hook) {
+    public static void displayAllValues(InteractionHook hook, Integer deleteDelay) {
         EmbedBuilder embedBuilder = DnDHelper.getInitiativeEmbedBuilder();
-        DnDHelper.sendOrEditInitiativeMessage(hook, embedBuilder, null);
+        DnDHelper.sendOrEditInitiativeMessage(hook, embedBuilder, null, deleteDelay);
     }
 
 

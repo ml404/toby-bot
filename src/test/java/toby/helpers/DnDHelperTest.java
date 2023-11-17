@@ -123,8 +123,8 @@ class DnDHelperTest {
         when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
 
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
-        DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
-        DnDHelper.incrementTurnTable(hook, event);
+        DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null, 0);
+        DnDHelper.incrementTurnTable(hook, event, 0);
         verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 
@@ -150,8 +150,8 @@ class DnDHelperTest {
             when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
 
             DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
-            DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
-            DnDHelper.decrementTurnTable(hook, event);
+            DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null, 0);
+            DnDHelper.decrementTurnTable(hook, event, 0);
             verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 
