@@ -2,6 +2,8 @@ package toby.helpers;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
 import net.dv8tion.jda.api.interactions.InteractionHook;
@@ -18,7 +20,7 @@ public class DnDHelper {
 
     private static final AtomicInteger initiativeIndex = new AtomicInteger(0);
 
-    private static final Map<Long, Boolean> hasEmbedForGuildMap = new HashMap<>();
+    private static final Map<Long, MessageEmbed> hasEmbedForGuildMap = new HashMap<>();
 
     private static LinkedList<Map.Entry<String, Integer>> sortedEntries = new LinkedList<>();
 
@@ -109,16 +111,20 @@ public class DnDHelper {
     }
 
     public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
-        boolean hasCurrentEmbed = hasCurrentEmbed(guildId);
+        MessageEmbed currentMessageEmbed = getCurrentEmbed(guildId);
         TableButtons initButtons = getInitButtons();
-        if (hasCurrentEmbed) {
-            hook.deleteOriginal().queue();
-        }
-            hook
-                .sendMessageEmbeds(embedBuilder.build())
-                .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
-                .queue();
-        hasEmbedForGuildMap.put(guildId, true);
+        MessageEmbed messageEmbed = embedBuilder.build();
+        if (currentMessageEmbed == null) {
+                hook
+                    .sendMessageEmbeds(messageEmbed)
+                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
+                    .queue();
+            hasEmbedForGuildMap.put(guildId, messageEmbed);
+        } else
+                hook
+                    .editOriginalEmbeds(messageEmbed)
+                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
+                    .queue();
     }
 
 
@@ -133,13 +139,14 @@ public class DnDHelper {
     }
 
     public static void clearInitiative(long guildId) {
-        hasEmbedForGuildMap.put(guildId, false);
+        hasEmbedForGuildMap.remove(guildId);
         initiativeIndex.setPlain(0);
         sortedEntries.clear();
     }
 
-    public static void clearInitiative(long guildId, InteractionHook hook) {
-        hasEmbedForGuildMap.put(guildId, false);
+    public static void clearInitiative(long guildId, InteractionHook hook, Message message) {
+        if(message!=null) message.delete().queue();
+        hasEmbedForGuildMap.remove(guildId);
         initiativeIndex.setPlain(0);
         sortedEntries.clear();
         hook.deleteOriginal().queue();
@@ -152,11 +159,11 @@ public class DnDHelper {
         return sortedEntries;
     }
 
-    public static boolean hasCurrentEmbed(long guildId) {
-        return hasEmbedForGuildMap.getOrDefault(guildId, false);
+    public static MessageEmbed getCurrentEmbed(long guildId) {
+        return hasEmbedForGuildMap.get(guildId);
     }
 
-    public static void setHasEmbedForGuild(long guildId, boolean hasMessage) {
+    public static void setCurrentEmbed(long guildId, MessageEmbed hasMessage) {
         hasEmbedForGuildMap.put(guildId, hasMessage);
     }
 
