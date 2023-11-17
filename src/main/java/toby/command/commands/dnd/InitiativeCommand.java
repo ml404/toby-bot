@@ -39,7 +39,7 @@ public class InitiativeCommand implements IDnDCommand {
 
         //If we are calling this a second time, it's better to clean slate the DnDHelper for that guild.
         InteractionHook hook = event.getHook();
-        DnDHelper.clearInitiative(requestingUserDto.getGuildId());
+        DnDHelper.clearInitiative();
         if (!nameList.isEmpty()) {
             rollInitiativeForString(nameList, initiativeMap);
         } else {
@@ -87,8 +87,7 @@ public class InitiativeCommand implements IDnDCommand {
 
     public static void displayAllValues(InteractionHook hook) {
         EmbedBuilder embedBuilder = DnDHelper.getInitiativeEmbedBuilder();
-        long guildId = hook.getInteraction().getGuild().getIdLong();
-        DnDHelper.sendOrEditInitiativeMessage(guildId, hook, embedBuilder);
+        DnDHelper.sendOrEditInitiativeMessage(hook, embedBuilder, null);
     }
 
 

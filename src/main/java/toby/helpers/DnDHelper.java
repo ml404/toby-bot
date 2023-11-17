@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
 import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,8 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DnDHelper {
 
     private static final AtomicInteger initiativeIndex = new AtomicInteger(0);
-
-    private static final Map<Long, MessageEmbed> hasEmbedForGuildMap = new HashMap<>();
 
     private static LinkedList<Map.Entry<String, Integer>> sortedEntries = new LinkedList<>();
 
@@ -73,10 +70,10 @@ public class DnDHelper {
     }
 
 
-    public static void incrementTurnTable(InteractionHook hook, long guildId) {
+    public static void incrementTurnTable(InteractionHook hook, long guildId, Message message) {
         incrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(guildId, hook, embedBuilder);
+        sendOrEditInitiativeMessage(hook, embedBuilder, message);
     }
 
     private static void incrementIndex() {
@@ -86,10 +83,10 @@ public class DnDHelper {
         }
     }
 
-    public static void decrementTurnTable(InteractionHook hook, long guildId) {
+    public static void decrementTurnTable(InteractionHook hook, long guildId, Message message) {
         decrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(guildId, hook, embedBuilder);
+        sendOrEditInitiativeMessage(hook, embedBuilder, message);
     }
 
     private static void decrementIndex() {
@@ -110,19 +107,15 @@ public class DnDHelper {
         return new TableButtons(prev, clear, next);
     }
 
-    public static void sendOrEditInitiativeMessage(long guildId, InteractionHook hook, EmbedBuilder embedBuilder) {
-        MessageEmbed currentMessageEmbed = getCurrentEmbed(guildId);
+    public static void sendOrEditInitiativeMessage(InteractionHook hook, EmbedBuilder embedBuilder, Message eventMessage) {
         TableButtons initButtons = getInitButtons();
         MessageEmbed messageEmbed = embedBuilder.build();
-        if (currentMessageEmbed == null) {
+        if (eventMessage == null) {
             hook.sendMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
-            hasEmbedForGuildMap.put(guildId, messageEmbed);
             return;
         }
-        // Existing embed is found, edit the original message
-        hook.editOriginalComponents(ActionRow.of(initButtons.prev(), initButtons.clear(), initButtons.next())).queue();
-        hook.editOriginalEmbeds(messageEmbed).queue();
-        hasEmbedForGuildMap.put(guildId, messageEmbed);
+        // We came via a button press, so edit the embed
+        eventMessage.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
     }
 
 
@@ -136,15 +129,13 @@ public class DnDHelper {
         return embedBuilder;
     }
 
-    public static void clearInitiative(long guildId) {
-        hasEmbedForGuildMap.remove(guildId);
+    public static void clearInitiative() {
         initiativeIndex.setPlain(0);
         sortedEntries.clear();
     }
 
-    public static void clearInitiative(long guildId, InteractionHook hook, Message message) {
+    public static void clearInitiative(InteractionHook hook, Message message) {
         if (message != null) message.delete().queue();
-        hasEmbedForGuildMap.remove(guildId);
         initiativeIndex.setPlain(0);
         sortedEntries.clear();
         hook.deleteOriginal().queue();
@@ -157,13 +148,6 @@ public class DnDHelper {
         return sortedEntries;
     }
 
-    public static MessageEmbed getCurrentEmbed(long guildId) {
-        return hasEmbedForGuildMap.get(guildId);
-    }
-
-    public static void setCurrentEmbed(long guildId, MessageEmbed hasMessage) {
-        hasEmbedForGuildMap.put(guildId, hasMessage);
-    }
 
     public static AtomicInteger getInitiativeIndex() {
         return initiativeIndex;

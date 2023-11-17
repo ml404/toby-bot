@@ -208,9 +208,9 @@ public class CommandManager {
             switch (componentId) {
                 case "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), deleteDelay);
                 case "stop" -> MusicPlayerHelper.stopSong(event, PlayerManager.getInstance().getMusicManager(event.getGuild()), requestingUserDto.isSuperUser(), deleteDelay);
-                case "init:next" -> DnDHelper.incrementTurnTable(hook, guildId);
-                case "init:prev" -> DnDHelper.decrementTurnTable(hook, guildId);
-                case "init:clear" -> DnDHelper.clearInitiative(guildId, hook, event.getMessage());
+                case "init:next" -> DnDHelper.incrementTurnTable(hook, guildId, event.getMessage());
+                case "init:prev" -> DnDHelper.decrementTurnTable(hook, guildId, event.getMessage());
+                case "init:clear" -> DnDHelper.clearInitiative(hook, event.getMessage());
                 default -> {
                     //button name that should be something like 'roll: 20,1,0'
                     String invoke = componentId.toLowerCase();

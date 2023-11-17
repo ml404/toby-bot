@@ -6,10 +6,11 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.LayoutComponent;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction;
 import net.dv8tion.jda.internal.requests.restaction.AuditableRestActionImpl;
@@ -36,7 +37,17 @@ class DnDHelperTest {
     Message message;
 
     @Mock
+    ButtonInteractionEvent event;
+
+    @Mock
     Member member;
+    @Mock
+    private WebhookMessageEditAction webhookMessageEditAction;
+
+    @Mock
+    WebhookMessageCreateAction webhookMessageCreateAction;
+    @Mock
+    private MessageEditAction messageEditAction;
     private List<Member> memberList;
     private Map<String, Integer> initiativeMap;
 
@@ -60,17 +71,26 @@ class DnDHelperTest {
         when(user1.getEffectiveName()).thenReturn("name 1");
         when(user2.getEffectiveName()).thenReturn("name 2");
         when(user3.getEffectiveName()).thenReturn("name 3");
-        initiativeMap = new HashMap<>();
         AuditableRestActionImpl auditableRestAction = mock(AuditableRestActionImpl.class);
+        initiativeMap = new HashMap<>();
+        webhookMessageEditAction = mock(WebhookMessageEditAction.class);
+        webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
+        when(event.getMessage()).thenReturn(message);
+        messageEditAction = mock(MessageEditAction.class);
+        when(message.editMessageEmbeds(any(MessageEmbed.class))).thenReturn(messageEditAction);
+        when(messageEditAction.setActionRow(any(), any(), any())).thenReturn(messageEditAction);
         when(message.delete()).thenReturn(auditableRestAction);
-        DnDHelper.clearInitiative(123456789L);
+        DnDHelper.clearInitiative();
         when(hook.deleteOriginal()).thenReturn(mock(RestAction.class));
     }
 
     @AfterEach
-    public void tearDown(){
+    public void tearDown() {
         reset(hook);
-        DnDHelper.clearInitiative(123456789L);
+        reset(webhookMessageCreateAction);
+        reset(webhookMessageEditAction);
+        reset(message);
+        DnDHelper.clearInitiative();
     }
 
     @Test
@@ -89,8 +109,6 @@ class DnDHelperTest {
     void testIncrementTurnTable() {
         long guildId = 123456789L;
 
-        WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
-        WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
         when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
         when(hook.editOriginalComponents(any(LayoutComponent.class))).thenReturn(webhookMessageEditAction);
         when(hook.editOriginalEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageEditAction);
@@ -100,19 +118,18 @@ class DnDHelperTest {
         when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
 
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
-        DnDHelper.sendOrEditInitiativeMessage(guildId, hook, DnDHelper.getInitiativeEmbedBuilder());
-        DnDHelper.incrementTurnTable(hook, guildId);
+        DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
+        DnDHelper.incrementTurnTable(hook, guildId, event.getMessage());
 
         // Verify that setActionRow is called once for initial setup with the correct buttons
-        verifySetActionRows(webhookMessageCreateAction, hook);
+        verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 
         // Verify that queue is called once
         verify(webhookMessageCreateAction, times(1)).queue();
-        verify(webhookMessageEditAction, times(2)).queue();
 
         verify(hook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(hook, times(1)).editOriginalEmbeds(any(MessageEmbed.class));
+        verify(messageEditAction, times(1)).queue();
         assertEquals(1, DnDHelper.getInitiativeIndex().get());
     }
 
@@ -132,17 +149,16 @@ class DnDHelperTest {
             when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
 
             DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
-            DnDHelper.sendOrEditInitiativeMessage(guildId, hook, DnDHelper.getInitiativeEmbedBuilder());
-            DnDHelper.decrementTurnTable(hook, guildId);
-            verifySetActionRows(webhookMessageCreateAction, hook);
+            DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
+            DnDHelper.decrementTurnTable(hook, guildId, event.getMessage());
+            verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 
             // Verify that queue is called once
             verify(webhookMessageCreateAction, times(1)).queue();
-            verify(webhookMessageEditAction, times(2)).queue();
 
             verify(hook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-            verify(hook, times(1)).editOriginalEmbeds(any(MessageEmbed.class));
+            verify(messageEditAction, times(1)).queue();
             assertEquals(2, DnDHelper.getInitiativeIndex().get());
         }
     }
@@ -169,17 +185,14 @@ class DnDHelperTest {
     void testClearInitiative() {
         long guildId = 123456789L;
 
-        DnDHelper.setCurrentEmbed(guildId, mock(MessageEmbed.class));
-
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
-        DnDHelper.clearInitiative(guildId);
+        DnDHelper.clearInitiative();
 
-        assertNull(DnDHelper.getCurrentEmbed(guildId));
         assertEquals(0, DnDHelper.getInitiativeIndex().get());
         assertEquals(0, DnDHelper.getSortedEntries().size());
     }
 
-    private static void verifySetActionRows(WebhookMessageCreateAction webhookMessageCreateAction,InteractionHook hook) {
+    private static void verifySetActionRows(WebhookMessageCreateAction webhookMessageCreateAction, MessageEditAction messageEditAction) {
         // Verify that setActionRow is called once for initial setup with the correct buttons
         verify(webhookMessageCreateAction, times(1)).setActionRow(
                 eq(DnDHelper.getInitButtons().prev()),
@@ -187,11 +200,11 @@ class DnDHelperTest {
                 eq(DnDHelper.getInitButtons().next())
         );
 
-        verify(hook, times(1)).editOriginalComponents(ActionRow.of(
-                DnDHelper.getInitButtons().prev(),
-                DnDHelper.getInitButtons().clear(),
-                DnDHelper.getInitButtons().next()
-        ));
+        verify(messageEditAction, times(1)).setActionRow(
+                eq(DnDHelper.getInitButtons().prev()),
+                eq(DnDHelper.getInitButtons().clear()),
+                eq(DnDHelper.getInitButtons().next())
+        );
     }
 
 }
