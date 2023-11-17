@@ -119,7 +119,7 @@ class DnDHelperTest {
 
         DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
         DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
-        DnDHelper.incrementTurnTable(hook, guildId, event.getMessage());
+        DnDHelper.incrementTurnTable(hook, event.getMessage());
 
         // Verify that setActionRow is called once for initial setup with the correct buttons
         verifySetActionRows(webhookMessageCreateAction, messageEditAction);
@@ -150,7 +150,7 @@ class DnDHelperTest {
 
             DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
             DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null);
-            DnDHelper.decrementTurnTable(hook, guildId, event.getMessage());
+            DnDHelper.decrementTurnTable(hook, event.getMessage());
             verifySetActionRows(webhookMessageCreateAction, messageEditAction);
 
 

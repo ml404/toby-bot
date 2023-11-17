@@ -70,7 +70,7 @@ public class DnDHelper {
     }
 
 
-    public static void incrementTurnTable(InteractionHook hook, long guildId, Message message) {
+    public static void incrementTurnTable(InteractionHook hook, Message message) {
         incrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
         sendOrEditInitiativeMessage(hook, embedBuilder, message);
@@ -83,7 +83,7 @@ public class DnDHelper {
         }
     }
 
-    public static void decrementTurnTable(InteractionHook hook, long guildId, Message message) {
+    public static void decrementTurnTable(InteractionHook hook, Message message) {
         decrementIndex();
         EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
         sendOrEditInitiativeMessage(hook, embedBuilder, message);
