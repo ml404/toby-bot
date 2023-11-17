@@ -7,6 +7,8 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.LayoutComponent;
 import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction;
@@ -90,6 +92,7 @@ class DnDHelperTest {
         WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
         WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
         when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
+        when(hook.editOriginalComponents(any(LayoutComponent.class))).thenReturn(webhookMessageEditAction);
         when(hook.editOriginalEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageEditAction);
 
         // Mock the behavior of setActionRow to return the same WebhookMessageEditAction
@@ -101,12 +104,12 @@ class DnDHelperTest {
         DnDHelper.incrementTurnTable(hook, guildId);
 
         // Verify that setActionRow is called once for initial setup with the correct buttons
-        verifySetActionRows(webhookMessageCreateAction, webhookMessageEditAction);
+        verifySetActionRows(webhookMessageCreateAction, hook);
 
 
         // Verify that queue is called once
         verify(webhookMessageCreateAction, times(1)).queue();
-        verify(webhookMessageEditAction, times(1)).queue();
+        verify(webhookMessageEditAction, times(2)).queue();
 
         verify(hook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
         verify(hook, times(1)).editOriginalEmbeds(any(MessageEmbed.class));
@@ -121,6 +124,7 @@ class DnDHelperTest {
             WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
             WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
             when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
+            when(hook.editOriginalComponents(any(LayoutComponent.class))).thenReturn(webhookMessageEditAction);
             when(hook.editOriginalEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageEditAction);
 
             // Mock the behavior of setActionRow to return the same WebhookMessageEditAction
@@ -130,12 +134,12 @@ class DnDHelperTest {
             DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
             DnDHelper.sendOrEditInitiativeMessage(guildId, hook, DnDHelper.getInitiativeEmbedBuilder());
             DnDHelper.decrementTurnTable(hook, guildId);
-            verifySetActionRows(webhookMessageCreateAction, webhookMessageEditAction);
+            verifySetActionRows(webhookMessageCreateAction, hook);
 
 
             // Verify that queue is called once
             verify(webhookMessageCreateAction, times(1)).queue();
-            verify(webhookMessageEditAction, times(1)).queue();
+            verify(webhookMessageEditAction, times(2)).queue();
 
             verify(hook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
             verify(hook, times(1)).editOriginalEmbeds(any(MessageEmbed.class));
@@ -175,7 +179,7 @@ class DnDHelperTest {
         assertEquals(0, DnDHelper.getSortedEntries().size());
     }
 
-    private static void verifySetActionRows(WebhookMessageCreateAction webhookMessageCreateAction, WebhookMessageEditAction webhookMessageEditAction) {
+    private static void verifySetActionRows(WebhookMessageCreateAction webhookMessageCreateAction,InteractionHook hook) {
         // Verify that setActionRow is called once for initial setup with the correct buttons
         verify(webhookMessageCreateAction, times(1)).setActionRow(
                 eq(DnDHelper.getInitButtons().prev()),
@@ -183,11 +187,11 @@ class DnDHelperTest {
                 eq(DnDHelper.getInitButtons().next())
         );
 
-        verify(webhookMessageEditAction, times(1)).setActionRow(
-                eq(DnDHelper.getInitButtons().prev()),
-                eq(DnDHelper.getInitButtons().clear()),
-                eq(DnDHelper.getInitButtons().next())
-        );
+        verify(hook, times(1)).editOriginalComponents(ActionRow.of(
+                DnDHelper.getInitButtons().prev(),
+                DnDHelper.getInitButtons().clear(),
+                DnDHelper.getInitButtons().next()
+        ));
     }
 
 }

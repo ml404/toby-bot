@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,8 +53,7 @@ public class DnDHelper {
         StringBuilder description = new StringBuilder();
         for (int i = 0; i < sortedEntries.size(); i++) {
             int currentIndex = (initiativeIndex.get() + i) % sortedEntries.size();
-            description.append(sortedEntries.get(currentIndex).getKey()).append(": ")
-                    .append(sortedEntries.get(currentIndex).getValue()).append("\n");
+            description.append(sortedEntries.get(currentIndex).getKey()).append(": ").append(sortedEntries.get(currentIndex).getValue()).append("\n");
         }
         return description;
     }
@@ -115,16 +115,14 @@ public class DnDHelper {
         TableButtons initButtons = getInitButtons();
         MessageEmbed messageEmbed = embedBuilder.build();
         if (currentMessageEmbed == null) {
-                hook
-                    .sendMessageEmbeds(messageEmbed)
-                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
-                    .queue();
+            hook.sendMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
             hasEmbedForGuildMap.put(guildId, messageEmbed);
-        } else
-                hook
-                    .editOriginalEmbeds(messageEmbed)
-                    .setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next())
-                    .queue();
+            return;
+        }
+        // Existing embed is found, edit the original message
+        hook.editOriginalComponents(ActionRow.of(initButtons.prev(), initButtons.clear(), initButtons.next())).queue();
+        hook.editOriginalEmbeds(messageEmbed).queue();
+        hasEmbedForGuildMap.put(guildId, messageEmbed);
     }
 
 
@@ -145,7 +143,7 @@ public class DnDHelper {
     }
 
     public static void clearInitiative(long guildId, InteractionHook hook, Message message) {
-        if(message!=null) message.delete().queue();
+        if (message != null) message.delete().queue();
         hasEmbedForGuildMap.remove(guildId);
         initiativeIndex.setPlain(0);
         sortedEntries.clear();
