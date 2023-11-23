@@ -32,7 +32,7 @@ public class DnDHelper {
 
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
-        sortedEntries.sort(Map.Entry.comparingByValue());
+        sortedEntries.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
     }
 
     public static void rollInitiativeForString(List<String> nameList, Map<String, Integer> initiativeMap) {
