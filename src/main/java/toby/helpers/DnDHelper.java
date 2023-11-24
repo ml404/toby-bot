@@ -29,15 +29,16 @@ public class DnDHelper {
         List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm && !memberInChannel.getUser().isBot()).toList();
         if (nonDmMembers.isEmpty()) return;
         nonDmMembers.forEach(target -> rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName(), 0));
-
-        sortedEntries = new LinkedList<>(initiativeMap.entrySet());
-        // Sort the list based on values
-        sortedEntries.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
+        sortMap(initiativeMap);
     }
 
     public static void rollInitiativeForString(List<String> nameList, Map<String, Integer> initiativeMap) {
         if (nameList.isEmpty()) return;
         nameList.forEach(name -> rollAndAddToMap(initiativeMap, name, 0));
+        sortMap(initiativeMap);
+    }
+
+    private static void sortMap(Map<String, Integer> initiativeMap) {
         sortedEntries = new LinkedList<>(initiativeMap.entrySet());
         // Sort the list based on values
         sortedEntries.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
