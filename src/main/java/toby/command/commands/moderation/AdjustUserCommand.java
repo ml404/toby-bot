@@ -61,12 +61,12 @@ public class AdjustUserCommand implements IModerationCommand {
 
     private void validateArgumentsAndUpdateUser(SlashCommandInteractionEvent event, UserDto targetUserDto, Boolean isOwner, int deleteDelay) {
         Optional<String> permissionOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString);
+        Optional<Integer> modifierOptional = Optional.ofNullable(event.getOption(MODIFIER)).map(OptionMapping::getAsInt);
 
-        if (permissionOptional.isEmpty()) {
+        if (permissionOptional.isEmpty() && modifierOptional.isEmpty()) {
             event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
-        Optional<Integer> modifierOptional = Optional.ofNullable(event.getOption(MODIFIER)).map(OptionMapping::getAsInt);
         modifierOptional.ifPresent(targetUserDto::setInitiativeModifier);
         switch (UserDto.Permissions.valueOf(permissionOptional.get().toUpperCase())) {
             case MUSIC -> targetUserDto.setMusicPermission(!targetUserDto.hasMusicPermission());
