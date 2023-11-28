@@ -1,6 +1,7 @@
 package toby.command.commands.misc;
 
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class HelloThereCommandTest implements CommandTest {
         when(messageOption.getAsString()).thenReturn("2005/05/20");
         when(event.getOption("date")).thenReturn(messageOption);
 
-        UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null); // You can set the user as needed
+        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
 
         // Mock the event to return the MESSAGE option
         when(event.getOptions()).thenReturn(List.of(messageOption));
@@ -53,13 +54,14 @@ class HelloThereCommandTest implements CommandTest {
         verify(interactionHook, times(1)).sendMessage("General Kenobi.");
     }
 
+
     @Test
     public void testWithOptionBeforeEp3(){
         OptionMapping messageOption = Mockito.mock(OptionMapping.class);
         when(messageOption.getAsString()).thenReturn("2005/05/18");
         when(event.getOption("date")).thenReturn(messageOption);
 
-        UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null); // You can set the user as needed
+        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
 
         // Mock the event to return the MESSAGE option
 
@@ -77,7 +79,7 @@ class HelloThereCommandTest implements CommandTest {
     public void testWithNoOption(){
         OptionMapping messageOption = Mockito.mock(OptionMapping.class);
 
-        UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null); // You can set the user as needed
+        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
 
         // Mock the event to return the MESSAGE option
         when(event.getOption(anyString())).thenReturn(messageOption);
@@ -95,7 +97,7 @@ class HelloThereCommandTest implements CommandTest {
         when(messageOption.getAsString()).thenReturn("19/05/2005");
         when(event.getOption("date")).thenReturn(messageOption);
 
-        UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null); // You can set the user as needed
+        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
 
         // Mock the event to return the MESSAGE option
         when(event.getOptions()).thenReturn(List.of(messageOption));
@@ -107,4 +109,10 @@ class HelloThereCommandTest implements CommandTest {
 
         verify(interactionHook, times(1)).sendMessageFormat("I don't recognise the format of the date you gave me, please use this format %s", "yyyy/MM/dd");
     }
+
+    @NotNull
+    private static UserDto getUserDto() {
+        return new UserDto(1L, 1L, true, true, true, true, 0L, null);
+    }
+
 }

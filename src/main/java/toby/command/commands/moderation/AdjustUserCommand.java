@@ -20,6 +20,7 @@ import static toby.jpa.dto.UserDto.Permissions.*;
 
 public class AdjustUserCommand implements IModerationCommand {
 
+    public static final String MODIFIER = "modifier";
     private final IUserService userService;
     private final String PERMISSION_NAME = "name";
     private final String USERS = "users";
@@ -65,6 +66,8 @@ public class AdjustUserCommand implements IModerationCommand {
             event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
+        Optional<Integer> modifierOptional = Optional.ofNullable(event.getOption(MODIFIER)).map(OptionMapping::getAsInt);
+        modifierOptional.ifPresent(targetUserDto::setInitiativeModifier);
         switch (UserDto.Permissions.valueOf(permissionOptional.get().toUpperCase())) {
             case MUSIC -> targetUserDto.setMusicPermission(!targetUserDto.hasMusicPermission());
             case DIG -> targetUserDto.setDigPermission(!targetUserDto.hasDigPermission());
@@ -123,6 +126,7 @@ public class AdjustUserCommand implements IModerationCommand {
         permission.addChoice(MEME.name(), MEME.name());
         permission.addChoice(DIG.name(), DIG.name());
         permission.addChoice(SUPERUSER.name(), SUPERUSER.name());
-        return List.of(userOption, permission);
+        OptionData initiative = new OptionData(OptionType.INTEGER, MODIFIER, "modifier for the initiative command when used on your user");
+        return List.of(userOption, permission, initiative);
     }
 }

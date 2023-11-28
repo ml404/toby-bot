@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class TeamCommandTest implements CommandTest {
     public void testHandle_WithNoArgs() {
         // You can set up your test scenario here, including mocking event and UserDto.
         // Example:
-        UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null); // You can set the user as needed
+        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
         Integer deleteDelay = 0;
 
         // Create a CommandContext
@@ -85,7 +86,7 @@ class TeamCommandTest implements CommandTest {
         guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember1);
         guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember2);
 
-        UserDto requestingUserDto = new UserDto(1L, 1L, true, true, true, true, 0L, null); // You can set the user as needed
+        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
 
         // Create a CommandContext
         CommandContext ctx = new CommandContext(event);
@@ -96,6 +97,11 @@ class TeamCommandTest implements CommandTest {
         verify(event, times(1)).deferReply();
         verify(interactionHook, times(2)).sendMessageFormat(eq("Moved %s to '%s'"), anyString(), anyString());
         verify(interactionHook, times(1)).sendMessage(anyString());
+    }
+
+    @NotNull
+    private static UserDto getUserDto() {
+        return new UserDto(1L, 1L, true, true, true, true, 0L, null);
     }
 
     private static void guildMoveVoiceMemberMocking(VoiceChannel createdVoiceChannel, Member member) {

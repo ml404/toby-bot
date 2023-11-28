@@ -12,8 +12,11 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import toby.command.CommandContext;
 import toby.command.CommandTest;
+import toby.jpa.service.IUserService;
+import toby.jpa.service.impl.UserServiceImpl;
 
 import java.util.List;
 
@@ -23,14 +26,18 @@ class InitiativeCommandTest implements CommandTest {
 
     InitiativeCommand initiativeCommand;
 
+    @Mock
+    IUserService userService;
+
     @BeforeEach
     public void setup() {
         setUpCommonMocks();
+        userService = mock(UserServiceImpl.class);
         doReturn(webhookMessageCreateAction)
                 .when(interactionHook)
                 .sendMessageEmbeds(any(), any(MessageEmbed[].class));
 
-        initiativeCommand = new InitiativeCommand();
+        initiativeCommand = new InitiativeCommand(userService);
     }
 
     @AfterEach
