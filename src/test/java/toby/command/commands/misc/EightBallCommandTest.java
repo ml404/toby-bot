@@ -33,7 +33,7 @@ class EightBallCommandTest implements CommandTest {
     }
 
     @Test
-    public void testCommand_WithNotTom(){
+    public void testCommand_WithNotTom() {
         // Create a CommandContext
         CommandContext ctx = new CommandContext(event);
 
@@ -52,7 +52,7 @@ class EightBallCommandTest implements CommandTest {
     }
 
     @Test
-    public void testCommand_WithTom(){
+    public void testCommand_WithTom() {
         // Create a CommandContext
         CommandContext ctx = new CommandContext(event);
 

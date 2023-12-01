@@ -20,6 +20,7 @@ import static toby.jpa.dto.UserDto.Permissions.*;
 
 public class AdjustUserCommand implements IModerationCommand {
 
+    public static final String MODIFIER = "modifier";
     private final IUserService userService;
     private final String PERMISSION_NAME = "name";
     private final String USERS = "users";
@@ -60,11 +61,13 @@ public class AdjustUserCommand implements IModerationCommand {
 
     private void validateArgumentsAndUpdateUser(SlashCommandInteractionEvent event, UserDto targetUserDto, Boolean isOwner, int deleteDelay) {
         Optional<String> permissionOptional = Optional.ofNullable(event.getOption(PERMISSION_NAME)).map(OptionMapping::getAsString);
+        Optional<Integer> modifierOptional = Optional.ofNullable(event.getOption(MODIFIER)).map(OptionMapping::getAsInt);
 
-        if (permissionOptional.isEmpty()) {
+        if (permissionOptional.isEmpty() && modifierOptional.isEmpty()) {
             event.getHook().sendMessage("You did not mention a valid permission to update").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
             return;
         }
+        modifierOptional.ifPresent(targetUserDto::setInitiativeModifier);
         switch (UserDto.Permissions.valueOf(permissionOptional.get().toUpperCase())) {
             case MUSIC -> targetUserDto.setMusicPermission(!targetUserDto.hasMusicPermission());
             case DIG -> targetUserDto.setDigPermission(!targetUserDto.hasDigPermission());
@@ -123,6 +126,7 @@ public class AdjustUserCommand implements IModerationCommand {
         permission.addChoice(MEME.name(), MEME.name());
         permission.addChoice(DIG.name(), DIG.name());
         permission.addChoice(SUPERUSER.name(), SUPERUSER.name());
-        return List.of(userOption, permission);
+        OptionData initiative = new OptionData(OptionType.INTEGER, MODIFIER, "modifier for the initiative command when used on your user");
+        return List.of(userOption, permission, initiative);
     }
 }

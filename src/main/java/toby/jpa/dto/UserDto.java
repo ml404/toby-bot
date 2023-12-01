@@ -46,9 +46,16 @@ public class UserDto implements Serializable {
     @Column(name = "social_credit")
     private Long socialCredit = 0L;
 
+    @Column(name="initiative")
+    private int initiative = 0;
+
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "music_file_id", referencedColumnName = "id")
     private MusicDto musicDto;
+
+    public int getInitiative() {
+        return 0;
+    }
 
     public enum Permissions {
         MUSIC("music"),
@@ -69,8 +76,8 @@ public class UserDto implements Serializable {
         public static Boolean isValidEnum(String enumName) {
             return EnumUtils.isValidEnum(Permissions.class, enumName);
         }
-    }
 
+    }
     public UserDto() {
     }
 
@@ -83,6 +90,18 @@ public class UserDto implements Serializable {
         this.digPermission = digPermission;
         this.memePermission = memePermission;
         this.musicDto = musicDto;
+    }
+
+    public UserDto(Long discordId, Long guildId, boolean superUser, boolean musicPermission, boolean digPermission, boolean memePermission, Long socialCredit, int initiative, MusicDto musicDto) {
+        this.discordId = discordId;
+        this.guildId = guildId;
+        this.socialCredit = socialCredit;
+        this.superUser = superUser;
+        this.musicPermission = musicPermission;
+        this.digPermission = digPermission;
+        this.memePermission = memePermission;
+        this.musicDto = musicDto;
+        this.initiative = initiative;
     }
 
 
@@ -143,6 +162,14 @@ public class UserDto implements Serializable {
         this.socialCredit = socialCredit;
     }
 
+    public void setInitiativeModifier(Integer modifier) {
+        initiative = modifier;
+    }
+
+    public int getInitiativeModifier() {
+        return initiative;
+    }
+
     public MusicDto getMusicDto() {
         return musicDto;
     }
@@ -156,6 +183,7 @@ public class UserDto implements Serializable {
         return "User{" + "discordId='" + discordId +
                 "', guildId='" + guildId +
                 "', socialCredit='" + socialCredit +
+                "', initiative='" + initiative +
                 "', superUser='" + superUser +
                 "', musicPermission='" + musicPermission +
                 "', digPermission='" + digPermission +
@@ -181,6 +209,7 @@ public class UserDto implements Serializable {
                 .append(discordId, other.discordId)
                 .append(guildId, other.guildId)
                 .append(socialCredit, other.socialCredit)
+                .append(initiative, other.initiative)
                 .append(superUser, other.superUser)
                 .append(musicPermission, other.musicPermission)
                 .append(digPermission, other.digPermission)
@@ -195,6 +224,7 @@ public class UserDto implements Serializable {
                 .append(discordId)
                 .append(guildId)
                 .append(socialCredit)
+                .append(initiative)
                 .append(superUser)
                 .append(musicPermission)
                 .append(digPermission)

@@ -101,7 +101,7 @@ public class CommandManager {
         addCommand(new IntroSongCommand(userService, musicFileService, configService));
 
         //dnd commands
-        addCommand(new InitiativeCommand());
+        addCommand(new InitiativeCommand(userService));
         addCommand(new DnDCommand());
     }
 

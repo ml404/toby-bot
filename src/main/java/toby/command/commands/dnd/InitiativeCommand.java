@@ -12,9 +12,9 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.jetbrains.annotations.NotNull;
 import toby.command.CommandContext;
-import toby.command.ICommand;
 import toby.helpers.DnDHelper;
 import toby.jpa.dto.UserDto;
+import toby.jpa.service.IUserService;
 
 import java.util.*;
 
@@ -23,6 +23,12 @@ import static toby.helpers.DnDHelper.rollInitiativeForMembers;
 import static toby.helpers.DnDHelper.rollInitiativeForString;
 
 public class InitiativeCommand implements IDnDCommand {
+
+    private IUserService userService;
+
+    public InitiativeCommand(IUserService userService){
+        this.userService = userService;
+    }
 
     @Override
     public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
@@ -44,7 +50,7 @@ public class InitiativeCommand implements IDnDCommand {
         if (!nameList.isEmpty()) {
             rollInitiativeForString(nameList, initiativeMap);
         } else {
-            rollInitiativeForMembers(memberList, dm, initiativeMap);
+            rollInitiativeForMembers(memberList, dm, initiativeMap, userService);
         }
         if (checkForNonDmMembersInVoiceChannel(deleteDelay, event)) return;
         displayAllValues(hook, deleteDelay);

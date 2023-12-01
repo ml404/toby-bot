@@ -1,10 +1,7 @@
 package toby.helpers;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
@@ -19,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import toby.jpa.service.IUserService;
+import toby.jpa.service.impl.UserServiceImpl;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,11 +40,18 @@ class DnDHelperTest {
 
     @Mock
     Member member;
+
+    @Mock
+    Guild guild;
+
     @Mock
     private WebhookMessageEditAction webhookMessageEditAction;
 
     @Mock
     WebhookMessageCreateAction webhookMessageCreateAction;
+
+    @Mock
+    IUserService userService;
     @Mock
     private MessageEditAction messageEditAction;
     private List<Member> memberList;
@@ -61,10 +67,16 @@ class DnDHelperTest {
         User user1 = mock(User.class);
         User user2 = mock(User.class);
         User user3 = mock(User.class);
+        userService = mock(UserServiceImpl.class);
         memberList = Arrays.asList(player1, player2, player3);
         when(player1.getUser()).thenReturn(user1);
         when(player2.getUser()).thenReturn(user2);
         when(player3.getUser()).thenReturn(user3);
+        guild = mock(Guild.class);
+        when(player1.getGuild()).thenReturn(guild);
+        when(player2.getGuild()).thenReturn(guild);
+        when(player3.getGuild()).thenReturn(guild);
+        when(guild.getIdLong()).thenReturn(1L);
         when(user1.isBot()).thenReturn(false);
         when(user2.isBot()).thenReturn(false);
         when(user3.isBot()).thenReturn(false);
@@ -95,6 +107,8 @@ class DnDHelperTest {
         reset(message);
         reset(event);
         reset(messageEditAction);
+        reset(userService);
+        reset(guild);
         DnDHelper.clearInitiative();
     }
 
@@ -122,7 +136,7 @@ class DnDHelperTest {
         when(webhookMessageCreateAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageCreateAction);
         when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
 
-        DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
+        DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap, userService);
         DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null, 0);
         DnDHelper.incrementTurnTable(hook, event, 0);
         verifySetActionRows(webhookMessageCreateAction, messageEditAction);
@@ -149,7 +163,7 @@ class DnDHelperTest {
             when(webhookMessageCreateAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageCreateAction);
             when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
 
-            DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
+            DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap, userService);
             DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null, 0);
             DnDHelper.decrementTurnTable(hook, event, 0);
             verifySetActionRows(webhookMessageCreateAction, messageEditAction);
@@ -186,7 +200,7 @@ class DnDHelperTest {
     void testClearInitiative() {
         long guildId = 123456789L;
 
-        DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap);
+        DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap, userService);
         DnDHelper.clearInitiative();
 
         assertEquals(0, DnDHelper.getInitiativeIndex().get());

@@ -10,6 +10,8 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
+import toby.jpa.dto.UserDto;
+import toby.jpa.service.IUserService;
 
 import java.awt.*;
 import java.util.List;
@@ -25,10 +27,13 @@ public class DnDHelper {
 
     private static LinkedList<Map.Entry<String, Integer>> sortedEntries = new LinkedList<>();
 
-    public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<String, Integer> initiativeMap) {
+    public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<String, Integer> initiativeMap, IUserService userService) {
         List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm && !memberInChannel.getUser().isBot()).toList();
         if (nonDmMembers.isEmpty()) return;
-        nonDmMembers.forEach(target -> rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName(), 0));
+        nonDmMembers.forEach(target -> {
+            UserDto userDto = UserDtoHelper.calculateUserDto(target.getGuild().getIdLong(), target.getIdLong(), target.isOwner(), userService, 20);
+            rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName(), userDto!= null ? userDto.getInitiative() : 0);
+        });
         sortMap(initiativeMap);
     }
 
