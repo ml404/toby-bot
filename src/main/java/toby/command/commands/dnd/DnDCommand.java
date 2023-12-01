@@ -138,7 +138,8 @@ public class DnDCommand implements IDnDCommand, IFetchCommand{
 
         }
         if (spell.range() != null) {
-            embedBuilder.addField("Range", transformToMeters(Integer.parseInt(spell.range().split(" ")[0])) + "m", true);
+            String meterValue = (spell.range().equals("Touch")) ? "Touch" : transformToMeters(Integer.parseInt(spell.range().split(" ")[0])) + "m";
+            embedBuilder.addField("Range", meterValue, true);
         }
 
         if (spell.components() != null && !spell.components().isEmpty()) {
