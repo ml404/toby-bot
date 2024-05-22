@@ -1,9 +1,6 @@
-package toby.menu;
+package toby.menu
 
-public interface IMenu {
-
-    void handle(MenuContext ctx, Integer deleteDelay);
-
-    String getName();
-
+interface IMenu {
+    fun handle(ctx: MenuContext, deleteDelay: Int)
+    val name: String
 }

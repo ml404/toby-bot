@@ -1,86 +1,78 @@
-package jpa;
+package jpa
 
-import org.apache.commons.collections4.IterableUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import toby.Application;
-import toby.jpa.dto.BrotherDto;
-import toby.jpa.service.IBrotherService;
+import org.apache.commons.collections4.IterableUtils
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
+import toby.Application
+import toby.jpa.dto.BrotherDto
+import toby.jpa.service.IBrotherService
 
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-@SpringBootTest(classes = Application.class)
+@SpringBootTest(classes = [Application::class])
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("test")
-public class BrotherServiceImplIntegrationTest {
-
+class BrotherServiceImplIntegrationTest {
     @Autowired
-    private IBrotherService brotherService;
+    private val brotherService: IBrotherService? = null
 
     @BeforeEach
-    public void setUp() {
-        brotherService.clearCache();
-        brotherService.deleteBrotherById(6L);
+    fun setUp() {
+        brotherService!!.clearCache()
+        brotherService.deleteBrotherById(6L)
     }
 
     @AfterEach
-    public void cleanDb() {
-        brotherService.deleteBrotherById(6L);
+    fun cleanDb() {
+        brotherService!!.deleteBrotherById(6L)
     }
 
     @Test
-    public void testDataSQL() {
-        assertEquals(3, IterableUtils.toList(brotherService.listBrothers()).size());
+    fun testDataSQL() {
+        Assertions.assertEquals(3, IterableUtils.toList(brotherService!!.listBrothers()).size)
     }
 
     @Test
-    public void whenValidDiscordId_thenBrotherShouldBeFound() {
-        BrotherDto brotherDto = new BrotherDto(6L, "a");
-        brotherService.createNewBrother(brotherDto);
-        Optional<BrotherDto> dbBrotherOptional = brotherService.getBrotherById(brotherDto.getDiscordId());
+    fun whenValidDiscordId_thenBrotherShouldBeFound() {
+        val brotherDto = BrotherDto(6L, "a")
+        brotherService!!.createNewBrother(brotherDto)
+        val dbBrother: BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
 
-        assertTrue(dbBrotherOptional.isPresent());
-        BrotherDto dbBrother = dbBrotherOptional.get();
-        assertEquals(dbBrother.getDiscordId(), brotherDto.getDiscordId());
-        assertEquals(dbBrother.getBrotherName(), brotherDto.getBrotherName());
-        brotherService.deleteBrotherById(6L);
+        assertNotNull(dbBrother)
+        Assertions.assertEquals(dbBrother?.discordId, brotherDto.discordId)
+        Assertions.assertEquals(dbBrother?.brotherName, brotherDto.brotherName)
+        brotherService.deleteBrotherById(6L)
     }
 
     @Test
-    public void testUpdate_thenNewBrotherShouldBeReturned() {
-        int originalBrotherSize = IterableUtils.toList(brotherService.listBrothers()).size();
+    fun testUpdate_thenNewBrotherShouldBeReturned() {
+        val originalBrotherSize = IterableUtils.toList(brotherService!!.listBrothers()).size
 
-        BrotherDto brotherDto = new BrotherDto(6L, "a");
-        brotherService.createNewBrother(brotherDto);
-        Optional<BrotherDto> brotherDtoOptional1 = brotherService.getBrotherById(brotherDto.getDiscordId());
+        val brotherDto = BrotherDto(6L, "a")
+        brotherService.createNewBrother(brotherDto)
+        val dbBrother1: BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
 
-        BrotherDto brotherDtoUpdated = new BrotherDto(6L, "b");
-        brotherService.updateBrother(brotherDtoUpdated);
-        brotherService.clearCache(); // Clear the cache
+        val brotherDtoUpdated = BrotherDto(6L, "b")
+        brotherService.updateBrother(brotherDtoUpdated)
+        brotherService.clearCache() // Clear the cache
 
-        int expectedBrotherSize = originalBrotherSize + 1;
+        val expectedBrotherSize = originalBrotherSize + 1
 
-        Optional<BrotherDto> brotherDtoOptional2 = brotherService.getBrotherById(brotherDto.getDiscordId());
+        val dbBrother2: BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
 
-        assertTrue(brotherDtoOptional1.isPresent());
-        assertTrue(brotherDtoOptional2.isPresent());
+        assertNotNull(dbBrother1)
+        assertNotNull(dbBrother2)
 
-        BrotherDto dbBrother1 = brotherDtoOptional1.get();
-        BrotherDto dbBrother2 = brotherDtoOptional2.get();
-
-        assertEquals(dbBrother1.getDiscordId(), brotherDto.getDiscordId());
-        assertEquals(dbBrother1.getBrotherName(), brotherDto.getBrotherName());
-        assertEquals(dbBrother2.getDiscordId(), brotherDtoUpdated.getDiscordId());
-        assertEquals(dbBrother2.getBrotherName(), brotherDtoUpdated.getBrotherName());
-        assertEquals(expectedBrotherSize, originalBrotherSize + 1);
-        brotherService.deleteBrotherById(6L);
+        Assertions.assertEquals(dbBrother1?.discordId, brotherDto.discordId)
+        Assertions.assertEquals(dbBrother1?.brotherName, brotherDto.brotherName)
+        Assertions.assertEquals(dbBrother2?.discordId, brotherDtoUpdated.discordId)
+        Assertions.assertEquals(dbBrother2?.brotherName, brotherDtoUpdated.brotherName)
+        Assertions.assertEquals(expectedBrotherSize, originalBrotherSize + 1)
+        brotherService.deleteBrotherById(6L)
     }
 }

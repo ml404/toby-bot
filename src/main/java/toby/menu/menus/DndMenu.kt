@@ -1,47 +1,51 @@
-package toby.menu.menus;
+package toby.menu.menus
 
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
-import toby.helpers.HttpHelper;
-import toby.menu.IMenu;
-import toby.menu.MenuContext;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
+import toby.command.commands.dnd.DnDCommand
+import toby.command.commands.dnd.DnDCommand.Companion.doLookUpAndReply
+import toby.helpers.HttpHelper
+import toby.menu.IMenu
+import toby.menu.MenuContext
+import java.io.UnsupportedEncodingException
 
-import java.io.UnsupportedEncodingException;
-
-import static toby.command.commands.dnd.DnDCommand.*;
-
-public class DndMenu implements IMenu {
-    @Override
-    public void handle(MenuContext ctx, Integer deleteDelay) {
-        StringSelectInteractionEvent event = ctx.getSelectEvent();
-        event.deferReply().queue();
+class DndMenu : IMenu {
+    override fun handle(ctx: MenuContext, deleteDelay: Int) {
+        val event = ctx.selectEvent
+        event.deferReply().queue()
         try {
-            determineDnDRequestType(event, deleteDelay, getType(event));
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
+            determineDnDRequestType(event, deleteDelay, getType(event))
+        } catch (e: UnsupportedEncodingException) {
+            throw RuntimeException(e)
         }
     }
 
-    private void determineDnDRequestType(StringSelectInteractionEvent event, Integer deleteDelay, String type) throws UnsupportedEncodingException {
-        switch (type) {
-            case SPELL_NAME -> sendDndApiRequest(event, SPELL_NAME, "spells", deleteDelay);
-            case CONDITION_NAME-> sendDndApiRequest(event, CONDITION_NAME, "conditions", deleteDelay);
-            case RULE_NAME-> sendDndApiRequest(event, RULE_NAME, "rule-sections", deleteDelay);
-            case FEATURE_NAME -> sendDndApiRequest(event, FEATURE_NAME, "features", deleteDelay);
+    @Throws(UnsupportedEncodingException::class)
+    private fun determineDnDRequestType(event: StringSelectInteractionEvent, deleteDelay: Int, type: String) {
+        when (type) {
+            DnDCommand.SPELL_NAME -> sendDndApiRequest(event, DnDCommand.SPELL_NAME, "spells", deleteDelay)
+            DnDCommand.CONDITION_NAME -> sendDndApiRequest(event, DnDCommand.CONDITION_NAME, "conditions", deleteDelay)
+            DnDCommand.RULE_NAME -> sendDndApiRequest(event, DnDCommand.RULE_NAME, "rule-sections", deleteDelay)
+            DnDCommand.FEATURE_NAME -> sendDndApiRequest(event, DnDCommand.FEATURE_NAME, "features", deleteDelay)
         }
     }
 
-    private void sendDndApiRequest(StringSelectInteractionEvent event, String typeName, String typeValue, Integer deleteDelay) {
-        String query = event.getValues().get(0); // Get the selected option
-        event.getMessage().delete().queue();
-        doLookUpAndReply(event.getHook(), typeName, typeValue, query, new HttpHelper(), deleteDelay);
+    private fun sendDndApiRequest(
+        event: StringSelectInteractionEvent,
+        typeName: String,
+        typeValue: String,
+        deleteDelay: Int
+    ) {
+        val query = event.values[0] // Get the selected option
+        event.message.delete().queue()
+        doLookUpAndReply(event.hook, typeName, typeValue, query, HttpHelper(), deleteDelay)
     }
 
-    private static String getType(StringSelectInteractionEvent event) {
-        return event.getComponentId().split(":")[1];
-    }
+    override val name: String
+        get() = "dnd"
 
-    public String getName() {
-        return "dnd";
+    companion object {
+        private fun getType(event: StringSelectInteractionEvent): String {
+            return event.componentId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
+        }
     }
-
 }

@@ -1,98 +1,61 @@
-package toby.jpa.dto;
+package toby.jpa.dto
 
-import jakarta.persistence.*;
-import org.apache.commons.lang3.EnumUtils;
-import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.*
+import org.apache.commons.lang3.EnumUtils
+import org.springframework.transaction.annotation.Transactional
+import java.io.Serializable
 
-import java.io.Serializable;
-
-
-@NamedQueries({
-        @NamedQuery(name = "ConfigDto.getAll",
-                query = "select a from ConfigDto as a"),
-
-        @NamedQuery(name = "ConfigDto.getGuildAll",
-                query = "select a from ConfigDto as a WHERE a.guildId = :guildId "),
-
-        @NamedQuery(name =  "ConfigDto.getValue",
-                query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guildId OR a.guildId = 'all')")
-})
-
+@NamedQueries(
+    NamedQuery(name = "ConfigDto.getAll", query = "select a from ConfigDto as a"),
+    NamedQuery(name = "ConfigDto.getGuildAll", query = "select a from ConfigDto as a WHERE a.guildId = :guildId "),
+    NamedQuery(
+        name = "ConfigDto.getValue",
+        query = "select a from ConfigDto as a WHERE a.name = :name AND (a.guildId = :guildId OR a.guildId = 'all')"
+    )
+)
 @Entity
-@Table(name="config", schema ="public")
+@Table(name = "config", schema = "public")
 @Transactional
-public class ConfigDto implements Serializable {
-
+class ConfigDto : Serializable {
+    @JvmField
     @Id
     @Column(name = "name")
-    private String name;
+    var name: String? = null
+
     @Column(name = "\"value\"")
-    private String value;
+    var value: String? = null
+
+    @JvmField
     @Id
     @Column(name = "guild_id")
-    private String guildId;
+    var guildId: String? = null
 
 
-    public enum Configurations {
+    enum class Configurations(@JvmField val configValue: String) {
         VOLUME("DEFAULT_VOLUME"),
         MOVE("DEFAULT_MOVE_CHANNEL"),
         DELETE_DELAY("DELETE_MESSAGE_DELAY");
 
-        private final String configValue;
-
-        Configurations(String configName) {
-            this.configValue = configName;
-        }
-
-        public String getConfigValue() {
-            return this.configValue;
-        }
-
-        public static Boolean isValidEnum(String enumName) {
-            return EnumUtils.isValidEnum(ConfigDto.Configurations.class, enumName);
+        companion object {
+            fun isValidEnum(enumName: String?): Boolean {
+                return EnumUtils.isValidEnum(Configurations::class.java, enumName)
+            }
         }
     }
 
-    public ConfigDto(){
-    }
+    constructor()
 
-    public ConfigDto(String name, String value, String guildId) {
-        this.name = name;
-        this.value = value;
-        this.guildId = guildId;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
+    constructor(name: String?, value: String?, guildId: String?) {
+        this.name = name
+        this.value = value
+        this.guildId = guildId
     }
 
 
-    public String getGuildId() {
-        return guildId;
-    }
-
-    public void setGuildId(String guildId) {
-        this.guildId = guildId;
-    }
-
-    @Override
-    public String toString() {
+    override fun toString(): String {
         return "ConfigDto{" + "name='" + name +
                 ", value=" + value +
                 ", guildId=" + guildId +
-                '}';
+                '}'
     }
-
 }

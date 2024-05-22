@@ -1,6 +1,5 @@
-package toby.command.commands.dnd;
+package toby.command.commands.dnd
 
-import toby.command.ICommand;
+import toby.command.ICommand
 
-public interface IDnDCommand extends ICommand {
-}
+interface IDnDCommand : ICommand

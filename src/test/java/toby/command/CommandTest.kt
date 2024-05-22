@@ -1,137 +1,140 @@
-package toby.command;
+package toby.command
 
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.requests.RestAction;
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
-import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
-import net.dv8tion.jda.internal.requests.restaction.WebhookMessageCreateActionImpl;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mock;
-import toby.jpa.dto.UserDto;
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.requests.RestAction
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
+import net.dv8tion.jda.internal.requests.restaction.WebhookMessageCreateActionImpl
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.kotlin.anyVararg
+import toby.jpa.dto.UserDto
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-public interface CommandTest {
-
-    @Mock
-    SlashCommandInteractionEvent event = mock(SlashCommandInteractionEvent.class);
-
-    @Mock
-    InteractionHook interactionHook = mock(InteractionHook.class);
-
-    @Mock
-    Message message = mock(Message.class);
-
-    @Mock
-    Guild guild = mock(Guild.class);
-
-    @Mock
-    User user = mock(User.class);
-
-    @Mock
-    JDA jda = mock(JDA.class);
-
-    @Mock
-    Member member = mock(Member.class);
-    @Mock
-    Member targetMember = mock(Member.class);
-    @Mock
-    Member botMember = mock(Member.class);
-    @Mock
-    MessageChannelUnion messageChannelUnion = mock(MessageChannelUnion.class);
-
-
-    @Mock
-    UserDto requestingUserDto = mock(UserDto.class);
-
-    @Mock
-    WebhookMessageCreateAction<Message> webhookMessageCreateAction = mock(WebhookMessageCreateActionImpl.class);
-
-    @Mock
-    MessageCreateAction messageCreateAction = mock(MessageCreateAction.class);
-
-    @Mock
-    ReplyCallbackAction replyCallbackAction = mock(ReplyCallbackAction.class);
-    @Mock
-    RestAction restAction = mock(RestAction.class);
-
-
+interface CommandTest {
     @BeforeEach
-    default void setUpCommonMocks() {
-        when(event.getHook()).thenReturn(interactionHook);
-        when(event.deferReply()).thenReturn(replyCallbackAction);
-        when(event.deferReply()).thenReturn(replyCallbackAction);
-        when(event.getGuild()).thenReturn(guild);
-        when(event.getUser()).thenReturn(user);
-        when(event.reply(anyString())).thenReturn(replyCallbackAction);
-        when(event.replyFormat(anyString(), any())).thenReturn(replyCallbackAction);
+    fun setUpCommonMocks() {
+        Mockito.`when`(event.hook).thenReturn(interactionHook)
+        Mockito.`when`(event.deferReply()).thenReturn(replyCallbackAction)
+        Mockito.`when`(event.deferReply()).thenReturn(replyCallbackAction)
+        Mockito.`when`(event.guild).thenReturn(guild)
+        Mockito.`when`(event.user).thenReturn(user)
+        Mockito.`when`(event.reply(anyString())).thenReturn(replyCallbackAction)
+        Mockito.`when`(event.replyFormat(anyString(), any())).thenReturn(replyCallbackAction)
+        Mockito.`when`(replyCallbackAction.setEphemeral(anyBoolean())).thenReturn(replyCallbackAction)
         //refers to the user making the call
-        when(event.getMember()).thenReturn(member);
-        when(event.getChannel()).thenReturn(messageChannelUnion);
-        when(user.getEffectiveName()).thenReturn("UserName");
-        when(user.getName()).thenReturn("UserName");
-        when(user.isBot()).thenReturn(false);
-        when(interactionHook.deleteOriginal()).thenReturn(restAction);
-        when(interactionHook.sendMessage(anyString())).thenReturn(webhookMessageCreateAction);
-        when(interactionHook.sendMessageFormat(anyString(), any(Object[].class))).thenReturn(webhookMessageCreateAction);
-        when(interactionHook.retrieveOriginal()).thenReturn(restAction);
-        when(webhookMessageCreateAction.addActionRow(anyCollection())).thenReturn(webhookMessageCreateAction);
-        when(webhookMessageCreateAction.addContent(anyString())).thenReturn(webhookMessageCreateAction);
-        when(webhookMessageCreateAction.setEphemeral(anyBoolean())).thenReturn(webhookMessageCreateAction);
-        when(messageChannelUnion.sendMessage(anyString())).thenReturn(messageCreateAction);
-        when(messageCreateAction.addContent(anyString())).thenReturn(messageCreateAction);
-        when(guild.getJDA()).thenReturn(jda);
-        when(guild.getIdLong()).thenReturn(1L);
-        when(guild.getOwner()).thenReturn(member);
-        when(guild.getId()).thenReturn("1");
+        Mockito.`when`(event.member).thenReturn(member)
+        Mockito.`when`(event.channel).thenReturn(messageChannelUnion)
+        Mockito.`when`(user.effectiveName).thenReturn("UserName")
+        Mockito.`when`(user.name).thenReturn("UserName")
+        Mockito.`when`(user.isBot).thenReturn(false)
+        Mockito.`when`(interactionHook.deleteOriginal()).thenReturn(restAction as RestAction<Void>)
+        Mockito.`when`(interactionHook.sendMessage(anyString())).thenReturn(webhookMessageCreateAction as WebhookMessageCreateAction<Message>)
+        Mockito.`when`(interactionHook.sendMessageFormat(anyString(), any(Array<Any>::class.java))).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(interactionHook.retrieveOriginal()).thenReturn(restAction as RestAction<Message>)
+        Mockito.`when`(interactionHook.sendMessageEmbeds(any(), anyVararg())).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(webhookMessageCreateAction.addActionRow(anyCollection())).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(webhookMessageCreateAction.addContent(anyString())).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(webhookMessageCreateAction.setEphemeral(anyBoolean())).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(messageChannelUnion.sendMessage(anyString())).thenReturn(messageCreateAction)
+        Mockito.`when`(messageCreateAction.addContent(anyString())).thenReturn(messageCreateAction)
+        Mockito.`when`(guild.jda).thenReturn(jda)
+        Mockito.`when`(guild.idLong).thenReturn(1L)
+        Mockito.`when`(guild.owner).thenReturn(member)
+        Mockito.`when`(requestingUserDto.guildId).thenReturn(1L)
         //refers to toby-bot usually
-        when(guild.getSelfMember()).thenReturn(botMember);
-        when(member.getNickname()).thenReturn("Member Nickname");
-        when(member.getEffectiveName()).thenReturn("Effective Name");
-        when(member.getGuild()).thenReturn(guild);
-        when(targetMember.getNickname()).thenReturn("Target Nickname");
-        when(targetMember.getEffectiveName()).thenReturn("Target Effective Name");
-        when(targetMember.getGuild()).thenReturn(guild);
-        when(botMember.getNickname()).thenReturn("Bot Nickname");
-        when(botMember.getEffectiveName()).thenReturn("Bot Effective Name");
-        when(botMember.getGuild()).thenReturn(guild);
-        when(requestingUserDto.isSuperUser()).thenReturn(true);
-        when(requestingUserDto.hasMemePermission()).thenReturn(true);
-        when(requestingUserDto.hasMusicPermission()).thenReturn(true);
-        when(requestingUserDto.hasDigPermission()).thenReturn(true);
-        when(requestingUserDto.getDiscordId()).thenReturn(1L);
-        when(requestingUserDto.getGuildId()).thenReturn(1L);
-        when(requestingUserDto.getSocialCredit()).thenReturn(0L);
-        when(requestingUserDto.getMusicDto()).thenReturn(null);
-
-
+        Mockito.`when`(guild.selfMember).thenReturn(botMember)
+        Mockito.`when`(member.nickname).thenReturn("Member Nickname")
+        Mockito.`when`(member.effectiveName).thenReturn("Effective Name")
+        Mockito.`when`(member.guild).thenReturn(guild)
+        Mockito.`when`(targetMember.nickname).thenReturn("Target Nickname")
+        Mockito.`when`(targetMember.effectiveName).thenReturn("Target Effective Name")
+        Mockito.`when`(targetMember.guild).thenReturn(guild)
+        Mockito.`when`(botMember.nickname).thenReturn("Bot Nickname")
+        Mockito.`when`(botMember.effectiveName).thenReturn("Bot Effective Name")
+        Mockito.`when`(botMember.guild).thenReturn(guild)
+        Mockito.`when`(requestingUserDto.superUser).thenReturn(true)
+        Mockito.`when`(requestingUserDto.memePermission).thenReturn(true)
+        Mockito.`when`(requestingUserDto.musicPermission).thenReturn(true)
+        Mockito.`when`(requestingUserDto.digPermission).thenReturn(true)
+        Mockito.`when`(requestingUserDto.discordId).thenReturn(1L)
+        Mockito.`when`(requestingUserDto.guildId).thenReturn(1L)
+        Mockito.`when`(requestingUserDto.socialCredit).thenReturn(0L)
+        Mockito.`when`(requestingUserDto.musicDto).thenReturn(null)
     }
 
     @AfterEach
-    default void tearDownCommonMocks() {
-        reset(event);
-        reset(user);
-        reset(requestingUserDto);
-        reset(guild);
-        reset(interactionHook);
-        reset(webhookMessageCreateAction);
-        reset(jda);
-        reset(message);
-        reset(messageCreateAction);
-        reset(botMember);
-        reset(member);
-        reset(targetMember);
-        reset(replyCallbackAction);
+    fun tearDownCommonMocks() {
+        Mockito.reset(event)
+        Mockito.reset(user)
+        Mockito.reset(requestingUserDto)
+        Mockito.reset(guild)
+        Mockito.reset(interactionHook)
+        Mockito.reset(webhookMessageCreateAction)
+        Mockito.reset(jda)
+        Mockito.reset(message)
+        Mockito.reset(messageCreateAction)
+        Mockito.reset(botMember)
+        Mockito.reset(member)
+        Mockito.reset(targetMember)
+        Mockito.reset(replyCallbackAction)
     }
 
+    companion object {
+        @Mock
+        val event: SlashCommandInteractionEvent = Mockito.mock(
+            SlashCommandInteractionEvent::class.java
+        )
+
+        @Mock
+        val interactionHook: InteractionHook = Mockito.mock(InteractionHook::class.java)
+
+        @Mock
+        val message: Message = Mockito.mock(Message::class.java)
+
+        @Mock
+        val guild: Guild = Mockito.mock(Guild::class.java)
+
+        @Mock
+        val user: User = Mockito.mock(User::class.java)
+
+        @Mock
+        val jda: JDA = Mockito.mock(JDA::class.java)
+
+        @Mock
+        val member: Member = Mockito.mock(Member::class.java)
+
+        @Mock
+        val targetMember: Member = Mockito.mock(Member::class.java)
+
+        @Mock
+        val botMember: Member = Mockito.mock(Member::class.java)
+
+        @Mock
+        val messageChannelUnion: MessageChannelUnion = Mockito.mock(MessageChannelUnion::class.java)
+
+
+        @Mock
+        val requestingUserDto: UserDto = Mockito.mock(UserDto::class.java)
+
+        @Mock
+        val webhookMessageCreateAction: WebhookMessageCreateActionImpl<Message> =
+            Mockito.mock(WebhookMessageCreateActionImpl::class.java) as WebhookMessageCreateActionImpl<Message>
+
+        @Mock
+        val messageCreateAction: MessageCreateAction = Mockito.mock(MessageCreateAction::class.java)
+
+        @Mock
+        val replyCallbackAction: ReplyCallbackAction = Mockito.mock(ReplyCallbackAction::class.java)
+
+        @Mock
+        val restAction: RestAction<*>? = Mockito.mock(RestAction::class.java)
+    }
 }

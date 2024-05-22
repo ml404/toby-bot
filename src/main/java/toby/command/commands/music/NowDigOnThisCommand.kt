@@ -1,84 +1,61 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import toby.command.CommandContext;
-import toby.helpers.URLHelper;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.GuildMusicManager;
-import toby.lavaplayer.PlayerManager;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.helpers.MusicPlayerHelper
+import toby.helpers.URLHelper
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.PlayerManager
+import java.util.*
 
-import java.util.List;
-import java.util.Optional;
-
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-import static toby.helpers.MusicPlayerHelper.adjustTrackPlayingTimes;
-
-
-public class NowDigOnThisCommand implements IMusicCommand {
-
-    private final String LINK = "link";
-    private final String START_POSITION = "start";
-    private final String VOLUME = "volume";
-
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+class NowDigOnThisCommand : IMusicCommand {
+    private val LINK = "link"
+    private val START_POSITION = "start"
+    private val VOLUME = "volume"
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        if (requestingUserDto.hasDigPermission()) {
-            Optional<String> linkOptional = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString);
-            if (linkOptional.isEmpty()) {
-                event.getHook().sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(invokeDeleteOnMessageResponse(deleteDelay));
-                return;
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        if (requestingUserDto.digPermission) {
+            val linkOptional = Optional.ofNullable(event.getOption(LINK)).map { obj: OptionMapping -> obj.asString }
+            if (linkOptional.isEmpty) {
+                event.hook.sendMessageFormat("Correct usage is `%snowdigonthis <youtube linkOptional>`", "/").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                return
             }
-            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-            String link = linkOptional.get();
-            if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:" + linkOptional;
-            Long startPosition = adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map(OptionMapping::getAsLong).orElse(0L));
-            GuildMusicManager musicManager = instance.getMusicManager(ctx.getGuild());
-            int volume = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt).orElse(musicManager.getAudioPlayer().getVolume());
-            if (musicManager.getScheduler().getQueue().isEmpty()) {
-                musicManager.getAudioPlayer().setVolume(volume);
+            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+            var link = linkOptional.get()
+            if (link.contains("youtube") && !URLHelper.isValidURL(link)) link = "ytsearch:$linkOptional"
+            val startPosition = MusicPlayerHelper.adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map { obj: OptionMapping -> obj.asLong }.orElse(0L))
+            val musicManager = instance.getMusicManager(ctx.guild)
+            val volume = Optional.ofNullable(event.getOption(VOLUME)).map { obj: OptionMapping -> obj.asInt }.orElse(musicManager.audioPlayer.volume)
+            if (musicManager.scheduler.queue.isEmpty()) {
+                musicManager.audioPlayer.volume = volume
             }
-            instance.loadAndPlay(ctx.getGuild(), event, link, false, deleteDelay, startPosition, volume);
-        } else
-            sendErrorMessage(event, deleteDelay);
+            instance.loadAndPlay(ctx.guild, event, link, false, deleteDelay!!, startPosition, volume)
+        } else sendErrorMessage(event, deleteDelay)
     }
 
+    override val name: String get() = "nowdigonthis"
+    override val description: String get() = "Plays a song which cannot be skipped"
 
-    @Override
-    public String getName() {
-        return "nowdigonthis";
+    override fun getErrorMessage(name: String?): String = "I'm gonna put some dirt in your eye $name"
+
+    fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int?) {
+        event.hook.sendMessage(getErrorMessage(event.member!!.effectiveName)).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
-    @Override
-    public String getDescription() {
-        return "Plays a song which cannot be skipped";
-    }
-
-    @Override
-    public String getErrorMessage(String name) {
-        return String.format("I'm gonna put some dirt in your eye %s", name);
-    }
-
-    @Override
-    public void sendErrorMessage(SlashCommandInteractionEvent event, Integer deleteDelay) {
-        event.getHook().sendMessage(getErrorMessage(event.getMember().getEffectiveName())).queue(invokeDeleteOnMessageResponse(deleteDelay));
-    }
-
-    @Override
-    public List<OptionData> getOptionData() {
-        OptionData linkArg = new OptionData(OptionType.STRING, LINK, "Link to play that cannot be stopped unless requested by a super user", true);
-        OptionData startPositionArg = new OptionData(OptionType.NUMBER, START_POSITION, "Start position of the track in seconds");
-        OptionData volume = new OptionData(OptionType.INTEGER, VOLUME, "Volume to play at");
-
-        return List.of(linkArg, volume, startPositionArg);
-    }
+    override val optionData: List<OptionData>
+        get() {
+            val linkArg = OptionData(OptionType.STRING, LINK, "Link to play that cannot be stopped unless requested by a super user", true)
+            val startPositionArg = OptionData(OptionType.NUMBER, START_POSITION, "Start position of the track in seconds")
+            val volume = OptionData(OptionType.INTEGER, VOLUME, "Volume to play at")
+            return listOf(linkArg, volume, startPositionArg)
+        }
 }

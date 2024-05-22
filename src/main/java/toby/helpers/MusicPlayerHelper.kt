@@ -1,249 +1,308 @@
-package toby.helpers;
+package toby.helpers
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.channel.Channel;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.Interaction;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import org.springframework.web.ErrorResponseException;
-import toby.jpa.dto.MusicDto;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.GuildMusicManager;
-import toby.lavaplayer.PlayerManager;
-import toby.lavaplayer.TrackScheduler;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.channel.Channel
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import org.springframework.web.ErrorResponseException
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand.Companion.sendDeniedStoppableMessage
+import toby.jpa.dto.MusicDto
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.GuildMusicManager
+import toby.lavaplayer.PlayerManager
+import java.net.URI
+import java.util.concurrent.TimeUnit
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+object MusicPlayerHelper {
+    private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
 
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-import static toby.command.commands.music.IMusicCommand.sendDeniedStoppableMessage;
+    const val SECOND_MULTIPLIER: Int = 1000
+    private val guildLastNowPlayingMessage: MutableMap<Long, MutableMap<Channel?, Message?>> = HashMap()
 
-public class MusicPlayerHelper {
-
-    private static final String webUrl = "https://gibe-toby-bot.herokuapp.com/";
-
-    public static final int SECOND_MULTIPLIER = 1000;
-    private static final Map<Long, Map<Channel, Message>> guildLastNowPlayingMessage = new HashMap<>();
-
-    public static void playUserIntro(UserDto dbUser, Guild guild, int deleteDelay, Long startPosition, int volume) {
-        playUserIntro(dbUser, guild, null, deleteDelay, startPosition, volume);
+    @JvmStatic
+    fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?, volume: Int) {
+        playUserIntro(dbUser, guild, null, deleteDelay, startPosition, volume)
     }
 
-    public static void playUserIntro(UserDto dbUser, Guild guild, SlashCommandInteractionEvent event, int deleteDelay, Long startPosition, int volume) {
-        MusicDto musicDto = dbUser.getMusicDto();
-        PlayerManager instance = PlayerManager.getInstance();
-        int currentVolume = PlayerManager.getInstance().getMusicManager(guild).getAudioPlayer().getVolume();
-        if (musicDto != null && musicDto.getFileName() != null) {
-            Integer introVolume = musicDto.getIntroVolume();
-            instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(guild,
-                    event,
-                    String.format(webUrl + "/music?id=%s", musicDto.getId()),
-                    true,
-                    0,
-                    startPosition,
-                    introVolume != null ? introVolume : volume);
+    @JvmStatic
+    fun playUserIntro(
+        dbUser: UserDto,
+        guild: Guild?,
+        event: SlashCommandInteractionEvent?,
+        deleteDelay: Int,
+        startPosition: Long?,
+        volume: Int
+    ) {
+        val musicDto = dbUser.musicDto
+        val instance = PlayerManager.instance
+        val currentVolume = PlayerManager.instance.getMusicManager(guild!!).audioPlayer.volume
+        if (musicDto?.fileName != null) {
+            val introVolume = musicDto.introVolume
+            instance.setPreviousVolume(currentVolume)
+            instance.loadAndPlay(
+                guild,
+                event,
+                "$webUrl/music?id=${musicDto.id}",
+                true,
+                0,
+                startPosition!!,
+                introVolume
+            )
         } else if (musicDto != null) {
-            Integer introVolume = musicDto.getIntroVolume();
-            instance.setPreviousVolume(currentVolume);
-            instance.loadAndPlay(guild, event, Arrays.toString(dbUser.getMusicDto().getMusicBlob()), true, deleteDelay, startPosition, introVolume);
+            val introVolume = musicDto.introVolume
+            instance.setPreviousVolume(currentVolume)
+            instance.loadAndPlay(
+                guild,
+                event,
+                dbUser.musicDto?.musicBlob.contentToString(),
+                true,
+                deleteDelay,
+                startPosition!!,
+                introVolume
+            )
         }
     }
 
-    public static void nowPlaying(IReplyCallback event, PlayerManager playerManager, Integer deleteDelay) {
-        GuildMusicManager musicManager = playerManager.getMusicManager(event.getGuild());
-        final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
-        AudioTrack track = audioPlayer.getPlayingTrack();
-        InteractionHook hook = event.getHook();
-        if (checkForPlayingTrack(track, hook, deleteDelay)) return;
-        checkTrackAndSendMessage(track, hook, audioPlayer.getVolume());
+    @JvmStatic
+    fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
+        val musicManager = playerManager.getMusicManager(event.guild!!)
+        val audioPlayer = musicManager.audioPlayer
+        val track = audioPlayer.playingTrack
+        val hook = event.hook
+        if (checkForPlayingTrack(track, hook, deleteDelay)) return
+        checkTrackAndSendMessage(track, hook, audioPlayer.volume)
     }
 
-    private static void checkTrackAndSendMessage(AudioTrack track, InteractionHook hook, int volume) {
-        String nowPlaying = getNowPlayingString(track, volume);
-        Button pausePlay = Button.primary("pause/play", "⏯");
-        Button stop = Button.primary("stop", "⏹");
-        Interaction interaction = hook.getInteraction();
-        long guildId = interaction.getGuild().getIdLong();
-        Channel channel = interaction.getChannel();
+    private fun checkTrackAndSendMessage(track: AudioTrack, hook: InteractionHook, volume: Int) {
+        val nowPlaying = getNowPlayingString(track, volume)
+        val pausePlay = Button.primary("pause/play", "⏯")
+        val stop = Button.primary("stop", "⏹")
+        val interaction = hook.interaction
+        val guildId = interaction.guild!!.idLong
+        val channel = interaction.channel
 
         // Get the previous "Now Playing" messages if they exist
-        Map<Channel, Message> channelMessageMap = guildLastNowPlayingMessage.get(guildId);
+        val channelMessageMap: Map<Channel?, Message?>? = guildLastNowPlayingMessage[guildId]
         try {
-            if (channelMessageMap == null || channelMessageMap.get(channel) == null) {
-                sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId);
+            if (channelMessageMap == null || channelMessageMap[channel] == null) {
+                sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId)
             } else {
                 // Update the existing "Now Playing" messages
-                String updatedNowPlaying = getNowPlayingString(track, volume);
-                for (Message message : channelMessageMap.values()) {
+                val updatedNowPlaying = getNowPlayingString(track, volume)
+                for (message in channelMessageMap.values) {
                     try {
-                        message.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue();
-                    } catch (ErrorResponseException e) {
+                        message!!.editMessage(updatedNowPlaying).setActionRow(pausePlay, stop).queue()
+                    } catch (e: ErrorResponseException) {
                         // Log exception or handle accordingly
                     }
-
                 }
-                hook.deleteOriginal().queue();
+                hook.deleteOriginal().queue()
             }
-        } catch (IllegalArgumentException | ErrorResponseException e) {
+        } catch (e: IllegalArgumentException) {
             // Send a new "Now Playing" message and store it
-            sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId);
+            sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId)
+        } catch (e: ErrorResponseException) {
+            sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId)
         }
     }
 
-    private static void sendNewNowPlayingMessage(InteractionHook hook, Channel channel, String nowPlaying, Button pausePlay, Button stop, long guildId) {
+    private fun sendNewNowPlayingMessage(
+        hook: InteractionHook,
+        channel: Channel?,
+        nowPlaying: String,
+        pausePlay: Button,
+        stop: Button,
+        guildId: Long
+    ) {
         // Send a new "Now Playing" message and store it
-        Message nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete();
+        val nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete()
         // Store message in the guild's map
-        Map<Channel, Message> channelMessageMap = guildLastNowPlayingMessage.get(guildId);
+        var channelMessageMap = guildLastNowPlayingMessage[guildId]
         if (channelMessageMap == null) {
-            channelMessageMap = new HashMap<>();
+            channelMessageMap = HashMap()
         }
-        channelMessageMap.put(channel, nowPlayingMessage);
-        guildLastNowPlayingMessage.put(guildId, channelMessageMap);
+        channelMessageMap[channel] = nowPlayingMessage
+        guildLastNowPlayingMessage[guildId] = channelMessageMap
     }
 
-    static boolean checkForPlayingTrack(AudioTrack track, InteractionHook hook, Integer deleteDelay) {
+    fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
         if (track == null) {
-            hook.sendMessage("There is no track playing currently").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return true;
+            hook.sendMessage("There is no track playing currently").setEphemeral(true).queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
+            return true
         }
-        return false;
+        return false
     }
 
-    public static void stopSong(IReplyCallback event, GuildMusicManager musicManager, boolean canOverrideSkips, Integer deleteDelay) {
-        InteractionHook hook = event.getHook();
-        if (PlayerManager.getInstance().isCurrentlyStoppable() || canOverrideSkips) {
-            TrackScheduler scheduler = musicManager.getScheduler();
-            scheduler.stopTrack(true);
-            scheduler.getQueue().clear();
-            scheduler.setLooping(false);
-            musicManager.getAudioPlayer().setPaused(false);
-            hook.deleteOriginal().queue();
-            hook.sendMessage("The player has been stopped and the queue has been cleared").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            resetNowPlayingMessage(event.getGuild().getIdLong());
+    fun stopSong(event: IReplyCallback, musicManager: GuildMusicManager, canOverrideSkips: Boolean, deleteDelay: Int?) {
+        val hook = event.hook
+        if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
+            val scheduler = musicManager.scheduler
+            scheduler.stopTrack(true)
+            scheduler.queue.clear()
+            scheduler.isLooping = false
+            musicManager.audioPlayer.isPaused = false
+            hook.deleteOriginal().queue()
+            hook.sendMessage("The player has been stopped and the queue has been cleared").queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
+            resetNowPlayingMessage(event.guild!!.idLong)
         } else {
-            sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
+            sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
     }
 
-    public static String getNowPlayingString(AudioTrack playingTrack, int volume) {
-        AudioTrackInfo info = playingTrack.getInfo();
+    fun getNowPlayingString(playingTrack: AudioTrack, volume: Int): String {
+        val info = playingTrack.info
         if (!info.isStream) {
-            long position = playingTrack.getPosition();
-            long duration = playingTrack.getDuration();
-            String songPosition = formatTime(position);
-            String songDuration = formatTime(duration);
-            return String.format("Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) with volume '%d'", info.title, info.author, songPosition, songDuration, info.uri, volume);
-
+            val position = playingTrack.position
+            val duration = playingTrack.duration
+            val songPosition = formatTime(position)
+            val songDuration = formatTime(duration)
+            return String.format(
+                "Now playing `%s` by `%s` `[%s/%s]` (Link: <%s>) with volume '%d'",
+                info.title,
+                info.author,
+                songPosition,
+                songDuration,
+                info.uri,
+                volume
+            )
         } else {
-            return String.format("Now playing `%s` by `%s` (Link: <%s>) with volume '%d'", info.title, info.author, info.uri, volume);
+            return String.format(
+                "Now playing `%s` by `%s` (Link: <%s>) with volume '%d'",
+                info.title,
+                info.author,
+                info.uri,
+                volume
+            )
         }
     }
 
-    public static void changePauseStatusOnTrack(IReplyCallback event, GuildMusicManager musicManager, Integer deleteDelay) {
-        AudioPlayer audioPlayer = musicManager.getAudioPlayer();
-        boolean paused = audioPlayer.isPaused();
-        String message = paused ? "Resuming: `" : "Pausing: `";
-        sendMessageAndSetPaused(audioPlayer, event.getHook(), message, deleteDelay, !paused);
-
+    fun changePauseStatusOnTrack(event: IReplyCallback, musicManager: GuildMusicManager, deleteDelay: Int) {
+        val audioPlayer = musicManager.audioPlayer
+        val paused = audioPlayer.isPaused
+        val message = if (paused) "Resuming: `" else "Pausing: `"
+        sendMessageAndSetPaused(audioPlayer, event.hook, message, deleteDelay, !paused)
     }
 
-    private static void sendMessageAndSetPaused(AudioPlayer audioPlayer, InteractionHook hook, String content, Integer deleteDelay, boolean paused) {
-        AudioTrack track = audioPlayer.getPlayingTrack();
+    private fun sendMessageAndSetPaused(
+        audioPlayer: AudioPlayer,
+        hook: InteractionHook,
+        content: String,
+        deleteDelay: Int,
+        paused: Boolean
+    ) {
+        val track = audioPlayer.playingTrack
         hook.sendMessage(content)
-                .addContent(track.getInfo().title)
-                .addContent("` by `")
-                .addContent(track.getInfo().author)
-                .addContent("`")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay));
-        audioPlayer.setPaused(paused);
+            .addContent(track.info.title)
+            .addContent("` by `")
+            .addContent(track.info.author)
+            .addContent("`")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        audioPlayer.isPaused = paused
     }
 
-    public static void skipTracks(IReplyCallback event, PlayerManager playerManager, int tracksToSkip, boolean canOverrideSkips, Integer deleteDelay) {
-        InteractionHook hook = event.getHook();
-        GuildMusicManager musicManager = playerManager.getMusicManager(event.getGuild());
-        final AudioPlayer audioPlayer = musicManager.getAudioPlayer();
+    fun skipTracks(
+        event: IReplyCallback,
+        playerManager: PlayerManager,
+        tracksToSkip: Int,
+        canOverrideSkips: Boolean,
+        deleteDelay: Int?
+    ) {
+        val hook = event.hook
+        val musicManager = playerManager.getMusicManager(event.guild!!)
+        val audioPlayer = musicManager.audioPlayer
 
-        if (audioPlayer.getPlayingTrack() == null) {
-            hook.sendMessage("There is no track playing currently").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+        if (audioPlayer.playingTrack == null) {
+            hook.sendMessage("There is no track playing currently").queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
+            return
         }
         if (tracksToSkip < 0) {
-            hook.sendMessage("You're not too bright, but thanks for trying").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+            hook.sendMessage("You're not too bright, but thanks for trying").setEphemeral(true).queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
+            return
         }
 
-        if (playerManager.isCurrentlyStoppable() || canOverrideSkips) {
-            for (int i = 0; i < tracksToSkip; i++) {
-                musicManager.getScheduler().nextTrack();
+        if (playerManager.isCurrentlyStoppable || canOverrideSkips) {
+            for (i in 0 until tracksToSkip) {
+                musicManager.scheduler.nextTrack()
             }
-            musicManager.getScheduler().setLooping(false);
-            hook.sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(invokeDeleteOnMessageResponse(deleteDelay));
-        } else sendDeniedStoppableMessage(hook, musicManager, deleteDelay);
+            musicManager.scheduler.isLooping = false
+            hook.sendMessageFormat("Skipped %d track(s)", tracksToSkip).queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
+        } else sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
     }
 
-    public static String formatTime(long timeInMillis) {
-        final long hours = timeInMillis / TimeUnit.HOURS.toMillis(1);
-        final long minutes = timeInMillis / TimeUnit.MINUTES.toMillis(1);
-        final long seconds = timeInMillis % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1);
+    fun formatTime(timeInMillis: Long): String {
+        val hours = timeInMillis / TimeUnit.HOURS.toMillis(1)
+        val minutes = timeInMillis / TimeUnit.MINUTES.toMillis(1)
+        val seconds = timeInMillis % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1)
 
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
     }
 
-    public static Long adjustTrackPlayingTimes(Long startTime) {
-        Map<String, Long> adjustmentMap = new HashMap<>();
+    fun adjustTrackPlayingTimes(startTime: Long): Long {
+        val adjustmentMap: MutableMap<String, Long> = HashMap()
 
-        if (startTime > 0L) adjustmentMap.put(MusicDto.Adjustment.START.name(), startTime);
+        if (startTime > 0L) adjustmentMap[MusicDto.Adjustment.START.name] = startTime
 
         if (adjustmentMap.isEmpty()) {
-            return 0L;
+            return 0L
         }
 
-        if (adjustmentMap.containsKey(MusicDto.Adjustment.START.name())) {
-            return adjustmentMap.get(MusicDto.Adjustment.START.name()) * SECOND_MULTIPLIER;
+        if (adjustmentMap.containsKey(MusicDto.Adjustment.START.name)) {
+            return adjustmentMap[MusicDto.Adjustment.START.name]!! * SECOND_MULTIPLIER
         }
-//       TODO: return a map when end can be specified too
+
+        //       TODO: return a map when end can be specified too
 
 //        if (adjustmentMap.containsKey(MusicDto.Adjustment.END.name())){
 //            return adjustmentMap.get(MusicDto.Adjustment.END.name()) * SECOND_MULTIPLIER;
 //        }
-        return 0L;
+        return 0L
     }
 
-    public static boolean isUrl(String url) {
-        try {
-            new URI(url);
-            return true;
-        } catch (URISyntaxException e) {
-            return false;
-        }
+    fun isUrl(url: String?): Boolean = runCatching { URI(url) }.isSuccess
+
+
+@JvmStatic
+fun deriveDeleteDelayFromTrack(track: AudioTrack): Int {
+    return (track.duration / 1000).toInt()
+}
+
+private fun resetNowPlayingMessage(guildId: Long) {
+    val channelMessageMap: Map<Channel?, Message?>? = guildLastNowPlayingMessage[guildId]
+    if (!channelMessageMap.isNullOrEmpty()) channelMessageMap.values.forEach {
+        it!!.delete().queue()
     }
-
-    public static int deriveDeleteDelayFromTrack(AudioTrack track) {
-        return (int) (track.getDuration() / 1000);
-    }
-
-    private static void resetNowPlayingMessage(long guildId) {
-        Map<Channel, Message> channelMessageMap = guildLastNowPlayingMessage.get(guildId);
-        if (channelMessageMap != null && !channelMessageMap.isEmpty())
-            channelMessageMap.values().forEach(message -> message.delete().queue());
-        guildLastNowPlayingMessage.remove(guildId);
-    }
+    guildLastNowPlayingMessage.remove(guildId)
+}
 
 
-    public static void resetMessages(long guildId) {
-        resetNowPlayingMessage(guildId);
-    }
-
+@JvmStatic
+fun resetMessages(guildId: Long) {
+    resetNowPlayingMessage(guildId)
+}
 }

@@ -1,15 +1,13 @@
-package toby.jpa.service;
+package toby.jpa.service
 
-import toby.jpa.dto.MusicDto;
+import toby.jpa.dto.MusicDto
 
-public interface IMusicFileService {
+interface IMusicFileService {
+    fun createNewMusicFile(musicDto: MusicDto?): MusicDto?
+    fun getMusicFileById(id: String?): MusicDto?
+    fun updateMusicFile(musicDto: MusicDto?): MusicDto?
+    fun deleteMusicFile(musicDto: MusicDto?)
+    fun deleteMusicFileById(id: String?)
 
-    MusicDto createNewMusicFile(MusicDto musicDto);
-    MusicDto getMusicFileById(String id);
-    MusicDto updateMusicFile(MusicDto musicDto);
-    void deleteMusicFile(MusicDto musicDto);
-    void deleteMusicFileById(String id);
-
-    void clearCache();
-
+    fun clearCache()
 }

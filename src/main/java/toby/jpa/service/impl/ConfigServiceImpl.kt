@@ -1,67 +1,55 @@
-package toby.jpa.service.impl;
+package toby.jpa.service.impl
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import toby.jpa.dto.ConfigDto;
-import toby.jpa.persistence.IConfigPersistence;
-import toby.jpa.service.IConfigService;
-
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.CachePut
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.stereotype.Service
+import toby.jpa.dto.ConfigDto
+import toby.jpa.persistence.IConfigPersistence
+import toby.jpa.service.IConfigService
 
 @Service
-public class ConfigServiceImpl implements IConfigService {
-
+open class ConfigServiceImpl : IConfigService {
     @Autowired
-    IConfigPersistence configService;
+    lateinit var configService: IConfigPersistence
 
-    @Override
-    @Cacheable(value="configs")
-    public List<ConfigDto> listAllConfig() {
-        return configService.listAllConfig();
+    @Cacheable(value = ["configs"])
+    override fun listAllConfig(): List<ConfigDto?>? {
+        return configService.listAllConfig()
     }
 
-    @Override
-    @Cacheable(value="configs")
-    public List<ConfigDto> listGuildConfig(String guildId) {
-        return configService.listGuildConfig(guildId);
+    @Cacheable(value = ["configs"])
+    override fun listGuildConfig(guildId: String?): List<ConfigDto?>? {
+        return configService.listGuildConfig(guildId)
     }
 
-    @Override
-    @CachePut(value = "configs", key = "#name+#guildId")
-    public ConfigDto getConfigByName(String name, String guildId) {
-        return configService.getConfigByName(name, guildId);
+    @CachePut(value = ["configs"], key = "#name+#guildId")
+    override fun getConfigByName(name: String?, guildId: String): ConfigDto? {
+        return configService.getConfigByName(name, guildId)
     }
 
-    @Override
-    @CachePut(value="configs", key="#configDto.name+#configDto.guildId")
-    public ConfigDto createNewConfig(ConfigDto configDto) {
-        return configService.createNewConfig(configDto);
+    @CachePut(value = ["configs"], key = "#configDto.name+#configDto.guildId")
+    override fun createNewConfig(configDto: ConfigDto): ConfigDto {
+        return configService.createNewConfig(configDto)
     }
 
-    @Override
-    @CachePut(value="configs", key="#configDto.name+#configDto.guildId")
-    public ConfigDto updateConfig(ConfigDto configDto) {
-        return configService.updateConfig(configDto);
+    @CachePut(value = ["configs"], key = "#configDto.name+#configDto.guildId")
+    override fun updateConfig(configDto: ConfigDto?): ConfigDto? {
+        return configService.updateConfig(configDto)
     }
 
-    @Override
-    @CacheEvict(value="configs", allEntries = true)
-    public void deleteAll(String guildId){
-        configService.deleteAll(guildId);
+    @CacheEvict(value = ["configs"], allEntries = true)
+    override fun deleteAll(guildId: String?) {
+        configService.deleteAll(guildId)
     }
 
-    @Override
-    @CacheEvict(value = "configs", key="#configDto.name+#configDto.guildId")
-    public void deleteConfig(String guildId, String name) {
-        configService.deleteConfig(guildId, name);
+    @CacheEvict(value = ["configs"], key = "#configDto.name+#configDto.guildId")
+    override fun deleteConfig(guildId: String?, name: String?) {
+        configService.deleteConfig(guildId, name)
     }
 
-    @Override
-    @CacheEvict(value = "configs", allEntries = true)
-    public void clearCache() {
-
+    @CacheEvict(value = ["configs"], allEntries = true)
+    override fun clearCache() {
     }
 }

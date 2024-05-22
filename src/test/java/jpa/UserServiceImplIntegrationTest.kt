@@ -1,171 +1,167 @@
-package jpa;
+package jpa
 
-import org.apache.commons.collections4.IterableUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import toby.Application;
-import toby.jpa.dto.MusicDto;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IUserService;
+import org.apache.commons.collections4.IterableUtils
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
+import toby.Application
+import toby.jpa.dto.MusicDto
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IUserService
 
-import static org.junit.jupiter.api.Assertions.*;
-
-@SpringBootTest(classes = Application.class)
+@SpringBootTest(classes = [Application::class])
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("test")
-public class UserServiceImplIntegrationTest {
+class UserServiceImplIntegrationTest {
     @Autowired
-    private IUserService userService;
+    private val userService: IUserService? = null
 
     @BeforeEach
-    public void setUp() {
-        userService.clearCache();
+    fun setUp() {
+        userService!!.clearCache()
     }
 
     @AfterEach
-    public void tearDown(){
+    fun tearDown() {
     }
 
     @Test
-    public void testDataSQL() {
-        assertEquals(3, IterableUtils.toList(userService.listGuildUsers(1L)).size());
+    fun testDataSQL() {
+        Assertions.assertEquals(3, IterableUtils.toList(userService!!.listGuildUsers(1L)).size)
     }
 
     @Test
-    public void whenValidDiscordIdAndGuild_thenUserShouldBeFound() {
-        UserDto userDto = new UserDto();
-        userDto.setDiscordId(6L);
-        userDto.setGuildId(1L);
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, 0, null);
-        userDto.setMusicDto(musicDto);
-        userService.createNewUser(userDto);
-        UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
+    fun whenValidDiscordIdAndGuild_thenUserShouldBeFound() {
+        val userDto = UserDto()
+        userDto.discordId = 6L
+        userDto.guildId = 1L
+        val musicDto = MusicDto(userDto.discordId!!, userDto.guildId, null, 0, null)
+        userDto.musicDto = musicDto
+        userService!!.createNewUser(userDto)
+        val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
 
-        assertEquals(dbUser.getDiscordId(),userDto.getDiscordId());
-        assertEquals(dbUser.getGuildId(),userDto.getGuildId());
-        assertTrue(dbUser.hasMusicPermission());
-        assertTrue(dbUser.hasMemePermission());
-        assertTrue(dbUser.hasDigPermission());
-        assertFalse(dbUser.isSuperUser());
-        assertNotNull(dbUser.getMusicDto());
-        userService.deleteUserById(6L, 1L);
+        Assertions.assertEquals(dbUser!!.discordId, userDto.discordId)
+        Assertions.assertEquals(dbUser.guildId, userDto.guildId)
+        Assertions.assertTrue(dbUser.musicPermission)
+        Assertions.assertTrue(dbUser.memePermission)
+        Assertions.assertTrue(dbUser.digPermission)
+        Assertions.assertFalse(dbUser.superUser)
+        Assertions.assertNotNull(dbUser.musicDto)
+        userService.deleteUserById(6L, 1L)
     }
 
     @Test
-    public void testUpdate_thenNewUserValuesShouldBeReturned() {
-        UserDto userDto1 = new UserDto();
-        userDto1.setDiscordId(6L);
-        userDto1.setGuildId(1L);
-        MusicDto musicDto1 = new MusicDto(userDto1.getDiscordId(), userDto1.getGuildId(), null, 0, null);
-        userDto1.setMusicDto(musicDto1);
-        userDto1 = userService.createNewUser(userDto1);
-        UserDto dbUser1 = userService.getUserById(userDto1.getDiscordId(), userDto1.getGuildId());
+    fun testUpdate_thenNewUserValuesShouldBeReturned() {
+        var userDto1: UserDto? = UserDto()
+        userDto1!!.discordId = 6L
+        userDto1.guildId = 1L
+        val musicDto1 = MusicDto(userDto1.discordId!!, userDto1.guildId, null, 0, null)
+        userDto1.musicDto = musicDto1
+        userDto1 = userService!!.createNewUser(userDto1)
+        val dbUser1 = userService.getUserById(userDto1!!.discordId, userDto1.guildId)
 
-        int dbSize = userService.listGuildUsers(1L).size();
+        val dbSize = userService.listGuildUsers(1L).size
 
-        assertEquals(dbUser1.getDiscordId(),userDto1.getDiscordId());
-        assertEquals(dbUser1.getGuildId(),userDto1.getGuildId());
-        assertTrue(dbUser1.hasMusicPermission());
-        assertTrue(dbUser1.hasMemePermission());
-        assertTrue(dbUser1.hasDigPermission());
-        assertFalse(dbUser1.isSuperUser());
-        assertNotNull(dbUser1.getMusicDto());
+        Assertions.assertEquals(dbUser1!!.discordId, userDto1.discordId)
+        Assertions.assertEquals(dbUser1.guildId, userDto1.guildId)
+        Assertions.assertTrue(dbUser1.musicPermission)
+        Assertions.assertTrue(dbUser1.memePermission)
+        Assertions.assertTrue(dbUser1.digPermission)
+        Assertions.assertFalse(dbUser1.superUser)
+        Assertions.assertNotNull(dbUser1.musicDto)
 
-        UserDto userDto2 = new UserDto();
-        userDto2.setDiscordId(6L);
-        userDto2.setGuildId(1L);
-        MusicDto musicDto2 = new MusicDto(userDto2.getDiscordId(), userDto2.getGuildId(), null, 0, null);
-        userDto2.setMusicDto(musicDto2);
-        userDto2.setDigPermission(false);
-        userDto2 = userService.updateUser(userDto2);
-        userService.clearCache(); // Clear the cache
+        var userDto2: UserDto? = UserDto()
+        userDto2!!.discordId = 6L
+        userDto2.guildId = 1L
+        val musicDto2 = MusicDto(userDto2.discordId!!, userDto2.guildId, null, 0, null)
+        userDto2.musicDto = musicDto2
+        userDto2.digPermission = false
+        userDto2 = userService.updateUser(userDto2)
+        userService.clearCache() // Clear the cache
 
-        UserDto dbUser2 = userService.getUserById(userDto2.getDiscordId(), userDto2.getGuildId());
+        val dbUser2 = userService.getUserById(userDto2!!.discordId, userDto2.guildId)
 
-        int guildMemberSize = userService.listGuildUsers(userDto2.getGuildId()).size();
+        val guildMemberSize = userService.listGuildUsers(userDto2.guildId).size
 
-        assertEquals(dbUser2.getDiscordId(),userDto2.getDiscordId());
-        assertEquals(dbUser2.getGuildId(),userDto2.getGuildId());
-        assertTrue(dbUser2.hasMusicPermission());
-        assertTrue(dbUser2.hasMemePermission());
-        assertFalse(dbUser2.hasDigPermission());
-        assertFalse(dbUser2.isSuperUser());
-        assertNotNull(dbUser2.getMusicDto());
-        assertEquals(dbSize, guildMemberSize);
-        userService.deleteUserById(6L, 1L);
-
+        Assertions.assertEquals(dbUser2!!.discordId, userDto2.discordId)
+        Assertions.assertEquals(dbUser2.guildId, userDto2.guildId)
+        Assertions.assertTrue(dbUser2.musicPermission)
+        Assertions.assertTrue(dbUser2.memePermission)
+        Assertions.assertFalse(dbUser2.digPermission)
+        Assertions.assertFalse(dbUser2.superUser)
+        Assertions.assertNotNull(dbUser2.musicDto)
+        Assertions.assertEquals(dbSize, guildMemberSize)
+        userService.deleteUserById(6L, 1L)
     }
 
 
     @Test
-    public void whenMusicFileExistsWithSameDiscordIdAndGuild_thenUserShouldBeFoundWithMusicFile() {
-        UserDto userDto = new UserDto();
-        userDto.setDiscordId(6L);
-        userDto.setGuildId(1L);
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), "test", 0, null);
-        userDto.setMusicDto(musicDto);
-        userService.createNewUser(userDto);
-        UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
+    fun whenMusicFileExistsWithSameDiscordIdAndGuild_thenUserShouldBeFoundWithMusicFile() {
+        val userDto = UserDto()
+        userDto.discordId = 6L
+        userDto.guildId = 1L
+        val musicDto = MusicDto(userDto.discordId!!, userDto.guildId, "test", 0, null)
+        userDto.musicDto = musicDto
+        userService!!.createNewUser(userDto)
+        val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
 
-        assertEquals(dbUser.getDiscordId(),userDto.getDiscordId());
-        assertEquals(dbUser.getGuildId(),userDto.getGuildId());
-        assertTrue(dbUser.hasMusicPermission());
-        assertTrue(dbUser.hasMemePermission());
-        assertTrue(dbUser.hasDigPermission());
-        assertFalse(dbUser.isSuperUser());
-        MusicDto dbMusicFileDto = userDto.getMusicDto();
-        assertNotNull(dbMusicFileDto);
-        assertEquals(dbMusicFileDto.getId(), musicDto.getId());
-        assertEquals(dbMusicFileDto.getFileName(), musicDto.getFileName());
-        userService.deleteUserById(6L, 1L);
-
+        Assertions.assertEquals(dbUser!!.discordId, userDto.discordId)
+        Assertions.assertEquals(dbUser.guildId, userDto.guildId)
+        Assertions.assertTrue(dbUser.musicPermission)
+        Assertions.assertTrue(dbUser.memePermission)
+        Assertions.assertTrue(dbUser.digPermission)
+        Assertions.assertFalse(dbUser.superUser)
+        val dbMusicFileDto = userDto.musicDto
+        Assertions.assertNotNull(dbMusicFileDto)
+        Assertions.assertEquals(dbMusicFileDto!!.id, musicDto.id)
+        Assertions.assertEquals(dbMusicFileDto.fileName, musicDto.fileName)
+        userService.deleteUserById(6L, 1L)
     }
 
     @Test
-    public void whenMusicFileExistsWithSameDiscordIdAndGuildAndUpdatedOnce_thenUserShouldBeFoundWithMusicFile() {
-        UserDto userDto = new UserDto();
-        userDto.setDiscordId(6L);
-        userDto.setGuildId(1L);
-        MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, 0, null);
-        userDto.setMusicDto(musicDto);
-        userService.createNewUser(userDto);
-        UserDto dbUser = userService.getUserById(userDto.getDiscordId(), userDto.getGuildId());
-        userService.clearCache();
+    fun whenMusicFileExistsWithSameDiscordIdAndGuildAndUpdatedOnce_thenUserShouldBeFoundWithMusicFile() {
+        val userDto = UserDto()
+        userDto.discordId = 6L
+        userDto.guildId = 1L
+        val musicDto = MusicDto(userDto.discordId!!, userDto.guildId, null, 0, null)
+        userDto.musicDto = musicDto
+        userService!!.createNewUser(userDto)
+        val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
+        userService.clearCache()
 
-        assertEquals(dbUser.getDiscordId(),userDto.getDiscordId());
-        assertEquals(dbUser.getGuildId(),userDto.getGuildId());
-        assertTrue(dbUser.hasMusicPermission());
-        assertTrue(dbUser.hasMemePermission());
-        assertTrue(dbUser.hasDigPermission());
-        assertFalse(dbUser.isSuperUser());
-        MusicDto dbMusicFileDto = userDto.getMusicDto();
-        assertNotNull(dbMusicFileDto);
-        assertEquals(dbMusicFileDto.getId(), musicDto.getId());
-        assertEquals(dbMusicFileDto.getFileName(), musicDto.getFileName());
-
-
-        dbMusicFileDto.setFileName("file name");
-        dbMusicFileDto.setMusicBlob("test data".getBytes());
-        userDto.setMusicDto(dbMusicFileDto);
-        UserDto dbUser2 = userService.updateUser(userDto);
+        Assertions.assertEquals(dbUser!!.discordId, userDto.discordId)
+        Assertions.assertEquals(dbUser.guildId, userDto.guildId)
+        Assertions.assertTrue(dbUser.musicPermission)
+        Assertions.assertTrue(dbUser.memePermission)
+        Assertions.assertTrue(dbUser.digPermission)
+        Assertions.assertFalse(dbUser.superUser)
+        var dbMusicFileDto = userDto.musicDto
+        Assertions.assertNotNull(dbMusicFileDto)
+        Assertions.assertEquals(dbMusicFileDto!!.id, musicDto.id)
+        Assertions.assertEquals(dbMusicFileDto.fileName, musicDto.fileName)
 
 
-        assertEquals(dbUser2.getDiscordId(),userDto.getDiscordId());
-        assertEquals(dbUser2.getGuildId(),userDto.getGuildId());
-        assertTrue(dbUser2.hasMusicPermission());
-        assertTrue(dbUser2.hasMemePermission());
-        assertTrue(dbUser2.hasDigPermission());
-        assertFalse(dbUser2.isSuperUser());
-        dbMusicFileDto = dbUser2.getMusicDto();
-        assertNotNull(dbMusicFileDto);
-        assertEquals(dbMusicFileDto.getId(), musicDto.getId());
-        assertEquals(dbMusicFileDto.getFileName(), musicDto.getFileName());
-        userService.deleteUserById(6L, 1L);
+        dbMusicFileDto.fileName = "file name"
+        dbMusicFileDto.musicBlob = "test data".toByteArray()
+        userDto.musicDto = dbMusicFileDto
+        val dbUser2 = userService.updateUser(userDto)
 
+
+        Assertions.assertEquals(dbUser2!!.discordId, userDto.discordId)
+        Assertions.assertEquals(dbUser2.guildId, userDto.guildId)
+        Assertions.assertTrue(dbUser2.musicPermission)
+        Assertions.assertTrue(dbUser2.memePermission)
+        Assertions.assertTrue(dbUser2.digPermission)
+        Assertions.assertFalse(dbUser2.superUser)
+        dbMusicFileDto = dbUser2.musicDto
+        Assertions.assertNotNull(dbMusicFileDto)
+        Assertions.assertEquals(dbMusicFileDto!!.id, musicDto.id)
+        Assertions.assertEquals(dbMusicFileDto.fileName, musicDto.fileName)
+        userService.deleteUserById(6L, 1L)
     }
 }

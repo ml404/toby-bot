@@ -1,196 +1,260 @@
-package toby.command.commands.dnd;
+package toby.command.commands.dnd
 
-import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
-import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion;
-import net.dv8tion.jda.api.interactions.Interaction;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.jpa.service.IUserService;
-import toby.jpa.service.impl.UserServiceImpl;
+import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
+import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
+import net.dv8tion.jda.api.interactions.Interaction
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.kotlin.anyVararg
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.command.CommandTest.Companion.interactionHook
+import toby.command.CommandTest.Companion.member
+import toby.command.CommandTest.Companion.user
+import toby.command.CommandTest.Companion.webhookMessageCreateAction
+import toby.jpa.service.IUserService
+import toby.jpa.service.impl.UserServiceImpl
 
-import java.util.List;
-
-import static org.mockito.Mockito.*;
-
-class InitiativeCommandTest implements CommandTest {
-
-    InitiativeCommand initiativeCommand;
+internal class InitiativeCommandTest : CommandTest {
+    private lateinit var initiativeCommand: InitiativeCommand
 
     @Mock
-    IUserService userService;
+    lateinit var userService: IUserService
 
     @BeforeEach
-    public void setup() {
-        setUpCommonMocks();
-        userService = mock(UserServiceImpl.class);
-        doReturn(webhookMessageCreateAction)
-                .when(interactionHook)
-                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
-
-        initiativeCommand = new InitiativeCommand(userService);
+    fun setup() {
+        setUpCommonMocks()
+        userService = Mockito.mock(UserServiceImpl::class.java)
+        initiativeCommand = InitiativeCommand(userService)
     }
 
     @AfterEach
-    public void tearDown() {
-        tearDownCommonMocks();
+    fun tearDown() {
+        tearDownCommonMocks()
     }
 
     @Test
-    void test_initiativeCommandWithCorrectSetup_WithMembers() {
+    fun test_initiativeCommandWithCorrectSetup_WithMembers() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping channelOptionMapping = mock(OptionMapping.class);
-        OptionMapping dmOptionMapping = mock(OptionMapping.class);
-        GuildChannelUnion guildChannelUnion = mock(GuildChannelUnion.class);
-        AudioChannel audioChannel = mock(AudioChannel.class);
-        Member dmMember = mock(Member.class);
-        Interaction interaction = mock(Interaction.class);
-        when(channelOptionMapping.getAsChannel()).thenReturn(guildChannelUnion);
-        when(dmOptionMapping.getAsMember()).thenReturn(dmMember);
-        when(guildChannelUnion.asAudioChannel()).thenReturn(audioChannel);
-        when(event.getOption("channel")).thenReturn(channelOptionMapping);
-        when(event.getOption("dm")).thenReturn(dmOptionMapping);
-        when(audioChannel.getMembers()).thenReturn(List.of(member));
-        when(interactionHook.getInteraction()).thenReturn(interaction);
-        when(interaction.getGuild()).thenReturn(guild);
-        when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
-        when(member.getUser()).thenReturn(user);
+        val commandContext = CommandContext(CommandTest.event)
+        val channelOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val dmOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val guildChannelUnion = Mockito.mock(GuildChannelUnion::class.java)
+        val audioChannel = Mockito.mock(AudioChannel::class.java)
+        val dmMember = Mockito.mock(Member::class.java)
+        val interaction = Mockito.mock(
+            Interaction::class.java
+        )
+        Mockito.`when`(channelOptionMapping.asChannel).thenReturn(guildChannelUnion)
+        Mockito.`when`(dmOptionMapping.asMember).thenReturn(dmMember)
+        Mockito.`when`(guildChannelUnion.asAudioChannel()).thenReturn(audioChannel)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("channel")).thenReturn(channelOptionMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("dm")).thenReturn(dmOptionMapping)
+        Mockito.`when`<List<Member>>(audioChannel.members).thenReturn(listOf(member))
+        Mockito.`when`(interactionHook.interaction).thenReturn(interaction)
+        Mockito.`when`<Guild?>(interaction.guild).thenReturn(CommandTest.guild)
+        Mockito.`when`<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction.setActionRow(
+                any(
+                    Button::class.java
+                ), any(
+                    Button::class.java
+                ), any(
+                    Button::class.java
+                )
+            ) as WebhookMessageCreateAction<Message>?
+        ).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(member.user).thenReturn(user)
 
 
         //Act
-        initiativeCommand.handle(commandContext, requestingUserDto, 0);
+        initiativeCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).deferReply();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(webhookMessageCreateAction, times(1)).setActionRow(any(), any(), any());
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(interactionHook, Mockito.times(1)).sendMessageEmbeds(
+            any(), anyVararg()
+        )
+        Mockito.verify<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction, Mockito.times(1)
+        ).setActionRow(
+            any(), any(), any()
+        )
     }
 
     @Test
-    void test_initiativeCommandWithCorrectSetup_WithNames() {
+    fun test_initiativeCommandWithCorrectSetup_WithNames() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping namesMapping = mock(OptionMapping.class);
-        OptionMapping dmOptionMapping = mock(OptionMapping.class);
-        Member dmMember = mock(Member.class);
-        Interaction interaction = mock(Interaction.class);
-        when(namesMapping.getAsString()).thenReturn("name1, name2, name3, name4");
-        when(dmOptionMapping.getAsMember()).thenReturn(dmMember);
-        when(event.getOption("names")).thenReturn(namesMapping);
-        when(event.getOption("dm")).thenReturn(dmOptionMapping);
-        when(interactionHook.getInteraction()).thenReturn(interaction);
-        when(interaction.getGuild()).thenReturn(guild);
-        when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
-        when(member.getUser()).thenReturn(user);
+        val commandContext = CommandContext(CommandTest.event)
+        val namesMapping = Mockito.mock(OptionMapping::class.java)
+        val dmOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val dmMember = Mockito.mock(Member::class.java)
+        val interaction = Mockito.mock(
+            Interaction::class.java
+        )
+        Mockito.`when`(namesMapping.asString).thenReturn("name1, name2, name3, name4")
+        Mockito.`when`(dmOptionMapping.asMember).thenReturn(dmMember)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("names")).thenReturn(namesMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("dm")).thenReturn(dmOptionMapping)
+        Mockito.`when`(interactionHook.interaction).thenReturn(interaction)
+        Mockito.`when`<Guild?>(interaction.guild).thenReturn(CommandTest.guild)
+        Mockito.`when`<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction.setActionRow(
+                any(
+                    Button::class.java
+                ), any(
+                    Button::class.java
+                ), any(
+                    Button::class.java
+                )
+            ) as WebhookMessageCreateAction<Message>?
+        ).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(member.user).thenReturn(user)
 
 
         //Act
-        initiativeCommand.handle(commandContext, requestingUserDto, 0);
+        initiativeCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).deferReply();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(webhookMessageCreateAction, times(1)).setActionRow(any(), any(), any());
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(interactionHook, Mockito.times(1)).sendMessageEmbeds(any<MessageEmbed>())
+        Mockito.verify<WebhookMessageCreateAction<Message>>(webhookMessageCreateAction, Mockito.times(1))
+            .setActionRow(
+                any(),
+                any(),
+                any()
+            )
     }
 
     @Test
-    void test_initiativeCommandWithCorrectSetup_UsingMemberVoiceState() {
+    fun test_initiativeCommandWithCorrectSetup_UsingMemberVoiceState() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping dmOptionMapping = mock(OptionMapping.class);
-        GuildChannelUnion guildChannelUnion = mock(GuildChannelUnion.class);
-        AudioChannel audioChannel = mock(AudioChannel.class);
-        Member dmMember = mock(Member.class);
-        Interaction interaction = mock(Interaction.class);
-        GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
-        when(dmOptionMapping.getAsMember()).thenReturn(dmMember);
-        when(guildChannelUnion.asAudioChannel()).thenReturn(audioChannel);
-        when(event.getOption("dm")).thenReturn(dmOptionMapping);
-        when(member.getVoiceState()).thenReturn(guildVoiceState);
-        when(guildVoiceState.getChannel()).thenReturn(audioChannelUnion);
-        when(audioChannelUnion.getMembers()).thenReturn(List.of(member));
-        when(interactionHook.getInteraction()).thenReturn(interaction);
-        when(interaction.getGuild()).thenReturn(guild);
-        when(webhookMessageCreateAction.setActionRow(any(Button.class), any(Button.class), any(Button.class))).thenReturn(webhookMessageCreateAction);
-        when(member.getUser()).thenReturn(user);
+        val commandContext = CommandContext(CommandTest.event)
+        val dmOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val guildChannelUnion = Mockito.mock(GuildChannelUnion::class.java)
+        val audioChannel = Mockito.mock(AudioChannel::class.java)
+        val dmMember = Mockito.mock(Member::class.java)
+        val interaction = Mockito.mock(
+            Interaction::class.java
+        )
+        val guildVoiceState = Mockito.mock(GuildVoiceState::class.java)
+        val audioChannelUnion = Mockito.mock(AudioChannelUnion::class.java)
+        Mockito.`when`(dmOptionMapping.asMember).thenReturn(dmMember)
+        Mockito.`when`(guildChannelUnion.asAudioChannel()).thenReturn(audioChannel)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("dm")).thenReturn(dmOptionMapping)
+        Mockito.`when`<GuildVoiceState>(member.voiceState).thenReturn(guildVoiceState)
+        Mockito.`when`(guildVoiceState.channel).thenReturn(audioChannelUnion)
+        Mockito.`when`<List<Member>>(audioChannelUnion.members).thenReturn(listOf(member))
+        Mockito.`when`(interactionHook.interaction).thenReturn(interaction)
+        Mockito.`when`<Guild?>(interaction.guild).thenReturn(CommandTest.guild)
+        Mockito.`when`<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction.setActionRow(
+                any(
+                    Button::class.java
+                ), any(
+                    Button::class.java
+                ), any(
+                    Button::class.java
+                )
+            ) as WebhookMessageCreateAction<Message>?
+        ).thenReturn(webhookMessageCreateAction as WebhookMessageCreateAction<Message>)
+        Mockito.`when`(member.user).thenReturn(user)
 
         //Act
-        initiativeCommand.handle(commandContext, requestingUserDto, 0);
+        initiativeCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).deferReply();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(webhookMessageCreateAction, times(1)).setActionRow(any(), any(), any());
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(interactionHook, Mockito.times(1)).sendMessageEmbeds(any<MessageEmbed>())
+        Mockito.verify<WebhookMessageCreateAction<Message>>(webhookMessageCreateAction, Mockito.times(1)
+        ).setActionRow(
+            any(), any(), any()
+        )
     }
 
     @Test
-    void test_initiativeCommandWithNoValidChannel() {
+    fun test_initiativeCommandWithNoValidChannel() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping dmOptionMapping = mock(OptionMapping.class);
-        AudioChannel audioChannel = mock(AudioChannel.class);
-        Member dmMember = mock(Member.class);
-        Interaction interaction = mock(Interaction.class);
-        when(dmOptionMapping.getAsMember()).thenReturn(dmMember);
-        when(event.getOption("dm")).thenReturn(dmOptionMapping);
-        when(audioChannel.getMembers()).thenReturn(List.of(member));
-        when(interactionHook.getInteraction()).thenReturn(interaction);
-        when(interaction.getGuild()).thenReturn(guild);
-        when(event.reply(anyString())).thenReturn(replyCallbackAction);
-        when(replyCallbackAction.setEphemeral(true)).thenReturn(replyCallbackAction);
+        val commandContext = CommandContext(CommandTest.event)
+        val dmOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val audioChannel = Mockito.mock(AudioChannel::class.java)
+        val dmMember = Mockito.mock(Member::class.java)
+        val interaction = Mockito.mock(
+            Interaction::class.java
+        )
+        Mockito.`when`(dmOptionMapping.asMember).thenReturn(dmMember)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("dm")).thenReturn(dmOptionMapping)
+        Mockito.`when`<List<Member>>(audioChannel.members).thenReturn(listOf(member))
+        Mockito.`when`(interactionHook.interaction).thenReturn(interaction)
+        Mockito.`when`<Guild?>(interaction.guild).thenReturn(CommandTest.guild)
+        Mockito.`when`(CommandTest.event.reply(ArgumentMatchers.anyString()))
+            .thenReturn(CommandTest.replyCallbackAction)
+        Mockito.`when`(CommandTest.replyCallbackAction.setEphemeral(true)).thenReturn(CommandTest.replyCallbackAction)
 
         //Act
-        initiativeCommand.handle(commandContext, requestingUserDto, 0);
+        initiativeCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).deferReply();
-        verify(interactionHook, times(0)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(webhookMessageCreateAction, times(0)).setActionRow(any(), any(), any());
-        verify(event, times(1)).reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.");
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(interactionHook, Mockito.times(0)).sendMessageEmbeds(any(), anyVararg())
+        Mockito.verify(
+            webhookMessageCreateAction as WebhookMessageCreateAction<Message>, Mockito.times(0)
+        ).setActionRow(
+            any(), any(), any()
+        )
+        Mockito.verify(CommandTest.event, Mockito.times(1))
+            .reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.")
     }
 
     @Test
-    void test_initiativeCommandWithNoNonDMMembersAndAValidChannelOption() {
+    fun test_initiativeCommandWithNoNonDMMembersAndAValidChannelOption() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping channelOptionMapping = mock(OptionMapping.class);
-        OptionMapping dmOptionMapping = mock(OptionMapping.class);
-        GuildChannelUnion guildChannelUnion = mock(GuildChannelUnion.class);
-        AudioChannel audioChannel = mock(AudioChannel.class);
-        Member dmMember = mock(Member.class);
-        Interaction interaction = mock(Interaction.class);
-        when(channelOptionMapping.getAsChannel()).thenReturn(guildChannelUnion);
-        when(dmOptionMapping.getAsMember()).thenReturn(dmMember);
-        when(guildChannelUnion.asAudioChannel()).thenReturn(audioChannel);
-        when(event.getOption("channel")).thenReturn(channelOptionMapping);
-        when(event.getOption("dm")).thenReturn(dmOptionMapping);
-        when(audioChannel.getMembers()).thenReturn(List.of(dmMember));
-        when(interactionHook.getInteraction()).thenReturn(interaction);
-        when(interaction.getGuild()).thenReturn(guild);
-        when(event.reply(anyString())).thenReturn(replyCallbackAction);
-        when(replyCallbackAction.setEphemeral(true)).thenReturn(replyCallbackAction);
+        val commandContext = CommandContext(CommandTest.event)
+        val channelOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val dmOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val guildChannelUnion = Mockito.mock(GuildChannelUnion::class.java)
+        val audioChannel = Mockito.mock(AudioChannel::class.java)
+        val dmMember = Mockito.mock(Member::class.java)
+        val interaction = Mockito.mock(
+            Interaction::class.java
+        )
+        Mockito.`when`(channelOptionMapping.asChannel).thenReturn(guildChannelUnion)
+        Mockito.`when`(dmOptionMapping.asMember).thenReturn(dmMember)
+        Mockito.`when`(guildChannelUnion.asAudioChannel()).thenReturn(audioChannel)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("channel")).thenReturn(channelOptionMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("dm")).thenReturn(dmOptionMapping)
+        Mockito.`when`(audioChannel.members).thenReturn(listOf(dmMember))
+        Mockito.`when`(interactionHook.interaction).thenReturn(interaction)
+        Mockito.`when`<Guild?>(interaction.guild).thenReturn(CommandTest.guild)
+        Mockito.`when`(CommandTest.event.reply(ArgumentMatchers.anyString()))
+            .thenReturn(CommandTest.replyCallbackAction)
+        Mockito.`when`(CommandTest.replyCallbackAction.setEphemeral(true)).thenReturn(CommandTest.replyCallbackAction)
 
         //Act
-        initiativeCommand.handle(commandContext, requestingUserDto, 0);
+        initiativeCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).deferReply();
-        verify(interactionHook, times(0)).sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        verify(webhookMessageCreateAction, times(0)).setActionRow(any(), any(), any());
-        verify(event, times(1)).reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.");
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(interactionHook, Mockito.times(0)).sendMessageEmbeds(
+            any(), anyVararg()
+
+        )
+        Mockito.verify<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction, Mockito.times(0)
+        ).setActionRow(
+            any(), any(), any()
+        )
+        Mockito.verify(CommandTest.event, Mockito.times(1))
+            .reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
     }
 }

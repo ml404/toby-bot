@@ -1,83 +1,68 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Mentions;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import toby.command.CommandContext;
-import toby.emote.Emotes;
-import toby.jpa.dto.BrotherDto;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IBrotherService;
+import net.dv8tion.jda.api.entities.emoji.Emoji
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.emote.Emotes
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IBrotherService
+import java.util.*
 
-import java.util.List;
-import java.util.Optional;
+class BrotherCommand(private val brotherService: IBrotherService) : IMiscCommand {
+    override val name = "brother"
 
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-
-
-public class BrotherCommand implements IMiscCommand {
-
-    private final IBrotherService brotherService;
-    public static Long tobyId = 320919876883447808L;
-    private final String BROTHER = "brother";
-
-    public BrotherCommand(IBrotherService brotherService) {
-        this.brotherService = brotherService;
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        val guild = event.guild!!
+        val tobyEmote: Emoji? = guild.jda.getEmojiById(Emotes.TOBY)
+        determineBrother(event, tobyEmote, deleteDelay!!)
     }
 
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        Guild guild = event.getGuild();
-        Emoji tobyEmote = guild.getJDA().getEmojiById(Emotes.TOBY);
-
-        determineBrother(event, tobyEmote, deleteDelay);
-    }
-
-    private void determineBrother(SlashCommandInteractionEvent event, Emoji tobyEmote, int deleteDelay) {
-        InteractionHook hook = event.getHook();
-        if (tobyId.equals(event.getUser().getIdLong())) {
-            hook.sendMessageFormat("You're not my fucking brother Toby, you're me %s", tobyEmote).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+    private fun determineBrother(event: SlashCommandInteractionEvent, tobyEmote: Emoji?, deleteDelay: Int) {
+        val hook = event.hook
+        if (tobyId == event.user.idLong) {
+            hook.sendMessageFormat("You're not my fucking brother Toby, you're me %s", tobyEmote)
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
         }
-        Optional<Mentions> optionalMentions = Optional.ofNullable(event.getOption(BROTHER)).map(OptionMapping::getMentions);
-        if (optionalMentions.isEmpty()) {
-            Optional<BrotherDto> brother = brotherService.getBrotherById(event.getUser().getIdLong());
-            brother.ifPresentOrElse(
-                    brotherDto -> hook.sendMessageFormat("Of course you're my brother %s.", brotherDto.getBrotherName()).queue(invokeDeleteOnMessageResponse(deleteDelay)),
-                    () -> hook.sendMessageFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            );
-            return;
+        val optionalMentions = Optional.ofNullable(event.getOption(name)).map { obj: OptionMapping -> obj.mentions }
+        if (optionalMentions.isEmpty) {
+            val brother = brotherService.getBrotherById(event.user.idLong)
+            brother?.let {
+                hook.sendMessageFormat("Of course you're my brother %s.", it.brotherName)
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            }
+                ?: run {
+                    hook.sendMessageFormat("You're not my fucking brother %s ffs %s", event.user.name, tobyEmote)
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                }
+            return
         }
-        List<Member> mentions = optionalMentions.get().getMembers();
-        mentions.forEach(member -> {
-            Optional<BrotherDto> brother = brotherService.getBrotherById(member.getIdLong());
-            brother.ifPresentOrElse(
-                    brotherDto -> hook.sendMessageFormat("Of course you're my brother %s.", brotherDto.getBrotherName()).queue(invokeDeleteOnMessageResponse(deleteDelay)),
-                    () -> hook.sendMessageFormat("You're not my fucking brother %s ffs %s", event.getUser().getName(), tobyEmote).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            );
-        });
+        val mentions = optionalMentions.get().members
+        mentions.forEach { member ->
+            val brother = brotherService.getBrotherById(member.idLong)
+            brother?.let {
+                hook.sendMessageFormat("Of course you're my brother %s.", it.brotherName)
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            } ?: run {
+                hook.sendMessageFormat("You're not my fucking brother %s ffs %s", event.user.name, tobyEmote)
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            }
+        }
     }
 
-    @Override
-    public String getName() {
-        return BROTHER;
-    }
+    override val description: String
+        get() = "Let me tell you if you're my brother."
+    override val optionData: List<OptionData>
+        get() = listOf(OptionData(OptionType.USER, name, "Tag the person who you want to check the brother status of."))
 
-    @Override
-    public String getDescription() {
-        return "Let me tell you if you're my brother.";
-    }
-
-    @Override
-    public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.USER, BROTHER, "Tag the person who you want to check the brother status of."));
+    companion object {
+        @JvmField
+        var tobyId = 320919876883447808L
     }
 }

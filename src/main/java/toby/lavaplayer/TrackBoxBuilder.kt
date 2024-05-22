@@ -1,119 +1,124 @@
-package toby.lavaplayer;
+package toby.lavaplayer
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import kotlin.math.max
+import kotlin.math.min
 
-public class TrackBoxBuilder {
-    private static final String TOP_LEFT_CORNER = "\u2554";
-    private static final String TOP_RIGHT_CORNER = "\u2557";
-    private static final String BOTTOM_LEFT_CORNER = "\u255a";
-    private static final String BOTTOM_RIGHT_CORNER = "\u255d";
-    private static final String BORDER_HORIZONTAL = "\u2550";
-    private static final String BORDER_VERTICAL = "\u2551";
-    private static final String PROGRESS_FILL = "\u25a0";
-    private static final String PROGRESS_EMPTY = "\u2015";
+object TrackBoxBuilder {
+    private const val TOP_LEFT_CORNER = "\u2554"
+    private const val TOP_RIGHT_CORNER = "\u2557"
+    private const val BOTTOM_LEFT_CORNER = "\u255a"
+    private const val BOTTOM_RIGHT_CORNER = "\u255d"
+    private const val BORDER_HORIZONTAL = "\u2550"
+    private const val BORDER_VERTICAL = "\u2551"
+    private const val PROGRESS_FILL = "\u25a0"
+    private const val PROGRESS_EMPTY = "\u2015"
 
-    public static String buildTrackBox(int width, AudioTrack track, boolean isPaused, int volume) {
-        return boxify(width, buildFirstLine(width - 4, track), buildSecondLine(width - 4, track, isPaused, volume));
+    fun buildTrackBox(width: Int, track: AudioTrack, isPaused: Boolean, volume: Int): String {
+        return boxify(width, buildFirstLine(width - 4, track), buildSecondLine(width - 4, track, isPaused, volume))
     }
 
-    private static String buildFirstLine(int width, AudioTrack track) {
-        StringBuilder builder = new StringBuilder();
-        String title = track.getInfo().title;
-        int titleWidth = width - 7;
+    private fun buildFirstLine(width: Int, track: AudioTrack): String {
+        val builder = StringBuilder()
+        val title = track.info.title
+        val titleWidth = width - 7
 
-        if (title.length() > titleWidth) {
-            builder.append(title.substring(0, titleWidth - 3));
-            builder.append("...");
+        if (title.length > titleWidth) {
+            builder.append(title.substring(0, titleWidth - 3))
+            builder.append("...")
         } else {
-            builder.append(title);
+            builder.append(title)
         }
 
-        return builder.toString();
+        return builder.toString()
     }
 
-    private static String buildSecondLine(int width, AudioTrack track, boolean isPaused, int volume) {
-        String cornerText = isPaused ? "PAUSED" : volume + "%";
+    private fun buildSecondLine(width: Int, track: AudioTrack, isPaused: Boolean, volume: Int): String {
+        val cornerText = if (isPaused) "PAUSED" else "$volume%"
 
-        String duration = formatTiming(track.getDuration(), track.getDuration());
-        String position = formatTiming(track.getPosition(), track.getDuration());
-        int spacing = duration.length() - position.length();
-        int barLength = width - duration.length() - position.length() - spacing - 14;
+        val duration = formatTiming(track.duration, track.duration)
+        val position = formatTiming(track.position, track.duration)
+        val spacing = duration.length - position.length
+        val barLength = width - duration.length - position.length - spacing - 14
 
-        float progress = (float) Math.min(track.getPosition(), track.getDuration()) / (float) Math.max(track.getDuration(), 1);
-        int progressBlocks = Math.round(progress * barLength);
+        val progress =
+            min(track.position.toDouble(), track.duration.toDouble()).toFloat() / max(track.duration.toDouble(), 1.0)
+                .toFloat()
+        val progressBlocks = Math.round(progress * barLength)
 
-        StringBuilder builder = new StringBuilder();
+        val builder = StringBuilder()
 
-        for (int i = 0; i < 6 - cornerText.length(); i++) {
-            builder.append(" ");
+        for (i in 0 until 6 - cornerText.length) {
+            builder.append(" ")
         }
 
-        builder.append(cornerText);
+        builder.append(cornerText)
 
-        builder.append(" [");
-        for (int i = 0; i < barLength; i++) {
-            builder.append(i < progressBlocks ? PROGRESS_FILL : PROGRESS_EMPTY);
+        builder.append(" [")
+        for (i in 0 until barLength) {
+            builder.append(if (i < progressBlocks) PROGRESS_FILL else PROGRESS_EMPTY)
         }
-        builder.append("]");
+        builder.append("]")
 
-        for (int i = 0; i < spacing + 1; i++) {
-            builder.append(" ");
+        for (i in 0 until spacing + 1) {
+            builder.append(" ")
         }
 
-        builder.append(position);
-        builder.append(" of ");
-        builder.append(duration);
+        builder.append(position)
+        builder.append(" of ")
+        builder.append(duration)
 
-        builder.append(" ");
-        builder.append(TOP_RIGHT_CORNER);
+        builder.append(" ")
+        builder.append(TOP_RIGHT_CORNER)
 
-        return builder.toString();
+        return builder.toString()
     }
 
-    private static String formatTiming(long timing, long maximum) {
-        timing = Math.min(timing, maximum) / 1000;
+    private fun formatTiming(timing: Long, maximum: Long): String {
+        var timing = timing
+        timing = (min(timing.toDouble(), maximum.toDouble()) / 1000).toLong()
 
-        long seconds = timing % 60;
-        timing /= 60;
-        long minutes = timing % 60;
-        timing /= 60;
-        long hours = timing;
+        val seconds = timing % 60
+        timing /= 60
+        val minutes = timing % 60
+        timing /= 60
+        val hours = timing
 
-        if (maximum >= 3600000L) {
-            return String.format("%d:%02d:%02d", hours, minutes, seconds);
+        return if (maximum >= 3600000L) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
         } else {
-            return String.format("%d:%02d", minutes, seconds);
+            String.format("%d:%02d", minutes, seconds)
         }
     }
 
-    private static void boxifyLine(StringBuilder builder, String line) {
-        builder.append(BORDER_VERTICAL);
-        builder.append(" ");
-        builder.append(line);
-        builder.append("\n");
+    private fun boxifyLine(builder: StringBuilder, line: String) {
+        builder.append(BORDER_VERTICAL)
+        builder.append(" ")
+        builder.append(line)
+        builder.append("\n")
     }
 
-    private static String boxify(int width, String firstLine, String secondLine) {
-        StringBuilder builder = new StringBuilder();
+    private fun boxify(width: Int, firstLine: String, secondLine: String): String {
+        val builder = StringBuilder()
 
-        builder.append("```");
-        builder.append(TOP_LEFT_CORNER);
-        for (int i = 0; i < width - 1; i++) {
-            builder.append(BORDER_HORIZONTAL);
+        builder.append("```")
+        builder.append(TOP_LEFT_CORNER)
+        for (i in 0 until width - 1) {
+            builder.append(BORDER_HORIZONTAL)
         }
-        builder.append("\n");
+        builder.append("\n")
 
-        boxifyLine(builder, firstLine);
-        boxifyLine(builder, secondLine);
+        boxifyLine(builder, firstLine)
+        boxifyLine(builder, secondLine)
 
-        builder.append(BOTTOM_LEFT_CORNER);
-        for (int i = 0; i < width - 2; i++) {
-            builder.append(BORDER_HORIZONTAL);
+        builder.append(BOTTOM_LEFT_CORNER)
+        for (i in 0 until width - 2) {
+            builder.append(BORDER_HORIZONTAL)
         }
-        builder.append(BOTTOM_RIGHT_CORNER);
-        builder.append("```");
+        builder.append(BOTTOM_RIGHT_CORNER)
+        builder.append("```")
 
-        return builder.toString();
+        return builder.toString()
     }
 }
 

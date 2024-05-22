@@ -1,4 +1,8 @@
-package toby.dto.web.dnd;
+package toby.dto.web.dnd
 
-public record Rule(String index, String name, String desc, String url) {
-}
+data class Rule(
+    val index: String?,
+    val name: String?,
+    val desc: String?,
+    val url: String?
+)

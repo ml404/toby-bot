@@ -1,90 +1,113 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
 
-import static org.mockito.Mockito.*;
-
-class NowPlayingCommandTest implements MusicCommandTest {
-
-    NowPlayingCommand nowPlayingCommand;
+internal class NowPlayingCommandTest : MusicCommandTest {
+    private lateinit var nowPlayingCommand: NowPlayingCommand
 
     @BeforeEach
-    void setUp() {
-        setupCommonMusicMocks();
-        nowPlayingCommand = new NowPlayingCommand();
+    fun setUp() {
+        setupCommonMusicMocks()
+        nowPlayingCommand = NowPlayingCommand()
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMusicMocks();
+    fun tearDown() {
+        tearDownCommonMusicMocks()
     }
 
     @Test
-    void testNowPlaying_withNoCurrentTrack_throwsError() {
+    fun testNowPlaying_withNoCurrentTrack_throwsError() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.getPlayingTrack()).thenReturn(null);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.playingTrack).thenReturn(null)
 
 
         //Act
-        nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        nowPlayingCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage("There is no track playing currently");
-
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage("There is no track playing currently")
     }
 
     @Test
-    void testNowPlaying_withoutCorrectPermission_throwsError() {
+    fun testNowPlaying_withoutCorrectPermission_throwsError() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(requestingUserDto.hasMusicPermission()).thenReturn(false);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(CommandTest.requestingUserDto.musicPermission).thenReturn(false)
 
 
         //Act
-        nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        nowPlayingCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(interactionHook, times(1)).sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name");
-
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name")
     }
 
     @Test
-    void testNowPlaying_withCurrentTrackStream_printsTrack() {
+    fun testNowPlaying_withCurrentTrackStream_printsTrack() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(track.getUserData()).thenReturn(1);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
 
         //Act
-        nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        nowPlayingCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` (Link: <uri>) with volume '0'"));
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("Now playing `Title` by `Author` (Link: <uri>) with volume '0'"))
     }
 
     @Test
-    void testNowPlaying_withCurrentTrackNotStream_printsTrackWithTimestamps() {
+    fun testNowPlaying_withCurrentTrackNotStream_printsTrackWithTimestamps() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        AudioTrackInfo audioTrackInfo = new AudioTrackInfo("Title", "Author", 1000L, "Identifier", false, "uri");
-        when(audioPlayer.getPlayingTrack()).thenReturn(track);
-        when(track.getInfo()).thenReturn(audioTrackInfo);
-        when(track.getUserData()).thenReturn(1);
-        when(track.getPosition()).thenReturn(1000L);
-        when(track.getDuration()).thenReturn(3000L);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val audioTrackInfo = AudioTrackInfo("Title", "Author", 1000L, "Identifier", false, "uri")
+        Mockito.`when`(MusicCommandTest.audioPlayer.playingTrack)
+            .thenReturn(MusicCommandTest.track)
+        Mockito.`when`(MusicCommandTest.track.info).thenReturn(audioTrackInfo)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
+        Mockito.`when`(MusicCommandTest.track.position).thenReturn(1000L)
+        Mockito.`when`(MusicCommandTest.track.duration).thenReturn(3000L)
         //Act
-        nowPlayingCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        nowPlayingCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(interactionHook, times(1)).sendMessage(eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) with volume '0'"));
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) with volume '0'"))
     }
 }

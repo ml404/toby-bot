@@ -1,44 +1,47 @@
-package toby.helpers;
+package toby.helpers
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import java.io.IOException
 
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+class WikiFetcher(private val cache: Cache) {
 
-public class WikiFetcher {
-
-    private final Cache cache;
-
-    public WikiFetcher(Cache cache) {
-        this.cache = cache;
+    @Throws(IOException::class)
+    fun fetchFromWiki(cacheToRetrieve: String, webUrl: String, className: String, cssQuery: String): List<String> {
+        val cachedStrings = cache.get(key = cacheToRetrieve)
+        return cachedStrings ?: getMapStrings(cacheToRetrieve, webUrl, className, cssQuery)
     }
 
-    @SuppressWarnings("unchecked")
-    public List<String> fetchFromWiki(String cacheToRetrieve, String webUrl, String className, String cssQuery) throws IOException {
-        List<String> listOfStrings = (List<String>) cache.get(cacheToRetrieve);
-        return listOfStrings != null ? listOfStrings : getMapStrings(cacheToRetrieve, webUrl, className,cssQuery);
+    @Throws(IOException::class)
+    private fun getMapStrings(
+        cacheToRetrieve: String,
+        webUrl: String,
+        className: String,
+        cssQuery: String
+    ): List<String> {
+        val mapElement = getElementFromWiki(webUrl, className)
+        val listOfStrings = if (cacheToRetrieve == "dbdKillers") {
+            getDbdKillerStrings(mapElement)
+        } else {
+            mapElement.select(cssQuery).eachText()
+        }
+        cache.put(cacheToRetrieve, listOfStrings)
+        return listOfStrings
     }
 
-    @SuppressWarnings("unchecked")
-    private List<String> getMapStrings(String cacheToRetrieve, String webUrl, String className, String cssQuery) throws IOException {
-        Element mapElement = getElementFromWiki(webUrl, className);
-        List<String> listOfStrings = cacheToRetrieve.equals("dbdKillers") ? getDbdKillerStrings(mapElement) : mapElement.select(cssQuery).eachText();
-        cache.put(cacheToRetrieve, listOfStrings);
-        return listOfStrings;
+    private fun getDbdKillerStrings(mapElement: Element): List<String> {
+        return mapElement.select("div")[6]
+            .allElements
+            .eachText()
+            .filter { name ->
+                name.split("-").size == 2
+            }
     }
 
-    public List<String> getDbdKillerStrings(Element mapElement){
-        return mapElement.select("div").get(6).getAllElements().eachText().stream().filter(name -> name.split("-").length == 2).collect(Collectors.toList());
-    }
-
-    private Element getElementFromWiki(String webUrl, String className) throws IOException {
-        Document doc = Jsoup.connect(webUrl).get();
-        Elements mapElements = doc.getElementsByClass(className);
-        return mapElements.get(0);
+    @Throws(IOException::class)
+    private fun getElementFromWiki(webUrl: String, className: String): Element {
+        val doc = Jsoup.connect(webUrl).get()
+        return doc.getElementsByClass(className).first()
+            ?: throw IOException("Element with class '$className' not found")
     }
 }
-

@@ -1,54 +1,53 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.jpa.dto.UserDto;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.jpa.dto.UserDto
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-class ChCommandTest implements CommandTest {
-
-    ChCommand command;
+internal class ChCommandTest : CommandTest {
+    var command: ChCommand? = null
 
     @BeforeEach
-    void setUp() {
-        setUpCommonMocks();
-        command = new ChCommand();
+    fun setUp() {
+        setUpCommonMocks()
+        command = ChCommand()
         // Mock OptionMapping for the MESSAGE option
-        OptionMapping messageOption = Mockito.mock(OptionMapping.class);
-        when(messageOption.getAsString()).thenReturn("hello world");
-        when(event.getOption("message")).thenReturn(messageOption);
+        val messageOption = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`(messageOption.asString).thenReturn("hello world")
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("message")).thenReturn(messageOption)
 
         // Mock the event to return the MESSAGE option
-        when(event.getOption(anyString())).thenReturn(messageOption);
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption(ArgumentMatchers.anyString()))
+            .thenReturn(messageOption)
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMocks();
+    fun tearDown() {
+        tearDownCommonMocks()
     }
 
     @Test
-    public void testHandle() {
+    fun testHandle() {
         // Create a CommandContext
-        CommandContext ctx = new CommandContext(event);
+        val ctx = CommandContext(CommandTest.event)
 
         // Mock requestingUserDto
-        UserDto requestingUserDto = new UserDto(); // You can set the user as needed
-        Integer deleteDelay = 0; // Set your desired deleteDelay
+        val requestingUserDto = UserDto() // You can set the user as needed
+        val deleteDelay = 0 // Set your desired deleteDelay
 
         // Test the handle method
-        command.handle(ctx, requestingUserDto, deleteDelay);
+        command!!.handle(ctx, requestingUserDto, deleteDelay)
 
         // Verify that the message was sent with the expected content
         // You can use Mockito.verify() to check if event.getHook().sendMessage(...) was called with the expected message content.
         // For example:
-        verify(event.getHook()).sendMessage("Oh! I think you mean: 'chello chorld'");
+        Mockito.verify(CommandTest.event.hook)
+            .sendMessage("Oh! I think you mean: 'chello chorld'")
     }
 }

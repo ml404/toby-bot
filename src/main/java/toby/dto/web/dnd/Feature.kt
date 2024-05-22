@@ -1,15 +1,14 @@
-package toby.dto.web.dnd;
+package toby.dto.web.dnd
 
-import com.google.gson.annotations.SerializedName;
-import toby.dto.web.dnd.spell.ApiInfo;
+import com.google.gson.annotations.SerializedName
 
-import java.util.List;
-
-public record Feature(String index,
-                      @SerializedName("class") ApiInfo classInfo,
-                      String name,
-                      int level,
-                      List<String> prerequisites,
-                      List<String> desc,
-                      String url) {
-}
+data class Feature(
+    val index: String?,
+    @SerializedName("class")
+    val classInfo: ApiInfo?,
+    val name: String?,
+    val level: Int?,
+    val prerequisites: List<String?>,
+    val desc: List<String>?,
+    val url: String?
+)

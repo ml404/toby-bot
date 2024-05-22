@@ -1,17 +1,14 @@
-package toby.jpa.persistence;
+package toby.jpa.persistence
 
-import toby.jpa.dto.ExcuseDto;
+import toby.jpa.dto.ExcuseDto
 
-import java.util.List;
-
-public interface IExcusePersistence {
-
-    List<ExcuseDto> listAllGuildExcuses(Long guildId);
-    List<ExcuseDto> listApprovedGuildExcuses(Long guildId);
-    List<ExcuseDto> listPendingGuildExcuses(Long guildId);
-    ExcuseDto createNewExcuse(ExcuseDto excuseDto);
-    ExcuseDto getExcuseById(Integer id);
-    ExcuseDto updateExcuse(ExcuseDto excuseDto);
-    void deleteAllExcusesForGuild(Long excuseDto);
-    void deleteExcuseById(Integer discordId);
+interface IExcusePersistence {
+    fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?>
+    fun listApprovedGuildExcuses(guildId: Long?): List<ExcuseDto?>
+    fun listPendingGuildExcuses(guildId: Long?): List<ExcuseDto?>
+    fun createNewExcuse(excuseDto: ExcuseDto?): ExcuseDto?
+    fun getExcuseById(id: Int?): ExcuseDto
+    fun updateExcuse(excuseDto: ExcuseDto): ExcuseDto
+    fun deleteAllExcusesForGuild(guildId: Long?)
+    fun deleteExcuseById(id: Int?)
 }

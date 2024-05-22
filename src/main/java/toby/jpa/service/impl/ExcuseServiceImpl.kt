@@ -1,74 +1,59 @@
-package toby.jpa.service.impl;
+package toby.jpa.service.impl
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import toby.jpa.dto.ExcuseDto;
-import toby.jpa.persistence.IExcusePersistence;
-import toby.jpa.service.IExcuseService;
-
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.CachePut
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.stereotype.Service
+import toby.jpa.dto.ExcuseDto
+import toby.jpa.persistence.IExcusePersistence
+import toby.jpa.service.IExcuseService
 
 @Service
-public class ExcuseServiceImpl implements IExcuseService {
-
+open class ExcuseServiceImpl : IExcuseService {
     @Autowired
-    IExcusePersistence excuseService;
+    lateinit var excuseService: IExcusePersistence
 
-    @Override
-    @Cacheable(value = "excuses")
-    public List<ExcuseDto> listAllGuildExcuses(Long guildId) {
-        return excuseService.listAllGuildExcuses(guildId);
+    @Cacheable(value = ["excuses"])
+    override fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?> {
+        return excuseService.listAllGuildExcuses(guildId)
     }
 
-    @Override
-    @Cacheable(value = "excuses")
-    public List<ExcuseDto> listApprovedGuildExcuses(Long guildId) {
-        return excuseService.listApprovedGuildExcuses(guildId);
+    @Cacheable(value = ["excuses"])
+    override fun listApprovedGuildExcuses(guildId: Long?): List<ExcuseDto?> {
+        return excuseService.listApprovedGuildExcuses(guildId)
     }
 
-    @Override
-    public List<ExcuseDto> listPendingGuildExcuses(Long guildId) {
-        return excuseService.listPendingGuildExcuses(guildId);
+    override fun listPendingGuildExcuses(guildId: Long?): List<ExcuseDto?> {
+        return excuseService.listPendingGuildExcuses(guildId)
     }
 
-    @Override
-    @CachePut(value = "excuses", key = "#excuseDto.id")
-    public ExcuseDto createNewExcuse(ExcuseDto excuseDto) {
-        return excuseService.createNewExcuse(excuseDto);
+    @CachePut(value = ["excuses"], key = "#excuseDto.id")
+    override fun createNewExcuse(excuseDto: ExcuseDto?): ExcuseDto? {
+        return excuseService.createNewExcuse(excuseDto)
     }
 
-    @Override
-    @CachePut(value = "excuses", key = "#id")
-    public ExcuseDto getExcuseById(Integer id) {
-        return excuseService.getExcuseById(id);
+    @CachePut(value = ["excuses"], key = "#id")
+    override fun getExcuseById(id: Int?): ExcuseDto {
+        return excuseService.getExcuseById(id)
     }
 
-    @Override
-    @CachePut(value = "excuses", key = "#excuseDto.id")
-    public ExcuseDto updateExcuse(ExcuseDto excuseDto) {
-        return excuseService.updateExcuse(excuseDto);
+    @CachePut(value = ["excuses"], key = "#excuseDto.id")
+    override fun updateExcuse(excuseDto: ExcuseDto): ExcuseDto {
+        return excuseService.updateExcuse(excuseDto)
     }
 
-    @Override
-    @CacheEvict(value = "excuses", allEntries = true)
-    public void deleteExcuseByGuildId(Long guildId) {
-        excuseService.deleteAllExcusesForGuild(guildId);
+    @CacheEvict(value = ["excuses"], allEntries = true)
+    override fun deleteExcuseByGuildId(guildId: Long?) {
+        excuseService.deleteAllExcusesForGuild(guildId)
     }
 
-    @Override
-    @CacheEvict(value = "excuses", key = "#id")
-    public void deleteExcuseById(Integer id) {
-        excuseService.deleteExcuseById(id);
+    @CacheEvict(value = ["excuses"], key = "#id")
+    override fun deleteExcuseById(id: Int?) {
+        excuseService.deleteExcuseById(id)
     }
 
-    @Override
-    @CacheEvict(value = "excuses", allEntries = true)
-    public void clearCache() {
-
+    @CacheEvict(value = ["excuses"], allEntries = true)
+    override fun clearCache() {
     }
-
-
 }

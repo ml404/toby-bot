@@ -1,37 +1,47 @@
-package toby.menu;
+package toby.menu
 
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mock;
-import toby.command.CommandTest;
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.kotlin.anyVararg
+import toby.command.CommandTest
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
-public interface MenuTest extends CommandTest {
-
-    @Mock
-    StringSelectInteractionEvent menuEvent = mock(StringSelectInteractionEvent.class);
-
+interface MenuTest : CommandTest {
     @BeforeEach
-    default void setUpMenuMocks(){
-        setUpCommonMocks();
-        when(menuEvent.getHook()).thenReturn(interactionHook);
-        when(menuEvent.deferReply()).thenReturn(replyCallbackAction);
-        when(menuEvent.deferReply()).thenReturn(replyCallbackAction);
-        when(menuEvent.getGuild()).thenReturn(guild);
-        when(menuEvent.getUser()).thenReturn(user);
-        when(menuEvent.reply(anyString())).thenReturn(replyCallbackAction);
-        when(menuEvent.replyFormat(anyString(), any())).thenReturn(replyCallbackAction);
+    fun setUpMenuMocks() {
+        setUpCommonMocks()
+        Mockito.`when`(menuEvent.hook).thenReturn(CommandTest.interactionHook)
+        Mockito.`when`(menuEvent.deferReply())
+            .thenReturn(CommandTest.replyCallbackAction)
+        Mockito.`when`(menuEvent.deferReply())
+            .thenReturn(CommandTest.replyCallbackAction)
+        Mockito.`when`<Guild>(menuEvent.guild).thenReturn(CommandTest.guild)
+        Mockito.`when`(menuEvent.user).thenReturn(CommandTest.user)
+        Mockito.`when`(menuEvent.reply(ArgumentMatchers.anyString()))
+            .thenReturn(CommandTest.replyCallbackAction)
+        Mockito.`when`(
+            menuEvent.replyFormat(
+                ArgumentMatchers.anyString(),
+                anyVararg()
+            )
+        ).thenReturn(CommandTest.replyCallbackAction)
     }
 
     @AfterEach
-    default void tearDownMenuMocks(){
-        tearDownCommonMocks();
-        reset(menuEvent);
+    fun tearDownMenuMocks() {
+        tearDownCommonMocks()
+        Mockito.reset(menuEvent)
     }
 
 
+    companion object {
+        @Mock
+        val menuEvent: StringSelectInteractionEvent = Mockito.mock(
+            StringSelectInteractionEvent::class.java
+        )
+    }
 }

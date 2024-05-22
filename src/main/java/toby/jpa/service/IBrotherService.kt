@@ -1,16 +1,13 @@
-package toby.jpa.service;
+package toby.jpa.service
 
-import toby.jpa.dto.BrotherDto;
+import toby.jpa.dto.BrotherDto
 
-import java.util.Optional;
-
-public interface IBrotherService  {
-    Iterable<BrotherDto> listBrothers();
-    BrotherDto createNewBrother(BrotherDto brotherDto);
-    Optional<BrotherDto> getBrotherById(Long discordId);
-    BrotherDto updateBrother(BrotherDto brotherDto);
-    void deleteBrother(BrotherDto brotherDto);
-    void deleteBrotherById(Long discordId);
-    void clearCache();
-
+interface IBrotherService {
+    fun listBrothers(): Iterable<BrotherDto?>?
+    fun createNewBrother(brotherDto: BrotherDto): BrotherDto?
+    fun getBrotherById(discordId: Long?): BrotherDto?
+    fun updateBrother(brotherDto: BrotherDto?): BrotherDto?
+    fun deleteBrother(brotherDto: BrotherDto?)
+    fun deleteBrotherById(discordId: Long?)
+    fun clearCache()
 }

@@ -1,153 +1,102 @@
-package toby.jpa.dto;
+package toby.jpa.dto
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
-import org.apache.commons.lang3.EnumUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.annotation.JsonIgnore
+import jakarta.persistence.*
+import org.apache.commons.lang3.EnumUtils
+import org.apache.commons.lang3.builder.EqualsBuilder
+import org.apache.commons.lang3.builder.HashCodeBuilder
+import org.springframework.transaction.annotation.Transactional
+import java.io.Serializable
 
-import java.io.Serializable;
-
-@NamedQueries({
-
-        @NamedQuery(name = "MusicDto.getById",
-                query = "select a from MusicDto as a WHERE a.id = :id"),
-
-        @NamedQuery(name = "MusicDto.deleteById",
-                query = "delete from MusicDto as a WHERE a.id = :id")
-})
-
+@NamedQueries(
+    NamedQuery(name = "MusicDto.getById", query = "select a from MusicDto as a WHERE a.id = :id"),
+    NamedQuery(name = "MusicDto.deleteById", query = "delete from MusicDto as a WHERE a.id = :id")
+)
 @Entity
 @Table(name = "music_files", schema = "public")
 @Transactional
-public class MusicDto implements Serializable {
-
-
+class MusicDto : Serializable {
+    @JvmField
     @Id
     @Column(name = "id")
     @JsonIgnore
-    private String id;
+    var id: String? = null
 
+    @JvmField
     @Column(name = "file_name")
-    private String fileName;
+    var fileName: String? = null
 
     @Column(name = "file_vol")
-    private Integer introVolume = 10;
+    var introVolume: Int = 10
 
+    @JvmField
     @Lob
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "TEXT")
-    private byte[] musicBlob;
+    var musicBlob: ByteArray? = null
 
 
-    public MusicDto() {
+    constructor()
+
+    constructor(discordId: Long, guildId: Long, fileName: String?, introVolume: Int, musicBlob: ByteArray?) {
+        this.id = createMusicId(guildId, discordId)
+        this.fileName = fileName
+        this.introVolume = introVolume
+        this.musicBlob = musicBlob
     }
 
-    public MusicDto(Long discordId, Long guildId, String fileName, int introVolume, byte[] musicBlob) {
-        this.id = createMusicId(guildId, discordId);
-        this.fileName = fileName;
-        this.introVolume = introVolume;
-        this.musicBlob = musicBlob;
-
-    }
-
-    public enum Adjustment {
+    enum class Adjustment(val adjustment: String) {
         START("start"),
         END("end");
 
-        private final String adjustment;
-
-        Adjustment(String adjustment) {
-            this.adjustment = adjustment;
-        }
-
-        public String getAdjustment() {
-            return this.adjustment;
-        }
-
-        public static Boolean isValidEnum(String enumName) {
-            return EnumUtils.isValidEnum(MusicDto.Adjustment.class, enumName);
+        companion object {
+            fun isValidEnum(enumName: String?): Boolean {
+                return EnumUtils.isValidEnum(Adjustment::class.java, enumName)
+            }
         }
     }
 
-    private String createMusicId(Long guildId, Long discordId) {
-        return String.format("%s_%s", guildId, discordId);
+    private fun createMusicId(guildId: Long, discordId: Long): String {
+        return String.format("%s_%s", guildId, discordId)
     }
 
 
-    public String getId() {
-        return id;
+    override fun toString(): String {
+        val sb = StringBuilder("MusicDto{")
+        sb.append("id=").append(id)
+        sb.append(", fileName=").append(fileName)
+        sb.append(", introVolume=").append(introVolume)
+        sb.append('}')
+        return sb.toString()
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public Integer getIntroVolume() {
-        return introVolume;
-    }
-
-    public void setIntroVolume(Integer introVolume) {
-        this.introVolume = introVolume;
-    }
-
-    public byte[] getMusicBlob() {
-        return musicBlob;
-    }
-
-    public void setMusicBlob(byte[] musicBlob) {
-        this.musicBlob = musicBlob;
-    }
-
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("MusicDto{");
-        sb.append("id=").append(id);
-        sb.append(", fileName=").append(fileName);
-        sb.append(", introVolume=").append(introVolume);
-        sb.append('}');
-        return sb.toString();
-    }
-
-    @Override
-    public boolean equals(Object o) {
+    override fun equals(o: Any?): Boolean {
         // If the object is compared with itself then return true
-        if (o == this) {
-            return true;
+        if (o === this) {
+            return true
         }
 
         /* Check if o is an instance of MusicDto or not
           "null instanceof [type]" also returns false */
-        if (!(o instanceof MusicDto other)) {
-            return false;
+        if (o !is MusicDto) {
+            return false
         }
 
         // Compare the data members and return accordingly
-        return new EqualsBuilder()
-                .append(id, other.id)
-                .append(fileName, other.fileName)
-                .append(introVolume, other.introVolume)
-                .append(musicBlob, other.musicBlob)
-                .isEquals();
+        return EqualsBuilder()
+            .append(id, o.id)
+            .append(fileName, o.fileName)
+            .append(introVolume, o.introVolume)
+            .append(musicBlob, o.musicBlob)
+            .isEquals
     }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(17, 37)
-                .append(id)
-                .append(fileName)
-                .append(introVolume)
-                .append(musicBlob)
-                .toHashCode();
+    override fun hashCode(): Int {
+        return HashCodeBuilder(17, 37)
+            .append(id)
+            .append(fileName)
+            .append(introVolume)
+            .append(musicBlob)
+            .toHashCode()
     }
 }

@@ -1,26 +1,27 @@
-package toby.helpers;
+package toby.helpers
 
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet
+import org.apache.hc.client5.http.impl.classic.HttpClients
+import org.apache.hc.core5.http.ParseException
+import org.apache.hc.core5.http.io.entity.EntityUtils
+import java.io.IOException
 
-import java.io.IOException;
-
-public class HttpHelper {
-    public String fetchFromGet(String url) {
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-            HttpGet httpGet = new HttpGet(url);
-            httpGet.addHeader("Accept", "application/json");
-            CloseableHttpResponse response = httpClient.execute(httpGet);
-            if (response.getCode() == 200) {
-                return EntityUtils.toString(response.getEntity());
+class HttpHelper {
+    fun fetchFromGet(url: String?): String {
+        try {
+            HttpClients.createDefault().use { httpClient ->
+                val httpGet = HttpGet(url)
+                httpGet.addHeader("Accept", "application/json")
+                val response = httpClient.execute(httpGet)
+                if (response.code == 200) {
+                    return EntityUtils.toString(response.entity)
+                }
             }
-        } catch (IOException | ParseException e) {
-            throw new RuntimeException(e);
+        } catch (e: IOException) {
+            throw RuntimeException(e)
+        } catch (e: ParseException) {
+            throw RuntimeException(e)
         }
-        return "";
+        return ""
     }
 }

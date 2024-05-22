@@ -1,102 +1,76 @@
-package toby.jpa.persistence.impl;
+package toby.jpa.persistence.impl
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-import toby.jpa.dto.ExcuseDto;
-import toby.jpa.persistence.IExcusePersistence;
-
-import java.util.List;
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
+import jakarta.persistence.Query
+import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
+import toby.jpa.dto.ExcuseDto
+import toby.jpa.persistence.IExcusePersistence
 
 @Repository
 @Transactional
-public class ExcusePersistenceImpl implements IExcusePersistence {
-
-    ExcusePersistenceImpl() {
-    }
-
+open class ExcusePersistenceImpl internal constructor() : IExcusePersistence {
     @PersistenceContext
-    protected EntityManager em;
+    var entityManager: EntityManager? = null
 
-    public EntityManager getEntityManager() {
-        return em;
+
+    override fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?> {
+        val q: Query = entityManager!!.createNamedQuery("ExcuseDto.getAll", ExcuseDto::class.java)
+        q.setParameter("guildId", guildId)
+        return q.resultList as List<ExcuseDto?>
     }
 
-    public void setEntityManager(EntityManager entityManager) {
-        this.em = entityManager;
+    override fun listApprovedGuildExcuses(guildId: Long?): List<ExcuseDto?> {
+        val q: Query = entityManager!!.createNamedQuery("ExcuseDto.getApproved", ExcuseDto::class.java)
+        q.setParameter("guildId", guildId)
+        return q.resultList as List<ExcuseDto?>
     }
 
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public List<ExcuseDto> listAllGuildExcuses(Long guildId) {
-        Query q = em.createNamedQuery("ExcuseDto.getAll", ExcuseDto.class);
-        q.setParameter("guildId", guildId);
-        return q.getResultList();
+    override fun listPendingGuildExcuses(guildId: Long?): List<ExcuseDto?> {
+        val q: Query = entityManager!!.createNamedQuery("ExcuseDto.getPending", ExcuseDto::class.java)
+        q.setParameter("guildId", guildId)
+        return q.resultList as List<ExcuseDto?>
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public List<ExcuseDto> listApprovedGuildExcuses(Long guildId) {
-        Query q = em.createNamedQuery("ExcuseDto.getApproved", ExcuseDto.class);
-        q.setParameter("guildId", guildId);
-        return q.getResultList();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public List<ExcuseDto> listPendingGuildExcuses(Long guildId) {
-        Query q = em.createNamedQuery("ExcuseDto.getPending", ExcuseDto.class);
-        q.setParameter("guildId", guildId);
-        return q.getResultList();
-    }
-
-    @Override
-    public ExcuseDto createNewExcuse(ExcuseDto excuseDto) {
-        return persistExcuseDto(excuseDto);
+    override fun createNewExcuse(excuseDto: ExcuseDto?): ExcuseDto? {
+        return persistExcuseDto(excuseDto)
     }
 
 
-    @Override
-    public ExcuseDto getExcuseById(Integer id) {
-        Query excuseQuery = em.createNamedQuery("ExcuseDto.getById", ExcuseDto.class);
-        excuseQuery.setParameter("id", id);
-        return (ExcuseDto) excuseQuery.getSingleResult();
+    override fun getExcuseById(id: Int?): ExcuseDto {
+        val excuseQuery: Query = entityManager!!.createNamedQuery("ExcuseDto.getById", ExcuseDto::class.java)
+        excuseQuery.setParameter("id", id)
+        return excuseQuery.singleResult as ExcuseDto
     }
 
-    @Override
-    public ExcuseDto updateExcuse(ExcuseDto excuseDto) {
-        ExcuseDto dbExcuse = getExcuseById(excuseDto.getId());
+    override fun updateExcuse(excuseDto: ExcuseDto): ExcuseDto {
+        val dbExcuse = getExcuseById(excuseDto.id)
 
-        if (!excuseDto.equals(dbExcuse)) {
-            em.merge(excuseDto);
-            em.flush();
+        if (excuseDto != dbExcuse) {
+            entityManager!!.merge(excuseDto)
+            entityManager!!.flush()
         }
 
-        return excuseDto;
+        return excuseDto
     }
 
-    @Override
-    public void deleteAllExcusesForGuild(Long guildId) {
-        Query excuseQuery = em.createNamedQuery("ExcuseDto.deleteAllByGuildId");
-        excuseQuery.setParameter("guildId", guildId);
-        excuseQuery.executeUpdate();
+    override fun deleteAllExcusesForGuild(guildId: Long?) {
+        val excuseQuery = entityManager!!.createNamedQuery("ExcuseDto.deleteAllByGuildId")
+        excuseQuery.setParameter("guildId", guildId)
+        excuseQuery.executeUpdate()
     }
 
-    @Override
-    public void deleteExcuseById(Integer id) {
-        Query excuseQuery = em.createNamedQuery("ExcuseDto.deleteById");
-        excuseQuery.setParameter("id", id);
-        excuseQuery.executeUpdate();
-
+    override fun deleteExcuseById(id: Int?) {
+        val excuseQuery = entityManager!!.createNamedQuery("ExcuseDto.deleteById")
+        excuseQuery.setParameter("id", id)
+        excuseQuery.executeUpdate()
     }
 
     @Transactional
-    private ExcuseDto persistExcuseDto(ExcuseDto excuseDto) {
-        em.persist(excuseDto);
-        em.flush();
-        return excuseDto;
+    private fun persistExcuseDto(excuseDto: ExcuseDto?): ExcuseDto? {
+        entityManager!!.persist(excuseDto)
+        entityManager!!.flush()
+        return excuseDto
     }
 }

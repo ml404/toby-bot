@@ -1,42 +1,30 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.deleteAfter
+import toby.helpers.MusicPlayerHelper
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.PlayerManager
 
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.CommandContext;
-import toby.command.ICommand;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.PlayerManager;
-
-import static toby.command.commands.music.IMusicCommand.isInvalidChannelStateForCommand;
-import static toby.helpers.MusicPlayerHelper.changePauseStatusOnTrack;
-
-
-public class ResumeCommand implements IMusicCommand {
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+class ResumeCommand : IMusicCommand {
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        ICommand.deleteAfter(ctx.getEvent().getHook(), deleteDelay);
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(event, deleteDelay);
-            return;
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        deleteAfter(ctx!!.event.hook, deleteDelay!!)
+        val event = ctx.event
+        event.deferReply().queue()
+        if (!requestingUserDto.musicPermission) {
+            sendErrorMessage(event, deleteDelay)
+            return
         }
-        if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        changePauseStatusOnTrack(event,instance.getMusicManager(ctx.getGuild()), deleteDelay);
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        MusicPlayerHelper.changePauseStatusOnTrack(event, instance.getMusicManager(ctx.guild), deleteDelay)
     }
 
-    @Override
-    public String getName() {
-        return "resume";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Resumes the current song if one is paused.";
-    }
+    override val name: String
+        get() = "resume"
+    override val description: String
+        get() = "Resumes the current song if one is paused."
 }

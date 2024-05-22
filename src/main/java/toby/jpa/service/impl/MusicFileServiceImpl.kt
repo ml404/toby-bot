@@ -1,53 +1,45 @@
-package toby.jpa.service.impl;
+package toby.jpa.service.impl
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.stereotype.Service;
-import toby.jpa.dto.MusicDto;
-import toby.jpa.persistence.IMusicFilePersistence;
-import toby.jpa.service.IMusicFileService;
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.CachePut
+import org.springframework.stereotype.Service
+import toby.jpa.dto.MusicDto
+import toby.jpa.persistence.IMusicFilePersistence
+import toby.jpa.service.IMusicFileService
 
 @Service
-public class MusicFileServiceImpl implements IMusicFileService {
-
+open class MusicFileServiceImpl : IMusicFileService {
     @Autowired
-    IMusicFilePersistence musicFileService;
+    lateinit var musicFileService: IMusicFilePersistence
 
 
-    @Override
-    @CachePut(value = "music", key = "#musicDto.id")
-    public MusicDto createNewMusicFile(MusicDto musicDto) {
-        return musicFileService.createNewMusicFile(musicDto);
+    @CachePut(value = ["music"], key = "#musicDto.id")
+    override fun createNewMusicFile(musicDto: MusicDto?): MusicDto? {
+        return musicFileService.createNewMusicFile(musicDto)
     }
 
-    @Override
-    @CachePut(value = "music", key = "#id")
-    public MusicDto getMusicFileById(String id) {
-        return musicFileService.getMusicFileById(id);
+    @CachePut(value = ["music"], key = "#id")
+    override fun getMusicFileById(id: String?): MusicDto {
+        return musicFileService.getMusicFileById(id)
     }
 
-    @Override
-    @CachePut(value = "music", key = "#musicDto.id")
-    public MusicDto updateMusicFile(MusicDto musicDto) {
-        return musicFileService.updateMusicFile(musicDto);
+    @CachePut(value = ["music"], key = "#musicDto.id")
+    override fun updateMusicFile(musicDto: MusicDto?): MusicDto? {
+        return musicFileService.updateMusicFile(musicDto)
     }
 
-    @Override
-    @CacheEvict(value = "music", key = "#musicDto.id")
-    public void deleteMusicFile(MusicDto musicDto) {
-        musicFileService.deleteMusicFile(musicDto);
+    @CacheEvict(value = ["music"], key = "#musicDto.id")
+    override fun deleteMusicFile(musicDto: MusicDto?) {
+        musicFileService.deleteMusicFile(musicDto)
     }
 
-    @Override
-    @CacheEvict(value = "music", key = "#id")
-    public void deleteMusicFileById(String id) {
-        musicFileService.deleteMusicFileById(id);
+    @CacheEvict(value = ["music"], key = "#id")
+    override fun deleteMusicFileById(id: String?) {
+        musicFileService.deleteMusicFileById(id)
     }
 
-    @Override
-    @CacheEvict(value = "music", allEntries = true)
-    public void clearCache() {
-
+    @CacheEvict(value = ["music"], allEntries = true)
+    override fun clearCache() {
     }
 }

@@ -1,38 +1,30 @@
-package toby.lavaplayer;
+package toby.lavaplayer
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import com.sedmelluq.discord.lavaplayer.track.playback.MutableAudioFrame;
-import net.dv8tion.jda.api.audio.AudioSendHandler;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
+import com.sedmelluq.discord.lavaplayer.track.playback.MutableAudioFrame
+import net.dv8tion.jda.api.audio.AudioSendHandler
+import java.nio.Buffer
+import java.nio.ByteBuffer
 
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
+class AudioPlayerSendHandler(private val audioPlayer: AudioPlayer) : AudioSendHandler {
+    private val buffer: ByteBuffer = ByteBuffer.allocate(1024)
+    private val frame = MutableAudioFrame()
 
-public class AudioPlayerSendHandler implements AudioSendHandler {
-    private final AudioPlayer audioPlayer;
-    private final ByteBuffer buffer;
-    private final MutableAudioFrame frame;
-
-    public AudioPlayerSendHandler(AudioPlayer audioPlayer) {
-        this.audioPlayer = audioPlayer;
-        this.buffer = ByteBuffer.allocate(1024);
-        this.frame = new MutableAudioFrame();
-        this.frame.setBuffer(buffer);
+    init {
+        frame.setBuffer(buffer)
     }
 
-    @Override
-    public boolean canProvide() {
-        return this.audioPlayer.provide(this.frame);
+    override fun canProvide(): Boolean {
+        return audioPlayer.provide(this.frame)
     }
 
-    @Override
-    public ByteBuffer provide20MsAudio() {
-        final Buffer buffer = ((Buffer) this.buffer).flip();
-        return (ByteBuffer) buffer;
+    override fun provide20MsAudio(): ByteBuffer {
+        val buffer = (buffer as Buffer).flip()
+        return buffer as ByteBuffer
     }
 
-    @Override
-    public boolean isOpus() {
-        return true;
+    override fun isOpus(): Boolean {
+        return true
     }
 }
 

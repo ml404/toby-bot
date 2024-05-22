@@ -1,103 +1,51 @@
-package toby.dto.web;
+package toby.dto.web
 
-import com.google.gson.annotations.SerializedName;
+import com.google.gson.annotations.SerializedName
 
-public class RedditAPIDto {
-
+class RedditAPIDto {
+    @JvmField
     @SerializedName("title")
-    private String title;
+    var title: String? = null
 
+    @JvmField
     @SerializedName("author")
-    private String author;
+    var author: String? = null
 
+    @JvmField
     @SerializedName("permalink")
-    private String url;
+    var url: String? = null
 
     @SerializedName("url_overridden_by_dest")
-    private String image;
+    var image: String? = null
 
     @SerializedName("over_18")
-    private Boolean nsfw;
+    var isNsfw: Boolean? = null
 
+    @JvmField
     @SerializedName("is_video")
-    private Boolean video;
+    var video: Boolean? = null
 
-    public enum TimePeriod {
+    enum class TimePeriod(@JvmField val timePeriod: String) {
         DAY("day"),
         WEEK("week"),
         MONTH("month"),
         ALL("all");
 
-        private final String timePeriod;
-
-        TimePeriod(String timePeriod){
-            this.timePeriod=timePeriod;
-        }
-
-        public String getTimePeriod(){
-            return this.timePeriod;
-        }
-
-        public static RedditAPIDto.TimePeriod parseTimePeriod(String value) {
-            for (RedditAPIDto.TimePeriod timePeriod : RedditAPIDto.TimePeriod.values()) {
-                if (timePeriod.name().equalsIgnoreCase(value)) {
-                    return timePeriod;
+        companion object {
+            @JvmStatic
+            fun parseTimePeriod(value: String): TimePeriod {
+                for (timePeriod in entries) {
+                    if (timePeriod.name.equals(value, ignoreCase = true)) {
+                        return timePeriod
+                    }
                 }
+                // Handle non-enum constants here
+                throw IllegalArgumentException("Invalid time period: $value")
             }
-            // Handle non-enum constants here
-            throw new IllegalArgumentException("Invalid time period: " + value);
         }
-
     }
 
-    public static String redditPrefix = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s";
-
-    public String getTitle() {
-        return title;
+    companion object {
+        var redditPrefix: String = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s"
     }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public Boolean isNsfw() {
-        return nsfw;
-    }
-
-    public void setNsfw(Boolean nsfw) {
-        this.nsfw = nsfw;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public void setImage(String image) {
-        this.image = image;
-    }
-
-    public Boolean getVideo() {
-        return video;
-    }
-
-    public void setVideo(Boolean video) {
-        this.video = video;
-    }
-
 }

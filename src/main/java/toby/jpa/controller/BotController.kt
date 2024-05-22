@@ -1,65 +1,44 @@
-package toby.jpa.controller;
+package toby.jpa.controller
 
-import org.springframework.web.bind.annotation.*;
-import toby.jpa.dto.BrotherDto;
-import toby.jpa.dto.ConfigDto;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IBrotherService;
-import toby.jpa.service.IConfigService;
-import toby.jpa.service.IMusicFileService;
-import toby.jpa.service.IUserService;
+import org.springframework.web.bind.annotation.*
+import toby.jpa.dto.BrotherDto
+import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IBrotherService
+import toby.jpa.service.IConfigService
+import toby.jpa.service.IMusicFileService
+import toby.jpa.service.IUserService
 
 @RestController
 @RequestMapping("/")
-public class BotController {
-
-    public IUserService userService;
-
-    public IMusicFileService musicFileService;
-
-    public IConfigService configService;
-
-    public IBrotherService brotherService;
-
-    public BotController(IUserService userService, IMusicFileService musicFileService, IConfigService configService, IBrotherService brotherService) {
-        this.userService = userService;
-        this.musicFileService = musicFileService;
-        this.configService = configService;
-        this.brotherService = brotherService;
-    }
-
+class BotController(
+    var userService: IUserService,
+    var musicFileService: IMusicFileService,
+    var configService: IConfigService,
+    var brotherService: IBrotherService
+) {
     @GetMapping("/")
-    public String index() {
-        return "Welcome to TobyBot \n" +
-                "To find out more, please visit https://github.com/ml404/toby-bot#readme";
-    }
+    fun index(): String =
+         """
+            Welcome to TobyBot 
+            To find out more, please visit https://github.com/ml404/toby-bot#readme
+            """.trimIndent()
 
     @GetMapping("/brother")
     @ResponseBody
-    public BrotherDto getBrother(@RequestParam("discordId") String discordId){
-        return brotherService.getBrotherById(Long.valueOf(discordId)).get();
-    }
+    fun getBrother(@RequestParam("discordId") discordId: String): BrotherDto? = brotherService.getBrotherById(discordId.toLong())
 
     @GetMapping("/config")
     @ResponseBody
-    public ConfigDto getConfig(@RequestParam("name") String name, @RequestParam("guildId") String guildId){
-
-        return configService.getConfigByName(name, guildId);
-    }
+    fun getConfig(@RequestParam("name") name: String?, @RequestParam("guildId") guildId: String): ConfigDto? = configService.getConfigByName(name, guildId)
 
 
     @GetMapping("/music")
     @ResponseBody
-    public byte[] getMusicBlob(@RequestParam("id") String id){
+    fun getMusicBlob(@RequestParam("id") id: String?): ByteArray? = musicFileService.getMusicFileById(id)?.musicBlob
 
-        return musicFileService.getMusicFileById(id).getMusicBlob();
-    }
 
     @GetMapping("/user")
     @ResponseBody
-    public UserDto getUser(@RequestParam("discordId") Long discordId, @RequestParam("guildId") Long guildId){
-
-        return userService.getUserById(discordId, guildId);
-    }
-
+    fun getUser(@RequestParam("discordId") discordId: Long?, @RequestParam("guildId") guildId: Long?): UserDto? = userService.getUserById(discordId, guildId)
 }

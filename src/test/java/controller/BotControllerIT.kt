@@ -1,33 +1,33 @@
-package controller;
+package controller
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import toby.Application;
+import org.hamcrest.Matchers.containsString
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import toby.Application
 
-import static org.hamcrest.Matchers.containsString;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@SpringBootTest(classes = Application.class)
+@SpringBootTest(classes = [Application::class])
 @AutoConfigureMockMvc
-public class BotControllerIT {
+class BotControllerIT {
 
     @Autowired
-    MockMvc mockMvc;
+    private lateinit var mockMvc: MockMvc
 
     @BeforeEach
-    public void setUp() {
+    fun setUp() {
+        // Setup code if needed
     }
 
     @Test
-    public void getIndex() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Welcome to TobyBot \nTo find out more, please visit https://github.com/ml404/toby-bot#readme")));
+    fun `index endpoint returns welcome message`() {
+        mockMvc.perform(get("/"))
+            .andExpect(status().isOk)
+            .andExpect(content().string(containsString("Welcome to TobyBot \nTo find out more, please visit https://github.com/ml404/toby-bot#readme")))
     }
 }

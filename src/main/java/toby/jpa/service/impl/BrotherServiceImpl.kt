@@ -1,62 +1,50 @@
-package toby.jpa.service.impl;
+package toby.jpa.service.impl
 
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import toby.jpa.dto.BrotherDto;
-import toby.jpa.persistence.IBrotherPersistence;
-import toby.jpa.service.IBrotherService;
-
-import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.CachePut
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.stereotype.Service
+import toby.jpa.dto.BrotherDto
+import toby.jpa.persistence.IBrotherPersistence
+import toby.jpa.service.IBrotherService
 
 @Service
-public class BrotherServiceImpl implements IBrotherService {
+open class BrotherServiceImpl : IBrotherService {
+    @Autowired
+    lateinit var brotherService: IBrotherPersistence
 
-    IBrotherPersistence brotherService;
-
-    public BrotherServiceImpl(IBrotherPersistence brotherService) {
-        this.brotherService = brotherService;
+    @Cacheable(value = ["brothers"])
+    override fun listBrothers(): Iterable<BrotherDto?> {
+        return brotherService.listBrothers()
     }
 
-    @Override
-    @Cacheable(value = "brothers")
-    public Iterable<BrotherDto> listBrothers() {
-        return brotherService.listBrothers();
+    @CachePut(value = ["brothers"], key = "#brotherDto.discordId")
+    override fun createNewBrother(brotherDto: BrotherDto): BrotherDto? {
+        return brotherService.createNewBrother(brotherDto)
     }
 
-    @Override
-    @CachePut(value = "brothers", key = "#brotherDto.discordId")
-    public BrotherDto createNewBrother(BrotherDto brotherDto) {
-        return brotherService.createNewBrother(brotherDto);
+    @Cacheable(value = ["brothers"], key = "#discordId")
+    override fun getBrotherById(discordId: Long?): BrotherDto? {
+        return brotherService.getBrotherById(discordId)
     }
 
-    @Override
-    @Cacheable(value = "brothers", key = "#discordId")
-    public Optional<BrotherDto> getBrotherById(Long discordId) {
-        return Optional.ofNullable(brotherService.getBrotherById(discordId));
+    @CachePut(value = ["brothers"], key = "#brotherDto.discordId")
+    override fun updateBrother(brotherDto: BrotherDto?): BrotherDto? {
+        return brotherService.updateBrother(brotherDto)
     }
 
-    @Override
-    @CachePut(value = "brothers", key = "#brotherDto.discordId")
-    public BrotherDto updateBrother(BrotherDto brotherDto) {
-        return brotherService.updateBrother(brotherDto);
+    @CacheEvict(value = ["brothers"], key = "#brotherDto.discordId")
+    override fun deleteBrother(brotherDto: BrotherDto?) {
+        brotherService.deleteBrother(brotherDto)
     }
 
-    @Override
-    @CacheEvict(value = "brothers", key = "#brotherDto.discordId")
-    public void deleteBrother(BrotherDto brotherDto) {
-        brotherService.deleteBrother(brotherDto);
+    @CacheEvict(value = ["brothers"], key = "#discordId")
+    override fun deleteBrotherById(discordId: Long?) {
+        brotherService.deleteBrotherById(discordId)
     }
 
-    @Override
-    @CacheEvict(value = "brothers", key = "#discordId")
-    public void deleteBrotherById(Long discordId) {
-        brotherService.deleteBrotherById(discordId);
+    @CacheEvict(value = ["brothers"], allEntries = true)
+    override fun clearCache() {
     }
-
-    @CacheEvict(value = "brothers", allEntries = true)
-    public void clearCache() {
-    }
-
 }

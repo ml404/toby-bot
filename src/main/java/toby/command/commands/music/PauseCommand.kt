@@ -1,50 +1,34 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
+import toby.command.CommandContext
+import toby.helpers.MusicPlayerHelper
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.PlayerManager
 
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.GuildMusicManager;
-import toby.lavaplayer.PlayerManager;
-
-import static toby.command.commands.music.IMusicCommand.isInvalidChannelStateForCommand;
-import static toby.command.commands.music.IMusicCommand.sendDeniedStoppableMessage;
-import static toby.helpers.MusicPlayerHelper.changePauseStatusOnTrack;
-
-public class PauseCommand implements IMusicCommand {
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+class PauseCommand : IMusicCommand {
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        if (!requestingUserDto.hasMusicPermission()) {
-            sendErrorMessage(event, deleteDelay);
-            return;
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        if (!requestingUserDto.musicPermission) {
+            sendErrorMessage(event, deleteDelay!!)
+            return
         }
-        if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        Guild guild = event.getGuild();
-
-        GuildMusicManager musicManager = instance.getMusicManager(guild);
-        if (instance.isCurrentlyStoppable() || requestingUserDto.isSuperUser()) {
-            changePauseStatusOnTrack(event, musicManager, deleteDelay);
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        val guild = event.guild!!
+        val musicManager = instance.getMusicManager(guild)
+        if (instance.isCurrentlyStoppable || requestingUserDto.superUser) {
+            MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay!!)
         } else {
-            sendDeniedStoppableMessage(event.getHook(), musicManager, deleteDelay);
+            IMusicCommand.sendDeniedStoppableMessage(event.hook, musicManager, deleteDelay)
         }
     }
 
-
-    @Override
-    public String getName() {
-        return "pause";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Pauses the current song if one is playing";
-    }
+    override val name: String
+        get() = "pause"
+    override val description: String
+        get() = "Pauses the current song if one is playing"
 }

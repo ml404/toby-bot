@@ -1,159 +1,204 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Mentions;
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
-import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.jpa.dto.ConfigDto;
-import toby.jpa.service.IConfigService;
+import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.GuildVoiceState
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Mentions
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
+import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.requests.RestAction
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.jpa.dto.ConfigDto
+import toby.jpa.service.IConfigService
 
-import java.util.List;
+internal class MoveCommandTest : CommandTest {
+    private var moveCommand: MoveCommand? = null
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-class MoveCommandTest implements CommandTest {
-
-    MoveCommand moveCommand;
-    
     @Mock
-    IConfigService configService;
-    
+    lateinit var configService: IConfigService
+
     @BeforeEach
-    void setUp() {
-        setUpCommonMocks();
-        configService = mock(IConfigService.class);
-        when(configService.getConfigByName(ConfigDto.Configurations.MOVE.getConfigValue(),"1")).thenReturn(new ConfigDto(ConfigDto.Configurations.MOVE.getConfigValue(), "CHANNEL","1"));
-        moveCommand = new MoveCommand(configService);
+    fun setUp() {
+        setUpCommonMocks()
+        configService = Mockito.mock(IConfigService::class.java)
+        Mockito.`when`(configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, "1"))
+            .thenReturn(ConfigDto(ConfigDto.Configurations.MOVE.configValue, "CHANNEL", "1"))
+        moveCommand = MoveCommand(configService)
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMocks();
-        reset(configService);
+    fun tearDown() {
+        tearDownCommonMocks()
+        Mockito.reset(configService)
     }
 
     @Test
-    void test_moveWithValidPermissions_movesEveryoneInChannel() {
+    fun test_moveWithValidPermissions_movesEveryoneInChannel() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        moveSetup(true, true, List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        moveSetup(botMoveOthers = true, memberMoveOthers = true, mentionedMembers = listOf(CommandTest.targetMember))
 
         //Act
-        moveCommand.handle(commandContext, requestingUserDto, 0);
+        moveCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(guild, times(1)).moveVoiceMember(eq(targetMember),any());
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.guild, Mockito.times(1)).moveVoiceMember(
+            ArgumentMatchers.eq(CommandTest.targetMember),
+            ArgumentMatchers.any<AudioChannel>()
+        )
     }
 
     @Test
-    void test_moveWithValidPermissionsAndMultipleMembers_movesEveryoneInChannel() {
+    fun test_moveWithValidPermissionsAndMultipleMembers_movesEveryoneInChannel() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        moveSetup(true, true, List.of(member, targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        moveSetup(true,
+            memberMoveOthers = true,
+            mentionedMembers = listOf(CommandTest.member, CommandTest.targetMember)
+        )
 
         //Act
-        moveCommand.handle(commandContext, requestingUserDto, 0);
+        moveCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(guild, times(1)).moveVoiceMember(eq(member), any());
-        verify(guild, times(1)).moveVoiceMember(eq(targetMember),any());
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.guild, Mockito.times(1)).moveVoiceMember(
+            ArgumentMatchers.eq(CommandTest.member),
+            ArgumentMatchers.any<AudioChannel>()
+        )
+        Mockito.verify(CommandTest.guild, Mockito.times(1)).moveVoiceMember(
+            ArgumentMatchers.eq(CommandTest.targetMember),
+            ArgumentMatchers.any<AudioChannel>()
+        )
     }
 
 
     @Test
-    void test_moveWithInvalidBotPermissions_throwsError() {
+    fun test_moveWithInvalidBotPermissions_throwsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        moveSetup(false, true, List.of(targetMember));
-        GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        when(targetMember.getVoiceState()).thenReturn(guildVoiceState);
-        when(guildVoiceState.inAudioChannel()).thenReturn(true);
+        val commandContext = CommandContext(CommandTest.event)
+        moveSetup(botMoveOthers = false, memberMoveOthers = true, mentionedMembers = listOf(CommandTest.targetMember))
+        val guildVoiceState = Mockito.mock(GuildVoiceState::class.java)
+        Mockito.`when`<GuildVoiceState>(CommandTest.targetMember.voiceState).thenReturn(guildVoiceState)
+        Mockito.`when`(guildVoiceState.inAudioChannel()).thenReturn(true)
 
         //Act
-        moveCommand.handle(commandContext, requestingUserDto, 0);
+        moveCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("I'm not allowed to move %s"), eq("Target Effective Name"));
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("I'm not allowed to move %s"),
+            ArgumentMatchers.eq("Target Effective Name")
+        )
     }
 
     @Test
-    void test_moveWithInvalidUserPermissions_throwsError() {
+    fun test_moveWithInvalidUserPermissions_throwsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        moveSetup(true, false, List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        moveSetup(botMoveOthers = true, memberMoveOthers = false, mentionedMembers = listOf(CommandTest.targetMember))
 
         //Act
-        moveCommand.handle(commandContext, requestingUserDto, 0);
+        moveCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("You can't move '%s'"), eq("Target Effective Name"));
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("You can't move '%s'"),
+            ArgumentMatchers.eq("Target Effective Name")
+        )
     }
 
     @Test
-    void test_moveWithUserNotInChannel_throwsError() {
+    fun test_moveWithUserNotInChannel_throwsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        moveSetup(true, true, List.of(targetMember));
-        GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        when(targetMember.getVoiceState()).thenReturn(guildVoiceState);
-        when(guildVoiceState.inAudioChannel()).thenReturn(false);
+        val commandContext = CommandContext(CommandTest.event)
+        moveSetup(botMoveOthers = true, memberMoveOthers = true, mentionedMembers = listOf(CommandTest.targetMember))
+        val guildVoiceState = Mockito.mock(GuildVoiceState::class.java)
+        Mockito.`when`<GuildVoiceState>(CommandTest.targetMember.voiceState).thenReturn(guildVoiceState)
+        Mockito.`when`(guildVoiceState.inAudioChannel()).thenReturn(false)
 
         //Act
-        moveCommand.handle(commandContext, requestingUserDto, 0);
+        moveCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved."), eq("Target Effective Name"));
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved."),
+            ArgumentMatchers.eq("Target Effective Name")
+        )
     }
 
-    private static void moveSetup(boolean botMoveOthers, boolean memberMoveOthers, List<Member> mentionedMembers) {
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
-        GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
-        OptionMapping channelOptionMapping = mock(OptionMapping.class);
-        OptionMapping userOptionMapping = mock(OptionMapping.class);
-        Mentions mentions = mock(Mentions.class);
+    companion object {
+        private fun moveSetup(botMoveOthers: Boolean, memberMoveOthers: Boolean, mentionedMembers: List<Member>) {
+            val audioChannelUnion = Mockito.mock(AudioChannelUnion::class.java)
+            val guildVoiceState = Mockito.mock(GuildVoiceState::class.java)
+            val auditableRestAction = Mockito.mock(AuditableRestAction::class.java)
+            val channelOptionMapping = Mockito.mock(OptionMapping::class.java)
+            val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+            val mentions = Mockito.mock(Mentions::class.java)
 
-        when(targetMember.getVoiceState()).thenReturn(guildVoiceState);
-        when(guildVoiceState.inAudioChannel()).thenReturn(true);
-        when(event.getOption("channel")).thenReturn(channelOptionMapping);
-        when(event.getOption("users")).thenReturn(userOptionMapping);
-        when(userOptionMapping.getMentions()).thenReturn(mentions);
-        GuildChannelUnion guildChannelUnion = mock(GuildChannelUnion.class);
-        when(channelOptionMapping.getAsChannel()).thenReturn(guildChannelUnion);
-        when(guildChannelUnion.getName()).thenReturn("Channel");
-        when(guildChannelUnion.asVoiceChannel()).thenReturn(mock(VoiceChannel.class));
-        when(mentions.getMembers()).thenReturn(mentionedMembers);
-        when(member.canInteract(any(Member.class))).thenReturn(true);
-        when(botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)).thenReturn(botMoveOthers);
-        when(botMember.canInteract(any(Member.class))).thenReturn(botMoveOthers);
-        when(member.getVoiceState()).thenReturn(guildVoiceState);
-        when(member.hasPermission(Permission.VOICE_MOVE_OTHERS)).thenReturn(memberMoveOthers);
-        when(guildVoiceState.getChannel()).thenReturn(audioChannelUnion);
-        VoiceChannel voiceChannel = mock(VoiceChannel.class);
-        when(guild.getVoiceChannelsByName("CHANNEL", true)).thenReturn(List.of(voiceChannel));
-        when(guild.moveVoiceMember(any(), any())).thenReturn(auditableRestAction);
-        when(auditableRestAction.reason(any())).thenReturn(auditableRestAction);
+            Mockito.`when`<GuildVoiceState>(CommandTest.targetMember.voiceState)
+                .thenReturn(guildVoiceState)
+            Mockito.`when`(guildVoiceState.inAudioChannel()).thenReturn(true)
+            Mockito.`when`<OptionMapping>(CommandTest.event.getOption("channel"))
+                .thenReturn(channelOptionMapping)
+            Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
+            Mockito.`when`(userOptionMapping.mentions).thenReturn(mentions)
+            val guildChannelUnion = Mockito.mock(GuildChannelUnion::class.java)
+            Mockito.`when`(channelOptionMapping.asChannel).thenReturn(guildChannelUnion)
+            Mockito.`when`(guildChannelUnion.name).thenReturn("Channel")
+            Mockito.`when`(guildChannelUnion.asVoiceChannel()).thenReturn(
+                Mockito.mock(
+                    VoiceChannel::class.java
+                )
+            )
+            Mockito.`when`(mentions.members).thenReturn(mentionedMembers)
+            Mockito.`when`(
+                CommandTest.member.canInteract(
+                    ArgumentMatchers.any(
+                        Member::class.java
+                    )
+                )
+            ).thenReturn(true)
+            Mockito.`when`(CommandTest.botMember.hasPermission(Permission.VOICE_MOVE_OTHERS))
+                .thenReturn(botMoveOthers)
+            Mockito.`when`(
+                CommandTest.botMember.canInteract(
+                    ArgumentMatchers.any(
+                        Member::class.java
+                    )
+                )
+            ).thenReturn(botMoveOthers)
+            Mockito.`when`<GuildVoiceState>(CommandTest.member.voiceState).thenReturn(guildVoiceState)
+            Mockito.`when`(CommandTest.member.hasPermission(Permission.VOICE_MOVE_OTHERS))
+                .thenReturn(memberMoveOthers)
+            Mockito.`when`(guildVoiceState.channel).thenReturn(audioChannelUnion)
+            val voiceChannel = Mockito.mock(
+                VoiceChannel::class.java
+            )
+            Mockito.`when`<List<VoiceChannel>>(CommandTest.guild.getVoiceChannelsByName("CHANNEL", true))
+                .thenReturn(listOf(voiceChannel))
+            Mockito.`when`<RestAction<Void>>(
+                CommandTest.guild.moveVoiceMember(
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any<AudioChannel>()
+                )
+            ).thenReturn(auditableRestAction as RestAction<Void>)
+            Mockito.`when`(auditableRestAction.reason(ArgumentMatchers.any())).thenReturn(auditableRestAction)
+        }
     }
 }

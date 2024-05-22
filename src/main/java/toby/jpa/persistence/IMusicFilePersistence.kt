@@ -1,12 +1,11 @@
-package toby.jpa.persistence;
+package toby.jpa.persistence
 
-import toby.jpa.dto.MusicDto;
+import toby.jpa.dto.MusicDto
 
-public interface IMusicFilePersistence {
-
-    MusicDto createNewMusicFile(MusicDto musicDto);
-    MusicDto getMusicFileById(String id);
-    MusicDto updateMusicFile(MusicDto musicDto);
-    void deleteMusicFile(MusicDto musicDto);
-    void deleteMusicFileById(String id);
+interface IMusicFilePersistence {
+    fun createNewMusicFile(musicDto: MusicDto?): MusicDto?
+    fun getMusicFileById(id: String?): MusicDto
+    fun updateMusicFile(musicDto: MusicDto?): MusicDto?
+    fun deleteMusicFile(musicDto: MusicDto?)
+    fun deleteMusicFileById(id: String?)
 }

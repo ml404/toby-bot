@@ -1,64 +1,45 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.PlayerManager
+import java.util.*
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import org.jetbrains.annotations.NotNull;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.PlayerManager;
-import toby.lavaplayer.TrackScheduler;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-
-public class ShuffleCommand implements IMusicCommand {
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+class ShuffleCommand : IMusicCommand {
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        if (requestingUserDto.hasMusicPermission()) {
-            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-
-            Guild guild = event.getGuild();
-
-            TrackScheduler trackScheduler = instance.getMusicManager(guild).getScheduler();
-            BlockingQueue<AudioTrack> queue = trackScheduler.getQueue();
-            if (queue.size() == 0) {
-                event.getHook().sendMessage("I can't shuffle a queue that doesn't exist").queue(invokeDeleteOnMessageResponse(deleteDelay));
-                return;
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        if (requestingUserDto.musicPermission) {
+            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+            val guild = event.guild!!
+            val trackScheduler = instance.getMusicManager(guild).scheduler
+            val queue = trackScheduler.queue
+            if (queue.size == 0) {
+                event.hook.sendMessage("I can't shuffle a queue that doesn't exist").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                return
             }
-            LinkedBlockingQueue<AudioTrack> shuffledAudioTracks = shuffleAudioTracks(queue);
-            trackScheduler.setQueue(shuffledAudioTracks);
-            event.getHook().sendMessage("The queue has been shuffled 🦧").queue(invokeDeleteOnMessageResponse(deleteDelay));
-
+            val shuffledAudioTracks = shuffleAudioTracks(queue)
+            trackScheduler.queue = shuffledAudioTracks
+            event.hook.sendMessage("The queue has been shuffled 🦧").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
         }
     }
 
-    @NotNull
-    private LinkedBlockingQueue<AudioTrack> shuffleAudioTracks(BlockingQueue<AudioTrack> queue) {
-        ArrayList<AudioTrack> audioTrackArrayList = new ArrayList<>(queue);
-        Collections.shuffle(audioTrackArrayList);
-        return new LinkedBlockingQueue<>(audioTrackArrayList);
+    private fun shuffleAudioTracks(queue: BlockingQueue<AudioTrack?>): LinkedBlockingQueue<AudioTrack?> {
+        val audioTrackArrayList = ArrayList(queue)
+        Collections.shuffle(audioTrackArrayList)
+        return LinkedBlockingQueue(audioTrackArrayList)
     }
 
-    @Override
-    public String getName() {
-        return "shuffle";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Use this command to shuffle the queue";
-    }
+    override val name: String
+        get() = "shuffle"
+    override val description: String
+        get() = "Use this command to shuffle the queue"
 }

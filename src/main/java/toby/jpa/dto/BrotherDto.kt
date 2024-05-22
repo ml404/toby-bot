@@ -1,66 +1,41 @@
-package toby.jpa.dto;
+package toby.jpa.dto
 
-import jakarta.persistence.*;
-import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.*
+import org.springframework.transaction.annotation.Transactional
+import java.io.Serializable
 
-import java.io.Serializable;
-
-@NamedQueries({
-        @NamedQuery(name = "BrotherDto.getAll",
-                query = "select a from BrotherDto as a"),
-
-        @NamedQuery(name =  "BrotherDto.getName",
-                query = "select a from BrotherDto as a WHERE a.brotherName = :name"),
-
-        @NamedQuery(name =  "BrotherDto.getById",
-                query = "select a from BrotherDto as a WHERE a.discordId = :discordId"),
-
-        @NamedQuery(name =  "BrotherDto.deleteById",
-                query = "delete from BrotherDto as a WHERE a.discordId = :discordId")
-})
-
+@NamedQueries(
+    NamedQuery(name = "BrotherDto.getAll", query = "select a from BrotherDto as a"),
+    NamedQuery(name = "BrotherDto.getName", query = "select a from BrotherDto as a WHERE a.brotherName = :name"),
+    NamedQuery(name = "BrotherDto.getById", query = "select a from BrotherDto as a WHERE a.discordId = :discordId"),
+    NamedQuery(name = "BrotherDto.deleteById", query = "delete from BrotherDto as a WHERE a.discordId = :discordId")
+)
 @Entity
-@Table(name="brothers", schema ="public")
+@Table(name = "brothers", schema = "public")
 @Transactional
-public class BrotherDto implements Serializable {
-
+class BrotherDto : Serializable {
+    @JvmField
     @Id
     @Column(name = "discord_id")
-    private Long discordId;
+    var discordId: Long? = null
+
+    @JvmField
     @Column(name = "brother_name")
-    private String brotherName;
+    var brotherName: String? = null
 
 
-    public BrotherDto(){
-    };
+    constructor()
 
-    public BrotherDto(Long discordId, String brotherName) {
-        this.discordId = discordId;
-        this.brotherName = brotherName;
+    constructor(discordId: Long?, brotherName: String?) {
+        this.discordId = discordId
+        this.brotherName = brotherName
     }
 
-    public Long getDiscordId() {
-        return discordId;
-    }
-
-    public void setDiscordId(Long discordId) {
-        this.discordId = discordId;
-    }
-
-    public String getBrotherName() {
-        return brotherName;
-    }
-
-    public void setBrotherName(String brotherName) {
-        this.brotherName = brotherName;
-    }
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("BrotherDto{");
-        sb.append("discordId='").append(discordId);
-        sb.append(", brotherName=").append(brotherName);
-        sb.append('}');
-        return sb.toString();
+    override fun toString(): String {
+        val sb = StringBuilder("BrotherDto{")
+        sb.append("discordId='").append(discordId)
+        sb.append(", brotherName=").append(brotherName)
+        sb.append('}')
+        return sb.toString()
     }
 }

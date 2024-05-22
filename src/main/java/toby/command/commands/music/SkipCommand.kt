@@ -1,51 +1,32 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.PlayerManager;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import toby.command.CommandContext
+import toby.helpers.MusicPlayerHelper
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.PlayerManager
+import java.util.*
 
-import java.util.List;
-import java.util.Optional;
-
-import static toby.helpers.MusicPlayerHelper.skipTracks;
-
-
-public class SkipCommand implements IMusicCommand {
-
-    private final String SKIP = "skip";
-
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+class SkipCommand : IMusicCommand {
+    private val SKIP = "skip"
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply(true).queue();
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-        int tracksToSkip = Optional.ofNullable(event.getOption(SKIP)).map(OptionMapping::getAsInt).orElse(1);
-        skipTracks(event, instance, tracksToSkip, requestingUserDto.isSuperUser(), deleteDelay);
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply(true).queue()
+        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        val tracksToSkip = Optional.ofNullable(event.getOption(SKIP)).map { obj: OptionMapping -> obj.asInt }.orElse(1)
+        MusicPlayerHelper.skipTracks(event, instance, tracksToSkip, requestingUserDto.superUser, deleteDelay)
     }
 
-
-    @Override
-    public String getName() {
-        return "skip";
-    }
-
-    @Override
-    public String getDescription() {
-        return "skip X number of tracks. Skips 1 by default";
-    }
-
-    @Override
-    public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.INTEGER, SKIP, "Number of tracks to skip"));
-    }
+    override val name: String
+        get() = "skip"
+    override val description: String
+        get() = "skip X number of tracks. Skips 1 by default"
+    override val optionData: List<OptionData>
+        get() = listOf(OptionData(OptionType.INTEGER, SKIP, "Number of tracks to skip"))
 }
-

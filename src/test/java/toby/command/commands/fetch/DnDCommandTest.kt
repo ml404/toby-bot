@@ -1,252 +1,375 @@
-package toby.command.commands.fetch;
+package toby.command.commands.fetch
 
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.components.ItemComponent;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.command.commands.dnd.DnDCommand;
-import toby.helpers.HttpHelper;
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.components.ItemComponent
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import org.mockito.kotlin.anyVararg
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.command.CommandTest.Companion.webhookMessageCreateAction
+import toby.command.commands.dnd.DnDCommand
+import toby.helpers.HttpHelper
 
-import static org.mockito.Mockito.*;
-
-class DnDCommandTest implements CommandTest {
-
-    DnDCommand command;
+internal class DnDCommandTest : CommandTest {
+    var command: DnDCommand? = null
 
     @BeforeEach
-    void setUp() {
-        setUpCommonMocks();
-        command = new DnDCommand();
-        doReturn(webhookMessageCreateAction)
-                .when(interactionHook)
-                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
+    fun setUp() {
+        setUpCommonMocks()
+        command = DnDCommand()
+        Mockito.doReturn(webhookMessageCreateAction)
+            .`when`(CommandTest.interactionHook)
+            .sendMessageEmbeds(
+                ArgumentMatchers.any(), anyVararg()
 
+            )
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMocks();
+    fun tearDown() {
+        tearDownCommonMocks()
     }
 
     @Test
-    void test_DnDCommandWithTypeAsSpell() {
+    fun test_DnDCommandWithTypeAsSpell() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn(getSpellJson());
-        when(typeMapping.getAsString()).thenReturn("spells");
-        when(typeMapping.getName()).thenReturn("spell");
-        when(queryMapping.getAsString()).thenReturn("fireball");
+        val commandContext = CommandContext(CommandTest.event)
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(ArgumentMatchers.anyString())).thenReturn(spellJson)
+        Mockito.`when`(typeMapping.asString).thenReturn("spells")
+        Mockito.`when`(typeMapping.name).thenReturn("spell")
+        Mockito.`when`(queryMapping.asString).thenReturn("fireball")
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(helper, times(1)).fetchFromGet(any());
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(helper, Mockito.times(1)).fetchFromGet(ArgumentMatchers.any())
     }
+
     @Test
-    void test_DnDCommandWithTypeAsSpell_AndNothingIsReturnedForQuery() {
+    fun test_DnDCommandWithTypeAsSpell_AndNothingIsReturnedForQuery() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn("");
-        when(typeMapping.getAsString()).thenReturn("spells");
-        when(typeMapping.getName()).thenReturn("spell");
-        when(queryMapping.getAsString()).thenReturn("fireball");
+        val commandContext = CommandContext(CommandTest.event)
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(ArgumentMatchers.anyString())).thenReturn("")
+        Mockito.`when`(typeMapping.asString).thenReturn("spells")
+        Mockito.`when`(typeMapping.name).thenReturn("spell")
+        Mockito.`when`(queryMapping.asString).thenReturn("fireball")
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(helper, times(2)).fetchFromGet(any());
-        verify(interactionHook, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for %s '%s'", "spell", "fireball");
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(helper, Mockito.times(2)).fetchFromGet(ArgumentMatchers.any())
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(0)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessageFormat("Sorry, nothing was returned for %s '%s'", "spell", "fireball")
     }
 
     @Test
-    void test_DnDCommandWithTypeAsSpell_AndNothingIsSomethingIsReturnedForCloseMatchQuery() {
+    fun test_DnDCommandWithTypeAsSpell_AndNothingIsSomethingIsReturnedForCloseMatchQuery() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "Fireball"))).thenReturn("");
-        when(typeMapping.getAsString()).thenReturn("spells");
-        when(typeMapping.getName()).thenReturn("spell");
-        when(queryMapping.getAsString()).thenReturn("Fireball");
-        when(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "?name=Fireball"))).thenReturn("""
-                {"count":2,"results":[{"index":"delayed-blast-fireball","name":"Delayed Blast Fireball","url":"/api/spells/delayed-blast-fireball"},{"index":"fireball","name":"Fireball","url":"/api/spells/fireball"}]}""");
-        when(webhookMessageCreateAction.addActionRow(any(ItemComponent.class))).thenReturn(webhookMessageCreateAction);
+        val commandContext = CommandContext(CommandTest.event)
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(String.format("https://www.dnd5eapi.co/api/%s/%s", "spells", "Fireball")))
+            .thenReturn("")
+        Mockito.`when`(typeMapping.asString).thenReturn("spells")
+        Mockito.`when`(typeMapping.name).thenReturn("spell")
+        Mockito.`when`(queryMapping.asString).thenReturn("Fireball")
+        Mockito.`when`(
+            helper.fetchFromGet(
+                String.format(
+                    "https://www.dnd5eapi.co/api/%s/%s",
+                    "spells",
+                    "?name=Fireball"
+                )
+            )
+        ).thenReturn(
+            """
+                {"count":2,"results":[{"index":"delayed-blast-fireball","name":"Delayed Blast Fireball","url":"/api/spells/delayed-blast-fireball"},{"index":"fireball","name":"Fireball","url":"/api/spells/fireball"}]}
+                """.trimIndent()
+        )
+        Mockito.`when`<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction.addActionRow(
+                ArgumentMatchers.any(
+                    ItemComponent::class.java
+                )
+            ) as WebhookMessageCreateAction<Message>?
+        ).thenReturn(webhookMessageCreateAction as WebhookMessageCreateAction<Message>?)
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(helper, times(2)).fetchFromGet(any());
-        verify(interactionHook, times(1)).sendMessageFormat("Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate", "Fireball");
-        verify(webhookMessageCreateAction, times(1)).addActionRow(any(StringSelectMenu.class));
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(helper, Mockito.times(2)).fetchFromGet(ArgumentMatchers.any())
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            "Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate",
+            "Fireball"
+        )
+        Mockito.verify<WebhookMessageCreateAction<Message>>(
+            webhookMessageCreateAction,
+            Mockito.times(1)
+        ).addActionRow(
+            ArgumentMatchers.any(
+                StringSelectMenu::class.java
+            )
+        )
     }
 
     @Test
-    void test_DnDCommandWithTypeAsCondition() {
+    fun test_DnDCommandWithTypeAsCondition() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn(getConditionJson());
-        when(typeMapping.getAsString()).thenReturn("conditions");
-        when(typeMapping.getName()).thenReturn("condition");
-        when(queryMapping.getAsString()).thenReturn("grappled");
+        val commandContext = CommandContext(CommandTest.event)
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(ArgumentMatchers.anyString())).thenReturn(conditionJson)
+        Mockito.`when`(typeMapping.asString).thenReturn("conditions")
+        Mockito.`when`(typeMapping.name).thenReturn("condition")
+        Mockito.`when`(queryMapping.asString).thenReturn("grappled")
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(helper, times(1)).fetchFromGet(any());
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(helper, Mockito.times(1)).fetchFromGet(ArgumentMatchers.any())
     }
 
     @Test
-    void test_DnDCommandWithTypeAsCondition_AndNothingIsReturnedForQuery() {
+    fun test_DnDCommandWithTypeAsCondition_AndNothingIsReturnedForQuery() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        noQueryReturn("condition", "conditions", commandContext);
+        val commandContext = CommandContext(CommandTest.event)
+        noQueryReturn("condition", "conditions", commandContext)
     }
 
     @Test
-    void test_DnDCommandWithTypeAsRule() {
+    fun test_DnDCommandWithTypeAsRule() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn(getRuleJson());
-        when(typeMapping.getAsString()).thenReturn("rule-sections");
-        when(typeMapping.getName()).thenReturn("rule");
-        when(queryMapping.getAsString()).thenReturn("cover");
+        val commandContext = CommandContext(CommandTest.event)
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(ArgumentMatchers.anyString())).thenReturn(ruleJson)
+        Mockito.`when`(typeMapping.asString).thenReturn("rule-sections")
+        Mockito.`when`(typeMapping.name).thenReturn("rule")
+        Mockito.`when`(queryMapping.asString).thenReturn("cover")
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(helper, times(1)).fetchFromGet(any());
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(helper, Mockito.times(1)).fetchFromGet(ArgumentMatchers.any())
     }
 
     @Test
-    void test_DnDCommandWithTypeAsRule_AndNothingIsReturnedForQuery() {
+    fun test_DnDCommandWithTypeAsRule_AndNothingIsReturnedForQuery() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        noQueryReturn("rule", "rule-sections", commandContext);
+        val commandContext = CommandContext(CommandTest.event)
+        noQueryReturn("rule", "rule-sections", commandContext)
     }
 
     @Test
-    void test_DnDCommandWithTypeAsFeature() {
+    fun test_DnDCommandWithTypeAsFeature() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn(getFeatureJson());
-        when(typeMapping.getAsString()).thenReturn("features");
-        when(typeMapping.getName()).thenReturn("feature");
-        when(queryMapping.getAsString()).thenReturn("action-surge-1-use");
+        val commandContext = CommandContext(CommandTest.event)
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(ArgumentMatchers.anyString())).thenReturn(featureJson)
+        Mockito.`when`(typeMapping.asString).thenReturn("features")
+        Mockito.`when`(typeMapping.name).thenReturn("feature")
+        Mockito.`when`(queryMapping.asString).thenReturn("action-surge-1-use")
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(helper, times(1)).fetchFromGet(any());
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(helper, Mockito.times(1)).fetchFromGet(ArgumentMatchers.any())
     }
 
     @Test
-    void test_DnDCommandWithTypeAsFeature_AndNothingIsReturnedForQuery() {
+    fun test_DnDCommandWithTypeAsFeature_AndNothingIsReturnedForQuery() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        noQueryReturn("feature", "features", commandContext);
+        val commandContext = CommandContext(CommandTest.event)
+        noQueryReturn("feature", "features", commandContext)
     }
 
-    private void noQueryReturn(String typeName, String typeValue, CommandContext commandContext) {
-        OptionMapping typeMapping = mock(OptionMapping.class);
-        OptionMapping queryMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeMapping);
-        when(event.getOption("query")).thenReturn(queryMapping);
-        when(event.getInteraction()).thenReturn(event);
-        HttpHelper helper = mock(HttpHelper.class);
-        when(helper.fetchFromGet(anyString())).thenReturn("");
-        when(typeMapping.getAsString()).thenReturn(typeValue);
-        when(typeMapping.getName()).thenReturn(typeName);
-        when(queryMapping.getAsString()).thenReturn("nerd");
+    private fun noQueryReturn(typeName: String, typeValue: String, commandContext: CommandContext) {
+        val typeMapping = Mockito.mock(OptionMapping::class.java)
+        val queryMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("query")).thenReturn(queryMapping)
+        Mockito.`when`(CommandTest.event.interaction)
+            .thenReturn(CommandTest.event)
+        val helper = Mockito.mock(HttpHelper::class.java)
+        Mockito.`when`(helper.fetchFromGet(ArgumentMatchers.anyString())).thenReturn("")
+        Mockito.`when`(typeMapping.asString).thenReturn(typeValue)
+        Mockito.`when`(typeMapping.name).thenReturn(typeName)
+        Mockito.`when`(queryMapping.asString).thenReturn("nerd")
 
 
         //Act
-        OptionMapping typeOptionMapping = commandContext.getEvent().getOption(DnDCommand.TYPE);
-        command.handleWithHttpObjects(commandContext.getEvent(), typeOptionMapping.getName(), typeOptionMapping.getAsString(), commandContext.getEvent().getOption(DnDCommand.QUERY).getAsString(), helper, 0);
+        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        command!!.handleWithHttpObjects(
+            commandContext.event,
+            typeOptionMapping!!.name,
+            typeOptionMapping.asString,
+            commandContext.event.getOption(DnDCommand.QUERY)!!
+                .asString,
+            helper,
+            0
+        )
 
         //Assert
-        verify(event, times(1)).getOption("type");
-        verify(event, times(1)).getOption("query");
-        verify(interactionHook, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(helper, times(2)).fetchFromGet(any());
-        verify(interactionHook, times(1)).sendMessageFormat("Sorry, nothing was returned for %s '%s'", typeName, "nerd");
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("type")
+        Mockito.verify(CommandTest.event, Mockito.times(1)).getOption("query")
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(0)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(helper, Mockito.times(2)).fetchFromGet(ArgumentMatchers.any())
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessageFormat("Sorry, nothing was returned for %s '%s'", typeName, "nerd")
     }
 
-    private String getSpellJson() {
-        return """
+    private val spellJson: String
+        get() = """
                 {
                 	"index": "fireball",
                 	"name": "Fireball",
@@ -328,22 +451,32 @@ class DnDCommandTest implements CommandTest {
                 	],
                 	"url": "/api/spells/fireball"
                 }
-                """;
-    }
+                
+                """.trimIndent()
 
-    private String getConditionJson(){
-        return """
-                {"index":"grappled","name":"Grappled","desc":["- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.","- The condition ends if the grappler is incapacitated (see the condition).","- The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."],"url":"/api/conditions/grappled"}""";
-    }
+    private val conditionJson: String
+        get() = """
+                {"index":"grappled","name":"Grappled","desc":["- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.","- The condition ends if the grappler is incapacitated (see the condition).","- The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."],"url":"/api/conditions/grappled"}
+                """.trimIndent()
 
-    private String getRuleJson(){
-        return """
-                {"name":"Cover","index":"cover","desc":"## Cover\\n\\nWalls, trees, creatures, and other obstacles can provide cover during combat, making a target more difficult to harm. A target can benefit from cover only when an attack or other effect originates on the opposite side of the cover.\\n\\nThere are three degrees of cover. If a target is behind multiple sources of cover, only the most protective degree of cover applies; the degrees aren't added together. For example, if a target is behind a creature that gives half cover and a tree trunk that gives three-quarters cover, the target has three-quarters cover.\\n\\nA target with **half cover** has a +2 bonus to AC and Dexterity saving throws. A target has half cover if an obstacle blocks at least half of its body. The obstacle might be a low wall, a large piece of furniture, a narrow tree trunk, or a creature, whether that creature is an enemy or a friend.\\n\\nA target with **three-quarters cover** has a +5 bonus to AC and Dexterity saving throws. A target has three-quarters cover if about three-quarters of it is covered by an obstacle. The obstacle might be a portcullis, an arrow slit, or a thick tree trunk.\\n\\nA target with **total cover** can't be targeted directly by an attack or a spell, although some spells can reach such a target by including it in an area of effect. A target has total cover if it is completely concealed by an obstacle.\\n","url":"/api/rule-sections/cover"}""";
-    }
+    private val ruleJson: String
+        get() = """
+                {"name":"Cover","index":"cover","desc":"## Cover\
+                \
+                Walls, trees, creatures, and other obstacles can provide cover during combat, making a target more difficult to harm. A target can benefit from cover only when an attack or other effect originates on the opposite side of the cover.\
+                \
+                There are three degrees of cover. If a target is behind multiple sources of cover, only the most protective degree of cover applies; the degrees aren't added together. For example, if a target is behind a creature that gives half cover and a tree trunk that gives three-quarters cover, the target has three-quarters cover.\
+                \
+                A target with **half cover** has a +2 bonus to AC and Dexterity saving throws. A target has half cover if an obstacle blocks at least half of its body. The obstacle might be a low wall, a large piece of furniture, a narrow tree trunk, or a creature, whether that creature is an enemy or a friend.\
+                \
+                A target with **three-quarters cover** has a +5 bonus to AC and Dexterity saving throws. A target has three-quarters cover if about three-quarters of it is covered by an obstacle. The obstacle might be a portcullis, an arrow slit, or a thick tree trunk.\
+                \
+                A target with **total cover** can't be targeted directly by an attack or a spell, although some spells can reach such a target by including it in an area of effect. A target has total cover if it is completely concealed by an obstacle.\
+                ","url":"/api/rule-sections/cover"}
+                """.trimIndent()
 
-    private String getFeatureJson(){
-        return """
-                {"index":"action-surge-1-use","class":{"index":"fighter","name":"Fighter","url":"/api/classes/fighter"},"name":"Action Surge (1 use)","level":2,"prerequisites":[],"desc":["Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action on top of your regular action and a possible bonus action.","Once you use this feature, you must finish a short or long rest before you can use it again. Starting at 17th level, you can use it twice before a rest, but only once on the same turn."],"url":"/api/features/action-surge-1-use"}""";
-    }
-
+    private val featureJson: String
+        get() = """
+                {"index":"action-surge-1-use","class":{"index":"fighter","name":"Fighter","url":"/api/classes/fighter"},"name":"Action Surge (1 use)","level":2,"prerequisites":[],"desc":["Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action on top of your regular action and a possible bonus action.","Once you use this feature, you must finish a short or long rest before you can use it again. Starting at 17th level, you can use it twice before a rest, but only once on the same turn."],"url":"/api/features/action-surge-1-use"}
+                """.trimIndent()
 }

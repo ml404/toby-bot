@@ -1,69 +1,68 @@
-package jpa;
+package jpa
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import toby.Application;
-import toby.jpa.dto.ConfigDto;
-import toby.jpa.service.IConfigService;
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
+import toby.Application
+import toby.jpa.dto.ConfigDto
+import toby.jpa.service.IConfigService
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-@SpringBootTest(classes = Application.class)
+@SpringBootTest(classes = [Application::class])
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("test")
-public class ConfigServiceImplIntegrationTest {
-
+class ConfigServiceImplIntegrationTest {
     @Autowired
-    private IConfigService configService;
+    private val configService: IConfigService? = null
 
 
     @BeforeEach
-    public void setUp() {
-        configService.clearCache();
+    fun setUp() {
+        configService!!.clearCache()
     }
 
     @AfterEach
-    public void cleanUp(){
-    }
-    @Test
-    public void testDataSQL() {
-        assertEquals(3, configService.listAllConfig().size());
+    fun cleanUp() {
     }
 
     @Test
-    public void whenValidNameAndGuild_thenConfigShouldBeFound() {
-        ConfigDto configDto = new ConfigDto("TOKEN", "1234", "test");
-        configService.createNewConfig(configDto);
-        ConfigDto dbConfig = configService.getConfigByName(configDto.getName(), configDto.getGuildId());
-
-        assertEquals(dbConfig.getName(),configDto.getName());
-        assertEquals(dbConfig.getGuildId(),configDto.getGuildId());
-        configService.deleteAll("test");
+    fun testDataSQL() {
+        Assertions.assertEquals(3, configService!!.listAllConfig()!!.size)
     }
 
     @Test
-    public void testUpdate_thenNewConfigShouldBeReturned() {
-        ConfigDto configDto = new ConfigDto("TOKEN", "1234", "test");
-        configService.createNewConfig(configDto);
-        ConfigDto dbConfig1 = configService.getConfigByName(configDto.getName(), configDto.getGuildId());
+    fun whenValidNameAndGuild_thenConfigShouldBeFound() {
+        val configDto = ConfigDto("TOKEN", "1234", "test")
+        configService!!.createNewConfig(configDto)
+        val dbConfig = configService.getConfigByName(configDto.name, configDto.guildId!!)
 
-        ConfigDto configDtoUpdated = new ConfigDto("TOKEN", "12345", "test");
-        configService.updateConfig(configDtoUpdated);
-        configService.clearCache();
-        ConfigDto dbConfig2 = configService.getConfigByName(configDto.getName(), configDto.getGuildId());
+        Assertions.assertEquals(dbConfig!!.name, configDto.name)
+        Assertions.assertEquals(dbConfig.guildId, configDto.guildId)
+        configService.deleteAll("test")
+    }
 
-        int configSize = configService.listGuildConfig("test").size();
+    @Test
+    fun testUpdate_thenNewConfigShouldBeReturned() {
+        val configDto = ConfigDto("TOKEN", "1234", "test")
+        configService!!.createNewConfig(configDto)
+        val dbConfig1 = configService.getConfigByName(configDto.name, configDto.guildId!!)
 
-        assertEquals(dbConfig1.getName(),configDto.getName());
-        assertEquals(dbConfig1.getGuildId(),configDto.getGuildId());
-        assertEquals(dbConfig2.getName(),configDtoUpdated.getName());
-        assertEquals(dbConfig2.getGuildId(),configDtoUpdated.getGuildId());
-        assertEquals(1, configSize);
-        configService.deleteAll("test");
+        val configDtoUpdated = ConfigDto("TOKEN", "12345", "test")
+        configService.updateConfig(configDtoUpdated)
+        configService.clearCache()
+        val dbConfig2 = configService.getConfigByName(configDto.name, configDto.guildId!!)
+
+        val configSize = configService.listGuildConfig("test")!!.size
+
+        Assertions.assertEquals(dbConfig1!!.name, configDto.name)
+        Assertions.assertEquals(dbConfig1.guildId, configDto.guildId)
+        Assertions.assertEquals(dbConfig2!!.name, configDtoUpdated.name)
+        Assertions.assertEquals(dbConfig2.guildId, configDtoUpdated.guildId)
+        Assertions.assertEquals(1, configSize)
+        configService.deleteAll("test")
     }
 }

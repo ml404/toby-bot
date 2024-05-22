@@ -1,62 +1,50 @@
-package toby.jpa.service.impl;
+package toby.jpa.service.impl
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import toby.jpa.dto.UserDto;
-import toby.jpa.persistence.IUserPersistence;
-import toby.jpa.service.IUserService;
-
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.CachePut
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.stereotype.Service
+import toby.jpa.dto.UserDto
+import toby.jpa.persistence.IUserPersistence
+import toby.jpa.service.IUserService
 
 @Service
-public class UserServiceImpl implements IUserService {
-
+open class UserServiceImpl : IUserService {
     @Autowired
-    IUserPersistence userService;
+    lateinit var userService: IUserPersistence
 
-    @Override
-    @Cacheable(value = "users")
-    public List<UserDto> listGuildUsers(Long guildId) {
-        return userService.listGuildUsers(guildId);
+    @Cacheable(value = ["users"])
+    override fun listGuildUsers(guildId: Long?): List<UserDto?> {
+        return userService.listGuildUsers(guildId)
     }
 
-    @Override
-    @CachePut(value = "users", key = "#userDto.discordId+#userDto.guildId")
-    public UserDto createNewUser(UserDto userDto) {
-        return userService.createNewUser(userDto);
+    @CachePut(value = ["users"], key = "#userDto.discordId+#userDto.guildId")
+    override fun createNewUser(userDto: UserDto): UserDto? {
+        return userService.createNewUser(userDto)
     }
 
-    @Override
-    @CachePut(value = "users", key = "#discordId+#guildId")
-    public UserDto getUserById(Long discordId, Long guildId) {
-        return userService.getUserById(discordId, guildId);
+    @CachePut(value = ["users"], key = "#discordId+#guildId")
+    override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {
+        return userService.getUserById(discordId, guildId)
     }
 
-    @Override
-    @CachePut(value = "users", key = "#userDto.discordId+#userDto.guildId")
-    public UserDto updateUser(UserDto userDto) {
-        return userService.updateUser(userDto);
+    @CachePut(value = ["users"], key = "#userDto.discordId+#userDto.guildId")
+    override fun updateUser(userDto: UserDto): UserDto {
+        return userService.updateUser(userDto)
     }
 
-    @Override
-    @CacheEvict(value = "users", key = "#userDto.discordId+#user.guildId")
-    public void deleteUser(UserDto userDto) {
-        userService.deleteUser(userDto);
+    @CacheEvict(value = ["users"], key = "#userDto.discordId+#user.guildId")
+    override fun deleteUser(userDto: UserDto) {
+        userService.deleteUser(userDto)
     }
 
-    @Override
-    @CacheEvict(value = "users", key = "#discordId+#guildId")
-    public void deleteUserById(Long discordId, Long guildId) {
-        userService.deleteUserById(discordId, guildId);
+    @CacheEvict(value = ["users"], key = "#discordId+#guildId")
+    override fun deleteUserById(discordId: Long?, guildId: Long?) {
+        userService.deleteUserById(discordId, guildId)
     }
 
-    @Override
-    @CacheEvict(value = "users", allEntries = true)
-    public void clearCache() {
-
+    @CacheEvict(value = ["users"], allEntries = true)
+    override fun clearCache() {
     }
-
 }

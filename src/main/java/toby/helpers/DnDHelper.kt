@@ -1,167 +1,179 @@
-package toby.helpers;
+package toby.helpers
 
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.entities.emoji.UnicodeEmoji;
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import org.jetbrains.annotations.NotNull;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IUserService;
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.emoji.Emoji
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
+import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.jpa.service.IUserService
+import java.awt.Color
+import java.util.*
+import java.util.Map.Entry.comparingByValue
+import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicInteger
 
-import java.awt.*;
-import java.util.List;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
+object DnDHelper {
+    @JvmField
+    val initiativeIndex: AtomicInteger = AtomicInteger(0)
 
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
+    @JvmStatic
+    var sortedEntries: LinkedList<Map.Entry<String, Int>> = LinkedList()
+        private set
 
-public class DnDHelper {
-
-    private static final AtomicInteger initiativeIndex = new AtomicInteger(0);
-
-    private static LinkedList<Map.Entry<String, Integer>> sortedEntries = new LinkedList<>();
-
-    public static void rollInitiativeForMembers(List<Member> memberList, Member dm, Map<String, Integer> initiativeMap, IUserService userService) {
-        List<Member> nonDmMembers = memberList.stream().filter(memberInChannel -> memberInChannel != dm && !memberInChannel.getUser().isBot()).toList();
-        if (nonDmMembers.isEmpty()) return;
-        nonDmMembers.forEach(target -> {
-            UserDto userDto = UserDtoHelper.calculateUserDto(target.getGuild().getIdLong(), target.getIdLong(), target.isOwner(), userService, 20);
-            rollAndAddToMap(initiativeMap, target.getUser().getEffectiveName(), userDto!= null ? userDto.getInitiative() : 0);
-        });
-        sortMap(initiativeMap);
+    fun rollInitiativeForMembers(
+        memberList: List<Member>,
+        dm: Member,
+        initiativeMap: MutableMap<String, Int>,
+        userService: IUserService
+    ) {
+        val nonDmMembers = memberList.stream()
+            .filter { memberInChannel: Member -> memberInChannel !== dm && !memberInChannel.user.isBot }
+            .toList()
+        if (nonDmMembers.isEmpty()) return
+        nonDmMembers.forEach { target ->
+            val userDto = UserDtoHelper.calculateUserDto(target.guild.idLong, target.idLong, target.isOwner, userService, 20)
+            rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto?.initiativeModifier ?: 0)
+        }
+        sortMap(initiativeMap)
     }
 
-    public static void rollInitiativeForString(List<String> nameList, Map<String, Integer> initiativeMap) {
-        if (nameList.isEmpty()) return;
-        nameList.forEach(name -> rollAndAddToMap(initiativeMap, name, 0));
-        sortMap(initiativeMap);
+    fun rollInitiativeForString(nameList: List<String>, initiativeMap: MutableMap<String, Int>) {
+        if (nameList.isEmpty()) return
+        nameList.forEach { name -> rollAndAddToMap(initiativeMap, name, 0) }
+        sortMap(initiativeMap)
     }
 
-    private static void sortMap(Map<String, Integer> initiativeMap) {
-        sortedEntries = new LinkedList<>(initiativeMap.entrySet());
+    private fun sortMap(initiativeMap: Map<String, Int>) {
+        sortedEntries = LinkedList(initiativeMap.entries)
         // Sort the list based on values
-        sortedEntries.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
+        sortedEntries.sortWith(comparingByValue(Comparator.reverseOrder()))
     }
 
-    private static void rollAndAddToMap(Map<String, Integer> initiativeMap, String name, int modifier) {
-        int diceRoll = DnDHelper.rollDiceWithModifier(20, 1, modifier);
-        initiativeMap.put(name, diceRoll);
+    private fun rollAndAddToMap(initiativeMap: MutableMap<String, Int>, name: String, modifier: Int) {
+        val diceRoll = rollDiceWithModifier(20, 1, modifier)
+        initiativeMap[name] = diceRoll
     }
 
-    @NotNull
-    public static StringBuilder createTurnOrderString() {
-        StringBuilder description = new StringBuilder();
-        for (int i = 0; i < sortedEntries.size(); i++) {
-            int currentIndex = (initiativeIndex.get() + i) % sortedEntries.size();
-            description.append(sortedEntries.get(currentIndex).getKey()).append(": ").append(sortedEntries.get(currentIndex).getValue()).append("\n");
+    private fun createTurnOrderString(): StringBuilder {
+        val description = StringBuilder()
+        for (i in sortedEntries.indices) {
+            val currentIndex = (initiativeIndex.get() + i) % sortedEntries.size
+            description.append(sortedEntries[currentIndex].key).append(": ").append(sortedEntries[currentIndex].value)
+                .append("\n")
         }
-        return description;
+        return description
     }
 
-    public static int rollDiceWithModifier(int diceValue, int diceToRoll, int modifier) {
-        return rollDice(diceValue, diceToRoll) + modifier;
+    @JvmStatic
+    fun rollDiceWithModifier(diceValue: Int, diceToRoll: Int, modifier: Int): Int {
+        return rollDice(diceValue, diceToRoll) + modifier
     }
 
-    public static int rollDice(int diceValue, int diceToRoll) {
-        int rollTotal = 0;
-        Random rand = ThreadLocalRandom.current();
-        for (int i = 0; i < diceToRoll; i++) {
-            int roll = rand.nextInt(diceValue) + 1; //This results in 1 - 20 (instead of 0 - 19) for default value
-            rollTotal += roll;
+    @JvmStatic
+    fun rollDice(diceValue: Int, diceToRoll: Int): Int {
+        var rollTotal = 0
+        val rand: Random = ThreadLocalRandom.current()
+        for (i in 0 until diceToRoll) {
+            val roll = rand.nextInt(diceValue) + 1 //This results in 1 - 20 (instead of 0 - 19) for default value
+            rollTotal += roll
         }
-        return rollTotal;
+        return rollTotal
     }
 
 
-    public static void incrementTurnTable(InteractionHook hook, ButtonInteractionEvent event, Integer deleteDelay) {
-        incrementIndex();
-        EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay);
+    @JvmStatic
+    fun incrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int?) {
+        incrementIndex()
+        val embedBuilder = initiativeEmbedBuilder
+        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay)
     }
 
-    private static void incrementIndex() {
-        getInitiativeIndex().incrementAndGet();
-        if (initiativeIndex.get() >= DnDHelper.getSortedEntries().size()) {
-            initiativeIndex.set(0);
+    private fun incrementIndex() {
+        initiativeIndex.incrementAndGet()
+        if (initiativeIndex.get() >= sortedEntries.size) {
+            initiativeIndex.set(0)
         }
     }
 
-    public static void decrementTurnTable(InteractionHook hook, ButtonInteractionEvent event, Integer deleteDelay) {
-        decrementIndex();
-        EmbedBuilder embedBuilder = getInitiativeEmbedBuilder();
-        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay);
+    @JvmStatic
+    fun decrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int?) {
+        decrementIndex()
+        val embedBuilder = initiativeEmbedBuilder
+        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay)
     }
 
-    private static void decrementIndex() {
-        initiativeIndex.decrementAndGet();
+    private fun decrementIndex() {
+        initiativeIndex.decrementAndGet()
         if (initiativeIndex.get() < 0) {
-            initiativeIndex.set(getSortedEntries().size() - 1);
+            initiativeIndex.set(sortedEntries.size - 1)
         }
     }
 
-    @NotNull
-    public static TableButtons getInitButtons() {
-        UnicodeEmoji prevEmoji = Emoji.fromUnicode("⬅️");
-        UnicodeEmoji xEmoji = Emoji.fromUnicode("❌");
-        UnicodeEmoji nextEmoji = Emoji.fromUnicode("➡️");
-        Button prev = Button.primary("init:prev", prevEmoji);
-        Button clear = Button.primary("init:clear", xEmoji);
-        Button next = Button.primary("init:next", nextEmoji);
-        return new TableButtons(prev, clear, next);
-    }
+    @JvmStatic
+    val initButtons: TableButtons
+        get() {
+            val prevEmoji = Emoji.fromUnicode("⬅️")
+            val xEmoji = Emoji.fromUnicode("❌")
+            val nextEmoji = Emoji.fromUnicode("➡️")
+            val prev = Button.primary("init:prev", prevEmoji)
+            val clear = Button.primary("init:clear", xEmoji)
+            val next = Button.primary("init:next", nextEmoji)
+            return TableButtons(prev, clear, next)
+        }
 
-    public static void sendOrEditInitiativeMessage(InteractionHook hook, EmbedBuilder embedBuilder, ButtonInteractionEvent event, Integer deleteDelay) {
-        TableButtons initButtons = getInitButtons();
-        MessageEmbed messageEmbed = embedBuilder.build();
+    @JvmStatic
+    fun sendOrEditInitiativeMessage(
+        hook: InteractionHook,
+        embedBuilder: EmbedBuilder,
+        event: ButtonInteractionEvent?,
+        deleteDelay: Int?
+    ) {
+        val initButtons = initButtons
+        val messageEmbed = embedBuilder.build()
         if (event == null) {
-            hook.sendMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
+            hook.sendMessageEmbeds(messageEmbed).setActionRow(initButtons.prev, initButtons.clear, initButtons.next).queue()
         } else {
-            Message message = event.getMessage();
+            val message = event.message
             // We came via a button press, so edit the embed
-            message.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev(), initButtons.clear(), initButtons.next()).queue();
-            hook.setEphemeral(true).sendMessageFormat("Next turn: %s", DnDHelper.sortedEntries.get(initiativeIndex.get()).getKey()).queue(invokeDeleteOnMessageResponse(deleteDelay));
+            message.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
+                .queue()
+            hook.setEphemeral(true).sendMessageFormat("Next turn: %s", sortedEntries[initiativeIndex.get()].key).queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
         }
     }
 
 
-    @NotNull
-    public static EmbedBuilder getInitiativeEmbedBuilder() {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setColor(Color.GREEN);
-        embedBuilder.setTitle("Initiative Order");
-        StringBuilder description = createTurnOrderString();
-        embedBuilder.setDescription(description.toString());
-        return embedBuilder;
+    @JvmStatic
+    val initiativeEmbedBuilder: EmbedBuilder
+        get() {
+            val embedBuilder = EmbedBuilder()
+            embedBuilder.setColor(Color.GREEN)
+            embedBuilder.setTitle("Initiative Order")
+            val description = createTurnOrderString()
+            embedBuilder.setDescription(description.toString())
+            return embedBuilder
+        }
+
+    @JvmStatic
+    fun clearInitiative() {
+        initiativeIndex.plain = 0
+        sortedEntries.clear()
     }
 
-    public static void clearInitiative() {
-        initiativeIndex.setPlain(0);
-        sortedEntries.clear();
-    }
-
-    public static void clearInitiative(InteractionHook hook, ButtonInteractionEvent event) {
-        Message message = event.getMessage();
-        if (message != null) message.delete().queue();
-        initiativeIndex.setPlain(0);
-        sortedEntries.clear();
-        hook.deleteOriginal().queue();
-    }
-
-    public record TableButtons(Button prev, Button clear, Button next) {
-    }
-
-    public static LinkedList<Map.Entry<String, Integer>> getSortedEntries() {
-        return sortedEntries;
+    fun clearInitiative(hook: InteractionHook, event: ButtonInteractionEvent) {
+        val message = event.message
+        message.delete().queue()
+        initiativeIndex.plain = 0
+        sortedEntries.clear()
+        hook.deleteOriginal().queue()
     }
 
 
-    public static AtomicInteger getInitiativeIndex() {
-        return initiativeIndex;
-    }
+    @JvmRecord
+    data class TableButtons(@JvmField val prev: Button, @JvmField val clear: Button, @JvmField val next: Button)
 }

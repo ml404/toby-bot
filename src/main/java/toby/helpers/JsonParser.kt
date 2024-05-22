@@ -1,46 +1,43 @@
-package toby.helpers;
+package toby.helpers
 
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import org.jetbrains.annotations.NotNull;
-import toby.dto.web.dnd.Feature;
-import toby.dto.web.dnd.Information;
-import toby.dto.web.dnd.Rule;
-import toby.dto.web.dnd.spell.QueryResult;
-import toby.dto.web.dnd.spell.Spell;
+import com.google.gson.FieldNamingPolicy
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import toby.dto.web.dnd.*
 
-public class JsonParser {
-
-    public static Spell parseJSONToSpell(String jsonData) {
-        Gson gson = createGsonWithSnakeCaseFields();
-        return gson.fromJson(jsonData, Spell.class);
+object JsonParser {
+    @JvmStatic
+    fun parseJSONToSpell(jsonData: String?): Spell? {
+        val gson = createGsonWithSnakeCaseFields()
+        return gson.fromJson(jsonData, Spell::class.java)
     }
 
-    public static Information parseJsonToInformation(String jsonData) {
-        Gson gson = createGsonWithSnakeCaseFields();
-        return gson.fromJson(jsonData, Information.class);
+    @JvmStatic
+    fun parseJsonToInformation(jsonData: String?): Information? {
+        val gson = createGsonWithSnakeCaseFields()
+        return gson.fromJson(jsonData, Information::class.java)
     }
 
-    public static Rule parseJsonToRule(String jsonData) {
-        Gson gson = createGsonWithSnakeCaseFields();
-        return gson.fromJson(jsonData, Rule.class);
+    @JvmStatic
+    fun parseJsonToRule(jsonData: String?): Rule? {
+        val gson = createGsonWithSnakeCaseFields()
+        return gson.fromJson(jsonData, Rule::class.java)
     }
 
-    public static Feature parseJsonToFeature(String jsonData){
-        Gson gson = createGsonWithSnakeCaseFields();
-        return gson.fromJson(jsonData, Feature.class);
+    @JvmStatic
+    fun parseJsonToFeature(jsonData: String?): Feature? {
+        val gson = createGsonWithSnakeCaseFields()
+        return gson.fromJson(jsonData, Feature::class.java)
     }
 
 
-    public static QueryResult parseJsonToQueryResult(String jsonData) {
-        Gson gson = new Gson();
-        return gson.fromJson(jsonData, QueryResult.class);
+    @JvmStatic
+    fun parseJsonToQueryResult(jsonData: String?): QueryResult? {
+        val gson = Gson()
+        return gson.fromJson(jsonData, QueryResult::class.java)
     }
 
-    @NotNull
-    private static Gson createGsonWithSnakeCaseFields() {
-        return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+    private fun createGsonWithSnakeCaseFields(): Gson {
+        return GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
     }
-
 }

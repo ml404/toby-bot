@@ -1,6 +1,5 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import toby.command.ICommand;
+import toby.command.ICommand
 
-public interface IModerationCommand extends ICommand {
-}
+interface IModerationCommand : ICommand

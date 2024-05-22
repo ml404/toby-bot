@@ -1,6 +1,8 @@
-package toby.dto.web.dnd;
+package toby.dto.web.dnd
 
-import java.util.List;
-
-public record Information(String index, String name, List<String>desc, String url) {
-}
+data class Information(
+    val index: String?,
+    val name: String?,
+    val desc: List<String>?,
+    val url: String?
+)

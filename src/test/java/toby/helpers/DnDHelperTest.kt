@@ -1,225 +1,326 @@
-package toby.helpers;
+package toby.helpers
 
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.*;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
-import net.dv8tion.jda.api.interactions.components.LayoutComponent;
-import net.dv8tion.jda.api.requests.RestAction;
-import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction;
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction;
-import net.dv8tion.jda.internal.requests.restaction.AuditableRestActionImpl;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import toby.jpa.service.IUserService;
-import toby.jpa.service.impl.UserServiceImpl;
+import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.emoji.Emoji
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
+import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.interactions.components.LayoutComponent
+import net.dv8tion.jda.api.requests.RestAction
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
+import net.dv8tion.jda.api.utils.messages.MessageRequest
+import net.dv8tion.jda.internal.requests.restaction.AuditableRestActionImpl
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.anyVararg
+import toby.helpers.DnDHelper.clearInitiative
+import toby.helpers.DnDHelper.decrementTurnTable
+import toby.helpers.DnDHelper.incrementTurnTable
+import toby.helpers.DnDHelper.initButtons
+import toby.helpers.DnDHelper.initiativeEmbedBuilder
+import toby.helpers.DnDHelper.rollDice
+import toby.helpers.DnDHelper.rollDiceWithModifier
+import toby.helpers.DnDHelper.rollInitiativeForMembers
+import toby.helpers.DnDHelper.sendOrEditInitiativeMessage
+import toby.helpers.DnDHelper.sortedEntries
+import toby.jpa.service.IUserService
+import toby.jpa.service.impl.UserServiceImpl
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-class DnDHelperTest {
+internal class DnDHelperTest {
+    @Mock
+    lateinit var hook: InteractionHook
 
     @Mock
-    InteractionHook hook;
+    lateinit var message: Message
 
     @Mock
-    Message message;
+    lateinit var event: ButtonInteractionEvent
 
     @Mock
-    ButtonInteractionEvent event;
+    lateinit var member: Member
 
     @Mock
-    Member member;
+    lateinit var guild: Guild
 
     @Mock
-    Guild guild;
+    private lateinit var webhookMessageEditAction: WebhookMessageEditAction<Message>
 
     @Mock
-    private WebhookMessageEditAction webhookMessageEditAction;
+    lateinit var webhookMessageCreateAction: WebhookMessageCreateAction<Message>
 
     @Mock
-    WebhookMessageCreateAction webhookMessageCreateAction;
+    lateinit var userService: IUserService
 
     @Mock
-    IUserService userService;
-    @Mock
-    private MessageEditAction messageEditAction;
-    private List<Member> memberList;
-    private Map<String, Integer> initiativeMap;
+    private lateinit var messageEditAction: MessageEditAction
+    private lateinit var memberList: List<Member>
+    private lateinit var initiativeMap: MutableMap<String, Int>
 
     @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    fun setUp() {
+        MockitoAnnotations.openMocks(this)
         // Call rollInitiativeForMembers before testing other methods
-        Member player1 = mock(Member.class);
-        Member player2 = mock(Member.class);
-        Member player3 = mock(Member.class);
-        User user1 = mock(User.class);
-        User user2 = mock(User.class);
-        User user3 = mock(User.class);
-        userService = mock(UserServiceImpl.class);
-        memberList = Arrays.asList(player1, player2, player3);
-        when(player1.getUser()).thenReturn(user1);
-        when(player2.getUser()).thenReturn(user2);
-        when(player3.getUser()).thenReturn(user3);
-        guild = mock(Guild.class);
-        when(player1.getGuild()).thenReturn(guild);
-        when(player2.getGuild()).thenReturn(guild);
-        when(player3.getGuild()).thenReturn(guild);
-        when(guild.getIdLong()).thenReturn(1L);
-        when(user1.isBot()).thenReturn(false);
-        when(user2.isBot()).thenReturn(false);
-        when(user3.isBot()).thenReturn(false);
-        when(user1.getEffectiveName()).thenReturn("name 1");
-        when(user2.getEffectiveName()).thenReturn("name 2");
-        when(user3.getEffectiveName()).thenReturn("name 3");
-        AuditableRestActionImpl auditableRestAction = mock(AuditableRestActionImpl.class);
-        event = mock(ButtonInteractionEvent.class);
-        initiativeMap = new HashMap<>();
-        webhookMessageEditAction = mock(WebhookMessageEditAction.class);
-        webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
-        when(event.getMessage()).thenReturn(message);
-        messageEditAction = mock(MessageEditAction.class);
-        when(message.editMessageEmbeds(any(MessageEmbed.class))).thenReturn(messageEditAction);
-        when(messageEditAction.setActionRow(any(), any(), any())).thenReturn(messageEditAction);
-        when(message.delete()).thenReturn(auditableRestAction);
-        DnDHelper.clearInitiative();
-        when(hook.deleteOriginal()).thenReturn(mock(RestAction.class));
-        when(hook.setEphemeral(true)).thenReturn(hook);
-        when(hook.sendMessageFormat(anyString(), any())).thenReturn(webhookMessageCreateAction);
+        val player1 = Mockito.mock(Member::class.java)
+        val player2 = Mockito.mock(Member::class.java)
+        val player3 = Mockito.mock(Member::class.java)
+        val user1 = Mockito.mock(User::class.java)
+        val user2 = Mockito.mock(User::class.java)
+        val user3 = Mockito.mock(User::class.java)
+        userService = Mockito.mock(UserServiceImpl::class.java)
+        memberList = listOf(player1, player2, player3)
+        Mockito.`when`(player1.user).thenReturn(user1)
+        Mockito.`when`(player2.user).thenReturn(user2)
+        Mockito.`when`(player3.user).thenReturn(user3)
+        guild = Mockito.mock(Guild::class.java)
+        Mockito.`when`(player1.guild).thenReturn(guild)
+        Mockito.`when`(player2.guild).thenReturn(guild)
+        Mockito.`when`(player3.guild).thenReturn(guild)
+        Mockito.`when`(guild.idLong).thenReturn(1L)
+        Mockito.`when`(user1.isBot).thenReturn(false)
+        Mockito.`when`(user2.isBot).thenReturn(false)
+        Mockito.`when`(user3.isBot).thenReturn(false)
+        Mockito.`when`(user1.effectiveName).thenReturn("name 1")
+        Mockito.`when`(user2.effectiveName).thenReturn("name 2")
+        Mockito.`when`(user3.effectiveName).thenReturn("name 3")
+        val auditableRestAction = Mockito.mock(
+            AuditableRestActionImpl::class.java
+        ) as AuditableRestAction<Void>
+        event = Mockito.mock(ButtonInteractionEvent::class.java)
+        initiativeMap = HashMap()
+        webhookMessageEditAction = Mockito.mock(WebhookMessageEditAction::class.java) as WebhookMessageEditAction<Message>
+        webhookMessageCreateAction = Mockito.mock(WebhookMessageCreateAction::class.java) as WebhookMessageCreateAction<Message>
+        Mockito.`when`(event.message).thenReturn(message)
+        messageEditAction = Mockito.mock(MessageEditAction::class.java)
+        Mockito.`when`(message.editMessageEmbeds(ArgumentMatchers.any(MessageEmbed::class.java)))
+            .thenReturn(messageEditAction)
+        Mockito.`when`(
+            messageEditAction.setActionRow(
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any()
+            )
+        ).thenReturn(messageEditAction)
+        Mockito.`when`(message.delete()).thenReturn(auditableRestAction)
+        clearInitiative()
+        Mockito.`when`(hook.deleteOriginal()).thenReturn(
+            Mockito.mock(
+                RestAction::class.java
+            ) as RestAction<Void>?
+        )
+        Mockito.`when`(hook.setEphemeral(true)).thenReturn(hook)
+        Mockito.`when`(hook.sendMessageFormat(ArgumentMatchers.anyString(), anyVararg()))
+            .thenReturn(webhookMessageCreateAction)
     }
 
     @AfterEach
-    public void tearDown() {
-        reset(hook);
-        reset(webhookMessageCreateAction);
-        reset(webhookMessageEditAction);
-        reset(message);
-        reset(event);
-        reset(messageEditAction);
-        reset(userService);
-        reset(guild);
-        DnDHelper.clearInitiative();
+    fun tearDown() {
+        Mockito.reset(hook)
+        Mockito.reset(webhookMessageCreateAction)
+        Mockito.reset(webhookMessageEditAction)
+        Mockito.reset(message)
+        Mockito.reset(event)
+        Mockito.reset(messageEditAction)
+        Mockito.reset(userService)
+        Mockito.reset(guild)
+        clearInitiative()
     }
 
     @Test
-    void testRollDiceWithModifier() {
-        int result = DnDHelper.rollDiceWithModifier(20, 1, 5);
-        assertTrue(result >= 6 && result <= 25, "Result should be between 6 and 25 (inclusive)");
+    fun testRollDiceWithModifier() {
+        val result = rollDiceWithModifier(20, 1, 5)
+        Assertions.assertTrue(result in 6..25, "Result should be between 6 and 25 (inclusive)")
     }
 
     @Test
-    void testRollDice() {
-        int result = DnDHelper.rollDice(20, 2);
-        assertTrue(result >= 2 && result <= 40, "Result should be between 2 and 40 (inclusive)");
+    fun testRollDice() {
+        val result = rollDice(20, 2)
+        Assertions.assertTrue(result in 2..40, "Result should be between 2 and 40 (inclusive)")
     }
 
     @Test
-    void testIncrementTurnTable() {
-        WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
-        WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
-        when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
-        when(hook.editOriginalComponents(any(LayoutComponent.class))).thenReturn(webhookMessageEditAction);
-        when(hook.editOriginalEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageEditAction);
+    fun testIncrementTurnTable() {
+        val webhookMessageCreateAction = Mockito.mock(
+            WebhookMessageCreateAction::class.java
+        ) as WebhookMessageCreateAction<Message>
+        val webhookMessageEditAction = Mockito.mock(
+            WebhookMessageEditAction::class.java
+        ) as WebhookMessageEditAction<Message>
+        Mockito.`when`(
+            hook.sendMessageEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
+        ).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`(
+            hook.editOriginalComponents(
+                ArgumentMatchers.any(
+                    LayoutComponent::class.java
+                )
+            )
+        ).thenReturn(webhookMessageEditAction)
+        Mockito.`when`(
+            hook.editOriginalEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
+        ).thenReturn(webhookMessageEditAction)
 
         // Mock the behavior of setActionRow to return the same WebhookMessageEditAction
-        when(webhookMessageCreateAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageCreateAction);
-        when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
+        Mockito.`when`<MessageRequest<*>>(
+            webhookMessageCreateAction.setActionRow(
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any()
+            )
+        ).thenReturn(webhookMessageCreateAction)
+        Mockito.`when`<MessageRequest<*>>(
+            webhookMessageEditAction.setActionRow(
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any(),
+                ArgumentMatchers.any()
+            )
+        ).thenReturn(webhookMessageEditAction)
 
-        DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap, userService);
-        DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null, 0);
-        DnDHelper.incrementTurnTable(hook, event, 0);
-        verifySetActionRows(webhookMessageCreateAction, messageEditAction);
+        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
+        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
+        incrementTurnTable(hook, event, 0)
+        verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
 
         // Verify that queue is called once
-        verify(webhookMessageCreateAction, times(1)).queue();
+        Mockito.verify(webhookMessageCreateAction, Mockito.times(1)).queue()
 
-        verify(hook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(messageEditAction, times(1)).queue();
-        assertEquals(1, DnDHelper.getInitiativeIndex().get());
+        Mockito.verify(hook, Mockito.times(1)).sendMessageEmbeds(
+            ArgumentMatchers.any(
+                MessageEmbed::class.java
+            )
+        )
+        Mockito.verify(messageEditAction, Mockito.times(1)).queue()
+        Assertions.assertEquals(1, DnDHelper.initiativeIndex.get())
     }
 
     @Test
-    void testDecrementTurnTable() {
-        {
-            WebhookMessageCreateAction webhookMessageCreateAction = mock(WebhookMessageCreateAction.class);
-            WebhookMessageEditAction webhookMessageEditAction = mock(WebhookMessageEditAction.class);
-            when(hook.sendMessageEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageCreateAction);
-            when(hook.editOriginalComponents(any(LayoutComponent.class))).thenReturn(webhookMessageEditAction);
-            when(hook.editOriginalEmbeds(any(MessageEmbed.class))).thenReturn(webhookMessageEditAction);
+    fun testDecrementTurnTable() {
+        run {
+            val webhookMessageCreateAction = Mockito.mock(
+                WebhookMessageCreateAction::class.java
+            ) as WebhookMessageCreateAction<Message>
+            val webhookMessageEditAction = Mockito.mock(
+                WebhookMessageEditAction::class.java
+            ) as WebhookMessageEditAction<Message>
+            Mockito.`when`(
+                hook.sendMessageEmbeds(
+                    ArgumentMatchers.any(
+                        MessageEmbed::class.java
+                    )
+                )
+            ).thenReturn(webhookMessageCreateAction)
+            Mockito.`when`(
+                hook.editOriginalComponents(
+                    ArgumentMatchers.any(
+                        LayoutComponent::class.java
+                    )
+                )
+            ).thenReturn(webhookMessageEditAction)
+            Mockito.`when`(
+                hook.editOriginalEmbeds(
+                    ArgumentMatchers.any(
+                        MessageEmbed::class.java
+                    )
+                )
+            ).thenReturn(webhookMessageEditAction)
 
             // Mock the behavior of setActionRow to return the same WebhookMessageEditAction
-            when(webhookMessageCreateAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageCreateAction);
-            when(webhookMessageEditAction.setActionRow(any(), any(), any())).thenReturn(webhookMessageEditAction);
+            Mockito.`when`<MessageRequest<*>>(
+                webhookMessageCreateAction.setActionRow(
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any()
+                )
+            ).thenReturn(webhookMessageCreateAction)
+            Mockito.`when`<MessageRequest<*>>(
+                webhookMessageEditAction.setActionRow(
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any()
+                )
+            ).thenReturn(webhookMessageEditAction)
 
-            DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap, userService);
-            DnDHelper.sendOrEditInitiativeMessage(hook, DnDHelper.getInitiativeEmbedBuilder(), null, 0);
-            DnDHelper.decrementTurnTable(hook, event, 0);
-            verifySetActionRows(webhookMessageCreateAction, messageEditAction);
+            rollInitiativeForMembers(memberList, member, initiativeMap, userService)
+            sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
+            decrementTurnTable(hook, event, 0)
+            verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
 
             // Verify that queue is called once
-            verify(webhookMessageCreateAction, times(1)).queue();
+            Mockito.verify(webhookMessageCreateAction, Mockito.times(1)).queue()
 
-            verify(hook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
-            verify(messageEditAction, times(1)).queue();
-            assertEquals(2, DnDHelper.getInitiativeIndex().get());
+            Mockito.verify(hook, Mockito.times(1)).sendMessageEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
+            Mockito.verify(messageEditAction, Mockito.times(1)).queue()
+            Assertions.assertEquals(2, DnDHelper.initiativeIndex.get())
         }
     }
 
     @Test
-    void testGetInitButtons() {
-        DnDHelper.TableButtons buttons = DnDHelper.getInitButtons();
+    fun testGetInitButtons() {
+        val buttons = initButtons
 
-        assertNotNull(buttons);
-        assertEquals(Emoji.fromUnicode("⬅️").getName(), buttons.prev().getEmoji().getName());
-        assertEquals(Emoji.fromUnicode("❌").getName(), buttons.clear().getEmoji().getName());
-        assertEquals(Emoji.fromUnicode("➡️").getName(), buttons.next().getEmoji().getName());
+        Assertions.assertNotNull(buttons)
+        Assertions.assertEquals(Emoji.fromUnicode("⬅️").name, buttons.prev.emoji?.name)
+        Assertions.assertEquals(Emoji.fromUnicode("❌").name, buttons.clear.emoji?.name)
+        Assertions.assertEquals(Emoji.fromUnicode("➡️").name, buttons.next.emoji?.name)
     }
 
     @Test
-    void testGetInitiativeEmbedBuilder() {
-        EmbedBuilder embedBuilder = DnDHelper.getInitiativeEmbedBuilder();
+    fun testGetInitiativeEmbedBuilder() {
+        val embedBuilder = initiativeEmbedBuilder
 
-        assertNotNull(embedBuilder);
-        assertEquals("Initiative Order", embedBuilder.build().getTitle());
+        Assertions.assertNotNull(embedBuilder)
+        Assertions.assertEquals("Initiative Order", embedBuilder.build().title)
     }
 
     @Test
-    void testClearInitiative() {
-        long guildId = 123456789L;
+    fun testClearInitiative() {
+        val guildId = 123456789L
 
-        DnDHelper.rollInitiativeForMembers(memberList, member, initiativeMap, userService);
-        DnDHelper.clearInitiative();
+        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
+        clearInitiative()
 
-        assertEquals(0, DnDHelper.getInitiativeIndex().get());
-        assertEquals(0, DnDHelper.getSortedEntries().size());
+        Assertions.assertEquals(0, DnDHelper.initiativeIndex.get())
+        Assertions.assertEquals(0, sortedEntries.size)
     }
 
-    private static void verifySetActionRows(WebhookMessageCreateAction webhookMessageCreateAction, MessageEditAction messageEditAction) {
-        // Verify that setActionRow is called once for initial setup with the correct buttons
-        verify(webhookMessageCreateAction, times(1)).setActionRow(
-                eq(DnDHelper.getInitButtons().prev()),
-                eq(DnDHelper.getInitButtons().clear()),
-                eq(DnDHelper.getInitButtons().next())
-        );
+    companion object {
+        private fun verifySetActionRows(
+            webhookMessageCreateAction: WebhookMessageCreateAction<*>,
+            messageEditAction: MessageEditAction
+        ) {
+            // Verify that setActionRow is called once for initial setup with the correct buttons
+            Mockito.verify(webhookMessageCreateAction, Mockito.times(1)).setActionRow(
+                ArgumentMatchers.eq(initButtons.prev),
+                ArgumentMatchers.eq(initButtons.clear),
+                ArgumentMatchers.eq(initButtons.next)
+            )
 
-        verify(messageEditAction, times(1)).setActionRow(
-                eq(DnDHelper.getInitButtons().prev()),
-                eq(DnDHelper.getInitButtons().clear()),
-                eq(DnDHelper.getInitButtons().next())
-        );
+            Mockito.verify(messageEditAction, Mockito.times(1)).setActionRow(
+                ArgumentMatchers.eq(initButtons.prev),
+                ArgumentMatchers.eq(initButtons.clear),
+                ArgumentMatchers.eq(initButtons.next)
+            )
+        }
     }
-
 }

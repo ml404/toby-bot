@@ -1,131 +1,164 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import java.util.concurrent.ArrayBlockingQueue
 
-import java.util.concurrent.ArrayBlockingQueue;
-
-import static org.mockito.Mockito.*;
-
-class SkipCommandTest implements MusicCommandTest {
-
-    SkipCommand skipCommand;
+internal class SkipCommandTest : MusicCommandTest {
+    private lateinit var skipCommand: SkipCommand
 
     @BeforeEach
-    void setUp() {
-        setupCommonMusicMocks();
-        skipCommand = new SkipCommand();
-        when(event.deferReply(true)).thenReturn(replyCallbackAction);
+    fun setUp() {
+        setupCommonMusicMocks()
+        skipCommand = SkipCommand()
+        Mockito.`when`(CommandTest.event.deferReply(true))
+            .thenReturn(CommandTest.replyCallbackAction)
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMusicMocks();
+    fun tearDown() {
+        tearDownCommonMusicMocks()
     }
 
     @Test
-    void test_skipCommand_withValidQueueAndSetup() {
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(false);
-        ArrayBlockingQueue queue = new ArrayBlockingQueue<>(2);
-        AudioTrack track2 = mockAudioTrack("Another Title", "Another Author", "identifier", 1000L, true ,"uri");
-        queue.add(track);
-        queue.add(track2);
-        when(trackScheduler.getQueue()).thenReturn(queue);
-        when(track.getUserData()).thenReturn(1);
+    fun test_skipCommand_withValidQueueAndSetup() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(2)
+        val track2 = mockAudioTrack("Another Title", "Another Author", "identifier", 1000L, true, "uri")
+        queue.add(MusicCommandTest.track)
+        queue.add(track2)
+        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
         //Act
-        skipCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        skipCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
-        verify(trackScheduler, times(1)).setLooping(false);
-        verify(trackScheduler, times(1)).nextTrack();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("Skipped %d track(s)"), eq(1));
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(1)).isLooping = false
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(1)).nextTrack()
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessageFormat(ArgumentMatchers.eq("Skipped %d track(s)"), ArgumentMatchers.eq(1))
     }
 
     @Test
-    void test_skipCommandForMultipleTracks_withValidQueueAndSetup() {
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        OptionMapping optionMapping = mock(OptionMapping.class);
-        when(event.getOption("skip")).thenReturn(optionMapping);
-        when(optionMapping.getAsInt()).thenReturn(2);
-        ArrayBlockingQueue queue = new ArrayBlockingQueue<>(3);
-        AudioTrack track2 = mockAudioTrack("Another Title", "Another Author", "identifier", 1000L, true ,"uri");
-        AudioTrack track3 = mockAudioTrack("Another Title 1", "Another Author 1", "identifier", 1000L, true, "uri");
-        queue.add(track);
-        queue.add(track2);
-        queue.add(track3);
-        when(trackScheduler.getQueue()).thenReturn(queue);
-        when(track.getUserData()).thenReturn(1);
+    fun test_skipCommandForMultipleTracks_withValidQueueAndSetup() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        val optionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("skip")).thenReturn(optionMapping)
+        Mockito.`when`(optionMapping.asInt).thenReturn(2)
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(3)
+        val track2 = mockAudioTrack("Another Title", "Another Author", "identifier", 1000L, true, "uri")
+        val track3 = mockAudioTrack("Another Title 1", "Another Author 1", "identifier", 1000L, true, "uri")
+        queue.add(MusicCommandTest.track)
+        queue.add(track2)
+        queue.add(track3)
+        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
         //Act
-        skipCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        skipCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
-        verify(trackScheduler, times(1)).setLooping(false);
-        verify(trackScheduler, times(2)).nextTrack();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("Skipped %d track(s)"), eq(2));
-    }
-
-    @NotNull
-    private static AudioTrack mockAudioTrack(String title, String author, String identifier, long songLength, boolean isStream, String uri) {
-        AudioTrack track2 = mock(AudioTrack.class);
-        when(track2.getInfo()).thenReturn(new AudioTrackInfo(title, author, songLength, identifier, isStream, uri));
-        when(track2.getDuration()).thenReturn(songLength);
-        return track2;
-    }
-
-    @Test
-    void test_skipCommandWithInvalidAmountOfTracksToSkip_withValidQueueAndSetup() {
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(false);
-        OptionMapping optionMapping = mock(OptionMapping.class);
-        when(event.getOption("skip")).thenReturn(optionMapping);
-        when(optionMapping.getAsInt()).thenReturn(-1);
-        ArrayBlockingQueue queue = new ArrayBlockingQueue<>(2);
-        AudioTrack track2 = mockAudioTrack("Another Title", "Another Author", "identifier", 1000L, true ,"uri");
-        queue.add(track);
-        queue.add(track2);
-        when(trackScheduler.getQueue()).thenReturn(queue);
-        when(track.getUserData()).thenReturn(1);
-
-        //Act
-        skipCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
-
-        verify(trackScheduler, times(0)).setLooping(false);
-        verify(trackScheduler, times(0)).nextTrack();
-        verify(interactionHook, times(1)).sendMessage(eq("You're not too bright, but thanks for trying"));
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(1)).isLooping = false
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(2)).nextTrack()
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessageFormat(ArgumentMatchers.eq("Skipped %d track(s)"), ArgumentMatchers.eq(2))
     }
 
     @Test
-    void test_skipCommandWithValidNumberOfTracksToSkip_withNoQueueAndSetup() {
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(false);
-        OptionMapping optionMapping = mock(OptionMapping.class);
-        when(event.getOption("skip")).thenReturn(optionMapping);
-        when(optionMapping.getAsInt()).thenReturn(1);
-        when(trackScheduler.getQueue()).thenReturn(null);
-        when(track.getUserData()).thenReturn(1);
-        when(audioPlayer.getPlayingTrack()).thenReturn(null);
+    fun test_skipCommandWithInvalidAmountOfTracksToSkip_withValidQueueAndSetup() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        val optionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("skip")).thenReturn(optionMapping)
+        Mockito.`when`(optionMapping.asInt).thenReturn(-1)
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(2)
+        val track2 = mockAudioTrack("Another Title", "Another Author", "identifier", 1000L, true, "uri")
+        queue.add(MusicCommandTest.track)
+        queue.add(track2)
+        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
         //Act
-        skipCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        skipCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
-        verify(trackScheduler, times(0)).setLooping(false);
-        verify(trackScheduler, times(0)).nextTrack();
-        verify(interactionHook, times(1)).sendMessage(eq("There is no track playing currently"));
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(0)).isLooping = false
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(0)).nextTrack()
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("You're not too bright, but thanks for trying"))
+    }
+
+    @Test
+    fun test_skipCommandWithValidNumberOfTracksToSkip_withNoQueueAndSetup() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        val optionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("skip")).thenReturn(optionMapping)
+        Mockito.`when`(optionMapping.asInt).thenReturn(1)
+        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(null)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
+        Mockito.`when`(MusicCommandTest.audioPlayer.playingTrack).thenReturn(null)
+
+        //Act
+        skipCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
+
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(0)).isLooping = false
+        Mockito.verify(MusicCommandTest.trackScheduler, Mockito.times(0)).nextTrack()
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("There is no track playing currently"))
+    }
+
+    companion object {
+        private fun mockAudioTrack(
+            title: String,
+            author: String,
+            identifier: String,
+            songLength: Long,
+            isStream: Boolean,
+            uri: String
+        ): AudioTrack {
+            val track2 = Mockito.mock(
+                AudioTrack::class.java
+            )
+            Mockito.`when`(track2.info).thenReturn(AudioTrackInfo(title, author, songLength, identifier, isStream, uri))
+            Mockito.`when`(track2.duration).thenReturn(songLength)
+            return track2
+        }
     }
 }

@@ -1,6 +1,5 @@
-package toby.command.commands.fetch;
+package toby.command.commands.fetch
 
-import toby.command.ICommand;
+import toby.command.ICommand
 
-public interface IFetchCommand extends ICommand {
-}
+interface IFetchCommand : ICommand

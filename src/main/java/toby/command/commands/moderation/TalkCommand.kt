@@ -1,43 +1,34 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
+import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Member
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.jpa.dto.UserDto
+import java.util.function.Consumer
 
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-
-public class TalkCommand implements IModerationCommand {
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        final Member member = ctx.getMember();
-        final Guild guild = event.getGuild();
-        member.getVoiceState().getChannel().getMembers().forEach(target -> {
-            if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.isSuperUser()) {
-                event.getHook().sendMessageFormat("You aren't allowed to unmute %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay));
-                return;
+class TalkCommand : IModerationCommand {
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        val member = ctx.member
+        val guild = event.guild!!
+        member!!.voiceState!!.channel!!.members.forEach(Consumer { target: Member? ->
+            if (!member.canInteract(target!!) || !member.hasPermission(Permission.VOICE_MUTE_OTHERS) || !requestingUserDto.superUser) {
+                event.hook.sendMessageFormat("You aren't allowed to unmute %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                return@Consumer
             }
-            final Member bot = guild.getSelfMember();
+            val bot = guild.selfMember
             if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-                event.getHook().sendMessageFormat("I'm not allowed to unmute %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay));
-                return;
+                event.hook.sendMessageFormat("I'm not allowed to unmute %s", target).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                return@Consumer
             }
-
-            guild.mute(target, false).reason("Unmuted").queue();
-        });
+            guild.mute(target, false).reason("Unmuted").queue()
+        })
     }
 
-    @Override
-    public String getName() {
-        return "talk";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Unmute everyone in your voice channel, mostly made for Among Us.";
-    }
+    override val name: String
+        get() = "talk"
+    override val description: String
+        get() = "Unmute everyone in your voice channel, mostly made for Among Us."
 }

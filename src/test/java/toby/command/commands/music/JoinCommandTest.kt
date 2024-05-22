@@ -1,57 +1,76 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import net.dv8tion.jda.api.Permission;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import toby.command.CommandContext;
-import toby.jpa.service.IConfigService;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.GuildVoiceState
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import toby.jpa.service.IConfigService
+import java.util.concurrent.ArrayBlockingQueue
 
-import java.util.concurrent.ArrayBlockingQueue;
-
-import static org.mockito.Mockito.*;
-
-class JoinCommandTest implements MusicCommandTest {
-
-    JoinCommand command;
+internal class JoinCommandTest : MusicCommandTest {
+    var command: JoinCommand? = null
 
     @Mock
-    IConfigService configService;
+    lateinit var configService: IConfigService
 
     @BeforeEach
-    public void setup(){
-        setupCommonMusicMocks();
-        configService = mock(IConfigService.class);
-        command = new JoinCommand(configService);
+    fun setup() {
+        setupCommonMusicMocks()
+        configService = Mockito.mock(IConfigService::class.java)
+        command = JoinCommand(configService)
     }
 
     @AfterEach
-    public void teardown(){
-        tearDownCommonMusicMocks();
+    fun teardown() {
+        tearDownCommonMusicMocks()
     }
+
     @Test
-    void test_joinCommand() {
-        setUpAudioChannelsWithBotNotInChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(false);
-        when(memberVoiceState.getChannel()).thenReturn(audioChannelUnion);
-        when(audioChannelUnion.getName()).thenReturn("Channel Name");
-        ArrayBlockingQueue<AudioTrack> queue = mock(ArrayBlockingQueue.class);
-        when(trackScheduler.getQueue()).thenReturn(queue);
-        when(member.getVoiceState()).thenReturn(memberVoiceState);
-        when(memberVoiceState.inAudioChannel()).thenReturn(true);
-        when(botMember.hasPermission(Permission.VOICE_CONNECT)).thenReturn(true);
+    fun test_joinCommand() {
+        setUpAudioChannelsWithBotNotInChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        Mockito.`when`<AudioChannelUnion>(MusicCommandTest.memberVoiceState.channel)
+            .thenReturn(MusicCommandTest.audioChannelUnion)
+        Mockito.`when`(MusicCommandTest.audioChannelUnion.name).thenReturn("Channel Name")
+        val queue: ArrayBlockingQueue<AudioTrack?> = Mockito.mock(
+            ArrayBlockingQueue::class.java
+        ) as ArrayBlockingQueue<AudioTrack?>
+        Mockito.`when`(trackScheduler.queue).thenReturn(queue)
+        Mockito.`when`<GuildVoiceState>(CommandTest.member.voiceState)
+            .thenReturn(MusicCommandTest.memberVoiceState)
+        Mockito.`when`(MusicCommandTest.memberVoiceState.inAudioChannel()).thenReturn(true)
+        Mockito.`when`(MusicCommandTest.botMember.hasPermission(Permission.VOICE_CONNECT))
+            .thenReturn(true)
 
         //Act
-        command.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        command!!.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioManager, times(1)).openAudioConnection(audioChannelUnion);
-        verify(playerManager, times(1)).getMusicManager(guild);
-        verify(musicManager.getAudioPlayer(), times(1)).setVolume(100);
-        verify(event.getHook(), times(1)).sendMessageFormat(eq("Connecting to `\uD83D\uDD0A %s` with volume '%s'"), eq("Channel Name"), eq(100));
+        Mockito.verify(MusicCommandTest.audioManager, Mockito.times(1))
+            .openAudioConnection(MusicCommandTest.audioChannelUnion)
+        Mockito.verify(MusicCommandTest.playerManager, Mockito.times(1))
+            .getMusicManager(CommandTest.guild)
+        Mockito.verify(MusicCommandTest.musicManager.audioPlayer, Mockito.times(1)).volume = 100
+        Mockito.verify(CommandTest.event.hook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("Connecting to `\uD83D\uDD0A %s` with volume '%s'"),
+            ArgumentMatchers.eq("Channel Name"),
+            ArgumentMatchers.eq(100)
+        )
     }
 }

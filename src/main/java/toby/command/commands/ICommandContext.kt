@@ -1,92 +1,77 @@
-package toby.command.commands;
+package toby.command.commands
 
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.sharding.ShardManager;
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.sharding.ShardManager
 
 /**
  * Dummy class that holds the basics for a command context
  */
-public interface ICommandContext {
+interface ICommandContext {
+    /**
+     * Returns the [net.dv8tion.jda.api.entities.Guild] for the current command/event
+     *
+     * @return the [net.dv8tion.jda.api.entities.Guild] for this command/event
+     */
+    val guild: Guild
 
     /**
-     * Returns the {@link net.dv8tion.jda.api.entities.Guild} for the current command/event
+     * Returns the [message event][net.dv8tion.jda.api.events.message.MessageReceivedEvent] that was received for this instance
      *
-     * @return the {@link net.dv8tion.jda.api.entities.Guild} for this command/event
+     * @return the [message event][net.dv8tion.jda.api.events.message.MessageReceivedEvent] that was received for this instance
      */
-    Guild getGuild();
-
-    /**
-     * Returns the {@link net.dv8tion.jda.api.events.message.MessageReceivedEvent message event} that was received for this instance
-     *
-     * @return the {@link net.dv8tion.jda.api.events.message.MessageReceivedEvent message event} that was received for this instance
-     */
-    SlashCommandInteractionEvent getEvent();
-
-    /**
-     * Returns the {@link TextChannel channel} that the message for this event was send in
-     *
-     * @return the {@link TextChannel channel} that the message for this event was send in
-     */
-    default TextChannel getChannel() {
-        return this.getEvent().getChannel().asTextChannel();
-    }
-
-    /**
-     * Returns the {@link net.dv8tion.jda.api.entities.User author} of the message as user
-     *
-     * @return the {@link net.dv8tion.jda.api.entities.User author} of the message as user
-     */
-    default User getAuthor() {
-        return this.getEvent().getUser();
-    }
-    /**
-     * Returns the {@link net.dv8tion.jda.api.entities.Member author} of the message as member
-     *
-     * @return the {@link net.dv8tion.jda.api.entities.Member author} of the message as member
-     */
-    default Member getMember() {
-        return this.getEvent().getMember();
-    }
-
-    /**
-     * Returns the current {@link net.dv8tion.jda.api.JDA jda} instance
-     *
-     * @return the current {@link net.dv8tion.jda.api.JDA jda} instance
-     */
-    default JDA getJDA() {
-        return this.getEvent().getJDA();
-    }
-
-    /**
-     * Returns the current {@link net.dv8tion.jda.api.sharding.ShardManager} instance
-     *
-     * @return the current {@link net.dv8tion.jda.api.sharding.ShardManager} instance
-     */
-    default ShardManager getShardManager() {
-        return this.getJDA().getShardManager();
-    }
-
-    /**
-     * Returns the {@link net.dv8tion.jda.api.entities.User user} for the currently logged in account
-     *
-     * @return the {@link net.dv8tion.jda.api.entities.User user} for the currently logged in account
-     */
-    default User getSelfUser() {
-        return this.getJDA().getSelfUser();
-    }
-
-    /**
-     * Returns the {@link net.dv8tion.jda.api.entities.Member member} in the guild for the currently logged in account
-     *
-     * @return the {@link net.dv8tion.jda.api.entities.Member member} in the guild for the currently logged in account
-     */
-    default Member getSelfMember() {
-        return this.getGuild().getSelfMember();
-    }
-
+    val event: SlashCommandInteractionEvent
+    val channel: TextChannel?
+        /**
+         * Returns the [channel][TextChannel] that the message for this event was send in
+         *
+         * @return the [channel][TextChannel] that the message for this event was send in
+         */
+        get() = event.channel.asTextChannel()
+    val author: User?
+        /**
+         * Returns the [author][net.dv8tion.jda.api.entities.User] of the message as user
+         *
+         * @return the [author][net.dv8tion.jda.api.entities.User] of the message as user
+         */
+        get() = event.user
+    val member: Member?
+        /**
+         * Returns the [author][net.dv8tion.jda.api.entities.Member] of the message as member
+         *
+         * @return the [author][net.dv8tion.jda.api.entities.Member] of the message as member
+         */
+        get() = event.member
+    val jDA: JDA
+        /**
+         * Returns the current [jda][net.dv8tion.jda.api.JDA] instance
+         *
+         * @return the current [jda][net.dv8tion.jda.api.JDA] instance
+         */
+        get() = event.jda
+    val shardManager: ShardManager?
+        /**
+         * Returns the current [net.dv8tion.jda.api.sharding.ShardManager] instance
+         *
+         * @return the current [net.dv8tion.jda.api.sharding.ShardManager] instance
+         */
+        get() = jDA.shardManager
+    val selfUser: User?
+        /**
+         * Returns the [user][net.dv8tion.jda.api.entities.User] for the currently logged in account
+         *
+         * @return the [user][net.dv8tion.jda.api.entities.User] for the currently logged in account
+         */
+        get() = jDA.selfUser
+    val selfMember: Member?
+        /**
+         * Returns the [member][net.dv8tion.jda.api.entities.Member] in the guild for the currently logged in account
+         *
+         * @return the [member][net.dv8tion.jda.api.entities.Member] in the guild for the currently logged in account
+         */
+        get() = guild.selfMember
 }

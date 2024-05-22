@@ -1,17 +1,13 @@
-package helpers;
+package helpers
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.helpers.FileUtils;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.net.URL;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static toby.helpers.FileUtils.streamsAreEqual;
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import toby.helpers.FileUtils.readByteArrayToInputStream
+import toby.helpers.FileUtils.readInputStreamToByteArray
+import toby.helpers.FileUtils.streamsAreEqual
+import java.io.*
 
 /**
  * FileUtils Tester.
@@ -19,15 +15,16 @@ import static toby.helpers.FileUtils.streamsAreEqual;
  * @author <Matthew Layton>
  * @since <pre>May 8, 2021</pre>
  * @version 1.0
- */
-public class FileUtilsTest {
-
+</Matthew> */
+class FileUtilsTest {
     @BeforeEach
-    public void before() throws Exception {
+    @Throws(Exception::class)
+    fun before() {
     }
 
     @AfterEach
-    public void after() throws Exception {
+    @Throws(Exception::class)
+    fun after() {
     }
 
     /**
@@ -36,19 +33,19 @@ public class FileUtilsTest {
      *
      */
     @Test
-    public void testReadInputStreamToByteArray() throws Exception {
-        ClassLoader classLoader = getClass().getClassLoader();
-        URL mp3Resource1 = classLoader.getResource("test.mp3");
-        File file = new File(mp3Resource1.getFile());
+    @Throws(Exception::class)
+    fun testReadInputStreamToByteArray() {
+        val classLoader = javaClass.classLoader
+        val mp3Resource1 = classLoader.getResource("test.mp3")
+        val file = File(mp3Resource1.file)
 
 
-        URL mp3Resource2 = classLoader.getResource("test.mp3");
-        InputStream fileInputStream = new FileInputStream(file);
-        byte[] bytes = FileUtils.readInputStreamToByteArray(fileInputStream);
+        val mp3Resource2 = classLoader.getResource("test.mp3")
+        val fileInputStream: InputStream = FileInputStream(file)
+        val bytes = readInputStreamToByteArray(fileInputStream)
 
-        assertNotNull(bytes);
-        assertArrayEquals(bytes, mp3Resource2.openStream().readAllBytes());
-
+        Assertions.assertNotNull(bytes)
+        Assertions.assertArrayEquals(bytes, mp3Resource2.openStream().readAllBytes())
     }
 
     /**
@@ -57,16 +54,15 @@ public class FileUtilsTest {
      *
      */
     @Test
-    public void testReadByteArrayToInputStream() throws Exception {
-        ClassLoader classLoader = getClass().getClassLoader();
-        URL mp3Resource = classLoader.getResource("test.mp3");
-        File file = new File(mp3Resource.getFile());
-        InputStream inputStreamFromFile = new FileInputStream(file);
-        InputStream inputStreamFromString = FileUtils.readByteArrayToInputStream(mp3Resource.openStream().readAllBytes());
+    @Throws(Exception::class)
+    fun testReadByteArrayToInputStream() {
+        val classLoader = javaClass.classLoader
+        val mp3Resource = classLoader.getResource("test.mp3")
+        val file = File(mp3Resource.file)
+        val inputStreamFromFile: InputStream = FileInputStream(file)
+        val inputStreamFromString = readByteArrayToInputStream(mp3Resource.openStream().readAllBytes())
 
-        assertNotNull(inputStreamFromString);
-        assertTrue(streamsAreEqual(inputStreamFromFile, inputStreamFromString));
+        Assertions.assertNotNull(inputStreamFromString)
+        Assertions.assertTrue(streamsAreEqual(inputStreamFromFile, inputStreamFromString))
     }
-
-
 }

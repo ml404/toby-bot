@@ -1,99 +1,93 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Mentions;
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
-import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import toby.command.CommandContext;
-import toby.jpa.dto.ConfigDto;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IConfigService;
+import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Mentions
+import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IConfigService
+import java.util.*
+import java.util.function.Consumer
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-
-public class MoveCommand implements IModerationCommand {
-
-    private final IConfigService configService;
-    private final String USERS = "users";
-    private final String CHANNEL = "channel";
-
-    public MoveCommand(IConfigService configService) {
-        this.configService = configService;
-    }
-
-
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        final Member member = ctx.getMember();
-        Guild guild = event.getGuild();
-
-        List<Member> memberList = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
+class MoveCommand(private val configService: IConfigService) : IModerationCommand {
+    private val USERS = "users"
+    private val CHANNEL = "channel"
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        val member = ctx.member
+        val guild = event.guild!!
+        val memberList = Optional.ofNullable(event.getOption(USERS)).map { obj: OptionMapping -> obj.mentions }
+            .map { obj: Mentions -> obj.members }.orElse(emptyList())
         if (memberList.isEmpty()) {
-            event.getHook().sendMessage("You must mention 1 or more Users to move").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+            event.hook.sendMessage("You must mention 1 or more Users to move")
+                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            return
         }
-
-        Optional<GuildChannelUnion> channelOptional = Optional.ofNullable(event.getOption(CHANNEL)).map(OptionMapping::getAsChannel);
-        ConfigDto channelConfig = configService.getConfigByName(ConfigDto.Configurations.MOVE.getConfigValue(), guild.getId());
-        Optional<VoiceChannel> voiceChannelOptional = channelOptional.map(GuildChannelUnion::asVoiceChannel).or(() -> guild.getVoiceChannelsByName(channelConfig.getValue(), true).stream().findFirst());
-        if (voiceChannelOptional.isEmpty()) {
-            event.getHook().sendMessageFormat("Could not find a channel on the server that matched name").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+        val channelOptional =
+            Optional.ofNullable(event.getOption(CHANNEL)).map { obj: OptionMapping -> obj.getAsChannel() }
+        val channelConfig = configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, guild.id)
+        val voiceChannelOptional = channelOptional.map { obj: GuildChannelUnion -> obj.asVoiceChannel() }
+            .or { guild.getVoiceChannelsByName(channelConfig?.value!!, true).stream().findFirst() }
+        if (voiceChannelOptional.isEmpty) {
+            event.hook.sendMessageFormat("Could not find a channel on the server that matched name")
+                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            return
         }
-
-        memberList.forEach(target -> {
-            if (doChannelValidation(ctx.getEvent(), guild.getSelfMember(), member, target, deleteDelay)) return;
-            VoiceChannel voiceChannel = voiceChannelOptional.get();
+        memberList.forEach(Consumer { target: Member ->
+            if (doChannelValidation(ctx.event, guild.selfMember, member, target, deleteDelay!!)) return@Consumer
+            val voiceChannel = voiceChannelOptional.get()
             guild.moveVoiceMember(target, voiceChannel)
-                    .queue(
-                            (__) -> event.getHook().sendMessageFormat("Moved %s to '%s'", target.getEffectiveName(), voiceChannel.getName()).queue(invokeDeleteOnMessageResponse(deleteDelay)),
-                            (error) -> event.getHook().sendMessageFormat("Could not move '%s'", error.getMessage()).queue(invokeDeleteOnMessageResponse(deleteDelay))
-                    );
-        });
+                .queue(
+                    {
+                        event.hook.sendMessageFormat("Moved %s to '%s'", target.effectiveName, voiceChannel.name)
+                            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    }
+                ) { error: Throwable ->
+                    event.hook.sendMessageFormat("Could not move '%s'", error.message)
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                }
+        })
     }
 
-    private boolean doChannelValidation(SlashCommandInteractionEvent event, Member botMember, Member member, Member target, int deleteDelay) {
-        if (!target.getVoiceState().inAudioChannel()) {
-            event.getHook().sendMessageFormat("Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.", target.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return true;
+    private fun doChannelValidation(
+        event: SlashCommandInteractionEvent,
+        botMember: Member,
+        member: Member?,
+        target: Member,
+        deleteDelay: Int
+    ): Boolean {
+        if (!target.voiceState!!.inAudioChannel()) {
+            event.hook.sendMessageFormat(
+                "Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.",
+                target.effectiveName
+            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return true
         }
-        if (!member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.getHook().sendMessageFormat("You can't move '%s'", target.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return true;
+        if (!member!!.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
+            event.hook.sendMessageFormat("You can't move '%s'", target.effectiveName)
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return true
         }
         if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.getHook().sendMessageFormat("I'm not allowed to move %s", target.getEffectiveName()).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return true;
+            event.hook.sendMessageFormat("I'm not allowed to move %s", target.effectiveName)
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return true
         }
-        return false;
+        return false
     }
 
-    @Override
-    public String getName() {
-        return "move";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Move mentioned members into a voice channel (voice channel can be defaulted by config command)";
-    }
-
-    @Override
-    public List<OptionData> getOptionData() {
-        return List.of(
-                new OptionData(OptionType.STRING, USERS, "User(s) to move", true),
-                new OptionData(OptionType.STRING, CHANNEL, "Channel to move to"));
-    }
+    override val name: String get() = "move"
+    override val description: String get() = "Move mentioned members into a voice channel (voice channel can be defaulted by config command)"
+    override val optionData: List<OptionData> get() = listOf(
+            OptionData(OptionType.STRING, USERS, "User(s) to move", true),
+            OptionData(OptionType.STRING, CHANNEL, "Channel to move to")
+        )
 }

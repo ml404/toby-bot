@@ -1,80 +1,65 @@
-package toby.jpa.persistence.impl;
+package toby.jpa.persistence.impl
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-import toby.jpa.dto.MusicDto;
-import toby.jpa.persistence.IMusicFilePersistence;
-
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
+import jakarta.persistence.Query
+import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
+import toby.jpa.dto.MusicDto
+import toby.jpa.persistence.IMusicFilePersistence
 
 @Repository
 @Transactional
-public class MusicFilePersistenceImpl implements IMusicFilePersistence {
-
+open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @PersistenceContext
-    protected EntityManager em;
+    lateinit var entityManager: EntityManager
 
-    public EntityManager getEntityManager() {
-        return em;
+
+    private fun persistMusicDto(musicDto: MusicDto?): MusicDto? {
+        entityManager.persist(musicDto)
+        entityManager.flush()
+        return musicDto
     }
 
-    public void setEntityManager(EntityManager entityManager) {
-        this.em = entityManager;
+    override fun createNewMusicFile(musicDto: MusicDto?): MusicDto? {
+        val databaseMusicFile = entityManager.find(MusicDto::class.java, musicDto?.id)
+        return if ((databaseMusicFile == null)) persistMusicDto(musicDto) else updateMusicFile(musicDto)
     }
 
-
-    private MusicDto persistMusicDto(MusicDto musicDto) {
-        em.persist(musicDto);
-        em.flush();
-        return musicDto;
-    }
-
-    @Override
-    public MusicDto createNewMusicFile(MusicDto musicDto) {
-        MusicDto databaseMusicFile = em.find(MusicDto.class, musicDto.getId());
-        return (databaseMusicFile == null) ? persistMusicDto(musicDto) : updateMusicFile(musicDto);
-    }
-
-    @Override
-    public MusicDto getMusicFileById(String id) {
+    override fun getMusicFileById(id: String?): MusicDto {
         // Create a native SQL query to retrieve the size of the music_blob column
-        String sql = "SELECT LENGTH(music_blob) AS data_size FROM music_files WHERE id = :id";
+        val sql = "SELECT LENGTH(music_blob) AS data_size FROM music_files WHERE id = :id"
 
-        Query sizeQ = em.createNativeQuery(sql);
-        sizeQ.setParameter("id", id);
+        val sizeQ = entityManager.createNativeQuery(sql)
+        sizeQ.setParameter("id", id)
 
         // Execute the query
-        Object result = sizeQ.getSingleResult();
+        val result = sizeQ.singleResult
 
         // Handle the result (assuming it's a Long)
-        if (result instanceof Long dataSize) {
-            System.out.println("Data size in bytes: " + dataSize);
+        if (result is Long) {
+            println("Data size in bytes: $result")
         }
 
-        Query q = em.createNamedQuery("MusicDto.getById", MusicDto.class);
-        q.setParameter("id", id);
-        return (MusicDto) q.getSingleResult();
+        val q: Query = entityManager.createNamedQuery("MusicDto.getById", MusicDto::class.java)
+        q.setParameter("id", id)
+        return q.singleResult as MusicDto
     }
 
-    @Override
-    public MusicDto updateMusicFile(MusicDto musicDto) {
-        em.merge(musicDto);
-        em.flush();
-        return musicDto;
+    override fun updateMusicFile(musicDto: MusicDto?): MusicDto? {
+        entityManager.merge(musicDto)
+        entityManager.flush()
+        return musicDto
     }
 
-    @Override
-    public void deleteMusicFile(MusicDto musicDto) {
-        em.remove(musicDto);
-        em.flush();
+    override fun deleteMusicFile(musicDto: MusicDto?) {
+        entityManager.remove(musicDto)
+        entityManager.flush()
     }
 
-    @Override
-    public void deleteMusicFileById(String id) {
-        Query q = em.createNamedQuery("MusicDto.deleteById");
-        q.setParameter("id", id);
-        q.executeUpdate();
+    override fun deleteMusicFileById(id: String?) {
+        val q = entityManager.createNamedQuery("MusicDto.deleteById")
+        q.setParameter("id", id)
+        q.executeUpdate()
     }
 }

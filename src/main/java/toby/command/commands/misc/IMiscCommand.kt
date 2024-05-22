@@ -1,6 +1,5 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import toby.command.ICommand;
+import toby.command.ICommand
 
-public interface IMiscCommand extends ICommand {
-}
+interface IMiscCommand : ICommand

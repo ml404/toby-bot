@@ -1,64 +1,71 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import toby.command.CommandTest;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
-import toby.command.ICommand;
-import toby.jpa.dto.UserDto;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.command.ICommand.Companion.deleteAfter
+import toby.jpa.dto.UserDto
 
-import java.util.List;
-
-import static org.mockito.Mockito.*;
-
-public class RandomCommandTest implements CommandTest {
-
-    private RandomCommand randomCommand;
+class RandomCommandTest : CommandTest {
+    private var randomCommand: RandomCommand? = null
 
     @BeforeEach
-    public void setUp() {
-        setUpCommonMocks();
-        randomCommand = new RandomCommand();
+    fun setUp() {
+        setUpCommonMocks()
+        randomCommand = RandomCommand()
     }
 
     @AfterEach
-    public void tearDown(){
-        tearDownCommonMocks();
+    fun tearDown() {
+        tearDownCommonMocks()
     }
 
     @Test
-    public void testHandleCommandWithList() {
+    fun testHandleCommandWithList() {
         // Mock the list of options provided by the user
-        OptionMapping listOption = mock(OptionMapping.class);
-        when(listOption.getAsString()).thenReturn("Option1,Option2,Option3");
+        val listOption = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`(listOption.asString).thenReturn("Option1,Option2,Option3")
 
         // Mock the event's options to return the list option
-        when(event.getOption("list")).thenReturn(listOption);
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("list")).thenReturn(listOption)
 
         // Mock ICommand's deleteOriginal and queueAfter
-        ICommand.deleteAfter(interactionHook, 0);
+        deleteAfter(CommandTest.interactionHook, 0)
 
         // Call the handle method with the event
-        randomCommand.handle(new CommandContext(event), mock(UserDto.class), 0);
+        randomCommand!!.handle(
+            CommandContext(CommandTest.event),
+            Mockito.mock<UserDto>(UserDto::class.java),
+            0
+        )
 
         // Verify that the interactionHook's sendMessage method is called with a random option
-        verify(interactionHook, times(1)).sendMessage(anyString()); // Note: This is just an example; the actual option may vary
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.anyString()) // Note: This is just an example; the actual option may vary
     }
 
     @Test
-    public void testHandleCommandWithoutList() {
+    fun testHandleCommandWithoutList() {
         // Mock the event's options to be empty
-        when(event.getOptions()).thenReturn(List.of());
+        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf())
 
         // Mock ICommand's deleteOriginal and queueAfter
-        ICommand.deleteAfter(interactionHook, 0);
+        deleteAfter(CommandTest.interactionHook, 0)
 
         // Call the handle method with the event
-        randomCommand.handle(new CommandContext(event), mock(UserDto.class), 0);
+        randomCommand!!.handle(
+            CommandContext(CommandTest.event),
+            Mockito.mock<UserDto>(UserDto::class.java),
+            0
+        )
 
         // Verify that the interactionHook's sendMessage method is called with the command's description
-        verify(interactionHook, times(1)).sendMessage("Return one item from a list you provide with options separated by commas.");
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage("Return one item from a list you provide with options separated by commas.")
     }
 }

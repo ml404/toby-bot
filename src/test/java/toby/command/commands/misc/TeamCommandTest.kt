@@ -1,115 +1,132 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Mentions;
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.requests.RestAction;
-import net.dv8tion.jda.api.requests.restaction.ChannelAction;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.jpa.dto.UserDto;
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Mentions
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.requests.RestAction
+import net.dv8tion.jda.api.requests.restaction.ChannelAction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.jpa.dto.UserDto
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
-class TeamCommandTest implements CommandTest {
-
-    private TeamCommand teamCommand;
+internal class TeamCommandTest : CommandTest {
+    private var teamCommand: TeamCommand? = null
 
     @BeforeEach
-    public void beforeEach() {
-        setUpCommonMocks(); // Initialize the mocks
-        teamCommand = new TeamCommand();
+    fun beforeEach() {
+        setUpCommonMocks() // Initialize the mocks
+        teamCommand = TeamCommand()
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMocks();
+    fun tearDown() {
+        tearDownCommonMocks()
     }
 
     @Test
-    public void testHandle_WithNoArgs() {
+    fun testHandle_WithNoArgs() {
         // You can set up your test scenario here, including mocking event and UserDto.
         // Example:
-        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
-        Integer deleteDelay = 0;
+        val requestingUserDto = userDto // You can set the user as needed
+        val deleteDelay = 0
 
         // Create a CommandContext
-        CommandContext ctx = new CommandContext(event);
+        val ctx = CommandContext(CommandTest.event)
 
         // Test the handle method
-        teamCommand.handle(ctx, requestingUserDto, deleteDelay);
+        teamCommand!!.handle(ctx, requestingUserDto, deleteDelay)
 
-        verify(event, times(1)).deferReply();
-        verify(event.getHook()).sendMessage("Return X teams from a list of tagged users.");
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(CommandTest.event.hook)
+            .sendMessage("Return X teams from a list of tagged users.")
     }
 
     @Test
-    public void testHandle_WithArgs() {
+    fun testHandle_WithArgs() {
         // You can set up your test scenario here, including mocking event and UserDto.
-        OptionMapping membersOption = Mockito.mock(OptionMapping.class);
-        when(event.getOption("members")).thenReturn(membersOption);
-        when(membersOption.getAsString()).thenReturn("user1, user2");
+        val membersOption = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("members")).thenReturn(membersOption)
+        Mockito.`when`(membersOption.asString).thenReturn("user1, user2")
 
-        OptionMapping sizeOption = Mockito.mock(OptionMapping.class);
-        when(event.getOption("size")).thenReturn(sizeOption);
-        when(sizeOption.getAsInt()).thenReturn(2);
+        val sizeOption = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("size")).thenReturn(sizeOption)
+        Mockito.`when`(sizeOption.asInt).thenReturn(2)
 
-        when(event.getOptions()).thenReturn(List.of(membersOption, sizeOption));
-        ChannelAction voiceChannel = mock(ChannelAction.class);
-        when(guild.createVoiceChannel(anyString())).thenReturn(voiceChannel);
-        when(voiceChannel.setBitrate(anyInt())).thenReturn(voiceChannel);
-        VoiceChannel createdVoiceChannel = mock(VoiceChannel.class);
-        when(voiceChannel.complete()).thenReturn(createdVoiceChannel);
-        when(createdVoiceChannel.getName()).thenReturn("channelName");
-        Integer deleteDelay = 0;
+        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options)
+            .thenReturn(listOf(membersOption, sizeOption))
+        val voiceChannel = Mockito.mock(ChannelAction::class.java) as ChannelAction<VoiceChannel>
+        Mockito.`when`<ChannelAction<VoiceChannel>>(CommandTest.guild.createVoiceChannel(ArgumentMatchers.anyString()))
+            .thenReturn(voiceChannel)
+        Mockito.`when`(voiceChannel.setBitrate(ArgumentMatchers.anyInt())).thenReturn(voiceChannel)
+        val createdVoiceChannel = Mockito.mock(
+            VoiceChannel::class.java
+        )
+        Mockito.`when`(voiceChannel.complete()).thenReturn(createdVoiceChannel)
+        Mockito.`when`(createdVoiceChannel.name).thenReturn("channelName")
+        val deleteDelay = 0
+
         // Mock the guild.moveVoiceMember() method
+        val mentions = Mockito.mock(Mentions::class.java)
+        Mockito.`when`(CommandTest.event.getOption("members")!!.mentions).thenReturn(mentions)
+        val mockMember1 = Mockito.mock(Member::class.java)
+        val mockMember2 = Mockito.mock(Member::class.java)
+        val memberList: ArrayList<Member?> = ArrayList(listOf(mockMember1, mockMember2))
+        Mockito.`when`(mockMember1.effectiveName).thenReturn("Name 1")
+        Mockito.`when`(mockMember2.effectiveName).thenReturn("Name 2")
+        Mockito.`when`(mentions.members).thenReturn(memberList)
 
-        Mentions mentions = mock(Mentions.class);
-        when(event.getOption("members").getMentions()).thenReturn(mentions);
-        Member mockMember1 = mock(Member.class);
-        Member mockMember2 = mock(Member.class);
-        List<Member> memberList = new ArrayList<>(List.of(mockMember1, mockMember2));
-        when(mockMember1.getEffectiveName()).thenReturn("Name 1");
-        when(mockMember2.getEffectiveName()).thenReturn("Name 2");
-        when(mentions.getMembers()).thenReturn(memberList);
+        guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember1)
+        guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember2)
 
-        guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember1);
-        guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember2);
-
-        UserDto requestingUserDto = getUserDto(); // You can set the user as needed
+        val requestingUserDto = userDto // You can set the user as needed
 
         // Create a CommandContext
-        CommandContext ctx = new CommandContext(event);
+        val ctx = CommandContext(CommandTest.event)
 
         // Test the handle method
-        teamCommand.handle(ctx, requestingUserDto, deleteDelay);
+        teamCommand!!.handle(ctx, requestingUserDto, deleteDelay)
 
-        verify(event, times(1)).deferReply();
-        verify(interactionHook, times(2)).sendMessageFormat(eq("Moved %s to '%s'"), anyString(), anyString());
-        verify(interactionHook, times(1)).sendMessage(anyString());
+        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(2)).sendMessageFormat(
+            ArgumentMatchers.eq("Moved %s to '%s'"),
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyString()
+        )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.anyString())
     }
 
-    @NotNull
-    private static UserDto getUserDto() {
-        return new UserDto(1L, 1L, true, true, true, true, 0L, null);
-    }
+    companion object {
+        private val userDto: UserDto
+            get() = UserDto(1L, 1L,
+                superUser = true,
+                musicPermission = true,
+                digPermission = true,
+                memePermission = true,
+                socialCredit = 0L,
+                musicDto = null
+            )
 
-    private static void guildMoveVoiceMemberMocking(VoiceChannel createdVoiceChannel, Member member) {
-        when(guild.moveVoiceMember(eq(member), any())).thenAnswer(invocation -> {
-            // Simulate the move
-            event.getHook().sendMessageFormat("Moved %s to '%s'", member.getEffectiveName(), createdVoiceChannel.getName()).complete();
-            return mock(RestAction.class);
-        });
+        private fun guildMoveVoiceMemberMocking(createdVoiceChannel: VoiceChannel, member: Member) {
+            Mockito.`when`<RestAction<Void>>(
+                CommandTest.guild.moveVoiceMember(
+                    ArgumentMatchers.eq(
+                        member
+                    ), ArgumentMatchers.any<AudioChannel>()
+                )
+            ).thenAnswer {
+                // Simulate the move
+                CommandTest.event.hook
+                    .sendMessageFormat("Moved %s to '%s'", member.effectiveName, createdVoiceChannel.name).complete()
+                Mockito.mock(RestAction::class.java)
+            }
+        }
     }
-
 }

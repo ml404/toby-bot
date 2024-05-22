@@ -1,7 +1,6 @@
-package toby.emote;
+package toby.emote
 
-public class Emotes {
-
-    public static final String TOBY = "766987656344240128";
-    public static final String JESS = "767363491417423911";
+object Emotes {
+    const val TOBY: String = "766987656344240128"
+    const val JESS: String = "767363491417423911"
 }

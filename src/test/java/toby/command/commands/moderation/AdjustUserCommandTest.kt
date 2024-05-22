@@ -1,147 +1,168 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.entities.Mentions;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IUserService;
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Mentions
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IUserService
 
-import java.util.List;
-
-import static org.mockito.Mockito.*;
-
-class AdjustUserCommandTest implements CommandTest {
-
-    AdjustUserCommand adjustUserCommand;
-
+internal class AdjustUserCommandTest : CommandTest {
+    private lateinit var adjustUserCommand: AdjustUserCommand
+    
     @Mock
-    IUserService userService = mock(IUserService.class);
+    var userService: IUserService = Mockito.mock(IUserService::class.java)
 
     @BeforeEach
-    void setUp() {
-        setUpCommonMocks();
-        adjustUserCommand = new AdjustUserCommand(userService);
+    fun setUp() {
+        setUpCommonMocks()
+        adjustUserCommand = AdjustUserCommand(userService)
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMocks();
-        reset(userService);
+    fun tearDown() {
+        tearDownCommonMocks()
+        Mockito.reset(userService)
     }
 
     @Test
-    void testAdjustUser_withCorrectPermissions_updatesTargetUser() {
+    fun testAdjustUser_withCorrectPermissions_updatesTargetUser() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        UserDto targetUserDto = mock(UserDto.class);
-        OptionMapping userOptionMapping = mock(OptionMapping.class);
-        OptionMapping permissionOptionMapping = mock(OptionMapping.class);
-        Mentions mentions = mock(Mentions.class);
-        when(userService.getUserById(any(),any())).thenReturn(targetUserDto);
-        when(targetUserDto.getGuildId()).thenReturn(1L);
-        when(event.getOption("users")).thenReturn(userOptionMapping);
-        when(event.getOption("name")).thenReturn(permissionOptionMapping);
-        when(userOptionMapping.getMentions()).thenReturn(mentions);
-        when(permissionOptionMapping.getAsString()).thenReturn(UserDto.Permissions.MUSIC.name());
-        when(mentions.getMembers()).thenReturn(List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        val targetUserDto = Mockito.mock(UserDto::class.java)
+        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val permissionOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val mentions = Mockito.mock(Mentions::class.java)
+        Mockito.`when`(userService.getUserById(ArgumentMatchers.any(), ArgumentMatchers.any()))
+            .thenReturn(targetUserDto)
+        Mockito.`when`(targetUserDto.guildId).thenReturn(1L)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("name")).thenReturn(permissionOptionMapping)
+        Mockito.`when`(userOptionMapping.mentions).thenReturn(mentions)
+        Mockito.`when`(permissionOptionMapping.asString).thenReturn(UserDto.Permissions.MUSIC.name)
+        Mockito.`when`<List<Member>>(mentions.members).thenReturn(listOf(CommandTest.targetMember))
 
         //Act
-        adjustUserCommand.handle(commandContext, requestingUserDto, 0);
+        adjustUserCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(userService, times(1)).getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-        verify(userService, times(1)).updateUser(targetUserDto);
-        verify(interactionHook, times(1)).sendMessageFormat(eq("Updated user %s's permissions"), eq("Target Effective Name"));
-
+        Mockito.verify(userService, Mockito.times(1)).getUserById(
+            CommandTest.targetMember.idLong,
+            CommandTest.targetMember.guild.idLong
+        )
+        Mockito.verify(userService, Mockito.times(1)).updateUser(targetUserDto)
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("Updated user %s's permissions"),
+            ArgumentMatchers.eq("Target Effective Name")
+        )
     }
 
     @Test
-    void testAdjustUser_withCorrectPermissions_createsTargetUser() {
+    fun testAdjustUser_withCorrectPermissions_createsTargetUser() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        UserDto targetUserDto = mock(UserDto.class);
-        OptionMapping userOptionMapping = mock(OptionMapping.class);
-        OptionMapping permissionOptionMapping = mock(OptionMapping.class);
-        Mentions mentions = mock(Mentions.class);
-        when(targetUserDto.getGuildId()).thenReturn(1L);
-        when(event.getOption("users")).thenReturn(userOptionMapping);
-        when(event.getOption("name")).thenReturn(permissionOptionMapping);
-        when(userOptionMapping.getMentions()).thenReturn(mentions);
-        when(permissionOptionMapping.getAsString()).thenReturn(UserDto.Permissions.MUSIC.name());
-        when(mentions.getMembers()).thenReturn(List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        val targetUserDto = Mockito.mock(UserDto::class.java)
+        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val permissionOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val mentions = Mockito.mock(Mentions::class.java)
+        Mockito.`when`(targetUserDto.guildId).thenReturn(1L)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("name")).thenReturn(permissionOptionMapping)
+        Mockito.`when`(userOptionMapping.mentions).thenReturn(mentions)
+        Mockito.`when`(permissionOptionMapping.asString).thenReturn(UserDto.Permissions.MUSIC.name)
+        Mockito.`when`<List<Member>>(mentions.members).thenReturn(listOf(CommandTest.targetMember))
 
         //Act
-        adjustUserCommand.handle(commandContext, requestingUserDto, 0);
+        adjustUserCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(userService, times(1)).getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-        verify(userService, times(1)).createNewUser(any(UserDto.class));
-        verify(interactionHook, times(1)).sendMessageFormat(eq("User %s's permissions did not exist in this server's database, they have now been created"), eq("Target Effective Name"));
-
+        Mockito.verify(userService, Mockito.times(1)).getUserById(
+            CommandTest.targetMember.idLong,
+            CommandTest.targetMember.guild.idLong
+        )
+        Mockito.verify(userService, Mockito.times(1)).createNewUser(ArgumentMatchers.any(UserDto::class.java))
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("User %s's permissions did not exist in this server's database, they have now been created"),
+            ArgumentMatchers.eq("Target Effective Name")
+        )
     }
 
     @Test
-    void testAdjustUser_withNoMentionedPermissions_Errors() {
+    fun testAdjustUser_withNoMentionedPermissions_Errors() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        UserDto targetUserDto = mock(UserDto.class);
-        OptionMapping userOptionMapping = mock(OptionMapping.class);
-        Mentions mentions = mock(Mentions.class);
-        when(userService.getUserById(any(),any())).thenReturn(targetUserDto);
-        when(targetUserDto.getGuildId()).thenReturn(1L);
-        when(event.getOption("users")).thenReturn(userOptionMapping);
-        when(userOptionMapping.getMentions()).thenReturn(mentions);
-        when(mentions.getMembers()).thenReturn(List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        val targetUserDto = Mockito.mock(UserDto::class.java)
+        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val mentions = Mockito.mock(Mentions::class.java)
+        Mockito.`when`(userService.getUserById(ArgumentMatchers.any(), ArgumentMatchers.any()))
+            .thenReturn(targetUserDto)
+        Mockito.`when`(targetUserDto.guildId).thenReturn(1L)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
+        Mockito.`when`(userOptionMapping.mentions).thenReturn(mentions)
+        Mockito.`when`<List<Member>>(mentions.members).thenReturn(listOf(CommandTest.targetMember))
 
         //Act
-        adjustUserCommand.handle(commandContext, requestingUserDto, 0);
+        adjustUserCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(userService, times(0)).getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-        verify(interactionHook, times(1)).sendMessage(eq("You must mention a permission to adjust of the user you've mentioned."));
-
+        Mockito.verify(userService, Mockito.times(0)).getUserById(
+            CommandTest.targetMember.idLong,
+            CommandTest.targetMember.guild.idLong
+        )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("You must mention a permission to adjust of the user you've mentioned."))
     }
 
     @Test
-    void testAdjustUser_withNoMentionedUser_Errors() {
+    fun testAdjustUser_withNoMentionedUser_Errors() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        UserDto targetUserDto = mock(UserDto.class);
-        OptionMapping userOptionMapping = mock(OptionMapping.class);
-        when(userService.getUserById(any(),any())).thenReturn(targetUserDto);
-        when(event.getOption("users")).thenReturn(userOptionMapping);
+        val commandContext = CommandContext(CommandTest.event)
+        val targetUserDto = Mockito.mock(UserDto::class.java)
+        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`(userService.getUserById(ArgumentMatchers.any(), ArgumentMatchers.any()))
+            .thenReturn(targetUserDto)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
 
         //Act
-        adjustUserCommand.handle(commandContext, requestingUserDto, 0);
+        adjustUserCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(userService, times(0)).getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-        verify(interactionHook, times(1)).sendMessage(eq("You must mention 1 or more Users to adjust permissions of"));
-
+        Mockito.verify(userService, Mockito.times(0)).getUserById(
+            CommandTest.targetMember.idLong,
+            CommandTest.targetMember.guild.idLong
+        )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("You must mention 1 or more Users to adjust permissions of"))
     }
 
     @Test
-    void testAdjustUser_whenUserIsntOwner_Errors() {
+    fun testAdjustUser_whenUserIsntOwner_Errors() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        UserDto targetUserDto = mock(UserDto.class);
-        OptionMapping userOptionMapping = mock(OptionMapping.class);
-        when(userService.getUserById(any(),any())).thenReturn(targetUserDto);
-        when(event.getOption("users")).thenReturn(userOptionMapping);
-        when(member.isOwner()).thenReturn(false);
-        when(requestingUserDto.isSuperUser()).thenReturn(false);
+        val commandContext = CommandContext(CommandTest.event)
+        val targetUserDto = Mockito.mock(UserDto::class.java)
+        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`(userService.getUserById(ArgumentMatchers.any(), ArgumentMatchers.any()))
+            .thenReturn(targetUserDto)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
+        Mockito.`when`(CommandTest.member.isOwner).thenReturn(false)
+        Mockito.`when`(CommandTest.requestingUserDto.superUser).thenReturn(false)
 
         //Act
-        adjustUserCommand.handle(commandContext, requestingUserDto, 0);
+        adjustUserCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(userService, times(0)).getUserById(targetMember.getIdLong(), targetMember.getGuild().getIdLong());
-        verify(interactionHook, times(1)).sendMessage(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"));
-
+        Mockito.verify(userService, Mockito.times(0)).getUserById(
+            CommandTest.targetMember.idLong,
+            CommandTest.targetMember.guild.idLong
+        )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"))
     }
 }

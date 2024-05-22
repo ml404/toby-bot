@@ -1,187 +1,165 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Mentions;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import toby.command.CommandContext;
-import toby.helpers.URLHelper;
-import toby.jpa.dto.ConfigDto;
-import toby.jpa.dto.MusicDto;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IConfigService;
-import toby.jpa.service.IMusicFileService;
-import toby.jpa.service.IUserService;
-import toby.lavaplayer.PlayerManager;
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Mentions
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.helpers.FileUtils
+import toby.helpers.URLHelper
+import toby.helpers.UserDtoHelper
+import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.MusicDto
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IConfigService
+import toby.jpa.service.IMusicFileService
+import toby.jpa.service.IUserService
+import toby.lavaplayer.PlayerManager
+import java.io.InputStream
+import java.net.URI
+import java.util.*
+import java.util.concurrent.ExecutionException
+import java.util.function.Consumer
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-import static toby.helpers.FileUtils.readInputStreamToByteArray;
-import static toby.helpers.UserDtoHelper.calculateUserDto;
-
-public class IntroSongCommand implements IMusicCommand {
-    private static final String VOLUME = "volume";
-    private final IUserService userService;
-    private final IMusicFileService musicFileService;
-    private final IConfigService configService;
-    private final String USERS = "users";
-    private final String LINK = "link";
-    private final String ATTACHMENT = "attachment";
-
-    public IntroSongCommand(IUserService userService, IMusicFileService musicFileService, IConfigService configService) {
-        this.userService = userService;
-        this.musicFileService = musicFileService;
-        this.configService = configService;
+class IntroSongCommand(private val userService: IUserService, private val musicFileService: IMusicFileService, private val configService: IConfigService) : IMusicCommand {
+    private val USERS = "users"
+    private val LINK = "link"
+    private val ATTACHMENT = "attachment"
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
-    }
-
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        int introVolume = calculateIntroVolume(event);
-        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
-        if (!requestingUserDto.isSuperUser() && !mentionedMembers.isEmpty()) {
-            sendErrorMessage(event, deleteDelay);
-            return;
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        val introVolume = calculateIntroVolume(event)
+        val mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map { obj: OptionMapping -> obj.mentions }.map { obj: Mentions -> obj.members }.orElse(emptyList())
+        if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {
+            sendErrorMessage(event, deleteDelay!!)
+            return
         }
-        Optional<Message.Attachment> optionalAttachment = Optional.ofNullable(event.getOption(ATTACHMENT)).map(OptionMapping::getAsAttachment);
-        String link = Optional.ofNullable(event.getOption(LINK)).map(OptionMapping::getAsString).orElse("");
-
-        if (optionalAttachment.isPresent() && URLHelper.isValidURL(link)) {
-            event.getHook().sendMessage(getDescription()).queue(invokeDeleteOnMessageResponse(deleteDelay));
-        } else if (!link.isEmpty()) {
-            setIntroViaUrl(event, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume);
+        val optionalAttachment = Optional.ofNullable(event.getOption(ATTACHMENT)).map { obj: OptionMapping -> obj.getAsAttachment() }
+        val link = Optional.ofNullable(event.getOption(LINK)).map { obj: OptionMapping -> obj.asString }.orElse("")
+        if (optionalAttachment.isPresent && URLHelper.isValidURL(link)) {
+            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        } else if (link.isNotEmpty()) {
+            setIntroViaUrl(event, requestingUserDto, deleteDelay, URLHelper.fromUrlString(link), introVolume)
         } else {
-            optionalAttachment.ifPresent(attachment -> setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, attachment, introVolume));
+            optionalAttachment.ifPresent { attachment: Message.Attachment -> setIntroViaDiscordAttachment(event, requestingUserDto, deleteDelay, attachment, introVolume) }
         }
     }
 
-    private int calculateIntroVolume(SlashCommandInteractionEvent event) {
-        String volumePropertyName = ConfigDto.Configurations.VOLUME.getConfigValue();
-        int defaultVolume = Integer.parseInt(configService.getConfigByName(volumePropertyName, event.getGuild().getId()).getValue());
-        Optional<Integer> volumeOptional = Optional.ofNullable(event.getOption(VOLUME)).map(OptionMapping::getAsInt);
-        int introVolume = volumeOptional.orElse(defaultVolume);
-        if (introVolume < 1) introVolume = 1;
-        if (introVolume > 100) introVolume = 100;
-        return introVolume;
+    private fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
+        val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
+        val defaultVolume = configService.getConfigByName(volumePropertyName, event.guild?.id!!)?.value?.toIntOrNull()
+        val volumeOptional = Optional.ofNullable(event.getOption(VOLUME)).map { obj: OptionMapping -> obj.asInt }
+        var introVolume = volumeOptional.orElse(defaultVolume)
+        if (introVolume < 1) introVolume = 1
+        if (introVolume > 100) introVolume = 100
+        return introVolume
     }
 
-    private void setIntroViaDiscordAttachment(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Message.Attachment attachment, int introVolume) {
-        if (!Objects.equals(attachment.getFileExtension(), "mp3")) {
-            event.getHook().sendMessage("Please use mp3 files only").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
-        } else if (attachment.getSize() > 400000) {
-            event.getHook().sendMessage("Please keep the file size under 400kb").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+    private fun setIntroViaDiscordAttachment(event: SlashCommandInteractionEvent, requestingUserDto: UserDto?, deleteDelay: Int?, attachment: Message.Attachment, introVolume: Int) {
+        if (attachment.getFileExtension() != "mp3") {
+            event.hook.sendMessage("Please use mp3 files only").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            return
+        } else if (attachment.size > 400000) {
+            event.hook.sendMessage("Please keep the file size under 400kb").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            return
         }
-
-        InputStream inputStream = null;
+        var inputStream: InputStream? = null
         try {
-            inputStream = attachment.getProxy().download().get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            inputStream = attachment.proxy.download().get()
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+        } catch (e: ExecutionException) {
+            e.printStackTrace()
         }
-        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
-        if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
-            InputStream finalInputStream = inputStream;
-            mentionedMembers.forEach(member -> {
-                UserDto userDto = calculateUserDto(member.getGuild().getIdLong(), member.getIdLong(), member.isOwner(), userService, introVolume);
-                persistMusicFile(event, userDto, deleteDelay, attachment.getFileName(), introVolume, finalInputStream, member.getEffectiveName());
-            });
-        } else
-            persistMusicFile(event, requestingUserDto, deleteDelay, attachment.getFileName(), introVolume, inputStream, event.getUser().getName());
+        val mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map { obj: OptionMapping -> obj.mentions }.map { obj: Mentions -> obj.members }.orElse(emptyList())
+        if (mentionedMembers.size > 0 && requestingUserDto!!.superUser) {
+            val finalInputStream = inputStream
+            mentionedMembers.forEach(Consumer { member: Member ->
+                val userDto = UserDtoHelper.calculateUserDto(member.guild.idLong, member.idLong, member.isOwner, userService, introVolume)
+                persistMusicFile(event, userDto, deleteDelay, attachment.fileName, introVolume, finalInputStream, member.effectiveName)
+            })
+        } else persistMusicFile(event, requestingUserDto, deleteDelay, attachment.fileName, introVolume, inputStream, event.user.name)
     }
 
-    private void setIntroViaUrl(SlashCommandInteractionEvent event, UserDto requestingUserDto, Integer deleteDelay, Optional<URI> optionalURI, int introVolume) {
-        List<Member> mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map(OptionMapping::getMentions).map(Mentions::getMembers).orElse(Collections.emptyList());
-        String urlString = optionalURI.map(URI::toString).orElse("");
-
-        if (mentionedMembers.size() > 0 && requestingUserDto.isSuperUser()) {
-            mentionedMembers.forEach(member -> {
-                UserDto userDto = calculateUserDto(member.getGuild().getIdLong(), member.getIdLong(), member.isOwner(), userService, introVolume);
-                persistMusicUrl(event, userDto, deleteDelay, urlString, urlString, member.getEffectiveName(), introVolume);
-            });
-        } else
-            persistMusicUrl(event, requestingUserDto, deleteDelay, urlString, urlString, event.getUser().getName(), introVolume);
+    private fun setIntroViaUrl(event: SlashCommandInteractionEvent, requestingUserDto: UserDto?, deleteDelay: Int?, optionalURI: Optional<URI>, introVolume: Int) {
+        val mentionedMembers = Optional.ofNullable(event.getOption(USERS)).map { obj: OptionMapping -> obj.mentions }.map { obj: Mentions -> obj.members }.orElse(emptyList())
+        val urlString = optionalURI.map { obj: URI -> obj.toString() }.orElse("")
+        if (mentionedMembers.size > 0 && requestingUserDto!!.superUser) {
+            mentionedMembers.forEach(Consumer { member: Member ->
+                val userDto = UserDtoHelper.calculateUserDto(member.guild.idLong, member.idLong, member.isOwner, userService, introVolume)
+                persistMusicUrl(event, userDto, deleteDelay, urlString, urlString, member.effectiveName, introVolume)
+            })
+        } else persistMusicUrl(event, requestingUserDto, deleteDelay, urlString, urlString, event.user.name, introVolume)
     }
 
+    private fun persistMusicFile(event: SlashCommandInteractionEvent, targetDto: UserDto?, deleteDelay: Int?, filename: String, introVolume: Int, inputStream: InputStream?, memberName: String) {
+        val fileContents: ByteArray? = runCatching {
+            FileUtils.readInputStreamToByteArray(inputStream)
+        }.onFailure { _ ->
+            event.hook.sendMessageFormat("Unable to read file '%s'", filename)
+                .setEphemeral(true)
+                .queue {
+                    invokeDeleteOnMessageResponse(deleteDelay!!)
+                }
+        }.getOrNull()
 
-    private void persistMusicFile(SlashCommandInteractionEvent event, UserDto targetDto, Integer deleteDelay, String filename, int introVolume, InputStream inputStream, String memberName) {
-        byte[] fileContents;
-        try {
-            fileContents = readInputStreamToByteArray(inputStream);
-        } catch (ExecutionException | InterruptedException | IOException e) {
-            event.getHook().sendMessageFormat("Unable to read file '%s'", filename).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
-        }
-        MusicDto musicFileDto = targetDto.getMusicDto();
+        val musicFileDto = targetDto!!.musicDto
         if (musicFileDto == null) {
-            MusicDto musicDto = new MusicDto(targetDto.getDiscordId(), targetDto.getGuildId(), filename, introVolume, fileContents);
-            musicFileService.createNewMusicFile(musicDto);
-            targetDto.setMusicDto(musicDto);
-            userService.updateUser(targetDto);
-            event.getHook().sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+            val musicDto = MusicDto(targetDto.discordId!!, targetDto.guildId, filename, introVolume, fileContents!!)
+            musicFileService.createNewMusicFile(musicDto)
+            targetDto.musicDto = musicDto
+            userService.updateUser(targetDto)
+            event.hook.sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.fileName, musicDto.introVolume).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            return
         }
-        updateMusicFileDto(filename, introVolume, fileContents, musicFileDto);
-        event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
+        updateMusicFileDto(filename, introVolume, fileContents!!, musicFileDto)
+        event.hook.sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
-    private void persistMusicUrl(SlashCommandInteractionEvent event, UserDto targetDto, Integer deleteDelay, String filename, String url, String memberName, int introVolume) {
-        MusicDto musicFileDto = targetDto.getMusicDto();
-        byte[] urlBytes = url.getBytes();
+    private fun persistMusicUrl(event: SlashCommandInteractionEvent, targetDto: UserDto?, deleteDelay: Int?, filename: String, url: String, memberName: String, introVolume: Int) {
+        val musicFileDto = targetDto!!.musicDto
+        val urlBytes = url.toByteArray()
         if (musicFileDto == null) {
-            MusicDto musicDto = new MusicDto(targetDto.getDiscordId(), targetDto.getGuildId(), filename, introVolume, urlBytes);
-            musicFileService.createNewMusicFile(musicDto);
-            targetDto.setMusicDto(musicDto);
-            userService.updateUser(targetDto);
-            event.getHook().sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.getFileName(), musicDto.getIntroVolume()).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            return;
+            val musicDto = MusicDto(targetDto.discordId!!, targetDto.guildId, filename, introVolume, urlBytes)
+            musicFileService.createNewMusicFile(musicDto)
+            targetDto.musicDto = musicDto
+            userService.updateUser(targetDto)
+            event.hook.sendMessageFormat("Successfully set %s's intro song to '%s' with volume '%d'", memberName, musicDto.fileName, musicDto.introVolume).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            return
         }
-        updateMusicFileDto(filename, introVolume, urlBytes, musicFileDto);
-        event.getHook().sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay));
+        updateMusicFileDto(filename, introVolume, urlBytes, musicFileDto)
+        event.hook.sendMessageFormat("Successfully updated %s's intro song to '%s' with volume '%d'", memberName, filename, introVolume).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
-    private void updateMusicFileDto(String filename, int introVolume, byte[] fileContents, MusicDto musicFileDto) {
-        musicFileDto.setFileName(filename);
-        musicFileDto.setIntroVolume(introVolume);
-        musicFileDto.setMusicBlob(fileContents);
-        musicFileService.updateMusicFile(musicFileDto);
+    private fun updateMusicFileDto(filename: String, introVolume: Int, fileContents: ByteArray, musicFileDto: MusicDto) {
+        musicFileDto.fileName = filename
+        musicFileDto.introVolume = introVolume
+        musicFileDto.musicBlob = fileContents
+        musicFileService.updateMusicFile(musicFileDto)
     }
 
+    override val name: String
+        get() = "introsong"
+    override val description: String
+        get() = "Upload a **MP3** file to play when you join a voice channel. Can use youtube links instead."
+    override val optionData: List<OptionData>
+        get() {
+            val users = OptionData(OptionType.STRING, USERS, "User whose intro to change")
+            val link = OptionData(OptionType.STRING, LINK, "Link to set as your discord intro")
+            val attachment = OptionData(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro")
+            val volume = OptionData(OptionType.INTEGER, VOLUME, "volume to set your intro to")
+            return listOf(users, link, attachment, volume)
+        }
 
-    @Override
-    public String getName() {
-        return "introsong";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Upload a **MP3** file to play when you join a voice channel. Can use youtube links instead.";
-    }
-
-    @Override
-    public List<OptionData> getOptionData() {
-        OptionData users = new OptionData(OptionType.STRING, USERS, "User whose intro to change");
-        OptionData link = new OptionData(OptionType.STRING, LINK, "Link to set as your discord intro");
-        OptionData attachment = new OptionData(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro");
-        OptionData volume = new OptionData(OptionType.INTEGER, VOLUME, "volume to set your intro to");
-        return List.of(users, link, attachment, volume);
+    companion object {
+        private const val VOLUME = "volume"
     }
 }

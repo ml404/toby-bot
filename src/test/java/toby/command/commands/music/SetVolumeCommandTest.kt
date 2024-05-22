@@ -1,159 +1,205 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
-import toby.emote.Emotes;
+import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.emote.Emotes
 
-import static org.mockito.Mockito.*;
 
-class SetVolumeCommandTest implements MusicCommandTest {
-
-    SetVolumeCommand setVolumeCommand;
+internal class SetVolumeCommandTest : MusicCommandTest {
+    private lateinit var setVolumeCommand: SetVolumeCommand
 
     @BeforeEach
-    void setUp() {
-        setupCommonMusicMocks();
-        setVolumeCommand = new SetVolumeCommand();
+    fun setUp() {
+        setupCommonMusicMocks()
+        setVolumeCommand = SetVolumeCommand()
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMusicMocks();
+    fun tearDown() {
+        tearDownCommonMusicMocks()
     }
 
     @Test
-    void testSetVolume_withValidArgs() {
+    fun testSetVolume_withValidArgs() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("volume")).thenReturn(volumeOptionMapping);
-        int volumeArg = 20;
-        when(volumeOptionMapping.getAsInt()).thenReturn(volumeArg);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        int oldVolume = 21;
-        when(audioPlayer.getVolume()).thenReturn(oldVolume);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val volumeOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionMapping)
+        val volumeArg = 20
+        Mockito.`when`(volumeOptionMapping.asInt).thenReturn(volumeArg)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        val oldVolume = 21
+        Mockito.`when`(MusicCommandTest.audioPlayer.volume).thenReturn(oldVolume)
 
         //Act
-        setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        setVolumeCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioPlayer, times(1)).setVolume(volumeArg);
-        verify(interactionHook, times(1)).sendMessageFormat(eq("Changing volume from '%s' to '%s' \uD83D\uDD0A"), eq(oldVolume), eq(volumeArg));
+        Mockito.verify(MusicCommandTest.audioPlayer, Mockito.times(1)).volume = volumeArg
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("Changing volume from '%s' to '%s' \uD83D\uDD0A"),
+            ArgumentMatchers.eq(oldVolume),
+            ArgumentMatchers.eq(volumeArg)
+        )
     }
 
     @Test
-    void testSetVolume_withOldAndNewVolumeBeingTheSame_SendsErrorMessage() {
+    fun testSetVolume_withOldAndNewVolumeBeingTheSame_SendsErrorMessage() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("volume")).thenReturn(volumeOptionMapping);
-        int volumeArg = 20;
-        when(volumeOptionMapping.getAsInt()).thenReturn(volumeArg);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        int oldVolume = 20;
-        when(audioPlayer.getVolume()).thenReturn(oldVolume);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val volumeOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionMapping)
+        val volumeArg = 20
+        Mockito.`when`(volumeOptionMapping.asInt).thenReturn(volumeArg)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        val oldVolume = 20
+        Mockito.`when`(MusicCommandTest.audioPlayer.volume).thenReturn(oldVolume)
 
         //Act
-        setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        setVolumeCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioPlayer, times(0)).setVolume(volumeArg);
-        verify(interactionHook, times(1)).sendMessageFormat(eq("New volume and old volume are the same value, somebody shoot %s"), eq("Effective Name"));
+        Mockito.verify(MusicCommandTest.audioPlayer, Mockito.times(0)).volume = volumeArg
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("New volume and old volume are the same value, somebody shoot %s"),
+            ArgumentMatchers.eq("Effective Name")
+        )
     }
 
     @Test
-    void testSetVolume_withNewVolumeBeingOver100_SendsErrorMessage() {
+    fun testSetVolume_withNewVolumeBeingOver100_SendsErrorMessage() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("volume")).thenReturn(volumeOptionMapping);
-        int volumeArg = 101;
-        when(volumeOptionMapping.getAsInt()).thenReturn(volumeArg);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        int oldVolume = 20;
-        when(audioPlayer.getVolume()).thenReturn(oldVolume);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val volumeOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionMapping)
+        val volumeArg = 101
+        Mockito.`when`(volumeOptionMapping.asInt).thenReturn(volumeArg)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        val oldVolume = 20
+        Mockito.`when`(MusicCommandTest.audioPlayer.volume).thenReturn(oldVolume)
 
         //Act
-        setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        setVolumeCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioPlayer, times(0)).setVolume(volumeArg);
-        verify(interactionHook, times(1)).sendMessage(eq("Set the volume of the audio player for the server to a percent value (between 1 and 100)"));
+        Mockito.verify(MusicCommandTest.audioPlayer, Mockito.times(0)).volume = volumeArg
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("Set the volume of the audio player for the server to a percent value (between 1 and 100)"))
     }
 
     @Test
-    void testSetVolume_withNewVolumeBeingNegative_SendsErrorMessage() {
+    fun testSetVolume_withNewVolumeBeingNegative_SendsErrorMessage() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("volume")).thenReturn(volumeOptionMapping);
-        int volumeArg = 101;
-        when(volumeOptionMapping.getAsInt()).thenReturn(volumeArg);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        int oldVolume = 20;
-        when(audioPlayer.getVolume()).thenReturn(oldVolume);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val volumeOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionMapping)
+        val volumeArg = 101
+        Mockito.`when`(volumeOptionMapping.asInt).thenReturn(volumeArg)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        val oldVolume = 20
+        Mockito.`when`(MusicCommandTest.audioPlayer.volume).thenReturn(oldVolume)
 
         //Act
-        setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        setVolumeCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioPlayer, times(0)).setVolume(volumeArg);
-        verify(interactionHook, times(1)).sendMessage(eq("Set the volume of the audio player for the server to a percent value (between 1 and 100)"));
+        Mockito.verify(MusicCommandTest.audioPlayer, Mockito.times(0)).volume = volumeArg
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("Set the volume of the audio player for the server to a percent value (between 1 and 100)"))
     }
 
     @Test
-    void testSetVolume_withInvalidPermissions() {
+    fun testSetVolume_withInvalidPermissions() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("volume")).thenReturn(volumeOptionMapping);
-        int volumeArg = 20;
-        when(volumeOptionMapping.getAsInt()).thenReturn(volumeArg);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        int oldVolume = 21;
-        when(audioPlayer.getVolume()).thenReturn(oldVolume);
-        when(requestingUserDto.hasMusicPermission()).thenReturn(false);
-        RichCustomEmoji tobyEmote = mock(RichCustomEmoji.class);
-        when(jda.getEmojiById(Emotes.TOBY)).thenReturn(tobyEmote);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val volumeOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionMapping)
+        val volumeArg = 20
+        Mockito.`when`(volumeOptionMapping.asInt).thenReturn(volumeArg)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        val oldVolume = 21
+        Mockito.`when`(MusicCommandTest.audioPlayer.volume).thenReturn(oldVolume)
+        Mockito.`when`(CommandTest.requestingUserDto.musicPermission).thenReturn(false)
+        val tobyEmote = Mockito.mock(RichCustomEmoji::class.java)
+        Mockito.`when`<RichCustomEmoji>(CommandTest.jda.getEmojiById(Emotes.TOBY)).thenReturn(tobyEmote)
 
         //Act
-        setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        setVolumeCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioPlayer, times(0)).setVolume(volumeArg);
-        verify(interactionHook, times(1)).sendMessageFormat(eq("You aren't allowed to change the volume kid %s"), eq(tobyEmote));
+        Mockito.verify(MusicCommandTest.audioPlayer, Mockito.times(0)).volume = volumeArg
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("You aren't allowed to change the volume kid %s"),
+            ArgumentMatchers.eq(tobyEmote)
+        )
     }
 
     @Test
-    void testSetVolume_whenSongIsNotStoppableAndWithoutOverridingPermissions_SendsError() {
+    fun testSetVolume_whenSongIsNotStoppableAndWithoutOverridingPermissions_SendsError() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping volumeOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("volume")).thenReturn(volumeOptionMapping);
-        int volumeArg = 20;
-        when(volumeOptionMapping.getAsInt()).thenReturn(volumeArg);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(false);
-        int oldVolume = 21;
-        when(audioPlayer.getVolume()).thenReturn(oldVolume);
-        when(requestingUserDto.isSuperUser()).thenReturn(false);
-        RichCustomEmoji tobyEmote = mock(RichCustomEmoji.class);
-        when(jda.getEmojiById(Emotes.TOBY)).thenReturn(tobyEmote);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        val volumeOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionMapping)
+        val volumeArg = 20
+        Mockito.`when`(volumeOptionMapping.asInt).thenReturn(volumeArg)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        val oldVolume = 21
+        Mockito.`when`(MusicCommandTest.audioPlayer.volume).thenReturn(oldVolume)
+        Mockito.`when`(CommandTest.requestingUserDto.superUser).thenReturn(false)
+        val tobyEmote = Mockito.mock(RichCustomEmoji::class.java)
+        Mockito.`when`<RichCustomEmoji>(CommandTest.jda.getEmojiById(Emotes.TOBY)).thenReturn(tobyEmote)
 
         //Act
-        setVolumeCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        setVolumeCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(audioPlayer, times(0)).setVolume(volumeArg);
-        verify(interactionHook, times(1)).sendMessageFormat(eq("You aren't allowed to change the volume kid %s"), eq(tobyEmote));
+        Mockito.verify(MusicCommandTest.audioPlayer, Mockito.times(0)).volume = volumeArg
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("You aren't allowed to change the volume kid %s"),
+            ArgumentMatchers.eq(tobyEmote)
+        )
     }
 }

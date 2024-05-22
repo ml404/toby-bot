@@ -1,33 +1,30 @@
-package toby.helpers;
+package toby.helpers
 
-import java.net.URI;
-import java.net.URL;
-import java.util.Optional;
+import java.net.URI
+import java.net.URL
+import java.util.*
 
-public class URLHelper {
-
-    public static boolean isValidURL(String url) {
+object URLHelper {
+    fun isValidURL(url: String?): Boolean {
         /* Try creating a valid URL */
         try {
-            new URL(url).toURI();
-            return true;
-        }
-        // If there was an Exception
+            URL(url).toURI()
+            return true
+        } // If there was an Exception
         // while creating URL object
-        catch (Exception e) {
-            return false;
+        catch (e: Exception) {
+            return false
         }
     }
 
-    public static Optional<URI> fromUrlString(String url){
+    fun fromUrlString(url: String?): Optional<URI> {
         /* Try creating a valid URL */
-        try {
-            return Optional.of(new URL(url).toURI());
-        }
-        // If there was an Exception
+        return try {
+            Optional.of(URL(url).toURI())
+        } // If there was an Exception
         // while creating URL object
-        catch (Exception e) {
-            return Optional.empty();
+        catch (e: Exception) {
+            Optional.empty()
         }
     }
 }

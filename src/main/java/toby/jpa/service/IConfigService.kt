@@ -1,17 +1,14 @@
-package toby.jpa.service;
+package toby.jpa.service
 
-import toby.jpa.dto.ConfigDto;
+import toby.jpa.dto.ConfigDto
 
-import java.util.List;
-
-public interface IConfigService {
-
-    List<ConfigDto> listAllConfig();
-    List<ConfigDto> listGuildConfig(String guildId);
-    ConfigDto getConfigByName(String name, String guildId);
-    ConfigDto createNewConfig(ConfigDto configDto);
-    ConfigDto updateConfig(ConfigDto configDto);
-    void deleteAll(String guildId);
-    void deleteConfig(String guildId, String name);
-    void clearCache();
+interface IConfigService {
+    fun listAllConfig(): List<ConfigDto?>?
+    fun listGuildConfig(guildId: String?): List<ConfigDto?>?
+    fun getConfigByName(name: String?, guildId: String): ConfigDto?
+    fun createNewConfig(configDto: ConfigDto): ConfigDto?
+    fun updateConfig(configDto: ConfigDto?): ConfigDto?
+    fun deleteAll(guildId: String?)
+    fun deleteConfig(guildId: String?, name: String?)
+    fun clearCache()
 }

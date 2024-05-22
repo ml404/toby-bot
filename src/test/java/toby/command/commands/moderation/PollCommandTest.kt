@@ -1,100 +1,131 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
-import toby.emote.Emotes;
+import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
+import net.dv8tion.jda.api.entities.emoji.Emoji
+import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.kotlin.anyVararg
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.emote.Emotes
 
-import static org.mockito.Mockito.*;
-
-class PollCommandTest implements CommandTest {
-
-    PollCommand pollCommand;
+internal class PollCommandTest : CommandTest {
+    private var pollCommand: PollCommand? = null
 
     @Mock
-    private Emoji tobyEmote;
+    private val tobyEmote: Emoji? = null
 
     @BeforeEach
-    public void setup() {
-        setUpCommonMocks();
-        doReturn(messageCreateAction)
-                .when(messageChannelUnion)
-                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
-        pollCommand = new PollCommand();
+    fun setup() {
+        setUpCommonMocks()
+        Mockito.doReturn(CommandTest.messageCreateAction)
+            .`when`(CommandTest.messageChannelUnion)
+            .sendMessageEmbeds(
+                ArgumentMatchers.any(), anyVararg()
+
+            )
+        pollCommand = PollCommand()
     }
 
     @AfterEach
-    public void teardown() {
-        tearDownCommonMocks();
-        reset(messageChannelUnion);
+    fun teardown() {
+        tearDownCommonMocks()
+        Mockito.reset<MessageChannelUnion>(CommandTest.messageChannelUnion)
     }
 
     @Test
-    void test_pollCommandWithChoices_sendsEmbed() {
+    fun test_pollCommandWithChoices_sendsEmbed() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping choicesOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("choices")).thenReturn(choicesOptionMapping);
-        when(choicesOptionMapping.getAsString()).thenReturn("Choice1, Choice2");
+        val commandContext = CommandContext(CommandTest.event)
+        val choicesOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("choices")).thenReturn(choicesOptionMapping)
+        Mockito.`when`(choicesOptionMapping.asString).thenReturn("Choice1, Choice2")
 
         //Act
-        pollCommand.handle(commandContext, requestingUserDto, 0);
+        pollCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        Mockito.verify<MessageChannelUnion>(CommandTest.messageChannelUnion, Mockito.times(1))
+            .sendMessageEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
     }
 
     @Test
-    void test_pollCommandWithChoicesAndQuestion_sendsEmbed() {
+    fun test_pollCommandWithChoicesAndQuestion_sendsEmbed() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping choicesOptionMapping = mock(OptionMapping.class);
-        OptionMapping questionOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("choices")).thenReturn(choicesOptionMapping);
-        when(event.getOption("question")).thenReturn(questionOptionMapping);
-        when(choicesOptionMapping.getAsString()).thenReturn("Choice1, Choice2");
-        when(questionOptionMapping.getAsString()).thenReturn("Question");
+        val commandContext = CommandContext(CommandTest.event)
+        val choicesOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val questionOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("choices")).thenReturn(choicesOptionMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("question"))
+            .thenReturn(questionOptionMapping)
+        Mockito.`when`(choicesOptionMapping.asString).thenReturn("Choice1, Choice2")
+        Mockito.`when`(questionOptionMapping.asString).thenReturn("Question")
 
         //Act
-        pollCommand.handle(commandContext, requestingUserDto, 0);
+        pollCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(messageChannelUnion, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        Mockito.verify<MessageChannelUnion>(CommandTest.messageChannelUnion, Mockito.times(1))
+            .sendMessageEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
     }
 
     @Test
-    void test_pollCommandWithoutChoices_sendsError() {
+    fun test_pollCommandWithoutChoices_sendsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
+        val commandContext = CommandContext(CommandTest.event)
 
         //Act
-        pollCommand.handle(commandContext, requestingUserDto, 0);
+        pollCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(messageChannelUnion, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(interactionHook, times(1)).sendMessage(eq("Start a poll for every user in the server who has read permission in the channel you're posting to"));
+        Mockito.verify<MessageChannelUnion>(CommandTest.messageChannelUnion, Mockito.times(0))
+            .sendMessageEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
+            .sendMessage(ArgumentMatchers.eq("Start a poll for every user in the server who has read permission in the channel you're posting to"))
     }
 
     @Test
-    void test_pollCommandWithTooManyChoices_sendsError() {
+    fun test_pollCommandWithTooManyChoices_sendsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        OptionMapping choicesOptionMapping = mock(OptionMapping.class);
-        when(event.getOption("choices")).thenReturn(choicesOptionMapping);
-        when(choicesOptionMapping.getAsString()).thenReturn("Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1");
-        when(jda.getEmojiById(Emotes.TOBY)).thenReturn((RichCustomEmoji) tobyEmote);
+        val commandContext = CommandContext(CommandTest.event)
+        val choicesOptionMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("choices")).thenReturn(choicesOptionMapping)
+        Mockito.`when`(choicesOptionMapping.asString)
+            .thenReturn("Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1")
+        Mockito.`when`<RichCustomEmoji?>(CommandTest.jda.getEmojiById(Emotes.TOBY))
+            .thenReturn(tobyEmote as RichCustomEmoji?)
         //Act
-        pollCommand.handle(commandContext, requestingUserDto, 0);
+        pollCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(messageChannelUnion, times(0)).sendMessageEmbeds(any(MessageEmbed.class));
-        verify(interactionHook, times(1)).sendMessageFormat(eq("Please keep the poll size under 10 items, or else %s."), eq(tobyEmote));
+        Mockito.verify<MessageChannelUnion>(CommandTest.messageChannelUnion, Mockito.times(0))
+            .sendMessageEmbeds(
+                ArgumentMatchers.any(
+                    MessageEmbed::class.java
+                )
+            )
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("Please keep the poll size under 10 items, or else %s."),
+            ArgumentMatchers.eq<Emoji?>(tobyEmote)
+        )
     }
 }

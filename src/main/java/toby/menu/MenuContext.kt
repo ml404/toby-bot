@@ -1,31 +1,13 @@
-package toby.menu;
+package toby.menu
 
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
-import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
-import toby.command.commands.ICommandContext;
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
+import toby.command.commands.ICommandContext
 
-public class MenuContext implements ICommandContext {
-
-    IReplyCallback interaction;
-
-    public MenuContext(IReplyCallback interaction) {
-        this.interaction = interaction;
-    }
-
-    @Override
-    public Guild getGuild() {
-        return this.getEvent().getGuild();
-    }
-
-    @Override
-    public SlashCommandInteractionEvent getEvent() {
-        return (SlashCommandInteractionEvent) this.interaction;
-    }
-
-    public StringSelectInteractionEvent getSelectEvent(){
-        return (StringSelectInteractionEvent) this.interaction;
-    }
-
+class MenuContext(var interaction: IReplyCallback) : ICommandContext {
+    override val guild: Guild get() = event.guild!!
+    override val event: SlashCommandInteractionEvent get() = interaction as SlashCommandInteractionEvent
+    val selectEvent: StringSelectInteractionEvent get() = interaction as StringSelectInteractionEvent
 }

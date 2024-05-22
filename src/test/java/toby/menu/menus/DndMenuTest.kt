@@ -1,101 +1,101 @@
-package toby.menu.menus;
+package toby.menu.menus
 
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.menu.MenuContext;
-import toby.menu.MenuTest;
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyVararg
+import toby.command.CommandTest
+import toby.menu.MenuContext
+import toby.menu.MenuTest
 
-import java.util.List;
-
-import static org.mockito.Mockito.*;
-
-class DndMenuTest implements MenuTest {
-
-
-    private DndMenu dndMenu;
+internal class DndMenuTest : MenuTest {
+    private var dndMenu: DndMenu? = null
 
     @BeforeEach
-    public void setup(){
-        setUpMenuMocks();
-        dndMenu = new DndMenu();
-        doReturn(webhookMessageCreateAction)
-                .when(interactionHook)
-                .sendMessageEmbeds(any(), any(MessageEmbed[].class));
+    fun setup() {
+        setUpMenuMocks()
+        dndMenu = DndMenu()
+        Mockito.doReturn(CommandTest.webhookMessageCreateAction).`when`(CommandTest.interactionHook)
+            .sendMessageEmbeds(
+                any(),
+                anyVararg()
+            )
     }
 
     @AfterEach
-    public void tearDown(){
-        tearDownMenuMocks();
+    fun tearDown() {
+        tearDownMenuMocks()
     }
 
     @Test
-    public void test_dndMenuWithSpell(){
+    fun test_dndMenuWithSpell() {
         //Arrange
-        MenuContext ctx = mockAndCreateMenuContext("dnd:spell", "fireball");
+        val ctx = mockAndCreateMenuContext("dnd:spell", "fireball")
 
         //Act
-        dndMenu.handle(ctx, 0);
+        dndMenu!!.handle(ctx, 0)
 
         //Assert
-        verify(menuEvent, times(1)).deferReply();
-        verify(menuEvent, times(1)).getHook();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).deferReply()
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).hook
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(any(), anyVararg())
     }
 
     @Test
-    public void test_dndMenuWithCondition(){
+    fun test_dndMenuWithCondition() {
         //Arrange
-        MenuContext ctx = mockAndCreateMenuContext("dnd:condition", "grappled");
+        val ctx = mockAndCreateMenuContext("dnd:condition", "grappled")
 
         //Act
-        dndMenu.handle(ctx, 0);
+        dndMenu!!.handle(ctx, 0)
 
         //Assert
-        verify(menuEvent, times(1)).deferReply();
-        verify(menuEvent, times(1)).getHook();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).deferReply()
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).hook
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(any(), anyVararg())
     }
 
     @Test
-    public void test_dndMenuWithRule(){
+    fun test_dndMenuWithRule() {
         //Arrange
-        MenuContext ctx = mockAndCreateMenuContext("dnd:rule", "cover");
+        val ctx = mockAndCreateMenuContext("dnd:rule", "cover")
 
         //Act
-        dndMenu.handle(ctx, 0);
+        dndMenu!!.handle(ctx, 0)
 
         //Assert
-        verify(menuEvent, times(1)).deferReply();
-        verify(menuEvent, times(1)).getHook();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).deferReply()
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).hook
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(any(), anyVararg())
     }
 
     @Test
-    public void test_dndMenuWithFeature(){
+    fun test_dndMenuWithFeature() {
         //Arrange
-        MenuContext ctx = mockAndCreateMenuContext("dnd:feature", "action-surge-1-use");
+        val ctx = mockAndCreateMenuContext("dnd:feature", "action-surge-1-use")
 
         //Act
-        dndMenu.handle(ctx, 0);
+        dndMenu!!.handle(ctx, 0)
 
         //Assert
-        verify(menuEvent, times(1)).deferReply();
-        verify(menuEvent, times(1)).getHook();
-        verify(interactionHook, times(1)).sendMessageEmbeds(any(MessageEmbed.class));
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).deferReply()
+        Mockito.verify(MenuTest.menuEvent, Mockito.times(1)).hook
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageEmbeds(any(), anyVararg())
     }
 
 
-    @NotNull
-    private static MenuContext mockAndCreateMenuContext(String eventName, String selectedValue) {
-        AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
-        when(menuEvent.getComponentId()).thenReturn(eventName);
-        when(menuEvent.getValues()).thenReturn(List.of(selectedValue));
-        when(menuEvent.getMessage()).thenReturn(message);
-        when(message.delete()).thenReturn(auditableRestAction);
-        return new MenuContext(menuEvent);
+    companion object {
+        private fun mockAndCreateMenuContext(eventName: String, selectedValue: String): MenuContext {
+            val auditableRestAction = Mockito.mock(AuditableRestAction::class.java)
+            Mockito.`when`(MenuTest.menuEvent.componentId).thenReturn(eventName)
+            Mockito.`when`<List<String>>(MenuTest.menuEvent.values).thenReturn(listOf(selectedValue))
+            Mockito.`when`(MenuTest.menuEvent.message).thenReturn(CommandTest.message)
+            Mockito.`when`<AuditableRestAction<Void>>(CommandTest.message.delete())
+                .thenReturn(auditableRestAction as AuditableRestAction<Void>)
+            return MenuContext(MenuTest.menuEvent)
+        }
     }
 }

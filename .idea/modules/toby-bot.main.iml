@@ -1,5 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module external.linked.project.id="toby-bot:main" external.linked.project.path="$MODULE_DIR$/../.." external.root.project.path="$MODULE_DIR$/../.." external.system.id="GRADLE" external.system.module.group="com.github.ml404" external.system.module.type="sourceSet" external.system.module.version="5.0-SNAPSHOT" type="JAVA_MODULE" version="4">
+  <component name="FacetManager">
+    <facet external-system-id="GRADLE" type="kotlin-language" name="Kotlin">
+      <configuration version="5" platform="JVM 17" allPlatforms="JVM [17]" useProjectSettings="false">
+        <compilerSettings>
+          <option name="additionalArguments" value="-java-parameters" />
+        </compilerSettings>
+        <compilerArguments>
+          <flagArguments>
+            <flagArg name="allowNoSourceFiles" arg="true" />
+            <flagArg name="noReflect" arg="true" />
+            <flagArg name="noStdlib" arg="true" />
+          </flagArguments>
+          <stringArguments>
+            <stringArg name="destination" arg="$MODULE_DIR$/../../build/classes/kotlin/main" />
+            <stringArg name="jvmTarget" arg="17" />
+            <stringArg name="moduleName" arg="toby-bot" />
+            <stringArg name="apiVersion" arg="2.0" />
+            <stringArg name="languageVersion" arg="2.0" />
+          </stringArguments>
+          <arrayArguments>
+            <arrayArg name="pluginClasspaths">
+              <args>
+                <arg>$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-scripting-jvm/2.0.0-RC3/424c7a14926a28786c5eb90d75642b038d997e44/kotlin-scripting-jvm-2.0.0-RC3.jar</arg>
+                <arg>$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-scripting-common/2.0.0-RC3/5081f33d82fa8e4b263e600d033d7bdb28d80d4c/kotlin-scripting-common-2.0.0-RC3.jar</arg>
+                <arg>$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.0.0-RC3/37bea4f33a0d1823317f1210048928030077ec38/kotlin-stdlib-2.0.0-RC3.jar</arg>
+                <arg>$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar</arg>
+                <arg>$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-script-runtime/2.0.0-RC3/71f8f60382219b7b7677bb86669eecf403d96f64/kotlin-script-runtime-2.0.0-RC3.jar</arg>
+              </args>
+            </arrayArg>
+            <arrayArg name="pluginOptions" />
+          </arrayArguments>
+        </compilerArguments>
+      </configuration>
+    </facet>
+  </component>
   <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/../../build/classes/java/main" />
     <exclude-output />
@@ -11,9 +46,10 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Gradle: net.dv8tion:JDA:5.0.0-beta.17" level="project" />
     <orderEntry type="library" name="Gradle: me.duncte123:botCommons:2.0.122" level="project" />
+    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.0-RC3" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Gradle: org.jetbrains:annotations:24.0.0" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-lang3:3.13.0" level="project" />
-    <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer:2.0.2" level="project" />
+    <orderEntry type="library" name="Gradle: dev.arbjerg:lavaplayer:2.1.1" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework.boot:spring-boot-starter-log4j2:3.1.4" level="project" />
     <orderEntry type="library" name="Gradle: com.google.code.gson:gson:2.10.1" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.httpcomponents.client5:httpclient5:5.2.1" level="project" />
@@ -34,7 +70,9 @@
     <orderEntry type="library" name="Gradle: org.apache.commons:commons-collections4:4.4" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-databind:2.15.2" level="project" />
     <orderEntry type="library" name="Gradle: me.duncte123:reliqua:2.4.10" level="project" />
-    <orderEntry type="library" name="Gradle: dev.arbjerg:lava-common:2.0.2" level="project" />
+    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.0-RC3" level="project" />
+    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:2.0.0-RC3" level="project" />
+    <orderEntry type="library" name="Gradle: dev.arbjerg:lava-common:2.1.1" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.httpcomponents:httpclient:4.5.14" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-core:2.15.2" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0" level="project" />
@@ -60,7 +98,6 @@
     <orderEntry type="library" name="Gradle: org.springframework:spring-core:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-aop:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-expression:6.0.12" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:1.8.22" level="project" />
     <orderEntry type="library" name="Gradle: club.minnced:opus-java-api:1.1.1" level="project" />
     <orderEntry type="library" name="Gradle: club.minnced:opus-java-natives:1.1.1" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-annotations:2.15.2" level="project" />
@@ -86,9 +123,6 @@
     <orderEntry type="library" name="Gradle: io.micrometer:micrometer-commons:1.11.4" level="project" />
     <orderEntry type="library" name="Gradle: org.springframework:spring-jcl:6.0.12" level="project" />
     <orderEntry type="library" name="Gradle: com.squareup.okio:okio-jvm:3.0.0" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-common:1.8.22" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22" level="project" />
-    <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: org.hibernate.orm:hibernate-core:6.3.1.Final" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: dev.arbjerg:lavaplayer-natives:2.0.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Gradle: net.sf.trove4j:trove4j:3.0.3" level="project" />

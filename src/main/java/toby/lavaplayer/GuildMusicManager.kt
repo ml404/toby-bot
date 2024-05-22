@@ -1,30 +1,19 @@
-package toby.lavaplayer;
+package toby.lavaplayer
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 
-public class GuildMusicManager {
-    private final AudioPlayer audioPlayer;
-    private final TrackScheduler scheduler;
-    private final AudioPlayerSendHandler sendHandler;
+class GuildMusicManager(manager: AudioPlayerManager) {
+    @JvmField
+    val audioPlayer: AudioPlayer = manager.createPlayer()
+    @JvmField
+    val scheduler: TrackScheduler = TrackScheduler(this.audioPlayer)
+    @JvmField
+    val sendHandler: AudioPlayerSendHandler
 
 
-    public GuildMusicManager(AudioPlayerManager manager) {
-        this.audioPlayer = manager.createPlayer();
-        this.scheduler = new TrackScheduler(this.getAudioPlayer());
-        this.getAudioPlayer().addListener(this.getScheduler());
-        this.sendHandler = new AudioPlayerSendHandler(this.getAudioPlayer());
-    }
-
-    public AudioPlayerSendHandler getSendHandler(){
-        return sendHandler;
-    }
-
-    public AudioPlayer getAudioPlayer() {
-        return audioPlayer;
-    }
-
-    public TrackScheduler getScheduler() {
-        return scheduler;
+    init {
+        audioPlayer.addListener(this.scheduler)
+        this.sendHandler = AudioPlayerSendHandler(this.audioPlayer)
     }
 }

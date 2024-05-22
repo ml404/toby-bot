@@ -1,30 +1,29 @@
-package toby.jpa.configuration;
+package toby.jpa.configuration
 
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.concurrent.ConcurrentMapCache;
-import org.springframework.cache.support.SimpleCacheManager;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
-
-import java.util.Arrays;
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.EnableCaching
+import org.springframework.cache.concurrent.ConcurrentMapCache
+import org.springframework.cache.support.SimpleCacheManager
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 
 @Configuration
 @EnableCaching
 @Profile("prod")
-public class CachingConfig {
-
+open class CachingConfig {
     @Bean
-    public CacheManager cacheManager() {
-        SimpleCacheManager cacheManager = new SimpleCacheManager();
-        cacheManager.setCaches(Arrays.asList(
-                new ConcurrentMapCache("configs"),
-                new ConcurrentMapCache("brothers"),
-                new ConcurrentMapCache("users"),
-                new ConcurrentMapCache("music"),
-                new ConcurrentMapCache("excuses")
-                ));
-        return cacheManager;
+    open fun cacheManager(): CacheManager {
+        val cacheManager = SimpleCacheManager()
+        cacheManager.setCaches(
+            listOf(
+                ConcurrentMapCache("configs"),
+                ConcurrentMapCache("brothers"),
+                ConcurrentMapCache("users"),
+                ConcurrentMapCache("music"),
+                ConcurrentMapCache("excuses")
+            )
+        )
+        return cacheManager
     }
 }

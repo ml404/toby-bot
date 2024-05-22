@@ -1,109 +1,128 @@
-package toby.command.commands.moderation;
+package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
-import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
-import toby.command.CommandTest;
+import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.GuildVoiceState
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
 
-import java.util.List;
+internal class ShhCommandTest : CommandTest {
+    private var shhCommand: ShhCommand? = null
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-class ShhCommandTest implements CommandTest {
-
-    ShhCommand shhCommand;
-    
     @BeforeEach
-    void setUp() {
-        setUpCommonMocks();
-        shhCommand = new ShhCommand();
+    fun setUp() {
+        setUpCommonMocks()
+        shhCommand = ShhCommand()
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMocks();
+    fun tearDown() {
+        tearDownCommonMocks()
     }
 
     @Test
-    void test_shhWithValidPermissions_mutesEveryoneInChannel() {
+    fun test_shhWithValidPermissions_mutesEveryoneInChannel() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        shhSetup(true, true, List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        shhSetup(voiceMuteOtherBot = true, voiceMuteOtherMember = true, targetMember = listOf(CommandTest.targetMember))
 
         //Act
-        shhCommand.handle(commandContext, requestingUserDto, 0);
+        shhCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(guild, times(1)).mute(targetMember, true);
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.guild, Mockito.times(1))
+            .mute(CommandTest.targetMember, true)
     }
 
     @Test
-    void test_shhWithValidPermissionsAndMultipleMembers_mutesEveryoneInChannel() {
+    fun test_shhWithValidPermissionsAndMultipleMembers_mutesEveryoneInChannel() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        shhSetup(true, true, List.of(member, targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        shhSetup(
+            voiceMuteOtherBot = true,
+            voiceMuteOtherMember = true,
+            targetMember = listOf(CommandTest.member, CommandTest.targetMember)
+        )
 
         //Act
-        shhCommand.handle(commandContext, requestingUserDto, 0);
+        shhCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(guild, times(1)).mute(member, true);
-        verify(guild, times(1)).mute(targetMember, true);
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.guild, Mockito.times(1)).mute(CommandTest.member, true)
+        Mockito.verify(CommandTest.guild, Mockito.times(1))
+            .mute(CommandTest.targetMember, true)
     }
 
 
     @Test
-    void test_shhWithInvalidBotPermissions_throwsError() {
+    fun test_shhWithInvalidBotPermissions_throwsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        shhSetup(false, true, List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        shhSetup(false, true, listOf(CommandTest.targetMember))
 
         //Act
-        shhCommand.handle(commandContext, requestingUserDto, 0);
+        shhCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("I'm not allowed to mute %s"), eq(targetMember));
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("I'm not allowed to mute %s"),
+            ArgumentMatchers.eq(CommandTest.targetMember)
+        )
     }
 
     @Test
-    void test_shhWithInvalidUserPermissions_throwsError() {
+    fun test_shhWithInvalidUserPermissions_throwsError() {
         //Arrange
-        CommandContext commandContext = new CommandContext(event);
-        shhSetup(true, false, List.of(targetMember));
+        val commandContext = CommandContext(CommandTest.event)
+        shhSetup(true, false, listOf(CommandTest.targetMember))
 
         //Act
-        shhCommand.handle(commandContext, requestingUserDto, 0);
+        shhCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(event, times(1)).getGuild();
-        verify(interactionHook, times(1)).sendMessageFormat(eq("You aren't allowed to mute %s"), eq(targetMember));
-
+        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("You aren't allowed to mute %s"),
+            ArgumentMatchers.eq(CommandTest.targetMember)
+        )
     }
 
-    private static void shhSetup(boolean voiceMuteOtherBot, boolean voiceMuteOtherMember, List<Member> targetMember) {
-        AudioChannelUnion audioChannelUnion = mock(AudioChannelUnion.class);
-        GuildVoiceState guildVoiceState = mock(GuildVoiceState.class);
-        AuditableRestAction auditableRestAction = mock(AuditableRestAction.class);
-        when(member.canInteract(any(Member.class))).thenReturn(true);
-        when(botMember.hasPermission(Permission.VOICE_MUTE_OTHERS)).thenReturn(voiceMuteOtherBot);
-        when(member.getVoiceState()).thenReturn(guildVoiceState);
-        when(member.hasPermission(Permission.VOICE_MUTE_OTHERS)).thenReturn(voiceMuteOtherMember);
-        when(guildVoiceState.getChannel()).thenReturn(audioChannelUnion);
-        when(audioChannelUnion.getMembers()).thenReturn(targetMember);
-        when(guild.mute(any(), eq(true))).thenReturn(auditableRestAction);
-        when(auditableRestAction.reason("Muted")).thenReturn(auditableRestAction);
+    companion object {
+        private fun shhSetup(voiceMuteOtherBot: Boolean, voiceMuteOtherMember: Boolean, targetMember: List<Member>) {
+            val audioChannelUnion = Mockito.mock(AudioChannelUnion::class.java)
+            val guildVoiceState = Mockito.mock(GuildVoiceState::class.java)
+            val auditableRestAction = Mockito.mock(AuditableRestAction::class.java)
+            Mockito.`when`(
+                CommandTest.member.canInteract(
+                    ArgumentMatchers.any(
+                        Member::class.java
+                    )
+                )
+            ).thenReturn(true)
+            Mockito.`when`(CommandTest.botMember.hasPermission(Permission.VOICE_MUTE_OTHERS))
+                .thenReturn(voiceMuteOtherBot)
+            Mockito.`when`<GuildVoiceState>(CommandTest.member.voiceState).thenReturn(guildVoiceState)
+            Mockito.`when`(CommandTest.member.hasPermission(Permission.VOICE_MUTE_OTHERS))
+                .thenReturn(voiceMuteOtherMember)
+            Mockito.`when`(guildVoiceState.channel).thenReturn(audioChannelUnion)
+            Mockito.`when`(audioChannelUnion.members).thenReturn(targetMember)
+            Mockito.`when`<AuditableRestAction<Void>>(
+                CommandTest.guild.mute(
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.eq(true)
+                )
+            ).thenReturn(auditableRestAction as AuditableRestAction<Void>)
+            Mockito.`when`(auditableRestAction.reason("Muted")).thenReturn(auditableRestAction)
+        }
     }
 }

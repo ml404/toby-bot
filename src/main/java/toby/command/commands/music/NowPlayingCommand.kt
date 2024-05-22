@@ -1,37 +1,26 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
-import toby.lavaplayer.PlayerManager;
+import toby.command.CommandContext
+import toby.helpers.MusicPlayerHelper
+import toby.jpa.dto.UserDto
+import toby.lavaplayer.PlayerManager
 
-import static toby.command.commands.music.IMusicCommand.isInvalidChannelStateForCommand;
-import static toby.helpers.MusicPlayerHelper.nowPlaying;
-
-
-public class NowPlayingCommand implements IMusicCommand {
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        handleMusicCommand(ctx, PlayerManager.getInstance(), requestingUserDto, deleteDelay);
+class NowPlayingCommand : IMusicCommand {
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    @Override
-    public void handleMusicCommand(CommandContext ctx, PlayerManager instance, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        if (requestingUserDto.hasMusicPermission()) {
-            if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return;
-            nowPlaying(event, instance, deleteDelay);
-        } else sendErrorMessage(event, deleteDelay);
+    override fun handleMusicCommand(ctx: CommandContext?, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        if (requestingUserDto.musicPermission) {
+            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+            MusicPlayerHelper.nowPlaying(event, instance, deleteDelay)
+        } else sendErrorMessage(event, deleteDelay!!)
     }
 
-    @Override
-    public String getName() {
-        return "nowplaying";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Shows the currently playing song";
-    }
+    override val name: String
+        get() = "nowplaying"
+    override val description: String
+        get() = "Shows the currently playing song"
 }

@@ -1,58 +1,77 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.playerManager
+import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 
-import static org.mockito.Mockito.*;
-
-class LoopCommandTest implements MusicCommandTest {
-
-    LoopCommand loopCommand;
+internal class LoopCommandTest : MusicCommandTest {
+    private lateinit var loopCommand: LoopCommand
 
     @BeforeEach
-    void setUp() {
-        setupCommonMusicMocks();
-        loopCommand = new LoopCommand();
+    fun setUp() {
+        setupCommonMusicMocks()
+        loopCommand = LoopCommand()
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMusicMocks();
+    fun tearDown() {
+        tearDownCommonMusicMocks()
     }
 
     @Test
-    void test_looping_whenNotCurrentlyLooping() {
+    fun test_looping_whenNotCurrentlyLooping() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        when(trackScheduler.isLooping()).thenReturn(false);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(playerManager.isCurrentlyStoppable).thenReturn(true)
+        Mockito.`when`(trackScheduler.isLooping).thenReturn(false)
 
         //Act
-        loopCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        loopCommand.handleMusicCommand(
+            commandContext,
+            playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(interactionHook, times(1)).sendMessageFormat(eq("The Player has been set to **%s**"), eq("looping"));
-        verify(trackScheduler, times(1)).setLooping(true);
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("The Player has been set to **%s**"),
+            ArgumentMatchers.eq("looping")
+        )
+        Mockito.verify(trackScheduler, Mockito.times(1)).isLooping = true
     }
 
     @Test
-    void test_looping_whenCurrentlyLooping() {
+    fun test_looping_whenCurrentlyLooping() {
         //Arrange
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(true);
-        when(trackScheduler.isLooping()).thenReturn(true);
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(playerManager.isCurrentlyStoppable).thenReturn(true)
+        Mockito.`when`(trackScheduler.isLooping).thenReturn(true)
 
         //Act
-        loopCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        loopCommand.handleMusicCommand(
+            commandContext,
+            playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
         //Assert
-        verify(interactionHook, times(1)).sendMessageFormat(eq("The Player has been set to **%s**"), eq("not looping"));
-        verify(trackScheduler, times(1)).setLooping(false);
+        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+            ArgumentMatchers.eq("The Player has been set to **%s**"),
+            ArgumentMatchers.eq("not looping")
+        )
+        Mockito.verify(trackScheduler, Mockito.times(1)).isLooping = false
     }
 }

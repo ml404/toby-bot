@@ -1,109 +1,93 @@
-package toby.helpers;
+package toby.helpers
 
-import org.apache.commons.collections4.MapIterator;
-import org.apache.commons.collections4.map.LRUMap;
+import org.apache.commons.collections4.MapIterator
+import org.apache.commons.collections4.map.LRUMap
 
-import java.util.ArrayList;
+open class Cache(
+    timeToLiveInSeconds: Long, timerIntervalInSeconds: Long,
+    maxItems: Int
+) {
+    private val timeToLiveInMillis = timeToLiveInSeconds * 1000
 
-public class Cache <K, T> {
+    private val cacheMap: LRUMap<String, CachedObject> = LRUMap(maxItems)
 
-    private final long timeToLiveInMillis;
-
-    private final LRUMap<K, CachedObject> cacheMap;
-
-    protected class CachedObject {
-        public long lastAccessed = System.currentTimeMillis();
-        public T value;
-
-        protected CachedObject(T value) {
-            this.value = value;
-        }
+    protected inner class CachedObject(var value: List<String>) {
+        var lastAccessed: Long = System.currentTimeMillis()
     }
 
-    public Cache(long timeToLiveInSeconds, final long timerIntervalInSeconds,
-                 int maxItems) {
-        this.timeToLiveInMillis = timeToLiveInSeconds * 1000;
-
-        cacheMap = new LRUMap<>(maxItems);
+    init {
 
         if (timeToLiveInMillis > 0 && timerIntervalInSeconds > 0) {
-
-            Thread t = new Thread(() -> {
+            val t = Thread {
                 while (true) {
                     try {
-                        Thread.sleep(timerIntervalInSeconds * 1000);
-                    }
-                    catch (InterruptedException ignored) {
+                        Thread.sleep(timerIntervalInSeconds * 1000)
+                    } catch (ignored: InterruptedException) {
                     }
 
-                    cleanup();
+                    cleanup()
                 }
-            });
+            }
 
-            t.setDaemon(true);
-            t.start();
+            t.isDaemon = true
+            t.start()
         }
     }
 
-    public void put(K key, T value) {
-        synchronized (cacheMap) {
-            cacheMap.put(key, new CachedObject(value));
+    fun put(key: String, value: List<String>) {
+        synchronized(cacheMap) {
+            cacheMap.put(key, CachedObject(value))
         }
     }
 
-    public T get(K key) {
-        synchronized (cacheMap) {
-            CachedObject c = cacheMap.get(key);
-
-            if (c == null)
-                return null;
+    fun get(key: String): List<String>? {
+        synchronized(cacheMap) {
+            val c = cacheMap[key]
+            if (c == null) return null
             else {
-                c.lastAccessed = System.currentTimeMillis();
-                return c.value;
+                c.lastAccessed = System.currentTimeMillis()
+                return c.value
             }
         }
     }
 
-    public void remove(K key) {
-        synchronized (cacheMap) {
-            cacheMap.remove(key);
+    fun remove(key: String) {
+        synchronized(cacheMap) {
+            cacheMap.remove(key)
         }
     }
 
-    public int size() {
-        synchronized (cacheMap) {
-            return cacheMap.size();
+    fun size(): Int {
+        synchronized(cacheMap) {
+            return cacheMap.size
         }
     }
 
-    public void cleanup() {
+    fun cleanup() {
+        val now = System.currentTimeMillis()
+        var keysToDelete: ArrayList<String>
 
-        long now = System.currentTimeMillis();
-        ArrayList<K> keysToDelete;
-
-        synchronized (cacheMap) {
-            MapIterator<K, CachedObject> itr = cacheMap.mapIterator();
-
-            keysToDelete = new ArrayList<>((cacheMap.size() / 2) + 1);
-            K key;
-            CachedObject c;
-
+        synchronized(cacheMap) {
+            val itr: MapIterator<String, CachedObject> = cacheMap.mapIterator()
+            keysToDelete = ArrayList((cacheMap.size / 2) + 1)
+            var key: String
+            var c: CachedObject?
             while (itr.hasNext()) {
-                key = itr.next();
-                c = itr.getValue();
+                key = itr.next()
+                c = itr.value
 
                 if (c != null && (now > (timeToLiveInMillis + c.lastAccessed))) {
-                    keysToDelete.add(key);
+                    keysToDelete.add(key)
                 }
             }
         }
 
-        for (K key : keysToDelete) {
-            synchronized (cacheMap) {
-                cacheMap.remove(key);
+        for (key in keysToDelete) {
+            synchronized(cacheMap) {
+                cacheMap.remove(key)
             }
 
-            Thread.yield();
+            Thread.yield()
         }
     }
 }

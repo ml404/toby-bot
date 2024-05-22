@@ -1,65 +1,44 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.jpa.dto.UserDto
+import java.util.*
+import java.util.stream.Collectors
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-
-public class ChCommand implements IMiscCommand {
-
-    private final String MESSAGE = "message";
-
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        final SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-        String message = Optional.ofNullable(event.getOption(MESSAGE)).map(OptionMapping::getAsString).orElse("");
-
-        String newMessage = Arrays.stream(message.split(" ")).map(s -> {
-                    int vowelIndex = 0;
-                    for (int i = 0; i < s.length(); i++) {
-                        char c = s.charAt(i);
-                        if (isVowel(String.valueOf(c))) {
-                            vowelIndex = i;
-                            break;
-                        }
-                    }
-                    if (s.substring(vowelIndex).toLowerCase().startsWith("ink")) {
-                        return "gamerword";
-                    } else return "ch" + s.substring(vowelIndex).toLowerCase();
+class ChCommand : IMiscCommand {
+    private val MESSAGE = "message"
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        val message = Optional.ofNullable(event.getOption(MESSAGE)).map { obj: OptionMapping -> obj.asString }.orElse("")
+        val newMessage = Arrays.stream(message.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()).map { s: String ->
+            var vowelIndex = 0
+            for (i in s.indices) {
+                val c = s[i]
+                if (isVowel(c.toString())) {
+                    vowelIndex = i
+                    break
                 }
-        ).collect(Collectors.joining(" "));
-
-        event.getHook().sendMessage("Oh! I think you mean: '" + newMessage.stripLeading() + "'").queue(invokeDeleteOnMessageResponse(deleteDelay));
+            }
+            if (s.substring(vowelIndex).lowercase(Locale.getDefault()).startsWith("ink")) {
+                return@map "gamerword"
+            } else return@map "ch" + s.substring(vowelIndex).lowercase(Locale.getDefault())
+        }.collect(Collectors.joining(" "))
+        event.hook.sendMessage("Oh! I think you mean: '$newMessage'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
+    override val name: String get() = "ch"
+    override val description: String get() = "Allow me to 'ch' whatever you type."
 
-    @Override
-    public String getName() {
-        return "ch";
+    private fun isVowel(s: String): Boolean {
+        val vowels = listOf("a", "e", "i", "o", "u")
+        return vowels.contains(s.lowercase(Locale.getDefault()))
     }
 
-    @Override
-    public String getDescription() {
-        return "Allow me to 'ch' whatever you type.";
-    }
-
-    private boolean isVowel(String s) {
-        List<String> vowels = List.of("a", "e", "i", "o", "u");
-        return vowels.contains(s.toLowerCase());
-    }
-
-    @Override
-    public List<OptionData> getOptionData() {
-        return List.of(new OptionData(OptionType.STRING, MESSAGE, "Message to 'Ch'", true));
-    }
+    override val optionData: List<OptionData>
+        get() = listOf(OptionData(OptionType.STRING, MESSAGE, "Message to 'Ch'", true))
 }

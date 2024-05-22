@@ -1,31 +1,35 @@
-package toby.helpers;
+package toby.helpers
 
-import toby.jpa.dto.MusicDto;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IUserService;
+import toby.jpa.dto.MusicDto
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IUserService
 
-import java.util.Optional;
+object UserDtoHelper {
+    @JvmStatic
+    fun calculateUserDto(
+        guildId: Long,
+        discordId: Long,
+        isSuperUser: Boolean,
+        userService: IUserService,
+        introVolume: Int
+    ): UserDto? {
+        val dbUserDto = userService.listGuildUsers(guildId).find { it?.guildId == guildId && it.discordId == discordId }
 
-public class UserDtoHelper {
-
-    public static UserDto calculateUserDto(long guildId, long discordId, boolean isSuperUser, IUserService userService, int introVolume) {
-
-        Optional<UserDto> dbUserDto = userService.listGuildUsers(guildId).stream().filter(userDto -> userDto.getGuildId().equals(guildId) && userDto.getDiscordId().equals(discordId)).findFirst();
-        if (dbUserDto.isEmpty()) {
-            UserDto userDto = new UserDto();
-            userDto.setDiscordId(discordId);
-            userDto.setGuildId(guildId);
-            userDto.setSuperUser(isSuperUser);
-            MusicDto musicDto = new MusicDto(userDto.getDiscordId(), userDto.getGuildId(), null, introVolume, null);
-            userDto.setMusicDto(musicDto);
-            return userService.createNewUser(userDto);
+        return if (dbUserDto == null) {
+            val userDto = UserDto().apply {
+                this.discordId = discordId
+                this.guildId = guildId
+                this.superUser = isSuperUser
+                this.musicDto = MusicDto(discordId, guildId, null, introVolume, null)
+            }
+            userService.createNewUser(userDto)
+        } else {
+            userService.getUserById(discordId, guildId)
         }
-        return userService.getUserById(discordId, guildId);
     }
 
-    public static boolean userAdjustmentValidation(UserDto requester, UserDto target) {
 
-        return requester.isSuperUser() && !target.isSuperUser();
+        fun userAdjustmentValidation(requester: UserDto, target: UserDto): Boolean {
+        return requester.superUser && !target.superUser
     }
-
 }

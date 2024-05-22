@@ -1,60 +1,74 @@
-package toby.command.commands.music;
+package toby.command.commands.music
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import toby.command.CommandContext;
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
+import toby.command.CommandContext
+import toby.command.CommandTest
+import java.util.concurrent.ArrayBlockingQueue
 
-import java.util.concurrent.ArrayBlockingQueue;
-
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
-class PlayCommandTest implements MusicCommandTest {
-
-    PlayCommand playCommand;
+internal class PlayCommandTest : MusicCommandTest {
+    private lateinit var playCommand: PlayCommand
 
     @BeforeEach
-    void setUp() {
-        setupCommonMusicMocks();
-        playCommand = new PlayCommand();
+    fun setUp() {
+        setupCommonMusicMocks()
+        playCommand = PlayCommand()
     }
 
     @AfterEach
-    void tearDown() {
-        tearDownCommonMusicMocks();
+    fun tearDown() {
+        tearDownCommonMusicMocks()
     }
 
     @Test
-    void test_playcommand_withValidArguments() {
-        setUpAudioChannelsWithBotAndMemberInSameChannel();
-        CommandContext commandContext = new CommandContext(event);
-        when(audioPlayer.isPaused()).thenReturn(false);
-        when(playerManager.isCurrentlyStoppable()).thenReturn(false);
-        OptionMapping linkOptionalMapping = mock(OptionMapping.class);
-        OptionMapping typeOptionalMapping = mock(OptionMapping.class);
-        OptionMapping volumeOptionalMapping = mock(OptionMapping.class);
-        when(event.getOption("type")).thenReturn(typeOptionalMapping);
-        when(event.getOption("link")).thenReturn(linkOptionalMapping);
-        when(event.getOption("volume")).thenReturn(volumeOptionalMapping);
-        when(typeOptionalMapping.getAsString()).thenReturn("link");
-        when(linkOptionalMapping.getAsString()).thenReturn("www.testlink.com");
-        when(volumeOptionalMapping.getAsInt()).thenReturn(20);
-        ArrayBlockingQueue queue = new ArrayBlockingQueue<>(2);
-        AudioTrack track2 = mock(AudioTrack.class);
-        when(track2.getInfo()).thenReturn(new AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri"));
-        when(track2.getDuration()).thenReturn(1000L);
-        queue.add(track);
-        queue.add(track2);
-        when(trackScheduler.getQueue()).thenReturn(queue);
-        when(track.getUserData()).thenReturn(1);
+    fun test_playcommand_withValidArguments() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = CommandContext(CommandTest.event)
+        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
+        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        val linkOptionalMapping = Mockito.mock(OptionMapping::class.java)
+        val typeOptionalMapping = Mockito.mock(OptionMapping::class.java)
+        val volumeOptionalMapping = Mockito.mock(OptionMapping::class.java)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("type")).thenReturn(typeOptionalMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("link")).thenReturn(linkOptionalMapping)
+        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("volume")).thenReturn(volumeOptionalMapping)
+        Mockito.`when`(typeOptionalMapping.asString).thenReturn("link")
+        Mockito.`when`(linkOptionalMapping.asString).thenReturn("www.testlink.com")
+        Mockito.`when`(volumeOptionalMapping.asInt).thenReturn(20)
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(2)
+        val track2 = Mockito.mock(
+            AudioTrack::class.java
+        )
+        Mockito.`when`(track2.info)
+            .thenReturn(AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri"))
+        Mockito.`when`(track2.duration).thenReturn(1000L)
+        queue.add(MusicCommandTest.track)
+        queue.add(track2)
+        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
+        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
         //Act
-        playCommand.handleMusicCommand(commandContext, playerManager, requestingUserDto, 0);
+        playCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            CommandTest.requestingUserDto,
+            0
+        )
 
-        verify(playerManager, times(1)).loadAndPlay(eq(guild), eq(event), eq("www.testlink.com"), eq(true), eq(0), eq(0L), eq(20));
+        Mockito.verify(MusicCommandTest.playerManager, Mockito.times(1)).loadAndPlay(
+            ArgumentMatchers.eq(CommandTest.guild),
+            ArgumentMatchers.eq(CommandTest.event),
+            ArgumentMatchers.eq("www.testlink.com"),
+            ArgumentMatchers.eq(true),
+            ArgumentMatchers.eq(0),
+            ArgumentMatchers.eq(0L),
+            ArgumentMatchers.eq(20)
+        )
     }
 }

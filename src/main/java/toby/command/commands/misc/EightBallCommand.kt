@@ -1,78 +1,58 @@
-package toby.command.commands.misc;
+package toby.command.commands.misc
 
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import toby.command.CommandContext;
-import toby.jpa.dto.UserDto;
-import toby.jpa.service.IUserService;
+import toby.command.CommandContext
+import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.jpa.dto.UserDto
+import toby.jpa.service.IUserService
+import java.util.*
 
-import java.util.Random;
-
-import static toby.command.ICommand.invokeDeleteOnMessageResponse;
-
-public class EightBallCommand implements IMiscCommand {
-
-
-    public static final long TOMS_DISCORD_ID = 312691905030782977L;
-    private final IUserService userService;
-
-    public EightBallCommand(IUserService userService) {
-
-        this.userService = userService;
-    }
-
-    @Override
-    public void handle(CommandContext ctx, UserDto requestingUserDto, Integer deleteDelay) {
-        SlashCommandInteractionEvent event = ctx.getEvent();
-        event.deferReply().queue();
-
-        Random r = new Random();
-
-        int choice = 1 + r.nextInt(20);
-        String response = switch (choice) {
-            case 1 -> "It is certain";
-            case 2 -> "It is decidedly so";
-            case 3 -> "Without a doubt";
-            case 4 -> "Yes - definitely";
-            case 5 -> "You may rely on it";
-            case 6 -> "As I see it, yes";
-            case 7 -> "Most likely";
-            case 8 -> "Outlook good";
-            case 9 -> "Signs point to yes";
-            case 10 -> "Yes";
-            case 11 -> "Reply hazy, try again";
-            case 12 -> "Ask again later";
-            case 13 -> "Better not tell you now";
-            case 14 -> "Cannot predict now";
-            case 15 -> "Concentrate and ask again";
-            case 16 -> "Don't count on it";
-            case 17 -> "My reply is no";
-            case 18 -> "My sources say no";
-            case 19 -> "Outlook not so good";
-            case 20 -> "Very doubtful";
-            default -> "I fucked up, please try again";
-        };
-
-        if(requestingUserDto.getDiscordId().equals(TOMS_DISCORD_ID)){
-            event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay));
-            Long socialCredit = requestingUserDto.getSocialCredit();
-            int deductedSocialCredit = -5 * choice;
-            requestingUserDto.setSocialCredit(socialCredit + deductedSocialCredit);
-            event.getHook().sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
-            userService.updateUser(requestingUserDto);
-            return;
+class EightBallCommand(private val userService: IUserService) : IMiscCommand {
+    override fun handle(ctx: CommandContext?, requestingUserDto: UserDto, deleteDelay: Int?) {
+        val event = ctx!!.event
+        event.deferReply().queue()
+        val r = Random()
+        val choice = 1 + r.nextInt(20)
+        val response = when (choice) {
+            1 -> "It is certain"
+            2 -> "It is decidedly so"
+            3 -> "Without a doubt"
+            4 -> "Yes - definitely"
+            5 -> "You may rely on it"
+            6 -> "As I see it, yes"
+            7 -> "Most likely"
+            8 -> "Outlook good"
+            9 -> "Signs point to yes"
+            10 -> "Yes"
+            11 -> "Reply hazy, try again"
+            12 -> "Ask again later"
+            13 -> "Better not tell you now"
+            14 -> "Cannot predict now"
+            15 -> "Concentrate and ask again"
+            16 -> "Don't count on it"
+            17 -> "My reply is no"
+            18 -> "My sources say no"
+            19 -> "Outlook not so good"
+            20 -> "Very doubtful"
+            else -> "I fucked up, please try again"
         }
-        event.getHook().sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(invokeDeleteOnMessageResponse(deleteDelay));
+        if (requestingUserDto.discordId == TOMS_DISCORD_ID) {
+            event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            val socialCredit = requestingUserDto.socialCredit
+            val deductedSocialCredit = -5 * choice
+            requestingUserDto.socialCredit = socialCredit.plus(deductedSocialCredit)
+            event.hook.sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            userService.updateUser(requestingUserDto)
+            return
+        }
+        event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
-    @Override
-    public String getName() {
-        return "8ball";
-    }
+    override val name: String
+        get() = "8ball"
+    override val description: String
+        get() = "Think of a question and let me divine to you an answer!"
 
-    @Override
-    public String getDescription() {
-        return "Think of a question and let me divine to you an answer!";
+    companion object {
+        const val TOMS_DISCORD_ID = 312691905030782977L
     }
-
 }
-
