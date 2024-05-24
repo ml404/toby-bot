@@ -1,14 +1,17 @@
 package toby.command.commands.misc
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
-import toby.jpa.dto.UserDto
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.interactionHook
+import toby.command.CommandTest.Companion.requestingUserDto
 
 internal class ChCommandTest : CommandTest {
     lateinit var command: ChCommand
@@ -18,13 +21,12 @@ internal class ChCommandTest : CommandTest {
         setUpCommonMocks()
         command = ChCommand()
         // Mock OptionMapping for the MESSAGE option
-        val messageOption = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`(messageOption.asString).thenReturn("hello world")
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("message")).thenReturn(messageOption)
+        val messageOption = mockk<OptionMapping>()
+        every { messageOption.asString } returns "hello world"
+        every { event.getOption("message") } returns messageOption
 
         // Mock the event to return the MESSAGE option
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption(ArgumentMatchers.anyString()))
-            .thenReturn(messageOption)
+        every { event.getOption(any()) } returns messageOption
     }
 
     @AfterEach
@@ -35,18 +37,16 @@ internal class ChCommandTest : CommandTest {
     @Test
     fun testHandle() {
         // Create a CommandContext
-        val ctx = CommandContext(CommandTest.event)
+        val ctx = CommandContext(event)
 
         // Mock requestingUserDto
-        val requestingUserDto = UserDto() // You can set the user as needed
         val deleteDelay = 0 // Set your desired deleteDelay
 
         // Test the handle method
         command.handle(ctx, requestingUserDto, deleteDelay)
 
         // Verify that the message was sent with the expected content
-        // You can use Mockito.verify() to check if event.getHook().sendMessage(...) was called with the expected message content.
-        // For example:
-        Mockito.verify(CommandTest.event.hook).sendMessage("Oh! I think you mean: 'chello chorld'")
+        // You can use verify to check if event.hook.sendMessage(...) was called with the expected message content.
+        verify(exactly = 1) { interactionHook.sendMessage("Oh! I think you mean: 'chello chorld'") }
     }
 }

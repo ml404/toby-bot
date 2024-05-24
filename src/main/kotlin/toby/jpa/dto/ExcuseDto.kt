@@ -27,7 +27,7 @@ class ExcuseDto : Serializable {
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Int? = null
+    var id: Long? = null
 
     @JvmField
     @Column(name = "guild_id")
@@ -48,7 +48,7 @@ class ExcuseDto : Serializable {
     constructor()
 
 
-    constructor(id: Int?, guildId: Long?, author: String?, excuse: String?, approved: Boolean) {
+    constructor(id: Long?, guildId: Long?, author: String?, excuse: String?, approved: Boolean) {
         this.id = id
         this.guildId = guildId
         this.author = author

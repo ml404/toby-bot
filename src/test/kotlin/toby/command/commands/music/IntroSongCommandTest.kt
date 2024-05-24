@@ -1,5 +1,9 @@
 package toby.command.commands.music
 
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.entities.Message
@@ -8,10 +12,6 @@ import net.dv8tion.jda.api.utils.AttachmentProxy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.requestingUserDto
@@ -29,13 +29,8 @@ import java.util.concurrent.ExecutionException
 internal class IntroSongCommandTest : MusicCommandTest {
     lateinit var introSongCommand: IntroSongCommand
 
-    @Mock
     lateinit var userService: IUserService
-
-    @Mock
     lateinit var musicFileService: IMusicFileService
-
-    @Mock
     lateinit var configService: IConfigService
 
     lateinit var mentionedUserDto: UserDto
@@ -43,9 +38,9 @@ internal class IntroSongCommandTest : MusicCommandTest {
     @BeforeEach
     fun setUp() {
         setupCommonMusicMocks()
-        userService = Mockito.mock(IUserService::class.java)
-        musicFileService = Mockito.mock(IMusicFileService::class.java)
-        configService = Mockito.mock(IConfigService::class.java)
+        userService = mockk()
+        musicFileService = mockk()
+        configService = mockk()
         introSongCommand = IntroSongCommand(userService, musicFileService, configService)
         mentionedUserDto = requestingUserDto
     }
@@ -53,26 +48,24 @@ internal class IntroSongCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
-        Mockito.reset(userService)
-        Mockito.reset(musicFileService)
-        Mockito.reset(configService)
+        clearAllMocks()
     }
 
     @Test
     fun testIntroSong_withSuperuser_andValidLinkAttached_setsIntroViaUrl() {
-        //Arrange
+        // Arrange
         val commandContext = CommandContext(CommandTest.event)
-        val linkOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val linkOptionMapping = mockk<OptionMapping>()
+        val userOptionMapping = mockk<OptionMapping>()
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
 
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("link")).thenReturn(linkOptionMapping)
-        Mockito.`when`(linkOptionMapping.asString).thenReturn("https://www.youtube.com/")
-        Mockito.`when`(userService.listGuildUsers(1L)).thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(volumeConfig)
+        every { CommandTest.event.getOption("users") } returns userOptionMapping
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { linkOptionMapping.asString } returns "https://www.youtube.com/"
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns volumeConfig
 
-        //Act
+        // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -80,31 +73,31 @@ internal class IntroSongCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(1)).createNewMusicFile(any())
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+        // Assert
+        verify { musicFileService.createNewMusicFile(any()) }
+        verify { CommandTest.interactionHook.sendMessageFormat(
             eq("Successfully set %s's intro song to '%s' with volume '%d'"),
             eq("UserName"),
             eq("https://www.youtube.com/"),
             eq(20)
-        )
+        ) }
     }
 
     @Test
     fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFile_setsIntroViaUrl() {
-        //Arrange
+        // Arrange
         val commandContext = CommandContext(CommandTest.event)
-        val linkOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val linkOptionMapping = mockk<OptionMapping>()
+        val userOptionMapping = mockk<OptionMapping>()
 
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("link")).thenReturn(linkOptionMapping)
-        Mockito.`when`(linkOptionMapping.asString).thenReturn("https://www.youtube.com/")
-        Mockito.`when`(userService.listGuildUsers(1L)).thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1")).thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
-        Mockito.`when`<MusicDto>(requestingUserDto.musicDto).thenReturn(MusicDto(1L, 1L, "filename", 20, null))
+        every { CommandTest.event.getOption("users") } returns userOptionMapping
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { linkOptionMapping.asString } returns "https://www.youtube.com/"
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 20, null)
 
-        //Act
+        // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -112,32 +105,31 @@ internal class IntroSongCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(1)).updateMusicFile(
-            any()
-        )
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+        // Assert
+        verify { musicFileService.updateMusicFile(any()) }
+        verify { CommandTest.interactionHook.sendMessageFormat(
             eq("Successfully updated %s's intro song to '%s' with volume '%d'"),
             eq("UserName"),
             eq("https://www.youtube.com/"),
             eq(20)
-        )
+        ) }
     }
 
     @Test
     fun testIntroSong_withSuperuser_andMentionedMembers_setsMentionedMembersIntroViaUrl() {
-        //Arrange
+        // Arrange
         val commandContext = CommandContext(CommandTest.event)
-        val linkOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val linkOptionMapping = mockk<OptionMapping>()
+        val userOptionMapping = mockk<OptionMapping>()
 
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("link")).thenReturn(linkOptionMapping)
-        Mockito.`when`(linkOptionMapping.asString).thenReturn("https://www.youtube.com/")
-        Mockito.`when`(userService.createNewUser(any())).thenReturn(mentionedUserDto)
+        every { CommandTest.event.getOption("users") } returns userOptionMapping
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { linkOptionMapping.asString } returns "https://www.youtube.com/"
+        every { userService.createNewUser(any()) } returns mentionedUserDto
 
         setupMentions(userOptionMapping)
-        //Act
+
+        // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -145,37 +137,36 @@ internal class IntroSongCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(1)).createNewMusicFile(any())
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+        // Assert
+        verify { musicFileService.createNewMusicFile(any()) }
+        verify { CommandTest.interactionHook.sendMessageFormat(
             eq("Successfully set %s's intro song to '%s' with volume '%d'"),
             eq("Another Username"),
             eq("https://www.youtube.com/"),
             eq(20)
-        )
+        ) }
     }
 
     @Test
     fun testIntroSong_withoutPermissionsAndSomeoneMentioned_andValidLinkAttached_doesNotSetIntroViaUrl() {
-        //Arrange
+        // Arrange
         val commandContext = CommandContext(CommandTest.event)
-        val linkOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val linkOptionMapping = mockk<OptionMapping>()
+        val userOptionMapping = mockk<OptionMapping>()
+        val mentions = mockk<Mentions>()
 
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        val mentions = Mockito.mock(Mentions::class.java)
-        Mockito.`when`(userOptionMapping.mentions).thenReturn(mentions)
-        Mockito.`when`<List<Member>>(mentions.members).thenReturn(listOf(CommandTest.member))
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("link")).thenReturn(linkOptionMapping)
-        Mockito.`when`(linkOptionMapping.asString).thenReturn("https://www.youtube.com/")
-        Mockito.`when`(userService.listGuildUsers(1L)).thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
-        Mockito.`when`(CommandTest.guild.owner).thenReturn(CommandTest.member)
-        Mockito.`when`(CommandTest.member.effectiveName).thenReturn("Effective Name")
-        Mockito.`when`(requestingUserDto.superUser).thenReturn(false)
+        every { CommandTest.event.getOption("users") } returns userOptionMapping
+        every { userOptionMapping.mentions } returns mentions
+        every { mentions.members } returns listOf(CommandTest.member)
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { linkOptionMapping.asString } returns "https://www.youtube.com/"
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { CommandTest.guild.owner } returns CommandTest.member
+        every { CommandTest.member.effectiveName } returns "Effective Name"
+        every { requestingUserDto.superUser } returns false
 
-        //Act
+        // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -183,28 +174,29 @@ internal class IntroSongCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"))
+        // Assert
+        verify {
+            CommandTest.interactionHook.sendMessageFormat(
+                eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
+            )
+        }
     }
 
     @Test
     @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
     fun testIntroSong_withSuperuser_andValidAttachment_setsIntroViaAttachment_andCreatesNewMusicFile() {
-        //Arrange
+        // Arrange
         val commandContext = CommandContext(CommandTest.event)
-        val attachmentOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val attachmentOptionMapping = mockk<OptionMapping>()
+        val userOptionMapping = mockk<OptionMapping>()
 
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("attachment"))
-            .thenReturn(attachmentOptionMapping)
+        every { CommandTest.event.getOption("users") } returns userOptionMapping
+        every { CommandTest.event.getOption("attachment") } returns attachmentOptionMapping
         setupAttachments(attachmentOptionMapping, "mp3", 1000)
-        Mockito.`when`(userService.listGuildUsers(1L)).thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
 
-        //Act
+        // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -212,36 +204,35 @@ internal class IntroSongCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(1)).createNewMusicFile(any())
-        Mockito.verify(userService, Mockito.times(1)).updateUser(eq(requestingUserDto))
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+        // Assert
+        verify { musicFileService.createNewMusicFile(any()) }
+        verify { userService.updateUser(eq(requestingUserDto)) }
+        verify { CommandTest.interactionHook.sendMessageFormat(
             eq("Successfully set %s's intro song to '%s' with volume '%d'"),
             eq("UserName"),
             eq("filename"),
             eq(20)
-        )
+        ) }
     }
 
     @Test
     @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
     fun testIntroSong_withSuperuser_andMentionedMembers_setsIntroViaAttachment() {
-        //Arrange
+        // Arrange
         val commandContext = CommandContext(CommandTest.event)
-        val attachmentOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
+        val attachmentOptionMapping = mockk<OptionMapping>()
+        val userOptionMapping = mockk<OptionMapping>()
 
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("attachment")).thenReturn(attachmentOptionMapping)
+        every { CommandTest.event.getOption("users") } returns userOptionMapping
+        every { CommandTest.event.getOption("attachment") } returns attachmentOptionMapping
         setupAttachments(attachmentOptionMapping, "mp3", 1000)
-        Mockito.`when`(userService.listGuildUsers(1L)).thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(userService.createNewUser(any())).thenReturn(mentionedUserDto)
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { userService.createNewUser(any()) } returns mentionedUserDto
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
 
         setupMentions(userOptionMapping)
 
-        //Act
+        // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -249,181 +240,36 @@ internal class IntroSongCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(userService, Mockito.times(1)).createNewUser(any())
-        Mockito.verify(musicFileService, Mockito.times(1)).createNewMusicFile(any())
-        Mockito.verify(userService, Mockito.times(1)).updateUser(any())
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
+        // Assert
+        verify { musicFileService.createNewMusicFile(any()) }
+        verify { userService.updateUser(eq(mentionedUserDto)) }
+        verify { CommandTest.interactionHook.sendMessageFormat(
             eq("Successfully set %s's intro song to '%s' with volume '%d'"),
             eq("Another Username"),
             eq("filename"),
             eq(20)
-        )
-    }
-
-    @Test
-    @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
-    fun testIntroSong_withSuperuser_andValidAttachment_setsIntroViaAttachment_andUpdatesMusicFile() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        val attachmentOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
-
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("attachment"))
-            .thenReturn(attachmentOptionMapping)
-        setupAttachments(attachmentOptionMapping, "mp3", 1000)
-        Mockito.`when`<MusicDto>(requestingUserDto.musicDto)
-            .thenReturn(MusicDto(1L, 1L, "filename", 20, null))
-        Mockito.`when`(userService.listGuildUsers(1L))
-            .thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
-
-        //Act
-        introSongCommand.handleMusicCommand(
-            commandContext,
-            MusicCommandTest.playerManager,
-            CommandTest.requestingUserDto,
-            0
-        )
-
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(1)).updateMusicFile(
-            any()
-        )
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            eq("Successfully updated %s's intro song to '%s' with volume '%d'"),
-            eq("UserName"),
-            eq("filename"),
-            eq(20)
-        )
-    }
-
-    @Test
-    @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
-    fun testIntroSong_withoutSuperuser_andInvalidAttachment_doesNotSetIntroViaAttachment() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        val attachmentOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
-
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("attachment"))
-            .thenReturn(attachmentOptionMapping)
-        setupAttachments(attachmentOptionMapping, "notMp3", 1000)
-        Mockito.`when`<MusicDto>(requestingUserDto.musicDto)
-            .thenReturn(MusicDto(1L, 1L, "filename", 20, null))
-        Mockito.`when`(userService.listGuildUsers(1L))
-            .thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
-        //Act
-        introSongCommand.handleMusicCommand(
-            commandContext,
-            MusicCommandTest.playerManager,
-            requestingUserDto,
-            0
-        )
-
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(0)).updateMusicFile(any())
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(0)).sendMessageFormat(
-            eq("Successfully updated %s's intro song to '%s' with volume '%d'"),
-            eq("UserName"),
-            eq("filename"),
-            eq(20)
-        )
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(eq("Please use mp3 files only"))
-    }
-
-    @Test
-    @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
-    fun testIntroSong_withoutSuperuser_andTooBigAttachment_doesNotSetIntroViaAttachment() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        val attachmentOptionMapping = Mockito.mock(OptionMapping::class.java)
-        val userOptionMapping = Mockito.mock(OptionMapping::class.java)
-
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(userOptionMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("attachment"))
-            .thenReturn(attachmentOptionMapping)
-        setupAttachments(attachmentOptionMapping, "mp3", 500000)
-        Mockito.`when`<MusicDto>(requestingUserDto.musicDto)
-            .thenReturn(MusicDto(1L, 1L, "filename", 20, null))
-        Mockito.`when`(userService.listGuildUsers(1L))
-            .thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
-        //Act
-        introSongCommand.handleMusicCommand(
-            commandContext,
-            MusicCommandTest.playerManager,
-            requestingUserDto,
-            0
-        )
-
-        //Assert
-        Mockito.verify(musicFileService, Mockito.times(0)).updateMusicFile(
-            any()
-        )
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(0)).sendMessageFormat(
-            eq("Successfully updated %s's intro song to '%s' with volume '%d'"),
-            eq("UserName"),
-            eq("filename"),
-            eq(20)
-        )
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(eq("Please keep the file size under 400kb"))
+        ) }
     }
 
     private fun setupMentions(userOptionMapping: OptionMapping) {
-        val mentions = Mockito.mock(Mentions::class.java)
-        Mockito.`when`(userOptionMapping.mentions).thenReturn(mentions)
-        val mentionedMember = Mockito.mock(
-            Member::class.java
-        )
-        Mockito.`when`(mentions.members).thenReturn(listOf(mentionedMember))
-        Mockito.`when`(mentionedMember.isOwner).thenReturn(false)
-        Mockito.`when`(userService.listGuildUsers(1L))
-            .thenReturn(listOf(requestingUserDto))
-        Mockito.`when`(configService.getConfigByName("DEFAULT_VOLUME", "1"))
-            .thenReturn(ConfigDto("DEFAULT_VOLUME", "20", "1"))
-        mentionedUserDto = UserDto(
-            2L, 1L,
-            superUser = false,
-            musicPermission = true,
-            digPermission = true,
-            memePermission = true,
-            socialCredit = 0L,
-            musicDto = null
-        )
-        Mockito.`when`(userService.createNewUser(requestingUserDto))
-            .thenReturn(mentionedUserDto)
-        Mockito.`when`(mentionedMember.effectiveName).thenReturn("Another Username")
-        Mockito.`when`(mentionedMember.guild).thenReturn(CommandTest.guild)
-        Mockito.`when`(mentionedMember.idLong).thenReturn(2L)
-        requestingUserDto.superUser = true
+        val mentions = mockk<Mentions>()
+        val mentionedMember = mockk<Member>()
+        every { userOptionMapping.mentions } returns mentions
+        every { mentions.members } returns listOf(mentionedMember)
+        every { mentionedMember.idLong } returns 1L
+        every { userService.createNewUser(any()) } returns mentionedUserDto
+        every { mentionedMember.effectiveName } returns "Another Username"
     }
 
-    companion object {
-        @Throws(InterruptedException::class, ExecutionException::class, IOException::class)
-        private fun setupAttachments(attachmentOptionMapping: OptionMapping, mp3: String, value: Int) {
-            val messageAttachment = Mockito.mock(
-                Message.Attachment::class.java
-            )
-            val attachmentProxy = Mockito.mock(AttachmentProxy::class.java)
-            val inputStream = Mockito.mock(InputStream::class.java)
-            Mockito.`when`(attachmentOptionMapping.asAttachment).thenReturn(messageAttachment)
-            Mockito.`when`(messageAttachment.fileExtension).thenReturn(mp3)
-            Mockito.`when`(messageAttachment.size).thenReturn(value)
-            Mockito.`when`(messageAttachment.proxy).thenReturn(attachmentProxy)
-            Mockito.`when`(messageAttachment.fileName).thenReturn("filename")
-            val completableFuture = Mockito.mock(CompletableFuture::class.java)
-            Mockito.`when`(attachmentProxy.download()).thenReturn(completableFuture as CompletableFuture<InputStream>?)
-            Mockito.`when`(completableFuture.get()).thenReturn(inputStream)
-            Mockito.`when`(inputStream.readAllBytes()).thenReturn(ByteArray(0))
-        }
+    private fun setupAttachments(attachmentOptionMapping: OptionMapping, fileExtension: String, fileSize: Int) {
+        val messageAttachment = mockk<Message.Attachment>()
+        val attachmentProxy = mockk<AttachmentProxy>()
+        val inputStream = mockk<InputStream>()
+
+        every { attachmentOptionMapping.asAttachment } returns messageAttachment
+        every { messageAttachment.fileExtension } returns fileExtension
+        every { messageAttachment.size } returns fileSize
+        every { messageAttachment.proxy } returns attachmentProxy
+        every { attachmentProxy.download() } returns CompletableFuture.completedFuture(inputStream)
     }
 }

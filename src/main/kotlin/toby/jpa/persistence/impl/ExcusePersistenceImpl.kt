@@ -38,7 +38,7 @@ open class ExcusePersistenceImpl internal constructor() : IExcusePersistence {
     }
 
 
-    override fun getExcuseById(id: Int?): ExcuseDto {
+    override fun getExcuseById(id: Long?): ExcuseDto {
         val excuseQuery: Query = entityManager!!.createNamedQuery("ExcuseDto.getById", ExcuseDto::class.java)
         excuseQuery.setParameter("id", id)
         return excuseQuery.singleResult as ExcuseDto
@@ -61,7 +61,7 @@ open class ExcusePersistenceImpl internal constructor() : IExcusePersistence {
         excuseQuery.executeUpdate()
     }
 
-    override fun deleteExcuseById(id: Int?) {
+    override fun deleteExcuseById(id: Long?) {
         val excuseQuery = entityManager!!.createNamedQuery("ExcuseDto.deleteById")
         excuseQuery.setParameter("id", id)
         excuseQuery.executeUpdate()

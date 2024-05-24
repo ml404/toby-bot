@@ -1,47 +1,41 @@
 package toby.menu
 
-import net.dv8tion.jda.api.entities.Guild
+import io.mockk.*
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.kotlin.anyVararg
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.guild
+import toby.command.CommandTest.Companion.interactionHook
+import toby.command.CommandTest.Companion.message
+import toby.command.CommandTest.Companion.replyCallbackAction
+import toby.command.CommandTest.Companion.user
+import toby.command.commands.music.MusicCommandTest.Companion.auditableRestAction
 
 interface MenuTest : CommandTest {
     @BeforeEach
     fun setUpMenuMocks() {
         setUpCommonMocks()
-        Mockito.`when`(menuEvent.hook).thenReturn(CommandTest.interactionHook)
-        Mockito.`when`(menuEvent.deferReply())
-            .thenReturn(CommandTest.replyCallbackAction)
-        Mockito.`when`(menuEvent.deferReply())
-            .thenReturn(CommandTest.replyCallbackAction)
-        Mockito.`when`<Guild>(menuEvent.guild).thenReturn(CommandTest.guild)
-        Mockito.`when`(menuEvent.user).thenReturn(CommandTest.user)
-        Mockito.`when`(menuEvent.reply(ArgumentMatchers.anyString()))
-            .thenReturn(CommandTest.replyCallbackAction)
-        Mockito.`when`(
-            menuEvent.replyFormat(
-                ArgumentMatchers.anyString(),
-                anyVararg()
-            )
-        ).thenReturn(CommandTest.replyCallbackAction)
+        every { menuEvent.hook } returns interactionHook
+        every { menuEvent.deferReply() } returns replyCallbackAction
+        every { menuEvent.guild } returns guild
+        every { menuEvent.user } returns user
+        every { menuEvent.reply(any<String>()) } returns replyCallbackAction
+        every { menuEvent.replyFormat(any<String>(), *anyVararg()) } returns replyCallbackAction
+        every { menuEvent.message } returns message
+        every { message.delete() } returns auditableRestAction as AuditableRestAction<Void>
+        every { menuEvent.message.delete().queue() } just runs
+
     }
 
     @AfterEach
     fun tearDownMenuMocks() {
         tearDownCommonMocks()
-        Mockito.reset(menuEvent)
+        clearMocks(menuEvent)
     }
 
-
     companion object {
-        @Mock
-        val menuEvent: StringSelectInteractionEvent = Mockito.mock(
-            StringSelectInteractionEvent::class.java
-        )
+        val menuEvent: StringSelectInteractionEvent = mockk()
     }
 }

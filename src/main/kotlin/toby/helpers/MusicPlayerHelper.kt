@@ -305,7 +305,4 @@ object MusicPlayerHelper {
     fun resetMessages(guildId: Long) {
         resetNowPlayingMessage(guildId)
     }
-
-    fun Guild.idString() = idLong.toString()
-
 }

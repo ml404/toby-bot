@@ -1,16 +1,15 @@
 package toby.command.commands.misc
 
+import io.mockk.*
+import io.mockk.InternalPlatformDsl.toStr
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.kotlin.any
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.requestingUserDto
 import toby.jpa.dto.ExcuseDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IExcuseService
@@ -18,13 +17,12 @@ import toby.jpa.service.IExcuseService
 internal class ExcuseCommandTest : CommandTest {
     lateinit var excuseCommand: ExcuseCommand
 
-    @Mock
     lateinit var excuseService: IExcuseService
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        excuseService = Mockito.mock(IExcuseService::class.java)
+        excuseService = mockk()
         excuseCommand = ExcuseCommand(excuseService)
     }
 
@@ -34,41 +32,40 @@ internal class ExcuseCommandTest : CommandTest {
     }
 
     @Test
-    fun aRandomApprovedExcuse_WhenNoOptionsUsed(){
+    fun aRandomApprovedExcuse_WhenNoOptionsUsed() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
         val excuseDto = ExcuseDto(1, 1L, "TestAuthor", "Excuse 1", true)
-        val excuseDtos: List<ExcuseDto?> = listOf(
-            excuseDto
-        )
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options)
-            .thenReturn(emptyList())
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asString).thenReturn("all")
-        Mockito.`when`(excuseService.listApprovedGuildExcuses(Mockito.anyLong())).thenReturn(excuseDtos)
+        val excuseDtos: List<ExcuseDto?> = listOf(excuseDto)
+        val optionMapping = mockk<OptionMapping>()
+        every { event.options } returns emptyList()
+        every { event.getOption("action") } returns optionMapping
+        every { optionMapping.asString } returns "all"
+        every { excuseService.listApprovedGuildExcuses(any()) } returns excuseDtos
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            eq("Excuse #%d: '%s' - %s."),
-            eq<Int?>(excuseDto.id),
-            eq<String?>(excuseDto.excuse),
-            eq<String?>(excuseDto.author)
-        )
+        verify {
+            event.hook.sendMessageFormat(
+                "Excuse #%d: '%s' - %s.",
+                excuseDto.id,
+                excuseDto.excuse,
+                excuseDto.author
+            )
+        }
     }
 
     @Test
     fun listAllApprovedExcuses_WithValidApprovedOnes() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -77,182 +74,168 @@ internal class ExcuseCommandTest : CommandTest {
             ExcuseDto(2, 1L, "TestAuthor", "Excuse 2", true),
             ExcuseDto(3, 1L, "TestAuthor", "Excuse 3", true)
         )
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(optionMapping))
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asString).thenReturn("all")
-        Mockito.`when`(excuseService.listApprovedGuildExcuses(Mockito.anyLong())).thenReturn(excuseDtos)
+        val optionMapping = mockk<OptionMapping>()
+        every { event.options } returns listOf(optionMapping)
+        every { event.getOption("action") } returns optionMapping
+        every { optionMapping.asString } returns "all"
+        every { excuseService.listApprovedGuildExcuses(any()) } returns excuseDtos
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.anyString())
+        verify { event.hook.sendMessage(any<String>()) }
     }
 
     @Test
     fun listAllApprovedExcuses_WithNoValidApprovedOnes() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options)
-            .thenReturn(emptyList())
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asString).thenReturn("all")
-        Mockito.`when`(excuseService.listApprovedGuildExcuses(Mockito.anyLong())).thenReturn(emptyList<ExcuseDto>())
+        val optionMapping = mockk<OptionMapping>()
+        every { event.options } returns emptyList()
+        every { event.getOption("action") } returns optionMapping
+        every { optionMapping.asString } returns "all"
+        every { excuseService.listApprovedGuildExcuses(any()) } returns emptyList<ExcuseDto>()
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(eq("There are no approved excuses, consider submitting some."))
+        verify { event.hook.sendMessage("There are no approved excuses, consider submitting some.") }
     }
 
     @Test
     fun createNewExcuse() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
-        val excuseMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("excuse")).thenReturn(excuseMapping)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(excuseMapping))
-        Mockito.`when`(excuseMapping.asString).thenReturn("Excuse 1")
-        Mockito.`when`(excuseService.listAllGuildExcuses(1L)).thenReturn(emptyList<ExcuseDto>())
-        Mockito.`when`(excuseService.createNewExcuse(any()))
-            .thenReturn(excuseToCreate)
+        val excuseMapping = mockk<OptionMapping>()
+        val actionMapping = mockk<OptionMapping>()
+        val authorMapping = mockk<OptionMapping>()
+        every { event.getOption("excuse") } returns excuseMapping
+        every { event.getOption("action") } returns actionMapping
+        every { event.getOption("author") } returns authorMapping
+        every { event.options } returns listOf(excuseMapping)
+        every { actionMapping.asString } returns null.toStr()
+        every { excuseMapping.asString } returns "Excuse 1"
+        every { authorMapping.asMember } returns null
+        every { excuseService.listAllGuildExcuses(1L) } returns emptyList<ExcuseDto>()
+        every { excuseService.createNewExcuse(any()) } returns excuseToCreate
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        //see if excuse exists
-        Mockito.verify(excuseService, Mockito.times(1)).listAllGuildExcuses(1L)
-        // it doesn't, so create it
-        Mockito.verify(excuseService, Mockito.times(1))
-            .createNewExcuse(eq(ExcuseDto(null, 1L, "UserName", "Excuse 1", false)))
-        // send a message that your excuse exists in pending form
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.anyString(),
-            eq<String?>(excuseToCreate.excuse),
-            eq<String?>(excuseToCreate.author),
-            eq<Int?>(excuseToCreate.id)
-        )
+        verify {
+            excuseService.listAllGuildExcuses(1L)
+            excuseService.createNewExcuse(ExcuseDto(null, 1L, "UserName", "Excuse 1", false))
+            event.hook.sendMessageFormat(any(), excuseToCreate.excuse, excuseToCreate.author, excuseToCreate.id)
+        }
     }
 
     @Test
     fun createNewExcuse_thatExists_throwsError() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
 
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
-        val excuseDtos: List<ExcuseDto?> = listOf(
-            excuseToCreate
-        )
-        val excuseMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("excuse")).thenReturn(excuseMapping)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(excuseMapping))
-        Mockito.`when`(excuseMapping.asString).thenReturn("Excuse 1")
-        Mockito.`when`(excuseService.listAllGuildExcuses(1L)).thenReturn(excuseDtos)
-        Mockito.`when`(excuseService.createNewExcuse(any()))
-            .thenReturn(excuseToCreate)
+        val excuseDtos: List<ExcuseDto?> = listOf(excuseToCreate)
+        val excuseMapping = mockk<OptionMapping>()
+        val actionMapping = mockk<OptionMapping>()
+        val authorMapping = mockk<OptionMapping>()
+        every { event.getOption("excuse") } returns excuseMapping
+        every { event.getOption("action") } returns actionMapping
+        every { event.getOption("author") } returns authorMapping
+        every { actionMapping.asString } returns null.toString()
+        every { authorMapping.asMember } returns null
+        every { event.options } returns listOf(excuseMapping)
+        every { excuseMapping.asString } returns "Excuse 1"
+        every { excuseService.listAllGuildExcuses(1L) } returns excuseDtos
+        every { excuseService.createNewExcuse(any()) } returns excuseToCreate
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        //see if excuse exists
-        Mockito.verify(excuseService, Mockito.times(1)).listAllGuildExcuses(1L)
-        // it does, so don't create it
-        Mockito.verify(excuseService, Mockito.times(0))
-            .createNewExcuse(eq(ExcuseDto(null, 1L, "UserName", "Excuse 1", false)))
-        // send a message that your excuse exists in pending form
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(eq("I've heard that one before, keep up."))
+        verify {
+            excuseService.listAllGuildExcuses(1L)
+            event.hook.sendMessage("I've heard that one before, keep up.")
+        }
+        verify(exactly = 0) { excuseService.createNewExcuse(any()) }
     }
 
     @Test
     fun approvePendingExcuse_asSuperUser() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
         val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = Mockito.mock(OptionMapping::class.java)
-        val actionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("id")).thenReturn(excuseMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(actionMapping)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(excuseMapping))
-        Mockito.`when`(userDto.superUser).thenReturn(true)
-        Mockito.`when`(excuseMapping.asInt).thenReturn(1)
-        Mockito.`when`(actionMapping.asString).thenReturn("approve")
-        Mockito.`when`(excuseService.getExcuseById(1)).thenReturn(preUpdatedExcuse)
-        Mockito.`when`(excuseService.updateExcuse(any())).thenReturn(excuseToBeReturnedByUpdate)
+        val excuseMapping = mockk<OptionMapping>()
+        val actionMapping = mockk<OptionMapping>()
+        every { event.getOption("id") } returns excuseMapping
+        every { event.getOption("action") }.returns(actionMapping)
+        every { event.options } returns listOf(excuseMapping)
+        every { userDto.superUser } returns true
+        every { excuseMapping.asInt } returns 1
+        every { excuseMapping.asLong } returns 1
+        every { actionMapping.asString } returns "approve"
+        every { excuseService.getExcuseById(1) } returns preUpdatedExcuse
+        every { excuseService.updateExcuse(any()) } returns excuseToBeReturnedByUpdate
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        //see if excuse exists
-        Mockito.verify(excuseService, Mockito.times(1)).getExcuseById(eq(excuseToBeReturnedByUpdate.id))
-
-        // it doesn't, so create it
-        Mockito.verify(excuseService, Mockito.times(1)).updateExcuse(any())
-        // send a message that your excuse exists in pending form
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.anyString(),
-            eq<String?>(excuseToBeReturnedByUpdate.excuse)
-        )
+        verify {
+            excuseService.getExcuseById(excuseToBeReturnedByUpdate.id)
+            excuseService.updateExcuse(any())
+            event.hook.sendMessageFormat(any(), excuseToBeReturnedByUpdate.excuse)
+        }
     }
 
     @Test
     fun approvePendingExcuse_asNonAuthorisedUser() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
         val deleteDelay = 0
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = Mockito.mock(OptionMapping::class.java)
-        val actionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("id")).thenReturn(excuseMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(actionMapping)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(excuseMapping))
-        Mockito.`when`(excuseMapping.asInt).thenReturn(1)
-        Mockito.`when`(actionMapping.asString).thenReturn("approve")
-        Mockito.`when`(excuseService.getExcuseById(1)).thenReturn(excuseToCreate)
-        Mockito.`when`(excuseService.updateExcuse(any()))
-            .thenReturn(excuseToCreate)
-        Mockito.`when`(CommandTest.guild.owner).thenReturn(CommandTest.member)
-        Mockito.`when`(CommandTest.member.effectiveName).thenReturn("Effective Name")
+        val excuseMapping = mockk<OptionMapping>()
+        val actionMapping = mockk<OptionMapping>()
+        every { event.getOption("id") } returns excuseMapping
+        every { event.getOption("action") } returns actionMapping
+        every { event.options } returns listOf(excuseMapping)
+        every { excuseMapping.asInt } returns 1
+        every { actionMapping.asString } returns "approve"
+        every { excuseService.getExcuseById(1) } returns excuseToCreate
+        every { excuseService.updateExcuse(any()) } returns excuseToCreate
+        every { CommandTest.guild.owner } returns CommandTest.member
+        every { CommandTest.member.effectiveName } returns "Effective Name"
+        every { requestingUserDto.superUser } returns false
+
         // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
+        excuseCommand.handle(ctx, requestingUserDto, deleteDelay)
 
         // Assert
-        // send a message to say you're not authorised
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"))
-        //don't do lookups
-        Mockito.verify(excuseService, Mockito.times(0)).getExcuseById(eq(excuseToCreate.id))
-        //don't approve
-        Mockito.verify(excuseService, Mockito.times(0)).updateExcuse(any())
+        verify {
+            event.hook.sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
+        }
     }
-
 
     @Test
     fun listAllPendingExcuses_WithValidPendingOnes() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -261,108 +244,95 @@ internal class ExcuseCommandTest : CommandTest {
             ExcuseDto(2, 1L, "TestAuthor", "Excuse 2", true),
             ExcuseDto(3, 1L, "TestAuthor", "Excuse 3", true)
         )
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(optionMapping))
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asString).thenReturn("pending")
-        Mockito.`when`(excuseService.listPendingGuildExcuses(Mockito.anyLong())).thenReturn(excuseDtos)
+        val optionMapping = mockk<OptionMapping>()
+        every { event.options } returns listOf(optionMapping)
+        every { event.getOption("action") } returns optionMapping
+        every { optionMapping.asString } returns "pending"
+        every { excuseService.listPendingGuildExcuses(any()) } returns excuseDtos
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.anyString())
+        verify { event.hook.sendMessage(any<String>()) }
     }
 
     @Test
     fun listAllPendingExcuses_WithNoValidPendingOnes() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(optionMapping))
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asString).thenReturn("pending")
-        Mockito.`when`(excuseService.listPendingGuildExcuses(Mockito.anyLong())).thenReturn(emptyList<ExcuseDto>())
+        val optionMapping = mockk<OptionMapping>()
+        every { event.options } returns listOf(optionMapping)
+        every { event.getOption("action") } returns optionMapping
+        every { optionMapping.asString } returns "pending"
+        every { excuseService.listPendingGuildExcuses(any()) } returns emptyList<ExcuseDto>()
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(eq("There are no excuses pending approval, consider submitting some."))
+        verify { event.hook.sendMessage("There are no excuses pending approval, consider submitting some.") }
     }
 
     @Test
     fun deleteExcuse_asValidUser() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
-        val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = Mockito.mock(OptionMapping::class.java)
-        val actionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("id")).thenReturn(excuseMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(actionMapping)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(excuseMapping))
-        Mockito.`when`(userDto.superUser).thenReturn(true)
-        Mockito.`when`(excuseMapping.asInt).thenReturn(1)
-        Mockito.`when`(actionMapping.asString).thenReturn("delete")
-        Mockito.`when`(excuseService.getExcuseById(1)).thenReturn(preUpdatedExcuse)
-        Mockito.`when`(excuseService.updateExcuse(any()))
-            .thenReturn(excuseToBeReturnedByUpdate)
+        val excuseMapping = mockk<OptionMapping>()
+        val actionMapping = mockk<OptionMapping>()
+        every { event.getOption("id") } returns excuseMapping
+        every { event.getOption("action") } returns actionMapping
+        every { event.options } returns listOf(excuseMapping)
+        every { userDto.superUser } returns true
+        every { excuseMapping.asLong } returns 1
+        every { actionMapping.asString } returns "delete"
+        every { excuseService.deleteExcuseById(1L) } just Runs
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        // deleteById
-        Mockito.verify(excuseService, Mockito.times(1)).deleteExcuseById(eq(1))
-        // post update about deleting entry
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(ArgumentMatchers.anyString(), eq<Int?>(excuseToBeReturnedByUpdate.id))
+        verify {
+            excuseService.deleteExcuseById(any())
+            event.hook.sendMessageFormat(any(), excuseToBeReturnedByUpdate.id)
+        }
     }
 
     @Test
     fun deleteExcuse_asInvalidUser() {
         // Arrange
-        val ctx = CommandContext(CommandTest.event)
-        val userDto = Mockito.mock(UserDto::class.java)
+        val ctx = CommandContext(event)
+        val userDto = mockk<UserDto>()
         val deleteDelay = 0
         val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = Mockito.mock(OptionMapping::class.java)
-        val actionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("id")).thenReturn(excuseMapping)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("action")).thenReturn(actionMapping)
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf(excuseMapping))
-        Mockito.`when`(userDto.superUser).thenReturn(false)
-        Mockito.`when`(excuseMapping.asInt).thenReturn(1)
-        Mockito.`when`(actionMapping.asString).thenReturn("delete")
-        Mockito.`when`(CommandTest.guild.owner).thenReturn(CommandTest.member)
-        Mockito.`when`(CommandTest.member.effectiveName).thenReturn("Effective Name")
-        Mockito.`when`(excuseService.getExcuseById(1)).thenReturn(preUpdatedExcuse)
-        Mockito.`when`(excuseService.updateExcuse(any()))
-            .thenReturn(excuseToBeReturnedByUpdate)
+        val excuseMapping = mockk<OptionMapping>()
+        val actionMapping = mockk<OptionMapping>()
+        every { event.getOption("id") } returns excuseMapping
+        every { event.getOption("action") } returns actionMapping
+        every { event.options } returns listOf(excuseMapping)
+        every { userDto.superUser } returns false
+        every { excuseMapping.asInt } returns 1
+        every { actionMapping.asString } returns "delete"
+        every { CommandTest.guild.owner } returns CommandTest.member
+        every { CommandTest.member.effectiveName } returns "Effective Name"
+        every { excuseService.getExcuseById(1) } returns preUpdatedExcuse
+        every { excuseService.updateExcuse(any()) } returns excuseToBeReturnedByUpdate
 
         // Act
         excuseCommand.handle(ctx, userDto, deleteDelay)
 
         // Assert
-        // deleteById
-        Mockito.verify(excuseService, Mockito.times(0)).deleteExcuseById(eq(1))
-        // post error message
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name"))
-    }
-
-    @Test
-    fun testHandle_InvalidAction() {
-        // Test for handling an invalid action case
+        verify {
+            event.hook.sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
+        }
+        verify(exactly = 0) { excuseService.deleteExcuseById(1) }
     }
 }

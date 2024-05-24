@@ -13,7 +13,7 @@ class RandomCommand : IMiscCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
-        if (ctx.event.options.isEmpty()) {
+        if (event.options.isEmpty()) {
             event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }

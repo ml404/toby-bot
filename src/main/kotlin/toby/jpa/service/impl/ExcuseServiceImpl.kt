@@ -34,7 +34,7 @@ open class ExcuseServiceImpl : IExcuseService {
     }
 
     @CachePut(value = ["excuses"], key = "#id")
-    override fun getExcuseById(id: Int?): ExcuseDto {
+    override fun getExcuseById(id: Long?): ExcuseDto {
         return excuseService.getExcuseById(id)
     }
 
@@ -49,7 +49,7 @@ open class ExcuseServiceImpl : IExcuseService {
     }
 
     @CacheEvict(value = ["excuses"], key = "#id")
-    override fun deleteExcuseById(id: Int?) {
+    override fun deleteExcuseById(id: Long?) {
         excuseService.deleteExcuseById(id)
     }
 
