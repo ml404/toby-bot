@@ -7,9 +7,9 @@ interface IExcuseService {
     fun listApprovedGuildExcuses(guildId: Long?): List<ExcuseDto?>
     fun listPendingGuildExcuses(guildId: Long?): List<ExcuseDto?>
     fun createNewExcuse(excuseDto: ExcuseDto?): ExcuseDto?
-    fun getExcuseById(id: Int?): ExcuseDto?
+    fun getExcuseById(id: Long?): ExcuseDto?
     fun updateExcuse(excuseDto: ExcuseDto): ExcuseDto?
     fun deleteExcuseByGuildId(guildId: Long?)
-    fun deleteExcuseById(id: Int?)
+    fun deleteExcuseById(id: Long?)
     fun clearCache()
 }

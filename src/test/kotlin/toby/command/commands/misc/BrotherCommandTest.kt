@@ -1,134 +1,120 @@
 package toby.command.commands.misc
 
-import net.dv8tion.jda.api.entities.Guild
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Mentions
-import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.jda
+import toby.command.CommandTest.Companion.requestingUserDto
+import toby.command.CommandTest.Companion.user
 import toby.emote.Emotes
 import toby.jpa.dto.BrotherDto
-import toby.jpa.dto.UserDto
 import toby.jpa.service.IBrotherService
-import java.util.*
 
 internal class BrotherCommandTest : CommandTest {
-    @Mock
     lateinit var brotherService: IBrotherService
-
-    @Mock
-    private var tobyEmote: Emoji? = null
-
+    lateinit var tobyEmote: RichCustomEmoji
     lateinit var brotherCommand: BrotherCommand
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        brotherService = Mockito.mock(IBrotherService::class.java)
-        tobyEmote = Mockito.mock(RichCustomEmoji::class.java)
+        brotherService = mockk()
+        tobyEmote = mockk()
         brotherCommand = BrotherCommand(brotherService)
     }
 
     @AfterEach
     fun tearDown() {
         tearDownCommonMocks()
-        Mockito.reset(brotherService)
-        Mockito.reset(tobyEmote)
+        clearMocks(brotherService, tobyEmote)
     }
 
     @Test
     fun testDetermineBrother_BrotherExistsWithNoMention() {
-        val mentions = Optional.empty<Mentions>()
-        val user = Mockito.mock(UserDto::class.java)
-        val brotherDto = BrotherDto()
-        brotherDto.brotherName = "TestBrother"
+        // Arrange
+        val mentions = mockk<Mentions>()
+        val brotherDto = BrotherDto().apply {
+            discordId = 1L
+            brotherName = "TestBrother"
+        }
 
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("brother")).thenReturn(optionMapping)
-        Mockito.`when`(CommandTest.event.user).thenReturn(
-            Mockito.mock(
-                User::class.java
-            )
-        )
-        Mockito.`when`(brotherService.getBrotherById(user.discordId)).thenReturn(brotherDto)
-        Mockito.`when`<Guild>(CommandTest.event.guild).thenReturn(CommandTest.guild)
-        Mockito.`when`<RichCustomEmoji?>(CommandTest.jda.getEmojiById(Emotes.TOBY))
-            .thenReturn(tobyEmote as RichCustomEmoji?)
+        val optionMapping = mockk<OptionMapping>()
+
+        every { event.getOption("brother") } returns optionMapping
+        every { event.user.idLong } returns 1L
+        every { user.idLong } returns 1L
+        every { brotherService.getBrotherById(1) } returns brotherDto
+        every { optionMapping.mentions } returns mentions
+        every { mentions.members } returns emptyList()
+        every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContext(CommandTest.event), UserDto(), 0)
+        brotherCommand.handle(CommandContext(event), requestingUserDto, 0)
 
         // Assert
-        // Verify that the expected response is sent
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(ArgumentMatchers.anyString(), ArgumentMatchers.eq<String?>(brotherDto.brotherName))
+        verify(exactly = 1) {
+            event.hook.sendMessage(any<String>())
+        }
     }
 
     @Test
     fun testDetermineBrother_BrotherDoesntExistWithNoMention() {
         // Arrange
-        val mentions = Optional.empty<Mentions>()
-        val userDto = Mockito.mock(UserDto::class.java)
-        val user = Mockito.mock(User::class.java)
-        val brotherDto = BrotherDto()
-        brotherDto.brotherName = "TestBrother"
+        val mentions = mockk<Mentions>()
+        val brotherDto = BrotherDto().apply {
+            discordId = 1
+            brotherName = "TestBrother"
+        }
 
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("brother")).thenReturn(optionMapping)
-        Mockito.`when`(CommandTest.event.user).thenReturn(user)
-        Mockito.`when`(user.name).thenReturn("userName")
-        Mockito.`when`(brotherService.getBrotherById(userDto.discordId)).thenReturn(null)
-        Mockito.`when`<Guild>(CommandTest.event.guild).thenReturn(CommandTest.guild)
-        Mockito.`when`(CommandTest.guild.jda).thenReturn(CommandTest.jda)
-        Mockito.`when`<RichCustomEmoji?>(CommandTest.jda.getEmojiById(Emotes.TOBY))
-            .thenReturn(tobyEmote as RichCustomEmoji?)
+        val optionMapping = mockk<OptionMapping>()
+
+        every { event.getOption("brother") } returns optionMapping
+        every { optionMapping.mentions } returns mentions
+        every { mentions.members } returns emptyList()
+        every { event.user } returns user
+        every { brotherService.getBrotherById(1) } returns null
+        every { event.guild } returns CommandTest.guild
+        every { CommandTest.guild.jda } returns jda
+        every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContext(CommandTest.event), UserDto(), 0)
+        brotherCommand.handle(CommandContext(event), requestingUserDto, 0)
 
         // Assert
-        // Sends an angry message saying you're not my fucking brother with the toby emoji
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq<Emoji?>(tobyEmote)
-        )
+        verify(exactly = 1) {
+            event.hook.sendMessage(any<String>())
+        }
     }
 
     @Test
     fun testDetermineBrother_CalledByToby() {
-        //Arrange
-        val userDto = Mockito.mock(UserDto::class.java)
-        val user = Mockito.mock(User::class.java)
-        val brotherDto = BrotherDto()
-        brotherDto.brotherName = "TestBrother"
+        // Arrange
 
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`(CommandTest.event.user).thenReturn(user)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("brother")).thenReturn(optionMapping)
-        Mockito.`when`(CommandTest.event.user).thenReturn(user)
-        Mockito.`when`(user.idLong).thenReturn(BrotherCommand.tobyId)
-        Mockito.`when`(brotherService.getBrotherById(userDto.discordId)).thenReturn(null)
-        Mockito.`when`<Guild>(CommandTest.event.guild).thenReturn(CommandTest.guild)
-        Mockito.`when`(CommandTest.guild.jda).thenReturn(CommandTest.jda)
-        Mockito.`when`<RichCustomEmoji?>(CommandTest.jda.getEmojiById(Emotes.TOBY))
-            .thenReturn(tobyEmote as RichCustomEmoji?)
+        val optionMapping = mockk<OptionMapping>()
 
+        every { event.getOption("brother") } returns optionMapping
+        every { user.idLong } returns BrotherCommand.tobyId
+        every { brotherService.getBrotherById(1) } returns null
+        every { event.guild } returns CommandTest.guild
+        every { CommandTest.guild.jda } returns jda
+        every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContext(CommandTest.event), UserDto(), 0)
+        brotherCommand.handle(CommandContext(event), requestingUserDto, 0)
 
         // Assert
-        // Sends 'You're not my fucking brother Toby, you're me'
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(ArgumentMatchers.anyString(), ArgumentMatchers.eq<Emoji?>(tobyEmote))
+        verify(exactly = 1) {
+            event.hook.sendMessage(any<String>())
+        }
     }
 }

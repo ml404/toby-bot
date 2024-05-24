@@ -13,7 +13,8 @@ class DndMenu : IMenu {
         val event = ctx.selectEvent
         event.deferReply().queue()
         try {
-            determineDnDRequestType(event, deleteDelay, getType(event))
+            val type = getType(event)
+            determineDnDRequestType(event, deleteDelay, type)
         } catch (e: UnsupportedEncodingException) {
             throw RuntimeException(e)
         }
@@ -21,12 +22,14 @@ class DndMenu : IMenu {
 
     @Throws(UnsupportedEncodingException::class)
     private fun determineDnDRequestType(event: StringSelectInteractionEvent, deleteDelay: Int, type: String) {
-        when (type) {
-            DnDCommand.SPELL_NAME -> sendDndApiRequest(event, DnDCommand.SPELL_NAME, "spells", deleteDelay)
-            DnDCommand.CONDITION_NAME -> sendDndApiRequest(event, DnDCommand.CONDITION_NAME, "conditions", deleteDelay)
-            DnDCommand.RULE_NAME -> sendDndApiRequest(event, DnDCommand.RULE_NAME, "rule-sections", deleteDelay)
-            DnDCommand.FEATURE_NAME -> sendDndApiRequest(event, DnDCommand.FEATURE_NAME, "features", deleteDelay)
+        val typeName = when (type) {
+            DnDCommand.SPELL_NAME -> "spells"
+            DnDCommand.CONDITION_NAME -> "conditions"
+            DnDCommand.RULE_NAME -> "rule-sections"
+            DnDCommand.FEATURE_NAME -> "features"
+            else -> throw IllegalArgumentException("Unknown DnD request type: $type")
         }
+        sendDndApiRequest(event, typeName, type, deleteDelay)
     }
 
     private fun sendDndApiRequest(
@@ -35,9 +38,9 @@ class DndMenu : IMenu {
         typeValue: String,
         deleteDelay: Int
     ) {
-        val query = event.values[0] // Get the selected option
+        val query = event.values.firstOrNull() ?: return
         event.message.delete().queue()
-        doLookUpAndReply(event.hook, typeName, typeValue, query, HttpHelper(), deleteDelay)
+        doLookUpAndReply(event.hook, typeValue, typeName, query, HttpHelper(), deleteDelay)
     }
 
     override val name: String
@@ -45,7 +48,7 @@ class DndMenu : IMenu {
 
     companion object {
         private fun getType(event: StringSelectInteractionEvent): String {
-            return event.componentId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
+            return event.componentId.split(":").getOrNull(1) ?: ""
         }
     }
 }

@@ -1,34 +1,27 @@
 package toby.command.commands.misc
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.Mockito.`when`
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
 import toby.command.ICommand
-import toby.command.commands.music.IMusicCommand
 import toby.command.commands.music.PlayCommand
-import toby.jpa.dto.UserDto
 import toby.managers.CommandManager
 
 internal class HelpCommandTest : CommandTest {
-    @Mock
-    private var commandManager: CommandManager? = null
-
-    private var helpCommand: HelpCommand? = null
-
+    private lateinit var commandManager: CommandManager
+    private lateinit var helpCommand: HelpCommand
 
     @BeforeEach
     fun setup() {
         setUpCommonMocks()
-        commandManager = Mockito.mock(CommandManager::class.java)
-
-        `when`(CommandTest.event.hook).thenReturn(CommandTest.interactionHook)
-        helpCommand = HelpCommand(commandManager!!)
+        commandManager = mockk()
+        helpCommand = HelpCommand(commandManager)
     }
 
     @Test
@@ -36,22 +29,29 @@ internal class HelpCommandTest : CommandTest {
         // Mock user interaction with no arguments
 
         // Mock the event's options to be empty
-
-        `when`(CommandTest.event.options).thenReturn(listOf())
+        every { event.options } returns emptyList()
+        every { event.getOption("command") } returns null
 
         // Mock the CommandManager's commands
-        val musicCommand: ICommand = Mockito.mock(IMusicCommand::class.java)
-        val miscCommand: ICommand = Mockito.mock(IMiscCommand::class.java)
+        val musicCommand: ICommand = mockk()
+        val miscCommand: ICommand = mockk()
+        val moderationCommand: ICommand = mockk()
+        val fetchCommand: ICommand = mockk()
 
-        `when`(commandManager!!.musicCommands).thenReturn(listOf(musicCommand))
-        `when`(commandManager!!.miscCommands).thenReturn(listOf(miscCommand))
+        every { commandManager.musicCommands } returns listOf(musicCommand)
+        every { commandManager.miscCommands } returns listOf(miscCommand)
+        every { commandManager.moderationCommands } returns listOf(moderationCommand)
+        every { commandManager.fetchCommands } returns listOf(fetchCommand)
+        every { musicCommand.name } returns "musicName"
+        every { miscCommand.name } returns "miscName"
+        every { moderationCommand.name } returns "modName"
+        every { fetchCommand.name } returns "fetchName"
 
         // Test handle method
-        helpCommand!!.handle(CommandContext(CommandTest.event), Mockito.mock(UserDto::class.java), 0)
+        helpCommand.handle(CommandContext(event), mockk(), 0)
 
         // Verify interactions
-        //if we pass no args, a big list of commands are printed out in a formatted string
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(ArgumentMatchers.anyString())
+        verify(exactly = 1) { event.hook.sendMessageFormat(any()) }
     }
 
     @Test
@@ -59,21 +59,21 @@ internal class HelpCommandTest : CommandTest {
         // Mock user interaction with a command argument
 
         // Mock the event's options to include a command argument
-
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        `when`(CommandTest.event.options)
-            .thenReturn(listOf(optionMapping)) // Add an option to simulate a command argument
+        val optionMapping: OptionMapping = mockk()
+        every { event.options } returns listOf(optionMapping)
 
         // Mock the CommandManager's command
-        val musicCommand: ICommand = Mockito.mock(PlayCommand::class.java)
-        `when`(commandManager!!.getCommand(ArgumentMatchers.anyString())).thenReturn(musicCommand)
-        `when`(CommandTest.event.getOption("command")).thenReturn(optionMapping)
-        `when`(optionMapping.asString).thenReturn("play")
-        `when`(musicCommand.description).thenReturn("")
+        val musicCommand: ICommand = mockk<PlayCommand>()
+        every { commandManager.getCommand(any()) } returns musicCommand
+        every { event.getOption("command") } returns optionMapping
+        every { optionMapping.asString } returns "play"
+        every { musicCommand.description } returns ""
+        every { musicCommand.name } returns "play"
+
         // Test handle method
-        helpCommand!!.handle(CommandContext(CommandTest.event), Mockito.mock(UserDto::class.java), 0)
+        helpCommand.handle(CommandContext(event), mockk(), 0)
 
         // Verify interactions
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessage(ArgumentMatchers.anyString())
+        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
     }
 }

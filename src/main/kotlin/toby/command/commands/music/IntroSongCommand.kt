@@ -8,7 +8,6 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.helpers.FileUtils
-import toby.helpers.MusicPlayerHelper.idString
 import toby.helpers.URLHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
@@ -64,7 +63,7 @@ class IntroSongCommand(
 
     private fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val defaultVolume = configService.getConfigByName(volumePropertyName, event.guild?.idString())?.value?.toIntOrNull()
+        val defaultVolume = configService.getConfigByName(volumePropertyName, event.guild?.id)?.value?.toIntOrNull()
         val volumeOption = event.getOption(VOLUME)?.asInt
         var introVolume = volumeOption ?: defaultVolume ?: 100
         introVolume = introVolume.coerceIn(1, 100)

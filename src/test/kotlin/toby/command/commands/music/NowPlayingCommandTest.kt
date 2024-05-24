@@ -62,7 +62,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
 
         //Assert
         Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to the server owner: Effective Name")
+            .sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
     }
 
     @Test

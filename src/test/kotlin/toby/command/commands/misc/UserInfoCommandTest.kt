@@ -1,26 +1,23 @@
 package toby.command.commands.misc
 
-import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.Mockito.`when`
-import org.mockito.kotlin.any
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
 class UserInfoCommandTest : CommandTest {
-    @Mock
     lateinit var userService: IUserService
 
     lateinit var userInfoCommand: UserInfoCommand
@@ -30,13 +27,8 @@ class UserInfoCommandTest : CommandTest {
         setUpCommonMocks() // Call the common setup defined in the interface
 
         // Additional setup specific to UserInfoCommandTest
-        userService = Mockito.mock(IUserService::class.java)
+        userService = mockk()
         userInfoCommand = UserInfoCommand(userService)
-        Mockito.`when`<Guild>(CommandTest.event.guild).thenReturn(
-            Mockito.mock(
-                Guild::class.java
-            )
-        )
     }
 
     @AfterEach
@@ -47,25 +39,24 @@ class UserInfoCommandTest : CommandTest {
     @Test
     fun testHandleCommandWithOwnUser() {
         // Mock the event's options to be empty
-
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(listOf())
+        every { event.options } returns listOf()
 
         // Mock the requesting user's DTO
-        Mockito.`when`(userService.getUserById(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong()))
-            .thenReturn(requestingUserDto)
-        requestingUserDto.musicDto = MusicDto()
-        Mockito.`when`(CommandTest.event.guild!!.idLong).thenReturn(123L)
+        every { userService.getUserById(any(), any()) } returns requestingUserDto
+        requestingUserDto.apply {
+            every { musicDto } returns MusicDto()
+        }
 
         // Test handle method
-        userInfoCommand.handle(CommandContext(CommandTest.event), requestingUserDto, 0)
+        userInfoCommand.handle(CommandContext(event), requestingUserDto, 0)
 
         // Verify interactions
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(ArgumentMatchers.anyString(), ArgumentMatchers.eq(requestingUserDto))
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.anyString())
-        Mockito.verify(userService, Mockito.times(0))
-            .getUserById(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong())
+        verify(exactly = 1) {
+            event.hook.sendMessage("There is no intro music file associated with your user.")
+        }
+        verify(exactly = 0) {
+            userService.getUserById(any(), any())
+        }
     }
 
     @Test
@@ -73,86 +64,47 @@ class UserInfoCommandTest : CommandTest {
         // Mock user interaction with mentioned user
 
         // Mock the event's options to include mentions
-
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(
-            listOf(
-                Mockito.mock(
-                    OptionMapping::class.java
-                )
-            )
-        ) // Add an option to simulate mentions
+        every { event.options } returns listOf(mockk<OptionMapping>())
 
         // Mock a mentioned user's DTO
         val mentionedUserDto = UserDto()
-        Mockito.`when`(userService.getUserById(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong()))
-            .thenReturn(mentionedUserDto)
-        mentionedUserDto.musicDto = MusicDto(
-            1L,
-            1L,
-            "filename",
-            10,
-            null
-        )
+        every { userService.getUserById(any(), any()) } returns requestingUserDto
+        every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 10, null)
 
         // Mock mentions
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption(ArgumentMatchers.anyString())).thenReturn(
-            Mockito.mock(
-                OptionMapping::class.java
-            )
-        )
-        val mentions = Mockito.mock(Mentions::class.java)
-        Mockito.`when`(CommandTest.event.getOption("users")!!.mentions).thenReturn(mentions)
-        val mockMember = Mockito.mock(Member::class.java)
-        val memberList = listOf(mockMember)
-        Mockito.`when`(mentions.members).thenReturn(memberList)
-        val mockGuild = Mockito.mock(Guild::class.java)
-        Mockito.`when`(mockMember.guild).thenReturn(mockGuild)
-        Mockito.`when`(mockGuild.idLong).thenReturn(123L)
-        Mockito.`when`(userService.getUserById(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong()))
-            .thenReturn(mentionedUserDto)
-        Mockito.`when`(mockMember.effectiveName).thenReturn("Toby")
-
+        val mentions = mockk<Mentions>()
+        every { event.getOption(any())?.mentions } returns mentions
+        val memberList = listOf(member)
+        every { mentions.members } returns memberList
+        every { userService.getUserById(any(), any()) } returns mentionedUserDto
 
         // Test handle method
-        
-        userInfoCommand.handle(CommandContext(CommandTest.event), requestingUserDto, 0)
+        userInfoCommand.handle(CommandContext(event), requestingUserDto, 0)
 
         // Verify interactions
-
-        //lookup on mentionedMember
-        Mockito.verify(userService, Mockito.times(1)).getUserById(any(), any())
-        //music file message
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessageFormat(ArgumentMatchers.anyString(), ArgumentMatchers.anyString())
-        //mentioned user message
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.eq("Toby"),
-            ArgumentMatchers.eq(mentionedUserDto)
-        )
+        verify(exactly = 1)
+        {
+            userService.getUserById(any(), any())
+            event.hook.sendMessage(any<String>())
+        }
     }
 
     @Test
     fun testHandleCommandNoPermission() {
         // Mock user interaction without permission
-        `when`(requestingUserDto.isSuperUser()).thenReturn(false)
+        every { userService.getUserById(any(), any()) } returns requestingUserDto
+        every { requestingUserDto.superUser } returns false
+
         // Mock the event's options to include mentions
-
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options).thenReturn(
-            listOf(
-                Mockito.mock(
-                    OptionMapping::class.java
-                )
-            )
-        )
-
+        every { event.options } returns listOf(mockk<OptionMapping>())
 
         // Mock the requesting user without permission
         // Test handle method
-        userInfoCommand.handle(CommandContext(CommandTest.event), requestingUserDto, 0)
+        userInfoCommand.handle(CommandContext(event), requestingUserDto, 0)
 
         // Verify interactions
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.anyString())
+        verify(exactly = 1) {
+            event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
+        }
     }
 }

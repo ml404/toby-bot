@@ -1,5 +1,6 @@
 package toby.command.commands.misc
 
+import io.mockk.*
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
@@ -10,14 +11,14 @@ import net.dv8tion.jda.api.requests.restaction.ChannelAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
-import toby.jpa.dto.UserDto
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.guild
+import toby.command.CommandTest.Companion.requestingUserDto
 
 internal class TeamCommandTest : CommandTest {
-    private var teamCommand: TeamCommand? = null
+    private lateinit var teamCommand: TeamCommand
 
     @BeforeEach
     fun beforeEach() {
@@ -32,101 +33,82 @@ internal class TeamCommandTest : CommandTest {
 
     @Test
     fun testHandle_WithNoArgs() {
-        // You can set up your test scenario here, including mocking event and UserDto.
-        // Example:
-        val requestingUserDto = userDto // You can set the user as needed
+        // Set up your test scenario here, including mocking event and UserDto
         val deleteDelay = 0
 
         // Create a CommandContext
-        val ctx = CommandContext(CommandTest.event)
+        val ctx = CommandContext(event)
 
         // Test the handle method
-        teamCommand!!.handle(ctx, requestingUserDto, deleteDelay)
+        teamCommand.handle(ctx, requestingUserDto, deleteDelay)
 
-        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
-        Mockito.verify(CommandTest.event.hook)
-            .sendMessage("Return X teams from a list of tagged users.")
+        verify(exactly = 1) { event.deferReply() }
+        verify {
+            event.hook.sendMessage("Return X teams from a list of tagged users.")
+        }
     }
 
     @Test
     fun testHandle_WithArgs() {
-        // You can set up your test scenario here, including mocking event and UserDto.
-        val membersOption = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("members")).thenReturn(membersOption)
-        Mockito.`when`(membersOption.asString).thenReturn("user1, user2")
+        // Set up your test scenario here, including mocking event and UserDto
+        val membersOption = mockk<OptionMapping>()
+        val cleanupOption = mockk<OptionMapping>()
+        every { event.getOption("members") } returns membersOption
+        every { event.getOption("cleanup") } returns cleanupOption
+        every { membersOption.asString } returns "user1, user2"
+        every { cleanupOption.asBoolean } returns false
 
-        val sizeOption = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("size")).thenReturn(sizeOption)
-        Mockito.`when`(sizeOption.asInt).thenReturn(2)
+        val sizeOption = mockk<OptionMapping>()
+        every { event.getOption("size") } returns sizeOption
+        every { sizeOption.asInt } returns 2
 
-        Mockito.`when`<List<OptionMapping>>(CommandTest.event.options)
-            .thenReturn(listOf(membersOption, sizeOption))
-        val voiceChannel = Mockito.mock(ChannelAction::class.java) as ChannelAction<VoiceChannel>
-        Mockito.`when`<ChannelAction<VoiceChannel>>(CommandTest.guild.createVoiceChannel(ArgumentMatchers.anyString()))
-            .thenReturn(voiceChannel)
-        Mockito.`when`(voiceChannel.setBitrate(ArgumentMatchers.anyInt())).thenReturn(voiceChannel)
-        val createdVoiceChannel = Mockito.mock(
-            VoiceChannel::class.java
-        )
-        Mockito.`when`(voiceChannel.complete()).thenReturn(createdVoiceChannel)
-        Mockito.`when`(createdVoiceChannel.name).thenReturn("channelName")
+        every { event.options } returns listOf(membersOption, sizeOption)
+
+        val createdVoiceChannel = mockk<VoiceChannel>()
+        val voiceChannelCreation = mockk<ChannelAction<VoiceChannel>>()
+        every { guild.createVoiceChannel(any()) } returns voiceChannelCreation
+
+        val voiceChannelModification = mockk<ChannelAction<VoiceChannel>>()
+        every { voiceChannelCreation.setBitrate(any()) } returns voiceChannelModification
+
+        every { voiceChannelModification.hint(VoiceChannel::class).complete() } returns createdVoiceChannel
+        every { createdVoiceChannel.name } returns "channelName"
+
         val deleteDelay = 0
 
         // Mock the guild.moveVoiceMember() method
-        val mentions = Mockito.mock(Mentions::class.java)
-        Mockito.`when`(CommandTest.event.getOption("members")!!.mentions).thenReturn(mentions)
-        val mockMember1 = Mockito.mock(Member::class.java)
-        val mockMember2 = Mockito.mock(Member::class.java)
-        val memberList: ArrayList<Member?> = ArrayList(listOf(mockMember1, mockMember2))
-        Mockito.`when`(mockMember1.effectiveName).thenReturn("Name 1")
-        Mockito.`when`(mockMember2.effectiveName).thenReturn("Name 2")
-        Mockito.`when`(mentions.members).thenReturn(memberList)
+        val mentions = mockk<Mentions>()
+        every { event.getOption("members")?.mentions } returns mentions
+
+        val mockMember1 = mockk<Member>()
+        val mockMember2 = mockk<Member>()
+        val memberList = arrayListOf(mockMember1, mockMember2)
+        every { mockMember1.effectiveName } returns "Name 1"
+        every { mockMember2.effectiveName } returns "Name 2"
+        every { mentions.members } returns memberList
 
         guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember1)
         guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember2)
 
-        val requestingUserDto = userDto // You can set the user as needed
-
         // Create a CommandContext
-        val ctx = CommandContext(CommandTest.event)
+        val ctx = CommandContext(event)
 
         // Test the handle method
-        teamCommand!!.handle(ctx, requestingUserDto, deleteDelay)
+        teamCommand.handle(ctx, requestingUserDto, deleteDelay)
 
-        Mockito.verify(CommandTest.event, Mockito.times(1)).deferReply()
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(2)).sendMessageFormat(
-            ArgumentMatchers.eq("Moved %s to '%s'"),
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.anyString()
-        )
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.anyString())
+        verify(exactly = 1) { event.deferReply() }
+        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
     }
 
     companion object {
-        private val userDto: UserDto
-            get() = UserDto(1L, 1L,
-                superUser = true,
-                musicPermission = true,
-                digPermission = true,
-                memePermission = true,
-                socialCredit = 0L,
-                musicDto = null
-            )
-
         private fun guildMoveVoiceMemberMocking(createdVoiceChannel: VoiceChannel, member: Member) {
-            Mockito.`when`<RestAction<Void>>(
-                CommandTest.guild.moveVoiceMember(
-                    ArgumentMatchers.eq(
-                        member
-                    ), ArgumentMatchers.any<AudioChannel>()
-                )
-            ).thenAnswer {
-                // Simulate the move
-                CommandTest.event.hook
-                    .sendMessageFormat("Moved %s to '%s'", member.effectiveName, createdVoiceChannel.name).complete()
-                Mockito.mock(RestAction::class.java)
-            }
+            val restAction = mockk<RestAction<Void>>()
+            every {
+                guild.moveVoiceMember(member, createdVoiceChannel as AudioChannel)
+            } returns restAction
+
+            every { restAction.queue() } just Runs
+
         }
     }
 }

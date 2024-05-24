@@ -40,7 +40,7 @@ class EightBallCommand(private val userService: IUserService) : IMiscCommand {
             val socialCredit = requestingUserDto.socialCredit
             val deductedSocialCredit = -5 * choice
             requestingUserDto.socialCredit = socialCredit.plus(deductedSocialCredit)
-            event.hook.sendMessageFormat("Deducted: %d social credit.", deductedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.sendMessage("Deducted: $deductedSocialCredit social credit.").queue(invokeDeleteOnMessageResponse(deleteDelay))
             userService.updateUser(requestingUserDto)
             return
         }

@@ -34,7 +34,7 @@ class BrotherServiceImplIntegrationTest {
 
     @Test
     fun testDataSQL() {
-        Assertions.assertEquals(3, IterableUtils.toList(brotherService!!.listBrothers()).size)
+        Assertions.assertEquals(3, IterableUtils.toList(brotherService.listBrothers()).size)
     }
 
     @Test
@@ -51,7 +51,7 @@ class BrotherServiceImplIntegrationTest {
 
     @Test
     fun testUpdate_thenNewBrotherShouldBeReturned() {
-        val originalBrotherSize = IterableUtils.toList(brotherService!!.listBrothers()).size
+        val originalBrotherSize = IterableUtils.toList(brotherService.listBrothers()).size
 
         val brotherDto = BrotherDto(6L, "a")
         brotherService.createNewBrother(brotherDto)

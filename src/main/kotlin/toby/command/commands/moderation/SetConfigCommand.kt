@@ -7,7 +7,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import toby.helpers.MusicPlayerHelper.idString
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
@@ -66,9 +65,9 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
             return
         }
         val configValue = ConfigDto.Configurations.valueOf(optionMapping.name.uppercase(Locale.getDefault())).configValue
-        val databaseConfig = configService.getConfigByName(configValue, event.guild!!.idString())
+        val databaseConfig = configService.getConfigByName(configValue, event.guild!!.id)
         val newDefaultVolume = optionMapping.asInt
-        val newConfigDto = ConfigDto(configValue, newDefaultVolume.toString(), event.guild!!.idString())
+        val newConfigDto = ConfigDto(configValue, newDefaultVolume.toString(), event.guild!!.id)
         if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
             configService.updateConfig(newConfigDto)
         } else {
@@ -82,8 +81,8 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
         val newDefaultMoveChannelOptional =
             event.getOption(ConfigDto.Configurations.MOVE.name.lowercase(Locale.getDefault()))?.asChannel as? GuildChannelUnion
         if (newDefaultMoveChannelOptional != null) {
-            val databaseConfig = configService.getConfigByName(movePropertyName, event.guild!!.idString())
-            val newConfigDto = ConfigDto(movePropertyName, newDefaultMoveChannelOptional.name, event.guild!!.idString())
+            val databaseConfig = configService.getConfigByName(movePropertyName, event.guild!!.id)
+            val newConfigDto = ConfigDto(movePropertyName, newDefaultMoveChannelOptional.name, event.guild!!.id)
             if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
                 configService.updateConfig(newConfigDto)
             } else {

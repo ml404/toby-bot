@@ -37,7 +37,7 @@ class FileUtilsTest {
     fun testReadInputStreamToByteArray() {
         val classLoader = javaClass.classLoader
         val mp3Resource1 = classLoader.getResource("test.mp3")
-        val file = File(mp3Resource1.file)
+        val file = File(mp3Resource1?.file!!)
 
 
         val mp3Resource2 = classLoader.getResource("test.mp3")
@@ -45,7 +45,7 @@ class FileUtilsTest {
         val bytes = readInputStreamToByteArray(fileInputStream)
 
         Assertions.assertNotNull(bytes)
-        Assertions.assertArrayEquals(bytes, mp3Resource2.openStream().readAllBytes())
+        Assertions.assertArrayEquals(bytes, mp3Resource2?.openStream()?.readAllBytes())
     }
 
     /**
@@ -58,7 +58,7 @@ class FileUtilsTest {
     fun testReadByteArrayToInputStream() {
         val classLoader = javaClass.classLoader
         val mp3Resource = classLoader.getResource("test.mp3")
-        val file = File(mp3Resource.file)
+        val file = File(mp3Resource?.file!!)
         val inputStreamFromFile: InputStream = FileInputStream(file)
         val inputStreamFromString = readByteArrayToInputStream(mp3Resource.openStream().readAllBytes())
 

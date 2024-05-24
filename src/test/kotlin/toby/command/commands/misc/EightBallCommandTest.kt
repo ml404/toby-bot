@@ -1,15 +1,14 @@
 package toby.command.commands.misc
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.kotlin.any
 import toby.command.CommandContext
 import toby.command.CommandTest
-import toby.command.CommandTest.Companion.requestingUserDto
+import toby.command.CommandTest.Companion.event
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
@@ -17,13 +16,12 @@ internal class EightBallCommandTest : CommandTest {
 
     lateinit var command: EightBallCommand
 
-    @Mock
     lateinit var userService: IUserService
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        userService = Mockito.mock(IUserService::class.java)
+        userService = mockk()
         command = EightBallCommand(userService)
     }
 
@@ -35,23 +33,20 @@ internal class EightBallCommandTest : CommandTest {
     @Test
     fun testCommand_WithNotTom() {
         // Create a CommandContext
-        val ctx = CommandContext(CommandTest.event)
+        val ctx = CommandContext(event)
         val deleteDelay = 0 // Set your desired deleteDelay
 
         // Test the handle method
-        command.handle(ctx, requestingUserDto, deleteDelay)
+        command.handle(ctx, CommandTest.requestingUserDto, deleteDelay)
 
         // Verify that the message was sent with the expected content
-        // You can use Mockito.verify() to check if event.getHook().sendMessage(...) was called with the expected message content.
-        // For example:
-        Mockito.verify(CommandTest.event.hook)
-            .sendMessageFormat(ArgumentMatchers.eq("MAGIC 8-BALL SAYS: %s."), ArgumentMatchers.anyString())
+        verify { event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: %s.", any()) }
     }
 
     @Test
     fun testCommand_WithTom() {
         // Create a CommandContext
-        val ctx = CommandContext(CommandTest.event)
+        val ctx = CommandContext(event)
 
         // Mock requestingUserDto
         val tomsDiscordUser = UserDto(
@@ -66,17 +61,16 @@ internal class EightBallCommandTest : CommandTest {
         ) // You can set the user as needed
         val deleteDelay = 0 // Set your desired deleteDelay
 
-        Mockito.`when`(userService.updateUser(any())).thenReturn(tomsDiscordUser)
+        every { userService.updateUser(any()) } returns tomsDiscordUser
 
         // Test the handle method
         command.handle(ctx, tomsDiscordUser, deleteDelay)
 
         // Verify that the message was sent with the expected content
-        Mockito.verify(CommandTest.event.hook)
-            .sendMessageFormat(ArgumentMatchers.eq("MAGIC 8-BALL SAYS: Don't fucking talk to me."))
-        Mockito.verify(CommandTest.event.hook)
-            .sendMessageFormat(ArgumentMatchers.eq("Deducted: %d social credit."), ArgumentMatchers.anyInt())
-        Mockito.verify(userService, Mockito.times(1)).updateUser(any())
-        // You can also verify that ICommand.deleteAfter was called with the expected arguments.
+        verify {
+            event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.")
+            event.hook.sendMessage(any<String>())
+            userService.updateUser(any())
+        }
     }
 }

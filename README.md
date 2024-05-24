@@ -45,7 +45,7 @@ Ensure you have the following prerequisites set up before getting started:
 4. Start the bot:
 
    ```shell
-   java -jar build/libs/toby-bot-5.0-SNAPSHOT.jar -Dspring.profiles.active=prod
+   java -jar build/libs/toby-bot-6.0-SNAPSHOT.jar -Dspring.profiles.active=prod
    ```
 
 ## Usage
