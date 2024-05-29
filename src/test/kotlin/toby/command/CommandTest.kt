@@ -3,6 +3,7 @@ package toby.command
 import io.mockk.*
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -30,6 +31,8 @@ interface CommandTest {
         every { event.hook.sendMessage(any<String>()) } returns webhookMessageCreateAction
         every { event.hook.sendMessageFormat(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { event.hook.sendMessageEmbeds(any(), any<MessageEmbed>()) } returns webhookMessageCreateAction
+        every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.setActionRow(*anyVararg()).queue() } just Runs
         every { event.options } returns emptyList()
         every { user.effectiveName } returns "UserName"
         every { user.idLong } returns 1L
@@ -61,6 +64,7 @@ interface CommandTest {
         every { member.idLong } returns 1L
         every { member.effectiveName } returns "Effective Name"
         every { member.guild } returns guild
+        every { member.voiceState } returns guildVoiceState
         every { targetMember.nickname } returns "Target Nickname"
         every { targetMember.effectiveName } returns "Target Effective Name"
         every { targetMember.guild } returns guild
@@ -75,6 +79,8 @@ interface CommandTest {
         every { requestingUserDto.guildId } returns 1L
         every { requestingUserDto.socialCredit } returns 0L
         every { requestingUserDto.musicDto } returns null
+        every { guildVoiceState.channel } returns audioChannelUnion
+        every { audioChannelUnion.members } returns listOf(member)
     }
 
     @AfterEach
@@ -98,5 +104,7 @@ interface CommandTest {
         val messageCreateAction: MessageCreateAction = mockk()
         val replyCallbackAction: ReplyCallbackAction = mockk()
         val restAction: RestAction<*> = mockk()
+        val guildVoiceState: GuildVoiceState = mockk()
+        val audioChannelUnion: AudioChannelUnion = mockk()
     }
 }

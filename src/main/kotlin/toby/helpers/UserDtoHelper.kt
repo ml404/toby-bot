@@ -5,13 +5,12 @@ import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
 object UserDtoHelper {
-    @JvmStatic
     fun calculateUserDto(
         guildId: Long,
         discordId: Long,
         isSuperUser: Boolean,
         userService: IUserService,
-        introVolume: Int
+        introVolume: Int = 20
     ): UserDto? {
         val dbUserDto = userService.listGuildUsers(guildId).find { it?.guildId == guildId && it.discordId == discordId }
 

@@ -27,7 +27,7 @@ class MusicDto : Serializable {
     var fileName: String? = null
 
     @Column(name = "file_vol")
-    var introVolume: Int = 10
+    var introVolume: Int = 20
 
     @JvmField
     @Lob
