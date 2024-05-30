@@ -32,7 +32,6 @@ interface CommandTest {
         every { event.hook.sendMessageFormat(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { event.hook.sendMessageEmbeds(any(), any<MessageEmbed>()) } returns webhookMessageCreateAction
         every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
-        every { webhookMessageCreateAction.setActionRow(*anyVararg()).queue() } just Runs
         every { event.options } returns emptyList()
         every { user.effectiveName } returns "UserName"
         every { user.idLong } returns 1L
@@ -41,6 +40,7 @@ interface CommandTest {
         every { user.isBot } returns false
         every { interactionHook.deleteOriginal() } returns restAction
         every { interactionHook.sendMessage(any<String>()) } returns webhookMessageCreateAction
+        every { interactionHook.sendMessage(any<String>()).queue(any()) } just Runs
         every { interactionHook.sendMessageFormat(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { interactionHook.retrieveOriginal() } returns restAction as RestAction<Message>
         every { interactionHook.sendMessageEmbeds(any(), any<MessageEmbed>()) } returns webhookMessageCreateAction
@@ -49,8 +49,9 @@ interface CommandTest {
         every { webhookMessageCreateAction.addActionRow(any<ItemComponent>()) } just Awaits
         every { webhookMessageCreateAction.addContent(any()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.setEphemeral(any()) } returns webhookMessageCreateAction
-        every { webhookMessageCreateAction.queue(any()) } just Runs
+        every { webhookMessageCreateAction.setActionRow(*anyVararg()).queue() } just Runs
         every { webhookMessageCreateAction.setEphemeral(any()).queue(any()) } just Runs
+        every { webhookMessageCreateAction.queue(any()) } just Runs
         every { messageChannelUnion.sendMessage(any<String>()) } returns messageCreateAction
         every { messageCreateAction.addContent(any()) } returns messageCreateAction
         every { guild.jda } returns jda

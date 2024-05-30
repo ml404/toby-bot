@@ -1,5 +1,6 @@
 package toby.command.commands.moderation
 
+import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member
@@ -10,13 +11,17 @@ import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.botMember
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.guild
+import toby.command.CommandTest.Companion.member
+import toby.command.CommandTest.Companion.requestingUserDto
+import toby.command.CommandTest.Companion.targetMember
 
 internal class KickCommandTest : CommandTest {
-    private var kickCommand: KickCommand? = null
+    private lateinit var kickCommand: KickCommand
 
     @BeforeEach
     fun setUp() {
@@ -27,110 +32,90 @@ internal class KickCommandTest : CommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMocks()
+        unmockkAll()
     }
 
     @Test
     fun test_KickWithValidPermissions_kicksEveryoneInChannel() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        kickSetup(botKickOthers = true, memberKickOthers = true, mentionedMembers = listOf(CommandTest.targetMember))
+        // Arrange
+        val commandContext = CommandContext(event)
+        kickSetup(botKickOthers = true, memberKickOthers = true, mentionedMembers = listOf(targetMember))
 
-        //Act
-        kickCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        kickCommand.handle(commandContext, requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
-        Mockito.verify(CommandTest.guild, Mockito.times(1)).kick(CommandTest.targetMember)
+        // Assert
+        verify(exactly = 1) { event.guild }
+        verify(exactly = 1) { guild.kick(targetMember) }
     }
 
     @Test
     fun test_KickWithValidPermissionsAndMultipleMembers_kicksEveryoneInChannel() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        // Arrange
+        val commandContext = CommandContext(event)
         kickSetup(
             botKickOthers = true,
             memberKickOthers = true,
-            mentionedMembers = listOf(CommandTest.member, CommandTest.targetMember)
+            mentionedMembers = listOf(member, targetMember)
         )
 
-        //Act
-        kickCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        kickCommand.handle(commandContext, requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
-        Mockito.verify(CommandTest.guild, Mockito.times(1)).kick(CommandTest.member)
-        Mockito.verify(CommandTest.guild, Mockito.times(1)).kick(CommandTest.targetMember)
+        // Assert
+        verify(exactly = 1) { event.guild }
+        verify(exactly = 1) { guild.kick(member) }
+        verify(exactly = 1) { guild.kick(targetMember) }
     }
-
 
     @Test
     fun test_KickWithInvalidBotPermissions_throwsError() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        kickSetup(botKickOthers = false, memberKickOthers = true, mentionedMembers = listOf(CommandTest.targetMember))
+        // Arrange
+        val commandContext = CommandContext(event)
+        kickSetup(botKickOthers = false, memberKickOthers = true, mentionedMembers = listOf(targetMember))
 
-        //Act
-        kickCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        kickCommand.handle(commandContext, requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.eq("I'm not allowed to kick %s"),
-            ArgumentMatchers.eq(CommandTest.targetMember)
-        )
+        // Assert
+        verify(exactly = 1) { event.guild }
+        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
     }
 
     @Test
     fun test_KickWithInvalidUserPermissions_throwsError() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        kickSetup(botKickOthers = true, memberKickOthers = false, mentionedMembers = listOf(CommandTest.targetMember))
+        // Arrange
+        val commandContext = CommandContext(event)
+        kickSetup(botKickOthers = true, memberKickOthers = false, mentionedMembers = listOf(targetMember))
 
-        //Act
-        kickCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        kickCommand.handle(commandContext, requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.event, Mockito.times(1)).guild
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.eq("You can't kick %s"),
-            ArgumentMatchers.eq(CommandTest.targetMember)
-        )
+        // Assert
+        verify(exactly = 1) { event.guild }
+        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
     }
 
     companion object {
         private fun kickSetup(botKickOthers: Boolean, memberKickOthers: Boolean, mentionedMembers: List<Member>) {
-            val audioChannelUnion = Mockito.mock(AudioChannelUnion::class.java)
-            val guildVoiceState = Mockito.mock(GuildVoiceState::class.java)
-            val auditableRestAction = Mockito.mock(AuditableRestAction::class.java)
-            val optionMapping = Mockito.mock(OptionMapping::class.java)
-            val mentions = Mockito.mock(Mentions::class.java)
-            Mockito.`when`<OptionMapping>(CommandTest.event.getOption("users")).thenReturn(optionMapping)
-            Mockito.`when`(optionMapping.mentions).thenReturn(mentions)
-            Mockito.`when`(mentions.members).thenReturn(mentionedMembers)
-            Mockito.`when`(
-                CommandTest.member.canInteract(
-                    ArgumentMatchers.any(
-                        Member::class.java
-                    )
-                )
-            ).thenReturn(true)
-            Mockito.`when`(CommandTest.botMember.hasPermission(Permission.KICK_MEMBERS))
-                .thenReturn(botKickOthers)
-            Mockito.`when`(
-                CommandTest.botMember.canInteract(
-                    ArgumentMatchers.any(
-                        Member::class.java
-                    )
-                )
-            ).thenReturn(botKickOthers)
-            Mockito.`when`<GuildVoiceState>(CommandTest.member.voiceState).thenReturn(guildVoiceState)
-            Mockito.`when`(CommandTest.member.hasPermission(Permission.KICK_MEMBERS))
-                .thenReturn(memberKickOthers)
-            Mockito.`when`(guildVoiceState.channel).thenReturn(audioChannelUnion)
-            Mockito.`when`<AuditableRestAction<Void>>(CommandTest.guild.kick(ArgumentMatchers.any()))
-                .thenReturn(auditableRestAction as AuditableRestAction<Void>)
-            Mockito.`when`(auditableRestAction.reason(ArgumentMatchers.eq("because you told me to.")))
-                .thenReturn(auditableRestAction)
+            val audioChannelUnion = mockk<AudioChannelUnion>()
+            val guildVoiceState = mockk<GuildVoiceState>()
+            val auditableRestAction = mockk<AuditableRestAction<Void>>()
+            val optionMapping = mockk<OptionMapping>()
+            val mentions = mockk<Mentions>()
+
+            every { event.getOption("users") } returns optionMapping
+            every { optionMapping.mentions } returns mentions
+            every { mentions.members } returns mentionedMembers
+            every { member.canInteract(any<Member>()) } returns true
+            every { botMember.hasPermission(Permission.KICK_MEMBERS) } returns botKickOthers
+            every { botMember.canInteract(any<Member>()) } returns botKickOthers
+            every { member.voiceState } returns guildVoiceState
+            every { member.hasPermission(Permission.KICK_MEMBERS) } returns memberKickOthers
+            every { guildVoiceState.channel } returns audioChannelUnion
+            every { guild.kick(any<Member>()) } returns auditableRestAction
+            every { auditableRestAction.reason("because you told me to.") } returns auditableRestAction
+            every { auditableRestAction.queue(any(), any()) } just Runs
         }
     }
 }

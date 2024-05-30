@@ -1,8 +1,8 @@
 package toby.command.commands.moderation
 
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
-import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -13,80 +13,87 @@ import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
-import java.util.*
-import java.util.function.Consumer
 
 class MoveCommand(private val configService: IConfigService) : IModerationCommand {
-    private val USERS = "users"
-    private val CHANNEL = "channel"
+
+    companion object {
+        private const val USERS = "users"
+        private const val CHANNEL = "channel"
+    }
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
-        val member = ctx.member
-        val guild = event.guild!!
-        val memberList = Optional.ofNullable(event.getOption(USERS)).map { obj: OptionMapping -> obj.mentions }
-            .map { obj: Mentions -> obj.members }.orElse(emptyList())
+
+        val guild = event.guild ?: return
+        val member = ctx.member ?: return
+        val botMember = guild.selfMember
+
+        val memberList = event.getOption(USERS)?.mentions?.members.orEmpty()
         if (memberList.isEmpty()) {
             event.hook.sendMessage("You must mention 1 or more Users to move")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             return
         }
-        val channelOptional =
-            Optional.ofNullable(event.getOption(CHANNEL)).map { obj: OptionMapping -> obj.getAsChannel() }
-        val channelConfig = configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, guild.id)
-        val voiceChannelOptional = channelOptional.map { obj: GuildChannelUnion -> obj.asVoiceChannel() }
-            .or { guild.getVoiceChannelsByName(channelConfig?.value!!, true).stream().findFirst() }
-        if (voiceChannelOptional.isEmpty) {
-            event.hook.sendMessageFormat("Could not find a channel on the server that matched name")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+
+        val voiceChannel = getVoiceChannel(event, guild) ?: run {
+            event.hook.sendMessage("Could not find a channel on the server that matched the name")
+                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             return
         }
-        memberList.forEach(Consumer { target: Member ->
-            if (doChannelValidation(ctx.event, guild.selfMember, member, target, deleteDelay!!)) return@Consumer
-            val voiceChannel = voiceChannelOptional.get()
-            guild.moveVoiceMember(target, voiceChannel)
-                .queue(
-                    {
-                        event.hook.sendMessageFormat("Moved %s to '%s'", target.effectiveName, voiceChannel.name)
-                            .queue(invokeDeleteOnMessageResponse(deleteDelay))
-                    }
-                ) { error: Throwable ->
-                    event.hook.sendMessageFormat("Could not move '%s'", error.message)
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
-                }
-        })
+
+        memberList.forEach { target ->
+            if (!validateChannel(event, botMember, member, target, deleteDelay ?: 0)) {
+                guild.moveVoiceMember(target, voiceChannel).queue(
+                    { event.hook.sendMessage("Moved ${target.effectiveName} to '${voiceChannel.name}'")
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)) },
+                    { error -> event.hook.sendMessage("Could not move '${target.effectiveName}': ${error.message}")
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)) }
+                )
+            }
+        }
     }
 
-    private fun doChannelValidation(
+    private fun getVoiceChannel(event: SlashCommandInteractionEvent, guild: Guild) =
+        event.getOption(CHANNEL)?.asChannel?.asVoiceChannel()
+            ?: configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, guild.id)
+                ?.let { config -> guild.getVoiceChannelsByName(config.value ?: "", true).firstOrNull() }
+
+    private fun validateChannel(
         event: SlashCommandInteractionEvent,
         botMember: Member,
-        member: Member?,
+        member: Member,
         target: Member,
         deleteDelay: Int
     ): Boolean {
-        if (!target.voiceState!!.inAudioChannel()) {
-            event.hook.sendMessageFormat(
-                "Mentioned user '%s' is not connected to a voice channel currently, so cannot be moved.",
-                target.effectiveName
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            return true
+        return when {
+            target.voiceState?.inAudioChannel() == false -> {
+                event.hook.sendMessage("Mentioned user '${target.effectiveName}' is not connected to a voice channel currently, so cannot be moved.")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                true
+            }
+            !member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS) -> {
+                event.hook.sendMessage("You can't move '${target.effectiveName}'")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                true
+            }
+            !botMember.hasPermission(Permission.VOICE_MOVE_OTHERS) -> {
+                event.hook.sendMessage("I'm not allowed to move ${target.effectiveName}")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                true
+            }
+            else -> false
         }
-        if (!member!!.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.hook.sendMessageFormat("You can't move '%s'", target.effectiveName)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
-            return true
-        }
-        if (!botMember.hasPermission(Permission.VOICE_MOVE_OTHERS)) {
-            event.hook.sendMessageFormat("I'm not allowed to move %s", target.effectiveName)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
-            return true
-        }
-        return false
     }
 
-    override val name: String get() = "move"
-    override val description: String get() = "Move mentioned members into a voice channel (voice channel can be defaulted by config command)"
-    override val optionData: List<OptionData> get() = listOf(
+    override val name: String
+        get() = "move"
+
+    override val description: String
+        get() = "Move mentioned members into a voice channel (voice channel can be defaulted by config command)"
+
+    override val optionData: List<OptionData>
+        get() = listOf(
             OptionData(OptionType.STRING, USERS, "User(s) to move", true),
             OptionData(OptionType.STRING, CHANNEL, "Channel to move to")
         )
