@@ -25,7 +25,7 @@ object DnDHelper {
         val nonDmMembers = memberList.filter { it != dm && !it.user.isBot }
         nonDmMembers.forEach { target ->
             val userDto = UserDtoHelper.calculateUserDto(target.guild.idLong, target.idLong, target.isOwner, userService)
-            rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto?.initiativeModifier ?: 0)
+            rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto.initiativeModifier)
         }
         sortMap(initiativeMap)
     }
@@ -44,12 +44,10 @@ object DnDHelper {
         initiativeMap[name] = diceRoll
     }
 
-    @JvmStatic
     fun rollDiceWithModifier(diceValue: Int, diceToRoll: Int, modifier: Int): Int {
         return rollDice(diceValue, diceToRoll) + modifier
     }
 
-    @JvmStatic
     fun rollDice(diceValue: Int, diceToRoll: Int): Int {
         return (0 until diceToRoll).sumOf { Random.nextInt(1, diceValue + 1) }
     }
@@ -95,11 +93,16 @@ object DnDHelper {
         val initButtons = initButtons
         val messageEmbed = embedBuilder.build()
         if (event == null) {
-            hook.sendMessageEmbeds(messageEmbed).setActionRow(initButtons.prev, initButtons.clear, initButtons.next).queue()
+            hook.sendMessageEmbeds(messageEmbed)
+                .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
+                .queue()
         } else {
-            val message = event.message
-            message.editMessageEmbeds(messageEmbed).setActionRow(initButtons.prev, initButtons.clear, initButtons.next).queue()
-            hook.setEphemeral(true).sendMessageFormat("Next turn: %s", sortedEntries[initiativeIndex.get()].key).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)
+            // if we're here we came via a button press, so edit the embed rather than make a new one
+            event.message
+                .editMessageEmbeds(messageEmbed)
+                .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
+                .queue()
+            hook.setEphemeral(true).sendMessage("Next turn: ${sortedEntries[initiativeIndex.get()].key}").queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)
             )
         }
     }
@@ -115,8 +118,6 @@ object DnDHelper {
             embedBuilder.setDescription(description)
             return embedBuilder
         }
-
-    @JvmStatic
     fun clearInitiative() {
         initiativeIndex.set(0)
         sortedEntries.clear()

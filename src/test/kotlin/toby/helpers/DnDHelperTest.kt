@@ -1,14 +1,10 @@
 package toby.helpers
 
-import io.mockk.clearMocks
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.interactions.components.LayoutComponent
 import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
@@ -28,6 +24,7 @@ import toby.helpers.DnDHelper.rollDiceWithModifier
 import toby.helpers.DnDHelper.rollInitiativeForMembers
 import toby.helpers.DnDHelper.sendOrEditInitiativeMessage
 import toby.helpers.DnDHelper.sortedEntries
+import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 import toby.jpa.service.impl.UserServiceImpl
 
@@ -48,7 +45,7 @@ internal class DnDHelperTest {
     fun setUp() {
         hook = mockk()
         message = mockk()
-        event = mockk()
+        event = mockk(relaxed = true)
         member = mockk()
         guild = mockk()
         webhookMessageEditAction = mockk()
@@ -64,6 +61,9 @@ internal class DnDHelperTest {
         val user1 = mockk<User>()
         val user2 = mockk<User>()
         val user3 = mockk<User>()
+        val userDto1 = mockk<UserDto>()
+        val userDto2 = mockk<UserDto>()
+        val userDto3 = mockk<UserDto>()
 
         memberList = listOf(player1, player2, player3)
 
@@ -71,9 +71,18 @@ internal class DnDHelperTest {
         every { player2.user } returns user2
         every { player3.user } returns user3
 
+        every { player1.idLong } returns 1L
+        every { player2.idLong } returns 1L
+        every { player3.idLong } returns 1L
+
         every { player1.guild } returns guild
         every { player2.guild } returns guild
         every { player3.guild } returns guild
+
+        every { player1.isOwner } returns false
+        every { player2.isOwner } returns false
+        every { player3.isOwner } returns false
+
         every { guild.idLong } returns 1L
 
         every { user1.isBot } returns false
@@ -90,18 +99,36 @@ internal class DnDHelperTest {
 
         every { message.editMessageEmbeds(any<MessageEmbed>()) } returns messageEditAction
         every { messageEditAction.setActionRow(any(), any(), any()) } returns messageEditAction
+        every { messageEditAction.queue() } just Runs
         every { message.delete() } returns auditableRestAction
 
         clearInitiative()
 
         every { hook.deleteOriginal() } returns mockk<RestAction<Void>>()
         every { hook.setEphemeral(true) } returns hook
-        every { hook.sendMessageFormat(any(), *anyVararg()) } returns webhookMessageCreateAction
+        every { hook.sendMessage(any<String>()) } returns webhookMessageCreateAction
+
+        every { userDto1.discordId } returns 1L
+        every { userDto2.discordId } returns 2L
+        every { userDto3.discordId } returns 3L
+        every { userDto1.guildId } returns 1L
+        every { userDto2.guildId } returns 1L
+        every { userDto3.guildId } returns 1L
+        every { userDto1.initiativeModifier } returns 0
+        every { userDto2.initiativeModifier } returns 1
+        every { userDto3.initiativeModifier } returns 2
+
+        every { userService.listGuildUsers(any()) } returns listOf(userDto1, userDto2, userDto3)
+        every { hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.queue(any()) } just Runs
+        every { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() } just Runs
+        every { webhookMessageEditAction.setActionRow(any(), any(), any()).queue() } just Runs
+        every { webhookMessageEditAction.queue() } just Runs
     }
 
     @AfterEach
     fun tearDown() {
-        clearMocks(hook, message, event, member, guild, webhookMessageEditAction, webhookMessageCreateAction, messageEditAction, userService)
+        clearAllMocks()
         clearInitiative()
     }
 
@@ -119,21 +146,12 @@ internal class DnDHelperTest {
 
     @Test
     fun testIncrementTurnTable() {
-        val webhookMessageCreateAction = mockk<WebhookMessageCreateAction<Message>>()
-        val webhookMessageEditAction = mockk<WebhookMessageEditAction<Message>>()
-        every { hook.sendMessageEmbeds(any<MessageEmbed>()) } returns webhookMessageCreateAction
-        every { hook.editOriginalComponents(any<LayoutComponent>()) } returns webhookMessageEditAction
-        every { hook.editOriginalEmbeds(any<MessageEmbed>()) } returns webhookMessageEditAction
-
-        every { webhookMessageCreateAction.setActionRow(any(), any(), any()) } returns webhookMessageCreateAction
-        every { webhookMessageEditAction.setActionRow(any(), any(), any()) } returns webhookMessageEditAction
-
         rollInitiativeForMembers(memberList, member, initiativeMap, userService)
         sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
         incrementTurnTable(hook, event, 0)
         verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
-        verify(exactly = 1) { webhookMessageCreateAction.queue() }
+        verify(exactly = 1) { webhookMessageCreateAction.queue(any()) }
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.queue() }
         Assertions.assertEquals(1, DnDHelper.initiativeIndex.get())
@@ -141,21 +159,12 @@ internal class DnDHelperTest {
 
     @Test
     fun testDecrementTurnTable() {
-        val webhookMessageCreateAction = mockk<WebhookMessageCreateAction<Message>>()
-        val webhookMessageEditAction = mockk<WebhookMessageEditAction<Message>>()
-        every { hook.sendMessageEmbeds(any<MessageEmbed>()) } returns webhookMessageCreateAction
-        every { hook.editOriginalComponents(any<LayoutComponent>()) } returns webhookMessageEditAction
-        every { hook.editOriginalEmbeds(any<MessageEmbed>()) } returns webhookMessageEditAction
-
-        every { webhookMessageCreateAction.setActionRow(any(), any(), any()) } returns webhookMessageCreateAction
-        every { webhookMessageEditAction.setActionRow(any(), any(), any()) } returns webhookMessageEditAction
-
         rollInitiativeForMembers(memberList, member, initiativeMap, userService)
         sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
         decrementTurnTable(hook, event, 0)
         verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
-        verify(exactly = 1) { webhookMessageCreateAction.queue() }
+        verify(exactly = 1) { webhookMessageCreateAction.queue(any()) }
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.queue() }
         Assertions.assertEquals(2, DnDHelper.initiativeIndex.get())
@@ -166,9 +175,9 @@ internal class DnDHelperTest {
         val buttons = initButtons
 
         Assertions.assertNotNull(buttons)
-        Assertions.assertEquals(Emoji.fromUnicode("⬅️").name, buttons.prev.emoji?.name)
-        Assertions.assertEquals(Emoji.fromUnicode("❌").name, buttons.clear.emoji?.name)
-        Assertions.assertEquals(Emoji.fromUnicode("➡️").name, buttons.next.emoji?.name)
+        Assertions.assertEquals(Emoji.fromUnicode("⬅️").name, buttons.prev.label)
+        Assertions.assertEquals(Emoji.fromUnicode("❌").name, buttons.clear.label)
+        Assertions.assertEquals(Emoji.fromUnicode("➡️").name, buttons.next.label)
     }
 
     @Test

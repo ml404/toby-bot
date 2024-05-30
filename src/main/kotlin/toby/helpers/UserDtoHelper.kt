@@ -11,19 +11,18 @@ object UserDtoHelper {
         isSuperUser: Boolean,
         userService: IUserService,
         introVolume: Int = 20
-    ): UserDto? {
+    ): UserDto {
         val dbUserDto = userService.listGuildUsers(guildId).find { it?.guildId == guildId && it.discordId == discordId }
-
-        if (dbUserDto == null) {
+        return if (dbUserDto == null) {
             val userDto = UserDto().apply {
                 this.discordId = discordId
                 this.guildId = guildId
                 this.superUser = isSuperUser
                 this.musicDto = MusicDto(discordId, guildId, null, introVolume, null)
             }
-            return userService.createNewUser(userDto)
+            userService.createNewUser(userDto)
         } else {
-            return userService.getUserById(discordId, guildId)
+            dbUserDto
         }
     }
 
