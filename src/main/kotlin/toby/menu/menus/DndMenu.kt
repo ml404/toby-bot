@@ -6,22 +6,17 @@ import toby.command.commands.dnd.DnDCommand.Companion.doLookUpAndReply
 import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
-import java.io.UnsupportedEncodingException
 
 class DndMenu : IMenu {
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.selectEvent
         event.deferReply().queue()
-        try {
-            val type = getType(event)
-            determineDnDRequestType(event, deleteDelay, type)
-        } catch (e: UnsupportedEncodingException) {
-            throw RuntimeException(e)
-        }
+        event.toTypeString()
+            .runCatching { event.determineDnDRequestType(deleteDelay, this) }
+            .onFailure { throw RuntimeException(it) }
     }
 
-    @Throws(UnsupportedEncodingException::class)
-    private fun determineDnDRequestType(event: StringSelectInteractionEvent, deleteDelay: Int, type: String) {
+    private fun StringSelectInteractionEvent.determineDnDRequestType(deleteDelay: Int, type: String) {
         val typeName = when (type) {
             DnDCommand.SPELL_NAME -> "spells"
             DnDCommand.CONDITION_NAME -> "conditions"
@@ -29,26 +24,25 @@ class DndMenu : IMenu {
             DnDCommand.FEATURE_NAME -> "features"
             else -> throw IllegalArgumentException("Unknown DnD request type: $type")
         }
-        sendDndApiRequest(event, typeName, type, deleteDelay)
+        sendDndApiRequest(typeName, type, deleteDelay)
     }
 
-    private fun sendDndApiRequest(
-        event: StringSelectInteractionEvent,
+    private fun StringSelectInteractionEvent.sendDndApiRequest(
         typeName: String,
         typeValue: String,
         deleteDelay: Int
     ) {
-        val query = event.values.firstOrNull() ?: return
-        event.message.delete().queue()
-        doLookUpAndReply(event.hook, typeValue, typeName, query, HttpHelper(), deleteDelay)
+        val query = values.firstOrNull() ?: return
+        message.delete().queue()
+        doLookUpAndReply(hook, typeValue, typeName, query, HttpHelper(), deleteDelay)
     }
 
     override val name: String
         get() = "dnd"
 
     companion object {
-        private fun getType(event: StringSelectInteractionEvent): String {
-            return event.componentId.split(":").getOrNull(1) ?: ""
+        private fun StringSelectInteractionEvent.toTypeString(): String {
+            return componentId.split(":").getOrNull(1) ?: ""
         }
     }
 }

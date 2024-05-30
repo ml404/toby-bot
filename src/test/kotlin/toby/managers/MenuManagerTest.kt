@@ -1,21 +1,25 @@
 package toby.managers
+import io.mockk.mockk
+import io.mockk.unmockkAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
 import toby.jpa.service.IConfigService
 import toby.menu.IMenu
 import toby.menu.menus.DndMenu
 
 internal class MenuManagerTest {
 
-    @Mock
     lateinit var configService: IConfigService
 
     @BeforeEach
     fun setUp() {
-        MockitoAnnotations.openMocks(this)
+        configService = mockk()
+    }
+    @AfterEach
+    fun tearDown(){
+        unmockkAll()
     }
 
     @Test

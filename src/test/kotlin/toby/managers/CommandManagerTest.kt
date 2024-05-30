@@ -1,12 +1,11 @@
 package toby.managers
 
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
-import toby.command.ICommand
 import toby.command.commands.dnd.DnDCommand
 import toby.command.commands.dnd.InitiativeCommand
 import toby.command.commands.fetch.DbdRandomKillerCommand
@@ -22,40 +21,31 @@ import toby.jpa.service.impl.MusicFileServiceImpl
 import toby.jpa.service.impl.UserServiceImpl
 
 class CommandManagerTest {
-    @Mock
-    var configService: ConfigServiceImpl? = null
-
-    @Mock
-    var brotherService: BrotherServiceImpl? = null
-
-    @Mock
-    var userService: UserServiceImpl? = null
-
-    @Mock
-    var musicFileService: MusicFileServiceImpl? = null
-
-    @Mock
-    var excuseService: IExcuseService? = null
-
-
-    private var closeable: AutoCloseable? = null
-
+    
+    lateinit var configService: ConfigServiceImpl
+    lateinit var brotherService: BrotherServiceImpl
+    lateinit var userService: UserServiceImpl
+    lateinit var musicFileService: MusicFileServiceImpl
+    lateinit var excuseService: IExcuseService
 
     @BeforeEach
     fun openMocks() {
-        closeable = MockitoAnnotations.openMocks(this)
+        configService = mockk()
+        brotherService = mockk()
+        userService = mockk()
+        musicFileService = mockk()
+        excuseService = mockk()
     }
 
     @AfterEach
     @Throws(Exception::class)
     fun releaseMocks() {
-        closeable!!.close()
+        unmockkAll()
     }
 
     @Test
     fun testCommandManagerFindsAllCommands() {
-        val commandManager =
-            CommandManager(configService!!, brotherService!!, userService!!, musicFileService!!, excuseService!!)
+        val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
 
         val availableCommands = listOf(
             HelpCommand::class.java,
@@ -97,10 +87,7 @@ class CommandManagerTest {
             EightBallCommand::class.java
         )
 
-        Assertions.assertTrue(
-            availableCommands.containsAll(
-                commandManager.allCommands.stream().map { obj: ICommand -> obj.javaClass }
-                    .toList()))
+        Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
         Assertions.assertEquals(37, commandManager.allCommands.size)
         Assertions.assertEquals(37, commandManager.allSlashCommands.size)
     }

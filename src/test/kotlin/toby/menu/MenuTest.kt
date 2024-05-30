@@ -25,17 +25,15 @@ interface MenuTest : CommandTest {
         every { menuEvent.replyFormat(any<String>(), *anyVararg()) } returns replyCallbackAction
         every { menuEvent.message } returns message
         every { message.delete() } returns auditableRestAction as AuditableRestAction<Void>
-        every { menuEvent.message.delete().queue() } just runs
-
     }
 
     @AfterEach
     fun tearDownMenuMocks() {
         tearDownCommonMocks()
-        clearMocks(menuEvent)
+        unmockkAll()
     }
 
     companion object {
-        val menuEvent: StringSelectInteractionEvent = mockk()
+        val menuEvent: StringSelectInteractionEvent = mockk(relaxed = true)
     }
 }

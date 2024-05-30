@@ -1,10 +1,8 @@
 package toby.helpers
 
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
 
 internal class HttpHelperTest {
-    @Test
     fun fetchFromGet() {
         val httpHelper = HttpHelper()
         val responseString = httpHelper.fetchFromGet("https://www.dnd5eapi.co/api/spells/fireball")

@@ -1,13 +1,13 @@
 package toby.menu.menus
 
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.interactionHook
+import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.menu.MenuContext
 import toby.menu.MenuTest
 
@@ -18,7 +18,7 @@ internal class DndMenuTest : MenuTest {
     fun setup() {
         setUpMenuMocks()
         dndMenu = DndMenu()
-        every { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) } returns CommandTest.webhookMessageCreateAction
+        every { interactionHook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
     }
 
     @AfterEach
@@ -37,7 +37,7 @@ internal class DndMenuTest : MenuTest {
         //Assert
         verify(exactly = 1) { MenuTest.menuEvent.deferReply() }
         verify(exactly = 1) { MenuTest.menuEvent.hook }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
     @Test
@@ -51,7 +51,7 @@ internal class DndMenuTest : MenuTest {
         //Assert
         verify(exactly = 1) { MenuTest.menuEvent.deferReply() }
         verify(exactly = 1) { MenuTest.menuEvent.hook }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
     @Test
@@ -65,7 +65,7 @@ internal class DndMenuTest : MenuTest {
         //Assert
         verify(exactly = 1) { MenuTest.menuEvent.deferReply() }
         verify(exactly = 1) { MenuTest.menuEvent.hook }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
     @Test
@@ -79,7 +79,7 @@ internal class DndMenuTest : MenuTest {
         //Assert
         verify(exactly = 1) { MenuTest.menuEvent.deferReply() }
         verify(exactly = 1) { MenuTest.menuEvent.hook }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
     companion object {
@@ -89,6 +89,9 @@ internal class DndMenuTest : MenuTest {
             every { MenuTest.menuEvent.values } returns listOf(selectedValue)
             every { MenuTest.menuEvent.message } returns CommandTest.message
             every { CommandTest.message.delete() } returns auditableRestAction
+            every { auditableRestAction.queue() } just Runs
+            every { MenuTest.menuEvent.message.delete().queue() } just Runs
+            every { webhookMessageCreateAction.queue() } just Runs
             return MenuContext(MenuTest.menuEvent)
         }
     }
