@@ -65,7 +65,10 @@ interface CommandTest {
         every { member.effectiveName } returns "Effective Name"
         every { member.guild } returns guild
         every { member.voiceState } returns guildVoiceState
+        every { member.isOwner } returns false
         every { targetMember.nickname } returns "Target Nickname"
+        every { targetMember.idLong } returns 1L
+        every { targetMember.isOwner } returns false
         every { targetMember.effectiveName } returns "Target Effective Name"
         every { targetMember.guild } returns guild
         every { botMember.nickname } returns "Bot Nickname"
