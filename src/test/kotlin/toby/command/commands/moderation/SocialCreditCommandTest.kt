@@ -1,20 +1,20 @@
 package toby.command.commands.moderation
 
-import io.mockk.clearMocks
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.utils.concurrent.Task
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.anyLong
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.CommandTest.Companion.targetMember
+import toby.command.CommandTest.Companion.user
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
@@ -26,7 +26,7 @@ internal class SocialCreditCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        userService = mockk()
+        userService = mockk(relaxed = true)
         socialCreditCommand = SocialCreditCommand(userService)
     }
 
@@ -39,49 +39,88 @@ internal class SocialCreditCommandTest : CommandTest {
     @Test
     fun test_socialCreditCommandWithNoArgs_printsRequestingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
+        val task: Task<List<Member>> = mockk()
+        val memberList = listOf(member, targetMember)
+        val userOptionMapping = mockk<OptionMapping>()
+        val creditOptionMapping = mockk<OptionMapping>()
+        val leaderboardOptionMapping = mockk<OptionMapping>()
+
+
+        every { userService.listGuildUsers(any<Long>()) } returns listOf(requestingUserDto)
+        every { userService.getUserById(any<Long>(), any<Long>()) } returns requestingUserDto
+        every { event.getOption("users") } returns userOptionMapping
+        every { event.getOption("credit") } returns creditOptionMapping
+        every { event.getOption("leaderboard") } returns leaderboardOptionMapping
+        every { userOptionMapping.asUser } returns user
+        every { creditOptionMapping.asLong } returns Long.MIN_VALUE
+        every { leaderboardOptionMapping.asBoolean } returns false
         every { guild.isLoaded } returns false
+        every { guild.loadMembers() } returns task
+        every { member.isOwner } returns true
+        every { task.get() } returns memberList
+        every { user.effectiveName } returns "Effective Name"
 
         // Act
         socialCreditCommand.handle(commandContext, requestingUserDto, 0)
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageFormat("%s's social credit is: %d", "Effective Name", 0L) }
+        verify(exactly = 1) {
+            event.hook.sendMessage("Effective Name's social credit is: 0".trimIndent())
+        }
     }
 
     @Test
     fun test_socialCreditCommandWithUserMentionedAndCorrectPermissions_printsRequestingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val userOptionMapping = mockk<OptionMapping>()
-        val targetUserDto = mockk<UserDto>()
+        val creditOptionMapping = mockk<OptionMapping>()
+        val leaderboardOptionMapping = mockk<OptionMapping>()
+        val task: Task<List<Member>> = mockk()
+        val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
-        every { CommandTest.event.getOption("users") } returns userOptionMapping
-        every { userOptionMapping.asUser } returns CommandTest.user
-        every { userService.getUserById(anyLong(), anyLong()) } returns targetUserDto
-        every { targetUserDto.guildId } returns 1L
+        every { guild.loadMembers() } returns task
+        every { task.get() } returns memberList
+        every { event.getOption("users") } returns userOptionMapping
+        every { event.getOption("credit") } returns creditOptionMapping
+        every { event.getOption("leaderboard") } returns leaderboardOptionMapping
+        every { userOptionMapping.asUser } returns user
+        every { creditOptionMapping.asLong } returns Long.MIN_VALUE
+        every { leaderboardOptionMapping.asBoolean } returns false
+        every { userService.getUserById(any(), any()) } returns requestingUserDto
         every { member.isOwner } returns true
 
         // Act
         socialCreditCommand.handle(commandContext, requestingUserDto, 0)
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageFormat("%s's social credit is: %d", "UserName", 0L) }
+        verify(exactly = 1) {
+            event.hook.sendMessage("UserName's social credit is: 0")
+        }
     }
 
     @Test
     fun test_socialCreditCommandWithUserMentionedAndCorrectPermissionsAndValueToAdjust_printsAdjustingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val userOptionMapping = mockk<OptionMapping>()
         val scOptionMapping = mockk<OptionMapping>()
-        val targetUserDto = mockk<UserDto>()
+        val leaderboardOptionMapping = mockk<OptionMapping>()
+        val targetUserDto = mockk<UserDto>(relaxed = true)
+        val task: Task<List<Member>> = mockk()
+        val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
-        every { CommandTest.event.getOption("users") } returns userOptionMapping
-        every { CommandTest.event.getOption("credit") } returns scOptionMapping
-        every { userOptionMapping.asUser } returns CommandTest.user
+        every { guild.loadMembers() } returns task
+        every { task.get() } returns memberList
+        every { guild.isLoaded } returns false
+        every { event.getOption("users") } returns userOptionMapping
+        every { event.getOption("credit") } returns scOptionMapping
+        every { event.getOption("leaderboard") } returns leaderboardOptionMapping
+        every { userOptionMapping.asUser } returns user
         every { scOptionMapping.asLong } returns 5L
-        every { userService.getUserById(anyLong(), anyLong()) } returns targetUserDto
+        every { leaderboardOptionMapping.asBoolean } returns false
+        every { userService.getUserById(any(), any()) } returns targetUserDto
         every { targetUserDto.guildId } returns 1L
         every { member.isOwner } returns true
         every { userService.updateUser(targetUserDto) } returns targetUserDto
@@ -91,58 +130,83 @@ internal class SocialCreditCommandTest : CommandTest {
         socialCreditCommand.handle(commandContext, requestingUserDto, 0)
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageFormat("Updated user %s's social credit by %d. New score is: %d", "UserName", 5L, 5L) }
+        verify(exactly = 1) {
+            event.hook.sendMessage("Updated user UserName's social credit by 5. New score is: 5".trimIndent())
+        }
     }
 
     @Test
     fun test_socialCreditCommandWithUserMentionedAndIncorrectPermissions_printsRequestingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        val userOptionMapping = mockk<OptionMapping>()
+        val commandContext = CommandContext(event)
+        val userOptionMapping = mockk<OptionMapping>(relaxed = true)
+        val leaderboardOptionMapping = mockk<OptionMapping>()
         val targetUserDto = mockk<UserDto>()
+        val task: Task<List<Member>> = mockk()
+        val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
-        every { CommandTest.event.getOption("users") } returns userOptionMapping
-        every { userOptionMapping.asUser } returns CommandTest.user
-        every { userService.getUserById(anyLong(), anyLong()) } returns targetUserDto
+        every { guild.loadMembers() } returns task
+        every { task.get() } returns memberList
+        every { guild.isLoaded } returns false
+        every { event.getOption("users") } returns userOptionMapping
+        every { event.getOption("leaderboard") } returns leaderboardOptionMapping
+        every { userOptionMapping.asUser } returns user
+        every { leaderboardOptionMapping.asBoolean } returns false
+        every { userService.getUserById(any(), any()) } returns targetUserDto
         every { member.isOwner } returns false
         every { targetUserDto.guildId } returns 1L
-
-        // Act
-        socialCreditCommand.handle(commandContext, requestingUserDto, 0)
-
-        // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageFormat("User '%s' is not allowed to adjust the social credit of user '%s'.", "Effective Name", "UserName") }
-    }
-
-    @Test
-    fun test_leaderboard_printsLeaderboard() {
-        // Arrange
-        val commandContext = CommandContext(CommandTest.event)
-        val targetUserDto = mockk<UserDto>()
-        every { guild.isLoaded } returns false
-        every { guild.members } returns listOf(member, targetMember)
-        val leaderOptionMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("leaderboard") } returns leaderOptionMapping
-        every { leaderOptionMapping.asBoolean } returns true
-        every { userService.getUserById(anyLong(), anyLong()) } returns targetUserDto
-        every { member.isOwner } returns false
-        every { targetUserDto.guildId } returns 1L
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto, targetUserDto)
-        every { requestingUserDto.socialCredit } returns 100L
-        every { targetUserDto.socialCredit } returns 50L
-        every { targetUserDto.discordId } returns 2L
-        every { guild.members } returns listOf(member, targetMember)
-        every { member.idLong } returns 1L
-        every { targetMember.idLong } returns 2L
 
         // Act
         socialCreditCommand.handle(commandContext, requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {
-            CommandTest.interactionHook.sendMessageFormat(
-                "**Social Credit Leaderboard**\n**-----------------------------**\n#1: Effective Name - score: 100\n#2: Target Effective Name - score: 50\n"
+            event.hook.sendMessage(
+                "User 'Effective Name' is not allowed to adjust the social credit of user 'UserName'."
             )
+        }
+    }
+
+    @Test
+    fun test_leaderboard_printsLeaderboard() {
+        // Arrange
+        val commandContext = CommandContext(event)
+        val targetUserDto = mockk<UserDto>()
+        val task: Task<List<Member>> = mockk()
+        val memberList = listOf(member, targetMember)
+        every { guild.isLoaded } returns false
+        every { guild.loadMembers() } returns task
+        every { task.get() } returns memberList
+        val leaderOptionMapping = mockk<OptionMapping>()
+        every { event.getOption("leaderboard") } returns leaderOptionMapping
+        every { leaderOptionMapping.asBoolean } returns true
+        every { userService.getUserById(any(), any()) } returns targetUserDto
+        every { member.isOwner } returns false
+        every { targetUserDto.guildId } returns 1L
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto, targetUserDto)
+        every { requestingUserDto.socialCredit } returns 100L
+        every { targetUserDto.socialCredit } returns 50L
+        every { targetUserDto.discordId } returns 2L
+        every { guild.members } returns memberList
+        every { guild.getMemberById(1L) } returns member
+        every { guild.getMemberById(2L) } returns targetMember
+        every { member.idLong } returns 1L
+        every { targetMember.idLong } returns 2L
+
+
+        // Arrange
+        val expectedMessage = buildString {
+            append("**Social Credit Leaderboard**\n")
+            append("**-----------------------------**\n")
+            append("#1: Effective Name - score: 100\n")
+            append("#2: Target Effective Name - score: 50\n")
+        }
+        // Act
+        socialCreditCommand.handle(commandContext, requestingUserDto, 0)
+
+        // Assert
+        verify(exactly = 1) {
+            event.hook.sendMessage(expectedMessage.trimIndent())
         }
     }
 }

@@ -1,6 +1,5 @@
 package toby.command.commands.moderation
 
-import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -18,7 +17,7 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
         val event = ctx.event
         event.deferReply().queue()
         val member = ctx.member
-        if (!member?.isOwner!!) {
+        if (member?.isOwner != true) {
             event.hook.sendMessage("This is currently reserved for the owner of the server only, this may change in future")
                 .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             return
@@ -39,16 +38,14 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
                     event,
                     optionMapping,
                     deleteDelay,
-                    "Set default volume to '%s'"
+                    "Set default volume to '${optionMapping.asInt}'"
                 )
-
                 ConfigDto.Configurations.DELETE_DELAY -> setConfigAndSendMessage(
                     event,
                     optionMapping,
                     deleteDelay,
-                    "Set default delete message delay for TobyBot music messages to '%d' seconds"
+                    "Set default delete message delay for TobyBot music messages to '${optionMapping.asInt}' seconds"
                 )
-
             }
         }
     }
@@ -59,67 +56,76 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
         deleteDelay: Int,
         messageToSend: String
     ) {
-        val newValueOptional = optionMapping.asInt.takeIf { it >= 0 }
-        if (newValueOptional == null) {
-            event.hook.sendMessage("Value given invalid (a whole number representing percent)").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        val newValue = optionMapping.asInt.takeIf { it >= 0 }
+        if (newValue == null) {
+            event.hook.sendMessage("Value given invalid (a whole number representing percent)")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
-        val configValue = ConfigDto.Configurations.valueOf(optionMapping.name.uppercase(Locale.getDefault())).configValue
-        val databaseConfig = configService.getConfigByName(configValue, event.guild!!.id)
-        val newDefaultVolume = optionMapping.asInt
-        val newConfigDto = ConfigDto(configValue, newDefaultVolume.toString(), event.guild!!.id)
+
+        val configValue =
+            ConfigDto.Configurations.valueOf(optionMapping.name.uppercase(Locale.getDefault())).configValue
+        val guildId = event.guild?.id ?: return
+
+        val newConfigDto = ConfigDto(configValue, newValue.toString(), guildId)
+        val databaseConfig = configService.getConfigByName(configValue, guildId)
+
         if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
             configService.updateConfig(newConfigDto)
         } else {
             configService.createNewConfig(newConfigDto)
         }
-        event.hook.sendMessageFormat(messageToSend, newDefaultVolume).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val movePropertyName = ConfigDto.Configurations.MOVE.configValue
-        val newDefaultMoveChannelOptional =
-            event.getOption(ConfigDto.Configurations.MOVE.name.lowercase(Locale.getDefault()))?.asChannel as? GuildChannelUnion
-        if (newDefaultMoveChannelOptional != null) {
-            val databaseConfig = configService.getConfigByName(movePropertyName, event.guild!!.id)
-            val newConfigDto = ConfigDto(movePropertyName, newDefaultMoveChannelOptional.name, event.guild!!.id)
+        val guildId = event.guild?.id ?: return
+        val newDefaultMoveChannel =
+            event.getOption(ConfigDto.Configurations.MOVE.name.lowercase(Locale.getDefault()))?.asChannel
+
+        if (newDefaultMoveChannel != null) {
+            val newConfigDto = ConfigDto(movePropertyName, newDefaultMoveChannel.name, guildId)
+            val databaseConfig = configService.getConfigByName(movePropertyName, guildId)
+
             if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
                 configService.updateConfig(newConfigDto)
             } else {
                 configService.createNewConfig(newConfigDto)
             }
-            event.hook.sendMessageFormat("Set default move channel to '%s'", newDefaultMoveChannelOptional.name).setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.sendMessage("Set default move channel to '${newDefaultMoveChannel.name}'")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         } else {
-            event.hook.sendMessage("No valid channel was mentioned, so config was not updated").setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.sendMessage("No valid channel was mentioned, so config was not updated")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 
     override val name: String
         get() = "setconfig"
+
     override val description: String
-        get() = "Use this command to set the configuration used for this bot your server"
+        get() = "Use this command to set the configuration used for this bot in your server"
+
     override val optionData: List<OptionData>
-        get() {
-            val defaultVolume = OptionData(
+        get() = listOf(
+            OptionData(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.VOLUME.name.lowercase(Locale.getDefault()),
                 "Default volume for audio player on your server (100 without an override)",
                 false
-            )
-            val deleteDelay = OptionData(
+            ),
+            OptionData(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.DELETE_DELAY.name.lowercase(Locale.getDefault()),
                 "The length of time in seconds before your slash command messages are deleted",
                 false
-            )
-            val channelValue = OptionData(
+            ),
+            OptionData(
                 OptionType.CHANNEL,
                 ConfigDto.Configurations.MOVE.name.lowercase(Locale.getDefault()),
                 "Value for the default move channel you want if using move command without arguments",
                 false
             )
-            return listOf(defaultVolume, deleteDelay, channelValue)
-        }
+        )
 }
