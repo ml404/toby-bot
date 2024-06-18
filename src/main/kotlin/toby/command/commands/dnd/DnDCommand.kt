@@ -18,6 +18,7 @@ import toby.helpers.JsonParser
 import toby.jpa.dto.UserDto
 import java.lang.String.join
 import java.util.function.Consumer
+import kotlin.math.roundToInt
 
 class DnDCommand : IDnDCommand, IFetchCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
@@ -61,7 +62,6 @@ class DnDCommand : IDnDCommand, IFetchCommand {
         }
 
     companion object {
-        private const val DND_5_API_URL = "https://www.dnd5eapi.co/api/%s/%s"
         const val TYPE = "type"
         const val QUERY = "query"
         const val SPELL_NAME = "spell"
@@ -89,7 +89,6 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             return ""
         }
 
-        @JvmStatic
         fun doLookUpAndReply(
             hook: InteractionHook,
             typeName: String?,
@@ -98,39 +97,47 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             httpHelper: HttpHelper,
             deleteDelay: Int?
         ) {
-            val url = String.format(DND_5_API_URL, typeValue, replaceSpaceWithDash(query))
+            val url = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithDash()}"
             val responseData = httpHelper.fetchFromGet(url)
             when (typeName) {
                 SPELL_NAME -> {
                     val spell = JsonParser.parseJSONToSpell(responseData)
-                    spell?.let {
-                        val spellEmbed = createEmbedFromSpell(it)
+                    if (spell == null || spell.isAllFieldsNull()) {
+                        queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    } else {
+                        val spellEmbed = createEmbedFromSpell(spell)
                         hook.sendMessageEmbeds(spellEmbed.build()).queue()
-                    } ?: queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    }
                 }
 
                 CONDITION_NAME -> {
                     val information = JsonParser.parseJsonToInformation(responseData)
-                    information?.let {
+                    if (information == null || information.isAllFieldsNull()) {
+                        queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    } else {
                         val conditionEmbed = createEmbedFromInformation(information)
                         hook.sendMessageEmbeds(conditionEmbed.build()).queue()
-                    } ?: queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    }
                 }
 
                 RULE_NAME -> {
                     val rule = JsonParser.parseJsonToRule(responseData)
-                    rule?.let {
+                    if (rule == null || rule.isAllFieldsNull()) {
+                        queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    } else {
                         val conditionEmbed = createEmbedFromRule(rule)
                         hook.sendMessageEmbeds(conditionEmbed.build()).queue()
-                    } ?: queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    }
                 }
 
                 FEATURE_NAME -> {
                     val feature = JsonParser.parseJsonToFeature(responseData)
-                    feature?.let {
+                    if (feature == null || feature.isAllFieldsNull()) {
+                        queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    } else {
                         val conditionEmbed = createEmbedFromFeature(feature)
                         hook.sendMessageEmbeds(conditionEmbed.build()).queue()
-                    } ?: queryNonMatchRetry(hook, typeName, typeValue, query, httpHelper, deleteDelay)
+                    }
                 }
 
                 else -> hook.sendMessage("Something went wrong.")
@@ -146,13 +153,8 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             httpHelper: HttpHelper,
             deleteDelay: Int?
         ) {
-            val queryResponseData = httpHelper.fetchFromGet(
-                String.format(
-                    DND_5_API_URL,
-                    typeValue,
-                    "?name=" + replaceSpaceWithUrlEncode(query)
-                )
-            )
+            val queryUrl = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
+            val queryResponseData = httpHelper.fetchFromGet(queryUrl)
             val queryResult = JsonParser.parseJsonToQueryResult(queryResponseData)
             if (queryResult != null && queryResult.count > 0) {
                 val builder =
@@ -165,14 +167,11 @@ class DnDCommand : IDnDCommand, IFetchCommand {
                         )
                     )
                 })
-                hook.sendMessageFormat(
-                    "Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate",
-                    query
-                )
+                hook.sendMessage("Your query '$query' didn't return a value, but these close matches were found, please select one as appropriate")
                     .addActionRow(builder.build())
                     .queue()
             } else {
-                hook.sendMessageFormat("Sorry, nothing was returned for %s '%s'", typeName, query)
+                hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
         }
@@ -181,10 +180,10 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             val embedBuilder = EmbedBuilder()
             spell.name?.let { embedBuilder.setTitle(spell.name) }
             if (spell.desc.isNotEmpty()) {
-                embedBuilder.setDescription(transformListToString(spell.desc))
+                embedBuilder.setDescription(spell.desc.transformListToString())
             }
             if (spell.higherLevel.isNotEmpty()) {
-                embedBuilder.addField("Higher Level", transformListToString(spell.higherLevel), false)
+                embedBuilder.addField("Higher Level", spell.higherLevel.transformListToString(), false)
             }
             if (spell.range != null) {
                 val meterValue = if (spell.range == "Touch") "Touch" else buildString {
@@ -229,7 +228,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             if (spell.areaOfEffect != null) {
                 embedBuilder.addField(
                     "Area of Effect",
-                    "Type: " + spell.areaOfEffect.type + ", Size: " + transformToMeters(spell.areaOfEffect.size) + "m",
+                    "Type: ${spell.areaOfEffect.type}, Size: ${transformToMeters(spell.areaOfEffect.size)}m",
                     true
                 )
             }
@@ -265,7 +264,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
                 embedBuilder.setTitle(information.name)
             }
             if (!information.desc.isNullOrEmpty()) {
-                embedBuilder.setDescription(transformListToString(information.desc))
+                embedBuilder.setDescription((information.desc.transformListToString()))
             }
             embedBuilder.setColor(0x42f5a7)
             return embedBuilder
@@ -277,7 +276,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
                 embedBuilder.setTitle(rule.name)
             }
             if (!rule.desc.isNullOrEmpty()) {
-                embedBuilder.setDescription(rule.desc)
+                embedBuilder.setDescription(rule.desc.transformListToString())
             }
             embedBuilder.setColor(0x42f5a7)
             return embedBuilder
@@ -289,33 +288,33 @@ class DnDCommand : IDnDCommand, IFetchCommand {
                 embedBuilder.setTitle(feature.name)
             }
             if (!feature.desc.isNullOrEmpty()) {
-                embedBuilder.setDescription(transformListToString(feature.desc))
+                embedBuilder.setDescription(feature.desc.transformListToString())
             }
             if (feature.classInfo != null) {
                 embedBuilder.addField("Class", feature.classInfo.name, true)
             }
             feature.level?.let { embedBuilder.addField("Level", feature.level.toString(), true) }
             if (feature.prerequisites.isNotEmpty()) {
-                embedBuilder.addField("Prerequisites", transformListToString(feature.prerequisites), false)
+                embedBuilder.addField("Prerequisites", feature.prerequisites.transformListToString(), false)
             }
             embedBuilder.setColor(0x42f5a7)
             return embedBuilder
         }
 
-        private fun transformListToString(feature: List<String?>): String {
-            return feature.stream().reduce { s1: String?, s2: String? -> join("\n", s1, s2) }.get()
+        private fun List<String?>.transformListToString(): String {
+            return this.stream().reduce { s1: String?, s2: String? -> join("\n", s1, s2) }.get()
         }
 
-        private fun replaceSpaceWithDash(query: String): String {
-            return query.replace(" ", "-")
+        private fun String.replaceSpaceWithDash(): String {
+            return this.replace(" ", "-")
         }
 
-        private fun replaceSpaceWithUrlEncode(query: String): String {
-            return query.replace(" ", "%20")
+        private fun String.replaceSpaceWithUrlEncode(): String {
+            return this.replace(" ", "%20")
         }
 
         private fun transformToMeters(rangeNumber: Int): String {
-            return Math.round(rangeNumber.toDouble() / 3.28).toString()
+            return (rangeNumber.toDouble() / 3.28).roundToInt().toString()
         }
     }
 }

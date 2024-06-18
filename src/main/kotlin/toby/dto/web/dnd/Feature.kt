@@ -12,3 +12,13 @@ data class Feature(
     val desc: List<String>?,
     val url: String?
 )
+
+fun Feature.isAllFieldsNull(): Boolean =
+        index == null &&
+        classInfo == null &&
+        name == null &&
+        level == null &&
+        prerequisites.isEmpty() &&
+        desc.isNullOrEmpty() &&
+        url == null
+

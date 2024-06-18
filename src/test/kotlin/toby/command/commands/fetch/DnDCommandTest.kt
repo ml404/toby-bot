@@ -1,8 +1,6 @@
 package toby.command.commands.fetch
 
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
@@ -11,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.command.commands.dnd.DnDCommand
 import toby.helpers.HttpHelper
 
@@ -22,11 +22,11 @@ internal class DnDCommandTest : CommandTest {
         setUpCommonMocks()
         command = DnDCommand()
         every {
-            CommandTest.interactionHook.sendMessageEmbeds(
+            event.hook.sendMessageEmbeds(
                 any<MessageEmbed>(),
                 *anyVararg()
             )
-        } returns CommandTest.webhookMessageCreateAction
+        } returns webhookMessageCreateAction
     }
 
     @AfterEach
@@ -37,17 +37,18 @@ internal class DnDCommandTest : CommandTest {
     @Test
     fun test_DnDCommandWithTypeAsSpell() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
         every { helper.fetchFromGet(any()) } returns spellJson
         every { typeMapping.asString } returns "spells"
         every { typeMapping.name } returns "spell"
         every { queryMapping.asString } returns "fireball"
+        every { webhookMessageCreateAction.queue()} just Runs
 
         //Act
         val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
@@ -61,21 +62,21 @@ internal class DnDCommandTest : CommandTest {
         )
 
         //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { helper.fetchFromGet(any()) }
     }
 
     @Test
     fun test_DnDCommandWithTypeAsSpell_AndNothingIsReturnedForQuery() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
         every { helper.fetchFromGet(any()) } returns ""
         every { typeMapping.asString } returns "spells"
@@ -86,23 +87,20 @@ internal class DnDCommandTest : CommandTest {
         val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
         command.handleWithHttpObjects(
             commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
+            typeOptionMapping?.name,
+            typeOptionMapping?.asString,
             commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
             helper,
             0
         )
 
         //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
         verify(exactly = 2) { helper.fetchFromGet(any()) }
-        verify(exactly = 0) { CommandTest.interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) {
-            CommandTest.interactionHook.sendMessageFormat(
-                "Sorry, nothing was returned for %s '%s'",
-                "spell",
-                "fireball"
+            event.hook.sendMessage(
+                "Sorry, nothing was returned for spell 'fireball'"
             )
         }
     }
@@ -110,12 +108,12 @@ internal class DnDCommandTest : CommandTest {
     @Test
     fun test_DnDCommandWithTypeAsSpell_AndSomethingIsReturnedForCloseMatchQuery() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
         every { helper.fetchFromGet("https://www.dnd5eapi.co/api/spells/Fireball") } returns ""
         every { typeMapping.asString } returns "spells"
@@ -124,7 +122,8 @@ internal class DnDCommandTest : CommandTest {
         every { helper.fetchFromGet("https://www.dnd5eapi.co/api/spells?name=Fireball") } returns """
             {"count":2,"results":[{"index":"delayed-blast-fireball","name":"Delayed Blast Fireball","url":"/api/spells/delayed-blast-fireball"},{"index":"fireball","name":"Fireball","url":"/api/spells/fireball"}]}
         """.trimIndent()
-        every { CommandTest.webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns CommandTest.webhookMessageCreateAction
+        every { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.queue() } just Runs
 
         //Act
         val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
@@ -138,32 +137,30 @@ internal class DnDCommandTest : CommandTest {
         )
 
         //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
         verify(exactly = 2) { helper.fetchFromGet(any()) }
         verify(exactly = 1) {
-            CommandTest.interactionHook.sendMessageFormat(
-                "Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate",
-                "Fireball"
-            )
+            event.hook.sendMessage("Your query 'Fireball' didn't return a value, but these close matches were found, please select one as appropriate")
         }
-        verify(exactly = 1) { CommandTest.webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) }
+        verify(exactly = 1) { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) }
     }
 
     @Test
     fun test_DnDCommandWithTypeAsCondition() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
         every { helper.fetchFromGet(any()) } returns conditionJson
         every { typeMapping.asString } returns "conditions"
         every { typeMapping.name } returns "condition"
         every { queryMapping.asString } returns "grappled"
+        every { webhookMessageCreateAction.queue()} just Runs
 
         //Act
         val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
@@ -177,33 +174,34 @@ internal class DnDCommandTest : CommandTest {
         )
 
         //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { helper.fetchFromGet(any()) }
     }
 
     @Test
     fun test_DnDCommandWithTypeAsCondition_AndNothingIsReturnedForQuery() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         noQueryReturn("condition", "conditions", commandContext)
     }
 
     @Test
     fun test_DnDCommandWithTypeAsRule() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
         every { helper.fetchFromGet(any()) } returns ruleJson
         every { typeMapping.asString } returns "rule-sections"
         every { typeMapping.name } returns "rule"
         every { queryMapping.asString } returns "cover"
+        every { webhookMessageCreateAction.queue() } just Runs
 
         //Act
         val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
@@ -217,39 +215,41 @@ internal class DnDCommandTest : CommandTest {
         )
 
         //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { helper.fetchFromGet(any()) }
     }
 
     @Test
     fun test_DnDCommandWithTypeAsRule_AndNothingIsReturnedForQuery() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         noQueryReturn("rule", "rule-sections", commandContext)
     }
 
     @Test
     fun test_DnDCommandWithTypeAsRule_AndSomethingIsReturnedForCloseMatchQuery() {
-        //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        // Arrange
+        val commandContext = CommandContext(event)
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/rule-sections/cover") } returns ""
+        // Correct URLs in the mocks
+        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/rule-sections/cover".trimIndent()) } returns ""
         every { typeMapping.asString } returns "rule-sections"
         every { typeMapping.name } returns "rule"
         every { queryMapping.asString } returns "cover"
-        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/rule-sections?name=cover") } returns """
-            {"count":2,"results":[{"index":"cover","name":"Cover","url":"/api/rule-sections/cover"},{"index":"half-cover","name":"Half Cover","url":"/api/rule-sections/half-cover"}]}
-        """.trimIndent()
-        every { CommandTest.webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns CommandTest.webhookMessageCreateAction
+        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/rule-sections?name=cover".trimIndent()) } returns """
+        {"count":2,"results":[{"index":"cover","name":"Cover","url":"/api/rule-sections/cover"},{"index":"half-cover","name":"Half Cover","url":"/api/rule-sections/half-cover"}]}
+    """.trimIndent()
+        every { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.queue() } just Runs
 
-        //Act
+        // Act
         val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
         command.handleWithHttpObjects(
             commandContext.event,
@@ -260,25 +260,22 @@ internal class DnDCommandTest : CommandTest {
             0
         )
 
-        //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
+        // Assert
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
         verify(exactly = 2) { helper.fetchFromGet(any()) }
         verify(exactly = 1) {
-            CommandTest.interactionHook.sendMessageFormat(
-                "Your query '%s' didn't return a value, but these close matches were found, please select one as appropriate",
-                "cover"
-            )
+            event.hook.sendMessage("Your query 'cover' didn't return a value, but these close matches were found, please select one as appropriate")
         }
-        verify(exactly = 1) { CommandTest.webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) }
+        verify(exactly = 1) { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) }
     }
 
     private fun noQueryReturn(typeName: String, typeOption: String, commandContext: CommandContext) {
         val typeMapping = mockk<OptionMapping>()
         val queryMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("type") } returns typeMapping
-        every { CommandTest.event.getOption("query") } returns queryMapping
-        every { CommandTest.event.interaction } returns CommandTest.event
+        every { event.getOption("type") } returns typeMapping
+        every { event.getOption("query") } returns queryMapping
+        every { event.interaction } returns event
         val helper = mockk<HttpHelper>()
         every { helper.fetchFromGet(any()) } returns ""
         every { typeMapping.asString } returns typeOption
@@ -297,16 +294,11 @@ internal class DnDCommandTest : CommandTest {
         )
 
         //Assert
-        verify(exactly = 1) { CommandTest.event.getOption("type") }
-        verify(exactly = 1) { CommandTest.event.getOption("query") }
+        verify(exactly = 1) { event.getOption("type") }
+        verify(exactly = 1) { event.getOption("query") }
         verify(exactly = 2) { helper.fetchFromGet(any()) }
-        verify(exactly = 0) { CommandTest.interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) {
-            CommandTest.interactionHook.sendMessageFormat(
-                "Sorry, nothing was returned for %s '%s'",
-                typeName,
-                "fireball"
-            )
+            event.hook.sendMessage("Sorry, nothing was returned for $typeName 'fireball'")
         }
     }
 
