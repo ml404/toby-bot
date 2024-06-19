@@ -52,7 +52,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
             .thenReturn(musicManager)
         queue.add(track)
         queue.add(track2)
-        Mockito.`when`(trackScheduler.getQueue()).thenReturn(queue)
+        Mockito.`when`(trackScheduler.queue).thenReturn(queue)
         Mockito.`when`(track.userData).thenReturn(1)
 
         //Act
@@ -97,7 +97,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
             .thenReturn(musicManager)
         queue.add(track)
         queue.add(track2)
-        Mockito.`when`(trackScheduler.getQueue()).thenReturn(queue)
+        Mockito.`when`(trackScheduler.queue).thenReturn(queue)
         Mockito.`when`(track.userData).thenReturn(1)
         Mockito.`when`(CommandTest.requestingUserDto.digPermission).thenReturn(false)
 

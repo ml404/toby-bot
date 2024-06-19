@@ -2,18 +2,17 @@ package toby.command.commands.music
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import io.mockk.*
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class ShuffleCommandTest : MusicCommandTest {
-    var shuffleCommand: ShuffleCommand? = null
+    lateinit var shuffleCommand: ShuffleCommand
 
     @BeforeEach
     fun setUp() {
@@ -24,69 +23,71 @@ internal class ShuffleCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
+        clearMocks(CommandTest.event, MusicCommandTest.audioPlayer, MusicCommandTest.playerManager, CommandTest.interactionHook)
     }
 
     @Test
     fun testShuffleCommand_withValidQueue() {
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("skip")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asInt).thenReturn(2)
-        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(2)
-        val track2 = Mockito.mock(
-            AudioTrack::class.java
-        )
-        Mockito.`when`(track2.info)
-            .thenReturn(AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri"))
-        Mockito.`when`(track2.duration).thenReturn(1000L)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        val optionMapping = mockk<OptionMapping>()
+        every { CommandTest.event.getOption("skip") } returns optionMapping
+        every { optionMapping.asInt } returns 2
+
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(2)
+        val track2 = mockk<AudioTrack>()
+        every { track2.info } returns AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri")
+        every { track2.duration } returns 1000L
+
         queue.add(MusicCommandTest.track)
         queue.add(track2)
-        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
-        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
-        //Act
-        shuffleCommand!!.handleMusicCommand(
+        every { MusicCommandTest.trackScheduler.queue } returns queue
+        every { MusicCommandTest.track.userData } returns 1
+
+        // Act
+        shuffleCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("The queue has been shuffled 🦧"))
+        // Assert
+        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("The queue has been shuffled 🦧") }
     }
 
     @Test
     fun testShuffleCommand_withNoQueue() {
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
-        val optionMapping = Mockito.mock(OptionMapping::class.java)
-        Mockito.`when`<OptionMapping>(CommandTest.event.getOption("skip")).thenReturn(optionMapping)
-        Mockito.`when`(optionMapping.asInt).thenReturn(2)
-        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(1)
-        val track2 = Mockito.mock(
-            AudioTrack::class.java
-        )
-        Mockito.`when`(track2.info)
-            .thenReturn(AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri"))
-        Mockito.`when`(track2.duration).thenReturn(1000L)
-        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
-        Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        val optionMapping = mockk<OptionMapping>()
+        every { CommandTest.event.getOption("skip") } returns optionMapping
+        every { optionMapping.asInt } returns 2
 
-        //Act
-        shuffleCommand!!.handleMusicCommand(
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)
+        val track2 = mockk<AudioTrack>()
+        every { track2.info } returns AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri")
+        every { track2.duration } returns 1000L
+
+        every { MusicCommandTest.trackScheduler.queue } returns queue
+        every { MusicCommandTest.track.userData } returns 1
+
+        // Act
+        shuffleCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("I can't shuffle a queue that doesn't exist"))
+        // Assert
+        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("I can't shuffle a queue that doesn't exist") }
     }
 }

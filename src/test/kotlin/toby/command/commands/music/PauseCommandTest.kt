@@ -1,16 +1,15 @@
 package toby.command.commands.music
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import io.mockk.clearAllMocks
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
-import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class PauseCommandTest : MusicCommandTest {
@@ -25,17 +24,18 @@ internal class PauseCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
+        clearAllMocks()
     }
 
     @Test
     fun test_pauseMethod_withCorrectChannels_andPausableTrack() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(true)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
 
-        //Act
+        // Act
         pauseCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -43,37 +43,24 @@ internal class PauseCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.event.hook, Mockito.times(1))
-            .sendMessage("Pausing: `")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction as WebhookMessageCreateAction<Message>?,
-            Mockito.times(1)
-        ).addContent("Title")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("` by `")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Author")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("`")
+        // Assert
+        verify(exactly = 1) { CommandTest.event.hook.sendMessage("Pausing: `") }
+        verify(exactly = 1) { CommandTest.webhookMessageCreateAction.addContent("Title") }
+        verify(exactly = 1) { CommandTest.webhookMessageCreateAction.addContent("` by `") }
+        verify(exactly = 1) { CommandTest.webhookMessageCreateAction.addContent("Author") }
+        verify(exactly = 1) { CommandTest.webhookMessageCreateAction.addContent("`") }
     }
 
     @Test
     fun test_pauseMethod_withCorrectChannels_andNonPausableTrack() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
-        Mockito.`when`(CommandTest.requestingUserDto.superUser).thenReturn(false)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        every { CommandTest.requestingUserDto.superUser } returns false
 
-        //Act
+        // Act
         pauseCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -81,27 +68,29 @@ internal class PauseCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1)).sendMessageFormat(
-            ArgumentMatchers.eq("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!"),
-            ArgumentMatchers.eq("00:00:01"),
-            ArgumentMatchers.eq("00:00:01")
-        )
+        // Assert
+        verify(exactly = 1) {
+            CommandTest.interactionHook.sendMessageFormat(
+                "HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!",
+                "00:00:01",
+                "00:00:01"
+            )
+        }
     }
 
     @Test
     fun test_pauseMethod_withCorrectChannels_andNonPausableTrack_AndAQueue() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
-        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(1)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)
         queue.add(MusicCommandTest.track)
-        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
-        Mockito.`when`(CommandTest.requestingUserDto.superUser).thenReturn(false)
+        every { MusicCommandTest.trackScheduler.queue } returns queue
+        every { CommandTest.requestingUserDto.superUser } returns false
 
-        //Act
+        // Act
         pauseCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
@@ -109,8 +98,11 @@ internal class PauseCommandTest : MusicCommandTest {
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("Our daddy taught us not to be ashamed of our playlists"))
+        // Assert
+        verify(exactly = 1) {
+            CommandTest.interactionHook.sendMessage(
+                "Our daddy taught us not to be ashamed of our playlists"
+            )
+        }
     }
 }

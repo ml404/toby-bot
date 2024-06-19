@@ -25,12 +25,10 @@ object MusicPlayerHelper {
     const val SECOND_MULTIPLIER: Int = 1000
     private val guildLastNowPlayingMessage: MutableMap<Long, MutableMap<Channel?, Message?>> = HashMap()
 
-    @JvmStatic
     fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?, volume: Int) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition, volume)
     }
 
-    @JvmStatic
     fun playUserIntro(
         dbUser: UserDto,
         guild: Guild?,

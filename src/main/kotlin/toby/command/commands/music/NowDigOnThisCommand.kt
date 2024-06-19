@@ -38,7 +38,7 @@ class NowDigOnThisCommand : IMusicCommand {
             if (musicManager.scheduler.queue.isEmpty()) {
                 musicManager.audioPlayer.volume = volume
             }
-            instance.loadAndPlay(ctx.guild, event, link, false, deleteDelay!!, startPosition, volume)
+            instance.loadAndPlay(ctx.guild, event, link, false, deleteDelay ?: 0, startPosition, volume)
         } else sendErrorMessage(event, deleteDelay)
     }
 

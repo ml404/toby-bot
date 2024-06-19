@@ -13,6 +13,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.dto.web.RedditAPIDto
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -41,7 +43,14 @@ internal class MemeCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        every { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) } returns CommandTest.webhookMessageCreateAction
+        every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.getOption("timeperiod")} returns mockk {
+            every { asString } returns RedditAPIDto.TimePeriod.DAY.name.uppercase(Locale.getDefault())
+        }
+        every { event.getOption("limit")} returns mockk {
+            every { asInt } returns 1
+        }
+        every { webhookMessageCreateAction.queue()} just Runs
         memeCommand = MemeCommand()
     }
 
@@ -55,7 +64,7 @@ internal class MemeCommandTest : CommandTest {
     @Throws(IOException::class)
     fun test_memeCommandWithSubreddit_createsAndSendsEmbed() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val subredditOptionMapping = mockk<OptionMapping>()
         val httpClient = mockk<HttpClient>()
         val httpResponse = mockk<HttpResponse>()
@@ -64,25 +73,26 @@ internal class MemeCommandTest : CommandTest {
         val contentStream: InputStream = ByteArrayInputStream(jsonResponse.toByteArray())
 
         every { subredditOptionMapping.asString } returns "raimimemes"
-        every { CommandTest.event.getOption("subreddit") } returns subredditOptionMapping
+        every { event.getOption("subreddit") } returns subredditOptionMapping
         every { httpClient.execute(any()) } returns httpResponse
         every { httpResponse.statusLine } returns statusLine
         every { statusLine.statusCode } returns 200
         every { httpResponse.entity } returns httpEntity
         every { httpEntity.content } returns contentStream
 
+
         //Act
         memeCommand.handle(commandContext, httpClient, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
     @Test
     @Throws(IOException::class)
     fun test_memeCommandWithSubredditAndTimePeriod_createsAndSendsEmbed() {
         //Arrange
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         val subredditOptionMapping = mockk<OptionMapping>()
         val timePeriodOptionMapping = mockk<OptionMapping>()
         val httpClient = mockk<HttpClient>()
@@ -93,8 +103,8 @@ internal class MemeCommandTest : CommandTest {
 
         every { subredditOptionMapping.asString } returns "raimimemes"
         every { timePeriodOptionMapping.asString } returns RedditAPIDto.TimePeriod.DAY.name.uppercase(Locale.getDefault())
-        every { CommandTest.event.getOption("subreddit") } returns subredditOptionMapping
-        every { CommandTest.event.getOption("timeperiod") } returns timePeriodOptionMapping
+        every { event.getOption("subreddit") } returns subredditOptionMapping
+        every { event.getOption("timeperiod") } returns timePeriodOptionMapping
         every { httpClient.execute(any()) } returns httpResponse
         every { httpResponse.statusLine } returns statusLine
         every { statusLine.statusCode } returns 200
@@ -105,7 +115,7 @@ internal class MemeCommandTest : CommandTest {
         memeCommand.handle(commandContext, httpClient, CommandTest.requestingUserDto, 0)
 
         //Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
     @Test

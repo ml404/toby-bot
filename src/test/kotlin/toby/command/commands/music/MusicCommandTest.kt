@@ -27,10 +27,8 @@ import java.util.concurrent.ArrayBlockingQueue
 interface MusicCommandTest : CommandTest {
     fun setupCommonMusicMocks() {
         setUpCommonMocks()
-
         every { interactionHook.interaction } returns interaction
         every { interaction.guild } returns guild
-        playerManager = mockk()
         every { playerManager.getMusicManager(guild) } returns musicManager
         every { musicManager.audioPlayer } returns audioPlayer
         every { musicManager.sendHandler } returns audioPlayerSendHandler
@@ -109,7 +107,7 @@ interface MusicCommandTest : CommandTest {
         val memberVoiceState: GuildVoiceState = mockk()
         val botVoiceState: GuildVoiceState = mockk()
         val botMember: Member = mockk()
-        lateinit var playerManager: PlayerManager
+        var playerManager: PlayerManager = mockk()
         val musicManager: GuildMusicManager = mockk()
         val audioPlayer: AudioPlayer = mockk()
         val audioManager: AudioManager = mockk()

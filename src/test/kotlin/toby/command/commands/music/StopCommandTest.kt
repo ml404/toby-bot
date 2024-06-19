@@ -1,15 +1,14 @@
 package toby.command.commands.music
 
+import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
 
 internal class StopCommandTest : MusicCommandTest {
-    var stopCommand: StopCommand? = null
+    lateinit var stopCommand: StopCommand
 
     @BeforeEach
     fun setUp() {
@@ -20,61 +19,58 @@ internal class StopCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
+        clearMocks(CommandTest.event, CommandTest.interactionHook)
     }
 
     @Test
     fun test_callStopCommand_withBotAndUserBothInSameChannels() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
 
-        //Act
-        stopCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("The player has been stopped and the queue has been cleared"))
+        // Assert
+        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("The player has been stopped and the queue has been cleared") }
     }
 
     @Test
     fun test_callStopCommand_withBotNotInChannelAndUserInChannel() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithBotNotInChannel()
         val commandContext = CommandContext(CommandTest.event)
 
-        //Act
-        stopCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("I need to be in a voice channel for this to work"))
+        // Assert
+        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("I need to be in a voice channel for this to work") }
     }
 
     @Test
     fun test_callStopCommand_withUserNotInChannelAndBotInChannel() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithUserNotInChannel()
         val commandContext = CommandContext(CommandTest.event)
 
-        //Act
-        stopCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("You need to be in a voice channel for this command to work"))
+        // Assert
+        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("You need to be in a voice channel for this command to work") }
     }
 
     @Test
     fun test_callStopCommand_withUserInChannelAndBotInChannel_ButChannelsAreDifferent() {
-        //Arrange
+        // Arrange
         setUpAudioChannelsWithUserAndBotInDifferentChannels()
         val commandContext = CommandContext(CommandTest.event)
 
-        //Act
-        stopCommand!!.handle(commandContext, CommandTest.requestingUserDto, 0)
+        // Act
+        stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
-        //Assert
-        Mockito.verify(CommandTest.interactionHook, Mockito.times(1))
-            .sendMessage(ArgumentMatchers.eq("You need to be in the same voice channel as me for this to work"))
+        // Assert
+        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("You need to be in the same voice channel as me for this to work") }
     }
 }

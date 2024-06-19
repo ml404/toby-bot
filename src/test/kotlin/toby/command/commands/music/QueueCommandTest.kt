@@ -2,18 +2,19 @@ package toby.command.commands.music
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class QueueCommandTest : MusicCommandTest {
-    var queueCommand: QueueCommand? = null
+    lateinit var queueCommand: QueueCommand
 
     @BeforeEach
     fun setup() {
@@ -21,164 +22,104 @@ internal class QueueCommandTest : MusicCommandTest {
         queueCommand = QueueCommand()
     }
 
+    @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
+        clearMocks(CommandTest.event, MusicCommandTest.audioPlayer, MusicCommandTest.playerManager, MusicCommandTest.trackScheduler, MusicCommandTest.track, CommandTest.requestingUserDto)
     }
 
     @Test
     fun testQueue_WithNoTrackInTheQueue() {
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
 
-        //Act
-        queueCommand!!.handleMusicCommand(
+        // Act
+        queueCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.event.hook, Mockito.times(1))
-            .sendMessage("The queue is currently empty")
+        // Assert
+        verify(exactly = 1) { CommandTest.event.hook.sendMessage("The queue is currently empty") }
     }
 
     @Test
     fun testQueue_WithOneTrackInTheQueue() {
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
-        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(1)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)
         queue.add(MusicCommandTest.track)
-        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
+        every { MusicCommandTest.trackScheduler.queue } returns queue
 
-        //Act
-        queueCommand!!.handleMusicCommand(
+        // Act
+        queueCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.event.hook, Mockito.times(1))
-            .sendMessage("**Current Queue:**\n")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction as WebhookMessageCreateAction<Message>?,
-            Mockito.times(1)
-        ).addContent("#")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("1")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent(" `")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Title")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent(" by ")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Author")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("` [`")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("00:00:01")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("`]\n")
+        // Assert
+        verify(exactly = 1) { CommandTest.event.hook.sendMessage("**Current Queue:**\n") }
+        verifyOrder {
+            webhookMessageCreateAction.addContent("#")
+            webhookMessageCreateAction.addContent("1")
+            webhookMessageCreateAction.addContent(" `")
+            webhookMessageCreateAction.addContent("Title")
+            webhookMessageCreateAction.addContent(" by ")
+            webhookMessageCreateAction.addContent("Author")
+            webhookMessageCreateAction.addContent("` [`")
+            webhookMessageCreateAction.addContent("00:00:01")
+            webhookMessageCreateAction.addContent("`]\n")
+        }
     }
 
     @Test
     fun testQueue_WithMultipleTracksInTheQueue() {
+        // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        Mockito.`when`(MusicCommandTest.audioPlayer.isPaused).thenReturn(false)
-        Mockito.`when`(MusicCommandTest.playerManager.isCurrentlyStoppable).thenReturn(false)
-        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue<AudioTrack>(2)
-        val track2 = Mockito.mock(
-            AudioTrack::class.java
-        )
-        Mockito.`when`(track2.info)
-            .thenReturn(AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri"))
-        Mockito.`when`(track2.duration).thenReturn(1000L)
+        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(2)
+        val track2 = mockk<AudioTrack>()
+        every { track2.info } returns AudioTrackInfo("Another Title", "Another Author", 1000L, "identifier", true, "uri")
+        every { track2.duration } returns 1000L
         queue.add(MusicCommandTest.track)
         queue.add(track2)
-        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
+        every { MusicCommandTest.trackScheduler.queue } returns queue
 
-        //Act
-        queueCommand!!.handleMusicCommand(
+        // Act
+        queueCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
-        //Assert
-        Mockito.verify(CommandTest.event.hook, Mockito.times(1))
-            .sendMessage("**Current Queue:**\n")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction as WebhookMessageCreateAction<Message>?,
-            Mockito.times(2)
-        ).addContent("#")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("1")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(2)
-        ).addContent(" `")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Title")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(2)
-        ).addContent(" by ")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Author")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(2)
-        ).addContent("` [`")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(2)
-        ).addContent("00:00:01")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(2)
-        ).addContent("`]\n")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("2")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Another Title")
-        Mockito.verify<WebhookMessageCreateAction<Message>>(
-            webhookMessageCreateAction,
-            Mockito.times(1)
-        ).addContent("Another Author")
+        // Assert
+        verify(exactly = 1) { CommandTest.event.hook.sendMessage("**Current Queue:**\n") }
+        verifyOrder {
+            webhookMessageCreateAction.addContent("#")
+            webhookMessageCreateAction.addContent("1")
+            webhookMessageCreateAction.addContent(" `")
+            webhookMessageCreateAction.addContent("Title")
+            webhookMessageCreateAction.addContent(" by ")
+            webhookMessageCreateAction.addContent("Author")
+            webhookMessageCreateAction.addContent("` [`")
+            webhookMessageCreateAction.addContent("00:00:01")
+            webhookMessageCreateAction.addContent("`]\n")
+            webhookMessageCreateAction.addContent("2")
+            webhookMessageCreateAction.addContent("Another Title")
+            webhookMessageCreateAction.addContent("Another Author")
+        }
     }
 }

@@ -70,7 +70,7 @@ internal class SkipCommandTest : MusicCommandTest {
         queue.add(MusicCommandTest.track)
         queue.add(track2)
         queue.add(track3)
-        Mockito.`when`(MusicCommandTest.trackScheduler.getQueue()).thenReturn(queue)
+        Mockito.`when`(MusicCommandTest.trackScheduler.queue).thenReturn(queue)
         Mockito.`when`(MusicCommandTest.track.userData).thenReturn(1)
 
         //Act
