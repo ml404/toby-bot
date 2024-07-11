@@ -6,16 +6,13 @@ import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Mentions
-import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
-import net.dv8tion.jda.api.utils.AttachmentProxy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
-import toby.command.CommandTest.Companion.interactionHook
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.jpa.dto.ConfigDto
@@ -25,7 +22,6 @@ import toby.jpa.service.IConfigService
 import toby.jpa.service.IMusicFileService
 import toby.jpa.service.IUserService
 import java.io.IOException
-import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
@@ -46,16 +42,13 @@ internal class IntroSongCommandTest : MusicCommandTest {
         mentionedUserDto = requestingUserDto
 
         every { event.getOption("volume") } returns mockk {
-            every { asInt } returns 10
+            every { asInt } returns 20
         }
         every { event.getOption("link") } returns mockk {
             every { asString } returns "https://www.youtube.com/"
         }
         every { event.getOption("users")?.mentions } returns mockk {
             every { members } returns emptyList()
-        }
-        every { event.getOption("attachment") } returns mockk {
-            every { asAttachment } returns mockk(relaxed = true)
         }
     }
 
@@ -71,7 +64,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         val commandContext = CommandContext(event)
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
 
-        
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns volumeConfig
 
@@ -86,12 +79,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         // Assert
         verify { musicFileService.createNewMusicFile(any()) }
         verify {
-            interactionHook.sendMessageFormat(
-                eq("Successfully set %s's intro song to '%s' with volume '%d'"),
-                eq("UserName"),
-                eq("https://www.youtube.com/"),
-                eq(20)
-            )
+            event.hook.sendMessage("Successfully set UserName's intro song to 'https://www.youtube.com/' with volume '20'")
         }
     }
 
@@ -99,12 +87,14 @@ internal class IntroSongCommandTest : MusicCommandTest {
     fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFile_setsIntroViaUrl() {
         // Arrange
         val commandContext = CommandContext(event)
-        val linkOptionMapping = mockk<OptionMapping>()
+        val attachmentOptionMapping = mockk<OptionMapping>()
 
-        
+
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 20, null)
+        every { event.getOption("attachment") } returns attachmentOptionMapping
+        setupAttachments(attachmentOptionMapping, "mp3", 1000)
 
         // Act
         introSongCommand.handleMusicCommand(
@@ -117,12 +107,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         // Assert
         verify { musicFileService.updateMusicFile(any()) }
         verify {
-            interactionHook.sendMessageFormat(
-                eq("Successfully updated %s's intro song to '%s' with volume '%d'"),
-                eq("UserName"),
-                eq("https://www.youtube.com/"),
-                eq(20)
-            )
+            event.hook.sendMessage("Successfully updated UserName's intro song to 'https://www.youtube.com/' with volume '20'")
         }
     }
 
@@ -130,12 +115,12 @@ internal class IntroSongCommandTest : MusicCommandTest {
     fun testIntroSong_withSuperuser_andMentionedMembers_setsMentionedMembersIntroViaUrl() {
         // Arrange
         val commandContext = CommandContext(event)
-        val linkOptionMapping = mockk<OptionMapping>()
         val userOptionMapping = mockk<OptionMapping>()
 
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
         every { event.getOption("users") } returns userOptionMapping
-        
         every { userService.createNewUser(any()) } returns mentionedUserDto
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns mockk(relaxed = true)
 
         setupMentions(userOptionMapping)
 
@@ -150,11 +135,8 @@ internal class IntroSongCommandTest : MusicCommandTest {
         // Assert
         verify { musicFileService.createNewMusicFile(any()) }
         verify {
-            interactionHook.sendMessageFormat(
-                eq("Successfully set %s's intro song to '%s' with volume '%d'"),
-                eq("Another Username"),
-                eq("https://www.youtube.com/"),
-                eq(20)
+            event.hook.sendMessage(
+                "Successfully set Another Username's intro song to 'https://www.youtube.com/' with volume '20'"
             )
         }
     }
@@ -169,7 +151,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { event.getOption("users") } returns userOptionMapping
         every { userOptionMapping.mentions } returns mentions
         every { mentions.members } returns listOf(member)
-        
+
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { guild.owner } returns member
@@ -186,7 +168,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         // Assert
         verify {
-            interactionHook.sendMessageFormat(
+            event.hook.sendMessageFormat(
                 eq("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
             )
         }
@@ -203,6 +185,9 @@ internal class IntroSongCommandTest : MusicCommandTest {
         setupAttachments(attachmentOptionMapping, "mp3", 1000)
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { event.getOption("link") } returns mockk {
+            every { asString } returns ""
+        }
 
         // Act
         introSongCommand.handleMusicCommand(
@@ -216,11 +201,8 @@ internal class IntroSongCommandTest : MusicCommandTest {
         verify { musicFileService.createNewMusicFile(any()) }
         verify { userService.updateUser(eq(requestingUserDto)) }
         verify {
-            interactionHook.sendMessageFormat(
-                eq("Successfully set %s's intro song to '%s' with volume '%d'"),
-                eq("UserName"),
-                eq("filename"),
-                eq(20)
+            event.hook.sendMessage(
+                eq("Successfully set UserName's intro song to 'filename' with volume '20'")
             )
         }
     }
@@ -239,6 +221,9 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { userService.createNewUser(any()) } returns mentionedUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { event.getOption("link") } returns mockk {
+            every { asString } returns ""
+        }
 
         setupMentions(userOptionMapping)
 
@@ -254,18 +239,15 @@ internal class IntroSongCommandTest : MusicCommandTest {
         verify { musicFileService.createNewMusicFile(any()) }
         verify { userService.updateUser(eq(mentionedUserDto)) }
         verify {
-            interactionHook.sendMessageFormat(
-                eq("Successfully set %s's intro song to '%s' with volume '%d'"),
-                eq("Another Username"),
-                eq("filename"),
-                eq(20)
+            event.hook.sendMessage(
+                "Successfully set Another Username's intro song to 'filename' with volume '20'"
             )
         }
     }
 
     private fun setupMentions(userOptionMapping: OptionMapping) {
         val mentions = mockk<Mentions>()
-        val mentionedMember = mockk<Member>()
+        val mentionedMember = mockk<Member>(relaxed = true)
         every { userOptionMapping.mentions } returns mentions
         every { mentions.members } returns listOf(mentionedMember)
         every { mentionedMember.idLong } returns 1L
@@ -273,15 +255,15 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { mentionedMember.effectiveName } returns "Another Username"
     }
 
-    private fun setupAttachments(attachmentOptionMapping: OptionMapping, fileExtension: String, fileSize: Int) {
-        val messageAttachment = mockk<Message.Attachment>()
-        val attachmentProxy = mockk<AttachmentProxy>()
-        val inputStream = mockk<InputStream>()
+    private fun setupAttachments(attachmentOptionMapping: OptionMapping, fileExt: String, fileSize: Int) {
+        every { attachmentOptionMapping.asAttachment } returns mockk {
+            every { fileExtension } returns fileExt
+            every { fileName } returns "filename"
+            every { size } returns fileSize
+            every { proxy } returns mockk {
+                every { download() } returns CompletableFuture.completedFuture(mockk(relaxed = true))
+            }
+        }
 
-        every { attachmentOptionMapping.asAttachment } returns messageAttachment
-        every { messageAttachment.fileExtension } returns fileExtension
-        every { messageAttachment.size } returns fileSize
-        every { messageAttachment.proxy } returns attachmentProxy
-        every { attachmentProxy.download() } returns CompletableFuture.completedFuture(inputStream)
     }
 }

@@ -68,7 +68,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     override fun onTrackStart(player: AudioPlayer, track: AudioTrack) {
         super.onTrackStart(player, track)
         player.volume = (track.userData as Int)
-        if (event != null) nowPlaying(event, PlayerManager.instance, deriveDeleteDelayFromTrack(track))
+        nowPlaying(event, PlayerManager.instance, deriveDeleteDelayFromTrack(track))
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
