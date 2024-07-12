@@ -113,7 +113,7 @@ interface MusicCommandTest : CommandTest {
         val audioManager: AudioManager = mockk(relaxed = true)
         val audioPlayerSendHandler: AudioPlayerSendHandler = mockk()
         val track: AudioTrack = mockk()
-        val trackScheduler: TrackScheduler = mockk()
+        val trackScheduler: TrackScheduler = mockk(relaxed =  true)
         val audioChannelUnion: AudioChannelUnion = mockk()
         val interaction: Interaction = mockk()
         val auditableRestAction: AuditableRestAction<*> = mockk(relaxed = true)
