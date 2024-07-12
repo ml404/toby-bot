@@ -10,20 +10,31 @@ class LoopCommand : IMusicCommand {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    override fun handleMusicCommand(ctx: CommandContext, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+    override fun handleMusicCommand(
+        ctx: CommandContext,
+        instance: PlayerManager,
+        requestingUserDto: UserDto,
+        deleteDelay: Int?
+    ) {
         val event = ctx.event
         event.deferReply().queue()
+
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay ?: 0)
             return
         }
+
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+
         val scheduler = instance.getMusicManager(ctx.guild).scheduler
         val newIsRepeating = !scheduler.isLooping
         scheduler.isLooping = newIsRepeating
-        event.hook.sendMessageFormat("The Player has been set to **%s**", if (newIsRepeating) "looping" else "not looping").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
-    }
 
+        val loopStatusMessage = if (newIsRepeating) "looping" else "not looping"
+        event.hook
+            .sendMessage("The Player has been set to **$loopStatusMessage**")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+    }
     override val name: String
         get() = "loop"
     override val description: String

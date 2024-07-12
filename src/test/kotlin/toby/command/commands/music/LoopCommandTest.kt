@@ -1,11 +1,15 @@
 package toby.command.commands.music
 
-import io.mockk.*
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
@@ -22,14 +26,14 @@ internal class LoopCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
-        clearMocks(audioPlayer, playerManager, trackScheduler, CommandTest.interactionHook)
+        unmockkAll()
     }
 
     @Test
     fun test_looping_whenNotCurrentlyLooping() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         every { audioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
         every { trackScheduler.isLooping } returns false
@@ -43,10 +47,9 @@ internal class LoopCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageFormat(
-            eq("The Player has been set to **%s**"),
-            eq("looping")
-        ) }
+        verify(exactly = 1) {
+            event.hook.sendMessage("The Player has been set to **looping**")
+        }
         verify(exactly = 1) { trackScheduler.isLooping = true }
     }
 
@@ -54,7 +57,7 @@ internal class LoopCommandTest : MusicCommandTest {
     fun test_looping_whenCurrentlyLooping() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         every { audioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
         every { trackScheduler.isLooping } returns true
@@ -68,10 +71,9 @@ internal class LoopCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessageFormat(
-            eq("The Player has been set to **%s**"),
-            eq("not looping")
-        ) }
+        verify(exactly = 1) {
+            event.hook.sendMessage("The Player has been set to **not looping**")
+        }
         verify(exactly = 1) { trackScheduler.isLooping = false }
     }
 }
