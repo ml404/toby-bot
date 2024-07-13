@@ -276,7 +276,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
                 embedBuilder.setTitle(rule.name)
             }
             if (!rule.desc.isNullOrEmpty()) {
-                embedBuilder.setDescription(rule.desc.transformListToString())
+                embedBuilder.setDescription(rule.desc)
             }
             embedBuilder.setColor(0x42f5a7)
             return embedBuilder
