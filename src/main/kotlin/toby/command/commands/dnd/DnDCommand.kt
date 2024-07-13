@@ -97,7 +97,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             httpHelper: HttpHelper,
             deleteDelay: Int?
         ) {
-            val url = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithDash()}"
+            val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
             val responseData = httpHelper.fetchFromGet(url)
             when (typeName) {
                 SPELL_NAME -> {
@@ -158,7 +158,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
             val queryResult = JsonParser.parseJsonToQueryResult(queryResponseData)
             if (queryResult != null && queryResult.count > 0) {
                 val builder =
-                    StringSelectMenu.create(String.format("dnd:%s", typeName)).setPlaceholder("Choose an option")
+                    StringSelectMenu.create("dnd:$typeName").setPlaceholder("Choose an option")
                 queryResult.results.forEach(Consumer { info: ApiInfo ->
                     builder.addOptions(
                         SelectOption.of(
