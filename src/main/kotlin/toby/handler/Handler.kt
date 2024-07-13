@@ -177,7 +177,7 @@ class Handler @Autowired constructor(
     }
 
     //Auto joining voice channel when it becomes occupied and an audio connection doesn't already exist on the server, then play the associated user's intro song
-    fun onGuildVoiceJoin(event: GuildVoiceUpdateEvent) {
+    private fun onGuildVoiceJoin(event: GuildVoiceUpdateEvent) {
         val guild = event.guild
         val audioManager = guild.audioManager
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
@@ -191,7 +191,7 @@ class Handler @Autowired constructor(
         val audioPlayer= PlayerManager.instance.getMusicManager(guild).audioPlayer
         checkCurrentAudioManagerForNonBotMembers(audioManager)
         if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-            audioPlayer?.volume = defaultVolume
+            audioPlayer.volume = defaultVolume
             audioManager.openAudioConnection(event.channelJoined)
         }
 
@@ -203,7 +203,7 @@ class Handler @Autowired constructor(
         )
 
         if (audioManager.connectedChannel == event.channelJoined) {
-           requestingUserDto?.let { playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt()!!, 0L, audioPlayer?.volume!!)}
+            playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt()!!, 0L)
         }
     }
 

@@ -14,32 +14,50 @@ interface IMusicCommand : ICommand {
 
     companion object {
         @JvmStatic
-        fun sendDeniedStoppableMessage(interactionHook: InteractionHook, musicManager: GuildMusicManager, deleteDelay: Int?) {
-            if (musicManager.scheduler.queue.size > 0) {
-                interactionHook.sendMessage("Our daddy taught us not to be ashamed of our playlists").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        fun sendDeniedStoppableMessage(
+            interactionHook: InteractionHook,
+            musicManager: GuildMusicManager,
+            deleteDelay: Int?
+        ) {
+            val queueSize = musicManager.scheduler.queue.size
+            if (queueSize > 0) {
+                interactionHook
+                    .sendMessage("Our daddy taught us not to be ashamed of our playlists")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             } else {
                 val duration = musicManager.audioPlayer.playingTrack.duration
                 val songDuration = MusicPlayerHelper.formatTime(duration)
-                interactionHook.sendMessageFormat("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR %s, %s OF PLAYTIME!", songDuration, songDuration).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                interactionHook
+                    .sendMessage("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR $songDuration, $songDuration OF PLAYTIME!")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
         }
 
         fun isInvalidChannelStateForCommand(ctx: CommandContext, deleteDelay: Int?): Boolean {
-            val self = ctx.selfMember
-            val selfVoiceState = self!!.voiceState
+            val self = ctx.selfMember!!
+            val selfVoiceState = self.voiceState
+            val memberVoiceState = ctx.member!!.voiceState
+            val selfChannel = selfVoiceState!!.channel
+            val memberChannel = memberVoiceState!!.channel
             val event = ctx.event
-            if (!selfVoiceState!!.inAudioChannel()) {
-                event.hook.sendMessage("I need to be in a voice channel for this to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+
+            if (!selfVoiceState.inAudioChannel()) {
+                event.hook
+                    .sendMessage("I need to be in a voice channel for this to work")
+                    .setEphemeral(true)
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                 return true
             }
-            val member = ctx.member
-            val memberVoiceState = member!!.voiceState
-            if (!memberVoiceState!!.inAudioChannel()) {
-                event.hook.sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
-                return true
-            }
-            if (memberVoiceState.channel != selfVoiceState.channel) {
-                event.hook.sendMessage("You need to be in the same voice channel as me for this to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+
+            if (!memberVoiceState.inAudioChannel() || memberChannel != selfChannel) {
+                val errorMessage = if (!memberVoiceState.inAudioChannel()) {
+                    "You need to be in a voice channel for this command to work"
+                } else {
+                    "You need to be in the same voice channel as me for this to work"
+                }
+                event.hook
+                    .sendMessage(errorMessage)
+                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                 return true
             }
             return false

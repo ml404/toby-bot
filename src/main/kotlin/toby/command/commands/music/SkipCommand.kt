@@ -1,13 +1,11 @@
 package toby.command.commands.music
 
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.helpers.MusicPlayerHelper
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
-import java.util.*
 
 class SkipCommand : IMusicCommand {
     private val SKIP = "skip"
@@ -19,7 +17,7 @@ class SkipCommand : IMusicCommand {
         val event = ctx.event
         event.deferReply(true).queue()
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
-        val tracksToSkip = Optional.ofNullable(event.getOption(SKIP)).map { obj: OptionMapping -> obj.asInt }.orElse(1)
+        val tracksToSkip = event.getOption(SKIP)?.asInt?: 1
         MusicPlayerHelper.skipTracks(event, instance, tracksToSkip, requestingUserDto.superUser, deleteDelay)
     }
 

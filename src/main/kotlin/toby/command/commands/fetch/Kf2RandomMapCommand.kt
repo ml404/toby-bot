@@ -1,6 +1,5 @@
 package toby.command.commands.fetch
 
-import net.dv8tion.jda.api.entities.Message
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.deleteAfter
 import toby.command.commands.misc.RandomCommand
@@ -11,15 +10,15 @@ import java.io.IOException
 
 class Kf2RandomMapCommand(private val cache: Cache) : IFetchCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
-        deleteAfter(ctx.event.hook, deleteDelay!!)
+        ctx.event.hook.deleteAfter(deleteDelay ?: 0)
         val event = ctx.event
         event.deferReply().queue()
         try {
             val wikiFetcher = WikiFetcher(cache)
             val kf2Maps = wikiFetcher.fetchFromWiki(cacheName, kf2WebUrl, className, "b")
-            event.hook.sendMessage(RandomCommand.getRandomElement(kf2Maps)).queue { message: Message? -> deleteAfter(event.hook, deleteDelay) }
+            event.hook.sendMessage(RandomCommand.getRandomElement(kf2Maps)).queue { it?.deleteAfter(deleteDelay ?: 0) }
         } catch (ignored: IOException) {
-            event.hook.sendMessage("Huh, the website I pull data from must have returned something unexpected.").setEphemeral(true).queue { message: Message? -> deleteAfter(event.hook, deleteDelay) }
+            event.hook.sendMessage("Huh, the website I pull data from must have returned something unexpected.").setEphemeral(true).queue { it?.deleteAfter(deleteDelay ?: 0) }
         }
     }
 

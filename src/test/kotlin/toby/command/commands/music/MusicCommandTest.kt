@@ -104,19 +104,19 @@ interface MusicCommandTest : CommandTest {
     }
 
     companion object {
-        val memberVoiceState: GuildVoiceState = mockk()
-        val botVoiceState: GuildVoiceState = mockk()
-        val botMember: Member = mockk()
-        var playerManager: PlayerManager = mockk()
-        val musicManager: GuildMusicManager = mockk()
+        val memberVoiceState: GuildVoiceState = mockk(relaxed = true)
+        val botVoiceState: GuildVoiceState = mockk(relaxed = true)
+        val botMember: Member = mockk(relaxed = true)
+        var playerManager: PlayerManager = mockk(relaxed = true)
+        val musicManager: GuildMusicManager = mockk(relaxed = true)
         val audioPlayer: AudioPlayer = mockk(relaxed = true)
         val audioManager: AudioManager = mockk(relaxed = true)
-        val audioPlayerSendHandler: AudioPlayerSendHandler = mockk()
-        val track: AudioTrack = mockk()
+        val audioPlayerSendHandler: AudioPlayerSendHandler = mockk(relaxed = true)
+        val track: AudioTrack = mockk(relaxed = true)
         val trackScheduler: TrackScheduler = mockk(relaxed =  true)
-        val audioChannelUnion: AudioChannelUnion = mockk()
-        val interaction: Interaction = mockk()
+        val audioChannelUnion: AudioChannelUnion = mockk(relaxed = true)
+        val interaction: Interaction = mockk(relaxed = true)
         val auditableRestAction: AuditableRestAction<*> = mockk(relaxed = true)
-        val messageEditAction: MessageEditAction = mockk()
+        val messageEditAction: MessageEditAction = mockk(relaxed = true)
     }
 }

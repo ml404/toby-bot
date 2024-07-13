@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class ShuffleCommandTest : MusicCommandTest {
@@ -23,18 +24,18 @@ internal class ShuffleCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
-        clearMocks(CommandTest.event, MusicCommandTest.audioPlayer, MusicCommandTest.playerManager, CommandTest.interactionHook)
+        unmockkAll()
     }
 
     @Test
     fun testShuffleCommand_withValidQueue() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         every { MusicCommandTest.audioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("skip") } returns optionMapping
+        every { event.getOption("skip") } returns optionMapping
         every { optionMapping.asInt } returns 2
 
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(2)
@@ -57,18 +58,18 @@ internal class ShuffleCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("The queue has been shuffled 🦧") }
+        verify(exactly = 1) { event.hook.sendMessage("The queue has been shuffled 🦧") }
     }
 
     @Test
     fun testShuffleCommand_withNoQueue() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
         every { MusicCommandTest.audioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
-        every { CommandTest.event.getOption("skip") } returns optionMapping
+        every { event.getOption("skip") } returns optionMapping
         every { optionMapping.asInt } returns 2
 
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)
@@ -88,6 +89,6 @@ internal class ShuffleCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { CommandTest.interactionHook.sendMessage("I can't shuffle a queue that doesn't exist") }
+        verify(exactly = 1) { event.hook.sendMessage("I can't shuffle a queue that doesn't exist") }
     }
 }

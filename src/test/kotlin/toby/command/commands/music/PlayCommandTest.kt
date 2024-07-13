@@ -12,6 +12,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.playerManager
+import toby.command.commands.music.MusicCommandTest.Companion.track
+import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class PlayCommandTest : MusicCommandTest {
@@ -34,8 +38,9 @@ internal class PlayCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
-        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
+        every { audioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+
 
         val linkOptionMapping = mockk<OptionMapping>()
         val typeOptionMapping = mockk<OptionMapping>()
@@ -58,22 +63,22 @@ internal class PlayCommandTest : MusicCommandTest {
             "uri"
         )
         every { track2.duration } returns 1000L
-        queue.add(MusicCommandTest.track)
+        queue.add(track)
         queue.add(track2)
-        every { MusicCommandTest.trackScheduler.queue } returns queue
-        every { MusicCommandTest.track.userData } returns 1
+        every { trackScheduler.queue } returns queue
+        every { track.userData } returns 1
 
         // Act
         playCommand.handleMusicCommand(
             commandContext,
-            MusicCommandTest.playerManager,
+            playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
         // Assert
         verify(exactly = 1) {
-            MusicCommandTest.playerManager.loadAndPlay(
+            playerManager.loadAndPlay(
                 eq(CommandTest.guild),
                 eq(CommandTest.event),
                 eq("www.testlink.com"),

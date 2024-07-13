@@ -21,7 +21,7 @@ interface ICommand {
     fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val owner = event.guild?.owner
         val ownerName = owner?.effectiveName ?: "the server owner"
-        event.hook.sendMessageFormat(getErrorMessage(ownerName)).queue { message -> deleteAfter(message, deleteDelay) }
+        event.hook.sendMessageFormat(getErrorMessage(ownerName)).queue { it.deleteAfter(deleteDelay) }
     }
 
     val slashCommand: SlashCommandData
@@ -32,23 +32,23 @@ interface ICommand {
 
     companion object {
         @JvmStatic
-        fun deleteAfter(interactionHook: InteractionHook, delay: Int) {
-            interactionHook.deleteOriginal().queueAfter(delay.toLong(), TimeUnit.SECONDS)
+        fun InteractionHook.deleteAfter(delay: Int) {
+            this.deleteOriginal().queueAfter(delay.toLong(), TimeUnit.SECONDS)
         }
 
         @JvmStatic
-        fun deleteAfter(message: Message, delay: Int) {
-            message.delete().queueAfter(delay.toLong(), TimeUnit.SECONDS)
+        fun Message.deleteAfter(delay: Int) {
+            this.delete().queueAfter(delay.toLong(), TimeUnit.SECONDS)
         }
 
         @JvmStatic
         fun invokeDeleteOnMessageResponse(deleteDelay: Int): Consumer<Message> {
-            return Consumer { message -> deleteAfter(message, deleteDelay) }
+            return Consumer { message -> message.deleteAfter(deleteDelay) }
         }
 
         @JvmStatic
         fun invokeDeleteOnHookResponse(deleteDelay: Int): Consumer<InteractionHook> {
-            return Consumer { hook -> deleteAfter(hook, deleteDelay) }
+            return Consumer { hook -> hook.deleteAfter(deleteDelay) }
         }
     }
 }

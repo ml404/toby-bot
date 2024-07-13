@@ -12,15 +12,15 @@ class ResumeCommand : IMusicCommand {
     }
 
     override fun handleMusicCommand(ctx: CommandContext, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
-        deleteAfter(ctx.event.hook, deleteDelay!!)
+        ctx.event.hook.deleteAfter(deleteDelay ?: 0)
         val event = ctx.event
         event.deferReply().queue()
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay)
+            sendErrorMessage(event, deleteDelay ?: 0)
             return
         }
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
-        MusicPlayerHelper.changePauseStatusOnTrack(event, instance.getMusicManager(ctx.guild), deleteDelay)
+        MusicPlayerHelper.changePauseStatusOnTrack(event, instance.getMusicManager(ctx.guild), deleteDelay ?: 0)
     }
 
     override val name: String

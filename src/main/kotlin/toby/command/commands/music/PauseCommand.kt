@@ -21,7 +21,7 @@ class PauseCommand : IMusicCommand {
         val guild = event.guild!!
         val musicManager = instance.getMusicManager(guild)
         if (instance.isCurrentlyStoppable || requestingUserDto.superUser) {
-            MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay!!)
+            MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay ?: 0)
         } else {
             IMusicCommand.sendDeniedStoppableMessage(event.hook, musicManager, deleteDelay)
         }

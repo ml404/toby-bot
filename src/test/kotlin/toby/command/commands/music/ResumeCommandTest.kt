@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
+import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
 
 internal class ResumeCommandTest : MusicCommandTest {
@@ -29,7 +30,8 @@ internal class ResumeCommandTest : MusicCommandTest {
     fun test_resumeMethod_withCorrectChannels_andPausableTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(CommandTest.event)
+        val commandContext = CommandContext(event)
+        val hook = event.hook
         every { CommandTest.interactionHook.sendMessage("Resuming: ") } returns webhookMessageCreateAction as WebhookMessageCreateAction<Message>
         every { MusicCommandTest.audioPlayer.isPaused } returns true
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
@@ -43,14 +45,7 @@ internal class ResumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { CommandTest.event.hook.sendMessage("Resuming: `") }
-        verifyOrder {
-            webhookMessageCreateAction.addContent("Title")
-            webhookMessageCreateAction.addContent("` by `")
-            webhookMessageCreateAction.addContent("Author")
-            webhookMessageCreateAction.addContent("`")
-        }
-        verify(exactly = 1) { MusicCommandTest.audioPlayer.isPaused }
-        verify(exactly = 1) { MusicCommandTest.audioPlayer.isPaused = false }
+        verify(exactly = 1) { hook.sendMessage("Resuming: `Title` by `Author`") }
+        verify { MusicCommandTest.audioPlayer.isPaused = false }
     }
 }

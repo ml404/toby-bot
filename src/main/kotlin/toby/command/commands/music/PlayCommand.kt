@@ -34,7 +34,7 @@ class PlayCommand : IMusicCommand {
         val startPosition = MusicPlayerHelper.adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map { obj: OptionMapping -> obj.asLong }.orElse(0L))
         val volume = Optional.ofNullable(event.getOption(VOLUME)).map { obj: OptionMapping -> obj.asInt }.orElse(currentVolume)
         if (type == INTRO) {
-            MusicPlayerHelper.playUserIntro(requestingUserDto, guild, event, deleteDelay!!, startPosition, volume)
+            MusicPlayerHelper.playUserIntro(requestingUserDto, guild, event, deleteDelay!!, startPosition)
         } else {
             var link = Optional.ofNullable(event.getOption(LINK)).map { obj: OptionMapping -> obj.asString }.orElse("")
             if (link.contains("youtube") && !MusicPlayerHelper.isUrl(link)) {
