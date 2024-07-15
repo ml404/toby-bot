@@ -23,7 +23,7 @@ data class MusicDto(
     var fileName: String? = null,
 
     @Column(name = "file_vol")
-    var introVolume: Int = 20,
+    var introVolume: Int? = 20,
 
     @Lob
     @JsonIgnore
@@ -81,7 +81,7 @@ data class MusicDto(
     override fun hashCode(): Int {
         var result = id?.hashCode() ?: 0
         result = 31 * result + (fileName?.hashCode() ?: 0)
-        result = 31 * result + introVolume
+        result = 31 * result + (introVolume?.hashCode() ?: 0)
         result = 31 * result + (musicBlob?.contentHashCode() ?: 0)
         return result
     }

@@ -43,7 +43,7 @@ object MusicPlayerHelper {
             val introVolume = it.introVolume
             instance.setPreviousVolume(currentVolume)
             val url = if (it.fileName != null) "$webUrl/music?id=${it.id}" else it.musicBlob.contentToString()
-            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition!!, introVolume)
+            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition!!, introVolume ?: currentVolume)
         }
     }
 

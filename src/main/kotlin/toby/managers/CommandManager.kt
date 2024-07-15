@@ -135,7 +135,7 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
         val r = Random()
         val socialCredit = r.nextInt(5)
         val awardedSocialCredit = socialCredit * 5
-        requestingUserDto.socialCredit = socialCreditScore.plus(awardedSocialCredit)
+        requestingUserDto.socialCredit = socialCreditScore?.plus(awardedSocialCredit)
         userService.updateUser(requestingUserDto)
         //        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }

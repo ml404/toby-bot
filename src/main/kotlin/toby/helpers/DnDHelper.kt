@@ -25,7 +25,7 @@ object DnDHelper {
         val nonDmMembers = memberList.filter { it != dm && !it.user.isBot }
         nonDmMembers.forEach { target ->
             val userDto = UserDtoHelper.calculateUserDto(target.guild.idLong, target.idLong, target.isOwner, userService)
-            rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto.initiativeModifier)
+            rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto.initiativeModifier ?: 0)
         }
         sortMap(initiativeMap)
     }

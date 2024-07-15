@@ -94,7 +94,7 @@ class SocialCreditCommand(private val userService: IUserService) : IModerationCo
     }
 
     private fun updateUserSocialCredit(targetUserDto: UserDto, socialCreditScore: Long): UserDto {
-        targetUserDto.socialCredit += socialCreditScore
+        targetUserDto.socialCredit = targetUserDto.socialCredit?.plus(socialCreditScore)
         userService.updateUser(targetUserDto)
         return targetUserDto
     }

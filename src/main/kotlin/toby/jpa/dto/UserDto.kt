@@ -44,10 +44,10 @@ data class UserDto(
     var memePermission: Boolean = true,
 
     @Column(name = "social_credit")
-    var socialCredit: Long = 0L,
+    var socialCredit: Long? = 0L,
 
     @Column(name = "initiative")
-    var initiativeModifier: Int = 0,
+    var initiativeModifier: Int? = 0,
 
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "music_file_id", referencedColumnName = "id")

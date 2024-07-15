@@ -30,7 +30,6 @@ class PlayCommand : IMusicCommand {
         val type = Optional.ofNullable(event.getOption(TYPE)).map { obj: OptionMapping -> obj.asString }.orElse(LINK)
         val guild = event.guild!!
         val currentVolume = musicManager.audioPlayer.volume
-        instance.setPreviousVolume(currentVolume)
         val startPosition = MusicPlayerHelper.adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map { obj: OptionMapping -> obj.asLong }.orElse(0L))
         val volume = Optional.ofNullable(event.getOption(VOLUME)).map { obj: OptionMapping -> obj.asInt }.orElse(currentVolume)
         if (type == INTRO) {

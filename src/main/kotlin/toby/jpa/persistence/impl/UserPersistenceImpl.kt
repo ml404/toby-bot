@@ -17,14 +17,14 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
 
 
     override fun listGuildUsers(guildId: Long?): List<UserDto?> {
-        val q: Query = entityManager!!.createNamedQuery("UserDto.getGuildAll", UserDto::class.java)
+        val q: Query = entityManager.createNamedQuery("UserDto.getGuildAll", UserDto::class.java)
         q.setParameter("guildId", guildId)
         return q.resultList as List<UserDto?>
     }
 
     override fun createNewUser(userDto: UserDto): UserDto {
         createMusicFileEntry(userDto)
-        val databaseUser = entityManager!!.find(UserDto::class.java, userDto)
+        val databaseUser = entityManager.find(UserDto::class.java, userDto)
         val result = if ((databaseUser == null)) persistConfigDto(userDto) else databaseUser
 
         return result
@@ -32,11 +32,11 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
 
     private fun createMusicFileEntry(userDto: UserDto) {
         musicFileService.createNewMusicFile(userDto.musicDto)
-        entityManager!!.flush()
+        entityManager.flush()
     }
 
     override fun getUserById(discordId: Long?, guildId: Long?): UserDto {
-        val userQuery: Query = entityManager!!.createNamedQuery("UserDto.getById", UserDto::class.java)
+        val userQuery: Query = entityManager.createNamedQuery("UserDto.getById", UserDto::class.java)
         userQuery.setParameter("discordId", discordId)
         userQuery.setParameter("guildId", guildId)
         return userQuery.singleResult as UserDto
@@ -51,29 +51,29 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
         }
 
         if (userDto != dbUser) {
-            entityManager!!.merge(userDto)
-            entityManager!!.flush()
+            entityManager.merge(userDto)
+            entityManager.flush()
         }
 
         return userDto
     }
 
     override fun deleteUser(userDto: UserDto) {
-        entityManager!!.remove(userDto.musicDto)
-        entityManager!!.remove(userDto)
-        entityManager!!.flush()
+        entityManager.remove(userDto.musicDto)
+        entityManager.remove(userDto)
+        entityManager.flush()
     }
 
     override fun deleteUserById(discordId: Long?, guildId: Long?) {
-        val userQuery = entityManager!!.createNamedQuery("UserDto.deleteById")
+        val userQuery = entityManager.createNamedQuery("UserDto.deleteById")
         userQuery.setParameter("discordId", discordId)
         userQuery.setParameter("guildId", guildId)
         userQuery.executeUpdate()
     }
 
     private fun persistConfigDto(userDto: UserDto): UserDto {
-        entityManager!!.persist(userDto)
-        entityManager!!.flush()
+        entityManager.persist(userDto)
+        entityManager.flush()
         return userDto
     }
 }
