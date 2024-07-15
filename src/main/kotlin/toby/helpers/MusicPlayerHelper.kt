@@ -59,19 +59,7 @@ object MusicPlayerHelper {
         val hook = event.hook
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
         sendNowPlayingEmbed(track, hook, audioPlayer)
-
-        // Start a periodic updater thread or scheduled task if not already running
-        if (scheduler == null || scheduler?.isShutdown == true) {
-            scheduler = Executors.newScheduledThreadPool(1)
-            val initialDelay = 1L // initial delay before first update (in seconds)
-            val updateInterval = 1L // interval between updates (in seconds)
-            scheduler?.scheduleAtFixedRate({
-                val updatedTrack = audioPlayer.playingTrack // Get the latest track information
-                if (updatedTrack != null) {
-                    updateNowPlayingEmbed(updatedTrack, hook, audioPlayer) // Update the embed
-                }
-            }, initialDelay, updateInterval, TimeUnit.SECONDS)
-        }
+        startOrUpdateNowPlayingUpdater(hook, audioPlayer)
     }
 
     private fun buildNowPlayingEmbed(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
@@ -101,21 +89,59 @@ object MusicPlayerHelper {
     }
 
     private fun sendNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+        val guildId = hook.interaction.guild!!.idLong
+        val channel = hook.interaction.channel
+
         val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
-        hook.sendMessageEmbeds(embed)
-            .setActionRow(pausePlayButton, stopButton)
-            .queue { it.updateLastNowPlayingMessage(hook.interaction.guild!!.idLong, hook.interaction.channel) }
+        // Check if there is an existing now playing message in the map
+        val existingMessage = guildLastNowPlayingMessage[guildId]?.get(channel)
+
+        if (existingMessage != null) {
+            // Update the existing message
+            hook.editMessageEmbedsById(existingMessage.id, embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue {
+                    it.updateLastNowPlayingMessage(guildId, channel)
+                }
+        } else {
+            // Send a new message and store it in the map
+            hook.sendMessageEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue {
+                    it.updateLastNowPlayingMessage(guildId, channel)
+                }
+        }
     }
 
     private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+        val guildId = hook.interaction.guild!!.idLong
+        val channel = hook.interaction.channel
+
         val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
         hook.editOriginalEmbeds(embed)
             .setActionRow(pausePlayButton, stopButton)
-            .queue { it.updateLastNowPlayingMessage(hook.interaction.guild!!.idLong, hook.interaction.channel) }
+            .queue {
+                it.updateLastNowPlayingMessage(guildId, channel)
+            }
+    }
+
+    private fun startOrUpdateNowPlayingUpdater(hook: InteractionHook, audioPlayer: AudioPlayer) {
+        // Start a periodic updater thread or scheduled task if not already running
+        if (scheduler == null || scheduler?.isShutdown == true) {
+            scheduler = Executors.newScheduledThreadPool(1)
+            val initialDelay = 1L // initial delay before first update (in seconds)
+            val updateInterval = 1L // interval between updates (in seconds)
+            scheduler?.scheduleAtFixedRate({
+                val updatedTrack = audioPlayer.playingTrack // Get the latest track information
+                if (updatedTrack != null) {
+                    updateNowPlayingEmbed(updatedTrack, hook, audioPlayer) // Update the embed
+                }
+            }, initialDelay, updateInterval, TimeUnit.SECONDS)
+        }
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
@@ -291,7 +317,6 @@ object MusicPlayerHelper {
         return Pair(pausePlayButton, stopButton)
     }
 
-    // Method to stop the scheduler
     private fun stopScheduler() {
         scheduler?.shutdown()
         runCatching {
