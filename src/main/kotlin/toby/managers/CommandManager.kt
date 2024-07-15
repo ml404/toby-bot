@@ -91,7 +91,7 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
         require(!nameFound) { "A command with this name is already present" }
         commands.add(cmd)
         val slashCommand = cmd.slashCommand
-        slashCommand!!.addOptions(cmd.optionData!!)
+        slashCommand.addOptions(cmd.optionData)
         slashCommands.add(slashCommand)
     }
 

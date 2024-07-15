@@ -36,7 +36,7 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
             event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
-        event.hook.sendMessage(command.description!!).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(command.description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     override val name: String
