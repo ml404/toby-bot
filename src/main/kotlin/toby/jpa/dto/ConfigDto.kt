@@ -16,22 +16,20 @@ import java.io.Serializable
 @Entity
 @Table(name = "config", schema = "public")
 @Transactional
-class ConfigDto : Serializable {
-    @JvmField
+data class ConfigDto(
     @Id
     @Column(name = "name")
-    var name: String? = null
+    var name: String? = null,
 
     @Column(name = "\"value\"")
-    var value: String? = null
+    var value: String? = null,
 
-    @JvmField
     @Id
     @Column(name = "guild_id")
     var guildId: String? = null
+) : Serializable {
 
-
-    enum class Configurations(@JvmField val configValue: String) {
+    enum class Configurations(val configValue: String) {
         VOLUME("DEFAULT_VOLUME"),
         MOVE("DEFAULT_MOVE_CHANNEL"),
         DELETE_DELAY("DELETE_MESSAGE_DELAY");
@@ -43,19 +41,7 @@ class ConfigDto : Serializable {
         }
     }
 
-    constructor()
-
-    constructor(name: String?, value: String?, guildId: String?) {
-        this.name = name
-        this.value = value
-        this.guildId = guildId
-    }
-
-
     override fun toString(): String {
-        return "ConfigDto{" + "name='" + name +
-                ", value=" + value +
-                ", guildId=" + guildId +
-                '}'
+        return "ConfigDto{name='$name', value=$value, guildId=$guildId}"
     }
 }

@@ -13,29 +13,11 @@ import java.io.Serializable
 @Entity
 @Table(name = "brothers", schema = "public")
 @Transactional
-class BrotherDto : Serializable {
-    @JvmField
+data class BrotherDto(
     @Id
     @Column(name = "discord_id")
-    var discordId: Long? = null
+    var discordId: Long? = null,
 
-    @JvmField
     @Column(name = "brother_name")
     var brotherName: String? = null
-
-
-    constructor()
-
-    constructor(discordId: Long?, brotherName: String?) {
-        this.discordId = discordId
-        this.brotherName = brotherName
-    }
-
-    override fun toString(): String {
-        val sb = StringBuilder("BrotherDto{")
-        sb.append("discordId='").append(discordId)
-        sb.append(", brotherName=").append(brotherName)
-        sb.append('}')
-        return sb.toString()
-    }
-}
+) : Serializable

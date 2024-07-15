@@ -3,8 +3,6 @@ package toby.jpa.dto
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 import org.apache.commons.lang3.EnumUtils
-import org.apache.commons.lang3.builder.EqualsBuilder
-import org.apache.commons.lang3.builder.HashCodeBuilder
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 
@@ -15,35 +13,36 @@ import java.io.Serializable
 @Entity
 @Table(name = "music_files", schema = "public")
 @Transactional
-class MusicDto : Serializable {
-    @JvmField
+data class MusicDto(
     @Id
     @Column(name = "id")
     @JsonIgnore
-    var id: String? = null
+    var id: String? = null,
 
-    @JvmField
     @Column(name = "file_name")
-    var fileName: String? = null
+    var fileName: String? = null,
 
     @Column(name = "file_vol")
-    var introVolume: Int = 20
+    var introVolume: Int = 20,
 
-    @JvmField
     @Lob
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "TEXT")
     var musicBlob: ByteArray? = null
+) : Serializable {
 
-
-    constructor()
-
-    constructor(discordId: Long, guildId: Long, fileName: String?, introVolume: Int, musicBlob: ByteArray?) {
-        this.id = createMusicId(guildId, discordId)
-        this.fileName = fileName
-        this.introVolume = introVolume
-        this.musicBlob = musicBlob
-    }
+    constructor(
+        discordId: Long,
+        guildId: Long,
+        fileName: String? = null,
+        introVolume: Int = 20,
+        musicBlob: ByteArray? = null
+    ) : this(
+        id = createMusicId(guildId, discordId),
+        fileName = fileName,
+        introVolume = introVolume,
+        musicBlob = musicBlob
+    )
 
     enum class Adjustment(val adjustment: String) {
         START("start"),
@@ -56,47 +55,34 @@ class MusicDto : Serializable {
         }
     }
 
-    private fun createMusicId(guildId: Long, discordId: Long): String {
-        return String.format("%s_%s", guildId, discordId)
+    companion object {
+        private fun createMusicId(guildId: Long, discordId: Long): String {
+            return "${guildId}_$discordId"
+        }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-    override fun toString(): String {
-        val sb = StringBuilder("MusicDto{")
-        sb.append("id=").append(id)
-        sb.append(", fileName=").append(fileName)
-        sb.append(", introVolume=").append(introVolume)
-        sb.append('}')
-        return sb.toString()
-    }
+        other as MusicDto
 
-    override fun equals(o: Any?): Boolean {
-        // If the object is compared with itself then return true
-        if (o === this) {
-            return true
-        }
+        if (id != other.id) return false
+        if (fileName != other.fileName) return false
+        if (introVolume != other.introVolume) return false
+        if (musicBlob != null) {
+            if (other.musicBlob == null) return false
+            if (!musicBlob.contentEquals(other.musicBlob)) return false
+        } else if (other.musicBlob != null) return false
 
-        /* Check if o is an instance of MusicDto or not
-          "null instanceof [type]" also returns false */
-        if (o !is MusicDto) {
-            return false
-        }
-
-        // Compare the data members and return accordingly
-        return EqualsBuilder()
-            .append(id, o.id)
-            .append(fileName, o.fileName)
-            .append(introVolume, o.introVolume)
-            .append(musicBlob, o.musicBlob)
-            .isEquals
+        return true
     }
 
     override fun hashCode(): Int {
-        return HashCodeBuilder(17, 37)
-            .append(id)
-            .append(fileName)
-            .append(introVolume)
-            .append(musicBlob)
-            .toHashCode()
+        var result = id?.hashCode() ?: 0
+        result = 31 * result + (fileName?.hashCode() ?: 0)
+        result = 31 * result + introVolume
+        result = 31 * result + (musicBlob?.contentHashCode() ?: 0)
+        return result
     }
 }
