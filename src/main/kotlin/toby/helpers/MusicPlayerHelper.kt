@@ -5,6 +5,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.Channel
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -17,11 +18,14 @@ import toby.lavaplayer.GuildMusicManager
 import toby.lavaplayer.PlayerManager
 import java.awt.Color
 import java.net.URI
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
+    private var scheduler: ScheduledExecutorService? = null
     private val guildLastNowPlayingMessage = mutableMapOf<Long, MutableMap<Channel?, Message?>>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?) {
@@ -54,9 +58,18 @@ object MusicPlayerHelper {
         val hook = event.hook
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
         sendNowPlayingEmbed(track, hook, audioPlayer.volume)
+
+        // Start a periodic updater thread or scheduled task
+        scheduler = Executors.newScheduledThreadPool(1)
+        val initialDelay = 1L // initial delay before first update (in seconds)
+        val updateInterval = 1L // interval between updates (in seconds)
+        scheduler?.scheduleAtFixedRate({
+            val updatedTrack = audioPlayer.playingTrack // Get the latest track information
+            updateNowPlayingEmbed(updatedTrack, hook, audioPlayer.volume) // Update the embed
+        }, initialDelay, updateInterval, TimeUnit.SECONDS)
     }
 
-    private fun sendNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, volume: Int) {
+    private fun buildNowPlayingEmbed(track: AudioTrack, volume: Int): MessageEmbed {
         val info = track.info
         val embed = EmbedBuilder()
             .setTitle("Now Playing")
@@ -73,8 +86,24 @@ object MusicPlayerHelper {
             .setColor(Color.GREEN)
             .setFooter("Link: ${info.uri}", null)
             .build()
+
+        return embed
+    }
+
+    private fun sendNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, volume: Int) {
+        val embed = buildNowPlayingEmbed(track, volume)
         val (pausePlayButton, stopButton) = generateButtons()
+
         hook.sendMessageEmbeds(embed)
+            .setActionRow(pausePlayButton, stopButton)
+            .queue { it.updateLastNowPlayingMessage(hook.interaction.guild!!.idLong, hook.interaction.channel) }
+    }
+
+    private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, volume: Int) {
+        val embed = buildNowPlayingEmbed(track, volume)
+        val (pausePlayButton, stopButton) = generateButtons()
+
+        hook.editOriginalEmbeds(embed)
             .setActionRow(pausePlayButton, stopButton)
             .queue { it.updateLastNowPlayingMessage(hook.interaction.guild!!.idLong, hook.interaction.channel) }
     }
@@ -102,8 +131,8 @@ object MusicPlayerHelper {
                 queue.clear()
                 isLooping = false
             }
+            stopScheduler()
             musicManager.audioPlayer.isPaused = false
-
             hook.deleteOriginal().queue()
             val embed = EmbedBuilder()
                 .setTitle("Player Stopped")
@@ -250,6 +279,18 @@ object MusicPlayerHelper {
         val pausePlayButton = Button.primary("pause/play", "⏯️")
         val stopButton = Button.primary("stop", "⏹️")
         return Pair(pausePlayButton, stopButton)
+    }
+
+    // Method to stop the scheduler
+    private fun stopScheduler() {
+        scheduler?.shutdown()
+        runCatching {
+            if (!scheduler?.awaitTermination(1, TimeUnit.SECONDS)!!) {
+                scheduler?.shutdownNow()
+            }
+        }.onFailure {
+            scheduler?.shutdownNow()
+        }
     }
 }
 
