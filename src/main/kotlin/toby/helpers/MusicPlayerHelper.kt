@@ -29,26 +29,26 @@ object MusicPlayerHelper {
     private var scheduler: ScheduledExecutorService? = null
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Pair<Channel?, Message?>>()
 
-    fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?) {
+    fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
     }
 
     fun playUserIntro(
         dbUser: UserDto,
-        guild: Guild?,
+        guild: Guild,
         event: SlashCommandInteractionEvent?,
         deleteDelay: Int,
-        startPosition: Long?
+        startPosition: Long
     ) {
         val musicDto = dbUser.musicDto
         val instance = PlayerManager.instance
-        val currentVolume = instance.getMusicManager(guild!!).audioPlayer.volume
+        val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
         musicDto?.let {
             val introVolume = it.introVolume
             instance.setPreviousVolume(currentVolume)
             val url = if (it.fileName != null) "$webUrl/music?id=${it.id}" else it.musicBlob.contentToString()
-            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition!!, introVolume ?: currentVolume)
+            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
         }
     }
 
@@ -119,8 +119,8 @@ object MusicPlayerHelper {
         // Start a periodic updater thread or scheduled task if not already running
         if (scheduler == null || scheduler?.isShutdown == true) {
             scheduler = Executors.newScheduledThreadPool(1)
-            val initialDelay = 1L // initial delay before first update (in seconds)
-            val updateInterval = 1L // interval between updates (in seconds)
+            val initialDelay = 5L // initial delay before first update (in seconds)
+            val updateInterval = 5L // interval between updates (in seconds)
             scheduler?.scheduleAtFixedRate({
                 val updatedTrack = audioPlayer.playingTrack // Get the latest track information
                 if (updatedTrack != null) {
