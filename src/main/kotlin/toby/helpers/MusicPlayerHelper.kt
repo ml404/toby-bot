@@ -18,6 +18,7 @@ import toby.lavaplayer.GuildMusicManager
 import toby.lavaplayer.PlayerManager
 import java.awt.Color
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -26,7 +27,7 @@ object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     private var scheduler: ScheduledExecutorService? = null
-    private val guildLastNowPlayingMessage = mutableMapOf<Long, MutableMap<Channel?, Message?>>()
+    private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, MutableMap<Channel?, Message?>>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
@@ -77,8 +78,7 @@ object MusicPlayerHelper {
         val info = track.info
         val descriptionBuilder = StringBuilder()
 
-        descriptionBuilder.append("**Title**: `${info.title}`\n")
-            .append("**Author**: `${info.author}`\n")
+        descriptionBuilder.append("**Title**: `${info.title}`\n").append("**Author**: `${info.author}`\n")
 
         if (!info.isStream) {
             val songPosition = formatTime(track.position)
