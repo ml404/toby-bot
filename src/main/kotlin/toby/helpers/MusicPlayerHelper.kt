@@ -82,7 +82,7 @@ object MusicPlayerHelper {
             .addField("Volume", "${audioPlayer.volume}", true)
             .setColor(Color.GREEN)
             .setFooter("Link: ${info.uri}", null)
-            .addField("Paused?", if(audioPlayer.isPaused) "yes" else "no", false)
+            .addField("Paused?", if (audioPlayer.isPaused) "yes" else "no", false)
             .build()
 
         return embed
@@ -95,23 +95,25 @@ object MusicPlayerHelper {
         val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
-        // Check if there is an existing now playing message in the map
-        val existingMessage = guildLastNowPlayingMessage[guildId]?.second
+        synchronized(guildLastNowPlayingMessage) {
+            // Check if there is an existing now playing message in the map
+            val existingMessage = guildLastNowPlayingMessage[guildId]?.second
 
-        if (existingMessage != null) {
-            // Update the existing message
-            hook.editOriginalEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
-                .queue {
-                    guildLastNowPlayingMessage[guildId] = Pair(channel, it)
-                }
-        } else {
-            // Send a new message and store it in the map
-            hook.sendMessageEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
-                .queue {
-                    guildLastNowPlayingMessage[guildId] = Pair(channel, it)
-                }
+            if (existingMessage != null) {
+                // Update the existing message
+                hook.editOriginalEmbeds(embed)
+                    .setActionRow(pausePlayButton, stopButton)
+                    .queue {
+                        guildLastNowPlayingMessage[guildId] = Pair(channel, it)
+                    }
+            } else {
+                // Send a new message and store it in the map
+                hook.sendMessageEmbeds(embed)
+                    .setActionRow(pausePlayButton, stopButton)
+                    .queue {
+                        guildLastNowPlayingMessage[guildId] = Pair(channel, it)
+                    }
+            }
         }
     }
 
@@ -137,11 +139,13 @@ object MusicPlayerHelper {
         val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
-        hook.editOriginalEmbeds(embed)
-            .setActionRow(pausePlayButton, stopButton)
-            .queue {
-                guildLastNowPlayingMessage[guildId] = Pair(channel, it)
-            }
+        synchronized(guildLastNowPlayingMessage) {
+            hook.editOriginalEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue {
+                    guildLastNowPlayingMessage[guildId] = Pair(channel, it)
+                }
+        }
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
