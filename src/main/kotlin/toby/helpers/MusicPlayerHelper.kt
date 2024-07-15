@@ -27,7 +27,7 @@ object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     private var scheduler: ScheduledExecutorService? = null
-    private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, MutableMap<Channel?, Message?>>()
+    private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, ConcurrentHashMap<Channel?, Message?>>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
@@ -58,7 +58,7 @@ object MusicPlayerHelper {
         val track = audioPlayer.playingTrack
         val hook = event.hook
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
-        sendNowPlayingEmbed(track, hook, audioPlayer)
+        sendOrUpdateNowPlayingEmbed(track, hook, audioPlayer)
         startOrUpdateNowPlayingUpdater(hook, audioPlayer)
     }
 
@@ -82,13 +82,13 @@ object MusicPlayerHelper {
             .addField("Volume", "${audioPlayer.volume}", true)
             .setColor(Color.GREEN)
             .setFooter("Link: ${info.uri}", null)
-            .addField("Paused?", if(audioPlayer.isPaused) "yes" else "no", false)
+            .addField("Paused?", if (audioPlayer.isPaused) "yes" else "no", false)
             .build()
 
         return embed
     }
 
-    private fun sendNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+    private fun sendOrUpdateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
         val guildId = hook.interaction.guild!!.idLong
         val channel = hook.interaction.channel
 
@@ -115,20 +115,6 @@ object MusicPlayerHelper {
         }
     }
 
-    private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
-        val guildId = hook.interaction.guild!!.idLong
-        val channel = hook.interaction.channel
-
-        val embed = buildNowPlayingEmbed(track, audioPlayer)
-        val (pausePlayButton, stopButton) = generateButtons()
-
-        hook.editOriginalEmbeds(embed)
-            .setActionRow(pausePlayButton, stopButton)
-            .queue {
-                it.updateLastNowPlayingMessage(guildId, channel)
-            }
-    }
-
     private fun startOrUpdateNowPlayingUpdater(hook: InteractionHook, audioPlayer: AudioPlayer) {
         // Start a periodic updater thread or scheduled task if not already running
         if (scheduler == null || scheduler?.isShutdown == true) {
@@ -142,6 +128,20 @@ object MusicPlayerHelper {
                 }
             }, initialDelay, updateInterval, TimeUnit.SECONDS)
         }
+    }
+
+    private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+        val guildId = hook.interaction.guild!!.idLong
+        val channel = hook.interaction.channel
+
+        val embed = buildNowPlayingEmbed(track, audioPlayer)
+        val (pausePlayButton, stopButton) = generateButtons()
+
+        hook.editOriginalEmbeds(embed)
+            .setActionRow(pausePlayButton, stopButton)
+            .queue {
+                it.updateLastNowPlayingMessage(guildId, channel)
+            }
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
@@ -298,7 +298,7 @@ object MusicPlayerHelper {
     }
 
     private fun Message.updateLastNowPlayingMessage(guildId: Long, channel: Channel?) {
-        guildLastNowPlayingMessage.computeIfAbsent(guildId) { mutableMapOf() }[channel] = this
+        guildLastNowPlayingMessage.computeIfAbsent(guildId) { ConcurrentHashMap() }[channel] = this
     }
 
     private fun sendDeniedStoppableMessage(hook: InteractionHook, deleteDelay: Int?) {
@@ -317,6 +317,7 @@ object MusicPlayerHelper {
         return Pair(pausePlayButton, stopButton)
     }
 
+    // Method to stop the scheduler
     private fun stopScheduler() {
         scheduler?.shutdown()
         runCatching {
