@@ -5,7 +5,7 @@
 
 ## Overview
 
-Toby Bot is a feature-rich Discord bot built using Java and powered by various technologies including Spring Boot, JDA (Java Discord API), JPA (Java Persistence API), Hibernate, and Spring Web. This bot is designed to enhance your Discord server by providing a wide range of features and commands.
+Toby Bot is a feature-rich Discord bot built using Kotlin and powered by various technologies including Spring Boot, JDA (Java Discord API), JPA (Java Persistence API), Hibernate, and Spring Web. This bot is designed to enhance your Discord server by providing a wide range of features and commands.
 
 ## Features
 
@@ -45,7 +45,7 @@ Ensure you have the following prerequisites set up before getting started:
 4. Start the bot:
 
    ```shell
-   java -jar build/libs/toby-bot-5.0-SNAPSHOT.jar -Dspring.profiles.active=prod
+   java -jar build/libs/toby-bot-6.0-SNAPSHOT.jar -Dspring.profiles.active=prod
    ```
 
 ## Usage
