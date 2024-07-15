@@ -11,7 +11,6 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import toby.command.commands.music.IMusicCommand.Companion.sendDeniedStoppableMessage
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.GuildMusicManager
@@ -48,7 +47,6 @@ object MusicPlayerHelper {
         }
     }
 
-    @JvmStatic
     fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
@@ -75,11 +73,10 @@ object MusicPlayerHelper {
             .setColor(Color.GREEN)
             .setFooter("Link: ${info.uri}", null)
             .build()
-
-        // Send message with embed and action row
+        val (pausePlayButton, stopButton) = generateButtons()
         hook.sendMessageEmbeds(embed)
-            .setActionRow(Button.primary("pause/play", "⏯"), Button.primary("stop", "⏹"))  // Attach action row with the embed
-            .queue()
+            .setActionRow(pausePlayButton, stopButton)
+            .queue { it.updateLastNowPlayingMessage(hook.interaction.guild!!.idLong, hook.interaction.channel) }
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
@@ -107,17 +104,17 @@ object MusicPlayerHelper {
             }
             musicManager.audioPlayer.isPaused = false
 
+            hook.deleteOriginal().queue()
             val embed = EmbedBuilder()
                 .setTitle("Player Stopped")
                 .setDescription("The player has been stopped and the queue has been cleared")
                 .setColor(Color.RED)
                 .build()
 
-            hook.deleteOriginal().queue()
             hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
-            resetNowPlayingMessage(event.guild!!.idLong)
+            resetMessages(event.guild!!.idLong)
         } else {
-            sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
+            sendDeniedStoppableMessage(hook, deleteDelay)
         }
     }
 
@@ -196,7 +193,7 @@ object MusicPlayerHelper {
 
             hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
         } else {
-            sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
+            sendDeniedStoppableMessage(hook, deleteDelay)
         }
     }
 
@@ -225,13 +222,34 @@ object MusicPlayerHelper {
         return (track.duration / 1000).toInt()
     }
 
-    private fun resetNowPlayingMessage(guildId: Long) {
-        guildLastNowPlayingMessage[guildId]?.values?.forEach { it?.delete()?.queue() }
-        guildLastNowPlayingMessage.remove(guildId)
-    }
-
-    @JvmStatic
     fun resetMessages(guildId: Long) {
         resetNowPlayingMessage(guildId)
     }
+
+    private fun resetNowPlayingMessage(guildId: Long) {
+        val channelMessageMap = guildLastNowPlayingMessage[guildId]
+        channelMessageMap?.values?.forEach { it?.delete()?.queue() }
+        guildLastNowPlayingMessage.remove(guildId)
+    }
+
+    private fun Message.updateLastNowPlayingMessage(guildId: Long, channel: Channel?) {
+        guildLastNowPlayingMessage.computeIfAbsent(guildId) { mutableMapOf() }[channel] = this
+    }
+
+    private fun sendDeniedStoppableMessage(hook: InteractionHook, deleteDelay: Int?) {
+        val embed = EmbedBuilder()
+            .setTitle("Cannot Stop")
+            .setDescription("The player cannot be stopped at this time.")
+            .setColor(Color.RED)
+            .build()
+
+        hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+    }
+
+    private fun generateButtons(): Pair<Button, Button> {
+        val pausePlayButton = Button.primary("pause/play", "⏯️")
+        val stopButton = Button.primary("stop", "⏹️")
+        return Pair(pausePlayButton, stopButton)
+    }
 }
+
