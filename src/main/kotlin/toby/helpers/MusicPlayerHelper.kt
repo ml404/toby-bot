@@ -27,7 +27,7 @@ object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     private var scheduler: ScheduledExecutorService? = null
-    private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, ConcurrentHashMap<Channel?, Message?>>()
+    private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Pair<Channel?, Message?>>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
@@ -82,7 +82,7 @@ object MusicPlayerHelper {
             .addField("Volume", "${audioPlayer.volume}", true)
             .setColor(Color.GREEN)
             .setFooter("Link: ${info.uri}", null)
-            .addField("Paused?", if (audioPlayer.isPaused) "yes" else "no", false)
+            .addField("Paused?", if(audioPlayer.isPaused) "yes" else "no", false)
             .build()
 
         return embed
@@ -96,21 +96,21 @@ object MusicPlayerHelper {
         val (pausePlayButton, stopButton) = generateButtons()
 
         // Check if there is an existing now playing message in the map
-        val existingMessage = guildLastNowPlayingMessage[guildId]?.get(channel)
+        val existingMessage = guildLastNowPlayingMessage[guildId]?.second
 
         if (existingMessage != null) {
             // Update the existing message
-            hook.editMessageEmbedsById(existingMessage.id, embed)
+            hook.editOriginalEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue {
-                    it.updateLastNowPlayingMessage(guildId, channel)
+                    guildLastNowPlayingMessage[guildId] = Pair(channel, it)
                 }
         } else {
             // Send a new message and store it in the map
             hook.sendMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue {
-                    it.updateLastNowPlayingMessage(guildId, channel)
+                    guildLastNowPlayingMessage[guildId] = Pair(channel, it)
                 }
         }
     }
@@ -140,7 +140,7 @@ object MusicPlayerHelper {
         hook.editOriginalEmbeds(embed)
             .setActionRow(pausePlayButton, stopButton)
             .queue {
-                it.updateLastNowPlayingMessage(guildId, channel)
+                guildLastNowPlayingMessage[guildId] = Pair(channel, it)
             }
     }
 
@@ -292,13 +292,9 @@ object MusicPlayerHelper {
     }
 
     private fun resetNowPlayingMessage(guildId: Long) {
-        val channelMessageMap = guildLastNowPlayingMessage[guildId]
-        channelMessageMap?.values?.forEach { it?.delete()?.queue() }
+        val channelMessagePair = guildLastNowPlayingMessage[guildId]
+        channelMessagePair?.second?.delete()?.queue()
         guildLastNowPlayingMessage.remove(guildId)
-    }
-
-    private fun Message.updateLastNowPlayingMessage(guildId: Long, channel: Channel?) {
-        guildLastNowPlayingMessage.computeIfAbsent(guildId) { ConcurrentHashMap() }[channel] = this
     }
 
     private fun sendDeniedStoppableMessage(hook: InteractionHook, deleteDelay: Int?) {
