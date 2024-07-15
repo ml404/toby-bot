@@ -3,6 +3,7 @@ package toby.command.commands.music
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import io.mockk.*
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -10,8 +11,8 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
-import toby.command.CommandTest.Companion.replyCallbackAction
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import java.awt.Color
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class SkipCommandTest : MusicCommandTest {
@@ -21,7 +22,7 @@ internal class SkipCommandTest : MusicCommandTest {
     fun setUp() {
         setupCommonMusicMocks()
         skipCommand = SkipCommand()
-        every { event.deferReply(true) } returns replyCallbackAction
+        every { event.deferReply(true) } returns CommandTest.replyCallbackAction
     }
 
     @AfterEach
@@ -36,7 +37,7 @@ internal class SkipCommandTest : MusicCommandTest {
         val commandContext = CommandContext(event)
         every { MusicCommandTest.audioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
-        every { event.getOption("skip") } returns mockk {
+        every { event.getOption("skip") } returns mockk<OptionMapping> {
             every { asInt } returns 1
         }
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(2)
@@ -46,6 +47,9 @@ internal class SkipCommandTest : MusicCommandTest {
         every { trackScheduler.queue } returns queue
         every { MusicCommandTest.track.userData } returns 1
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         skipCommand.handleMusicCommand(
             commandContext,
@@ -54,11 +58,18 @@ internal class SkipCommandTest : MusicCommandTest {
             0
         )
 
+        // Assert
         verify(exactly = 1) { trackScheduler.isLooping = false }
         verify(exactly = 1) { trackScheduler.nextTrack() }
         verify(exactly = 1) {
-            event.hook.sendMessage("Skipped 1 track(s)")
+            event.hook.sendMessageEmbeds(capture(embedSlot))
         }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Tracks Skipped")
+        assert(messageEmbed.description == "Skipped 1 track(s)")
+        assert(messageEmbed.color == Color.CYAN)
     }
 
     @Test
@@ -80,6 +91,9 @@ internal class SkipCommandTest : MusicCommandTest {
         every { trackScheduler.queue } returns queue
         every { MusicCommandTest.track.userData } returns 1
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         skipCommand.handleMusicCommand(
             commandContext,
@@ -88,11 +102,18 @@ internal class SkipCommandTest : MusicCommandTest {
             0
         )
 
+        // Assert
         verify(exactly = 1) { trackScheduler.isLooping = false }
         verify(exactly = 2) { trackScheduler.nextTrack() }
         verify(exactly = 1) {
-            hook.sendMessage("Skipped 2 track(s)")
+            hook.sendMessageEmbeds(capture(embedSlot))
         }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Tracks Skipped")
+        assert(messageEmbed.description == "Skipped 2 track(s)")
+        assert(messageEmbed.color == Color.CYAN)
     }
 
     @Test
@@ -111,6 +132,9 @@ internal class SkipCommandTest : MusicCommandTest {
         every { trackScheduler.queue } returns queue
         every { MusicCommandTest.track.userData } returns 1
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         skipCommand.handleMusicCommand(
             commandContext,
@@ -119,11 +143,18 @@ internal class SkipCommandTest : MusicCommandTest {
             0
         )
 
+        // Assert
         verify(exactly = 0) { trackScheduler.isLooping = false }
         verify(exactly = 0) { trackScheduler.nextTrack() }
         verify(exactly = 1) {
-            event.hook.sendMessage("You're not too bright, but thanks for trying")
+            event.hook.sendMessageEmbeds(capture(embedSlot))
         }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Invalid Skip Request")
+        assert(messageEmbed.description == "You're not too bright, but thanks for trying")
+        assert(messageEmbed.color == Color.RED)
     }
 
     @Test
@@ -139,6 +170,9 @@ internal class SkipCommandTest : MusicCommandTest {
         every { MusicCommandTest.track.userData } returns 1
         every { MusicCommandTest.audioPlayer.playingTrack } returns null
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         skipCommand.handleMusicCommand(
             commandContext,
@@ -147,11 +181,18 @@ internal class SkipCommandTest : MusicCommandTest {
             0
         )
 
+        // Assert
         verify(exactly = 0) { trackScheduler.isLooping = false }
         verify(exactly = 0) { trackScheduler.nextTrack() }
         verify(exactly = 1) {
-            event.hook.sendMessage("There is no track playing currently")
+            event.hook.sendMessageEmbeds(capture(embedSlot))
         }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "No Track Playing")
+        assert(messageEmbed.description == "There is no track playing currently")
+        assert(messageEmbed.color == Color.RED)
     }
 
     companion object {

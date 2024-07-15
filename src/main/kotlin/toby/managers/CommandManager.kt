@@ -38,7 +38,7 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
     private val lastCommands: MutableMap<User, Pair<ICommand, CommandContext>> = HashMap()
 
     init {
-        val cache: Cache = Cache(86400, 3600, 2)
+        val cache = Cache(86400, 3600, 2)
 
         //misc commands
         addCommand(HelpCommand(this))
@@ -167,7 +167,6 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
                 "init:prev" -> DnDHelper.decrementTurnTable(hook, event, deleteDelay)
                 "init:clear" -> DnDHelper.clearInitiative(hook, event)
                 else -> {
-
                     //button name that should be something like 'roll: 20,1,0'
                     val invoke = componentId.lowercase(Locale.getDefault())
                     val split = invoke.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -176,7 +175,7 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
                     val cmd = getCommand(commandName)
                     cmd?.let { nonNullCmd ->
                         event.channel.sendTyping().queue()
-                        if (nonNullCmd.name.equals("roll")) {
+                        if (nonNullCmd.name == "roll") {
                             val rollCommand = nonNullCmd as? RollCommand
                             val optionArray = options.split(",").map { it.trim() }.toTypedArray()
                             rollCommand?.handleDiceRoll(

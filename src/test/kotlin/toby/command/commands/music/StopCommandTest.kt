@@ -1,12 +1,16 @@
 package toby.command.commands.music
 
-import io.mockk.*
+import io.mockk.clearMocks
+import io.mockk.slot
+import io.mockk.verify
+import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
+import java.awt.Color
 
 internal class StopCommandTest : MusicCommandTest {
     lateinit var stopCommand: StopCommand
@@ -28,12 +32,21 @@ internal class StopCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
+        val hook = event.hook
+        val embedSlot = slot<MessageEmbed>()
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
         // Assert
-        verify(exactly = 1) { event.hook.sendMessage("The player has been stopped and the queue has been cleared") }
+        verify(exactly = 1) { hook.deleteOriginal() }
+        verify(exactly = 1) { hook.sendMessageEmbeds(capture(embedSlot)) }
+
+        // Assert on the captured EmbedBuilder
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Player Stopped")
+        assert(messageEmbed.description == "The player has been stopped and the queue has been cleared")
+        assert(messageEmbed.color == Color.RED)
     }
 
     @Test
