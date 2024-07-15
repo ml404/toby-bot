@@ -109,7 +109,9 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         // Verify properties of captured MessageEmbed
         val messageEmbed = embedSlot.captured
         assert(messageEmbed.title == "Now Playing")
-        assert(messageEmbed.description == "`Title` by `Author`")
+        assert(messageEmbed.description == "**Title**: `Title`\n" +
+                "**Author**: `Author`\n" +
+                "**Stream**: `Live`\n")
         assert(messageEmbed.fields[0].name == "Volume")
         assert(messageEmbed.fields[0].value == "0")
         assert(messageEmbed.url == null)
@@ -146,7 +148,9 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         // Verify properties of captured MessageEmbed
         val messageEmbed = embedSlot.captured
         assert(messageEmbed.title == "Now Playing")
-        assert(messageEmbed.description == "`Title` by `Author` `[00:00:01/00:00:03]`")
+        assert(messageEmbed.description == "**Title**: `Title`\n" +
+                "**Author**: `Author`\n" +
+                "**Progress**: `00:00:01 / 00:00:03`\n")
         assert(messageEmbed.fields[0].name == "Volume")
         assert(messageEmbed.fields[0].value == "0")
         assert(messageEmbed.url == null)

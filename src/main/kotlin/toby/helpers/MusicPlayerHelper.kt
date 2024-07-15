@@ -57,41 +57,51 @@ object MusicPlayerHelper {
         val track = audioPlayer.playingTrack
         val hook = event.hook
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
-        sendNowPlayingEmbed(track, hook, audioPlayer.volume)
+        sendNowPlayingEmbed(track, hook, audioPlayer)
 
-        // Start a periodic updater thread or scheduled task
-        scheduler = Executors.newScheduledThreadPool(1)
-        val initialDelay = 1L // initial delay before first update (in seconds)
-        val updateInterval = 1L // interval between updates (in seconds)
-        scheduler?.scheduleAtFixedRate({
-            val updatedTrack = audioPlayer.playingTrack // Get the latest track information
-            updateNowPlayingEmbed(updatedTrack, hook, audioPlayer.volume) // Update the embed
-        }, initialDelay, updateInterval, TimeUnit.SECONDS)
+        // Start a periodic updater thread or scheduled task if not already running
+        if (scheduler == null || scheduler?.isShutdown == true) {
+            scheduler = Executors.newScheduledThreadPool(1)
+            val initialDelay = 1L // initial delay before first update (in seconds)
+            val updateInterval = 1L // interval between updates (in seconds)
+            scheduler?.scheduleAtFixedRate({
+                val updatedTrack = audioPlayer.playingTrack // Get the latest track information
+                if (updatedTrack != null) {
+                    updateNowPlayingEmbed(updatedTrack, hook, audioPlayer) // Update the embed
+                }
+            }, initialDelay, updateInterval, TimeUnit.SECONDS)
+        }
     }
 
-    private fun buildNowPlayingEmbed(track: AudioTrack, volume: Int): MessageEmbed {
+    private fun buildNowPlayingEmbed(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
         val info = track.info
+        val descriptionBuilder = StringBuilder()
+
+        descriptionBuilder.append("**Title**: `${info.title}`\n")
+            .append("**Author**: `${info.author}`\n")
+
+        if (!info.isStream) {
+            val songPosition = formatTime(track.position)
+            val songDuration = formatTime(track.duration)
+            descriptionBuilder.append("**Progress**: `$songPosition / $songDuration`\n")
+        } else {
+            descriptionBuilder.append("**Stream**: `Live`\n")
+        }
+
         val embed = EmbedBuilder()
             .setTitle("Now Playing")
-            .setDescription(
-                if (!info.isStream) {
-                    val songPosition = formatTime(track.position)
-                    val songDuration = formatTime(track.duration)
-                    "`${info.title}` by `${info.author}` `[$songPosition/$songDuration]`"
-                } else {
-                    "`${info.title}` by `${info.author}`"
-                }
-            )
-            .addField("Volume", "$volume", true)
+            .setDescription(descriptionBuilder.toString())
+            .addField("Volume", "${audioPlayer.volume}", true)
             .setColor(Color.GREEN)
             .setFooter("Link: ${info.uri}", null)
+            .addField("Paused?", if(audioPlayer.isPaused) "yes" else "no", false)
             .build()
 
         return embed
     }
 
-    private fun sendNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, volume: Int) {
-        val embed = buildNowPlayingEmbed(track, volume)
+    private fun sendNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+        val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
         hook.sendMessageEmbeds(embed)
@@ -99,8 +109,8 @@ object MusicPlayerHelper {
             .queue { it.updateLastNowPlayingMessage(hook.interaction.guild!!.idLong, hook.interaction.channel) }
     }
 
-    private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, volume: Int) {
-        val embed = buildNowPlayingEmbed(track, volume)
+    private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+        val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
         hook.editOriginalEmbeds(embed)
@@ -293,4 +303,3 @@ object MusicPlayerHelper {
         }
     }
 }
-
