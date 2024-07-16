@@ -4,14 +4,13 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.channel.Channel
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand.Companion.sendDeniedStoppableMessage
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.GuildMusicManager
@@ -23,11 +22,13 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
+data class PlayerContext(val playerManager: PlayerManager, val hook: InteractionHook)
+
 object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     private var scheduler: ScheduledExecutorService? = null
-    private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Pair<Channel?, Message?>>()
+    private val guildPlayerContextMap = ConcurrentHashMap<Long, PlayerContext>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
@@ -58,8 +59,32 @@ object MusicPlayerHelper {
         val track = audioPlayer.playingTrack
         val hook = event.hook
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
-        sendOrUpdateNowPlayingEmbed(track, hook, audioPlayer)
-        startOrUpdateNowPlayingUpdater(hook, audioPlayer)
+
+        // Check if a hook already exists in the map
+        val existingContext = guildPlayerContextMap[event.guild!!.idLong]
+
+        if (existingContext != null) {
+            // If the hook already exists, update the existing message instead of sending a new one
+            val embed = buildNowPlayingEmbed(track, audioPlayer)
+            val (pausePlayButton, stopButton) = generateButtons()
+
+            existingContext.hook.editOriginalEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue()
+
+        } else {
+            val embed = buildNowPlayingEmbed(track, audioPlayer)
+            val (pausePlayButton, stopButton) = generateButtons()
+
+            hook.sendMessageEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue()
+
+            val guildId = hook.interaction.guild!!.idLong
+            guildPlayerContextMap[guildId] = PlayerContext(playerManager, hook)
+
+            startNowPlayingUpdater(playerManager, hook, audioPlayer)
+        }
     }
 
     private fun buildNowPlayingEmbed(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
@@ -76,7 +101,7 @@ object MusicPlayerHelper {
             descriptionBuilder.append("**Stream**: `Live`\n")
         }
 
-        val embed = EmbedBuilder()
+        return EmbedBuilder()
             .setTitle("Now Playing")
             .setDescription(descriptionBuilder.toString())
             .addField("Volume", "${audioPlayer.volume}", true)
@@ -84,41 +109,10 @@ object MusicPlayerHelper {
             .setFooter("Link: ${info.uri}", null)
             .addField("Paused?", if (audioPlayer.isPaused) "yes" else "no", false)
             .build()
-
-        return embed
     }
 
-    private fun sendOrUpdateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
-        val guildId = hook.interaction.guild!!.idLong
-        val channel = hook.interaction.channel
-
-        val embed = buildNowPlayingEmbed(track, audioPlayer)
-        val (pausePlayButton, stopButton) = generateButtons()
-
-        synchronized(guildLastNowPlayingMessage) {
-            // Check if there is an existing now playing message in the map
-            val existingMessage = guildLastNowPlayingMessage[guildId]?.second
-
-            if (existingMessage != null) {
-                // Update the existing message
-                hook.editOriginalEmbeds(embed)
-                    .setActionRow(pausePlayButton, stopButton)
-                    .queue {
-                        guildLastNowPlayingMessage[guildId] = Pair(channel, it)
-                    }
-            } else {
-                // Send a new message and store it in the map
-                hook.sendMessageEmbeds(embed)
-                    .setActionRow(pausePlayButton, stopButton)
-                    .queue {
-                        guildLastNowPlayingMessage[guildId] = Pair(channel, it)
-                    }
-            }
-        }
-    }
-
-    private fun startOrUpdateNowPlayingUpdater(hook: InteractionHook, audioPlayer: AudioPlayer) {
-        // Start a periodic updater thread or scheduled task if not already running
+    private fun startNowPlayingUpdater(playerManager: PlayerManager, hook: InteractionHook, audioPlayer: AudioPlayer) {
+        scheduler = Executors.newScheduledThreadPool(1)
         if (scheduler == null || scheduler?.isShutdown == true) {
             scheduler = Executors.newScheduledThreadPool(1)
             val initialDelay = 5L // initial delay before first update (in seconds)
@@ -126,26 +120,27 @@ object MusicPlayerHelper {
             scheduler?.scheduleAtFixedRate({
                 val updatedTrack = audioPlayer.playingTrack // Get the latest track information
                 if (updatedTrack != null) {
-                    updateNowPlayingEmbed(updatedTrack, hook, audioPlayer) // Update the embed
+                    updateNowPlayingMessage(playerManager, updatedTrack, hook, audioPlayer) // Update the embed
                 }
             }, initialDelay, updateInterval, TimeUnit.SECONDS)
         }
     }
 
-    private fun updateNowPlayingEmbed(track: AudioTrack, hook: InteractionHook, audioPlayer: AudioPlayer) {
+    private fun updateNowPlayingMessage(
+        playerManager: PlayerManager,
+        track: AudioTrack,
+        hook: InteractionHook,
+        audioPlayer: AudioPlayer
+    ) {
         val guildId = hook.interaction.guild!!.idLong
-        val channel = hook.interaction.channel
-
         val embed = buildNowPlayingEmbed(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
 
-        synchronized(guildLastNowPlayingMessage) {
-            hook.editOriginalEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
-                .queue {
-                    guildLastNowPlayingMessage[guildId] = Pair(channel, it)
-                }
-        }
+        hook.editOriginalEmbeds(embed)
+            .setActionRow(pausePlayButton, stopButton)
+            .queue()
+
+        guildPlayerContextMap[guildId] = PlayerContext(playerManager, hook)
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
@@ -183,7 +178,7 @@ object MusicPlayerHelper {
             hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             resetMessages(event.guild!!.idLong)
         } else {
-            sendDeniedStoppableMessage(hook, deleteDelay)
+            sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
     }
 
@@ -262,7 +257,7 @@ object MusicPlayerHelper {
 
             hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
         } else {
-            sendDeniedStoppableMessage(hook, deleteDelay)
+            sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
     }
 
@@ -292,32 +287,16 @@ object MusicPlayerHelper {
     }
 
     fun resetMessages(guildId: Long) {
-        resetNowPlayingMessage(guildId)
-    }
-
-    private fun resetNowPlayingMessage(guildId: Long) {
-        val channelMessagePair = guildLastNowPlayingMessage[guildId]
-        channelMessagePair?.second?.delete()?.queue()
-        guildLastNowPlayingMessage.remove(guildId)
-    }
-
-    private fun sendDeniedStoppableMessage(hook: InteractionHook, deleteDelay: Int?) {
-        val embed = EmbedBuilder()
-            .setTitle("Cannot Stop")
-            .setDescription("The player cannot be stopped at this time.")
-            .setColor(Color.RED)
-            .build()
-
-        hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+        guildPlayerContextMap[guildId]?.hook?.deleteOriginal()
+        guildPlayerContextMap.remove(guildId)
     }
 
     private fun generateButtons(): Pair<Button, Button> {
-        val pausePlayButton = Button.primary("pause/play", "⏯️")
-        val stopButton = Button.primary("stop", "⏹️")
+        val pausePlayButton = Button.primary("pause_play", "Pause/Play")
+        val stopButton = Button.danger("stop", "Stop")
         return Pair(pausePlayButton, stopButton)
     }
 
-    // Method to stop the scheduler
     private fun stopScheduler() {
         scheduler?.shutdown()
         runCatching {
