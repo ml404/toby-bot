@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.helpers.MusicPlayerHelper
+import toby.helpers.MusicPlayerHelper.NowPlayingInfo
 import toby.lavaplayer.PlayerManager
 
 class MusicPlayerHelperTest {
@@ -138,6 +139,7 @@ class MusicPlayerHelperTest {
         val webhookMessageEditAction = mockk<WebhookMessageEditAction<Message>>()
         every { replyCallback.hook.sendMessageEmbeds(any<MessageEmbed>()) } returns webhookCreateAction
         every { replyCallback.hook.editOriginalEmbeds(any<MessageEmbed>()) } returns webhookMessageEditAction
+        every { replyCallback.hook.deleteOriginal().queue() } just Runs
         every {
             webhookCreateAction.setActionRow(
                 any<ItemComponent>(),
@@ -152,7 +154,7 @@ class MusicPlayerHelperTest {
         } returns webhookMessageEditAction
         every { webhookCreateAction.queue(any()) } answers {
             // Simulate storing the message in the map
-            MusicPlayerHelper.guildLastNowPlayingMessage[guildId] = Pair(mockk(relaxed = true), mockk(relaxed = true))
+            MusicPlayerHelper.guildLastNowPlayingMessage[guildId] = NowPlayingInfo(playerManager, replyCallback.hook)
         }
         every { webhookMessageEditAction.queue() } just Runs
 
