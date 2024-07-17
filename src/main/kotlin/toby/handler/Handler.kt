@@ -2,6 +2,7 @@ package toby.handler
 
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent
@@ -29,7 +30,7 @@ import toby.lavaplayer.PlayerManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.Nonnull
 
 @Service
@@ -127,21 +128,16 @@ class Handler @Autowired constructor(
     }
 
     private fun onGuildVoiceMove(guild: Guild) {
-        val audioManager = guild.audioManager
-        val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig =
-            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        guild.audioManager.connectedChannel?.let { rejoinPreviousChannel(guild) }
 
-        waitForNextChannelJoined(guild).thenAccept { nextChannelJoined ->
-            if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
-                val nonBotConnectedMembers = nextChannelJoined.members.filter { !it.user.isBot }
-                if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-                    PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-                    audioManager.openAudioConnection(nextChannelJoined)
-                    LOGGER.info("Audio connection opened.")
-                }
-                setupAndPlayUserIntro(guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
-            }
+    }
+
+    private fun rejoinPreviousChannel(guild: Guild) {
+        val audioManager = guild.audioManager
+        lastConnectedChannel[guild.idLong]?.let {
+                audioManager.openAudioConnection(it)
+                LOGGER.info("Rejoined previous channel: ${it.name}")
+                lastConnectedChannel.remove(guild.idLong)
         }
     }
 
@@ -157,23 +153,10 @@ class Handler @Autowired constructor(
         if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
             PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
             audioManager.openAudioConnection(event.channelJoined)
+            lastConnectedChannel[guild.idLong] = event.channelJoined!!
         }
 
         setupAndPlayUserIntro(guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
-    }
-
-    private fun waitForNextChannelJoined(guild: Guild): CompletableFuture<AudioChannel> {
-        val future = CompletableFuture<AudioChannel>()
-        val listener = object : ListenerAdapter() {
-            override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-                if (event.guild == guild && event.channelJoined != null) {
-                    guild.jda.removeEventListener(this)
-                    future.complete(event.channelJoined!!)
-                }
-            }
-        }
-        guild.jda.addEventListener(listener)
-        return future
     }
 
     private fun setupAndPlayUserIntro(
@@ -202,6 +185,7 @@ class Handler @Autowired constructor(
             if (connectedChannel.members.none { !it.user.isBot }) {
                 audioManager.closeAudioConnection()
                 LOGGER.info("Audio connection closed due to empty channel.")
+                lastConnectedChannel.remove(audioManager.guild.idLong)
             }
         }
     }
@@ -231,5 +215,6 @@ class Handler @Autowired constructor(
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(Handler::class.java)
+        var lastConnectedChannel = ConcurrentHashMap<Long, AudioChannelUnion>()
     }
 }
