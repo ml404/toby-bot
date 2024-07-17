@@ -13,7 +13,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.managers.AudioManager
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
@@ -40,14 +39,13 @@ class Handler @Autowired constructor(
     private val userService: IUserService,
     musicFileService: IMusicFileService,
     excuseService: IExcuseService,
-    private val logger: Logger = LoggerFactory.getLogger(Handler::class.java)
 ) : ListenerAdapter() {
 
     private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
     private val menuManager = MenuManager(configService)
 
     override fun onReady(@Nonnull event: ReadyEvent) {
-        logger.info("${event.jda.selfUser.name} is ready")
+        LOGGER.info("${event.jda.selfUser.name} is ready")
     }
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
@@ -130,7 +128,8 @@ class Handler @Autowired constructor(
     private fun onGuildVoiceMove(guild: Guild) {
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig =
+            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         waitForNextChannelJoined(guild).thenAccept { nextChannelJoined ->
             if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
@@ -138,7 +137,7 @@ class Handler @Autowired constructor(
                 if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
                     PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
                     audioManager.openAudioConnection(nextChannelJoined)
-                    logger.info("Audio connection opened.")
+                    LOGGER.info("Audio connection opened.")
                 }
                 setupAndPlayUserIntro(guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
             }
@@ -149,7 +148,8 @@ class Handler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig =
+            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
 
@@ -200,14 +200,14 @@ class Handler @Autowired constructor(
         if (connectedChannel != null) {
             if (connectedChannel.members.none { !it.user.isBot }) {
                 audioManager.closeAudioConnection()
-                logger.info("Audio connection closed due to empty channel.")
+                LOGGER.info("Audio connection closed due to empty channel.")
             }
         }
     }
 
     private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel?) {
         if (channelLeft?.name?.matches("(?i)team\\s[0-9]+".toRegex()) == true && nonBotConnectedMembersEmpty) {
-            logger.info("Deleting temporary channel: {}", channelLeft.name)
+            LOGGER.info("Deleting temporary channel: {}", channelLeft.name)
             channelLeft.delete().queue()
         }
     }
@@ -226,5 +226,9 @@ class Handler @Autowired constructor(
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         menuManager.handle(event)
+    }
+
+    companion object {
+        val LOGGER = LoggerFactory.getLogger(Handler::class.java)
     }
 }

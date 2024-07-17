@@ -26,19 +26,7 @@ class HandlerTest {
     private val brotherService: IBrotherService = mockk()
     private val musicFileService: IMusicFileService = mockk()
     private val excuseService: IExcuseService = mockk()
-    private val logger: Logger = mockk(relaxed = true)
-    private val handler = Handler(configService, brotherService, userService, musicFileService, excuseService, logger)
-
-    @Test
-    fun `onReady should log the correct message`() {
-        val event = mockk<ReadyEvent> {
-            every { jda.selfUser.name } returns "BotName"
-        }
-
-        handler.onReady(event)
-
-        verify { logger.info("BotName is ready") }
-    }
+    private val handler = Handler(configService, brotherService, userService, musicFileService, excuseService)
 
     @Test
     fun `onMessageReceived should respond correctly to different messages`() {
