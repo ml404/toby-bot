@@ -12,17 +12,12 @@ object UserDtoHelper {
         userService: IUserService,
         introVolume: Int = 20
     ): UserDto {
-        val dbUserDto = userService.listGuildUsers(guildId).find { it?.guildId == guildId && it.discordId == discordId }
-        return if (dbUserDto == null) {
-            val userDto = UserDto().apply {
-                this.discordId = discordId
-                this.guildId = guildId
-                this.superUser = isSuperUser
-                this.musicDto = MusicDto(discordId, guildId, null, introVolume, null)
-            }
-            userService.createNewUser(userDto)
-        } else {
-            dbUserDto
+        return userService.getUserById(discordId, guildId) ?: UserDto().apply {
+            this.discordId = discordId
+            this.guildId = guildId
+            this.superUser = isSuperUser
+            this.musicDto = MusicDto(discordId, guildId, null, introVolume, null)
+            userService.createNewUser(this)
         }
     }
 

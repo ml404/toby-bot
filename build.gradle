@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 buildscript {
     ext.kotlin_version = '2.0.0-RC3'
     ext {
@@ -82,6 +84,7 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'com.h2database:h2'
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0") // Use the latest version
 }
 
 tasks.register('deleteExtras', Delete) {
@@ -121,7 +124,7 @@ java {
     }
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
         jvmTarget = "17"
     }

@@ -1,7 +1,10 @@
 package toby.handler
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
@@ -24,13 +27,15 @@ import toby.emote.Emotes
 import toby.helpers.MusicPlayerHelper.playUserIntro
 import toby.helpers.UserDtoHelper.calculateUserDto
 import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.UserDto
 import toby.jpa.service.*
 import toby.lavaplayer.PlayerManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import javax.annotation.Nonnull
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 @Service
 @Configurable
@@ -39,16 +44,17 @@ class Handler @Autowired constructor(
     brotherService: IBrotherService,
     private val userService: IUserService,
     musicFileService: IMusicFileService,
-    excuseService: IExcuseService
+    excuseService: IExcuseService,
+    private val logger: Logger = LoggerFactory.getLogger(Handler::class.java)
 ) : ListenerAdapter() {
 
-    private val commandManager =
-        CommandManager(configService, brotherService, userService, musicFileService, excuseService)
+    private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
 
     private val menuManager = MenuManager(configService)
+    private val scope = CoroutineScope(Dispatchers.Default + Job())
 
     override fun onReady(@Nonnull event: ReadyEvent) {
-        LOGGER.info("{} is ready", event.jda.selfUser.name)
+        logger.info("${event.jda.selfUser.name} is ready")
     }
 
     override fun onMessageReceived(@Nonnull event: MessageReceivedEvent) {
@@ -67,17 +73,24 @@ class Handler @Autowired constructor(
         when {
             messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs") -> {
                 val tobyEmote = guild.jda.getEmojiById(Emotes.TOBY)
-                channel.sendMessageFormat("%s... that's not my name %s", member?.effectiveName ?: author.name, tobyEmote).queue()
+                channel.sendMessageFormat(
+                    "%s... that's not my name %s",
+                    member?.effectiveName ?: author.name,
+                    tobyEmote
+                ).queue()
                 message.addReaction(tobyEmote!!).queue()
             }
+
             messageStringLowercase.trim() == "sigh" -> {
                 val jessEmote = guild.jda.getEmojiById(Emotes.JESS)
                 channel.sendMessageFormat("Hey %s, what's up champ?", member?.effectiveName ?: author.name).queue()
                 channel.sendMessage(jessEmote.toString()).queue()
             }
+
             messageStringLowercase.contains("yeah") -> {
                 channel.sendMessage("YEAH????").queue()
             }
+
             BotMain.jda?.selfUser?.let { message.mentions.isMentioned(it) } == true -> {
                 channel.sendMessage("Don't talk to me").queue()
             }
@@ -117,108 +130,113 @@ class Handler @Autowired constructor(
             onGuildVoiceLeave(event)
         }
         if (event.channelJoined == null && event.channelLeft == null) {
-            onGuildVoiceMove(event)
+            scope.launch {
+                waitForNextChannelJoinedAndJoin(event)
+            }
+        }
+    }
+
+    private suspend fun waitForNextChannelJoinedAndJoin(event: GuildVoiceUpdateEvent) {
+        val guild = event.guild
+        val audioManager = guild.audioManager
+        val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
+        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+
+        val nextChannelJoined = waitForNextChannelJoined(guild)
+        checkCurrentAudioManagerForNonBotMembers(audioManager)
+
+        if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
+            val nonBotConnectedMembers = nextChannelJoined.members.filter { !it.user.isBot }
+            if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
+                PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
+                audioManager.openAudioConnection(nextChannelJoined)
+                logger.info("Audio connection opened.")
+            }
+
+            setupAndPlayUserIntro(event, guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
         }
     }
 
     private fun onGuildVoiceJoin(event: GuildVoiceUpdateEvent) {
         val guild = event.guild
         val audioManager = guild.audioManager
-        val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val databaseVolumeConfig = configService.getConfigByName(volumePropertyName, event.guild.id)
-        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, event.guild.id)
+        val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
+        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
-        val defaultVolume = databaseVolumeConfig?.value?.toInt() ?: 100
         val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
 
         checkCurrentAudioManagerForNonBotMembers(audioManager)
         if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
             PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-            audioManager.openAudioConnection(event.channelJoined!!)
+            audioManager.openAudioConnection(event.channelJoined)
         }
 
-        val member = event.member
-        val discordId = member.user.idLong
-        val guildId = guild.idLong
-        val requestingUserDto = calculateUserDto(guildId, discordId, member.isOwner, userService, defaultVolume)
-
-        if (audioManager.connectedChannel == event.channelJoined) {
-            playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0, 0L)
-        }
+        setupAndPlayUserIntro(event, guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
     }
 
-    private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
-        val guild = event.guild
-        val audioManager = guild.audioManager
-        val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val databaseConfig = configService.getConfigByName(volumePropertyName, event.guild.id)
-        val defaultVolume = databaseConfig?.value?.toInt() ?: 100
-        closeEmptyAudioManagerAndRejoin(event, guild, audioManager, defaultVolume)
-    }
-
-    private fun closeEmptyAudioManagerAndRejoin(
-        event: GuildVoiceUpdateEvent, guild: Guild, audioManager: AudioManager, defaultVolume: Int
-    ) {
-        val future = CompletableFuture.supplyAsync {
-            checkCurrentAudioManagerForNonBotMembers(audioManager)
-            audioManager // Supply the AudioManager instance
-        }
-
-        future.thenAcceptAsync { am: AudioManager ->
-            LOGGER.info("Is connected: {}", am.isConnected)
-            if (!am.isConnected) {
-                LOGGER.info("Attempting to connect...")
-                val nonBotConnectedMembers = event.channelJoined!!.members.filter { !it.user.isBot }
-                if (nonBotConnectedMembers.isNotEmpty()) {
-                    PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-                    am.openAudioConnection(event.channelJoined)
-                    LOGGER.info("Audio connection opened.")
+    private suspend fun waitForNextChannelJoined(guild: Guild): AudioChannel = suspendCoroutine { continuation ->
+        val listener = object : ListenerAdapter() {
+            override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
+                if (event.guild == guild && event.channelJoined != null) {
+                    guild.jda.removeEventListener(this)
+                    continuation.resume(event.channelJoined!!)
                 }
-                deleteTemporaryChannelIfEmpty(nonBotConnectedMembers.isEmpty(), event.channelLeft)
             }
         }
+        guild.jda.addEventListener(listener)
     }
 
+    private fun setupAndPlayUserIntro(
+        event: GuildVoiceUpdateEvent,
+        guild: Guild,
+        defaultVolume: Int,
+        audioManager: AudioManager,
+        nextChannelJoined: AudioChannel,
+        deleteDelayConfig: ConfigDto?
+    ) {
+        val requestingUserDto = getRequestingUserDto(event, guild, defaultVolume)
+        if (audioManager.connectedChannel == nextChannelJoined) {
+            playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
+        }
+    }
 
     private fun onGuildVoiceLeave(event: GuildVoiceUpdateEvent) {
         val guild = event.guild
         val audioManager = guild.audioManager
         checkCurrentAudioManagerForNonBotMembers(audioManager)
-        deleteTemporaryChannelIfEmpty(event.hasNonBotConnectedMembersInLeftChannel(), event.channelLeft)
+        deleteTemporaryChannelIfEmpty(event.channelLeft?.members?.none { !it.user.isBot } ?: true, event.channelLeft)
+    }
+
+    private fun checkCurrentAudioManagerForNonBotMembers(audioManager: AudioManager) {
+        val connectedChannel = audioManager.connectedChannel
+        if (connectedChannel != null) {
+            if (connectedChannel.members.none { !it.user.isBot }) {
+                audioManager.closeAudioConnection()
+                logger.info("Audio connection closed due to empty channel.")
+            }
+        }
     }
 
     private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel?) {
         if (channelLeft?.name?.matches("(?i)team\\s[0-9]+".toRegex()) == true && nonBotConnectedMembersEmpty) {
+            logger.info("Deleting temporary channel: {}", channelLeft.name)
             channelLeft.delete().queue()
         }
     }
 
-    private fun GuildVoiceUpdateEvent.hasNonBotConnectedMembersInLeftChannel() : Boolean = this.channelLeft?.members?.none { !it.user.isBot } == true
+    private fun getConfigValue(configName: String, guildId: String, defaultValue: Int = 100): Int {
+        val config = configService.getConfigByName(configName, guildId)
+        return config?.value?.toInt() ?: defaultValue
+    }
 
+    private fun getRequestingUserDto(event: GuildVoiceUpdateEvent, guild: Guild, defaultVolume: Int): UserDto {
+        val member = event.member
+        val discordId = member.user.idLong
+        val guildId = guild.idLong
+        return calculateUserDto(guildId, discordId, member.isOwner, userService, defaultVolume)
+    }
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         menuManager.handle(event)
-    }
-
-    companion object {
-        private val LOGGER: Logger = LoggerFactory.getLogger(Handler::class.java)
-
-        private fun checkCurrentAudioManagerForNonBotMembers(audioManager: AudioManager): AudioManager {
-            if (audioManager.isConnected) {
-                val membersInConnectedVoiceChannel = audioManager.connectedChannel?.members?.filter { !it.user.isBot } ?: emptyList()
-                if (membersInConnectedVoiceChannel.isEmpty()) {
-                    closeAudioPlayer(audioManager.guild, audioManager)
-                }
-            }
-            return audioManager
-        }
-
-        private fun closeAudioPlayer(guild: Guild, audioManager: AudioManager) {
-            val musicManager = PlayerManager.instance.getMusicManager(guild)
-            musicManager.scheduler.isLooping = false
-            musicManager.scheduler.queue.clear()
-            musicManager.audioPlayer.stopTrack()
-            audioManager.closeAudioConnection()
-        }
     }
 }
