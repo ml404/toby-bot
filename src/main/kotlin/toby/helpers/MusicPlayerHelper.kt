@@ -70,9 +70,10 @@ object MusicPlayerHelper {
 
         if (nowPlayingInfo != null) {
             // Update existing message
-            hook.editMessageEmbedsById(nowPlayingInfo.message.idLong, embed)
+            nowPlayingInfo.message.editMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue()
+            hook.deleteOriginal().queue()
         } else {
             // Send a new message and store it in the map
             hook.sendMessageEmbeds(embed)

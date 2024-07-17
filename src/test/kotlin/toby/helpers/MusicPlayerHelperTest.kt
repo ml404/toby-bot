@@ -9,8 +9,8 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.Channel
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.ItemComponent
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -57,6 +57,7 @@ class MusicPlayerHelperTest {
             every { guild } returns guildMock
             every { channel } returns channelMock
         }
+        every { replyCallback.hook.deleteOriginal().queue() } just Runs
     }
 
     @AfterEach
@@ -128,12 +129,12 @@ class MusicPlayerHelperTest {
         every { audioPlayer.isPaused } returns false
 
         // Mock InteractionHook methods
-        val webhookMessageEditAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
+        val messageEditAction = mockk<MessageEditAction>(relaxed = true)
         val message = mockk<Message>(relaxed = true)
         val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
         val nowPlayingInfo = NowPlayingInfo(playerManager, message)
         createWebhookMocking(webhookCreateAction, nowPlayingInfo)
-        editWebhookMocking(webhookMessageEditAction)
+        editWebhookMocking(messageEditAction, nowPlayingInfo)
         // Clear any existing messages
         MusicPlayerHelper.guildLastNowPlayingMessage.clear()
 
@@ -150,26 +151,29 @@ class MusicPlayerHelperTest {
 
         // Verify message behavior
         verify {
-            replyCallback.hook.editMessageEmbedsById(message.idLong, match<MessageEmbed> {
+            message.editMessageEmbeds(match<MessageEmbed> {
                 it.description?.contains("Title") == true && it.description?.contains("Author") == true
             })
-            webhookMessageEditAction.setActionRow(any(), any()).queue()
+            messageEditAction.setActionRow(any(), any()).queue()
         }
     }
 
-    private fun editWebhookMocking(webhookMessageEditAction: WebhookMessageEditAction<Message>) {
+    private fun editWebhookMocking(
+        messageEditAction: MessageEditAction,
+        nowPlayingInfo: NowPlayingInfo
+    ) {
         every {
-            replyCallback.hook.editMessageEmbedsById(
-                any<Long>(),
+            nowPlayingInfo.message.editMessageEmbeds(
                 any<MessageEmbed>()
             )
-        } returns webhookMessageEditAction
+        } returns messageEditAction
         every {
-            webhookMessageEditAction.setActionRow(
+            messageEditAction.setActionRow(
                 any(),
                 any()
             ).queue()
         } just Runs
+
     }
 
     private fun createWebhookMocking(
