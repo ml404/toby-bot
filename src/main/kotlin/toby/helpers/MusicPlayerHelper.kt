@@ -70,7 +70,7 @@ object MusicPlayerHelper {
 
         if (nowPlayingInfo != null) {
             // Update existing message
-            nowPlayingInfo.message.editMessageEmbeds(embed)
+            hook.editMessageEmbedsById(nowPlayingInfo.message.idLong, embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue()
         } else {
