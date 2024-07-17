@@ -1,9 +1,5 @@
 package toby.handler
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
@@ -34,8 +30,6 @@ import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
 import javax.annotation.Nonnull
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @Service
 @Configurable
@@ -51,13 +45,12 @@ class Handler @Autowired constructor(
     private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
 
     private val menuManager = MenuManager(configService)
-    private val scope = CoroutineScope(Dispatchers.Default + Job())
 
     override fun onReady(@Nonnull event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
     }
 
-    override fun onMessageReceived(@Nonnull event: MessageReceivedEvent) {
+    override fun onMessageReceived(event: MessageReceivedEvent) {
         val message = event.message
         val author = event.author
         val channel = event.channel
@@ -130,20 +123,16 @@ class Handler @Autowired constructor(
             onGuildVoiceLeave(event)
         }
         if (event.channelJoined == null && event.channelLeft == null) {
-            scope.launch {
-                waitForNextChannelJoinedAndJoin(event)
-            }
+            onGuildVoiceMove(event.guild)
         }
     }
 
-    private suspend fun waitForNextChannelJoinedAndJoin(event: GuildVoiceUpdateEvent) {
-        val guild = event.guild
+    private fun onGuildVoiceMove(guild: Guild) {
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
         val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         val nextChannelJoined = waitForNextChannelJoined(guild)
-        checkCurrentAudioManagerForNonBotMembers(audioManager)
 
         if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
             val nonBotConnectedMembers = nextChannelJoined.members.filter { !it.user.isBot }
@@ -153,7 +142,7 @@ class Handler @Autowired constructor(
                 logger.info("Audio connection opened.")
             }
 
-            setupAndPlayUserIntro(event, guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
+            setupAndPlayUserIntro(guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
         }
     }
 
@@ -165,36 +154,42 @@ class Handler @Autowired constructor(
 
         val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
 
-        checkCurrentAudioManagerForNonBotMembers(audioManager)
         if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
             PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
             audioManager.openAudioConnection(event.channelJoined)
         }
 
-        setupAndPlayUserIntro(event, guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
+        setupAndPlayUserIntro(guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
     }
 
-    private suspend fun waitForNextChannelJoined(guild: Guild): AudioChannel = suspendCoroutine { continuation ->
+    private fun waitForNextChannelJoined(guild: Guild): AudioChannel {
         val listener = object : ListenerAdapter() {
+            var channelJoined: AudioChannel? = null
+
             override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
                 if (event.guild == guild && event.channelJoined != null) {
                     guild.jda.removeEventListener(this)
-                    continuation.resume(event.channelJoined!!)
+                    channelJoined = event.channelJoined
                 }
             }
         }
         guild.jda.addEventListener(listener)
+
+        while (listener.channelJoined == null) {
+            Thread.sleep(100) // Adjust the delay as needed
+        }
+
+        return listener.channelJoined!!
     }
 
     private fun setupAndPlayUserIntro(
-        event: GuildVoiceUpdateEvent,
         guild: Guild,
         defaultVolume: Int,
         audioManager: AudioManager,
         nextChannelJoined: AudioChannel,
         deleteDelayConfig: ConfigDto?
     ) {
-        val requestingUserDto = getRequestingUserDto(event, guild, defaultVolume)
+        val requestingUserDto = getRequestingUserDto(guild, defaultVolume)
         if (audioManager.connectedChannel == nextChannelJoined) {
             playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
         }
@@ -229,9 +224,9 @@ class Handler @Autowired constructor(
         return config?.value?.toInt() ?: defaultValue
     }
 
-    private fun getRequestingUserDto(event: GuildVoiceUpdateEvent, guild: Guild, defaultVolume: Int): UserDto {
-        val member = event.member
-        val discordId = member.user.idLong
+    private fun getRequestingUserDto(guild: Guild, defaultVolume: Int): UserDto {
+        val member = guild.selfMember // Assuming you're using the bot's self member
+        val discordId = member.idLong
         val guildId = guild.idLong
         return calculateUserDto(guildId, discordId, member.isOwner, userService, defaultVolume)
     }
@@ -239,4 +234,5 @@ class Handler @Autowired constructor(
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         menuManager.handle(event)
     }
+
 }
