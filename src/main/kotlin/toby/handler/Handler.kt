@@ -1,6 +1,5 @@
 package toby.handler
 
-import kotlinx.coroutines.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
@@ -30,9 +29,8 @@ import toby.lavaplayer.PlayerManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import javax.annotation.Nonnull
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @Service
 @Configurable
@@ -43,12 +41,10 @@ class Handler @Autowired constructor(
     musicFileService: IMusicFileService,
     excuseService: IExcuseService,
     private val logger: Logger = LoggerFactory.getLogger(Handler::class.java)
-) : ListenerAdapter(), CoroutineScope {
+) : ListenerAdapter() {
 
     private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
     private val menuManager = MenuManager(configService)
-    private val job = Job()
-    override val coroutineContext = Dispatchers.Default + job
 
     override fun onReady(@Nonnull event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
@@ -136,9 +132,7 @@ class Handler @Autowired constructor(
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
         val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
-        // Launch a coroutine to handle the voice move without blocking the main thread
-        launch(Dispatchers.IO) {
-            val nextChannelJoined = waitForNextChannelJoined(guild)
+        waitForNextChannelJoined(guild).thenAccept { nextChannelJoined ->
             if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
                 val nonBotConnectedMembers = nextChannelJoined.members.filter { !it.user.isBot }
                 if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
@@ -167,18 +161,18 @@ class Handler @Autowired constructor(
         setupAndPlayUserIntro(guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
     }
 
-    private suspend fun waitForNextChannelJoined(guild: Guild): AudioChannel = withContext(Dispatchers.IO) {
-        suspendCoroutine { continuation ->
-            val listener = object : ListenerAdapter() {
-                override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-                    if (event.guild == guild && event.channelJoined != null) {
-                        guild.jda.removeEventListener(this)
-                        continuation.resume(event.channelJoined!!)
-                    }
+    private fun waitForNextChannelJoined(guild: Guild): CompletableFuture<AudioChannel> {
+        val future = CompletableFuture<AudioChannel>()
+        val listener = object : ListenerAdapter() {
+            override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
+                if (event.guild == guild && event.channelJoined != null) {
+                    guild.jda.removeEventListener(this)
+                    future.complete(event.channelJoined!!)
                 }
             }
-            guild.jda.addEventListener(listener)
         }
+        guild.jda.addEventListener(listener)
+        return future
     }
 
     private fun setupAndPlayUserIntro(
@@ -233,5 +227,4 @@ class Handler @Autowired constructor(
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         menuManager.handle(event)
     }
-
 }
