@@ -9,8 +9,9 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.Channel
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.ItemComponent
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -61,6 +62,7 @@ class MusicPlayerHelperTest {
 
     @AfterEach
     fun tearDown(){
+        MusicPlayerHelper.guildLastNowPlayingMessage.clear()
     }
 
     @Test
@@ -136,27 +138,22 @@ class MusicPlayerHelperTest {
 
         // Mock InteractionHook methods
         val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
-        val webhookMessageEditAction = mockk<WebhookMessageEditAction<Message>>()
+        val messageEditAction = mockk<MessageEditAction>()
+        val message = mockk<Message>(relaxed = true)
         every { replyCallback.hook.sendMessageEmbeds(any<MessageEmbed>()) } returns webhookCreateAction
-        every { replyCallback.hook.editOriginalEmbeds(any<MessageEmbed>()) } returns webhookMessageEditAction
-        every { replyCallback.hook.deleteOriginal().queue() } just Runs
         every {
             webhookCreateAction.setActionRow(
-                any<ItemComponent>(),
-                any<ItemComponent>()
+                any(),
+                any()
             )
         } returns webhookCreateAction
-        every {
-            webhookMessageEditAction.setActionRow(
-                any<ItemComponent>(),
-                any<ItemComponent>()
-            )
-        } returns webhookMessageEditAction
+        val nowPlayingInfo = NowPlayingInfo(playerManager, message)
         every { webhookCreateAction.queue(any()) } answers {
-            // Simulate storing the message in the map
-            MusicPlayerHelper.guildLastNowPlayingMessage[guildId] = NowPlayingInfo(playerManager, replyCallback.hook)
+            MusicPlayerHelper.guildLastNowPlayingMessage[guildId] = nowPlayingInfo
         }
-        every { webhookMessageEditAction.queue() } just Runs
+        every { message.editMessageEmbeds(any<MessageEmbed>()) } returns messageEditAction
+        every { messageEditAction.setActionRow(any(), any()).queue() } just Runs
+        every { messageEditAction.queue(any()) } just Runs
 
         // Clear any existing messages
         MusicPlayerHelper.guildLastNowPlayingMessage.clear()
@@ -172,14 +169,12 @@ class MusicPlayerHelperTest {
         // Perform nowPlaying action again to edit the existing message
         MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
 
-        // Verify interaction hook behavior
+        // Verify message behaviour
         verify {
-            replyCallback.hook.editOriginalEmbeds(match<MessageEmbed> {
+            nowPlayingInfo.message.editMessageEmbeds(match<MessageEmbed> {
                 it.description?.contains("Title") == true && it.description?.contains("Author") == true
             })
-            webhookMessageEditAction.queue()
+            messageEditAction.setActionRow(any(), any()).queue()
         }
-
-        MusicPlayerHelper.resetMessages(guildId)
     }
 }

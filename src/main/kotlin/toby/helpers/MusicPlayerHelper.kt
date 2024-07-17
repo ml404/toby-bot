@@ -4,6 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -27,7 +28,7 @@ object MusicPlayerHelper {
 
     class NowPlayingInfo(
         val playerManager: PlayerManager,
-        val hook: InteractionHook
+        val message: Message
     )
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long) {
@@ -69,7 +70,7 @@ object MusicPlayerHelper {
 
         if (nowPlayingInfo != null) {
             // Update existing message
-            nowPlayingInfo.hook.editOriginalEmbeds(embed)
+            nowPlayingInfo.message.editMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue()
         } else {
@@ -77,7 +78,7 @@ object MusicPlayerHelper {
             hook.sendMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue {
-                    guildLastNowPlayingMessage[guildId] = NowPlayingInfo(playerManager, hook)
+                    guildLastNowPlayingMessage[guildId] = NowPlayingInfo(playerManager, it)
                 }
         }
     }
@@ -256,7 +257,7 @@ object MusicPlayerHelper {
 
     private fun resetNowPlayingMessage(guildId: Long) {
         val playingInfo = guildLastNowPlayingMessage[guildId]
-        playingInfo?.hook?.deleteOriginal()?.queue()
+        playingInfo?.message?.delete()?.queue()
         guildLastNowPlayingMessage.remove(guildId)
     }
 
