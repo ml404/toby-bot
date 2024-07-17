@@ -117,12 +117,15 @@ class Handler @Autowired constructor(
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
         if (event.channelJoined != null) {
+            LOGGER.info("Voice join event triggered")
             onGuildVoiceJoin(event)
         }
         if (event.channelLeft != null) {
+            LOGGER.info("Voice leave event triggered")
             onGuildVoiceLeave(event)
         }
         if (event.channelJoined != null && event.channelLeft != null) {
+            LOGGER.info("Voice move event triggered")
             onGuildVoiceMove(event.guild)
         }
     }
