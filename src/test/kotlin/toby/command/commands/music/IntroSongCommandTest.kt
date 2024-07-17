@@ -26,20 +26,22 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 internal class IntroSongCommandTest : MusicCommandTest {
-    lateinit var introSongCommand: IntroSongCommand
-    lateinit var userService: IUserService
-    lateinit var musicFileService: IMusicFileService
-    lateinit var configService: IConfigService
-    lateinit var mentionedUserDto: UserDto
+    private lateinit var introSongCommand: IntroSongCommand
+    private lateinit var userService: IUserService
+    private lateinit var musicFileService: IMusicFileService
+    private lateinit var configService: IConfigService
+    private lateinit var mentionedUserDto: UserDto
 
     @BeforeEach
     fun setUp() {
         setupCommonMusicMocks()
         userService = mockk(relaxed = true)
         musicFileService = mockk(relaxed = true)
+        mentionedUserDto = mockk(relaxed = true) {
+            every { musicDto } returns null
+        }
         configService = mockk()
         introSongCommand = IntroSongCommand(userService, musicFileService, configService)
-        mentionedUserDto = requestingUserDto
 
         every { event.getOption("volume") } returns mockk {
             every { asInt } returns 20
@@ -65,14 +67,13 @@ internal class IntroSongCommandTest : MusicCommandTest {
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns volumeConfig
 
         // Act
         introSongCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
-            mentionedUserDto,
+            requestingUserDto,
             0
         )
 
@@ -94,7 +95,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 20, null)
         every { event.getOption("attachment") } returns attachmentOptionMapping
-        setupAttachments(attachmentOptionMapping, "mp3", 1000)
+        setupAttachments(attachmentOptionMapping)
 
         // Act
         introSongCommand.handleMusicCommand(
@@ -119,7 +120,8 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
         every { event.getOption("users") } returns userOptionMapping
-        every { userService.createNewUser(any()) } returns mentionedUserDto
+        every { userService.createNewUser(any()) } returns requestingUserDto
+        every { userService.getUserById(1L, 0L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns mockk(relaxed = true)
 
         setupMentions(userOptionMapping)
@@ -182,8 +184,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         val attachmentOptionMapping = mockk<OptionMapping>()
 
         every { event.getOption("attachment") } returns attachmentOptionMapping
-        setupAttachments(attachmentOptionMapping, "mp3", 1000)
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        setupAttachments(attachmentOptionMapping)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { event.getOption("link") } returns mockk {
             every { asString } returns ""
@@ -217,8 +218,8 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("attachment") } returns attachmentOptionMapping
-        setupAttachments(attachmentOptionMapping, "mp3", 1000)
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        setupAttachments(attachmentOptionMapping)
+        every { userService.getUserById(1L, 0L) } returns requestingUserDto
         every { userService.createNewUser(any()) } returns mentionedUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { event.getOption("link") } returns mockk {
@@ -237,7 +238,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         // Assert
         verify { musicFileService.createNewMusicFile(any()) }
-        verify { userService.updateUser(eq(mentionedUserDto)) }
+        verify { userService.updateUser(eq(requestingUserDto)) }
         verify {
             event.hook.sendMessage(
                 "Successfully set Another Username's intro song to 'filename' with volume '20'"
@@ -255,7 +256,11 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { mentionedMember.effectiveName } returns "Another Username"
     }
 
-    private fun setupAttachments(attachmentOptionMapping: OptionMapping, fileExt: String, fileSize: Int) {
+    private fun setupAttachments(
+        attachmentOptionMapping: OptionMapping,
+        fileExt: String = "mp3",
+        fileSize: Int = 1000
+    ) {
         every { attachmentOptionMapping.asAttachment } returns mockk {
             every { fileExtension } returns fileExt
             every { fileName } returns "filename"

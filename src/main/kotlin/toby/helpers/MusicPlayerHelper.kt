@@ -31,7 +31,7 @@ object MusicPlayerHelper {
         val message: Message
     )
 
-    fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long) {
+    fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
     }
 
