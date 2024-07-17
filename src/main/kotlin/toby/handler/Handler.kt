@@ -1,5 +1,6 @@
 package toby.handler
 
+import kotlinx.coroutines.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
@@ -30,6 +31,8 @@ import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
 import javax.annotation.Nonnull
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 @Service
 @Configurable
@@ -40,11 +43,12 @@ class Handler @Autowired constructor(
     musicFileService: IMusicFileService,
     excuseService: IExcuseService,
     private val logger: Logger = LoggerFactory.getLogger(Handler::class.java)
-) : ListenerAdapter() {
+) : ListenerAdapter(), CoroutineScope {
 
     private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
-
     private val menuManager = MenuManager(configService)
+    private val job = Job()
+    override val coroutineContext = Dispatchers.Default + job
 
     override fun onReady(@Nonnull event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
@@ -132,17 +136,18 @@ class Handler @Autowired constructor(
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
         val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
-        val nextChannelJoined = waitForNextChannelJoined(guild)
-
-        if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
-            val nonBotConnectedMembers = nextChannelJoined.members.filter { !it.user.isBot }
-            if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-                PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-                audioManager.openAudioConnection(nextChannelJoined)
-                logger.info("Audio connection opened.")
+        // Launch a coroutine to handle the voice move without blocking the main thread
+        launch(Dispatchers.IO) {
+            val nextChannelJoined = waitForNextChannelJoined(guild)
+            if (audioManager.connectedChannel?.members?.none { !it.user.isBot } == true) {
+                val nonBotConnectedMembers = nextChannelJoined.members.filter { !it.user.isBot }
+                if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
+                    PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
+                    audioManager.openAudioConnection(nextChannelJoined)
+                    logger.info("Audio connection opened.")
+                }
+                setupAndPlayUserIntro(guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
             }
-
-            setupAndPlayUserIntro(guild, defaultVolume, audioManager, nextChannelJoined, deleteDelayConfig)
         }
     }
 
@@ -162,24 +167,18 @@ class Handler @Autowired constructor(
         setupAndPlayUserIntro(guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
     }
 
-    private fun waitForNextChannelJoined(guild: Guild): AudioChannel {
-        val listener = object : ListenerAdapter() {
-            var channelJoined: AudioChannel? = null
-
-            override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-                if (event.guild == guild && event.channelJoined != null) {
-                    guild.jda.removeEventListener(this)
-                    channelJoined = event.channelJoined
+    private suspend fun waitForNextChannelJoined(guild: Guild): AudioChannel = withContext(Dispatchers.IO) {
+        suspendCoroutine { continuation ->
+            val listener = object : ListenerAdapter() {
+                override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
+                    if (event.guild == guild && event.channelJoined != null) {
+                        guild.jda.removeEventListener(this)
+                        continuation.resume(event.channelJoined!!)
+                    }
                 }
             }
+            guild.jda.addEventListener(listener)
         }
-        guild.jda.addEventListener(listener)
-
-        while (listener.channelJoined == null) {
-            Thread.sleep(100) // Adjust the delay as needed
-        }
-
-        return listener.channelJoined!!
     }
 
     private fun setupAndPlayUserIntro(
