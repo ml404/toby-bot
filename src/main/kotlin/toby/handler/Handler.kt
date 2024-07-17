@@ -116,32 +116,33 @@ class Handler @Autowired constructor(
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-        if (event.channelJoined != null) {
-            LOGGER.info("Voice join event triggered")
-            onGuildVoiceJoin(event)
-        }
-        if (event.channelLeft != null) {
-            LOGGER.info("Voice leave event triggered")
-            onGuildVoiceLeave(event)
-        }
-        if (event.channelJoined != null && event.channelLeft != null) {
-            LOGGER.info("Voice move event triggered")
-            onGuildVoiceMove(event.guild)
+        val guildId = event.guild.id
+
+        when {
+            event.channelJoined != null && event.channelLeft != null -> {
+                LOGGER.info("Voice move event triggered for guild $guildId from channel ${event.channelLeft} to channel ${event.channelJoined}")
+                onGuildVoiceMove(event.guild)
+            }
+            event.channelJoined != null -> {
+                LOGGER.info("Voice join event triggered for guild $guildId in channel ${event.channelJoined}")
+                onGuildVoiceJoin(event)
+            }
+            event.channelLeft != null -> {
+                LOGGER.info("Voice leave event triggered for guild $guildId from channel ${event.channelLeft}")
+                onGuildVoiceLeave(event)
+            }
         }
     }
 
     private fun onGuildVoiceMove(guild: Guild) {
-        guild.audioManager.connectedChannel?.let { rejoinPreviousChannel(guild) }
+        lastConnectedChannel[guild.idLong]?.let { rejoinPreviousChannel(guild, it) }
 
     }
 
-    private fun rejoinPreviousChannel(guild: Guild) {
-        val audioManager = guild.audioManager
-        lastConnectedChannel[guild.idLong]?.let {
-                audioManager.openAudioConnection(it)
-                LOGGER.info("Rejoined previous channel: ${it.name}")
-                lastConnectedChannel.remove(guild.idLong)
-        }
+    private fun rejoinPreviousChannel(guild: Guild, channel: AudioChannelUnion) {
+                guild.audioManager.openAudioConnection(channel)
+                LOGGER.info("Rejoined previous channel '${channel.name}' on guild '${guild.id}'")
+                lastConnectedChannel.remove(channel.idLong)
     }
 
     private fun onGuildVoiceJoin(event: GuildVoiceUpdateEvent) {
@@ -187,7 +188,7 @@ class Handler @Autowired constructor(
         if (connectedChannel != null) {
             if (connectedChannel.members.none { !it.user.isBot }) {
                 audioManager.closeAudioConnection()
-                LOGGER.info("Audio connection closed due to empty channel.")
+                LOGGER.info("Audio connection closed on guild ${audioManager.guild.id} due to empty channel.")
                 lastConnectedChannel.remove(audioManager.guild.idLong)
             }
         }
