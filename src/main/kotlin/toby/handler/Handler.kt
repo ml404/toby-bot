@@ -122,7 +122,7 @@ class Handler @Autowired constructor(
         if (event.channelLeft != null) {
             onGuildVoiceLeave(event)
         }
-        if (event.channelJoined == null && event.channelLeft == null) {
+        if (event.channelJoined != null && event.channelLeft != null) {
             onGuildVoiceMove(event.guild)
         }
     }
