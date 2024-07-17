@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.managers.AudioManager
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
@@ -229,6 +230,6 @@ class Handler @Autowired constructor(
     }
 
     companion object {
-        val LOGGER = LoggerFactory.getLogger(Handler::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(Handler::class.java)
     }
 }
