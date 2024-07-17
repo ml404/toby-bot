@@ -1,18 +1,16 @@
-package toby.command.commands.music
-
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.unmockkAll
-import io.mockk.verify
+import io.mockk.*
+import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
+import toby.command.commands.music.MusicCommandTest
 import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.track
+import toby.command.commands.music.NowPlayingCommand
 
 internal class NowPlayingCommandTest : MusicCommandTest {
     private lateinit var nowPlayingCommand: NowPlayingCommand
@@ -40,6 +38,9 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         val commandContext = CommandContext(event)
         every { audioPlayer.playingTrack } returns null
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         nowPlayingCommand.handleMusicCommand(
             commandContext,
@@ -49,7 +50,14 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { event.hook.sendMessage("There is no track playing currently") }
+        verify(exactly = 1) {
+            event.hook.sendMessageEmbeds(capture(embedSlot))
+        }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "No Track Playing")
+        assert(messageEmbed.description == "There is no track playing currently")
     }
 
     @Test
@@ -82,6 +90,9 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         val commandContext = CommandContext(event)
         every { track.userData } returns 1
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         nowPlayingCommand.handleMusicCommand(
             commandContext,
@@ -92,10 +103,18 @@ internal class NowPlayingCommandTest : MusicCommandTest {
 
         // Assert
         verify(exactly = 1) {
-            event.hook.sendMessage(
-                "Now playing `Title` by `Author` (Link: <uri>) with volume '0'"
-            )
+            event.hook.sendMessageEmbeds(capture(embedSlot))
         }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Now Playing")
+        assert(messageEmbed.description == "**Title**: `Title`\n" +
+                "**Author**: `Author`\n" +
+                "**Stream**: `Live`\n")
+        assert(messageEmbed.fields[0].name == "Volume")
+        assert(messageEmbed.fields[0].value == "0")
+        assert(messageEmbed.url == null)
     }
 
     @Test
@@ -110,6 +129,9 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         every { track.position } returns 1000L
         every { track.duration } returns 3000L
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         nowPlayingCommand.handleMusicCommand(
             commandContext,
@@ -120,9 +142,17 @@ internal class NowPlayingCommandTest : MusicCommandTest {
 
         // Assert
         verify(exactly = 1) {
-            event.hook.sendMessage(
-                "Now playing `Title` by `Author` `[00:00:01/00:00:03]` (Link: <uri>) with volume '0'"
-            )
+            event.hook.sendMessageEmbeds(capture(embedSlot))
         }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Now Playing")
+        assert(messageEmbed.description == "**Title**: `Title`\n" +
+                "**Author**: `Author`\n" +
+                "**Progress**: `00:00:01 / 00:00:03`\n")
+        assert(messageEmbed.fields[0].name == "Volume")
+        assert(messageEmbed.fields[0].value == "0")
+        assert(messageEmbed.url == null)
     }
 }

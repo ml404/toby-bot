@@ -1,15 +1,14 @@
 package toby.command.commands.music
 
 import io.mockk.*
-import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
-import toby.command.CommandTest.Companion.webhookMessageCreateAction
+import java.awt.Color
 
 internal class ResumeCommandTest : MusicCommandTest {
     private lateinit var resumeCommand: ResumeCommand
@@ -31,21 +30,34 @@ internal class ResumeCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
+        val audioPlayer = MusicCommandTest.audioPlayer
+        val playerManager = MusicCommandTest.playerManager
         val hook = event.hook
-        every { CommandTest.interactionHook.sendMessage("Resuming: ") } returns webhookMessageCreateAction as WebhookMessageCreateAction<Message>
-        every { MusicCommandTest.audioPlayer.isPaused } returns true
-        every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
+        every { audioPlayer.isPaused } returns true
+        every { playerManager.isCurrentlyStoppable } returns true
+        every { event.getOption("resume") } returns mockk {
+            every { asInt } returns 1
+        }
+
+
 
         // Act
         resumeCommand.handleMusicCommand(
             commandContext,
-            MusicCommandTest.playerManager,
+            playerManager,
             CommandTest.requestingUserDto,
             0
         )
 
+        val embedSlot = slot<MessageEmbed>()
         // Assert
-        verify(exactly = 1) { hook.sendMessage("Resuming: `Title` by `Author`") }
-        verify { MusicCommandTest.audioPlayer.isPaused = false }
+        verify(exactly = 1) { hook.sendMessageEmbeds(capture(embedSlot)) }
+        verify(exactly = 1) { audioPlayer.isPaused = false }
+
+        // Assert on the captured EmbedBuilder
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Track Pause/Resume")
+        assert(messageEmbed.description == "Resuming: `Title` by `Author`")
+        assert(messageEmbed.color == Color.CYAN)
     }
 }

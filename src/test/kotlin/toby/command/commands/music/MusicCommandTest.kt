@@ -42,7 +42,7 @@ interface MusicCommandTest : CommandTest {
         val pausePlay = Button.primary("pause/play", "⏯")
         val stop = Button.primary("stop", "⏹")
 
-        every { webhookMessageCreateAction.addActionRow(pausePlay, stop) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.setActionRow(listOf(pausePlay, stop)) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.complete() } returns message
         every { webhookMessageCreateAction.setActionRow(any(), any()) } returns webhookMessageCreateAction
         every { message.delete() } returns auditableRestAction as AuditableRestAction<Void>
@@ -113,7 +113,7 @@ interface MusicCommandTest : CommandTest {
         val audioManager: AudioManager = mockk(relaxed = true)
         val audioPlayerSendHandler: AudioPlayerSendHandler = mockk(relaxed = true)
         val track: AudioTrack = mockk(relaxed = true)
-        val trackScheduler: TrackScheduler = mockk(relaxed =  true)
+        val trackScheduler: TrackScheduler = mockk(relaxed = true)
         val audioChannelUnion: AudioChannelUnion = mockk(relaxed = true)
         val interaction: Interaction = mockk(relaxed = true)
         val auditableRestAction: AuditableRestAction<*> = mockk(relaxed = true)

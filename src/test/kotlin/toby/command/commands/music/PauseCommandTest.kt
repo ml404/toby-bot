@@ -3,7 +3,9 @@ package toby.command.commands.music
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.slot
 import io.mockk.verify
+import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -12,6 +14,7 @@ import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
+import java.awt.Color
 import java.util.concurrent.ArrayBlockingQueue
 
 private const val songDuration = "00:00:01"
@@ -39,6 +42,9 @@ internal class PauseCommandTest : MusicCommandTest {
         every { audioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
 
+        // Capture slot for MessageEmbed
+        val embedSlot = slot<MessageEmbed>()
+
         // Act
         pauseCommand.handleMusicCommand(
             commandContext,
@@ -48,10 +54,17 @@ internal class PauseCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { event.hook.sendMessage("Pausing: `Title` by `Author`") }
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(capture(embedSlot)) }
+
+        // Verify properties of captured MessageEmbed
+        val messageEmbed = embedSlot.captured
+        assert(messageEmbed.title == "Track Pause/Resume")
+        assert(messageEmbed.description == "Pausing: `Title` by `Author`")
+        assert(messageEmbed.color == Color.CYAN) // Adjust color as per your application's design
+
     }
 
-    @Test
+        @Test
     fun test_pauseMethod_withCorrectChannels_andNonPausableTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()

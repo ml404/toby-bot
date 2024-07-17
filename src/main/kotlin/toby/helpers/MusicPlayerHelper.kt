@@ -2,106 +2,123 @@ package toby.helpers
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.channel.Channel
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.buttons.Button
-import org.springframework.web.ErrorResponseException
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.command.commands.music.IMusicCommand.Companion.sendDeniedStoppableMessage
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.GuildMusicManager
 import toby.lavaplayer.PlayerManager
+import java.awt.Color
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
-    private val guildLastNowPlayingMessage = mutableMapOf<Long, MutableMap<Channel?, Message?>>()
+    val guildLastNowPlayingMessage = ConcurrentHashMap<Long, NowPlayingInfo>()
 
-    fun playUserIntro(dbUser: UserDto, guild: Guild?, deleteDelay: Int, startPosition: Long?) {
+    class NowPlayingInfo(
+        val playerManager: PlayerManager,
+        val message: Message
+    )
+
+    fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
     }
 
     fun playUserIntro(
         dbUser: UserDto,
-        guild: Guild?,
+        guild: Guild,
         event: SlashCommandInteractionEvent?,
         deleteDelay: Int,
-        startPosition: Long?
+        startPosition: Long
     ) {
         val musicDto = dbUser.musicDto
         val instance = PlayerManager.instance
-        val currentVolume = instance.getMusicManager(guild!!).audioPlayer.volume
+        val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
         musicDto?.let {
             val introVolume = it.introVolume
             instance.setPreviousVolume(currentVolume)
             val url = if (it.fileName != null) "$webUrl/music?id=${it.id}" else it.musicBlob.contentToString()
-            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition!!, introVolume ?: currentVolume)
+            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
         }
     }
 
-    @JvmStatic
     fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
         val track = audioPlayer.playingTrack
         val hook = event.hook
+
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
-        checkTrackAndSendMessage(track, hook, audioPlayer.volume)
-    }
 
-    private fun checkTrackAndSendMessage(track: AudioTrack, hook: InteractionHook, volume: Int) {
-        val nowPlaying = getNowPlayingString(track, volume)
-        val pausePlay = Button.primary("pause/play", "⏯")
-        val stop = Button.primary("stop", "⏹")
-        val interaction = hook.interaction
-        val guildId = interaction.guild!!.idLong
-        val channel = interaction.channel
+        val embed = buildNowPlayingMessageData(track, audioPlayer)
+        val (pausePlayButton, stopButton) = generateButtons()
+        val guildId = event.guild!!.idLong
 
-        val channelMessageMap = guildLastNowPlayingMessage[guildId]
+        val nowPlayingInfo = guildLastNowPlayingMessage[guildId]
 
-        try {
-            if (channelMessageMap == null || channelMessageMap[channel] == null) {
-                sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId)
-            } else {
-                val updatedNowPlaying = getNowPlayingString(track, volume)
-                channelMessageMap.values.forEach { message ->
-                    message?.editMessage(updatedNowPlaying)?.setActionRow(pausePlay, stop)?.queue()
+        if (nowPlayingInfo != null) {
+            // Update existing message
+            nowPlayingInfo.message.editMessageEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue()
+            hook.deleteOriginal().queue()
+        } else {
+            // Send a new message and store it in the map
+            hook.sendMessageEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue {
+                    guildLastNowPlayingMessage[guildId] = NowPlayingInfo(playerManager, it)
                 }
-                hook.deleteOriginal().queue()
-            }
-        } catch (e: IllegalArgumentException) {
-            sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId)
-        } catch (e: ErrorResponseException) {
-            sendNewNowPlayingMessage(hook, channel, nowPlaying, pausePlay, stop, guildId)
         }
     }
 
-    private fun sendNewNowPlayingMessage(
-        hook: InteractionHook,
-        channel: Channel?,
-        nowPlaying: String,
-        pausePlay: Button,
-        stop: Button,
-        guildId: Long
-    ) {
-        val nowPlayingMessage = hook.sendMessage(nowPlaying).setActionRow(pausePlay, stop).complete()
-        val channelMessageMap = guildLastNowPlayingMessage.getOrPut(guildId) { mutableMapOf() }
-        channelMessageMap[channel] = nowPlayingMessage
+    private fun buildNowPlayingMessageData(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
+        val info = track.info
+        val descriptionBuilder = StringBuilder()
+
+        descriptionBuilder.append("**Title**: `${info.title}`\n").append("**Author**: `${info.author}`\n")
+
+        if (!info.isStream) {
+            val songPosition = formatTime(track.position)
+            val songDuration = formatTime(track.duration)
+            descriptionBuilder.append("**Progress**: `$songPosition / $songDuration`\n")
+        } else {
+            descriptionBuilder.append("**Stream**: `Live`\n")
+        }
+
+        val embed = EmbedBuilder()
+            .setTitle("Now Playing")
+            .setDescription(descriptionBuilder.toString())
+            .addField("Volume", "${audioPlayer.volume}", true)
+            .setColor(Color.GREEN)
+            .setFooter("Link: ${info.uri}", null)
+            .addField("Paused?", if (audioPlayer.isPaused) "yes" else "no", false)
+            .build()
+
+        return embed
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
         return if (track == null) {
-            hook.sendMessage("There is no track playing currently").setEphemeral(true).queue(
-                invokeDeleteOnMessageResponse(deleteDelay ?: 0)
-            )
+            val embed = EmbedBuilder()
+                .setTitle("No Track Playing")
+                .setDescription("There is no track playing currently")
+                .setColor(Color.RED)
+                .build()
+
+            hook.sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             true
         } else {
             false
@@ -118,23 +135,16 @@ object MusicPlayerHelper {
             }
             musicManager.audioPlayer.isPaused = false
             hook.deleteOriginal().queue()
-            hook.sendMessage("The player has been stopped and the queue has been cleared").queue(
-                invokeDeleteOnMessageResponse(deleteDelay ?: 0)
-            )
-            resetNowPlayingMessage(event.guild!!.idLong)
+            val embed = EmbedBuilder()
+                .setTitle("Player Stopped")
+                .setDescription("The player has been stopped and the queue has been cleared")
+                .setColor(Color.RED)
+                .build()
+
+            hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
-        }
-    }
-
-    private fun getNowPlayingString(playingTrack: AudioTrack, volume: Int): String {
-        val info = playingTrack.info
-        return if (!info.isStream) {
-            val songPosition = formatTime(playingTrack.position)
-            val songDuration = formatTime(playingTrack.duration)
-            "Now playing `${info.title}` by `${info.author}` `[$songPosition/$songDuration]` (Link: <${info.uri}>) with volume '$volume'"
-        } else {
-            "Now playing `${info.title}` by `${info.author}` (Link: <${info.uri}>) with volume '$volume'"
         }
     }
 
@@ -153,9 +163,14 @@ object MusicPlayerHelper {
         paused: Boolean
     ) {
         val track = audioPlayer.playingTrack
-        event.hook
-            .sendMessage("$content${track.info.title}` by `${track.info.author}`")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        val hook = event.hook
+        val embed = EmbedBuilder()
+            .setTitle("Track Pause/Resume")
+            .setDescription("$content${track.info.title}` by `${track.info.author}`")
+            .setColor(Color.CYAN)
+            .build()
+
+        hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
         audioPlayer.isPaused = paused
     }
 
@@ -172,15 +187,24 @@ object MusicPlayerHelper {
 
         when {
             audioPlayer.playingTrack == null -> {
-                hook.sendMessage("There is no track playing currently").queue(
-                    invokeDeleteOnMessageResponse(deleteDelay ?: 0)
-                )
+                val embed = EmbedBuilder()
+                    .setTitle("No Track Playing")
+                    .setDescription("There is no track playing currently")
+                    .setColor(Color.RED)
+                    .build()
+
+                hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
                 return
             }
+
             tracksToSkip < 0 -> {
-                hook.sendMessage("You're not too bright, but thanks for trying").setEphemeral(true)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)
-                )
+                val embed = EmbedBuilder()
+                    .setTitle("Invalid Skip Request")
+                    .setDescription("You're not too bright, but thanks for trying")
+                    .setColor(Color.RED)
+                    .build()
+
+                hook.sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
                 return
             }
         }
@@ -190,7 +214,14 @@ object MusicPlayerHelper {
                 musicManager.scheduler.nextTrack()
             }
             musicManager.scheduler.isLooping = false
-            hook.sendMessage("Skipped $tracksToSkip track(s)").queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+
+            val embed = EmbedBuilder()
+                .setTitle("Tracks Skipped")
+                .setDescription("Skipped $tracksToSkip track(s)")
+                .setColor(Color.CYAN)
+                .build()
+
+            hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
@@ -218,16 +249,22 @@ object MusicPlayerHelper {
 
     @JvmStatic
     fun deriveDeleteDelayFromTrack(track: AudioTrack): Int {
-        return (track.duration / 1000).toInt()
+        return (track.duration / SECOND_MULTIPLIER).toInt()
+    }
+
+    fun resetMessages(guildId: Long) {
+        resetNowPlayingMessage(guildId)
     }
 
     private fun resetNowPlayingMessage(guildId: Long) {
-        guildLastNowPlayingMessage[guildId]?.values?.forEach { it?.delete()?.queue() }
+        val playingInfo = guildLastNowPlayingMessage[guildId]
+        playingInfo?.message?.delete()?.queue()
         guildLastNowPlayingMessage.remove(guildId)
     }
 
-    @JvmStatic
-    fun resetMessages(guildId: Long) {
-        resetNowPlayingMessage(guildId)
+    private fun generateButtons(): Pair<Button, Button> {
+        val pausePlayButton = Button.primary("pause/play", "⏯️")
+        val stopButton = Button.danger("stop", "⏹️")
+        return Pair(pausePlayButton, stopButton)
     }
 }
