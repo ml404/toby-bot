@@ -4,7 +4,6 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
-import net.dv8tion.jda.internal.utils.tuple.Pair
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
@@ -87,7 +86,7 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
     }
 
     private fun addCommand(cmd: ICommand) {
-        val nameFound = commands.stream().anyMatch { it.name.equals(cmd.name, true) }
+        val nameFound = commands.any { it.name.equals(cmd.name, true) }
         require(!nameFound) { "A command with this name is already present" }
         commands.add(cmd)
         val slashCommand = cmd.slashCommand
@@ -97,10 +96,10 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
 
     val allSlashCommands: List<CommandData?> get() = slashCommands
     val allCommands: List<ICommand> get() = commands
-    val musicCommands: List<ICommand> get() = commands.stream().filter { it is IMusicCommand }.toList()
-    val moderationCommands: List<ICommand> get() = commands.stream().filter { it is IModerationCommand }.toList()
-    val miscCommands: List<ICommand> get() = commands.stream().filter { it is IMiscCommand }.toList()
-    val fetchCommands: List<ICommand> get() = commands.stream().filter { it is IFetchCommand }.toList()
+    val musicCommands: List<ICommand> get() = commands.filterIsInstance<IMusicCommand>().toList()
+    val moderationCommands: List<ICommand> get() = commands.filterIsInstance<IModerationCommand>().toList()
+    val miscCommands: List<ICommand> get() = commands.filterIsInstance<IMiscCommand>().toList()
+    val fetchCommands: List<ICommand> get() = commands.filterIsInstance<IFetchCommand>().toList()
 
     fun getCommand(search: String): ICommand? {
         for (cmd in commands) {
@@ -112,21 +111,22 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
     }
 
     fun handle(event: SlashCommandInteractionEvent) {
-        val deleteDelay = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, event.guild!!.id)?.value?.toInt()
+        val guildId = event.guild?.id ?: return
+        val deleteDelay = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guildId)?.value?.toIntOrNull() ?: 0
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val defaultVolume = configService.getConfigByName(volumePropertyName, event.guild!!.id)?.value
-        val introVolume = defaultVolume?.toInt()
-        val requestingUserDto = event.member?.let { UserDtoHelper.calculateUserDto(event.guild!!.idLong, event.user.idLong, it.isOwner, userService, introVolume!!) }
+        val defaultVolume = configService.getConfigByName(volumePropertyName, guildId)?.value?.toIntOrNull()
+        val requestingUserDto = event.member?.let { UserDtoHelper.calculateUserDto(guildId.toLong(), event.user.idLong, it.isOwner, userService, defaultVolume ?: 0) }
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
 
-        // Build the response embed
-        if (cmd != null) {
+        cmd?.let {
             event.channel.sendTyping().queue()
             val ctx = CommandContext(event)
-            lastCommands[event.user] = Pair.of(cmd, ctx)
-            cmd.handle(ctx, requestingUserDto!!, deleteDelay)
-            attributeSocialCredit(ctx, userService, requestingUserDto, deleteDelay!!)
+            lastCommands[event.user] = Pair(it, ctx)
+            requestingUserDto?.let { userDto ->
+                it.handle(ctx, userDto, deleteDelay)
+                attributeSocialCredit(ctx, userService, userDto, deleteDelay)
+            }
         }
     }
 
@@ -141,53 +141,54 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
     }
 
     fun handle(event: ButtonInteractionEvent) {
-        val deleteDelay = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, event.guild!!.id)?.value?.toInt()
+        val guild = event.guild ?: return
+        val guildId = guild.idLong
+        val deleteDelay = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)?.value?.toIntOrNull() ?: 0
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val defaultVolume = configService.getConfigByName(volumePropertyName, event.guild!!.id)?.value
-        val introVolume = defaultVolume?.toInt()
-        val guildId = event.guild!!.idLong
-        val requestingUserDto = Objects.requireNonNull(event.member)?.let { UserDtoHelper.calculateUserDto(guildId, event.user.idLong, it.isOwner, userService, introVolume!!) }
+        val defaultVolume = configService.getConfigByName(volumePropertyName, guild.id)?.value?.toIntOrNull() ?: 0
+
+        val requestingUserDto = event.member?.let {
+            UserDtoHelper.calculateUserDto(guildId, event.user.idLong, it.isOwner, userService, defaultVolume)
+        } ?: return
+
         // Dispatch the simulated SlashCommandInteractionEvent
         val componentId = event.componentId
+        event.channel.sendTyping().queue()
+
         if (componentId == "resend_last_request") {
-            val iCommandCommandContextPair = lastCommands[event.user]!!
-            val cmd = iCommandCommandContextPair.left
-            // Resend the last request
-            if (cmd != null) {
-                event.channel.sendTyping().queue()
-                cmd.handle(iCommandCommandContextPair.right, requestingUserDto!!, deleteDelay)
-                event.deferEdit().queue()
-            }
+            val (cmd, ctx) = lastCommands[event.user] ?: return
+            cmd.handle(ctx, requestingUserDto, deleteDelay)
+            event.deferEdit().queue()
         } else {
             val hook = event.hook
+            val musicManager = PlayerManager.instance.getMusicManager(guild)
+
             when (componentId) {
-                "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, PlayerManager.instance.getMusicManager(event.guild!!), deleteDelay!!)
-                "stop" -> MusicPlayerHelper.stopSong(event, PlayerManager.instance.getMusicManager(event.guild!!), requestingUserDto!!.superUser, deleteDelay)
+                "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay)
+                "stop" -> MusicPlayerHelper.stopSong(event, musicManager, requestingUserDto.superUser, deleteDelay)
                 "init:next" -> DnDHelper.incrementTurnTable(hook, event, deleteDelay)
                 "init:prev" -> DnDHelper.decrementTurnTable(hook, event, deleteDelay)
                 "init:clear" -> DnDHelper.clearInitiative(hook, event)
                 else -> {
-                    //button name that should be something like 'roll: 20,1,0'
-                    val invoke = componentId.lowercase(Locale.getDefault())
-                    val split = invoke.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                    val commandName = split[0]
-                    val options = split[1]
-                    val cmd = getCommand(commandName)
-                    cmd?.let { nonNullCmd ->
-                        event.channel.sendTyping().queue()
-                        if (nonNullCmd.name == "roll") {
-                            val rollCommand = nonNullCmd as? RollCommand
-                            val optionArray = options.split(",").map { it.trim() }.toTypedArray()
-                            rollCommand?.handleDiceRoll(
+                    val (commandName, options) = componentId.split(":").takeIf { it.size == 2 } ?: return
+                    val cmd = getCommand(commandName.lowercase(Locale.getDefault())) ?: return
+
+                    event.channel.sendTyping().queue()
+                    if (cmd.name == "roll") {
+                        val rollCommand = cmd as? RollCommand ?: return
+                        val optionArray = options.split(",").mapNotNull { it.toIntOrNull() }.toTypedArray()
+                        if (optionArray.size == 3) {
+                            rollCommand.handleDiceRoll(
                                 event,
-                                optionArray.getOrNull(0)?.toIntOrNull() ?: return@let,
-                                optionArray.getOrNull(1)?.toIntOrNull() ?: return@let,
-                                optionArray.getOrNull(2)?.toIntOrNull() ?: return@let
-                            )?.queue { invokeDeleteOnMessageResponse(deleteDelay!!) }
+                                optionArray[0],
+                                optionArray[1],
+                                optionArray[2]
+                            ).queue { invokeDeleteOnMessageResponse(deleteDelay) }
                         }
+                    } else {
+                        val commandContext = CommandContext(event)
+                        cmd.handle(commandContext, requestingUserDto, deleteDelay)
                     }
-                    val commandContext = CommandContext(event)
-                    cmd!!.handle(commandContext, requestingUserDto!!, deleteDelay)
                 }
             }
         }

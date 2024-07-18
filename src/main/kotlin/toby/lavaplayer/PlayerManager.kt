@@ -15,12 +15,12 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 
-class PlayerManager {
+class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     private val musicManagers: MutableMap<Long, GuildMusicManager> = HashMap()
-    private val audioPlayerManager: AudioPlayerManager = DefaultAudioPlayerManager()
     var isCurrentlyStoppable: Boolean = true
     private var previousVolume: Int? = null
 
+    constructor() : this(DefaultAudioPlayerManager())
 
     init {
         audioPlayerManager.registerSourceManager(YoutubeAudioSourceManager())
