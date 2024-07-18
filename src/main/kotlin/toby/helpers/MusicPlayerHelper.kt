@@ -141,7 +141,8 @@ object MusicPlayerHelper {
                 .setColor(Color.RED)
                 .build()
 
-            hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            hook.sendMessageEmbeds(embed)
+                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)

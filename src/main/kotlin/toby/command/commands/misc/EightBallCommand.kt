@@ -36,7 +36,7 @@ class EightBallCommand(private val userService: IUserService) : IMiscCommand {
             else -> "I fucked up, please try again"
         }
         if (requestingUserDto.discordId == TOMS_DISCORD_ID) {
-            event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             val socialCredit = requestingUserDto.socialCredit
             val deductedSocialCredit = -5 * choice
             requestingUserDto.socialCredit = socialCredit?.plus(deductedSocialCredit)
@@ -44,7 +44,7 @@ class EightBallCommand(private val userService: IUserService) : IMiscCommand {
             userService.updateUser(requestingUserDto)
             return
         }
-        event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: %s.", response).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage("MAGIC 8-BALL SAYS: ${response}.").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     override val name: String

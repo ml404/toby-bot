@@ -40,7 +40,7 @@ internal class EightBallCommandTest : CommandTest {
         command.handle(ctx, CommandTest.requestingUserDto, deleteDelay)
 
         // Verify that the message was sent with the expected content
-        verify { event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: %s.", any()) }
+        verify { event.hook.sendMessage(any<String>()) }
     }
 
     @Test
@@ -68,7 +68,7 @@ internal class EightBallCommandTest : CommandTest {
 
         // Verify that the message was sent with the expected content
         verify {
-            event.hook.sendMessageFormat("MAGIC 8-BALL SAYS: Don't fucking talk to me.")
+            event.hook.sendMessage("MAGIC 8-BALL SAYS: Don't fucking talk to me.")
             event.hook.sendMessage(any<String>())
             userService.updateUser(any())
         }
