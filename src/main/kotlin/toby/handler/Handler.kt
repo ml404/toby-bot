@@ -1,6 +1,7 @@
 package toby.handler
 
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
@@ -150,8 +151,7 @@ class Handler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig =
-            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
 
@@ -161,15 +161,16 @@ class Handler @Autowired constructor(
             lastConnectedChannel[guild.idLong] = event.channelJoined!!
         }
 
-        setupAndPlayUserIntro(guild, defaultVolume, deleteDelayConfig)
+        setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
     }
 
     private fun setupAndPlayUserIntro(
+        member: Member,
         guild: Guild,
         defaultVolume: Int,
         deleteDelayConfig: ConfigDto?
     ) {
-        val requestingUserDto = getRequestingUserDto(guild, defaultVolume)
+        val requestingUserDto = getRequestingUserDto(member, defaultVolume)
         playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
     }
 
@@ -203,10 +204,9 @@ class Handler @Autowired constructor(
         return config?.value?.toInt() ?: defaultValue
     }
 
-    private fun getRequestingUserDto(guild: Guild, defaultVolume: Int): UserDto {
-        val member = guild.selfMember // Assuming you're using the bot's self member
+    private fun getRequestingUserDto(member: Member, defaultVolume: Int): UserDto {
         val discordId = member.idLong
-        val guildId = guild.idLong
+        val guildId = member.guild.idLong
         return calculateUserDto(guildId, discordId, member.isOwner, userService, defaultVolume)
     }
 
