@@ -16,14 +16,14 @@ import java.util.concurrent.LinkedBlockingQueue
 class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     var queue: BlockingQueue<AudioTrack?> = LinkedBlockingQueue()
     var isLooping: Boolean = false
-    lateinit var event: SlashCommandInteractionEvent
+    var event: SlashCommandInteractionEvent? = null
     var deleteDelay: Int? = null
     private var previousVolume: Int? = null
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
-        event.hook
-            .sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+        event?.hook
+            ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
+            ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
         track.position = startPosition
         track.userData = volume
         synchronized(queue) {
@@ -34,9 +34,9 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
-        event.hook
-            .sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+        event?.hook
+            ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
+            ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
         playList.tracks.forEach { track ->
             track.userData = volume
             if (!player.startTrack(track, true)) {
@@ -60,7 +60,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-        event.guild?.idLong?.let { resetMessages(it) }
+        event?.guild?.idLong?.let { resetMessages(it) }
         if (endReason.mayStartNext) {
             if (isLooping) {
                 player.startTrack(track.makeClone(), false)
@@ -78,17 +78,17 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     private fun setVolumeToPrevious(player: AudioPlayer) {
         if (previousVolume != null && player.volume != previousVolume) {
             player.volume = previousVolume as Int
-            event.channel
-                .sendMessageFormat("Setting volume back to '$previousVolume' \uD83D\uDD0A")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            event?.channel
+                ?.sendMessageFormat("Setting volume back to '$previousVolume' \uD83D\uDD0A")
+                ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
         }
     }
 
     override fun onTrackStuck(player: AudioPlayer, track: AudioTrack, thresholdMs: Long) {
         if (track.position == 0L) {
-            event.channel.sendMessage("Track ${track.info.title} got stuck, skipping.").queue(
-                invokeDeleteOnMessageResponse(deleteDelay ?: 0)
-            )
+            event?.channel
+                ?.sendMessage("Track ${track.info.title} got stuck, skipping.")
+                ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             nextTrack()
         }
     }
