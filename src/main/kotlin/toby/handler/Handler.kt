@@ -123,10 +123,12 @@ class Handler @Autowired constructor(
                 LOGGER.info("Voice move event triggered for guild $guildId from channel ${event.channelLeft} to channel ${event.channelJoined}")
                 onGuildVoiceMove(event.guild)
             }
+
             event.channelJoined != null -> {
                 LOGGER.info("Voice join event triggered for guild $guildId in channel ${event.channelJoined}")
                 onGuildVoiceJoin(event)
             }
+
             event.channelLeft != null -> {
                 LOGGER.info("Voice leave event triggered for guild $guildId from channel ${event.channelLeft}")
                 onGuildVoiceLeave(event)
@@ -136,13 +138,12 @@ class Handler @Autowired constructor(
 
     private fun onGuildVoiceMove(guild: Guild) {
         lastConnectedChannel[guild.idLong]?.let { rejoinPreviousChannel(guild, it) }
-
     }
 
     private fun rejoinPreviousChannel(guild: Guild, channel: AudioChannelUnion) {
-                guild.audioManager.openAudioConnection(channel)
-                LOGGER.info("Rejoined previous channel '${channel.name}' on guild '${guild.id}'")
-                lastConnectedChannel.remove(channel.idLong)
+        guild.audioManager.openAudioConnection(channel)
+        LOGGER.info("Rejoined previous channel '${channel.name}' on guild '${guild.id}'")
+        lastConnectedChannel.remove(channel.idLong)
     }
 
     private fun onGuildVoiceJoin(event: GuildVoiceUpdateEvent) {
@@ -160,20 +161,16 @@ class Handler @Autowired constructor(
             lastConnectedChannel[guild.idLong] = event.channelJoined!!
         }
 
-        setupAndPlayUserIntro(guild, defaultVolume, audioManager, event.channelJoined!!, deleteDelayConfig)
+        setupAndPlayUserIntro(guild, defaultVolume, deleteDelayConfig)
     }
 
     private fun setupAndPlayUserIntro(
         guild: Guild,
         defaultVolume: Int,
-        audioManager: AudioManager,
-        nextChannelJoined: AudioChannel,
         deleteDelayConfig: ConfigDto?
     ) {
         val requestingUserDto = getRequestingUserDto(guild, defaultVolume)
-        if (audioManager.connectedChannel == nextChannelJoined) {
-            playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
-        }
+        playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
     }
 
     private fun onGuildVoiceLeave(event: GuildVoiceUpdateEvent) {
