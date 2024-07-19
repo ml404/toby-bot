@@ -1,15 +1,12 @@
 package toby.command.commands.misc
 
-import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
-import java.util.function.Consumer
 
 class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
     private val USERS = "users"

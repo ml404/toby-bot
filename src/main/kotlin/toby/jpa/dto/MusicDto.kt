@@ -85,4 +85,8 @@ data class MusicDto(
         result = 31 * result + (musicBlob?.contentHashCode() ?: 0)
         return result
     }
+
+    override fun toString(): String {
+        return "MusicDto(id=$id, fileName=$fileName, introVolume=$introVolume)"
+    }
 }
