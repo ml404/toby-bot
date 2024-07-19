@@ -79,6 +79,7 @@ internal class MemeCommandTest : CommandTest {
         every { statusLine.statusCode } returns 200
         every { httpResponse.entity } returns httpEntity
         every { httpEntity.content } returns contentStream
+        every { httpEntity.isStreaming } returns false
 
 
         //Act
@@ -110,6 +111,7 @@ internal class MemeCommandTest : CommandTest {
         every { statusLine.statusCode } returns 200
         every { httpResponse.entity } returns httpEntity
         every { httpEntity.content } returns contentStream
+        every { httpEntity.isStreaming } returns false
 
         //Act
         memeCommand.handle(commandContext, httpClient, CommandTest.requestingUserDto, 0)
