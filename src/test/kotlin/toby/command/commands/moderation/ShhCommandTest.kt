@@ -80,13 +80,11 @@ internal class ShhCommandTest : CommandTest {
         // Act
         shhCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
 
+        val effectiveName = targetMember.effectiveName
         // Assert
         verify(exactly = 1) { event.guild }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                eq("I'm not allowed to mute %s"),
-                eq(targetMember)
-            )
+            event.hook.sendMessage("I'm not allowed to mute $effectiveName")
         }
     }
 
@@ -99,6 +97,7 @@ internal class ShhCommandTest : CommandTest {
             voiceMuteOtherMember = false,
             targetMembers = listOf(targetMember)
         )
+        val effectiveName = targetMember.effectiveName
 
         // Act
         shhCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
@@ -106,9 +105,8 @@ internal class ShhCommandTest : CommandTest {
         // Assert
         verify(exactly = 1) { event.guild }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                eq("You aren't allowed to mute %s"),
-                eq(targetMember)
+            event.hook.sendMessage(
+                eq("You aren't allowed to mute $effectiveName"),
             )
         }
     }
