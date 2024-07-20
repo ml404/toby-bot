@@ -70,13 +70,12 @@ internal class TalkCommandTest : CommandTest {
 
         // Act
         talkCommand.handle(commandContext, requestingUserDto, 0)
+        val effectiveName = targetMember.effectiveName
 
         // Assert
         verify(exactly = 1) { event.guild }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                eq("I'm not allowed to unmute %s"),
-                eq(targetMember)
+            event.hook.sendMessage("I'm not allowed to unmute $effectiveName"
             )
         }
     }
@@ -89,13 +88,12 @@ internal class TalkCommandTest : CommandTest {
 
         // Act
         talkCommand.handle(commandContext, requestingUserDto, 0)
+        val effectiveName = targetMember.effectiveName
 
         // Assert
         verify(exactly = 1) { event.guild }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                eq("You aren't allowed to unmute %s"),
-                eq(targetMember)
+            event.hook.sendMessage("You aren't allowed to unmute $effectiveName"
             )
         }
     }
