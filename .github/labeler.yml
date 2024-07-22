@@ -1,6 +1,3 @@
-AnyChange:
-- '**'
-
 Documentation:
 - '**/*.md'
 

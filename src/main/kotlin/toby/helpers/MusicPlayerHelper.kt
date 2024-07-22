@@ -54,8 +54,8 @@ object MusicPlayerHelper {
         }
     }
 
-    fun nowPlaying(event: IReplyCallback?, playerManager: PlayerManager, deleteDelay: Int?) {
-        val musicManager = playerManager.getMusicManager(event?.guild!!)
+    fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
+        val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
         val track = audioPlayer.playingTrack
         val hook = event.hook
