@@ -34,13 +34,16 @@ mainClassName = "toby.Application"
 
 repositories {
     mavenCentral()
-    jcenter()
     maven { url 'https://jitpack.io' }
     maven { url "https://repo.spring.io/libs-snapshot" }
     maven { url 'https://repo.spring.io/milestone' }
     maven { url 'https://repo.spring.io/snapshot' }
     maven { name 'm2-dv8tion'; url 'https://m2.dv8tion.net/releases' }
     maven { url = uri("https://plugins.gradle.org/m2/") }
+    maven {
+        name 'm2-duncte123'
+        url 'https://m2.duncte123.dev/releases'
+    }
 }
 
 configurations {
@@ -56,7 +59,7 @@ dependencies {
     implementation 'dev.arbjerg:lavaplayer:2.1.1'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.0.2'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
-    implementation 'me.duncte123:botCommons:2.0.122'
+    implementation 'me.duncte123:botCommons:3.1.18'
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
     implementation 'org.postgresql:postgresql'
