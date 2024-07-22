@@ -2,14 +2,12 @@ package toby.managers
 
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
 import toby.command.CommandContext
 import toby.command.ICommand
-import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.command.commands.dnd.DnDCommand
 import toby.command.commands.dnd.InitiativeCommand
 import toby.command.commands.fetch.DbdRandomKillerCommand
@@ -20,13 +18,10 @@ import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
 import toby.helpers.Cache
-import toby.helpers.DnDHelper
-import toby.helpers.MusicPlayerHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.*
-import toby.lavaplayer.PlayerManager
 import java.util.*
 
 @Service
@@ -34,7 +29,7 @@ import java.util.*
 class CommandManager @Autowired constructor(private val configService: IConfigService, private val brotherService: IBrotherService, private val userService: IUserService, private val musicFileService: IMusicFileService, private val excuseService: IExcuseService) {
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
-    private val lastCommands: MutableMap<User, Pair<ICommand, CommandContext>> = HashMap()
+    val lastCommands: MutableMap<User, Pair<ICommand, CommandContext>> = HashMap()
 
     init {
         val cache = Cache(86400, 3600, 2)
@@ -138,59 +133,5 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
         requestingUserDto.socialCredit = socialCreditScore?.plus(awardedSocialCredit)
         userService.updateUser(requestingUserDto)
         //        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
-    }
-
-    fun handle(event: ButtonInteractionEvent) {
-        val guild = event.guild ?: return
-        val guildId = guild.idLong
-        val deleteDelay = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)?.value?.toIntOrNull() ?: 0
-        val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val defaultVolume = configService.getConfigByName(volumePropertyName, guild.id)?.value?.toIntOrNull() ?: 0
-
-        val requestingUserDto = event.member?.let {
-            UserDtoHelper.calculateUserDto(guildId, event.user.idLong, it.isOwner, userService, defaultVolume)
-        } ?: return
-
-        // Dispatch the simulated SlashCommandInteractionEvent
-        val componentId = event.componentId
-        event.channel.sendTyping().queue()
-
-        if (componentId == "resend_last_request") {
-            val (cmd, ctx) = lastCommands[event.user] ?: return
-            cmd.handle(ctx, requestingUserDto, deleteDelay)
-            event.deferEdit().queue()
-        } else {
-            val hook = event.hook
-            val musicManager = PlayerManager.instance.getMusicManager(guild)
-
-            when (componentId) {
-                "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay)
-                "stop" -> MusicPlayerHelper.stopSong(event, musicManager, requestingUserDto.superUser, deleteDelay)
-                "init:next" -> DnDHelper.incrementTurnTable(hook, event, deleteDelay)
-                "init:prev" -> DnDHelper.decrementTurnTable(hook, event, deleteDelay)
-                "init:clear" -> DnDHelper.clearInitiative(hook, event)
-                else -> {
-                    val (commandName, options) = componentId.split(":").takeIf { it.size == 2 } ?: return
-                    val cmd = getCommand(commandName.lowercase(Locale.getDefault())) ?: return
-
-                    event.channel.sendTyping().queue()
-                    if (cmd.name == "roll") {
-                        val rollCommand = cmd as? RollCommand ?: return
-                        val optionArray = options.split(",").mapNotNull { it.toIntOrNull() }.toTypedArray()
-                        if (optionArray.size == 3) {
-                            rollCommand.handleDiceRoll(
-                                event,
-                                optionArray[0],
-                                optionArray[1],
-                                optionArray[2]
-                            ).queue { invokeDeleteOnMessageResponse(deleteDelay) }
-                        }
-                    } else {
-                        val commandContext = CommandContext(event)
-                        cmd.handle(commandContext, requestingUserDto, deleteDelay)
-                    }
-                }
-            }
-        }
     }
 }

@@ -28,6 +28,7 @@ import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.*
 import toby.lavaplayer.PlayerManager
+import toby.managers.ButtonManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
@@ -45,6 +46,7 @@ class Handler @Autowired constructor(
 ) : ListenerAdapter() {
 
     private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
+    private val buttonManager = ButtonManager(configService, userService, commandManager)
     private val menuManager = MenuManager(configService)
 
     override fun onReady(@Nonnull event: ReadyEvent) {
@@ -100,7 +102,7 @@ class Handler @Autowired constructor(
     override fun onButtonInteraction(event: ButtonInteractionEvent) {
         event.deferReply(true).queue()
         if (!event.user.isBot) {
-            commandManager.handle(event)
+            buttonManager.handle(event)
         }
     }
 
