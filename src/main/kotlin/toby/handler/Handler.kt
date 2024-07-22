@@ -33,7 +33,6 @@ import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import javax.annotation.Nonnull
 
 @Service
 @Configurable
@@ -49,7 +48,7 @@ class Handler @Autowired constructor(
     private val buttonManager = ButtonManager(configService, userService, commandManager)
     private val menuManager = MenuManager(configService)
 
-    override fun onReady(@Nonnull event: ReadyEvent) {
+    override fun onReady(event: ReadyEvent) {
         LOGGER.info("${event.jda.selfUser.name} is ready")
     }
 
