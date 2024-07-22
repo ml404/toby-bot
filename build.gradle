@@ -34,13 +34,16 @@ mainClassName = "toby.Application"
 
 repositories {
     mavenCentral()
-    jcenter()
     maven { url 'https://jitpack.io' }
     maven { url "https://repo.spring.io/libs-snapshot" }
     maven { url 'https://repo.spring.io/milestone' }
     maven { url 'https://repo.spring.io/snapshot' }
     maven { name 'm2-dv8tion'; url 'https://m2.dv8tion.net/releases' }
     maven { url = uri("https://plugins.gradle.org/m2/") }
+    maven {
+        name 'm2-duncte123'
+        url 'https://m2.duncte123.dev/releases'
+    }
 }
 
 configurations {

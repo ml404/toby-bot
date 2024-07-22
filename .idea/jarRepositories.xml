@@ -71,5 +71,10 @@
       <option name="name" value="maven5" />
       <option name="url" value="https://plugins.gradle.org/m2/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="m2-duncte123" />
+      <option name="name" value="m2-duncte123" />
+      <option name="url" value="https://m2.duncte123.dev/releases" />
+    </remote-repository>
   </component>
 </project>
