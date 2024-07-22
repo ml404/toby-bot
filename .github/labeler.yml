@@ -1,32 +1,33 @@
 AnyChange:
   - changed-files:
-      - '**'
+      - any-glob-to-any-file: '**'
 
 Documentation:
   - changed-files:
-      - '**/*.md'
+      - any-glob-to-any-file: '**/*.md'
 
 Config:
   - changed-files:
-      - '**/*.properties'
-      - '**/*.gradle'
+      - any-glob-to-any-file:
+        - '**/*.properties'
+        - '**/*.gradle'
 
 Commands:
   - changed-files:
-      - 'src/main/kotlin/toby/command/**'
+     - any-glob-to-any-file: 'src/main/kotlin/toby/command/**'
 
 Helpers:
   - changed-files:
-      - 'src/main/kotlin/toby/helpers/*'
+      - any-glob-to-any-file: 'src/main/kotlin/toby/helpers/*'
 
 Managers:
   - changed-files:
-      - 'src/main/kotlin/toby/managers/*'
+      - any-glob-to-any-file: 'src/main/kotlin/toby/managers/*'
 
 Database:
   - changed-files:
-      - 'src/main/kotlin/toby/jpa/**'
+      - any-glob-to-any-file: 'src/main/kotlin/toby/jpa/**'
 
 Lavaplayer:
   - changed-files:
-      - 'src/main/kotlin/toby/lavaplayer/**'
+      - any-glob-to-any-file: 'src/main/kotlin/toby/lavaplayer/**'
