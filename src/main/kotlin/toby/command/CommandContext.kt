@@ -9,5 +9,4 @@ import toby.command.commands.ICommandContext
 class CommandContext(var interaction: IReplyCallback) : ICommandContext {
     override val guild: Guild get() = event.guild!!
     override val event: SlashCommandInteractionEvent get() = interaction as SlashCommandInteractionEvent
-    val buttonInteractionEvent: ButtonInteractionEvent get() = interaction as ButtonInteractionEvent
 }

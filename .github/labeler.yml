@@ -8,6 +8,9 @@ Config:
 Commands:
   - src/main/kotlin/toby/command/**
 
+Buttons:
+ - src/main/kotlin/toby/button/**
+
 Helpers:
   - src/main/kotlin/toby/helpers/*
 
@@ -19,3 +22,6 @@ Database:
 
 Lavaplayer:
   - src/main/kotlin/toby/lavaplayer/**
+
+Tests:
+  -src/test/kotlin/**

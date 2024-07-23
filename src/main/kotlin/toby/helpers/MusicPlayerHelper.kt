@@ -167,7 +167,7 @@ object MusicPlayerHelper {
         val hook = event.hook
         val embed = EmbedBuilder()
             .setTitle("Track Pause/Resume")
-            .setDescription("$content${track.info.title}` by `${track.info.author}`")
+            .setDescription("$content${track?.info?.title}` by `${track?.info?.author}`")
             .setColor(Color.CYAN)
             .build()
 
