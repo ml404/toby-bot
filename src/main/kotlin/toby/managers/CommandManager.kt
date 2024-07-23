@@ -26,11 +26,13 @@ import java.util.*
 
 @Service
 @Configurable
-class CommandManager @Autowired constructor(private val configService: IConfigService,
-                                            private val brotherService: IBrotherService,
-                                            private val userService: IUserService,
-                                            private val musicFileService: IMusicFileService,
-                                            private val excuseService: IExcuseService) {
+class CommandManager @Autowired constructor(
+    private val configService: IConfigService,
+    private val brotherService: IBrotherService,
+    private val userService: IUserService,
+    private val musicFileService: IMusicFileService,
+    private val excuseService: IExcuseService
+) {
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
     val lastCommands: MutableMap<Guild, Pair<ICommand, CommandContext>> = HashMap()
@@ -100,21 +102,25 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
     val miscCommands: List<ICommand> get() = commands.filterIsInstance<IMiscCommand>().toList()
     val fetchCommands: List<ICommand> get() = commands.filterIsInstance<IFetchCommand>().toList()
 
-    fun getCommand(search: String): ICommand? {
-        for (cmd in commands) {
-            if (cmd.name.equals(search, true)) {
-                return cmd
-            }
-        }
-        return null
-    }
+    fun getCommand(search: String): ICommand? = commands.find { it.name.equals(search, true) }
 
     fun handle(event: SlashCommandInteractionEvent) {
         val guildId = event.guild?.id ?: return
-        val deleteDelay = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guildId)?.value?.toIntOrNull() ?: 0
+        val deleteDelay = configService.getConfigByName(
+            ConfigDto.Configurations.DELETE_DELAY.configValue,
+            guildId
+        )?.value?.toIntOrNull() ?: 0
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val defaultVolume = configService.getConfigByName(volumePropertyName, guildId)?.value?.toIntOrNull()
-        val requestingUserDto = event.member?.let { UserDtoHelper.calculateUserDto(guildId.toLong(), event.user.idLong, it.isOwner, userService, defaultVolume ?: 0) }
+        val requestingUserDto = event.member?.let {
+            UserDtoHelper.calculateUserDto(
+                guildId.toLong(),
+                event.user.idLong,
+                it.isOwner,
+                userService,
+                defaultVolume ?: 0
+            )
+        }
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
 
@@ -129,7 +135,12 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
         }
     }
 
-    private fun attributeSocialCredit(ctx: CommandContext, userService: IUserService, requestingUserDto: UserDto, deleteDelay: Int) {
+    private fun attributeSocialCredit(
+        ctx: CommandContext,
+        userService: IUserService,
+        requestingUserDto: UserDto,
+        deleteDelay: Int
+    ) {
         val socialCreditScore = requestingUserDto.socialCredit
         val r = Random()
         val socialCredit = r.nextInt(5)

@@ -27,7 +27,7 @@ internal class MenuManagerTest {
         val menuManager = MenuManager(configService)
         val availableMenus: List<Class<out IMenu>> = listOf(DndMenu::class.java)
         assertEquals(1, availableMenus.size)
-        assertTrue(availableMenus.containsAll(menuManager.allMenus.map { it.javaClass }))
+        assertTrue(availableMenus.containsAll(menuManager.allMenus.map { it.javaClass }.toList()))
     }
 
     @Test

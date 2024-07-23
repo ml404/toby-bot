@@ -73,12 +73,5 @@ class ButtonManager @Autowired constructor(
         buttons.add(btn)
     }
 
-    private fun getButton(search: String): IButton? {
-        for (btn in buttons) {
-            if (btn.name.equals(search, true)) {
-                return btn
-            }
-        }
-        return null
-    }
+    private fun getButton(search: String): IButton? = buttons.find { it.name.equals(search, true) }
 }

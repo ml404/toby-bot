@@ -30,18 +30,7 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
     val allMenus: List<IMenu>
         get() = menus
 
-    fun getMenu(search: String): IMenu? {
-        val searchLower = search.lowercase(Locale.getDefault()).split(":".toRegex()).dropLastWhile { it.isEmpty() }
-            .toTypedArray()[0]
-
-        for (menu in this.menus) {
-            if (menu.name == searchLower) {
-                return menu
-            }
-        }
-
-        return null
-    }
+    fun getMenu(search: String): IMenu? = menus.find { it.name.equals(search, true) }
 
     fun handle(event: StringSelectInteractionEvent) {
         val invoke = event.componentId.lowercase(Locale.getDefault())
@@ -50,9 +39,8 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
         // Build the response embed
         if (menu != null) {
             val deleteDelayConfig = configService.getConfigByName(
-                ConfigDto.Configurations.DELETE_DELAY.configValue, event.guild!!
-                    .id
-            )
+                ConfigDto.Configurations.DELETE_DELAY.configValue,
+                event.guild!!.id)
             event.channel.sendTyping().queue()
             val ctx = MenuContext(event)
 
