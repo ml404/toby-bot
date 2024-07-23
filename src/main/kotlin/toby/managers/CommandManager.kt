@@ -1,6 +1,6 @@
 package toby.managers
 
-import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import org.springframework.beans.factory.annotation.Autowired
@@ -26,10 +26,14 @@ import java.util.*
 
 @Service
 @Configurable
-class CommandManager @Autowired constructor(private val configService: IConfigService, private val brotherService: IBrotherService, private val userService: IUserService, private val musicFileService: IMusicFileService, private val excuseService: IExcuseService) {
+class CommandManager @Autowired constructor(private val configService: IConfigService,
+                                            private val brotherService: IBrotherService,
+                                            private val userService: IUserService,
+                                            private val musicFileService: IMusicFileService,
+                                            private val excuseService: IExcuseService) {
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
-    val lastCommands: MutableMap<User, Pair<ICommand, CommandContext>> = HashMap()
+    val lastCommands: MutableMap<Guild, Pair<ICommand, CommandContext>> = HashMap()
 
     init {
         val cache = Cache(86400, 3600, 2)
@@ -117,7 +121,7 @@ class CommandManager @Autowired constructor(private val configService: IConfigSe
         cmd?.let {
             event.channel.sendTyping().queue()
             val ctx = CommandContext(event)
-            lastCommands[event.user] = Pair(it, ctx)
+            lastCommands[event.guild!!] = Pair(it, ctx)
             requestingUserDto?.let { userDto ->
                 it.handle(ctx, userDto, deleteDelay)
                 attributeSocialCredit(ctx, userService, userDto, deleteDelay)

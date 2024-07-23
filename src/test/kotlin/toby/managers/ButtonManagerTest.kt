@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import toby.button.buttons.*
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
@@ -52,6 +53,21 @@ class ButtonManagerTest {
         unmockkAll()
     }
 
+    @Test
+    fun testButtonManagerFindsAllButtons() {
+        val availableButtons = listOf(
+            InitiativeClearButton::class.java,
+            InitiativeNextButton::class.java,
+            InitiativePreviousButton::class.java,
+            PausePlayButton::class.java,
+            ResendLastRequestButton::class.java,
+            RollButton::class.java,
+            StopButton::class.java,
+        )
+
+        assertTrue(availableButtons.containsAll(buttonManager.allButtons.map { it.javaClass }.toList()))
+        assertEquals(7, buttonManager.allButtons.size)
+    }
 
     @Test
     fun `test handle ButtonInteractionEvent with stop`() {

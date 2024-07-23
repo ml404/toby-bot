@@ -1,27 +1,46 @@
 package toby.managers
 
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
-import toby.command.CommandContext
-import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import toby.command.commands.misc.RollCommand
-import toby.helpers.DnDHelper
-import toby.helpers.MusicPlayerHelper
+import toby.button.ButtonContext
+import toby.button.IButton
+import toby.button.buttons.*
+import toby.helpers.Cache
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IUserService
-import toby.lavaplayer.PlayerManager
 import java.util.*
 
 @Service
 @Configurable
-class ButtonManager(
+class ButtonManager @Autowired constructor(
     private val configService: IConfigService,
     private val userService: IUserService,
-    private val commandManager: CommandManager
+    commandManager: CommandManager
 ) {
+    private val buttons: MutableList<IButton> = ArrayList()
+
+    val allButtons: List<IButton> get() = buttons
+
+    init {
+        Cache(86400, 3600, 2)
+
+        //music buttons
+        addButton(PausePlayButton())
+        addButton(StopButton())
+
+        //MiscButtons
+        addButton(ResendLastRequestButton(commandManager))
+        addButton(RollButton(commandManager))
+
+        //DnD Buttons
+        addButton(InitiativeNextButton())
+        addButton(InitiativePreviousButton())
+        addButton(InitiativeClearButton())
+    }
 
     fun handle(event: ButtonInteractionEvent) {
         val guild = event.guild ?: return
@@ -37,46 +56,29 @@ class ButtonManager(
             UserDtoHelper.calculateUserDto(guildId, event.user.idLong, it.isOwner, userService, defaultVolume)
         } ?: return
 
-        // Dispatch the simulated SlashCommandInteractionEvent
-        val componentId = event.componentId
-        event.channel.sendTyping().queue()
 
-        if (componentId == "resend_last_request") {
-            val (cmd, ctx) = commandManager.lastCommands[event.user] ?: return
-            cmd.handle(ctx, requestingUserDto, deleteDelay)
-            event.deferEdit().queue()
-        } else {
-            val hook = event.hook
-            val musicManager = PlayerManager.instance.getMusicManager(guild)
+        val btn = getButton(event.componentId.lowercase())
 
-            when (componentId) {
-                "pause/play" -> MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay)
-                "stop" -> MusicPlayerHelper.stopSong(event, musicManager, requestingUserDto.superUser, deleteDelay)
-                "init:next" -> DnDHelper.incrementTurnTable(hook, event, deleteDelay)
-                "init:prev" -> DnDHelper.decrementTurnTable(hook, event, deleteDelay)
-                "init:clear" -> DnDHelper.clearInitiative(hook, event)
-                else -> {
-                    val (commandName, options) = componentId.split(":").takeIf { it.size == 2 } ?: return
-                    val cmd = commandManager.getCommand(commandName.lowercase(Locale.getDefault())) ?: return
+        btn?.let {
+            event.channel.sendTyping().queue()
+            val ctx = ButtonContext(event)
+            requestingUserDto.let { userDto -> it.handle(ctx, userDto, deleteDelay) }
+        }
+    }
 
-                    event.channel.sendTyping().queue()
-                    if (cmd.name == "roll") {
-                        val rollCommand = cmd as? RollCommand ?: return
-                        val optionArray = options.split(",").mapNotNull { it.toIntOrNull() }.toTypedArray()
-                        if (optionArray.size == 3) {
-                            rollCommand.handleDiceRoll(
-                                event,
-                                optionArray[0],
-                                optionArray[1],
-                                optionArray[2]
-                            ).queue { invokeDeleteOnMessageResponse(deleteDelay) }
-                        }
-                    } else {
-                        val commandContext = CommandContext(event)
-                        cmd.handle(commandContext, requestingUserDto, deleteDelay)
-                    }
-                }
+
+    private fun addButton(btn: IButton) {
+        val nameFound = buttons.any { it.name.equals(btn.name, true) }
+        require(!nameFound) { "A button with this name is already present" }
+        buttons.add(btn)
+    }
+
+    private fun getButton(search: String): IButton? {
+        for (btn in buttons) {
+            if (btn.name.equals(search, true)) {
+                return btn
             }
         }
+        return null
     }
 }

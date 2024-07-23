@@ -102,7 +102,8 @@ object DnDHelper {
                 .editMessageEmbeds(messageEmbed)
                 .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
                 .queue()
-            hook.setEphemeral(true).sendMessage("Next turn: ${sortedEntries[initiativeIndex.get()].key}").queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)
+            hook.setEphemeral(true).sendMessage("Next turn: ${sortedEntries[initiativeIndex.get()].key}").queue(
+                invokeDeleteOnMessageResponse(deleteDelay ?: 0)
             )
         }
     }
@@ -118,6 +119,7 @@ object DnDHelper {
             embedBuilder.setDescription(description)
             return embedBuilder
         }
+
     fun clearInitiative() {
         initiativeIndex.set(0)
         sortedEntries.clear()
