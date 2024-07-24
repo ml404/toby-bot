@@ -2,6 +2,7 @@ package toby.helpers
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
@@ -21,12 +22,15 @@ import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
+private val logger = KotlinLogging.logger {}
+
 object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
+        logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
     }
 
@@ -42,10 +46,13 @@ object MusicPlayerHelper {
         val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
         musicDto?.let {
+            logger.info { "User ${dbUser.discordId} has a musicDto. Preparing to play intro." }
             val introVolume = it.introVolume
             instance.setPreviousVolume(currentVolume)
             val url = if (it.fileName != null) "$webUrl/music?id=${it.id}" else it.musicBlob.contentToString()
             instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
+        } ?: run {
+            logger.warn { "User ${dbUser.discordId} does not have a musicDto. Cannot play intro." }
         }
     }
 
@@ -107,6 +114,7 @@ object MusicPlayerHelper {
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
         return if (track == null) {
+            logger.warn { "No track is currently playing on guild ${hook.interaction.guild?.idLong}.." }
             val embed = EmbedBuilder()
                 .setTitle("No Track Playing")
                 .setDescription("There is no track playing currently")
@@ -123,6 +131,7 @@ object MusicPlayerHelper {
     fun stopSong(event: IReplyCallback, musicManager: GuildMusicManager, canOverrideSkips: Boolean, deleteDelay: Int?) {
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
+            logger.info { "Stopping the song and clearing the queue on guild ${event.guild?.idLong}." }
             musicManager.scheduler.apply {
                 stopTrack(true)
                 queue.clear()
@@ -148,6 +157,7 @@ object MusicPlayerHelper {
         val audioPlayer = musicManager.audioPlayer
         val paused = audioPlayer.isPaused
         val message = if (paused) "Resuming: `" else "Pausing: `"
+        logger.info { "Changing pause status to ${!paused} for track ${audioPlayer.playingTrack?.info?.title} on guild ${event.guild?.idLong}." }
         sendMessageAndSetPaused(audioPlayer, event, message, deleteDelay, !paused)
     }
 
@@ -183,6 +193,7 @@ object MusicPlayerHelper {
 
         when {
             audioPlayer.playingTrack == null -> {
+                logger.warn { "Attempted to skip tracks but no track is currently playing on guild ${event.guild?.idLong}." }
                 val embed = EmbedBuilder()
                     .setTitle("No Track Playing")
                     .setDescription("There is no track playing currently")
@@ -194,6 +205,7 @@ object MusicPlayerHelper {
             }
 
             tracksToSkip < 0 -> {
+                logger.warn { "Attempted to skip a negative number of tracks: $tracksToSkip on guild ${event.guild?.idLong}." }
                 val embed = EmbedBuilder()
                     .setTitle("Invalid Skip Request")
                     .setDescription("You're not too bright, but thanks for trying")
@@ -206,6 +218,7 @@ object MusicPlayerHelper {
         }
 
         if (playerManager.isCurrentlyStoppable || canOverrideSkips) {
+            logger.info { "Skipping $tracksToSkip track(s) on guild ${event.guild?.idLong}." }
             repeat(tracksToSkip) {
                 musicManager.scheduler.nextTrack()
             }
@@ -249,6 +262,7 @@ object MusicPlayerHelper {
     }
 
     fun resetMessages(guildId: Long) {
+        logger.info("Resetting now playing message for guild $guildId")
         resetNowPlayingMessage(guildId)
     }
 
