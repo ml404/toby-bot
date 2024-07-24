@@ -24,12 +24,7 @@ import java.util.concurrent.TimeUnit
 object MusicPlayerHelper {
     private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
-    val guildLastNowPlayingMessage = ConcurrentHashMap<Long, NowPlayingInfo>()
-
-    class NowPlayingInfo(
-        val playerManager: PlayerManager,
-        val message: Message
-    )
+    val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
@@ -70,7 +65,7 @@ object MusicPlayerHelper {
 
         if (nowPlayingInfo != null) {
             // Update existing message
-            nowPlayingInfo.message.editMessageEmbeds(embed)
+            nowPlayingInfo.editMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue()
             hook.deleteOriginal().queue()
@@ -79,7 +74,7 @@ object MusicPlayerHelper {
             hook.sendMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue {
-                    guildLastNowPlayingMessage[guildId] = NowPlayingInfo(playerManager, it)
+                    guildLastNowPlayingMessage[guildId] = it
                 }
         }
     }
@@ -259,7 +254,7 @@ object MusicPlayerHelper {
 
     private fun resetNowPlayingMessage(guildId: Long) {
         val playingInfo = guildLastNowPlayingMessage[guildId]
-        playingInfo?.message?.delete()?.queue()
+        playingInfo?.delete()?.queue()
         guildLastNowPlayingMessage.remove(guildId)
     }
 

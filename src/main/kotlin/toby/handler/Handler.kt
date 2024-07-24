@@ -1,5 +1,6 @@
 package toby.handler
 
+import net.dv8tion.jda.api.entities.Activity
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -34,6 +35,7 @@ import toby.managers.MenuManager
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+
 @Service
 @Configurable
 class Handler @Autowired constructor(
@@ -44,7 +46,8 @@ class Handler @Autowired constructor(
     excuseService: IExcuseService,
 ) : ListenerAdapter() {
 
-    private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
+    private val commandManager =
+        CommandManager(configService, brotherService, userService, musicFileService, excuseService)
     private val buttonManager = ButtonManager(configService, userService, commandManager)
     private val menuManager = MenuManager(configService)
 
@@ -152,7 +155,8 @@ class Handler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig =
+            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
 
@@ -164,6 +168,14 @@ class Handler @Autowired constructor(
 
         setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
     }
+
+//    private fun checkForNonIntroPlayingGames(nonBotConnectedMembers: List<Member>): List<Activity> {
+//        return nonBotConnectedMembers.map { member ->
+//            member.activities
+//                .filter { it.type === Activity.ActivityType.PLAYING }
+//                .first { it.name.equals("Street Fighter 6", true) }
+//        }.toList()
+//    }
 
     private fun setupAndPlayUserIntro(
         member: Member,
