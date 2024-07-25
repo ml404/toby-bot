@@ -71,6 +71,7 @@ object MusicPlayerHelper {
         val nowPlayingInfo = guildLastNowPlayingMessage[guildId]
 
         if (nowPlayingInfo != null) {
+            logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
             // Update existing message
             nowPlayingInfo.editMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
@@ -81,6 +82,7 @@ object MusicPlayerHelper {
             hook.sendMessageEmbeds(embed)
                 .setActionRow(pausePlayButton, stopButton)
                 .queue {
+                    logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
                     guildLastNowPlayingMessage[guildId] = it
                 }
         }
@@ -268,8 +270,11 @@ object MusicPlayerHelper {
     private fun resetNowPlayingMessage(guildId: Long) {
         val playingInfo = guildLastNowPlayingMessage[guildId]
         logger.info("Resetting now playing message ${playingInfo?.idLong} for guild $guildId")
-        playingInfo?.delete()?.queue().also { logger.info("Deleted now playing message ${playingInfo?.idLong} for guild $guildId") }
-        guildLastNowPlayingMessage.remove(guildId)
+        playingInfo?.delete()?.queue().also {
+            logger.info("Deleted now playing message ${playingInfo?.idLong} for guild $guildId")
+            guildLastNowPlayingMessage.remove(guildId)
+        }
+
     }
 
     private fun generateButtons(): Pair<Button, Button> {
