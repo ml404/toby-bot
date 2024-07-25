@@ -71,8 +71,9 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
         if (endReason.mayStartNext) {
             handleNextTrack(player, track)
         } else {
-            guildId?.let { resetMessages(it) }
+            guildId.resetMessagesForGuildId()
         }
+        guildId?.takeIf { queue.isEmpty() }?.let { it.resetMessagesForGuildId() }
     }
 
     private fun handleNextTrack(player: AudioPlayer, track: AudioTrack) {
@@ -115,5 +116,9 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
 
     fun setPreviousVolume(previousVolume: Int?) {
         this.previousVolume = previousVolume
+    }
+
+    private fun Long?.resetMessagesForGuildId(){
+        this?.let { resetMessages(it) }
     }
 }
