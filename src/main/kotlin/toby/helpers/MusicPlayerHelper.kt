@@ -262,12 +262,12 @@ object MusicPlayerHelper {
     }
 
     fun resetMessages(guildId: Long) {
-        logger.info("Resetting now playing message for guild $guildId")
         resetNowPlayingMessage(guildId)
     }
 
     private fun resetNowPlayingMessage(guildId: Long) {
         val playingInfo = guildLastNowPlayingMessage[guildId]
+        logger.info("Resetting now playing message ${playingInfo?.idLong} for guild $guildId")
         playingInfo?.delete()?.queue()
         guildLastNowPlayingMessage.remove(guildId)
     }
