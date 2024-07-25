@@ -24,7 +24,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
 
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
-        logger.info("Adding $track to the queue for guild ${event?.guild?.idLong}")
+        logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild ${event?.guild?.idLong}")
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -38,8 +38,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
-        logger.info("Adding $playList to the queue for guild ${event?.guild?.idLong}")
-
+        logger.info("Adding ${playList.name} to the queue for guild ${event?.guild?.idLong}")
         event?.hook
             ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -60,25 +59,31 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     override fun onTrackStart(player: AudioPlayer, track: AudioTrack) {
-        logger.info("$track started for guild ${event?.guild?.idLong}")
+        logger.info("${track.info.title} by ${track.info.author} started for guild ${event?.guild?.idLong}")
         super.onTrackStart(player, track)
         player.volume = track.userData as Int
         event?.let { nowPlaying(it, PlayerManager.instance, deriveDeleteDelayFromTrack(track)) }
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-        logger.info("$track ended for guild ${event?.guild?.idLong}")
-        event?.guild?.idLong?.let { resetMessages(it) }
+        val guildId = event?.guild?.idLong
+        logger.info("${track.info.title} by ${track.info.author} ended for guild $guildId")
         if (endReason.mayStartNext) {
-            if (isLooping) {
-                player.startTrack(track.makeClone(), false)
-            } else {
-                PlayerManager.instance.isCurrentlyStoppable = true
-                setVolumeToPrevious(player)
-                queue.peek()?.let {
-                    nextTrack()
-                    event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
-                }
+            handleNextTrack(player, track)
+        } else {
+            guildId?.let { resetMessages(it) }
+        }
+    }
+
+    private fun handleNextTrack(player: AudioPlayer, track: AudioTrack) {
+        if (isLooping) {
+            player.startTrack(track.makeClone(), false)
+        } else {
+            PlayerManager.instance.isCurrentlyStoppable = true
+            setVolumeToPrevious(player)
+            queue.peek()?.let {
+                nextTrack()
+                event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
             }
         }
     }
