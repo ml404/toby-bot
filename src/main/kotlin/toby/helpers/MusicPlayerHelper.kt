@@ -21,8 +21,6 @@ import java.awt.Color
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 private val logger = KotlinLogging.logger {}
 
@@ -30,7 +28,7 @@ object MusicPlayerHelper {
     private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
-    private val lock = ReentrantLock()
+    private val lock = Any()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
         logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
@@ -71,7 +69,7 @@ object MusicPlayerHelper {
         val (pausePlayButton, stopButton) = generateButtons()
         val guildId = event.guild!!.idLong
 
-        lock.withLock {
+        synchronized(lock) {
             val nowPlayingInfo = guildLastNowPlayingMessage[guildId]
 
             if (nowPlayingInfo != null) {
@@ -273,7 +271,7 @@ object MusicPlayerHelper {
     }
 
     private fun resetNowPlayingMessage(guildId: Long) {
-        lock.withLock {
+        synchronized(lock) {
             val playingInfo = guildLastNowPlayingMessage[guildId]
             logger.info("Resetting now playing message ${playingInfo?.idLong} for guild $guildId")
             playingInfo?.delete()?.queue().also {
