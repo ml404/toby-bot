@@ -1,11 +1,11 @@
 package toby.helpers
 
+import toby.managers.NowPlayingManager
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -19,7 +19,6 @@ import toby.lavaplayer.GuildMusicManager
 import toby.lavaplayer.PlayerManager
 import java.awt.Color
 import java.net.URI
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
@@ -27,8 +26,7 @@ private val logger = KotlinLogging.logger {}
 object MusicPlayerHelper {
     private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
-    val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
-    private val lock = Any()
+    val nowPlayingManager = NowPlayingManager()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
         logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
@@ -68,9 +66,7 @@ object MusicPlayerHelper {
         val embed = buildNowPlayingMessageData(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
         val guildId = event.guild!!.idLong
-
-        synchronized(lock) {
-            val nowPlayingInfo = guildLastNowPlayingMessage[guildId]
+         val nowPlayingInfo = nowPlayingManager.getLastNowPlayingMessage(guildId)
 
             if (nowPlayingInfo != null) {
                 logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
@@ -85,10 +81,10 @@ object MusicPlayerHelper {
                     .setActionRow(pausePlayButton, stopButton)
                     .queue {
                         logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
-                        guildLastNowPlayingMessage[guildId] = it
+                        nowPlayingManager.setNowPlayingMessage(guildId, it)
                     }
             }
-        }
+
     }
 
     private fun buildNowPlayingMessageData(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
@@ -137,7 +133,6 @@ object MusicPlayerHelper {
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
             logger.info { "Stopping the song and clearing the queue on guild ${event.guild?.idLong}." }
-            resetMessages(event.guild!!.idLong)
             musicManager.scheduler.apply {
                 stopTrack(true)
                 queue.clear()
@@ -153,6 +148,7 @@ object MusicPlayerHelper {
 
             hook.sendMessageEmbeds(embed)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
@@ -266,21 +262,7 @@ object MusicPlayerHelper {
         return (track.duration / SECOND_MULTIPLIER).toInt()
     }
 
-    fun resetMessages(guildId: Long) {
-        resetNowPlayingMessage(guildId)
-    }
-
-    private fun resetNowPlayingMessage(guildId: Long) {
-        synchronized(lock) {
-            val playingInfo = guildLastNowPlayingMessage[guildId]
-            logger.info("Resetting now playing message ${playingInfo?.idLong} for guild $guildId")
-            playingInfo?.delete()?.queue().also {
-                logger.info("Deleted now playing message ${playingInfo?.idLong} for guild $guildId")
-                guildLastNowPlayingMessage.remove(guildId)
-            }
-
-        }
-    }
+    fun resetMessages(guildId: Long) = nowPlayingManager.resetNowPlayingMessage(guildId)
 
     private fun generateButtons(): Pair<Button, Button> {
         val pausePlayButton = Button.primary("pause/play", "⏯️")
