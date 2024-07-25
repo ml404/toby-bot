@@ -21,13 +21,16 @@ import java.awt.Color
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 private val logger = KotlinLogging.logger {}
 
 object MusicPlayerHelper {
-    private const val webUrl = "https://gibe-toby-bot.herokuapp.com/"
+    private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
+    private val lock = ReentrantLock()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
         logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
@@ -49,7 +52,7 @@ object MusicPlayerHelper {
             logger.info { "User ${dbUser.discordId} has a musicDto. Preparing to play intro." }
             val introVolume = it.introVolume
             instance.setPreviousVolume(currentVolume)
-            val url = if (it.fileName != null) "$webUrl/music?id=${it.id}" else it.musicBlob.contentToString()
+            val url = if (it.fileName != null) "$WEB_URL/music?id=${it.id}" else it.musicBlob.contentToString()
             instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
         } ?: run {
             logger.warn { "User ${dbUser.discordId} does not have a musicDto. Cannot play intro." }
@@ -68,23 +71,25 @@ object MusicPlayerHelper {
         val (pausePlayButton, stopButton) = generateButtons()
         val guildId = event.guild!!.idLong
 
-        val nowPlayingInfo = guildLastNowPlayingMessage[guildId]
+        lock.withLock {
+            val nowPlayingInfo = guildLastNowPlayingMessage[guildId]
 
-        if (nowPlayingInfo != null) {
-            logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
-            // Update existing message
-            nowPlayingInfo.editMessageEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
-                .queue()
-            hook.deleteOriginal().queue()
-        } else {
-            // Send a new message and store it in the map
-            hook.sendMessageEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
-                .queue {
-                    logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
-                    guildLastNowPlayingMessage[guildId] = it
-                }
+            if (nowPlayingInfo != null) {
+                logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
+                // Update existing message
+                nowPlayingInfo.editMessageEmbeds(embed)
+                    .setActionRow(pausePlayButton, stopButton)
+                    .queue()
+                hook.deleteOriginal().queue()
+            } else {
+                // Send a new message and store it in the map
+                hook.sendMessageEmbeds(embed)
+                    .setActionRow(pausePlayButton, stopButton)
+                    .queue {
+                        logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
+                        guildLastNowPlayingMessage[guildId] = it
+                    }
+            }
         }
     }
 
@@ -134,6 +139,7 @@ object MusicPlayerHelper {
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
             logger.info { "Stopping the song and clearing the queue on guild ${event.guild?.idLong}." }
+            resetMessages(event.guild!!.idLong)
             musicManager.scheduler.apply {
                 stopTrack(true)
                 queue.clear()
@@ -149,7 +155,6 @@ object MusicPlayerHelper {
 
             hook.sendMessageEmbeds(embed)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
-            resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
@@ -268,13 +273,15 @@ object MusicPlayerHelper {
     }
 
     private fun resetNowPlayingMessage(guildId: Long) {
-        val playingInfo = guildLastNowPlayingMessage[guildId]
-        logger.info("Resetting now playing message ${playingInfo?.idLong} for guild $guildId")
-        playingInfo?.delete()?.queue().also {
-            logger.info("Deleted now playing message ${playingInfo?.idLong} for guild $guildId")
-            guildLastNowPlayingMessage.remove(guildId)
-        }
+        lock.withLock {
+            val playingInfo = guildLastNowPlayingMessage[guildId]
+            logger.info("Resetting now playing message ${playingInfo?.idLong} for guild $guildId")
+            playingInfo?.delete()?.queue().also {
+                logger.info("Deleted now playing message ${playingInfo?.idLong} for guild $guildId")
+                guildLastNowPlayingMessage.remove(guildId)
+            }
 
+        }
     }
 
     private fun generateButtons(): Pair<Button, Button> {
