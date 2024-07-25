@@ -1,13 +1,17 @@
 package toby.managers
 
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Message
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
+
 
 class NowPlayingManagerTest {
 
@@ -23,7 +27,7 @@ class NowPlayingManagerTest {
     }
 
     @AfterEach
-    fun tearDown(){
+    fun tearDown() {
         nowPlayingManager.clear()
     }
 
@@ -43,13 +47,19 @@ class NowPlayingManagerTest {
         val guildId = 1L
         nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
 
-        every { mockMessage1.delete().queue(any(), any()) } just Runs
+        // Create a CompletableFuture to simulate success
+        val future = CompletableFuture<Void>()
+        every { mockMessage1.delete().submit() } returns future
 
         nowPlayingManager.resetNowPlayingMessage(guildId)
+
+        // Complete the future to simulate the successful deletion
+        future.complete(null)
+
         assertNull(nowPlayingManager.getLastNowPlayingMessage(guildId))
 
-        // Verify that delete().queue was called
-        verify { mockMessage1.delete().queue() }
+        // Verify that submit() was called
+        verify { mockMessage1.delete().submit() }
     }
 
     @Test
@@ -57,14 +67,24 @@ class NowPlayingManagerTest {
         val guildId = 1L
         nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
 
-        every { mockMessage1.delete().queue(any(), any()) } just Runs
+        // Create a CompletableFuture to simulate success
+        val future = CompletableFuture<Void>()
+        every { mockMessage1.delete().submit() } returns future
 
+        // Reset the message once
         nowPlayingManager.resetNowPlayingMessage(guildId)
-        nowPlayingManager.resetNowPlayingMessage(guildId) // Reset again should be a no-op
+
+        // Ensure the future is completed before proceeding
+        future.complete(null)
+
+        // Call reset again which should be a no-op since the message is already deleted
+        nowPlayingManager.resetNowPlayingMessage(guildId)
+
+        // Verify that the message was removed from the map
         assertNull(nowPlayingManager.getLastNowPlayingMessage(guildId))
 
-        // Verify that delete().queue was called once
-        verify(exactly = 1) { mockMessage1.delete().queue() }
+        // Verify that submit() was called only once
+        verify(exactly = 1) { mockMessage1.delete().submit() }
     }
 
     @Test
@@ -113,6 +133,12 @@ class NowPlayingManagerTest {
         every { message1.idLong } returns 1L
         every { message2.idLong } returns 2L
 
+        // Create a CompletableFuture to simulate success
+        val future1 = CompletableFuture<Void>()
+        val future2 = CompletableFuture<Void>()
+        every { message1.delete().submit() } returns future1
+        every { message2.delete().submit() } returns future2
+
         // Set the first message
         nowPlayingManager.setNowPlayingMessage(guildId, message1)
 
@@ -122,11 +148,17 @@ class NowPlayingManagerTest {
         // Clear the messages
         nowPlayingManager.resetNowPlayingMessage(guildId)
 
+        // Complete the future to simulate the successful deletion
+        future1.complete(null)
+
         // Verify that the message is cleared
         assertNull(nowPlayingManager.getLastNowPlayingMessage(guildId))
 
         // Set the second message
         nowPlayingManager.setNowPlayingMessage(guildId, message2)
+
+        // Complete the future to simulate the successful deletion
+        future2.complete(null)
 
         // Verify that the second message is correctly set
         assertEquals(message2, nowPlayingManager.getLastNowPlayingMessage(guildId))
