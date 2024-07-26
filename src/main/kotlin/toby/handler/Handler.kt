@@ -3,6 +3,7 @@ package toby.handler
 import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
@@ -52,6 +53,28 @@ class Handler @Autowired constructor(
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
+
+        event.jda.guildCache.forEach { guild ->
+            val mostPopulatedChannel = guild.voiceChannels
+                .filter { channel ->
+                    channel.members.any { !it.user.isBot }
+                }
+                .maxByOrNull { channel ->
+                    channel.members.count { !it.user.isBot }
+                }
+
+            mostPopulatedChannel?.let { channel ->
+                connectToVoiceChannel(channel)
+            }
+        }
+    }
+
+    private fun connectToVoiceChannel(channel: VoiceChannel) {
+        val audioManager = channel.guild.audioManager
+        if (!audioManager.isConnected) {
+            audioManager.openAudioConnection(channel)
+            logger.info { "Connected to voice channel: ${channel.name} in guild: ${channel.guild.name}" }
+        }
     }
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
