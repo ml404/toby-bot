@@ -1,6 +1,5 @@
 package toby.handler
 
-import net.dv8tion.jda.api.entities.Activity
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -165,8 +164,9 @@ class Handler @Autowired constructor(
             audioManager.openAudioConnection(event.channelJoined)
             lastConnectedChannel[guild.idLong] = event.channelJoined!!
         }
-
-        setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
+        if (audioManager.connectedChannel == event.channelJoined) {
+            setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
+        }
     }
 
 //    private fun checkForNonIntroPlayingGames(nonBotConnectedMembers: List<Member>): List<Activity> {
