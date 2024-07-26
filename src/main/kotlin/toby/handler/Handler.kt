@@ -167,6 +167,7 @@ class Handler @Autowired constructor(
             }
         }.thenRun {
             if (audioManager.connectedChannel == event.channelJoined) {
+                logger.info("Audiomanager channel ${audioManager.connectedChannel} and event joined channel ${event.channelJoined} are the same")
                 setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
             }
         }.exceptionally { ex ->
