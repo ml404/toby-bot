@@ -63,8 +63,10 @@ class Handler @Autowired constructor(
                     channel.members.count { !it.user.isBot }
                 }
 
-            mostPopulatedChannel?.let { channel ->
-                connectToVoiceChannel(channel)
+            if (mostPopulatedChannel != null && mostPopulatedChannel.members.count { !it.user.isBot } > 0) {
+                connectToVoiceChannel(mostPopulatedChannel)
+            } else {
+                logger.info("No suitable voice channel found in guild: ${guild.name}")
             }
         }
     }
