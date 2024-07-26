@@ -1,12 +1,10 @@
 package toby.helpers
 
-import toby.managers.NowPlayingManager
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
@@ -17,6 +15,7 @@ import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.GuildMusicManager
 import toby.lavaplayer.PlayerManager
+import toby.managers.NowPlayingManager
 import java.awt.Color
 import java.net.URI
 import java.util.concurrent.TimeUnit
@@ -63,55 +62,30 @@ object MusicPlayerHelper {
 
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
 
-        val embed = buildNowPlayingMessageData(track, audioPlayer)
+        val embed = nowPlayingManager.buildNowPlayingMessageData(track, audioPlayer)
         val (pausePlayButton, stopButton) = generateButtons()
         val guildId = event.guild!!.idLong
-         val nowPlayingInfo = nowPlayingManager.getLastNowPlayingMessage(guildId)
+        val nowPlayingInfo = nowPlayingManager.getLastNowPlayingMessage(guildId)
 
-            if (nowPlayingInfo != null) {
-                logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
-                // Update existing message
-                nowPlayingInfo.editMessageEmbeds(embed)
-                    .setActionRow(pausePlayButton, stopButton)
-                    .queue()
-                hook.deleteOriginal().queue()
-            } else {
-                // Send a new message and store it in the map
-                hook.sendMessageEmbeds(embed)
-                    .setActionRow(pausePlayButton, stopButton)
-                    .queue {
-                        logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
-                        nowPlayingManager.setNowPlayingMessage(guildId, it)
-                    }
-            }
-
-    }
-
-    private fun buildNowPlayingMessageData(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
-        val info = track.info
-        val descriptionBuilder = StringBuilder()
-
-        descriptionBuilder.append("**Title**: `${info.title}`\n").append("**Author**: `${info.author}`\n")
-
-        if (!info.isStream) {
-            val songPosition = formatTime(track.position)
-            val songDuration = formatTime(track.duration)
-            descriptionBuilder.append("**Progress**: `$songPosition / $songDuration`\n")
+        if (nowPlayingInfo != null) {
+            logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
+            // Update existing message
+            nowPlayingInfo.editMessageEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue()
+            hook.deleteOriginal().queue()
         } else {
-            descriptionBuilder.append("**Stream**: `Live`\n")
+            // Send a new message and store it in the map
+            hook.sendMessageEmbeds(embed)
+                .setActionRow(pausePlayButton, stopButton)
+                .queue {
+                    logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
+                    nowPlayingManager.setNowPlayingMessage(guildId, it)
+                    nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L)
+                }
         }
-
-        val embed = EmbedBuilder()
-            .setTitle("Now Playing")
-            .setDescription(descriptionBuilder.toString())
-            .addField("Volume", "${audioPlayer.volume}", true)
-            .setColor(Color.GREEN)
-            .setFooter("Link: ${info.uri}", null)
-            .addField("Paused?", if (audioPlayer.isPaused) "yes" else "no", false)
-            .build()
-
-        return embed
     }
+
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
         return if (track == null) {

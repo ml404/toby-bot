@@ -1,9 +1,11 @@
 package toby.managers
 
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
+import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -162,5 +164,34 @@ class NowPlayingManagerTest {
 
         // Verify that the second message is correctly set
         assertEquals(message2, nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `test scheduleNowPlayingUpdate schedules update correctly`() {
+        // Given
+        val mockAudioPlayer = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioTrack = mockk<AudioTrack>(relaxed = true)
+        every { mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+
+        val guildId = 1L
+        val delay = 0L
+        val period = 1L
+
+        every { mockAudioPlayer.volume } returns 50
+        every { mockAudioPlayer.isPaused } returns false
+        every { mockAudioTrack.info } returns AudioTrackInfo("Test Title", "Test Author", 3000L, "", false, "http://example.com")
+
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
+
+        // When
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId, mockAudioTrack, mockAudioPlayer, delay, period)
+
+        // Sleep to allow the scheduled task to run
+        Thread.sleep(200)
+
+        // Then
+        coVerify(atLeast = 1) {
+            mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
     }
 }
