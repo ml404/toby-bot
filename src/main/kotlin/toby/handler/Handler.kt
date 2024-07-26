@@ -35,7 +35,6 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
-
 @Service
 @Configurable
 class Handler @Autowired constructor(
@@ -46,36 +45,34 @@ class Handler @Autowired constructor(
     excuseService: IExcuseService,
 ) : ListenerAdapter() {
 
-    private val commandManager =
-        CommandManager(configService, brotherService, userService, musicFileService, excuseService)
+    private val commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
     private val buttonManager = ButtonManager(configService, userService, commandManager)
     private val menuManager = MenuManager(configService)
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
+        event.jda.guildCache.forEach { guild -> connectToMostPopulatedVoiceChannel(guild) }
+    }
 
-        event.jda.guildCache.forEach { guild ->
-            val mostPopulatedChannel = guild.voiceChannels
-                .filter { channel ->
-                    channel.members.any { !it.user.isBot }
-                }
-                .maxByOrNull { channel ->
-                    channel.members.count { !it.user.isBot }
-                }
+    private fun connectToMostPopulatedVoiceChannel(guild: Guild) {
+        val mostPopulatedChannel = guild.voiceChannels
+            .filter { channel -> channel.members.any { !it.user.isBot } }
+            .maxByOrNull { channel -> channel.members.count { !it.user.isBot } }
 
-            if (mostPopulatedChannel != null && mostPopulatedChannel.members.count { !it.user.isBot } > 0) {
-                connectToVoiceChannel(mostPopulatedChannel)
-            } else {
-                logger.info("No suitable voice channel found in guild: ${guild.name}")
-            }
+        if (mostPopulatedChannel != null && mostPopulatedChannel.members.count { !it.user.isBot } > 0) {
+            connectToVoiceChannel(mostPopulatedChannel)
+        } else {
+            logger.info("No suitable voice channel found in guild: ${guild.name}")
         }
     }
 
     private fun connectToVoiceChannel(channel: VoiceChannel) {
-        val audioManager = channel.guild.audioManager
+        val guild = channel.guild
+        val audioManager = guild.audioManager
         if (!audioManager.isConnected) {
             audioManager.openAudioConnection(channel)
-            logger.info { "Connected to voice channel: ${channel.name} in guild: ${channel.guild.name}" }
+            logger.info { "Connected to voice channel: ${channel.name} in guild: ${guild.name}" }
+            lastConnectedChannel[guild.idLong] = channel as AudioChannelUnion
         }
     }
 
@@ -86,9 +83,7 @@ class Handler @Autowired constructor(
         val guild = event.guild
         val member = event.member
 
-        if (author.isBot || event.isWebhookMessage) {
-            return
-        }
+        if (author.isBot || event.isWebhookMessage) return
 
         val messageStringLowercase = message.contentRaw.lowercase(Locale.getDefault())
 
@@ -133,15 +128,19 @@ class Handler @Autowired constructor(
     }
 
     override fun onGuildReady(event: GuildReadyEvent) {
-        event.guild.updateCommands().addCommands(commandManager.allSlashCommands).queue()
+        updateCommands(event.guild)
     }
 
     override fun onGuildJoin(event: GuildJoinEvent) {
-        event.guild.updateCommands().addCommands(commandManager.allSlashCommands).queue()
+        updateCommands(event.guild)
     }
 
     override fun onGuildAvailable(event: GuildAvailableEvent) {
-        event.guild.updateCommands().addCommands(commandManager.allSlashCommands).queue()
+        updateCommands(event.guild)
+    }
+
+    private fun updateCommands(guild: Guild) {
+        guild.updateCommands().addCommands(commandManager.allSlashCommands).queue()
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
@@ -179,8 +178,7 @@ class Handler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig =
-            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
 
@@ -201,20 +199,7 @@ class Handler @Autowired constructor(
         }
     }
 
-//    private fun checkForNonIntroPlayingGames(nonBotConnectedMembers: List<Member>): List<Activity> {
-//        return nonBotConnectedMembers.map { member ->
-//            member.activities
-//                .filter { it.type === Activity.ActivityType.PLAYING }
-//                .first { it.name.equals("Street Fighter 6", true) }
-//        }.toList()
-//    }
-
-    private fun setupAndPlayUserIntro(
-        member: Member,
-        guild: Guild,
-        defaultVolume: Int,
-        deleteDelayConfig: ConfigDto?
-    ) {
+    private fun setupAndPlayUserIntro(member: Member, guild: Guild, defaultVolume: Int, deleteDelayConfig: ConfigDto?) {
         val requestingUserDto = getRequestingUserDto(member, defaultVolume)
         playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
     }
