@@ -22,7 +22,7 @@ class NowPlayingManager {
 
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
     private val lock = ReentrantReadWriteLock()
-    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+    private var scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
     fun setNowPlayingMessage(guildId: Long, message: Message) {
         lock.write {
@@ -71,6 +71,7 @@ class NowPlayingManager {
     }
 
     fun scheduleNowPlayingUpdate(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer, delay: Long, period: Long) {
+        scheduler = Executors.newScheduledThreadPool(1)
         scheduler.scheduleAtFixedRate({
             updateNowPlayingMessage(guildId, track, audioPlayer)
         }, delay, period, TimeUnit.SECONDS)
