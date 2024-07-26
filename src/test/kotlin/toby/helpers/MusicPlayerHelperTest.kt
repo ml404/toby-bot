@@ -12,10 +12,10 @@ import net.dv8tion.jda.api.interactions.components.ItemComponent
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.helpers.MusicPlayerHelper
-import toby.helpers.MusicPlayerHelper.NowPlayingInfo
 import toby.lavaplayer.PlayerManager
 
 class MusicPlayerHelperTest {
@@ -62,7 +62,7 @@ class MusicPlayerHelperTest {
 
     @AfterEach
     fun tearDown() {
-        MusicPlayerHelper.guildLastNowPlayingMessage.clear()
+        MusicPlayerHelper.nowPlayingManager.clear()
     }
 
     @Test
@@ -105,7 +105,7 @@ class MusicPlayerHelperTest {
         // Mock InteractionHook methods for sending a new message
         val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
         val message = mockk<Message>(relaxed = true)
-        createWebhookMocking(webhookCreateAction, NowPlayingInfo(playerManager, message))
+        createWebhookMocking(webhookCreateAction, message)
 
         // Perform nowPlaying action
         MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
@@ -132,17 +132,16 @@ class MusicPlayerHelperTest {
         val messageEditAction = mockk<MessageEditAction>(relaxed = true)
         val message = mockk<Message>(relaxed = true)
         val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
-        val nowPlayingInfo = NowPlayingInfo(playerManager, message)
-        createWebhookMocking(webhookCreateAction, nowPlayingInfo)
-        editWebhookMocking(messageEditAction, nowPlayingInfo)
+        createWebhookMocking(webhookCreateAction, message)
+        editWebhookMocking(messageEditAction, message)
         // Clear any existing messages
-        MusicPlayerHelper.guildLastNowPlayingMessage.clear()
+        MusicPlayerHelper.nowPlayingManager.clear()
 
         // Perform nowPlaying action
         MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
 
         // Verify that a new message was sent and stored
-        assert(MusicPlayerHelper.guildLastNowPlayingMessage.containsKey(guildId)) {
+        assertNotNull(MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId)) {
             "Expected guildLastNowPlayingMessage to contain a message for guildId $guildId"
         }
 
@@ -160,10 +159,10 @@ class MusicPlayerHelperTest {
 
     private fun editWebhookMocking(
         messageEditAction: MessageEditAction,
-        nowPlayingInfo: NowPlayingInfo
+        message: Message
     ) {
         every {
-            nowPlayingInfo.message.editMessageEmbeds(
+            message.editMessageEmbeds(
                 any<MessageEmbed>()
             )
         } returns messageEditAction
@@ -178,7 +177,7 @@ class MusicPlayerHelperTest {
 
     private fun createWebhookMocking(
         webhookCreateAction: WebhookMessageCreateAction<Message>,
-        nowPlayingInfo: NowPlayingInfo
+        message: Message
     ) {
         every { replyCallback.hook.sendMessageEmbeds(any<MessageEmbed>()) } returns webhookCreateAction
         every {
@@ -188,7 +187,7 @@ class MusicPlayerHelperTest {
             )
         } returns webhookCreateAction
         every { webhookCreateAction.queue(any()) } answers {
-            MusicPlayerHelper.guildLastNowPlayingMessage[guildId] = nowPlayingInfo
+            MusicPlayerHelper.nowPlayingManager.setNowPlayingMessage(guildId, message)
         }
     }
 }

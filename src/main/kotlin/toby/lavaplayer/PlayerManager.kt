@@ -71,14 +71,14 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             private val scheduler: TrackScheduler = musicManager.scheduler
 
             override fun trackLoaded(track: AudioTrack) {
-                event?.let { scheduler.event = it }
+                scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
                 scheduler.queue(track, startPosition, volume)
                 scheduler.setPreviousVolume(previousVolume)
             }
 
             override fun playlistLoaded(playlist: AudioPlaylist) {
-                event?.let { scheduler.event = it }
+                scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
                 scheduler.queueTrackList(playlist, volume)
             }
