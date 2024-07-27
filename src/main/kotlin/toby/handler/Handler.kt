@@ -49,28 +49,28 @@ class Handler @Autowired constructor(
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
-        event.jda.guildCache.forEach { guild -> connectToMostPopulatedVoiceChannel(guild) }
+        event.jda.guildCache.forEach { it.connectToMostPopulatedVoiceChannel() }
     }
 
-    private fun connectToMostPopulatedVoiceChannel(guild: Guild) {
-        val mostPopulatedChannel = guild.voiceChannels
+    private fun Guild.connectToMostPopulatedVoiceChannel() {
+        val mostPopulatedChannel = this.voiceChannels
             .filter { channel -> channel.members.any { !it.user.isBot } }
             .maxByOrNull { channel -> channel.members.count { !it.user.isBot } }
 
         if (mostPopulatedChannel != null && mostPopulatedChannel.members.count { !it.user.isBot } > 0) {
-            connectToVoiceChannel(mostPopulatedChannel)
+            mostPopulatedChannel.connectToVoiceChannel()
         } else {
-            logger.info("No suitable voice channel found in guild: ${guild.name}")
+            logger.info("No occupied voice channel to join found in guild: ${this.name}")
         }
     }
 
-    private fun connectToVoiceChannel(channel: VoiceChannel) {
-        val guild = channel.guild
+    private fun VoiceChannel.connectToVoiceChannel() {
+        val guild = this.guild
         val audioManager = guild.audioManager
         if (!audioManager.isConnected) {
-            audioManager.openAudioConnection(channel)
-            logger.info { "Connected to voice channel: ${channel.name} in guild: ${guild.name}" }
-            lastConnectedChannel[guild.idLong] = channel
+            audioManager.openAudioConnection(this)
+            logger.info { "Connected to voice channel: ${this.name} in guild: ${guild.name}" }
+            lastConnectedChannel[guild.idLong] = this
         }
     }
 
