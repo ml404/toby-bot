@@ -13,7 +13,7 @@ import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest.Companion.audioChannelUnion
 import toby.command.commands.music.MusicCommandTest.Companion.audioManager
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.memberVoiceState
 import toby.command.commands.music.MusicCommandTest.Companion.musicManager
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
@@ -43,7 +43,7 @@ internal class LeaveCommandTest : MusicCommandTest {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
 
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         every { memberVoiceState.channel } returns audioChannelUnion
         every { audioChannelUnion.name } returns "Channel Name"
@@ -66,8 +66,8 @@ internal class LeaveCommandTest : MusicCommandTest {
         verify(exactly = 1) { event.hook.sendMessage("Disconnecting from `\uD83D\uDD0A Channel Name`") }
         verify(exactly = 1) { scheduler.isLooping = false }
         verify(exactly = 1) { queue.clear() }
-        verify(exactly = 1) { audioPlayer.stopTrack() }
-        verify(exactly = 1) { audioPlayer.volume = 20 }
+        verify(exactly = 1) { mockAudioPlayer.stopTrack() }
+        verify(exactly = 1) { mockAudioPlayer.volume = 20 }
         verify(exactly = 1) { audioManager.closeAudioConnection() }
     }
 }

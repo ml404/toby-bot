@@ -32,7 +32,7 @@ internal class ShuffleCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption("skip") } returns optionMapping
@@ -66,7 +66,7 @@ internal class ShuffleCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption("skip") } returns optionMapping

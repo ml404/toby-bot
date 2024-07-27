@@ -11,7 +11,7 @@ import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.musicManager
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.track
@@ -36,7 +36,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
     fun test_nowDigOnThisCommand_withValidArguments() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         every { playerManager.getMusicManager(guild) } returns musicManager
 
@@ -90,7 +90,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
     fun test_nowDigOnThisCommand_withInvalidPermissionsArguments() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
 
         val linkOptionalMapping = mockk<OptionMapping>()

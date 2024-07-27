@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.track
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
@@ -38,7 +38,7 @@ internal class PlayCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
 
 

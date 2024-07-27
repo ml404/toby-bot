@@ -1,6 +1,5 @@
 package toby.command.commands.music
 
-import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.unmockkAll
 import io.mockk.verify
@@ -10,7 +9,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 
@@ -34,7 +33,7 @@ internal class LoopCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
         every { trackScheduler.isLooping } returns false
 
@@ -58,7 +57,7 @@ internal class LoopCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
         every { trackScheduler.isLooping } returns true
 

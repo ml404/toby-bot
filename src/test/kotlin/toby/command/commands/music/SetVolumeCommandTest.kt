@@ -37,7 +37,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         every { volumeOptionMapping.asInt } returns volumeArg
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
         val oldVolume = 21
-        every { MusicCommandTest.audioPlayer.volume } returns oldVolume
+        every { MusicCommandTest.mockAudioPlayer.volume } returns oldVolume
 
         // Act
         setVolumeCommand.handleMusicCommand(
@@ -48,7 +48,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { MusicCommandTest.audioPlayer.volume = volumeArg }
+        verify(exactly = 1) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
             event.hook.sendMessageFormat(
                 "Changing volume from '%s' to '%s' \uD83D\uDD0A",
@@ -69,7 +69,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         every { volumeOptionMapping.asInt } returns volumeArg
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
         val oldVolume = 20
-        every { MusicCommandTest.audioPlayer.volume } returns oldVolume
+        every { MusicCommandTest.mockAudioPlayer.volume } returns oldVolume
 
         // Act
         setVolumeCommand.handleMusicCommand(
@@ -80,7 +80,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 0) { MusicCommandTest.audioPlayer.volume = volumeArg }
+        verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
             event.hook.sendMessageFormat(
                 "New volume and old volume are the same value, somebody shoot %s",
@@ -100,7 +100,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         every { volumeOptionMapping.asInt } returns volumeArg
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
         val oldVolume = 20
-        every { MusicCommandTest.audioPlayer.volume } returns oldVolume
+        every { MusicCommandTest.mockAudioPlayer.volume } returns oldVolume
 
         // Act
         setVolumeCommand.handleMusicCommand(
@@ -111,7 +111,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 0) { MusicCommandTest.audioPlayer.volume = volumeArg }
+        verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
             event.hook.sendMessage(
                 "Set the volume of the audio player for the server to a percent value (between 1 and 100)"
@@ -130,7 +130,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         every { volumeOptionMapping.asInt } returns volumeArg
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
         val oldVolume = 20
-        every { MusicCommandTest.audioPlayer.volume } returns oldVolume
+        every { MusicCommandTest.mockAudioPlayer.volume } returns oldVolume
 
         // Act
         setVolumeCommand.handleMusicCommand(
@@ -141,7 +141,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 0) { MusicCommandTest.audioPlayer.volume = volumeArg }
+        verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
             event.hook.sendMessage(
                 "Set the volume of the audio player for the server to a percent value (between 1 and 100)"
@@ -160,7 +160,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         every { volumeOptionMapping.asInt } returns volumeArg
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
         val oldVolume = 21
-        every { MusicCommandTest.audioPlayer.volume } returns oldVolume
+        every { MusicCommandTest.mockAudioPlayer.volume } returns oldVolume
         every { CommandTest.requestingUserDto.musicPermission } returns false
         val tobyEmote = mockk<RichCustomEmoji>()
         every { CommandTest.jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
@@ -174,7 +174,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 0) { MusicCommandTest.audioPlayer.volume = volumeArg }
+        verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
             event.hook.sendMessageFormat(
                 "You aren't allowed to change the volume kid %s",
@@ -194,7 +194,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         every { volumeOptionMapping.asInt } returns volumeArg
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val oldVolume = 21
-        every { MusicCommandTest.audioPlayer.volume } returns oldVolume
+        every { MusicCommandTest.mockAudioPlayer.volume } returns oldVolume
         every { CommandTest.requestingUserDto.superUser } returns false
         val tobyEmote = mockk<RichCustomEmoji>()
         every { CommandTest.jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
@@ -209,7 +209,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 0) { MusicCommandTest.audioPlayer.volume = volumeArg }
+        verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
             hook.sendMessageFormat(
                 "You aren't allowed to change the volume kid %s",
