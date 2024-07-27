@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.requestingUserDto
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import java.awt.Color
 import java.util.concurrent.ArrayBlockingQueue
@@ -39,7 +39,7 @@ internal class PauseCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
 
         // Capture slot for MessageEmbed
@@ -69,7 +69,7 @@ internal class PauseCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         every { requestingUserDto.superUser } returns false
 
@@ -92,7 +92,7 @@ internal class PauseCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.isPaused } returns false
+        every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)
         queue.add(MusicCommandTest.track)

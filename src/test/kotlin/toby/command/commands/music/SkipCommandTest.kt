@@ -35,7 +35,7 @@ internal class SkipCommandTest : MusicCommandTest {
     fun test_skipCommand_withValidQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         every { event.getOption("skip") } returns mockk<OptionMapping> {
             every { asInt } returns 1
@@ -77,7 +77,7 @@ internal class SkipCommandTest : MusicCommandTest {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
         val hook = event.hook
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption("skip") } returns optionMapping
@@ -120,7 +120,7 @@ internal class SkipCommandTest : MusicCommandTest {
     fun test_skipCommandWithInvalidAmountOfTracksToSkip_withValidQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption("skip") } returns optionMapping
@@ -161,14 +161,14 @@ internal class SkipCommandTest : MusicCommandTest {
     fun test_skipCommandWithValidNumberOfTracksToSkip_withNoQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption("skip") } returns optionMapping
         every { optionMapping.asInt } returns 1
         every { trackScheduler.queue } returns ArrayBlockingQueue(1)
         every { MusicCommandTest.track.userData } returns 1
-        every { MusicCommandTest.audioPlayer.playingTrack } returns null
+        every { MusicCommandTest.mockAudioPlayer.playingTrack } returns null
 
         // Capture slot for MessageEmbed
         val embedSlot = slot<MessageEmbed>()

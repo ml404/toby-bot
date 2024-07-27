@@ -2,8 +2,6 @@ package toby.command.commands.music
 
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
-import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.handler.Handler
@@ -25,7 +23,7 @@ class JoinCommand(private val configService: IConfigService) : IMusicCommand {
         val self = ctx.selfMember ?: return
         val memberVoiceState = doJoinChannelValidation(ctx, deleteDelay) ?: return
         val audioManager = event.guild!!.audioManager
-        val memberChannel: AudioChannel? = memberVoiceState.channel
+        val memberChannel = memberVoiceState.channel?.asVoiceChannel()
 
         if (!requestingUserDto.musicPermission) {
             sendErrorMessage(event, deleteDelay!!)
@@ -38,7 +36,7 @@ class JoinCommand(private val configService: IConfigService) : IMusicCommand {
         }
 
         audioManager.openAudioConnection(memberChannel)
-        Handler.lastConnectedChannel[event.guild!!.idLong] = memberChannel as AudioChannelUnion
+        Handler.lastConnectedChannel[event.guild!!.idLong] = memberChannel!!
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val databaseConfig = configService.getConfigByName(volumePropertyName, event.guild?.id)
         val defaultVolume = databaseConfig?.value?.toInt() ?: 100
@@ -70,8 +68,4 @@ class JoinCommand(private val configService: IConfigService) : IMusicCommand {
 
     override val name: String = "join"
     override val description: String = "Makes the bot join your voice channel"
-
-    private fun sendErrorMessage(ctx: CommandContext, deleteDelay: Int) {
-        ctx.event.hook.sendMessage("You aren't allowed to use this command kid").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
-    }
 }

@@ -8,7 +8,7 @@ import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.track
 import toby.command.commands.music.NowPlayingCommand
 
@@ -36,7 +36,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
-        every { audioPlayer.playingTrack } returns null
+        every { mockAudioPlayer.playingTrack } returns null
 
         // Capture slot for MessageEmbed
         val embedSlot = slot<MessageEmbed>()
@@ -123,7 +123,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(event)
         val audioTrackInfo = AudioTrackInfo("Title", "Author", 1000L, "Identifier", false, "uri")
-        every { audioPlayer.playingTrack } returns track
+        every { mockAudioPlayer.playingTrack } returns track
         every { track.info } returns audioTrackInfo
         every { track.userData } returns 1
         every { track.position } returns 1000L

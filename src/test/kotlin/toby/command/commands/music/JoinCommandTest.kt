@@ -1,11 +1,9 @@
 package toby.command.commands.music
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import io.mockk.clearMocks
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -14,18 +12,15 @@ import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
-import toby.command.commands.music.MusicCommandTest.Companion.audioChannelUnion
 import toby.command.commands.music.MusicCommandTest.Companion.audioManager
-import toby.command.commands.music.MusicCommandTest.Companion.audioPlayer
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.botMember
 import toby.command.commands.music.MusicCommandTest.Companion.memberVoiceState
-import toby.command.commands.music.MusicCommandTest.Companion.musicManager
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.track
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
-import java.util.concurrent.ArrayBlockingQueue
 
 internal class JoinCommandTest : MusicCommandTest {
     lateinit var command: JoinCommand
@@ -42,24 +37,36 @@ internal class JoinCommandTest : MusicCommandTest {
     @AfterEach
     fun teardown() {
         tearDownCommonMusicMocks()
-        clearMocks(configService)
+        clearAllMocks()
     }
 
     @Test
     fun test_joinCommand() {
         setUpAudioChannelsWithBotNotInChannel()
+        // Setup mocks and stubs
+        val voiceChannel = mockk<VoiceChannel>() // Mock specific type if it's expected to be a VoiceChannel
+        val audioChannelUnion = mockk<AudioChannelUnion>()
         val commandContext = CommandContext(event)
 
-        every { audioPlayer.isPaused } returns false
-        every { audioPlayer.playingTrack } returns track
+        // Setup audio channel mocks
+        every { audioChannelUnion.asVoiceChannel() } returns voiceChannel
+        every { voiceChannel.name } returns "Channel Name"
+
+        // Mock behaviors for audio player and other services
+        every { mockAudioPlayer.isPaused } returns false
+        every { mockAudioPlayer.playingTrack } returns track
         every { playerManager.isCurrentlyStoppable } returns false
         every { memberVoiceState.channel } returns audioChannelUnion
-        every { audioChannelUnion.name } returns "Channel Name"
-        val queue: ArrayBlockingQueue<AudioTrack?> = mockk()
-        every { trackScheduler.queue } returns queue
+        every { trackScheduler.queue } returns mockk(relaxed = true)
         every { member.voiceState } returns memberVoiceState
         every { memberVoiceState.inAudioChannel() } returns true
         every { botMember.hasPermission(Permission.VOICE_CONNECT) } returns true
+        every { audioManager.openAudioConnection(any()) } just Runs
+        every { playerManager.getMusicManager(any()) } returns mockk(relaxed = true) {
+            every { audioPlayer } returns mockAudioPlayer
+        }
+        every { mockAudioPlayer.volume = 100 } just Runs
+        every { event.hook.sendMessage(any<String>()) } returns mockk(relaxed = true)
 
         // Act
         command.handleMusicCommand(
@@ -70,9 +77,10 @@ internal class JoinCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify(exactly = 1) { audioManager.openAudioConnection(audioChannelUnion) }
+        verify(exactly = 1) { audioManager.openAudioConnection(voiceChannel) }
         verify(exactly = 1) { playerManager.getMusicManager(guild) }
-        verify(exactly = 1) { audioPlayer.volume = 100 }
+        verify(exactly = 1) { mockAudioPlayer.volume = 100 }
         verify(exactly = 1) { event.hook.sendMessage(eq("Connecting to `\uD83D\uDD0A Channel Name` with volume '100'")) }
     }
+
 }

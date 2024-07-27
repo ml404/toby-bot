@@ -3,8 +3,6 @@ package toby.command.commands.music
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import io.mockk.*
-import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,7 +23,7 @@ internal class QueueCommandTest : MusicCommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMusicMocks()
-        clearMocks(CommandTest.event, MusicCommandTest.audioPlayer, MusicCommandTest.playerManager, MusicCommandTest.trackScheduler, MusicCommandTest.track, CommandTest.requestingUserDto)
+        clearMocks(CommandTest.event, MusicCommandTest.mockAudioPlayer, MusicCommandTest.playerManager, MusicCommandTest.trackScheduler, MusicCommandTest.track, CommandTest.requestingUserDto)
     }
 
     @Test
@@ -33,7 +31,7 @@ internal class QueueCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
 
         // Act
@@ -53,7 +51,7 @@ internal class QueueCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)
         queue.add(MusicCommandTest.track)
@@ -87,7 +85,7 @@ internal class QueueCommandTest : MusicCommandTest {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = CommandContext(CommandTest.event)
-        every { MusicCommandTest.audioPlayer.isPaused } returns false
+        every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(2)
         val track2 = mockk<AudioTrack>()

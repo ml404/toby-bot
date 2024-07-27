@@ -30,11 +30,11 @@ interface MusicCommandTest : CommandTest {
         every { interactionHook.interaction } returns interaction
         every { interaction.guild } returns guild
         every { playerManager.getMusicManager(guild) } returns musicManager
-        every { musicManager.audioPlayer } returns audioPlayer
+        every { musicManager.audioPlayer } returns mockAudioPlayer
         every { musicManager.sendHandler } returns audioPlayerSendHandler
         every { musicManager.scheduler } returns trackScheduler
         every { guild.audioManager } returns audioManager
-        every { audioPlayer.playingTrack } returns track
+        every { mockAudioPlayer.playingTrack } returns track
         every { trackScheduler.queue } returns ArrayBlockingQueue(1)
         every { track.info } returns AudioTrackInfo("Title", "Author", 20L, "Identifier", true, "uri")
         every { track.duration } returns 1000L
@@ -109,7 +109,7 @@ interface MusicCommandTest : CommandTest {
         val botMember: Member = mockk(relaxed = true)
         var playerManager: PlayerManager = mockk(relaxed = true)
         val musicManager: GuildMusicManager = mockk(relaxed = true)
-        val audioPlayer: AudioPlayer = mockk(relaxed = true)
+        val mockAudioPlayer: AudioPlayer = mockk(relaxed = true)
         val audioManager: AudioManager = mockk(relaxed = true)
         val audioPlayerSendHandler: AudioPlayerSendHandler = mockk(relaxed = true)
         val track: AudioTrack = mockk(relaxed = true)
