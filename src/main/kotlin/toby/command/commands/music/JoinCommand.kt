@@ -2,9 +2,11 @@ package toby.command.commands.music
 
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.handler.Handler
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
@@ -36,12 +38,13 @@ class JoinCommand(private val configService: IConfigService) : IMusicCommand {
         }
 
         audioManager.openAudioConnection(memberChannel)
+        Handler.lastConnectedChannel[event.guild!!.idLong] = memberChannel as VoiceChannel
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val databaseConfig = configService.getConfigByName(volumePropertyName, event.guild?.id)
         val defaultVolume = databaseConfig?.value?.toInt() ?: 100
         instance.getMusicManager(event.guild!!).audioPlayer.volume = defaultVolume
 
-        event.hook.sendMessage("Connecting to `\uD83D\uDD0A ${memberChannel?.name}` with volume '$defaultVolume'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage("Connecting to `\uD83D\uDD0A ${memberChannel.name}` with volume '$defaultVolume'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     private fun doJoinChannelValidation(ctx: CommandContext, deleteDelay: Int?): GuildVoiceState? {
@@ -67,5 +70,4 @@ class JoinCommand(private val configService: IConfigService) : IMusicCommand {
 
     override val name: String = "join"
     override val description: String = "Makes the bot join your voice channel"
-
 }

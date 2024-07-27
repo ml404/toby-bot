@@ -209,6 +209,7 @@ class HandlerTest {
         every { event.channelJoined } returns channel
         every { event.channelLeft } returns null
         every { channel.members } returns listOf(nonBotMember)
+        every { channel.asVoiceChannel() } returns mockk(relaxed = true)
         every { nonBotMember.user.isBot } returns false
         every { member.guild } returns guild
         every { member.isOwner } returns false
