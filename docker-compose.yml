@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    image: your_image_name  # Replace with your actual image name
+    ports:
+      - "8080:8080"
+    secrets:
+      - discord_token
+      - database_url
+
+secrets:
+  discord_token:
+    external: true
+  database_url:
+    external: true
