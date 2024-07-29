@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.helpers.MusicPlayerHelper.deriveDeleteDelayFromTrack
 import toby.helpers.MusicPlayerHelper.nowPlaying
+import toby.helpers.MusicPlayerHelper.nowPlayingManager
 import toby.helpers.MusicPlayerHelper.resetMessages
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -67,6 +68,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
         val guildId = event?.guild?.idLong
+        guildId?.let { nowPlayingManager.cancelScheduledTask(it) }
         logger.info("${track.info.title} by ${track.info.author} ended for guild $guildId")
         if (endReason.mayStartNext) {
             handleNextTrack(player, track)

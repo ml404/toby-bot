@@ -8,10 +8,7 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import toby.helpers.MusicPlayerHelper.formatTime
 import java.awt.Color
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -21,14 +18,14 @@ private val logger = KotlinLogging.logger {}
 class NowPlayingManager {
 
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
+    private val scheduledTasks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
     private val lock = ReentrantReadWriteLock()
-    private var scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(10)
 
     fun setNowPlayingMessage(guildId: Long, message: Message) {
         lock.write {
             logger.info { "Setting now playing message ${message.idLong} for guild $guildId" }
             guildLastNowPlayingMessage[guildId] = message
-            logger.info { "Now playing message set for guild $guildId" }
         }
     }
 
@@ -45,51 +42,53 @@ class NowPlayingManager {
 
     fun resetNowPlayingMessage(guildId: Long) {
         lock.write {
-            val message = guildLastNowPlayingMessage[guildId]
+            logger.info { "Resetting now playing message and cancelling scheduler for guild $guildId" }
+
+            val message = guildLastNowPlayingMessage.remove(guildId)
+            scheduledTasks.remove(guildId)?.cancel(true)
+
             if (message != null) {
-                logger.info { "Attempting to reset now playing message ${message.idLong} for guild $guildId" }
-                try {
-                    message.delete().submit()
-                        .whenComplete { _, error ->
-                            if (error != null) {
-                                logger.error(error) { "Failed to delete now playing message ${message.idLong} for guild $guildId" }
-                            } else {
-                                guildLastNowPlayingMessage.remove(guildId)
-                                scheduler.shutdownNow()
-                                logger.info { "Deleted now playing message ${message.idLong} for guild $guildId" }
-                            }
-                        }
-                } catch (e: Exception) {
-                    logger.error(e) { "Exception occurred while deleting now playing message ${message.idLong} for guild $guildId" }
+                logger.info { "Attempting to delete now playing message ${message.idLong} for guild $guildId" }
+                message.delete().submit().whenComplete { _, error ->
+                    if (error != null) {
+                        logger.error(error) { "Failed to delete now playing message ${message.idLong} for guild $guildId" }
+                    } else {
+                        logger.info { "Deleted now playing message ${message.idLong} for guild $guildId" }
+                    }
                 }
             } else {
-                guildLastNowPlayingMessage.remove(guildId) // Ensure entry is removed if it was already absent
-                scheduler.shutdownNow()
                 logger.info { "No now playing message to reset for guild $guildId" }
             }
         }
     }
 
     fun scheduleNowPlayingUpdate(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer, delay: Long, period: Long) {
-        scheduler = Executors.newScheduledThreadPool(1)
-        scheduler.scheduleAtFixedRate({
-            updateNowPlayingMessage(guildId, track, audioPlayer)
+        cancelScheduledTask(guildId)
+        val scheduledTask = scheduler.scheduleAtFixedRate({
+            try {
+                updateNowPlayingMessage(guildId, track, audioPlayer)
+            } catch (e: Exception) {
+                logger.error(e) { "Error occurred while updating now playing message for guild $guildId" }
+            }
         }, delay, period, TimeUnit.SECONDS)
+
+        scheduledTasks[guildId] = scheduledTask
     }
 
-    // Update now playing message periodically
     private fun updateNowPlayingMessage(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer) {
         lock.read {
             val message = guildLastNowPlayingMessage[guildId]
             message?.let {
                 val embed = buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)
-                it.editMessageEmbeds(embed).queue()
-                logger.info { "Updated now playing message ${it.idLong} for guild $guildId" }
+                message.editMessageEmbeds(embed).queue()
+                logger.info { "Updated now playing message ${message.idLong} for guild $guildId" }
             }
         }
     }
 
-    fun buildNowPlayingMessageData(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed = buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)
+    fun buildNowPlayingMessageData(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
+        return buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)
+    }
 
     private fun buildNowPlayingMessageData(track: AudioTrack, volume: Int, isPaused: Boolean): MessageEmbed {
         val info = track.info
@@ -105,7 +104,7 @@ class NowPlayingManager {
             descriptionBuilder.append("**Stream**: `Live`\n")
         }
 
-        val embed = EmbedBuilder()
+        return EmbedBuilder()
             .setTitle("Now Playing")
             .setDescription(descriptionBuilder.toString())
             .addField("Volume", "$volume", true)
@@ -113,17 +112,19 @@ class NowPlayingManager {
             .setFooter("Link: ${info.uri}", null)
             .addField("Paused?", if (isPaused) "yes" else "no", false)
             .build()
-
-        return embed
     }
 
-    fun shutdownExecutor() = scheduler.shutdownNow()
-
+    fun cancelScheduledTask(guildId: Long) {
+        lock.write {
+            scheduledTasks.remove(guildId)?.cancel(true)
+        }
+    }
 
     fun clear() {
         lock.write {
             guildLastNowPlayingMessage.clear()
-            scheduler.shutdownNow()
+            scheduledTasks.values.forEach { it.cancel(true) }
+            scheduledTasks.clear()
         }
     }
 }

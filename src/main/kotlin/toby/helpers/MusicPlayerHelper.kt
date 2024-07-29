@@ -86,7 +86,6 @@ object MusicPlayerHelper {
         nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L)
     }
 
-
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
         return if (track == null) {
             logger.warn { "No track is currently playing on guild ${hook.interaction.guild?.idLong}.." }
@@ -198,7 +197,7 @@ object MusicPlayerHelper {
                 musicManager.scheduler.nextTrack()
             }
             musicManager.scheduler.isLooping = false
-            nowPlayingManager.shutdownExecutor()
+            nowPlayingManager.cancelScheduledTask(event.guild?.idLong!!)
 
             val embed = EmbedBuilder()
                 .setTitle("Tracks Skipped")
