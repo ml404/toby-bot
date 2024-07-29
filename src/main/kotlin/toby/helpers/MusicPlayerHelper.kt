@@ -198,7 +198,6 @@ object MusicPlayerHelper {
                 musicManager.scheduler.nextTrack()
             }
             musicManager.scheduler.isLooping = false
-            nowPlayingManager.resetNowPlayingMessage(event.guild?.idLong!!)
 
             val embed = EmbedBuilder()
                 .setTitle("Tracks Skipped")

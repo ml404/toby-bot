@@ -80,10 +80,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
         } else {
             PlayerManager.instance.isCurrentlyStoppable = true
             player.setVolumeToPrevious()
-            queue.peek()?.let {
-                nextTrack()
-                event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
-            }
+            queue.peek()?.let { nextTrack() }
         }
     }
 
