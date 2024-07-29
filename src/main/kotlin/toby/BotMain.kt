@@ -32,8 +32,7 @@ open class BotMain @Autowired constructor(
         }
 
         // Fetch the Discord token from the environment
-        val discordToken = System.getenv("TOKEN")
-            ?: throw MissingEnvironmentVariableException("TOKEN environment variable is not set.")
+        val discordToken = System.getenv("TOKEN") ?: throw MissingEnvironmentVariableException("TOKEN environment variable is not set.")
 
         val builder = JDABuilder.createDefault(
             discordToken,
