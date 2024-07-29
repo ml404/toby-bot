@@ -26,7 +26,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
         return if ((databaseMusicFile == null)) persistMusicDto(musicDto) else updateMusicFile(musicDto)
     }
 
-    override fun getMusicFileById(id: String?): MusicDto {
+    override fun getMusicFileById(id: String?): MusicDto? {
         // Create a native SQL query to retrieve the size of the music_blob column
         val sql = "SELECT LENGTH(music_blob) AS data_size FROM music_files WHERE id = :id"
 
@@ -43,7 +43,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
 
         val q: Query = entityManager.createNamedQuery("MusicDto.getById", MusicDto::class.java)
         q.setParameter("id", id)
-        return q.singleResult as MusicDto
+        return runCatching { q.singleResult as MusicDto }.getOrNull()
     }
 
     override fun updateMusicFile(musicDto: MusicDto?): MusicDto? {

@@ -20,7 +20,7 @@ open class MusicFileServiceImpl : IMusicFileService {
     }
 
     @CachePut(value = ["music"], key = "#id")
-    override fun getMusicFileById(id: String?): MusicDto {
+    override fun getMusicFileById(id: String?): MusicDto? {
         return musicFileService.getMusicFileById(id)
     }
 
