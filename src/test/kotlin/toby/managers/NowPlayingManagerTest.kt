@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test
 import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
 
-
 class NowPlayingManagerTest {
 
     private lateinit var nowPlayingManager: NowPlayingManager
@@ -192,6 +191,158 @@ class NowPlayingManagerTest {
         // Then
         coVerify(atLeast = 1) {
             mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
+    }
+
+    @Test
+    fun `test concurrent scheduling and updating for multiple guilds`() {
+        // Given
+        val mockAudioPlayer1 = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioPlayer2 = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioTrack1 = mockk<AudioTrack>(relaxed = true)
+        val mockAudioTrack2 = mockk<AudioTrack>(relaxed = true)
+        every { mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+        every { mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+
+        val guildId1 = 1L
+        val guildId2 = 2L
+        val delay = 0L
+        val period = 1L
+
+        every { mockAudioPlayer1.volume } returns 50
+        every { mockAudioPlayer1.isPaused } returns false
+        every { mockAudioPlayer2.volume } returns 50
+        every { mockAudioPlayer2.isPaused } returns false
+        every { mockAudioTrack1.info } returns AudioTrackInfo("Test Title 1", "Test Author 1", 3000L, "", false, "http://example.com")
+        every { mockAudioTrack2.info } returns AudioTrackInfo("Test Title 2", "Test Author 2", 3000L, "", false, "http://example.com")
+
+        nowPlayingManager.setNowPlayingMessage(guildId1, mockMessage1)
+        nowPlayingManager.setNowPlayingMessage(guildId2, mockMessage2)
+
+        // When
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId1, mockAudioTrack1, mockAudioPlayer1, delay, period)
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId2, mockAudioTrack2, mockAudioPlayer2, delay, period)
+
+        // Sleep to allow the scheduled task to run
+        Thread.sleep(200)
+
+        // Then
+        coVerify(atLeast = 1) {
+            mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
+        coVerify(atLeast = 1) {
+            mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
+    }
+
+    @Test
+    fun `test cancelScheduledTask cancels task`() {
+        // Given
+        val guildId = 1L
+        val mockAudioPlayer = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioTrack = mockk<AudioTrack>(relaxed = true)
+        every { mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+
+        val delay = 0L
+        val period = 1L
+
+        every { mockAudioPlayer.volume } returns 50
+        every { mockAudioPlayer.isPaused } returns false
+        every { mockAudioTrack.info } returns AudioTrackInfo("Test Title", "Test Author", 3000L, "", false, "http://example.com")
+
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId, mockAudioTrack, mockAudioPlayer, delay, period)
+
+        // Sleep to allow the scheduled task to run
+        Thread.sleep(200)
+
+        // When
+        nowPlayingManager.cancelScheduledTask(guildId)
+
+        // Sleep to allow any pending tasks to be cancelled
+        Thread.sleep(200)
+
+        // Then
+        coVerify(atMost = 1) {
+            mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
+    }
+
+    @Test
+    fun `test resetNowPlayingMessage cancels scheduled task`() {
+        // Given
+        val guildId = 1L
+        val mockAudioPlayer = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioTrack = mockk<AudioTrack>(relaxed = true)
+        every { mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+
+        val delay = 0L
+        val period = 1L
+
+        every { mockAudioPlayer.volume } returns 50
+        every { mockAudioPlayer.isPaused } returns false
+        every { mockAudioTrack.info } returns AudioTrackInfo("Test Title", "Test Author", 3000L, "", false, "http://example.com")
+
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId, mockAudioTrack, mockAudioPlayer, delay, period)
+
+        // Sleep to allow the scheduled task to run
+        Thread.sleep(200)
+
+        // When
+        nowPlayingManager.resetNowPlayingMessage(guildId)
+
+        // Sleep to allow any pending tasks to be cancelled
+        Thread.sleep(200)
+
+        // Then
+        coVerify(atMost = 1) {
+            mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
+    }
+
+    @Test
+    fun `test clear cancels all scheduled tasks`() {
+        // Given
+        val guildId1 = 1L
+        val guildId2 = 2L
+        val mockAudioPlayer1 = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioPlayer2 = mockk<AudioPlayer>(relaxed = true)
+        val mockAudioTrack1 = mockk<AudioTrack>(relaxed = true)
+        val mockAudioTrack2 = mockk<AudioTrack>(relaxed = true)
+        every { mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+        every { mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue() } just Runs
+
+        val delay = 0L
+        val period = 1L
+
+        every { mockAudioPlayer1.volume } returns 50
+        every { mockAudioPlayer1.isPaused } returns false
+        every { mockAudioPlayer2.volume } returns 50
+        every { mockAudioPlayer2.isPaused } returns false
+        every { mockAudioTrack1.info } returns AudioTrackInfo("Test Title 1", "Test Author 1", 3000L, "", false, "http://example.com")
+        every { mockAudioTrack2.info } returns AudioTrackInfo("Test Title 2", "Test Author 2", 3000L, "", false, "http://example.com")
+
+        nowPlayingManager.setNowPlayingMessage(guildId1, mockMessage1)
+        nowPlayingManager.setNowPlayingMessage(guildId2, mockMessage2)
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId1, mockAudioTrack1, mockAudioPlayer1, delay, period)
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId2, mockAudioTrack2, mockAudioPlayer2, delay, period)
+
+        // Sleep to allow the scheduled task to run
+        Thread.sleep(200)
+
+        // When
+        nowPlayingManager.clear()
+
+        // Sleep to allow any pending tasks to be cancelled
+        Thread.sleep(200)
+
+        // Then
+        coVerify(atMost = 1) {
+            mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
+        }
+        coVerify(atMost = 1) {
+            mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
 }

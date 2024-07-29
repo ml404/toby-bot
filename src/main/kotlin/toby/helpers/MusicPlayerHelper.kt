@@ -81,11 +81,10 @@ object MusicPlayerHelper {
                 .queue {
                     logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
                     nowPlayingManager.setNowPlayingMessage(guildId, it)
-                    nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L)
                 }
         }
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L)
     }
-
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
         return if (track == null) {
@@ -198,6 +197,7 @@ object MusicPlayerHelper {
                 musicManager.scheduler.nextTrack()
             }
             musicManager.scheduler.isLooping = false
+            nowPlayingManager.cancelScheduledTask(event.guild?.idLong!!)
 
             val embed = EmbedBuilder()
                 .setTitle("Tracks Skipped")
