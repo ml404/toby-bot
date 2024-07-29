@@ -68,10 +68,10 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
         val guildId = event?.guild?.idLong
         logger.info("${track.info.title} by ${track.info.author} ended for guild $guildId")
-        guildId.resetMessagesForGuildId()
         if (endReason.mayStartNext) {
             handleNextTrack(player, track)
         }
+        guildId?.takeIf { queue.isEmpty() && player.playingTrack == null }?.let { it.resetMessagesForGuildId() }
     }
 
     private fun handleNextTrack(player: AudioPlayer, track: AudioTrack) {
