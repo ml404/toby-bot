@@ -35,17 +35,17 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
         entityManager.flush()
     }
 
-    override fun getUserById(discordId: Long?, guildId: Long?): UserDto {
+    override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {
         val userQuery: Query = entityManager.createNamedQuery("UserDto.getById", UserDto::class.java)
         userQuery.setParameter("discordId", discordId)
         userQuery.setParameter("guildId", guildId)
-        return userQuery.singleResult as UserDto
+        return runCatching { userQuery.singleResult as UserDto }.getOrNull()
     }
 
     override fun updateUser(userDto: UserDto): UserDto {
         val dbUser = getUserById(userDto.discordId, userDto.guildId)
         val musicFileById = musicFileService.getMusicFileById(userDto.musicDto?.id)
-        val requestMusicDto = dbUser.musicDto
+        val requestMusicDto = dbUser?.musicDto
         if (requestMusicDto != musicFileById) {
             musicFileService.updateMusicFile(requestMusicDto)
         }

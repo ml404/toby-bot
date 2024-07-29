@@ -193,11 +193,11 @@ object MusicPlayerHelper {
 
         if (playerManager.isCurrentlyStoppable || canOverrideSkips) {
             logger.info { "Skipping $tracksToSkip track(s) on guild ${event.guild?.idLong}." }
+            nowPlayingManager.cancelScheduledTask(event.guild?.idLong!!)
             repeat(tracksToSkip) {
                 musicManager.scheduler.nextTrack()
             }
             musicManager.scheduler.isLooping = false
-            nowPlayingManager.cancelScheduledTask(event.guild?.idLong!!)
 
             val embed = EmbedBuilder()
                 .setTitle("Tracks Skipped")
