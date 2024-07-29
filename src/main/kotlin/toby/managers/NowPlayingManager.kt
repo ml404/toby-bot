@@ -117,6 +117,8 @@ class NowPlayingManager {
         return embed
     }
 
+    fun shutdownExecutor() = scheduler.shutdownNow()
+
 
     fun clear() {
         lock.write {
