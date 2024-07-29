@@ -39,7 +39,6 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
         val userQuery: Query = entityManager.createNamedQuery("UserDto.getById", UserDto::class.java)
         userQuery.setParameter("discordId", discordId)
         userQuery.setParameter("guildId", guildId)
-        userQuery.singleResult.runCatching { }
         return runCatching { userQuery.singleResult as UserDto }.getOrNull()
     }
 
