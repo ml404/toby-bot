@@ -68,12 +68,10 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
         val guildId = event?.guild?.idLong
         logger.info("${track.info.title} by ${track.info.author} ended for guild $guildId")
+        guildId.resetMessagesForGuildId()
         if (endReason.mayStartNext) {
             handleNextTrack(player, track)
-        } else {
-            guildId.resetMessagesForGuildId()
         }
-        guildId?.takeIf { queue.isEmpty() && player.playingTrack == null }?.let { it.resetMessagesForGuildId() }
     }
 
     private fun handleNextTrack(player: AudioPlayer, track: AudioTrack) {
@@ -81,7 +79,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
             player.startTrack(track.makeClone(), false)
         } else {
             PlayerManager.instance.isCurrentlyStoppable = true
-            setVolumeToPrevious(player)
+            player.setVolumeToPrevious()
             queue.peek()?.let {
                 nextTrack()
                 event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
@@ -89,9 +87,9 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
         }
     }
 
-    private fun setVolumeToPrevious(player: AudioPlayer) {
+    private fun AudioPlayer.setVolumeToPrevious() {
         if (previousVolume != null && player.volume != previousVolume) {
-            player.volume = previousVolume as Int
+            this.volume = previousVolume as Int
             event?.channel
                 ?.sendMessageFormat("Setting volume back to '$previousVolume' \uD83D\uDD0A")
                 ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -110,7 +108,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     fun stopTrack(isStoppable: Boolean): Boolean {
         if (!isStoppable) return false
         player.stopTrack()
-        setVolumeToPrevious(player)
+        player.setVolumeToPrevious()
         return true
     }
 
