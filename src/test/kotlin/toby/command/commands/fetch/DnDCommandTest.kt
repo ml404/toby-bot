@@ -1,25 +1,31 @@
 package toby.command.commands.fetch
 
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.command.commands.dnd.DnDCommand
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
-internal class DnDCommandTest : CommandTest {
-    lateinit var command: DnDCommand
+class DnDCommandTest : CommandTest {
+
+    private lateinit var command: DnDCommand
+    private lateinit var httpHelper: HttpHelper
+    private val deleteDelay = 0
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
+        httpHelper = mockk(relaxed = true)
         command = DnDCommand()
         every {
             event.hook.sendMessageEmbeds(
@@ -32,366 +38,89 @@ internal class DnDCommandTest : CommandTest {
     @AfterEach
     fun tearDown() {
         tearDownCommonMocks()
+        unmockkAll()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun test_DnDCommandWithTypeAsSpell() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet(any()) } returns spellJson
-        every { typeMapping.asString } returns "spells"
-        every { typeMapping.name } returns "spell"
-        every { queryMapping.asString } returns "fireball"
-        every { webhookMessageCreateAction.queue() } just Runs
+    fun `should handle successful lookup and reply with embed`() = runTest {
+        // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
+        every { httpHelper.fetchFromGet(any()) } returns fireballJson andThen noQueryFound
 
-        //Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        val embedSlot = slot<MessageEmbed>()
         command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
+            event,
+            "spell",
+            "spells",
+            "fireball",
+            httpHelper,
+            deleteDelay
         )
 
-        //Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 1) { helper.fetchFromGet(any()) }
-    }
+       // Ensure all asynchronous code completes
+        advanceUntilIdle()
 
-    @Test
-    fun test_DnDCommandWithTypeAsSpell_AndNothingIsReturnedForQuery() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet(any()) } returns ""
-        every { typeMapping.asString } returns "spells"
-        every { typeMapping.name } returns "spell"
-        every { queryMapping.asString } returns "fireball"
-
-        //Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
-        command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping?.name,
-            typeOptionMapping?.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
-        )
-
-        //Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 2) { helper.fetchFromGet(any()) }
-        verify(exactly = 1) {
-            event.hook.sendMessage(
-                "Sorry, nothing was returned for spell 'fireball'"
-            )
+        // Verify interactions and responses
+        coVerify {
+            DnDHelper.doInitialLookup("spell", "spells", "fireball", httpHelper)
+            DnDHelper.queryNonMatchRetry("spells", "fireball", httpHelper)
+            event.hook.sendMessageEmbeds(capture(embedSlot))
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun test_DnDCommandWithTypeAsSpell_AndSomethingIsReturnedForCloseMatchQuery() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/spells/Fireball") } returns ""
-        every { typeMapping.asString } returns "spells"
-        every { typeMapping.name } returns "spell"
-        every { queryMapping.asString } returns "Fireball"
-        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/spells?name=Fireball") } returns """
-            {"count":2,"results":[{"index":"delayed-blast-fireball","name":"Delayed Blast Fireball","url":"/api/spells/delayed-blast-fireball"},{"index":"fireball","name":"Fireball","url":"/api/spells/fireball"}]}
-        """.trimIndent()
-        every { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns webhookMessageCreateAction
-        every { webhookMessageCreateAction.queue() } just Runs
+    fun `should handle no initial results but successful followup scenario`() = runTest {
+        // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
 
-        //Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
+        every { httpHelper.fetchFromGet(any()) } returns noQueryFound andThen blindJson
+
         command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
+            event,
+            "condition",
+            "conditions",
+            "blind",
+            httpHelper,
+            deleteDelay
         )
 
-        //Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 2) { helper.fetchFromGet(any()) }
-        verify(exactly = 1) {
-            event.hook.sendMessage("Your query 'Fireball' didn't return a value, but these close matches were found, please select one as appropriate")
+        // Verify interactions and responses
+        coVerify {
+            DnDHelper.doInitialLookup("condition", "conditions", "blind", httpHelper)
+            DnDHelper.queryNonMatchRetry("conditions", "blind", httpHelper)
+            event.hook.sendMessage(any<String>()).setActionRow(any<StringSelectMenu>()).queue()
         }
-        verify(exactly = 1) { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun test_DnDCommandWithTypeAsCondition() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet(any()) } returns conditionJson
-        every { typeMapping.asString } returns "conditions"
-        every { typeMapping.name } returns "condition"
-        every { queryMapping.asString } returns "grappled"
-        every { webhookMessageCreateAction.queue() } just Runs
+    fun `should handle no results scenario`() = runTest {
+        // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
+        every { httpHelper.fetchFromGet(any()) } returns noQueryFound andThen noQueryFound
 
-        //Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
         command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
+            event,
+            "condition",
+            "conditions",
+            "bli",
+            httpHelper,
+            deleteDelay
         )
 
-        //Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 1) { helper.fetchFromGet(any()) }
-    }
-
-    @Test
-    fun test_DnDCommandWithTypeAsCondition_AndNothingIsReturnedForQuery() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        noQueryReturn("condition", "conditions", commandContext)
-    }
-
-    @Test
-    fun test_DnDCommandWithTypeAsRule() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet(any()) } returns ruleJson
-        every { typeMapping.asString } returns "rule-sections"
-        every { typeMapping.name } returns "rule"
-        every { queryMapping.asString } returns "cover"
-        every { webhookMessageCreateAction.queue() } just Runs
-
-        //Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
-        command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
-        )
-
-        //Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 1) { helper.fetchFromGet(any()) }
-    }
-
-    @Test
-    fun test_DnDCommandWithTypeAsRule_AndNothingIsReturnedForQuery() {
-        //Arrange
-        val commandContext = CommandContext(event)
-        noQueryReturn("rule", "rule-sections", commandContext)
-    }
-
-    @Test
-    fun test_DnDCommandWithTypeAsRule_AndSomethingIsReturnedForCloseMatchQuery() {
-        // Arrange
-        val commandContext = CommandContext(event)
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        // Correct URLs in the mocks
-        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/rule-sections/cover".trimIndent()) } returns ""
-        every { typeMapping.asString } returns "rule-sections"
-        every { typeMapping.name } returns "rule"
-        every { queryMapping.asString } returns "cover"
-        every { helper.fetchFromGet("https://www.dnd5eapi.co/api/rule-sections?name=cover".trimIndent()) } returns """
-        {"count":2,"results":[{"index":"cover","name":"Cover","url":"/api/rule-sections/cover"},{"index":"half-cover","name":"Half Cover","url":"/api/rule-sections/half-cover"}]}
-    """.trimIndent()
-        every { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns webhookMessageCreateAction
-        every { webhookMessageCreateAction.queue() } just Runs
-
-        // Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
-        command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
-        )
-
-        // Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 2) { helper.fetchFromGet(any()) }
-        verify(exactly = 1) {
-            event.hook.sendMessage("Your query 'cover' didn't return a value, but these close matches were found, please select one as appropriate")
-        }
-        verify(exactly = 1) { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) }
-    }
-
-    private fun noQueryReturn(typeName: String, typeOption: String, commandContext: CommandContext) {
-        val typeMapping = mockk<OptionMapping>()
-        val queryMapping = mockk<OptionMapping>()
-        every { event.getOption("type") } returns typeMapping
-        every { event.getOption("query") } returns queryMapping
-        every { event.interaction } returns event
-        val helper = mockk<HttpHelper>()
-        every { helper.fetchFromGet(any()) } returns ""
-        every { typeMapping.asString } returns typeOption
-        every { typeMapping.name } returns typeName
-        every { queryMapping.asString } returns "fireball"
-
-        //Act
-        val typeOptionMapping = commandContext.event.getOption(DnDCommand.TYPE)
-        command.handleWithHttpObjects(
-            commandContext.event,
-            typeOptionMapping!!.name,
-            typeOptionMapping.asString,
-            commandContext.event.getOption(DnDCommand.QUERY)!!.asString,
-            helper,
-            0
-        )
-
-        //Assert
-        verify(exactly = 1) { event.getOption("type") }
-        verify(exactly = 1) { event.getOption("query") }
-        verify(exactly = 2) { helper.fetchFromGet(any()) }
-        verify(exactly = 1) {
-            event.hook.sendMessage("Sorry, nothing was returned for $typeName 'fireball'")
+        // Verify interactions and responses
+        coVerify {
+            DnDHelper.doInitialLookup("condition", "conditions", "bli", httpHelper)
+            DnDHelper.queryNonMatchRetry("conditions", "bli", httpHelper)
+            event.hook.sendMessage(any<String>()).queue()
         }
     }
 
     companion object {
-        private const val spellJson = """
-            {
-                "index": "fireball",
-                "name": "Fireball",
-                "desc": [
-                    "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame."
-                ],
-                "higher_level": [
-                    "When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd."
-                ],
-                "range": "150 feet",
-                "components": [
-                    "V",
-                    "S",
-                    "M"
-                ],
-                "material": "A tiny ball of bat guano and sulfur.",
-                "ritual": false,
-                "duration": "Instantaneous",
-                "concentration": false,
-                "casting_time": "1 action",
-                "level": 3,
-                "attack_type": "ranged",
-                "damage": {
-                    "damage_type": {
-                        "index": "fire",
-                        "name": "Fire",
-                        "url": "/api/damage-types/fire"
-                    },
-                    "damage_at_slot_level": {
-                        "3": "8d6",
-                        "4": "9d6",
-                        "5": "10d6",
-                        "6": "11d6",
-                        "7": "12d6",
-                        "8": "13d6",
-                        "9": "14d6"
-                    }
-                },
-                "school": {
-                    "index": "evocation",
-                    "name": "Evocation",
-                    "url": "/api/magic-schools/evocation"
-                },
-                "classes": [
-                    {
-                        "index": "sorcerer",
-                        "name": "Sorcerer",
-                        "url": "/api/classes/sorcerer"
-                    },
-                    {
-                        "index": "wizard",
-                        "name": "Wizard",
-                        "url": "/api/classes/wizard"
-                    }
-                ],
-                "subclasses": [
-                    {
-                        "index": "lore",
-                        "name": "Lore",
-                        "url": "/api/subclasses/lore"
-                    },
-                    {
-                        "index": "fiend",
-                        "name": "Fiend",
-                        "url": "/api/subclasses/fiend"
-                    }
-                ],
-                "url": "/api/spells/fireball"
-            }
-        """
-
-        private const val conditionJson = """
-            {
-                "index": "grappled",
-                "name": "Grappled",
-                "desc": [
-                    "A grappled creature’s speed becomes 0, and it can’t benefit from any bonus to its speed.",
-                    "The condition ends if the grappler is incapacitated (see the condition).",
-                    "The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."
-                ],
-                "url": "/api/conditions/grappled"
-            }
-        """
-
-        private const val ruleJson = """
-                {
-                "name":"Cover",
-                "index":"cover",
-                "desc":"## Cover\\n\\nWalls, trees, creatures, and other obstacles can provide cover during combat, making a target more difficult to harm. A target can benefit from cover only when an attack or other effect originates on the opposite side of the cover.\\n\\nThere are three degrees of cover. If a target is behind multiple sources of cover, only the most protective degree of cover applies; the degrees aren't added together. For example, if a target is behind a creature that gives half cover and a tree trunk that gives three-quarters cover, the target has three-quarters cover.\\n\\nA target with **half cover** has a +2 bonus to AC and Dexterity saving throws. A target has half cover if an obstacle blocks at least half of its body. The obstacle might be a low wall, a large piece of furniture, a narrow tree trunk, or a creature, whether that creature is an enemy or a friend.\\n\\nA target with **three-quarters cover** has a +5 bonus to AC and Dexterity saving throws. A target has three-quarters cover if about three-quarters of it is covered by an obstacle. The obstacle might be a portcullis, an arrow slit, or a thick tree trunk.\\n\\nA target with **total cover** can't be targeted directly by an attack or a spell, although some spells can reach such a target by including it in an area of effect. A target has total cover if it is completely concealed by an obstacle.\\n","url":"/api/rule-sections/cover"}"""
+        const val fireballJson =
+            """{"index":"fireball","name":"Fireball","desc":["A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.","The fire spreads around corners. It ignites flammable objects in the area that aren't being worn or carried."],"higher_level":["When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd."],"range":"150 feet","components":["V","S","M"],"material":"A tiny ball of bat guano and sulfur.","ritual":false,"duration":"Instantaneous","concentration":false,"casting_time":"1 action","level":3,"damage":{"damage_type":{"index":"fire","name":"Fire","url":"/api/damage-types/fire"},"damage_at_slot_level":{"3":"8d6","4":"9d6","5":"10d6","6":"11d6","7":"12d6","8":"13d6","9":"14d6"}},"dc":{"dc_type":{"index":"dex","name":"DEX","url":"/api/ability-scores/dex"},"dc_success":"half"},"area_of_effect":{"type":"sphere","size":20},"school":{"index":"evocation","name":"Evocation","url":"/api/magic-schools/evocation"},"classes":[{"index":"sorcerer","name":"Sorcerer","url":"/api/classes/sorcerer"},{"index":"wizard","name":"Wizard","url":"/api/classes/wizard"}],"subclasses":[{"index":"lore","name":"Lore","url":"/api/subclasses/lore"},{"index":"fiend","name":"Fiend","url":"/api/subclasses/fiend"}],"url":"/api/spells/fireball"}"""
+        const val blindJson =
+            """{"count":1,"results":[{"index":"blinded","name":"Blinded","url":"/api/conditions/blinded"}]}"""
+        const val noQueryFound = """{"error":"Not found"}"""
     }
 }
+

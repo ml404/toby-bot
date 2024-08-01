@@ -5,11 +5,13 @@ data class Rule(
     val name: String?,
     val desc: String?,
     val url: String?
-)
+): DnDResponse {
+    override fun isValidReturnObject(): Boolean =
+        !(index == null &&
+                name == null &&
+                desc.isNullOrEmpty() &&
+                url == null)
 
-fun Rule.isAllFieldsNull(): Boolean =
-            index == null &&
-            name == null &&
-            desc.isNullOrEmpty() &&
-            url == null
+}
+
 

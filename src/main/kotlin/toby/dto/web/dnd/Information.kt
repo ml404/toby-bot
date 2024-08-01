@@ -5,10 +5,11 @@ data class Information(
     val name: String?,
     val desc: List<String>?,
     val url: String?
-)
+): DnDResponse {
+    override fun isValidReturnObject(): Boolean =
+        !(index == null &&
+                name == null &&
+                desc.isNullOrEmpty()
+                && url == null)
 
-fun Information.isAllFieldsNull(): Boolean =
-            index == null &&
-            name == null &&
-            desc.isNullOrEmpty()
-            && url == null
+}

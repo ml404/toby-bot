@@ -2,7 +2,8 @@ package toby.menu.menus
 
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import toby.command.commands.dnd.DnDCommand.Companion.doLookUpAndReply
+import toby.helpers.DnDHelper.toEmbed
+import toby.helpers.DnDHelper.doInitialLookup
 import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
@@ -13,14 +14,13 @@ class DndMenu : IMenu {
         event.deferReply().queue()
         val type = event.toTypeString()
         runCatching {
-            event.determineDnDRequestType(deleteDelay, type, event.hook)
+            event.determineDnDRequestType(type, event.hook)
         }.onFailure {
             throw RuntimeException(it)
         }
     }
 
     private fun StringSelectInteractionEvent.determineDnDRequestType(
-        deleteDelay: Int,
         type: String,
         hook: InteractionHook
     ) {
@@ -31,18 +31,18 @@ class DndMenu : IMenu {
             FEATURE_NAME -> "features"
             else -> throw IllegalArgumentException("Unknown DnD request type: $type")
         }
-        sendDndApiRequest(typeName, type, deleteDelay, hook)
+        sendDndApiRequest(hook, typeName, type)
     }
 
     private fun StringSelectInteractionEvent.sendDndApiRequest(
+        hook: InteractionHook,
         typeName: String,
-        typeValue: String,
-        deleteDelay: Int,
-        hook: InteractionHook
+        typeValue: String
     ) {
         val query = values.firstOrNull() ?: return
         message.delete().queue()
-        doLookUpAndReply(hook, typeValue, typeName, query, HttpHelper(), deleteDelay)
+        val dnDResponse = doInitialLookup(typeValue, typeName, query, HttpHelper())
+        hook.sendMessageEmbeds(dnDResponse?.toEmbed()!!).queue()
     }
 
     override val name: String
