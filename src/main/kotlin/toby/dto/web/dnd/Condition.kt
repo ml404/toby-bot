@@ -1,6 +1,6 @@
 package toby.dto.web.dnd
 
-data class Information(
+data class Condition(
     val index: String?,
     val name: String?,
     val desc: List<String>?,

@@ -1,9 +1,13 @@
 package toby.menu.menus
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.DnDHelper.doInitialLookup
+import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
@@ -41,8 +45,16 @@ class DndMenu : IMenu {
     ) {
         val query = values.firstOrNull() ?: return
         message.delete().queue()
-        val dnDResponse = doInitialLookup(typeValue, typeName, query, HttpHelper())
-        hook.sendMessageEmbeds(dnDResponse?.toEmbed()!!).queue()
+        // Launch a coroutine to handle the suspend function call
+        CoroutineScope(Dispatchers.IO).launch {
+            val dnDResponse = doInitialLookup(typeName, typeValue, query, HttpHelper())
+
+            // Switch to the Main dispatcher for UI updates
+            withContext(Dispatchers.Main) {
+                // Make sure to handle potential null response
+                dnDResponse?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
+            }
+        }
     }
 
     override val name: String

@@ -1,6 +1,7 @@
 package toby.helpers
 
 import io.mockk.*
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import toby.dto.web.dnd.Feature
-import toby.dto.web.dnd.Information
+import toby.dto.web.dnd.Condition
 import toby.dto.web.dnd.Rule
 import toby.dto.web.dnd.Spell
 import toby.helpers.DnDHelper.clearInitiative
@@ -252,7 +253,7 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testDoInitialLookupWithSpell() {
+    fun testDoInitialLookupWithSpell() = runTest {
         val mockResponse = """{"name": "Fireball"}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
@@ -263,18 +264,18 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testDoInitialLookupWithCondition() {
+    fun testDoInitialLookupWithCondition() = runTest {
         val mockResponse = """{"name": "Blinded"}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val response = doInitialLookup(CONDITION_NAME, "condition", "blinded", httpHelper)
-        Assertions.assertTrue(response is Information, "Response should be of type Information")
-        Assertions.assertEquals("Blinded", (response as Information).name, "Condition name should be 'Blinded'")
+        Assertions.assertTrue(response is Condition, "Response should be of type Condition")
+        Assertions.assertEquals("Blinded", (response as Condition).name, "Condition name should be 'Blinded'")
     }
 
     @Test
-    fun testDoInitialLookupWithRule() {
+    fun testDoInitialLookupWithRule() = runTest  {
         val mockResponse = """{"name": "Cover"}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
@@ -285,7 +286,7 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testDoInitialLookupWithFeature() {
+    fun testDoInitialLookupWithFeature() = runTest  {
         val mockResponse = """{"name": "Darkvision"}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
@@ -296,7 +297,7 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testQueryNonMatchRetryWithSpell() {
+    fun testQueryNonMatchRetryWithSpell() = runTest  {
         val mockResponse = """{"results": [{"name": "Fireball"}]}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
@@ -307,7 +308,7 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testQueryNonMatchRetryWithRule() {
+    fun testQueryNonMatchRetryWithRule() = runTest  {
         val mockResponse = """{"results": [{"name": "Cover"}]}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
@@ -318,7 +319,7 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testQueryNonMatchRetryWithFeature() {
+    fun testQueryNonMatchRetryWithFeature() = runTest  {
         val mockResponse = """{"results": [{"name": "Darkvision"}]}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse
@@ -329,7 +330,7 @@ internal class DnDHelperTest {
     }
 
     @Test
-    fun testQueryNonMatchRetryWithCondition() {
+    fun testQueryNonMatchRetryWithCondition() = runTest  {
         val mockResponse = """{"results": [{"name": "Blinded"}]}"""
         val httpHelper = mockk<HttpHelper>()
         every { httpHelper.fetchFromGet(any()) } returns mockResponse

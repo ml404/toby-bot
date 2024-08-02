@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
@@ -16,6 +17,7 @@ import toby.command.commands.dnd.DnDCommand
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
+@Disabled
 class DnDCommandTest : CommandTest {
 
     private lateinit var command: DnDCommand

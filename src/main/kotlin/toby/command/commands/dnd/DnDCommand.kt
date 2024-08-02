@@ -1,6 +1,10 @@
 package toby.command.commands.dnd
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -18,14 +22,16 @@ import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.jpa.dto.UserDto
 
-class DnDCommand : IDnDCommand, IFetchCommand {
+class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.Default) : IDnDCommand, IFetchCommand {
+    private val logger = KotlinLogging.logger {}
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
-        val typeOptionMapping = ctx.event.getOption(TYPE)
+        val event = ctx.event
+        val typeOptionMapping = event.getOption(TYPE)
         handleWithHttpObjects(
-            ctx.event,
+            event,
             getName(typeOptionMapping),
             typeOptionMapping!!.asString,
-            ctx.event.getOption(QUERY)!!.asString,
+            event.getOption(QUERY)!!.asString,
             HttpHelper(),
             deleteDelay
         )
@@ -42,20 +48,20 @@ class DnDCommand : IDnDCommand, IFetchCommand {
     ) {
         event.deferReply().queue()
         val hook = event.hook
+        logger.info("accessing DnD Api...")
 
-        CoroutineScope(Dispatchers.Default).launch {
-            val doInitialLookupDeferred = async(Dispatchers.IO) { doInitialLookup(typeName, typeValue, query, httpHelper) }
-            val queryResultDeferred = async(Dispatchers.IO) { queryNonMatchRetry(typeValue, query, httpHelper) }
-            val initialQuery = doInitialLookupDeferred.await()
+        CoroutineScope(dispatcher).launch {
+            val initialQuery = doInitialLookup(typeName, typeValue, query, httpHelper)
+            val nonMatchQueryResult = queryNonMatchRetry(typeValue, query, httpHelper)
             if (initialQuery != null && initialQuery.isValidReturnObject()) {
-                queryResultDeferred.cancelAndJoin()
+                logger.info("Valid initial query found, sending embed")
                 hook.sendMessageEmbeds(initialQuery.toEmbed()).queue()
             }
-            val queryResult = queryResultDeferred.await()
-            if (queryResult != null && initialQuery == null) {
-                if (queryResult.count > 0) {
+            if (nonMatchQueryResult != null && initialQuery == null) {
+                logger.info("No initial query result, handling non-match query result")
+                if (nonMatchQueryResult.count > 0) {
                     val builder = StringSelectMenu.create("dnd:$typeName").setPlaceholder("Choose an option")
-                    queryResult.results.forEach { info: ApiInfo ->
+                    nonMatchQueryResult.results.forEach { info: ApiInfo ->
                         builder.addOptions(
                             SelectOption.of(
                                 info.index,
@@ -67,6 +73,7 @@ class DnDCommand : IDnDCommand, IFetchCommand {
                         .addActionRow(builder.build())
                         .queue()
                 } else {
+                    logger.info("No matches found for query: $query")
                     hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
                         .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                 }

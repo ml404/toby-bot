@@ -2,6 +2,7 @@ package toby.helpers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -34,7 +35,8 @@ object DnDHelper {
     ) {
         val nonDmMembers = memberList.filter { it != dm && !it.user.isBot }
         nonDmMembers.forEach { target ->
-            val userDto = UserDtoHelper.calculateUserDto(target.guild.idLong, target.idLong, target.isOwner, userService)
+            val userDto =
+                UserDtoHelper.calculateUserDto(target.guild.idLong, target.idLong, target.isOwner, userService)
             rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto.initiativeModifier ?: 0)
         }
         sortMap(initiativeMap)
@@ -142,40 +144,40 @@ object DnDHelper {
         hook.deleteOriginal().queue()
     }
 
-    fun doInitialLookup(
+    suspend fun doInitialLookup(
         typeName: String?,
         typeValue: String?,
         query: String,
         httpHelper: HttpHelper,
     ): DnDResponse? {
         val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
-        val responseData = httpHelper.fetchFromGet(url)
+        val responseData = withContext(Dispatchers.IO) { httpHelper.fetchFromGet(url) }
         return when (typeName) {
             SPELL_NAME -> JsonParser.parseJSONToSpell(responseData)
-            CONDITION_NAME -> JsonParser.parseJsonToInformation(responseData)
+            CONDITION_NAME -> JsonParser.parseJsonToCondition(responseData)
             RULE_NAME -> JsonParser.parseJsonToRule(responseData)
             FEATURE_NAME -> JsonParser.parseJsonToFeature(responseData)
-            else ->  null
+            else -> null
         }
     }
 
-    fun queryNonMatchRetry(
+    suspend fun queryNonMatchRetry(
         typeValue: String?,
         query: String,
         httpHelper: HttpHelper,
     ): QueryResult? {
         val queryUrl = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
-        val queryResponseData = httpHelper.fetchFromGet(queryUrl)
+        val queryResponseData = withContext(Dispatchers.IO) { httpHelper.fetchFromGet(queryUrl) }
         return JsonParser.parseJsonToQueryResult(queryResponseData)
     }
 
     fun DnDResponse.toEmbed(): MessageEmbed {
         return when (this) {
             is Spell -> createEmbedFromSpell(this).build()
-            is Information -> createEmbedFromInformation(this).build()
+            is Condition -> createEmbedFromInformation(this).build()
             is Rule -> createEmbedFromRule(this).build()
             is Feature -> createEmbedFromFeature(this).build()
-            else -> EmbedBuilder().build()
+            else -> throw Error("Something has gone horribly wrong")
         }
     }
 
@@ -261,7 +263,7 @@ object DnDHelper {
         return embedBuilder
     }
 
-    private fun createEmbedFromInformation(information: Information): EmbedBuilder {
+    private fun createEmbedFromInformation(information: Condition): EmbedBuilder {
         val embedBuilder = EmbedBuilder()
         if (information.name != null) {
             embedBuilder.setTitle(information.name)
@@ -318,17 +320,6 @@ object DnDHelper {
 
     private fun String.replaceSpaceWithUrlEncode(): String {
         return this.replace(" ", "%20")
-    }
-
-    suspend fun <T> sendAsyncRequest(
-        typeValue: String?,
-        query: String,
-        httpHelper: HttpHelper,
-        operation: AsyncOperation<T>
-    ): T {
-        return withContext(Dispatchers.IO) {
-            operation.execute(typeValue, query, httpHelper)
-        }
     }
 
     data class TableButtons(val prev: Button, val clear: Button, val next: Button)
