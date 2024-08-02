@@ -63,7 +63,7 @@ open class Cache(
         }
     }
 
-    fun cleanup() {
+    private fun cleanup() {
         val now = System.currentTimeMillis()
         var keysToDelete: ArrayList<String>
 

@@ -13,9 +13,9 @@ object JsonParser {
     }
 
     @JvmStatic
-    fun parseJsonToInformation(jsonData: String?): Information? {
+    fun parseJsonToCondition(jsonData: String?): Condition? {
         val gson = createGsonWithSnakeCaseFields()
-        return gson.fromJson(jsonData, Information::class.java)
+        return gson.fromJson(jsonData, Condition::class.java)
     }
 
     @JvmStatic

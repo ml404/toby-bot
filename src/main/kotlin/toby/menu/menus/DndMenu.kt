@@ -1,8 +1,13 @@
 package toby.menu.menus
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import toby.command.commands.dnd.DnDCommand.Companion.doLookUpAndReply
+import toby.helpers.DnDHelper.doInitialLookup
+import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
@@ -13,14 +18,13 @@ class DndMenu : IMenu {
         event.deferReply().queue()
         val type = event.toTypeString()
         runCatching {
-            event.determineDnDRequestType(deleteDelay, type, event.hook)
+            event.determineDnDRequestType(type, event.hook)
         }.onFailure {
             throw RuntimeException(it)
         }
     }
 
     private fun StringSelectInteractionEvent.determineDnDRequestType(
-        deleteDelay: Int,
         type: String,
         hook: InteractionHook
     ) {
@@ -31,18 +35,26 @@ class DndMenu : IMenu {
             FEATURE_NAME -> "features"
             else -> throw IllegalArgumentException("Unknown DnD request type: $type")
         }
-        sendDndApiRequest(typeName, type, deleteDelay, hook)
+        sendDndApiRequest(hook, typeName, type)
     }
 
     private fun StringSelectInteractionEvent.sendDndApiRequest(
+        hook: InteractionHook,
         typeName: String,
-        typeValue: String,
-        deleteDelay: Int,
-        hook: InteractionHook
+        typeValue: String
     ) {
         val query = values.firstOrNull() ?: return
         message.delete().queue()
-        doLookUpAndReply(hook, typeValue, typeName, query, HttpHelper(), deleteDelay)
+        // Launch a coroutine to handle the suspend function call
+        CoroutineScope(Dispatchers.IO).launch {
+            val dnDResponse = doInitialLookup(typeName, typeValue, query, HttpHelper())
+
+            // Switch to the Main dispatcher for UI updates
+            withContext(Dispatchers.Main) {
+                // Make sure to handle potential null response
+                dnDResponse?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
+            }
+        }
     }
 
     override val name: String
