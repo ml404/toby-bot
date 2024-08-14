@@ -19,7 +19,7 @@ import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.jpa.dto.UserDto
 
-class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.Default) : IDnDCommand, IFetchCommand {
+class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IDnDCommand, IFetchCommand {
     private val logger = KotlinLogging.logger {}
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event

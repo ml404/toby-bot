@@ -147,15 +147,14 @@ object DnDHelper {
         query: String,
         httpHelper: HttpHelper,
     ): DnDResponse? {
-        val url = "https://www.dnd5eapi.co/api/$typeName/${query.replaceSpaceWithDash()}"
+        val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
         val responseData = httpHelper.fetchFromGet(url)
-        return when (typeValue) {
+        return when (typeName) {
             SPELL_NAME -> JsonParser.parseJSONToSpell(responseData)
             CONDITION_NAME -> JsonParser.parseJsonToCondition(responseData)
             RULE_NAME -> JsonParser.parseJsonToRule(responseData)
             FEATURE_NAME -> JsonParser.parseJsonToFeature(responseData)
             else -> null
-
         }
     }
 

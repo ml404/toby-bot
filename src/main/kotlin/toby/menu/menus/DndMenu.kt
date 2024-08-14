@@ -22,17 +22,17 @@ class DndMenu(private val coroutineDispatcher: CoroutineDispatcher = Dispatchers
     }
 
     private fun StringSelectInteractionEvent.determineDnDRequestType(
-        type: String,
+        typeName: String,
         hook: InteractionHook
     ) {
-        val typeName = when (type) {
+        val typeValue = when (typeName) {
             SPELL_NAME -> "spells"
             CONDITION_NAME -> "conditions"
             RULE_NAME -> "rule-sections"
             FEATURE_NAME -> "features"
-            else -> throw IllegalArgumentException("Unknown DnD request type: $type")
+            else -> throw IllegalArgumentException("Unknown DnD request type: $typeName")
         }
-        sendDndApiRequest(hook, typeName, type)
+        sendDndApiRequest(hook, typeName, typeValue)
     }
 
     private fun StringSelectInteractionEvent.sendDndApiRequest(
