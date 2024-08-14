@@ -9,7 +9,7 @@ import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
-class DndMenu(private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO) : IMenu {
+class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IMenu {
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.selectEvent
         event.deferReply().queue()
@@ -43,8 +43,8 @@ class DndMenu(private val coroutineDispatcher: CoroutineDispatcher = Dispatchers
         val query = values.firstOrNull() ?: return
         message.delete().queue()
         // Launch a coroutine to handle the suspend function call
-        CoroutineScope(coroutineDispatcher).launch {
-            val dnDResponseDeferred = async(Dispatchers.IO) { doInitialLookup(typeName, typeValue, query, HttpHelper(), coroutineDispatcher) }
+        CoroutineScope(dispatcher).launch {
+            val dnDResponseDeferred = async(dispatcher) { doInitialLookup(typeName, typeValue, query, HttpHelper(), dispatcher) }
             // Make sure to handle potential null response
             dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
 

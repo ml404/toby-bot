@@ -52,7 +52,7 @@ internal class DndMenuTest : MenuTest {
 
         // Assert
         verify { menuEvent.deferReply() }
-        verify { interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
     }
 
     @Test
