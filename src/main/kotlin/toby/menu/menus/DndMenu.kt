@@ -44,7 +44,7 @@ class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IM
         message.delete().queue()
         // Launch a coroutine to handle the suspend function call
         CoroutineScope(dispatcher).launch {
-            val dnDResponseDeferred = async(dispatcher) { doInitialLookup(typeName, typeValue, query, HttpHelper(), dispatcher) }
+            val dnDResponseDeferred = async { doInitialLookup(typeName, typeValue, query, HttpHelper(dispatcher)) }
             // Make sure to handle potential null response
             dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
 

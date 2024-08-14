@@ -30,7 +30,7 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
             getName(typeOptionMapping),
             typeOptionMapping!!.asString,
             event.getOption(QUERY)!!.asString,
-            HttpHelper(),
+            HttpHelper(dispatcher),
             deleteDelay
         )
     }
@@ -51,8 +51,8 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
         // Use coroutine scope and structured concurrency
         CoroutineScope(dispatcher).launch {
             try {
-                val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper, dispatcher) }
-                val nonMatchQueryResultDeferred = async { queryNonMatchRetry(typeValue, query, httpHelper, dispatcher) }
+                val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
+                val nonMatchQueryResultDeferred = async { queryNonMatchRetry(typeValue, query, httpHelper) }
 
                 val initialQuery = initialQueryDeferred.await()
                 val nonMatchQueryResult = nonMatchQueryResultDeferred.await()

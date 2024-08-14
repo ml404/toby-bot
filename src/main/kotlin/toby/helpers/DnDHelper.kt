@@ -1,7 +1,5 @@
 package toby.helpers
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -147,11 +145,10 @@ object DnDHelper {
         typeName: String?,
         typeValue: String?,
         query: String,
-        httpHelper: HttpHelper,
-        dispatcher: CoroutineDispatcher = Dispatchers.IO
+        httpHelper: HttpHelper
     ): DnDResponse? {
         val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
-        val responseData = httpHelper.fetchFromGet(url, dispatcher)
+        val responseData = httpHelper.fetchFromGet(url)
         return when (typeName) {
             SPELL_NAME -> JsonParser.parseJSONToSpell(responseData)
             CONDITION_NAME -> JsonParser.parseJsonToCondition(responseData)
@@ -164,11 +161,10 @@ object DnDHelper {
     suspend fun queryNonMatchRetry(
         typeValue: String?,
         query: String,
-        httpHelper: HttpHelper,
-        dispatcher: CoroutineDispatcher = Dispatchers.IO
+        httpHelper: HttpHelper
     ): QueryResult? {
         val queryUrl = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
-        val queryResponseData = httpHelper.fetchFromGet(queryUrl, dispatcher)
+        val queryResponseData = httpHelper.fetchFromGet(queryUrl)
         return JsonParser.parseJsonToQueryResult(queryResponseData)
     }
 

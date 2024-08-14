@@ -11,8 +11,8 @@ import org.apache.hc.core5.http.io.entity.EntityUtils
 import java.io.IOException
 import java.text.ParseException
 
-class HttpHelper {
-    suspend fun fetchFromGet(url: String?, dispatcher: CoroutineDispatcher = Dispatchers.IO): String = withContext(dispatcher) {
+class HttpHelper(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
+    suspend fun fetchFromGet(url: String?): String = withContext(dispatcher) {
         if (url.isNullOrBlank()) return@withContext ""
         try {
             HttpClients.createDefault().use { httpClient: CloseableHttpClient ->
