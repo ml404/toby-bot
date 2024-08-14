@@ -1,9 +1,6 @@
 package toby.command.commands.dnd
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -50,9 +47,13 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.Defau
         val hook = event.hook
         logger.info("accessing DnD Api...")
 
-        CoroutineScope(dispatcher).launch {
-            val initialQuery = doInitialLookup(typeName, typeValue, query, httpHelper)
-            val nonMatchQueryResult = queryNonMatchRetry(typeValue, query, httpHelper)
+        val scope = CoroutineScope(dispatcher)
+        val initialQueryDeferred = scope.async { doInitialLookup(typeName, typeValue, query, httpHelper) }
+        val nonMatchQueryResultDeferred = scope.async { queryNonMatchRetry(typeValue, query, httpHelper) }
+
+        scope.launch {
+            val initialQuery = initialQueryDeferred.await()
+            val nonMatchQueryResult = nonMatchQueryResultDeferred.await()
             if (initialQuery != null && initialQuery.isValidReturnObject()) {
                 logger.info("Valid initial query found, sending embed")
                 hook.sendMessageEmbeds(initialQuery.toEmbed()).queue()

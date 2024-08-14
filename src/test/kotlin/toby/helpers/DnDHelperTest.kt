@@ -1,6 +1,8 @@
 package toby.helpers
 
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.emoji.Emoji
@@ -16,8 +18,8 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
-import toby.dto.web.dnd.Feature
 import toby.dto.web.dnd.Condition
+import toby.dto.web.dnd.Feature
 import toby.dto.web.dnd.Rule
 import toby.dto.web.dnd.Spell
 import toby.helpers.DnDHelper.clearInitiative
@@ -252,88 +254,97 @@ internal class DnDHelperTest {
         verify(exactly = 1) { hook.sendMessage(any<String>()) }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithSpell() = runTest {
         val mockResponse = """{"name": "Fireball"}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val response = doInitialLookup(SPELL_NAME, "spell", "fireball", httpHelper)
         Assertions.assertTrue(response is Spell, "Response should be of type Spell")
         Assertions.assertEquals("Fireball", (response as Spell).name, "Spell name should be 'Fireball'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithCondition() = runTest {
+
         val mockResponse = """{"name": "Blinded"}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val response = doInitialLookup(CONDITION_NAME, "condition", "blinded", httpHelper)
         Assertions.assertTrue(response is Condition, "Response should be of type Condition")
         Assertions.assertEquals("Blinded", (response as Condition).name, "Condition name should be 'Blinded'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithRule() = runTest  {
         val mockResponse = """{"name": "Cover"}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val response = doInitialLookup(RULE_NAME, "rule", "cover", httpHelper)
         Assertions.assertTrue(response is Rule, "Response should be of type Rule")
         Assertions.assertEquals("Cover", (response as Rule).name, "Rule name should be 'Cover'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithFeature() = runTest  {
         val mockResponse = """{"name": "Darkvision"}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val response = doInitialLookup(FEATURE_NAME, "feature", "darkvision", httpHelper)
         Assertions.assertTrue(response is Feature, "Response should be of type Feature")
         Assertions.assertEquals("Darkvision", (response as Feature).name, "Feature name should be 'Darkvision'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testQueryNonMatchRetryWithSpell() = runTest  {
         val mockResponse = """{"results": [{"name": "Fireball"}]}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val result = queryNonMatchRetry("spell", "fireball", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Fireball", result?.results?.firstOrNull()?.name, "Query result name should be 'Fireball'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testQueryNonMatchRetryWithRule() = runTest  {
         val mockResponse = """{"results": [{"name": "Cover"}]}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val result = queryNonMatchRetry("rule", "cover", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Cover", result?.results?.firstOrNull()?.name, "Query result name should be 'Cover'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testQueryNonMatchRetryWithFeature() = runTest  {
         val mockResponse = """{"results": [{"name": "Darkvision"}]}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val result = queryNonMatchRetry("feature", "darkvision", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Darkvision", result?.results?.firstOrNull()?.name, "Query result name should be 'Darkvision'")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testQueryNonMatchRetryWithCondition() = runTest  {
         val mockResponse = """{"results": [{"name": "Blinded"}]}"""
         val httpHelper = mockk<HttpHelper>()
-        every { httpHelper.fetchFromGet(any()) } returns mockResponse
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
         val result = queryNonMatchRetry("condition", "blinded", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")

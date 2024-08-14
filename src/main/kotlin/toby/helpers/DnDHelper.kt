@@ -1,8 +1,5 @@
 package toby.helpers
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -144,30 +141,31 @@ object DnDHelper {
         hook.deleteOriginal().queue()
     }
 
-    suspend fun doInitialLookup(
+    fun doInitialLookup(
         typeName: String?,
         typeValue: String?,
         query: String,
         httpHelper: HttpHelper,
     ): DnDResponse? {
-        val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
-        val responseData = withContext(Dispatchers.IO) { httpHelper.fetchFromGet(url) }
-        return when (typeName) {
+        val url = "https://www.dnd5eapi.co/api/$typeName/${query.replaceSpaceWithDash()}"
+        val responseData = httpHelper.fetchFromGet(url)
+        return when (typeValue) {
             SPELL_NAME -> JsonParser.parseJSONToSpell(responseData)
             CONDITION_NAME -> JsonParser.parseJsonToCondition(responseData)
             RULE_NAME -> JsonParser.parseJsonToRule(responseData)
             FEATURE_NAME -> JsonParser.parseJsonToFeature(responseData)
             else -> null
+
         }
     }
 
-    suspend fun queryNonMatchRetry(
+    fun queryNonMatchRetry(
         typeValue: String?,
         query: String,
         httpHelper: HttpHelper,
     ): QueryResult? {
         val queryUrl = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
-        val queryResponseData = withContext(Dispatchers.IO) { httpHelper.fetchFromGet(queryUrl) }
+        val queryResponseData = httpHelper.fetchFromGet(queryUrl)
         return JsonParser.parseJsonToQueryResult(queryResponseData)
     }
 

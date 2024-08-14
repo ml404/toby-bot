@@ -1,5 +1,6 @@
 package toby.command.commands.fetch
 
+import coroutines.MainCoroutineExtension
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -8,8 +9,8 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
@@ -17,7 +18,8 @@ import toby.command.commands.dnd.DnDCommand
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
-@Disabled
+@OptIn(ExperimentalCoroutinesApi::class)
+@ExtendWith(MainCoroutineExtension::class)
 class DnDCommandTest : CommandTest {
 
     private lateinit var command: DnDCommand
@@ -46,8 +48,9 @@ class DnDCommandTest : CommandTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `should handle successful lookup and reply with embed`() = runTest {
+
         // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
-        every { httpHelper.fetchFromGet(any()) } returns fireballJson andThen noQueryFound
+        coEvery { httpHelper.fetchFromGet(any()) } returns fireballJson andThen noQueryFound
 
         val embedSlot = slot<MessageEmbed>()
         command.handleWithHttpObjects(
@@ -75,7 +78,7 @@ class DnDCommandTest : CommandTest {
     fun `should handle no initial results but successful followup scenario`() = runTest {
         // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
 
-        every { httpHelper.fetchFromGet(any()) } returns noQueryFound andThen blindJson
+        coEvery { httpHelper.fetchFromGet(any()) } returns noQueryFound andThen blindJson
 
         command.handleWithHttpObjects(
             event,
@@ -98,7 +101,7 @@ class DnDCommandTest : CommandTest {
     @Test
     fun `should handle no results scenario`() = runTest {
         // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
-        every { httpHelper.fetchFromGet(any()) } returns noQueryFound andThen noQueryFound
+        coEvery { httpHelper.fetchFromGet(any()) } returns noQueryFound andThen noQueryFound
 
         command.handleWithHttpObjects(
             event,

@@ -1,12 +1,15 @@
 package toby.helpers
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 internal class HttpHelperTest {
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun fetchFromGet() {
+    fun fetchFromGet() = runTest {
         val httpHelper = HttpHelper()
         val responseString = httpHelper.fetchFromGet("https://www.dnd5eapi.co/api/spells/fireball")
         Assertions.assertEquals(spellJson, responseString)
