@@ -21,6 +21,7 @@ import toby.jpa.dto.UserDto
 
 class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IDnDCommand, IFetchCommand {
     private val logger = KotlinLogging.logger {}
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val typeOptionMapping = event.getOption(TYPE)
@@ -45,39 +46,40 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
     ) {
         event.deferReply().queue()
         val hook = event.hook
-        logger.info("accessing DnD Api...")
+        logger.info("Accessing DnD API...")
 
-        val scope = CoroutineScope(dispatcher)
-        val initialQueryDeferred = scope.async { doInitialLookup(typeName, typeValue, query, httpHelper) }
-        val nonMatchQueryResultDeferred = scope.async { queryNonMatchRetry(typeValue, query, httpHelper) }
+        // Use coroutine scope and structured concurrency
+        CoroutineScope(dispatcher).launch {
+            try {
+                val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper, dispatcher) }
+                val nonMatchQueryResultDeferred = async { queryNonMatchRetry(typeValue, query, httpHelper, dispatcher) }
 
-        scope.launch {
-            val initialQuery = initialQueryDeferred.await()
-            val nonMatchQueryResult = nonMatchQueryResultDeferred.await()
-            if (initialQuery != null && initialQuery.isValidReturnObject()) {
-                logger.info("Valid initial query found, sending embed")
-                hook.sendMessageEmbeds(initialQuery.toEmbed()).queue()
-            }
-            if (nonMatchQueryResult != null && initialQuery == null) {
-                logger.info("No initial query result, handling non-match query result")
-                if (nonMatchQueryResult.count > 0) {
-                    val builder = StringSelectMenu.create("dnd:$typeName").setPlaceholder("Choose an option")
-                    nonMatchQueryResult.results.forEach { info: ApiInfo ->
-                        builder.addOptions(
-                            SelectOption.of(
-                                info.index,
-                                info.index
-                            )
-                        )
+                val initialQuery = initialQueryDeferred.await()
+                val nonMatchQueryResult = nonMatchQueryResultDeferred.await()
+
+                if (initialQuery != null && initialQuery.isValidReturnObject()) {
+                    logger.info("Valid initial query found, sending embed")
+                    hook.sendMessageEmbeds(initialQuery.toEmbed()).queue()
+                } else if (nonMatchQueryResult != null) {
+                    logger.info("No initial query result, handling non-match query result")
+                    if (nonMatchQueryResult.count > 0) {
+                        val builder = StringSelectMenu.create("dnd:$typeName").setPlaceholder("Choose an option")
+                        nonMatchQueryResult.results.forEach { info: ApiInfo ->
+                            builder.addOptions(SelectOption.of(info.index, info.index))
+                        }
+                        hook.sendMessage("Your query '$query' didn't return a value, but these close matches were found, please select one as appropriate")
+                            .addActionRow(builder.build())
+                            .queue()
+                    } else {
+                        logger.info("No matches found for query: $query")
+                        hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
+                            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
                     }
-                    hook.sendMessage("Your query '$query' didn't return a value, but these close matches were found, please select one as appropriate")
-                        .addActionRow(builder.build())
-                        .queue()
-                } else {
-                    logger.info("No matches found for query: $query")
-                    hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                 }
+            } catch (e: Exception) {
+                logger.error("An error occurred while handling the DnD query", e)
+                hook.sendMessage("An error occurred while processing your request. Please try again later.")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             }
         }
     }

@@ -43,25 +43,26 @@ class DndMenu(private val coroutineDispatcher: CoroutineDispatcher = Dispatchers
         val query = values.firstOrNull() ?: return
         message.delete().queue()
         // Launch a coroutine to handle the suspend function call
-        val scope = CoroutineScope(coroutineDispatcher)
-        val dnDResponseDeferred = scope.async { doInitialLookup(typeName, typeValue, query, HttpHelper()) }
-        // Make sure to handle potential null response
-        scope.launch { dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
+        CoroutineScope(coroutineDispatcher).launch {
+            val dnDResponseDeferred = async(Dispatchers.IO) { doInitialLookup(typeName, typeValue, query, HttpHelper(), coroutineDispatcher) }
+            // Make sure to handle potential null response
+            dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
+
+        }
+
     }
 
-}
+    override val name: String
+        get() = "dnd"
 
-override val name: String
-    get() = "dnd"
+    companion object {
+        const val SPELL_NAME = "spell"
+        const val CONDITION_NAME = "condition"
+        const val RULE_NAME = "rule"
+        const val FEATURE_NAME = "feature"
 
-companion object {
-    const val SPELL_NAME = "spell"
-    const val CONDITION_NAME = "condition"
-    const val RULE_NAME = "rule"
-    const val FEATURE_NAME = "feature"
-
-    private fun StringSelectInteractionEvent.toTypeString(): String {
-        return componentId.split(":").getOrNull(1) ?: ""
+        private fun StringSelectInteractionEvent.toTypeString(): String {
+            return componentId.split(":").getOrNull(1) ?: ""
+        }
     }
-}
 }

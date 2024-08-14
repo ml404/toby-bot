@@ -118,9 +118,9 @@ class DnDCommandTest : CommandTest {
 
         // Verify interactions and responses
         coVerify {
-            DnDHelper.doInitialLookup("condition", "conditions", "bli", httpHelper)
-            DnDHelper.queryNonMatchRetry("conditions", "bli", httpHelper)
-            event.hook.sendMessage(any<String>()).queue()
+            DnDHelper.doInitialLookup("condition", "conditions", "bin", httpHelper)
+            DnDHelper.queryNonMatchRetry("conditions", "bin", httpHelper)
+            event.hook.sendMessage(any<String>()).queue(any())
         }
     }
 }
