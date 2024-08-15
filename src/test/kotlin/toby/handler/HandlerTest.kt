@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.emote.Emotes
 import toby.handler.Handler
+import toby.helpers.HttpHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.*
 import toby.lavaplayer.PlayerManager
@@ -31,12 +32,14 @@ class HandlerTest {
     private val excuseService: IExcuseService = mockk()
     private val commandManager: CommandManager = mockk()
     private val buttonManager: ButtonManager = mockk()
+    private val httpHelper: HttpHelper = mockk()
     private val handler = spyk(Handler(
         configService,
         brotherService,
         userService,
         musicFileService,
         excuseService,
+        httpHelper,
         commandManager,
         buttonManager
     ))

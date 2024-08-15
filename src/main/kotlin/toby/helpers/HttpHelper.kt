@@ -1,36 +1,32 @@
 package toby.helpers
 
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.hc.client5.http.classic.methods.HttpGet
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse
-import org.apache.hc.client5.http.impl.classic.HttpClients
-import org.apache.hc.core5.http.io.entity.EntityUtils
-import java.io.IOException
-import java.text.ParseException
 
-class HttpHelper(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
+class HttpHelper(private val client: HttpClient, private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
+
     suspend fun fetchFromGet(url: String?): String = withContext(dispatcher) {
         if (url.isNullOrBlank()) return@withContext ""
-        try {
-            HttpClients.createDefault().use { httpClient: CloseableHttpClient ->
-                val httpGet = HttpGet(url).apply {
-                    addHeader("Accept", "application/json")
-                }
-                httpClient.execute(httpGet).use { response: CloseableHttpResponse ->
-                    if (response.code == 200) {
-                        return@use EntityUtils.toString(response.entity)
-                    } else {
-                        return@use ""
-                    }
+
+        return@withContext try {
+            val response: HttpResponse = client.get(url) {
+                headers {
+                    append(HttpHeaders.Accept, "application/json")
                 }
             }
-        } catch (e: IOException) {
-            throw RuntimeException("I/O error occurred", e)
-        } catch (e: ParseException) {
-            throw RuntimeException("Parsing error occurred", e)
+            if (response.status == HttpStatusCode.OK) {
+                response.body<String>()
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            throw RuntimeException("HTTP error occurred", e)
         }
     }
 }

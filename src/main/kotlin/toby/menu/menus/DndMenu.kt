@@ -10,7 +10,7 @@ import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
-class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IMenu {
+class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, private val httpHelper: HttpHelper) : IMenu {
     private val logger = KotlinLogging.logger {}
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.info { "DnD menu event started for guild ${ctx.guild.idLong}" }
@@ -51,7 +51,7 @@ class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IM
         val query = values.firstOrNull() ?: return
         // Launch a coroutine to handle the suspend function call
         CoroutineScope(dispatcher).launch {
-            val dnDResponseDeferred = async { doInitialLookup(typeName, typeValue, query, HttpHelper(dispatcher)) }
+            val dnDResponseDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
             // Make sure to handle potential null response
             dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
 

@@ -16,6 +16,15 @@ import org.junit.jupiter.api.extension.ExtendWith
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.interactionHook
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
+import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
+import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_URL
 import toby.menu.MenuContext
 import toby.menu.MenuTest
 import toby.menu.MenuTest.Companion.menuEvent
@@ -41,7 +50,9 @@ internal class DndMenuTest : MenuTest {
     @Test
     fun test_dndMenuWithSpell() = runTest {
         // Arrange
-        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+        val httpHelper = createMockHttpClient(FIREBALL_URL, FIREBALL_INITIAL_RESPONSE, dispatcher = dispatcher)
+        dndMenu = DndMenu(dispatcher, httpHelper)
         val ctx = mockAndCreateMenuContext("dnd:spell", "fireball")
 
         // Act
@@ -58,7 +69,10 @@ internal class DndMenuTest : MenuTest {
     @Test
     fun test_dndMenuWithCondition() = runTest {
         // Arrange
-        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+
+        val httpHelper = createMockHttpClient(GRAPPLED_URL, GRAPPLED_INITIAL_RESPONSE, dispatcher = dispatcher)
+        dndMenu = DndMenu(dispatcher, httpHelper)
         val ctx = mockAndCreateMenuContext("dnd:condition", "grappled")
 
         // Act
@@ -75,7 +89,9 @@ internal class DndMenuTest : MenuTest {
     @Test
     fun test_dndMenuWithRule() = runTest {
         // Arrange
-        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+        val httpHelper = createMockHttpClient(COVER_INITIAL_URL, COVER_INITIAL_RESPONSE, dispatcher = dispatcher)
+        dndMenu = DndMenu(dispatcher, httpHelper)
         val ctx = mockAndCreateMenuContext("dnd:rule", "cover")
 
         // Act
@@ -92,7 +108,9 @@ internal class DndMenuTest : MenuTest {
     @Test
     fun test_dndMenuWithFeature() = runTest {
         // Arrange
-        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+        val httpHelper = createMockHttpClient(ACTION_SURGE_INITIAL_URL, ACTION_SURGE_RESPONSE, dispatcher = dispatcher)
+        dndMenu = DndMenu(dispatcher, httpHelper)
         val ctx = mockAndCreateMenuContext("dnd:feature", "action-surge-1-use")
 
         // Act

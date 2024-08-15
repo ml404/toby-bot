@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
 import toby.BotMain
 import toby.emote.Emotes
+import toby.helpers.HttpHelper
 import toby.helpers.MusicPlayerHelper.playUserIntro
 import toby.helpers.UserDtoHelper.calculateUserDto
 import toby.jpa.dto.ConfigDto
@@ -41,9 +42,10 @@ class Handler @Autowired constructor(
     private val userService: IUserService,
     musicFileService: IMusicFileService,
     excuseService: IExcuseService,
-    private val commandManager: CommandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService),
+    httpHelper: HttpHelper,
+    private val commandManager: CommandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper),
     private val buttonManager: ButtonManager = ButtonManager(configService, userService, commandManager),
-    private val menuManager: MenuManager = MenuManager(configService)
+    private val menuManager: MenuManager = MenuManager(configService, httpHelper)
 ) : ListenerAdapter() {
 
 

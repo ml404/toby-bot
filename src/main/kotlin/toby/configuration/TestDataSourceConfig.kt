@@ -1,4 +1,4 @@
-package toby.jpa.configuration
+package toby.configuration
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

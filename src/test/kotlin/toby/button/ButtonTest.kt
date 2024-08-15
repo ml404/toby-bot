@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonInteraction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import toby.helpers.HttpHelper
 import toby.helpers.MusicPlayerHelper
 import toby.jpa.service.*
 import toby.lavaplayer.PlayerManager
@@ -24,7 +25,8 @@ interface ButtonTest {
         userService = mockk()
         musicFileService = mockk()
         excuseService = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
+        httpHelper = mockk()
+        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper)
         buttonManager = ButtonManager(configService, userService, commandManager)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
@@ -93,5 +95,6 @@ interface ButtonTest {
         lateinit var excuseService: IExcuseService
         lateinit var commandManager: CommandManager
         lateinit var buttonManager: ButtonManager
+        lateinit var httpHelper: HttpHelper
     }
 }

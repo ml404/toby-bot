@@ -19,7 +19,7 @@ import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.jpa.dto.UserDto
 
-class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IDnDCommand, IFetchCommand {
+class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, private val httpHelper: HttpHelper) : IDnDCommand, IFetchCommand {
     private val logger = KotlinLogging.logger {}
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
@@ -48,7 +48,6 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
         // Create a coroutine scope with a supervisor job for structured concurrency
         CoroutineScope(dispatcher).launch {
             try {
-                val httpHelper = HttpHelper(dispatcher)
                 val initialQueryDeferred = async(dispatcher) { doInitialLookup(typeName, typeValue, query, httpHelper) }
                 val nonMatchQueryResultDeferred = async(dispatcher) { queryNonMatchRetry(typeValue, query, httpHelper) }
 
