@@ -68,9 +68,8 @@ class DnDCommandTest : CommandTest {
 
         // Verify interactions and responses
         coVerify {
-//            DnDHelper.doInitialLookup("spell", "spells", "fireball", httpHelper)
-//            DnDHelper.queryNonMatchRetry("spells", "fireball", httpHelper)
             event.hook.sendMessageEmbeds(capture(embedSlot))
+            webhookMessageCreateAction.queue()
         }
     }
 
@@ -78,7 +77,6 @@ class DnDCommandTest : CommandTest {
     @Test
     fun `should handle no initial results but successful followup scenario`() = runTest {
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-        val stringSelectMenuSlot = slot<StringSelectMenu>()
         command = DnDCommand(dispatcher)
         httpHelper = HttpHelper(dispatcher)
 
@@ -95,8 +93,6 @@ class DnDCommandTest : CommandTest {
 
         // Verify interactions and responses
         coVerify {
-//            DnDHelper.doInitialLookup("condition", "conditions", "blind", httpHelper)
-//            DnDHelper.queryNonMatchRetry("conditions", "blind", httpHelper)
             event.hook.sendMessage(any<String>())
             webhookMessageCreateAction.setActionRow(any<StringSelectMenu>()).queue()
         }
@@ -123,9 +119,8 @@ class DnDCommandTest : CommandTest {
 
         // Verify interactions and responses
         coVerify {
-//            DnDHelper.doInitialLookup("condition", "conditions", "bin", httpHelper)
-//            DnDHelper.queryNonMatchRetry("conditions", "bin", httpHelper)
-            event.hook.sendMessage(any<String>()).queue(any())
+            event.hook.sendMessage(any<String>())
+            webhookMessageCreateAction.queue(any())
         }
     }
 }
