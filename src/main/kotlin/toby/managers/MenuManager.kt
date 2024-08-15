@@ -23,10 +23,14 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
     }
 
     private fun addMenu(menu: IMenu) {
-        val nameFound = menus.stream().anyMatch { it: IMenu -> it.name.equals(menu.name, ignoreCase = true) }
+        val nameFound = menus.any {
+            val menuNameLower = it.name.lowercase()  // e.g., "dnd:spell"
+            menuNameLower == menu.name.lowercase() || menuNameLower.contains(menu.name.lowercase())
+        }
 
         require(!nameFound) { "A menu with this name is already present" }
         menus.add(menu)
+        logger.info { "Added menu ${menu.name}" }
     }
 
     val allMenus: List<IMenu>
