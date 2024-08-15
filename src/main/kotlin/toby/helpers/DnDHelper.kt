@@ -1,5 +1,6 @@
 package toby.helpers
 
+import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -23,6 +24,8 @@ import kotlin.random.Random
 object DnDHelper {
     val initiativeIndex = AtomicInteger(0)
     var sortedEntries = LinkedList<Map.Entry<String, Int>>()
+    private val logger = KotlinLogging.logger {}
+
 
     fun rollInitiativeForMembers(
         memberList: List<Member>,
@@ -148,6 +151,7 @@ object DnDHelper {
         httpHelper: HttpHelper
     ): DnDResponse? {
         val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
+        logger.info ("Fetching data from '$url'")
         val responseData = httpHelper.fetchFromGet(url)
         return when (typeName) {
             SPELL_NAME -> JsonParser.parseJSONToSpell(responseData)
@@ -164,6 +168,7 @@ object DnDHelper {
         httpHelper: HttpHelper
     ): QueryResult? {
         val queryUrl = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
+        logger.info("Fetching data from '$queryUrl'")
         val queryResponseData = httpHelper.fetchFromGet(queryUrl)
         return JsonParser.parseJsonToQueryResult(queryResponseData)
     }

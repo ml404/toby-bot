@@ -1,6 +1,7 @@
 package toby.menu.menus
 
 import kotlinx.coroutines.*
+import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import toby.helpers.DnDHelper.doInitialLookup
@@ -10,6 +11,7 @@ import toby.menu.IMenu
 import toby.menu.MenuContext
 
 class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IMenu {
+    private val logger = KotlinLogging.logger {}
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.selectEvent
         event.deferReply().queue()
@@ -30,7 +32,10 @@ class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IM
             CONDITION_NAME -> "conditions"
             RULE_NAME -> "rule-sections"
             FEATURE_NAME -> "features"
-            else -> throw IllegalArgumentException("Unknown DnD request type: $typeName")
+            else -> {
+                logger.info { "Non valid typename passed to the DnDMenu" }
+                ""
+            }
         }
         sendDndApiRequest(hook, typeName, typeValue)
     }
