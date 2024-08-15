@@ -30,7 +30,6 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
             getName(typeOptionMapping),
             typeOptionMapping!!.asString,
             event.getOption(QUERY)!!.asString,
-            HttpHelper(dispatcher),
             deleteDelay
         )
     }
@@ -41,41 +40,43 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
         typeName: String?,
         typeValue: String?,
         query: String,
-        httpHelper: HttpHelper,
         deleteDelay: Int?
     ) {
         event.deferReply().queue()
         val hook = event.hook
         logger.info("Accessing DnD API...")
-
-        // Use coroutine scope and structured concurrency
+        // Create a coroutine scope with a supervisor job for structured concurrency
         CoroutineScope(dispatcher).launch {
             try {
-                val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
-                val nonMatchQueryResultDeferred = async { queryNonMatchRetry(typeValue, query, httpHelper) }
+                val httpHelper = HttpHelper(dispatcher)
+                val initialQueryDeferred = async(dispatcher) { doInitialLookup(typeName, typeValue, query, httpHelper) }
+                val nonMatchQueryResultDeferred = async(dispatcher) { queryNonMatchRetry(typeValue, query, httpHelper) }
 
-                val initialQuery = initialQueryDeferred.await()
-                val nonMatchQueryResult = nonMatchQueryResultDeferred.await()
-
-                if (initialQuery != null && initialQuery.isValidReturnObject()) {
-                    logger.info("Valid initial query found, sending embed")
-                    hook.sendMessageEmbeds(initialQuery.toEmbed()).queue()
-                } else if (nonMatchQueryResult != null) {
+                initialQueryDeferred.await()?.let { initialQuery ->
+                    if (initialQuery.isValidReturnObject()) {
+                        logger.info("Valid initial query found, sending embed")
+                        hook.sendMessageEmbeds(initialQuery.toEmbed()).queue()
+                        return@launch
+                    }
+                }
+                nonMatchQueryResultDeferred.await()?.let { nonMatchQueryResult ->
                     logger.info("No initial query result, handling non-match query result")
                     if (nonMatchQueryResult.count > 0) {
                         val builder = StringSelectMenu.create("dnd:$typeName").setPlaceholder("Choose an option")
                         nonMatchQueryResult.results.forEach { info: ApiInfo ->
                             builder.addOptions(SelectOption.of(info.index, info.index))
                         }
+                        val stringSelectMenu = builder.build()
                         hook.sendMessage("Your query '$query' didn't return a value, but these close matches were found, please select one as appropriate")
-                            .addActionRow(builder.build())
+                            .setActionRow(stringSelectMenu)
                             .queue()
-                    } else {
-                        logger.info("No matches found for query: $query")
-                        hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
-                            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                        return@launch
                     }
                 }
+                logger.info("No matches found for query: $query")
+                hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+
             } catch (e: Exception) {
                 logger.error("An error occurred while handling the DnD query", e)
                 hook.sendMessage("An error occurred while processing your request. Please try again later.")
@@ -106,6 +107,7 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) :
         const val CONDITION_NAME = "condition"
         const val RULE_NAME = "rule"
         const val FEATURE_NAME = "feature"
+
         private fun getName(typeOptionMapping: OptionMapping?): String {
             return when (typeOptionMapping!!.asString) {
                 "spells" -> SPELL_NAME

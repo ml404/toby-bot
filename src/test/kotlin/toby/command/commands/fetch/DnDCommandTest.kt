@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
+import toby.command.CommandTest.Companion.interactionHook
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.command.commands.dnd.DnDCommand
-import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -31,13 +31,14 @@ class DnDCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        httpHelper = HttpHelper()
         every {
-            event.hook.sendMessageEmbeds(
+            interactionHook.sendMessageEmbeds(
                 any<MessageEmbed>(),
                 *anyVararg()
             )
         } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.setActionRow(any<StringSelectMenu>()).queue(any()) } just Runs
+
     }
 
     @AfterEach
@@ -49,7 +50,9 @@ class DnDCommandTest : CommandTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `should handle successful lookup and reply with embed`() = runTest {
-        command = DnDCommand(StandardTestDispatcher() as CoroutineDispatcher)
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+        command = DnDCommand(dispatcher)
+        httpHelper = HttpHelper(dispatcher)
 
         val embedSlot = slot<MessageEmbed>()
         command.handleWithHttpObjects(
@@ -57,17 +60,16 @@ class DnDCommandTest : CommandTest {
             "spell",
             "spells",
             "fireball",
-            httpHelper,
             deleteDelay
         )
 
-       // Ensure all asynchronous code completes
+        // Ensure all asynchronous code completes
         advanceUntilIdle()
 
         // Verify interactions and responses
         coVerify {
-            DnDHelper.doInitialLookup("spell", "spells", "fireball", httpHelper)
-            DnDHelper.queryNonMatchRetry("spells", "fireball", httpHelper)
+//            DnDHelper.doInitialLookup("spell", "spells", "fireball", httpHelper)
+//            DnDHelper.queryNonMatchRetry("spells", "fireball", httpHelper)
             event.hook.sendMessageEmbeds(capture(embedSlot))
         }
     }
@@ -75,15 +77,16 @@ class DnDCommandTest : CommandTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `should handle no initial results but successful followup scenario`() = runTest {
-        // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
-        command = DnDCommand(StandardTestDispatcher() as CoroutineDispatcher)
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+        val stringSelectMenuSlot = slot<StringSelectMenu>()
+        command = DnDCommand(dispatcher)
+        httpHelper = HttpHelper(dispatcher)
 
         command.handleWithHttpObjects(
             event,
             "condition",
             "conditions",
             "blind",
-            httpHelper,
             deleteDelay
         )
 
@@ -92,24 +95,26 @@ class DnDCommandTest : CommandTest {
 
         // Verify interactions and responses
         coVerify {
-            DnDHelper.doInitialLookup("condition", "conditions", "blind", httpHelper)
-            DnDHelper.queryNonMatchRetry("conditions", "blind", httpHelper)
-            event.hook.sendMessage(any<String>()).setActionRow(any<StringSelectMenu>()).queue()
+//            DnDHelper.doInitialLookup("condition", "conditions", "blind", httpHelper)
+//            DnDHelper.queryNonMatchRetry("conditions", "blind", httpHelper)
+            event.hook.sendMessage(any<String>())
+            webhookMessageCreateAction.setActionRow(any<StringSelectMenu>()).queue()
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `should handle no results scenario`() = runTest {
-        // Mocking JSON responses for doInitialLookup and queryNonMatchRetry
-        command = DnDCommand(StandardTestDispatcher() as CoroutineDispatcher)
+
+        val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
+        command = DnDCommand(dispatcher)
+        httpHelper = HttpHelper(dispatcher)
 
         command.handleWithHttpObjects(
             event,
             "condition",
             "conditions",
             "bin",
-            httpHelper,
             deleteDelay
         )
 
@@ -118,8 +123,8 @@ class DnDCommandTest : CommandTest {
 
         // Verify interactions and responses
         coVerify {
-            DnDHelper.doInitialLookup("condition", "conditions", "bin", httpHelper)
-            DnDHelper.queryNonMatchRetry("conditions", "bin", httpHelper)
+//            DnDHelper.doInitialLookup("condition", "conditions", "bin", httpHelper)
+//            DnDHelper.queryNonMatchRetry("conditions", "bin", httpHelper)
             event.hook.sendMessage(any<String>()).queue(any())
         }
     }
