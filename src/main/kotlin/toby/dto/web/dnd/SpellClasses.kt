@@ -20,7 +20,29 @@ data class Spell(
     val classes: List<ApiInfo>?,
     val subclasses: List<ApiInfo?>,
     val url: String?
-)
+): DnDResponse {
+    override fun isValidReturnObject(): Boolean {
+        return !(index == null &&
+                name == null &&
+                desc == null &&
+                higherLevel == null &&
+                range == null &&
+                components == null &&
+                material == null &&
+                ritual == null &&
+                duration == null &&
+                concentration == null &&
+                castingTime == null &&
+                level == null &&
+                damage == null &&
+                dc == null &&
+                areaOfEffect == null &&
+                school == null &&
+                classes == null &&
+                subclasses == null &&
+                url == null)
+    }
+}
 
 data class AreaOfEffect(val type: String, val size: Int)
 
@@ -33,25 +55,3 @@ data class Dc(val dcType: ApiInfo, val dcSuccess: String?)
 data class ApiInfo(val index: String, val name: String, val url: String)
 
 data class QueryResult(val count: Int, val results: List<ApiInfo>)
-
-fun Spell.isAllFieldsNull(): Boolean {
-    return index == null &&
-            name == null &&
-            desc == null &&
-            higherLevel == null &&
-            range == null &&
-            components == null &&
-            material == null &&
-            ritual == null &&
-            duration == null &&
-            concentration == null &&
-            castingTime == null &&
-            level == null &&
-            damage == null &&
-            dc == null &&
-            areaOfEffect == null &&
-            school == null &&
-            classes == null &&
-            subclasses == null &&
-            url == null
-}

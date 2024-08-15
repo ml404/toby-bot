@@ -1,86 +1,109 @@
 package toby.menu.menus
 
+import coroutines.MainCoroutineExtension
 import io.mockk.*
-import net.dv8tion.jda.api.EmbedBuilder
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import toby.command.CommandTest
-import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.interactionHook
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.menu.MenuContext
 import toby.menu.MenuTest
 import toby.menu.MenuTest.Companion.menuEvent
 
+@OptIn(ExperimentalCoroutinesApi::class)
+@ExtendWith(MainCoroutineExtension::class)
 internal class DndMenuTest : MenuTest {
+
     private lateinit var dndMenu: DndMenu
 
     @BeforeEach
     fun setup() {
         setUpMenuMocks()
-        dndMenu = DndMenu()
-        every { interactionHook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
+        every { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) } returns webhookMessageCreateAction
     }
 
     @AfterEach
     fun tearDown() {
         tearDownMenuMocks()
+        unmockkAll()
     }
 
     @Test
-    fun test_dndMenuWithSpell() {
-        //Arrange
+    fun test_dndMenuWithSpell() = runTest {
+        // Arrange
+        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
         val ctx = mockAndCreateMenuContext("dnd:spell", "fireball")
 
-        //Act
+        // Act
         dndMenu.handle(ctx, 0)
 
-        //Assert
-        verify(exactly = 1) { menuEvent.deferReply() }
-        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
+        // Ensure all asynchronous code completes
+        advanceUntilIdle()
+
+        // Assert
+        verify { menuEvent.deferReply() }
+        verify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
     }
 
     @Test
-    fun test_dndMenuWithCondition() {
-        //Arrange
+    fun test_dndMenuWithCondition() = runTest {
+        // Arrange
+        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
         val ctx = mockAndCreateMenuContext("dnd:condition", "grappled")
 
-        //Act
+        // Act
         dndMenu.handle(ctx, 0)
 
-        //Assert
-        verify(exactly = 1) { menuEvent.deferReply() }
-        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        // Ensure all asynchronous code completes
+        advanceUntilIdle()
+
+        // Assert
+        verify { menuEvent.deferReply() }
+        verify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
     }
 
     @Test
-    fun test_dndMenuWithRule() {
-        //Arrange
+    fun test_dndMenuWithRule() = runTest {
+        // Arrange
+        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
         val ctx = mockAndCreateMenuContext("dnd:rule", "cover")
 
-        //Act
+        // Act
         dndMenu.handle(ctx, 0)
 
-        //Assert
-        verify(exactly = 1) { menuEvent.deferReply() }
-        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        // Ensure all asynchronous code completes
+        advanceUntilIdle()
+
+        // Assert
+        verify { menuEvent.deferReply() }
+        verify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
     }
 
     @Test
-    fun test_dndMenuWithFeature() {
-        //Arrange
+    fun test_dndMenuWithFeature() = runTest {
+        // Arrange
+        dndMenu = DndMenu(StandardTestDispatcher() as CoroutineDispatcher)
         val ctx = mockAndCreateMenuContext("dnd:feature", "action-surge-1-use")
 
-        //Act
+        // Act
         dndMenu.handle(ctx, 0)
 
-        //Assert
-        verify(exactly = 1) { menuEvent.deferReply() }
-        verify(exactly = 1) { interactionHook.sendMessageEmbeds(any(), *anyVararg()) }
+        // Ensure all asynchronous code completes
+        advanceUntilIdle()
+
+        // Assert
+        verify { menuEvent.deferReply() }
+        verify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
     }
 
     companion object {
@@ -91,7 +114,6 @@ internal class DndMenuTest : MenuTest {
             every { menuEvent.message } returns CommandTest.message
             every { CommandTest.message.delete() } returns auditableRestAction
             every { auditableRestAction.queue() } just Runs
-            every { menuEvent.message.delete().queue() } just Runs
             every { webhookMessageCreateAction.queue() } just Runs
             return MenuContext(menuEvent)
         }

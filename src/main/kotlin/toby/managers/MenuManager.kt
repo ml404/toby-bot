@@ -1,5 +1,6 @@
 package toby.managers
 
+import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
@@ -15,6 +16,7 @@ import java.util.*
 @Configurable
 class MenuManager @Autowired constructor(private val configService: IConfigService) {
     private val menus: MutableList<IMenu> = ArrayList()
+    private val logger = KotlinLogging.logger {}
 
     init {
         addMenu(DndMenu())
@@ -22,15 +24,15 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
 
     private fun addMenu(menu: IMenu) {
         val nameFound = menus.stream().anyMatch { it: IMenu -> it.name.equals(menu.name, ignoreCase = true) }
-
         require(!nameFound) { "A menu with this name is already present" }
         menus.add(menu)
+        logger.info { "Added menu ${menu.name}" }
     }
 
     val allMenus: List<IMenu>
         get() = menus
 
-    fun getMenu(search: String): IMenu? = menus.find { it.name.equals(search, true) }
+    fun getMenu(search: String): IMenu? = menus.find { search.contains(it.name, ignoreCase = true) }
 
     fun handle(event: StringSelectInteractionEvent) {
         val invoke = event.componentId.lowercase(Locale.getDefault())
@@ -38,6 +40,7 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
 
         // Build the response embed
         if (menu != null) {
+            logger.info { "Handling menu: ${menu.name} on guild: ${event.guild?.idLong}" }
             val deleteDelayConfig = configService.getConfigByName(
                 ConfigDto.Configurations.DELETE_DELAY.configValue,
                 event.guild!!.id)

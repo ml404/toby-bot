@@ -1,6 +1,8 @@
 package toby.helpers
 
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -14,19 +16,30 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
+import toby.dto.web.dnd.Condition
+import toby.dto.web.dnd.Feature
+import toby.dto.web.dnd.Rule
+import toby.dto.web.dnd.Spell
 import toby.helpers.DnDHelper.clearInitiative
 import toby.helpers.DnDHelper.decrementTurnTable
+import toby.helpers.DnDHelper.doInitialLookup
 import toby.helpers.DnDHelper.incrementTurnTable
 import toby.helpers.DnDHelper.initButtons
 import toby.helpers.DnDHelper.initiativeEmbedBuilder
+import toby.helpers.DnDHelper.queryNonMatchRetry
 import toby.helpers.DnDHelper.rollDice
 import toby.helpers.DnDHelper.rollDiceWithModifier
 import toby.helpers.DnDHelper.rollInitiativeForMembers
+import toby.helpers.DnDHelper.rollInitiativeForString
 import toby.helpers.DnDHelper.sendOrEditInitiativeMessage
 import toby.helpers.DnDHelper.sortedEntries
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 import toby.jpa.service.impl.UserServiceImpl
+import toby.menu.menus.DndMenu.Companion.FEATURE_NAME
+import toby.menu.menus.DndMenu.Companion.RULE_NAME
+import toby.menu.menus.DndMenu.Companion.SPELL_NAME
 
 internal class DnDHelperTest {
     lateinit var hook: InteractionHook
@@ -198,6 +211,143 @@ internal class DnDHelperTest {
 
         Assertions.assertEquals(0, DnDHelper.initiativeIndex.get())
         Assertions.assertEquals(0, sortedEntries.size)
+    }
+
+    @Test
+    fun testRollInitiativeForMembersWithEmptyList() {
+        clearInitiative()
+        rollInitiativeForMembers(emptyList(), member, initiativeMap, userService)
+        Assertions.assertTrue(sortedEntries.isEmpty(), "Sorted entries should be empty for an empty member list")
+    }
+
+    @Test
+    fun testRollInitiativeForString() {
+        val names = listOf("Alice", "Bob", "Charlie")
+        rollInitiativeForString(names, initiativeMap)
+        Assertions.assertEquals(3, initiativeMap.size, "There should be an entry for each name")
+        names.forEach { name ->
+            Assertions.assertTrue(initiativeMap.containsKey(name), "Initiative map should contain entry for $name")
+        }
+    }
+
+    @Test
+    fun testSendOrEditInitiativeMessageForNewMessage() {
+        clearInitiative()
+        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
+        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
+
+        verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() }
+    }
+
+    @Test
+    fun testSendOrEditInitiativeMessageForExistingMessage() {
+        clearInitiative()
+        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
+        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, event, 0)
+
+        verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { messageEditAction.setActionRow(any(), any(), any()) }
+        verify(exactly = 1) { messageEditAction.queue() }
+        verify(exactly = 1) { hook.setEphemeral(true) }
+        verify(exactly = 1) { hook.sendMessage(any<String>()) }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testDoInitialLookupWithSpell() = runTest {
+        val mockResponse = """{"name": "Fireball"}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val response = doInitialLookup(SPELL_NAME, "spell", "fireball", httpHelper)
+        Assertions.assertTrue(response is Spell, "Response should be of type Spell")
+        Assertions.assertEquals("Fireball", (response as Spell).name, "Spell name should be 'Fireball'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testDoInitialLookupWithCondition() = runTest {
+
+        val mockResponse = """{"name": "Blinded"}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val response = doInitialLookup(CONDITION_NAME, "condition", "blinded", httpHelper)
+        Assertions.assertTrue(response is Condition, "Response should be of type Condition")
+        Assertions.assertEquals("Blinded", (response as Condition).name, "Condition name should be 'Blinded'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testDoInitialLookupWithRule() = runTest  {
+        val mockResponse = """{"name": "Cover"}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val response = doInitialLookup(RULE_NAME, "rule", "cover", httpHelper)
+        Assertions.assertTrue(response is Rule, "Response should be of type Rule")
+        Assertions.assertEquals("Cover", (response as Rule).name, "Rule name should be 'Cover'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testDoInitialLookupWithFeature() = runTest  {
+        val mockResponse = """{"name": "Darkvision"}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val response = doInitialLookup(FEATURE_NAME, "feature", "darkvision", httpHelper)
+        Assertions.assertTrue(response is Feature, "Response should be of type Feature")
+        Assertions.assertEquals("Darkvision", (response as Feature).name, "Feature name should be 'Darkvision'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testQueryNonMatchRetryWithSpell() = runTest  {
+        val mockResponse = """{"results": [{"name": "Fireball"}]}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val result = queryNonMatchRetry("spell", "fireball", httpHelper)
+        Assertions.assertNotNull(result, "Query result should not be null")
+        Assertions.assertEquals("Fireball", result?.results?.firstOrNull()?.name, "Query result name should be 'Fireball'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testQueryNonMatchRetryWithRule() = runTest  {
+        val mockResponse = """{"results": [{"name": "Cover"}]}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val result = queryNonMatchRetry("rule", "cover", httpHelper)
+        Assertions.assertNotNull(result, "Query result should not be null")
+        Assertions.assertEquals("Cover", result?.results?.firstOrNull()?.name, "Query result name should be 'Cover'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testQueryNonMatchRetryWithFeature() = runTest  {
+        val mockResponse = """{"results": [{"name": "Darkvision"}]}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val result = queryNonMatchRetry("feature", "darkvision", httpHelper)
+        Assertions.assertNotNull(result, "Query result should not be null")
+        Assertions.assertEquals("Darkvision", result?.results?.firstOrNull()?.name, "Query result name should be 'Darkvision'")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testQueryNonMatchRetryWithCondition() = runTest  {
+        val mockResponse = """{"results": [{"name": "Blinded"}]}"""
+        val httpHelper = mockk<HttpHelper>()
+        coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
+
+        val result = queryNonMatchRetry("condition", "blinded", httpHelper)
+        Assertions.assertNotNull(result, "Query result should not be null")
+        Assertions.assertEquals("Blinded", result?.results?.firstOrNull()?.name, "Query result name should be 'Blinded'")
     }
 
     companion object {

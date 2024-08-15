@@ -1,48 +1,63 @@
 package toby.menu.menus
 
+import kotlinx.coroutines.*
+import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import toby.command.commands.dnd.DnDCommand.Companion.doLookUpAndReply
+import toby.helpers.DnDHelper.doInitialLookup
+import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
-class DndMenu : IMenu {
+class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : IMenu {
+    private val logger = KotlinLogging.logger {}
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
+        logger.info { "DnD menu event started for guild ${ctx.guild.idLong}" }
         val event = ctx.selectEvent
         event.deferReply().queue()
         val type = event.toTypeString()
         runCatching {
-            event.determineDnDRequestType(deleteDelay, type, event.hook)
+            event.determineDnDRequestType(type, event.hook)
         }.onFailure {
             throw RuntimeException(it)
         }
     }
 
     private fun StringSelectInteractionEvent.determineDnDRequestType(
-        deleteDelay: Int,
-        type: String,
+        typeName: String,
         hook: InteractionHook
     ) {
-        val typeName = when (type) {
+        logger.info { "Determining DnD type value" }
+        val typeValue = when (typeName) {
             SPELL_NAME -> "spells"
             CONDITION_NAME -> "conditions"
             RULE_NAME -> "rule-sections"
             FEATURE_NAME -> "features"
-            else -> throw IllegalArgumentException("Unknown DnD request type: $type")
+            else -> {
+                logger.info { "Non valid typename passed to the DnDMenu" }
+                ""
+            }
         }
-        sendDndApiRequest(typeName, type, deleteDelay, hook)
+        logger.info { "Found Type value $typeValue" }
+        sendDndApiRequest(hook, typeName, typeValue)
     }
 
     private fun StringSelectInteractionEvent.sendDndApiRequest(
+        hook: InteractionHook,
         typeName: String,
-        typeValue: String,
-        deleteDelay: Int,
-        hook: InteractionHook
+        typeValue: String
     ) {
         val query = values.firstOrNull() ?: return
+        // Launch a coroutine to handle the suspend function call
+        CoroutineScope(dispatcher).launch {
+            val dnDResponseDeferred = async { doInitialLookup(typeName, typeValue, query, HttpHelper(dispatcher)) }
+            // Make sure to handle potential null response
+            dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
+
+        }
         message.delete().queue()
-        doLookUpAndReply(hook, typeValue, typeName, query, HttpHelper(), deleteDelay)
+
     }
 
     override val name: String

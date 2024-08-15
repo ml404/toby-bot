@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import toby.dto.web.dnd.*
 import toby.helpers.JsonParser.parseJSONToSpell
 import toby.helpers.JsonParser.parseJsonToFeature
-import toby.helpers.JsonParser.parseJsonToInformation
+import toby.helpers.JsonParser.parseJsonToCondition
 import toby.helpers.JsonParser.parseJsonToQueryResult
 import toby.helpers.JsonParser.parseJsonToRule
 
@@ -80,7 +80,7 @@ internal class JsonParserTest {
 
     @Test
     fun test_conditionQuery_returnsConditionObject() {
-        val condition = parseJsonToInformation(
+        val condition = parseJsonToCondition(
             """
                 {"index":"grappled","name":"Grappled","desc":["- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.","- The information ends if the grappler is incapacitated (see the information).","- The information also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."],"url":"/api/conditions/grappled"}
                 """.trimIndent()
