@@ -1,5 +1,6 @@
 package toby.managers
 
+import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
@@ -15,6 +16,7 @@ import java.util.*
 @Configurable
 class MenuManager @Autowired constructor(private val configService: IConfigService) {
     private val menus: MutableList<IMenu> = ArrayList()
+    private val logger = KotlinLogging.logger {}
 
     init {
         addMenu(DndMenu())
@@ -38,6 +40,7 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
 
         // Build the response embed
         if (menu != null) {
+            logger.info { "Handling menu: ${menu.name} on guild: ${event.guild?.idLong}" }
             val deleteDelayConfig = configService.getConfigByName(
                 ConfigDto.Configurations.DELETE_DELAY.configValue,
                 event.guild!!.id)

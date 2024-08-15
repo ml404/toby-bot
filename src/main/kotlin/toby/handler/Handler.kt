@@ -233,6 +233,7 @@ class Handler @Autowired constructor(
     }
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
+        logger.info { "StringSelectInteractionEvent received on guild ${event.guild?.idLong}" }
         menuManager.handle(event)
     }
 
