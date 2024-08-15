@@ -37,4 +37,12 @@ internal class MenuManagerTest {
         assertNotNull(menu)
         assertEquals("dnd", menu?.name)
     }
+
+    @Test
+    fun testMenuWithLongerName() {
+        val menuManager = MenuManager(configService)
+        val menu = menuManager.getMenu("dnd:spell")
+        assertNotNull(menu)
+        assertEquals("dnd", menu?.name)
+    }
 }
