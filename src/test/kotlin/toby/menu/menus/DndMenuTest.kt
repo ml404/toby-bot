@@ -6,9 +6,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.yield
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import org.junit.jupiter.api.AfterEach
@@ -18,15 +16,15 @@ import org.junit.jupiter.api.extension.ExtendWith
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.interactionHook
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
-import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_URL
-import toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_URL
 import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
 import toby.menu.MenuContext
 import toby.menu.MenuTest
 import toby.menu.MenuTest.Companion.menuEvent
@@ -40,7 +38,12 @@ internal class DndMenuTest : MenuTest {
     @BeforeEach
     fun setup() {
         setUpMenuMocks()
-        every { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) } returns webhookMessageCreateAction
+        every {
+            interactionHook.sendMessageEmbeds(
+                any<MessageEmbed>(),
+                *anyVararg()
+            )
+        } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just Runs
     }
 
@@ -57,29 +60,26 @@ internal class DndMenuTest : MenuTest {
         val httpHelper = createMockHttpClient(FIREBALL_INITIAL_URL, FIREBALL_INITIAL_RESPONSE, dispatcher = dispatcher)
         dndMenu = DndMenu(dispatcher, httpHelper)
         val ctx = mockAndCreateMenuContext("dnd:spell", "fireball")
+        val embedSlot = slot<MessageEmbed>()
+
 
         // Act
         dndMenu.handle(ctx, 0)
-
-        // Ensure that all coroutines are started
-        yield() // Forces the coroutine to yield, which might help to start the coroutine properly
-
-        // Run current tasks to ensure they start
-        runCurrent() // Executes all enqueued tasks up to this point
 
         // Ensure all asynchronous code completes
         advanceUntilIdle() // Advances the time until there are no more tasks left to process
 
         // Assert
-        verify { menuEvent.deferReply() }
-        coVerify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
+        coVerify {
+            menuEvent.deferReply()
+            interactionHook.sendMessageEmbeds(capture(embedSlot))
+        }
     }
 
     @Test
     fun test_dndMenuWithCondition() = runTest {
         // Arrange
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-
         val httpHelper = createMockHttpClient(GRAPPLED_INITIAL_URL, GRAPPLED_INITIAL_RESPONSE, dispatcher = dispatcher)
         dndMenu = DndMenu(dispatcher, httpHelper)
         val ctx = mockAndCreateMenuContext("dnd:condition", "grappled")
@@ -91,8 +91,10 @@ internal class DndMenuTest : MenuTest {
         advanceUntilIdle()
 
         // Assert
-        verify { menuEvent.deferReply() }
-        coVerify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
+        coVerify {
+            menuEvent.deferReply()
+            interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg())
+        }
     }
 
     @Test
@@ -110,8 +112,10 @@ internal class DndMenuTest : MenuTest {
         advanceUntilIdle()
 
         // Assert
-        verify { menuEvent.deferReply() }
-        coVerify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
+        coVerify {
+            menuEvent.deferReply()
+            interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg())
+        }
     }
 
     @Test
@@ -129,8 +133,10 @@ internal class DndMenuTest : MenuTest {
         advanceUntilIdle()
 
         // Assert
-        verify { menuEvent.deferReply() }
-        coVerify { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
+        coVerify {
+            menuEvent.deferReply()
+            interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg())
+        }
     }
 
     companion object {

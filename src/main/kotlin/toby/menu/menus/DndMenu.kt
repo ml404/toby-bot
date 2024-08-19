@@ -1,7 +1,11 @@
 package toby.menu.menus
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import toby.helpers.DnDHelper.doInitialLookup
@@ -10,8 +14,10 @@ import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
-class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, private val httpHelper: HttpHelper) : IMenu {
+class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, private val httpHelper: HttpHelper) :
+    IMenu {
     private val logger = KotlinLogging.logger {}
+
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.info { "DnD menu event started for guild ${ctx.guild.idLong}" }
         val event = ctx.selectEvent
@@ -52,12 +58,14 @@ class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, priv
         val query = values.firstOrNull() ?: return
         // Launch a coroutine to handle the suspend function call
         CoroutineScope(dispatcher).launch {
-            val dnDResponseDeferred = async(dispatcher) { doInitialLookup(typeName, typeValue, query, httpHelper) }
-            // Make sure to handle potential null response
-            dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
-
+            val embed = fetchDndApiResponse(typeName, typeValue, query)
+            embed?.let { hook.sendMessageEmbeds(it).queue() }
         }
 
+    }
+
+    private suspend fun fetchDndApiResponse(typeName: String, typeValue: String, query: String): MessageEmbed? {
+        return doInitialLookup(typeName, typeValue, query, httpHelper)?.toEmbed()
     }
 
     override val name: String

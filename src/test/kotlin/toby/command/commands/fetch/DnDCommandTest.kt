@@ -122,7 +122,6 @@ class DnDCommandTest : CommandTest {
     fun `should handle no results scenario`() = runTest {
 
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-        val scope = this
         val httpHelper = createMockHttpClient(
             BIN_INITIAL_URL,
             ERROR_NOT_FOUND_RESPONSE,
