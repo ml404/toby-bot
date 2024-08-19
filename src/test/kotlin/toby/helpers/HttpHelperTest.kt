@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
-import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_URL
 
 internal class HttpHelperTest {
 
@@ -17,7 +17,7 @@ internal class HttpHelperTest {
         val mockEngine = MockEngine { request ->
             // Check the request URL and provide a response
             when (request.url.toString()) {
-                FIREBALL_URL -> {
+                FIREBALL_INITIAL_URL -> {
                     respond(
                         content = FIREBALL_INITIAL_RESPONSE,
                         status = HttpStatusCode.OK,

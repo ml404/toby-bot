@@ -1,6 +1,7 @@
 package toby.command.commands.fetch
 
 import coroutines.MainCoroutineExtension
+import io.ktor.http.*
 import io.mockk.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,7 +28,7 @@ import toby.command.commands.fetch.TestHttpHelperHelper.EMPTY_QUERY_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.ERROR_NOT_FOUND_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
-import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_URL
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)
@@ -60,7 +61,7 @@ class DnDCommandTest : CommandTest {
     fun `should handle successful lookup and reply with embed`() = runTest {
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
         val httpHelper = createMockHttpClient(
-            FIREBALL_URL,
+            FIREBALL_INITIAL_URL,
             FIREBALL_INITIAL_RESPONSE,
             dispatcher = dispatcher
         )
@@ -93,6 +94,7 @@ class DnDCommandTest : CommandTest {
             ERROR_NOT_FOUND_RESPONSE,
             BLIND_QUERY_URL,
             BLIND_QUERY_RESPONSE,
+            initialResponseType = HttpStatusCode.NotFound,
             dispatcher = dispatcher
         )
         command = DnDCommand(dispatcher, httpHelper)
@@ -120,7 +122,17 @@ class DnDCommandTest : CommandTest {
     fun `should handle no results scenario`() = runTest {
 
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-        command = DnDCommand(dispatcher, createMockHttpClient(BIN_INITIAL_URL, ERROR_NOT_FOUND_RESPONSE, BIN_QUERY_URL, EMPTY_QUERY_RESPONSE, dispatcher = dispatcher))
+        val scope = this
+        val httpHelper = createMockHttpClient(
+            BIN_INITIAL_URL,
+            ERROR_NOT_FOUND_RESPONSE,
+            BIN_QUERY_URL,
+            EMPTY_QUERY_RESPONSE,
+            initialResponseType = HttpStatusCode.NotFound,
+            queryResponseType = HttpStatusCode.NotFound,
+            dispatcher = dispatcher
+        )
+        command = DnDCommand(dispatcher, httpHelper)
         command.handleWithHttpObjects(
             event,
             "condition",
@@ -130,7 +142,8 @@ class DnDCommandTest : CommandTest {
         )
 
         // Ensure all asynchronous code completes
-        advanceUntilIdle()
+        advanceUntilIdle() // Advances the time until there are no more tasks left to process
+
 
         // Verify interactions and responses
         coVerify {

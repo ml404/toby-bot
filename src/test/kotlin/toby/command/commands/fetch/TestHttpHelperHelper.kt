@@ -9,10 +9,10 @@ import toby.helpers.HttpHelper
 object TestHttpHelperHelper {
     //GET requests
     private const val DND_URL_START = "https://www.dnd5eapi.co/api"
-    const val FIREBALL_URL = "$DND_URL_START/spells/fireball"
+    const val FIREBALL_INITIAL_URL = "$DND_URL_START/spells/fireball"
     const val BLIND_INITIAL_URL = "$DND_URL_START/conditions/blind"
     const val BLIND_QUERY_URL = "$DND_URL_START/conditions?name=blind"
-    const val GRAPPLED_URL = "$DND_URL_START/conditions/grappled"
+    const val GRAPPLED_INITIAL_URL = "$DND_URL_START/conditions/grappled"
     const val COVER_INITIAL_URL = "$DND_URL_START/rule-sections/cover"
     const val ACTION_SURGE_INITIAL_URL = "$DND_URL_START/features/action-surge-1-use"
     const val BIN_INITIAL_URL = "$DND_URL_START/conditions/bin"
@@ -32,9 +32,11 @@ object TestHttpHelperHelper {
 
     fun createMockHttpClient(
         initialUrlRequest: String = "",
-        expectedInitialResponseJson: String = "",
+        initialResponseJson: String = "",
         queryRematchUrlRequest: String = "",
-        expectedQueryResponse: String = "",
+        queryRematchResponse: String = "",
+        initialResponseType: HttpStatusCode = HttpStatusCode.OK,
+        queryResponseType: HttpStatusCode = HttpStatusCode.OK,
         dispatcher: CoroutineDispatcher
     ): HttpHelper {
         val mockEngine = MockEngine { request ->
@@ -42,16 +44,16 @@ object TestHttpHelperHelper {
             when (request.url.toString()) {
                 initialUrlRequest -> {
                     respond(
-                        content = expectedInitialResponseJson,
-                        status = HttpStatusCode.OK,
+                        content = initialResponseJson,
+                        status = initialResponseType,
                         headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     )
                 }
 
                 queryRematchUrlRequest -> {
                     respond(
-                        content = expectedQueryResponse,
-                        status = HttpStatusCode.OK,
+                        content = queryRematchResponse,
+                        status = queryResponseType,
                         headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                     )
                 }

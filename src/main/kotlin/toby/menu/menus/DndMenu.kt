@@ -48,15 +48,15 @@ class DndMenu(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, priv
         typeName: String,
         typeValue: String
     ) {
+        message.delete().queue()
         val query = values.firstOrNull() ?: return
         // Launch a coroutine to handle the suspend function call
         CoroutineScope(dispatcher).launch {
-            val dnDResponseDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
+            val dnDResponseDeferred = async(dispatcher) { doInitialLookup(typeName, typeValue, query, httpHelper) }
             // Make sure to handle potential null response
             dnDResponseDeferred.await()?.let { hook.sendMessageEmbeds(it.toEmbed()).queue() }
 
         }
-        message.delete().queue()
 
     }
 
