@@ -15,7 +15,6 @@ class DndApiCoroutineHandler(
 ) {
     private val logger = KotlinLogging.logger {}
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun launchFetchAndSendEmbed(
         event: StringSelectInteractionEvent,
         typeName: String,
@@ -23,8 +22,8 @@ class DndApiCoroutineHandler(
         hook: InteractionHook
     ) {
         logger.info("Starting launchFetchAndSendEmbed")
+        event.message.delete().queue()
         CoroutineScope(dispatcher).launch {
-            logger.info("Running in coroutine: ${this.coroutineContext[Job]} on dispatcher: ${this.coroutineContext[CoroutineDispatcher]}")
             val query = event.values.firstOrNull() ?: return@launch
             val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
             val response = initialQueryDeferred.await()
@@ -34,7 +33,7 @@ class DndApiCoroutineHandler(
                     logger.info("Finished processing, sending embed...")
                     hook.sendMessageEmbeds(it.toEmbed()).queue()
                 }
-            }
+            } ?: hook.sendMessage("Something went wrong, please try again later.").queue()
         }
     }
 }

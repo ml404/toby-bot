@@ -2,9 +2,10 @@ package toby.menu.menus.dnd
 
 import coroutines.MainCoroutineExtension
 import io.mockk.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -116,5 +117,25 @@ class DndApiCoroutineHandlerTest {
 
         // Assert
         coVerify { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() }
+    }
+
+    @Test
+    fun `launchFetchAndSendEmbed should send error message when response is not valid`() = runTest {
+        // Arrange
+        val event = mockk<StringSelectInteractionEvent>(relaxed = true)
+        val hook = mockk<InteractionHook>(relaxed = true)
+        coEvery { httpHelper.fetchFromGet(any()) } returns ""
+        every { hook.sendMessage(any<String>()).queue() } returns Unit
+
+        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper)
+
+        every { event.values.firstOrNull() } returns "grappled"
+
+        // Act
+        handler.launchFetchAndSendEmbed(event, "condition", "conditions", hook)
+        advanceUntilIdle()
+
+        // Assert
+        coVerify { hook.sendMessage(any<String>()).queue() }
     }
 }
