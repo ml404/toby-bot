@@ -4,11 +4,12 @@ import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import toby.helpers.HttpHelper
 
 object TestHttpHelperHelper {
     //GET requests
-    private const val DND_URL_START = "https://www.dnd5eapi.co/api"
+    const val DND_URL_START = "https://www.dnd5eapi.co/api"
     const val FIREBALL_INITIAL_URL = "$DND_URL_START/spells/fireball"
     const val BLIND_INITIAL_URL = "$DND_URL_START/conditions/blind"
     const val BLIND_QUERY_URL = "$DND_URL_START/conditions?name=blind"
@@ -37,7 +38,7 @@ object TestHttpHelperHelper {
         queryRematchResponse: String = "",
         initialResponseType: HttpStatusCode = HttpStatusCode.OK,
         queryResponseType: HttpStatusCode = HttpStatusCode.OK,
-        dispatcher: CoroutineDispatcher
+        dispatcher: CoroutineDispatcher = Dispatchers.IO
     ): HttpHelper {
         val mockEngine = MockEngine { request ->
             // Check the request URL and provide a response

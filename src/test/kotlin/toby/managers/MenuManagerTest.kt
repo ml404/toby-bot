@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 import toby.helpers.HttpHelper
 import toby.jpa.service.IConfigService
 import toby.menu.IMenu
-import toby.menu.menus.DndMenu
+import toby.menu.menus.dnd.DndMenu
 
 internal class MenuManagerTest {
 

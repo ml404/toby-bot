@@ -22,8 +22,9 @@ import toby.helpers.DnDHelper.toEmbed
 import toby.helpers.HttpHelper
 import toby.jpa.dto.UserDto
 
-class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, private val httpHelper: HttpHelper) :
-    IDnDCommand, IFetchCommand {
+class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+                 private val httpHelper: HttpHelper
+) : IDnDCommand, IFetchCommand {
     private val logger = KotlinLogging.logger {}
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
@@ -48,18 +49,35 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, p
     ) {
         event.deferReply().queue()
         val hook = event.hook
-        var messageSent = false
         logger.info("Accessing DnD API...")
         // Create a coroutine scope with a supervisor job for structured concurrency
+        val hasRespondedToQuery = createLookupCoroutineAndReply(typeName, typeValue, query, hook, deleteDelay)
+
+        // Only send "No matches found" if no other message was sent
+        if (!hasRespondedToQuery) {
+            logger.info("No matches found for query: $query")
+            hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
+                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+        }
+    }
+
+    private fun createLookupCoroutineAndReply(
+        typeName: String?,
+        typeValue: String?,
+        query: String,
+        hook: InteractionHook,
+        deleteDelay: Int?
+    ): Boolean {
+        var hasReplied = false
         CoroutineScope(dispatcher).launch {
-            try {
+            runCatching {
                 val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
                 val nonMatchQueryResultDeferred = async { queryNonMatchRetry(typeValue, query, httpHelper) }
 
                 // Handle the initial query result
                 initialQueryDeferred.await()?.let {
                     if (it.isValidInitialQueryReturn(hook)) {
-                        messageSent = true
+                        hasReplied = true
                         return@launch
                     }
                 }
@@ -67,25 +85,19 @@ class DnDCommand(private val dispatcher: CoroutineDispatcher = Dispatchers.IO, p
                 // Handle the non-match query result
                 nonMatchQueryResultDeferred.await()?.let {
                     if (it.isValidNonMatchQueryReturn(typeName, hook, query)) {
-                        messageSent = true
+                        hasReplied = true
                         return@launch
                     }
                 }
 
-            } catch (e: Exception) {
-                logger.error("An error occurred while handling the DnD query", e)
+            }.onFailure {
+                logger.error("An error occurred while handling the DnD query", it)
                 hook.sendMessage("An error occurred while processing your request. Please try again later.")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
-                messageSent = true
+                hasReplied = true
             }
         }
-
-        // Only send "No matches found" if no other message was sent
-        if (!messageSent) {
-            logger.info("No matches found for query: $query")
-            hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
-        }
+        return hasReplied
     }
 
 

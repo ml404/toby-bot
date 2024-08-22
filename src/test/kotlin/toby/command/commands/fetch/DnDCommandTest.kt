@@ -29,12 +29,14 @@ import toby.command.commands.fetch.TestHttpHelperHelper.ERROR_NOT_FOUND_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_URL
+import toby.helpers.HttpHelper
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)
 class DnDCommandTest : CommandTest {
 
     private lateinit var command: DnDCommand
+    private lateinit var httpHelper: HttpHelper
     private val deleteDelay = 0
 
     @BeforeEach
@@ -60,7 +62,7 @@ class DnDCommandTest : CommandTest {
     @Test
     fun `should handle successful lookup and reply with embed`() = runTest {
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-        val httpHelper = createMockHttpClient(
+        httpHelper = createMockHttpClient(
             FIREBALL_INITIAL_URL,
             FIREBALL_INITIAL_RESPONSE,
             dispatcher = dispatcher
@@ -89,7 +91,7 @@ class DnDCommandTest : CommandTest {
     @Test
     fun `should handle no initial results but successful followup scenario`() = runTest {
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-        val httpHelper = createMockHttpClient(
+        httpHelper = createMockHttpClient(
             BLIND_INITIAL_URL,
             ERROR_NOT_FOUND_RESPONSE,
             BLIND_QUERY_URL,
@@ -122,7 +124,7 @@ class DnDCommandTest : CommandTest {
     fun `should handle no results scenario`() = runTest {
 
         val dispatcher = StandardTestDispatcher() as CoroutineDispatcher
-        val httpHelper = createMockHttpClient(
+        httpHelper = createMockHttpClient(
             BIN_INITIAL_URL,
             ERROR_NOT_FOUND_RESPONSE,
             BIN_QUERY_URL,

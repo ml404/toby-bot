@@ -10,12 +10,12 @@ import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
 import toby.menu.IMenu
 import toby.menu.MenuContext
-import toby.menu.menus.DndMenu
+import toby.menu.menus.dnd.DndMenu
 import java.util.*
 
 @Service
 @Configurable
-class MenuManager @Autowired constructor(private val configService: IConfigService, private val httpHelper: HttpHelper) {
+class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper) {
     private val menus: MutableList<IMenu> = ArrayList()
     private val logger = KotlinLogging.logger {}
 

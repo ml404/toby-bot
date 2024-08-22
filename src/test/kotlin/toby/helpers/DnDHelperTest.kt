@@ -37,9 +37,9 @@ import toby.helpers.DnDHelper.sortedEntries
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 import toby.jpa.service.impl.UserServiceImpl
-import toby.menu.menus.DndMenu.Companion.FEATURE_NAME
-import toby.menu.menus.DndMenu.Companion.RULE_NAME
-import toby.menu.menus.DndMenu.Companion.SPELL_NAME
+import toby.menu.menus.dnd.DndMenu.Companion.FEATURE_NAME
+import toby.menu.menus.dnd.DndMenu.Companion.RULE_NAME
+import toby.menu.menus.dnd.DndMenu.Companion.SPELL_NAME
 
 internal class DnDHelperTest {
     lateinit var hook: InteractionHook
