@@ -5,21 +5,22 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
+import toby.helpers.HttpHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
 import toby.menu.IMenu
 import toby.menu.MenuContext
-import toby.menu.menus.DndMenu
+import toby.menu.menus.dnd.DndMenu
 import java.util.*
 
 @Service
 @Configurable
-class MenuManager @Autowired constructor(private val configService: IConfigService) {
+class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper) {
     private val menus: MutableList<IMenu> = ArrayList()
     private val logger = KotlinLogging.logger {}
 
     init {
-        addMenu(DndMenu())
+        addMenu(DndMenu(httpHelper = httpHelper))
     }
 
     private fun addMenu(menu: IMenu) {

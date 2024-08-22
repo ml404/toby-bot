@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
 import org.yaml.snakeyaml.error.MissingEnvironmentVariableException
 import toby.handler.Handler
+import toby.helpers.HttpHelper
 import toby.jpa.service.*
 import java.util.*
 
@@ -22,7 +23,8 @@ open class BotMain @Autowired constructor(
     brotherService: IBrotherService,
     userService: IUserService,
     musicFileService: IMusicFileService,
-    excuseService: IExcuseService
+    excuseService: IExcuseService,
+    httpHelper: HttpHelper
 ) {
     init {
         EmbedUtils.setEmbedBuilder {
@@ -54,7 +56,7 @@ open class BotMain @Autowired constructor(
                     CacheFlag.ACTIVITY
                 )
             ).enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI)
-        builder.addEventListeners(Handler(configService, brotherService, userService, musicFileService, excuseService))
+        builder.addEventListeners(Handler(configService, brotherService, userService, musicFileService, excuseService, httpHelper))
         jda = builder.build()
     }
 

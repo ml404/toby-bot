@@ -5,6 +5,7 @@ buildscript {
         springBootVersion = '3.1.4'
         kotlin_version = '2.0.0-RC3'
         kotlinx_version = '1.9.0-RC'
+        ktor_version = '2.3.12'
     }
     repositories {
         mavenCentral()
@@ -61,7 +62,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     implementation 'me.duncte123:botCommons:3.1.18'
     implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+    implementation "io.ktor:ktor-client-core:$ktor_version"
+    implementation "io.ktor:ktor-client-cio:$ktor_version"
+    implementation "io.ktor:ktor-client-json:$ktor_version"
+    implementation "io.ktor:ktor-client-serialization:$ktor_version"
+    testImplementation "io.ktor:ktor-client-mock:$ktor_version"
     implementation 'org.postgresql:postgresql'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-web-services'

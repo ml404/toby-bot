@@ -1,22 +1,87 @@
 package toby.helpers
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.BLIND_QUERY_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.BLIND_QUERY_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.DND_URL_START
+import toby.command.commands.fetch.TestHttpHelperHelper.EMPTY_QUERY_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_RESPONSE
+import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_URL
+import toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
 
 internal class HttpHelperTest {
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun fetchFromGet() = runTest {
-        val httpHelper = HttpHelper()
-        val responseString = httpHelper.fetchFromGet("https://www.dnd5eapi.co/api/spells/fireball")
-        Assertions.assertEquals(spellJson, responseString)
+    fun `fetchFromGet returns expected JSON response for fireball`() = runBlocking {
+        val httpHelper = createMockHttpClient(
+            initialUrlRequest = FIREBALL_INITIAL_URL,
+            initialResponseJson = FIREBALL_INITIAL_RESPONSE,
+        )
+
+        val responseString = httpHelper.fetchFromGet(FIREBALL_INITIAL_URL)
+        assertEquals(FIREBALL_INITIAL_RESPONSE, responseString)
     }
 
-    private val spellJson: String
-        get() = """
-                {"index":"fireball","name":"Fireball","desc":["A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.","The fire spreads around corners. It ignites flammable objects in the area that aren't being worn or carried."],"higher_level":["When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd."],"range":"150 feet","components":["V","S","M"],"material":"A tiny ball of bat guano and sulfur.","ritual":false,"duration":"Instantaneous","concentration":false,"casting_time":"1 action","level":3,"damage":{"damage_type":{"index":"fire","name":"Fire","url":"/api/damage-types/fire"},"damage_at_slot_level":{"3":"8d6","4":"9d6","5":"10d6","6":"11d6","7":"12d6","8":"13d6","9":"14d6"}},"dc":{"dc_type":{"index":"dex","name":"DEX","url":"/api/ability-scores/dex"},"dc_success":"half"},"area_of_effect":{"type":"sphere","size":20},"school":{"index":"evocation","name":"Evocation","url":"/api/magic-schools/evocation"},"classes":[{"index":"sorcerer","name":"Sorcerer","url":"/api/classes/sorcerer"},{"index":"wizard","name":"Wizard","url":"/api/classes/wizard"}],"subclasses":[{"index":"lore","name":"Lore","url":"/api/subclasses/lore"},{"index":"fiend","name":"Fiend","url":"/api/subclasses/fiend"}],"url":"/api/spells/fireball"}
-                """.trimIndent()
+    @Test
+    fun `fetchFromGet returns expected JSON response for grappled`() = runBlocking {
+        val httpHelper = createMockHttpClient(
+            initialUrlRequest = GRAPPLED_INITIAL_URL,
+            initialResponseJson = GRAPPLED_INITIAL_RESPONSE
+        )
+
+        val responseString = httpHelper.fetchFromGet(GRAPPLED_INITIAL_URL)
+        assertEquals(GRAPPLED_INITIAL_RESPONSE, responseString)
+    }
+
+    @Test
+    fun `fetchFromGet returns expected JSON response for cover`() = runBlocking {
+        val httpHelper = createMockHttpClient(
+            initialUrlRequest = COVER_INITIAL_URL,
+            initialResponseJson = COVER_INITIAL_RESPONSE
+        )
+
+        val responseString = httpHelper.fetchFromGet(COVER_INITIAL_URL)
+        assertEquals(COVER_INITIAL_RESPONSE, responseString)
+    }
+
+    @Test
+    fun `fetchFromGet returns expected JSON response for action surge`() = runBlocking {
+        val httpHelper = createMockHttpClient(
+            initialUrlRequest = ACTION_SURGE_INITIAL_URL,
+            initialResponseJson = ACTION_SURGE_RESPONSE
+        )
+
+        val responseString = httpHelper.fetchFromGet(ACTION_SURGE_INITIAL_URL)
+        assertEquals(ACTION_SURGE_RESPONSE, responseString)
+    }
+
+    @Test
+    fun `fetchFromGet returns expected JSON response for blind query`() = runBlocking {
+        val httpHelper = createMockHttpClient(
+            queryRematchUrlRequest = BLIND_QUERY_URL,
+            queryRematchResponse = BLIND_QUERY_RESPONSE
+        )
+
+        val responseString = httpHelper.fetchFromGet(BLIND_QUERY_URL)
+        assertEquals(BLIND_QUERY_RESPONSE, responseString)
+    }
+
+    @Test
+    fun `fetchFromGet returns expected JSON response for empty query`() = runBlocking {
+        val httpHelper = createMockHttpClient(
+            queryRematchUrlRequest = "$DND_URL_START/conditions?name=nonexistent",
+            queryRematchResponse = EMPTY_QUERY_RESPONSE
+        )
+
+        val responseString = httpHelper.fetchFromGet("$DND_URL_START/conditions?name=nonexistent")
+        assertEquals(EMPTY_QUERY_RESPONSE, responseString)
+    }
 }

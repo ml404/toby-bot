@@ -1,4 +1,4 @@
-package toby.jpa.configuration
+package toby.configuration
 
 import com.zaxxer.hikari.HikariDataSource
 import org.postgresql.Driver

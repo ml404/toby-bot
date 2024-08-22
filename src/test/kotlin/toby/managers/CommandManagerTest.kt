@@ -18,6 +18,7 @@ import toby.command.commands.fetch.MemeCommand
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
+import toby.helpers.HttpHelper
 import toby.helpers.MusicPlayerHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.*
@@ -30,6 +31,7 @@ class CommandManagerTest {
     lateinit var userService: IUserService
     lateinit var musicFileService: IMusicFileService
     lateinit var excuseService: IExcuseService
+    lateinit var httpHelper: HttpHelper
     lateinit var commandManager: CommandManager
 
     @BeforeEach
@@ -39,7 +41,8 @@ class CommandManagerTest {
         userService = mockk()
         musicFileService = mockk()
         excuseService = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService)
+        httpHelper = mockk()
+        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }

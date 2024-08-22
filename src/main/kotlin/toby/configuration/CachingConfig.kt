@@ -1,4 +1,4 @@
-package toby.jpa.configuration
+package toby.configuration
 
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching

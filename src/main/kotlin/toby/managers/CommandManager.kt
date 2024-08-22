@@ -18,6 +18,7 @@ import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
 import toby.helpers.Cache
+import toby.helpers.HttpHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
@@ -31,7 +32,8 @@ class CommandManager @Autowired constructor(
     private val brotherService: IBrotherService,
     private val userService: IUserService,
     private val musicFileService: IMusicFileService,
-    private val excuseService: IExcuseService
+    private val excuseService: IExcuseService,
+    private val httpHelper: HttpHelper
 ) {
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
@@ -83,7 +85,7 @@ class CommandManager @Autowired constructor(
 
         //dnd commands
         addCommand(InitiativeCommand(userService))
-        addCommand(DnDCommand())
+        addCommand(DnDCommand(httpHelper = httpHelper))
     }
 
     private fun addCommand(cmd: ICommand) {
