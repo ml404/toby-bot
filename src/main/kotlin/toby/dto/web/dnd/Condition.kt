@@ -5,11 +5,11 @@ data class Condition(
     val name: String?,
     val desc: List<String>?,
     val url: String?
-): DnDResponse {
+) : DnDResponse {
     override fun isValidReturnObject(): Boolean =
-        !(index == null &&
-                name == null &&
+        !(index.isNullOrEmpty() &&
+                name.isNullOrEmpty() &&
                 desc.isNullOrEmpty()
-                && url == null)
+                && url.isNullOrEmpty())
 
 }

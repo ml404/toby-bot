@@ -13,12 +13,11 @@ data class Feature(
     val url: String?
 ) : DnDResponse {
     override fun isValidReturnObject(): Boolean =
-        !(index == null &&
+        !(index.isNullOrEmpty() &&
                 classInfo == null &&
-                name == null &&
+                name.isNullOrEmpty() &&
                 level == null &&
                 prerequisites.isEmpty() &&
                 desc.isNullOrEmpty() &&
-                url == null)
+                url.isNullOrEmpty())
 }
-

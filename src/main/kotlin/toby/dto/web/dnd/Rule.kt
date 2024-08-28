@@ -7,11 +7,8 @@ data class Rule(
     val url: String?
 ): DnDResponse {
     override fun isValidReturnObject(): Boolean =
-        !(index == null &&
-                name == null &&
-                desc.isNullOrEmpty() &&
-                url == null)
+        !(index.isNullOrEmpty() &&
+                name.isNullOrEmpty() &&
+                desc.isNullOrEmpty())
 
 }
-
-

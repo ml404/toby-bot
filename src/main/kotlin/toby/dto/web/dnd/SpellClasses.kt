@@ -22,25 +22,25 @@ data class Spell(
     val url: String?
 ): DnDResponse {
     override fun isValidReturnObject(): Boolean {
-        return !(index == null &&
-                name == null &&
-                desc == null &&
-                higherLevel == null &&
-                range == null &&
-                components == null &&
-                material == null &&
+        return !(index.isNullOrEmpty() &&
+                name.isNullOrEmpty() &&
+                desc.isEmpty() &&
+                higherLevel.isEmpty() &&
+                range.isNullOrEmpty() &&
+                components.isEmpty() &&
+                material.isNullOrEmpty() &&
                 ritual == null &&
-                duration == null &&
+                duration.isNullOrEmpty() &&
                 concentration == null &&
-                castingTime == null &&
+                castingTime.isNullOrEmpty() &&
                 level == null &&
                 damage == null &&
                 dc == null &&
                 areaOfEffect == null &&
                 school == null &&
-                classes == null &&
-                subclasses == null &&
-                url == null)
+                classes.isNullOrEmpty() &&
+                subclasses.isEmpty() &&
+                url.isNullOrEmpty())
     }
 }
 
