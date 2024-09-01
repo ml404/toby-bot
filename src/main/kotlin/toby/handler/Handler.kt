@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent
@@ -170,7 +171,7 @@ class Handler @Autowired constructor(
 
     private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
         val member = event.member
-        if (member.user.jda.selfUser == jda?.selfUser && !event.guild.audioManager.isConnected) {
+        if (member.user.jda.selfUser == jda?.selfUser) {
             val previousChannel = event.channelLeft?.asVoiceChannel()
             if (previousChannel != null) {
                 rejoinPreviousChannel(event.guild, previousChannel)
