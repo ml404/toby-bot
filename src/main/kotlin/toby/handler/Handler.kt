@@ -1,14 +1,11 @@
 package toby.handler
 
 import mu.KotlinLogging
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
-import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
-import net.dv8tion.jda.api.events.guild.GuildAvailableEvent
-import net.dv8tion.jda.api.events.guild.GuildJoinEvent
-import net.dv8tion.jda.api.events.guild.GuildReadyEvent
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -17,10 +14,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.managers.AudioManager
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
-import toby.BotMain.Companion.jda
 import toby.emote.Emotes
 import toby.helpers.HttpHelper
 import toby.helpers.MusicPlayerHelper.playUserIntro
@@ -34,9 +29,12 @@ import toby.managers.CommandManager
 import toby.managers.MenuManager
 import java.util.*
 
+private const val teamRegex = "(?i)team\\s[0-9]+"
+
 @Service
 @Configurable
-class Handler @Autowired constructor(
+class Handler(
+    private val jda: JDA,
     private val configService: IConfigService,
     brotherService: IBrotherService,
     private val userService: IUserService,
@@ -55,9 +53,11 @@ class Handler @Autowired constructor(
     private val menuManager: MenuManager = MenuManager(configService, httpHelper)
 ) : ListenerAdapter() {
 
+    private val logger = KotlinLogging.logger {}
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
+        jda.updateCommands().addCommands(commandManager.allSlashCommands).queue()
         event.jda.guildCache.forEach { it.connectToMostPopulatedVoiceChannel() }
     }
 
@@ -106,14 +106,15 @@ class Handler @Autowired constructor(
 
             messageStringLowercase.trim() == "sigh" -> {
                 val jessEmote = guild.jda.getEmojiById(Emotes.JESS)
-                channel.sendMessageFormat("Hey %s, what's up champ?", member?.effectiveName ?: author.name, jessEmote).queue()
+                channel.sendMessageFormat("Hey %s, what's up champ?", member?.effectiveName ?: author.name, jessEmote)
+                    .queue()
             }
 
             messageStringLowercase.contains("yeah") -> {
                 channel.sendMessage("YEAH????").queue()
             }
 
-            jda?.selfUser?.let { message.mentions.isMentioned(it) } == true -> {
+            jda.selfUser.let { message.mentions.isMentioned(it) } -> {
                 channel.sendMessage("Don't talk to me").queue()
             }
         }
@@ -130,22 +131,6 @@ class Handler @Autowired constructor(
         if (!event.user.isBot) {
             buttonManager.handle(event)
         }
-    }
-
-    override fun onGuildReady(event: GuildReadyEvent) {
-        updateCommands(event.guild)
-    }
-
-    override fun onGuildJoin(event: GuildJoinEvent) {
-        updateCommands(event.guild)
-    }
-
-    override fun onGuildAvailable(event: GuildAvailableEvent) {
-        updateCommands(event.guild)
-    }
-
-    private fun updateCommands(guild: Guild) {
-        guild.updateCommands().addCommands(commandManager.allSlashCommands).queue()
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
@@ -171,7 +156,7 @@ class Handler @Autowired constructor(
 
     private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
         val member = event.member
-        if (member.user.jda.selfUser == jda?.selfUser) {
+        if (member.user.jda.selfUser == jda.selfUser) {
             val previousChannel = event.channelLeft?.asVoiceChannel()
             if (previousChannel != null) {
                 rejoinPreviousChannel(event.guild, previousChannel)
@@ -218,7 +203,10 @@ class Handler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
-        deleteTemporaryChannelIfEmpty(event.channelLeft?.members?.none { !it.user.isBot } ?: true, event.channelLeft)
+        val channelLeft = event.channelLeft
+        if (channelLeft != null) {
+            deleteTemporaryChannelIfEmpty(channelLeft.members.none { !it.user.isBot }, channelLeft)
+        }
     }
 
     private fun AudioManager.checkAudioManagerToCloseConnectionOnEmptyChannel() {
@@ -231,8 +219,8 @@ class Handler @Autowired constructor(
         }
     }
 
-    private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel?) {
-        if (channelLeft?.name?.matches("(?i)team\\s[0-9]+".toRegex()) == true && nonBotConnectedMembersEmpty) {
+    private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel) {
+        if (channelLeft.name.matches(teamRegex.toRegex()) && nonBotConnectedMembersEmpty) {
             logger.info("Deleting temporary channel: {}", channelLeft.name)
             channelLeft.delete().queue()
         }
@@ -252,9 +240,5 @@ class Handler @Autowired constructor(
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         logger.info { "StringSelectInteractionEvent received on guild ${event.guild?.idLong}" }
         menuManager.handle(event)
-    }
-
-    companion object {
-        private val logger = KotlinLogging.logger {}
     }
 }
