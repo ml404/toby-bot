@@ -23,7 +23,9 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     constructor() : this(DefaultAudioPlayerManager())
 
     init {
-        audioPlayerManager.registerSourceManager(YoutubeAudioSourceManager())
+        val youtubeAudioSourceManager = YoutubeAudioSourceManager()
+        youtubeAudioSourceManager.useOauth2(null, false)
+        audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
         audioPlayerManager.registerSourceManager(TwitchStreamAudioSourceManager())
         audioPlayerManager.registerSourceManager(HttpAudioSourceManager())
         audioPlayerManager.registerSourceManager(LocalAudioSourceManager())
