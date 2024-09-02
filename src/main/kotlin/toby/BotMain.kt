@@ -4,7 +4,9 @@ import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
 import org.springframework.stereotype.Service
-import toby.handler.Handler
+import toby.handler.MessageEventHandler
+import toby.handler.StartUpHandler
+import toby.handler.VoiceEventHandler
 import toby.helpers.HttpHelper
 import toby.jpa.service.*
 
@@ -20,8 +22,22 @@ open class BotMain @Autowired constructor(
     httpHelper: HttpHelper
 ) {
     init {
-        jda.addEventListener(Handler(jda, configService, brotherService, userService, musicFileService, excuseService, httpHelper))
+        jda.addEventListener(StartUpHandler(
+            jda,
+            configService,
+            brotherService,
+            userService,
+            musicFileService,
+            excuseService,
+            httpHelper
+        ))
+        jda.addEventListener(VoiceEventHandler(jda, configService, userService))
+        jda.addEventListener(MessageEventHandler(jda,
+            configService,
+            brotherService,
+            userService,
+            musicFileService,
+            excuseService,
+            httpHelper))
     }
 }
-
-
