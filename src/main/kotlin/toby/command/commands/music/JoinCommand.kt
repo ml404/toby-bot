@@ -4,7 +4,7 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import toby.handler.Handler
+import toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
@@ -36,7 +36,7 @@ class JoinCommand(private val configService: IConfigService) : IMusicCommand {
         }
 
         audioManager.openAudioConnection(memberChannel)
-        Handler.lastConnectedChannel[event.guild!!.idLong] = memberChannel!!
+        lastConnectedChannel[event.guild!!.idLong] = memberChannel!!
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val databaseConfig = configService.getConfigByName(volumePropertyName, event.guild?.id)
         val defaultVolume = databaseConfig?.value?.toInt() ?: 100

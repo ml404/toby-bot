@@ -1,59 +1,46 @@
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.SelfUser
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
-import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
-import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
+import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import net.dv8tion.jda.api.managers.AudioManager
+import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction
 import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import toby.emote.Emotes
-import toby.handler.Handler
-import toby.helpers.HttpHelper
+import toby.handler.VoiceEventHandler
 import toby.jpa.dto.ConfigDto
-import toby.jpa.service.*
+import toby.jpa.service.IConfigService
+import toby.jpa.service.IUserService
 import toby.lavaplayer.PlayerManager
-import toby.managers.ButtonManager
-import toby.managers.CommandManager
 
 @ExtendWith(MockKExtension::class)
-class HandlerTest {
+class VoiceEventHandlerTest {
 
+    private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
     private val userService: IUserService = mockk()
-    private val brotherService: IBrotherService = mockk()
-    private val musicFileService: IMusicFileService = mockk()
-    private val excuseService: IExcuseService = mockk()
-    private val commandManager: CommandManager = mockk()
-    private val buttonManager: ButtonManager = mockk()
-    private val httpHelper: HttpHelper = mockk()
-    private val handler = spyk(Handler(
-        configService,
-        brotherService,
-        userService,
-        musicFileService,
-        excuseService,
-        httpHelper,
-        commandManager,
-        buttonManager
-    ))
+    private val handler = spyk(
+        VoiceEventHandler(
+            jda,
+            configService,
+            userService
+        )
+    )
 
     @Test
     fun `onReady should connect to the most populated voice channel`() {
-        val jda = mockk<JDA>()
         val selfUser = mockk<SelfUser>()
         val guild1 = mockk<Guild>()
         val guild2 = mockk<Guild>()
         val readyEvent = mockk<ReadyEvent>()
-        val voiceChannelUnion1 = mockk<AudioChannelUnion>()
         val voiceChannel1 = mockk<VoiceChannel>()
-        val voiceChannelUnion2 = mockk<AudioChannelUnion>()
         val voiceChannel2 = mockk<VoiceChannel>()
         val nonBotMember1 = mockk<Member>()
         val nonBotMember2 = mockk<Member>()
@@ -66,14 +53,19 @@ class HandlerTest {
         every { jda.selfUser } returns selfUser
         every { selfUser.name } returns "TestBot"
         every { jda.guildCache } returns guildCache
-        every { guildCache.iterator() } returns mutableListOf(guild1, guild2).iterator()
-        every { voiceChannelUnion1.asVoiceChannel() } returns voiceChannel1
-        every { voiceChannelUnion2.asVoiceChannel() } returns voiceChannel2
+        val commandListUpdateAction = mockk<CommandListUpdateAction>()
 
-        every { guild1.voiceChannels } returns listOf(voiceChannelUnion1.asVoiceChannel())
+        // Mocking the chain
+        every { jda.updateCommands() } returns commandListUpdateAction
+        every { commandListUpdateAction.addCommands(any<List<CommandData>>()) } returns commandListUpdateAction
+        every { commandListUpdateAction.queue() } just Runs
+
+        every { guildCache.iterator() } returns mutableListOf(guild1, guild2).iterator()
+
+        every { guild1.voiceChannels } returns listOf(voiceChannel1)
         every { guild1.idLong } returns 1L
         every { guild1.name } returns "Guild 1"
-        every { guild2.voiceChannels } returns listOf(voiceChannelUnion2.asVoiceChannel())
+        every { guild2.voiceChannels } returns listOf(voiceChannel2)
         every { guild2.idLong } returns 2L
         every { guild2.name } returns "Guild 2"
 
@@ -94,105 +86,16 @@ class HandlerTest {
         every { audioManager1.openAudioConnection(any()) } just Runs
         every { audioManager2.openAudioConnection(any()) } just Runs
 
+        val handler = VoiceEventHandler(
+            jda = jda,
+            configService = mockk(),
+            userService = mockk(),
+        )
+
         handler.onReady(readyEvent)
 
         verify(exactly = 1) { audioManager1.openAudioConnection(voiceChannel1) }
         verify(exactly = 1) { audioManager2.openAudioConnection(voiceChannel2) }
-    }
-
-    @Test
-    fun `onMessageReceived should respond correctly to toby message`() {
-        val event = mockk<MessageReceivedEvent>()
-        val message = mockk<Message>()
-        val author = mockk<User>()
-        val channel = mockk<MessageChannelUnion>()
-        val guild = mockk<Guild>()
-        val member = mockk<Member>()
-
-        every { event.message } returns message
-        every { event.author } returns author
-        every { event.channel } returns channel
-        every { event.guild } returns guild
-        every { event.member } returns member
-        every { author.isBot } returns false
-        every { event.isWebhookMessage } returns false
-        every { message.contentRaw } returns "toby"
-        every { member.effectiveName } returns "Matt"
-
-        val tobyEmote = mockk<RichCustomEmoji> {
-            every { asMention } returns "<:toby:123456789>"
-        }
-        every { guild.jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
-
-        every { channel.sendMessageFormat(any(), any(), any()).queue() } returns mockk()
-        every { message.addReaction(tobyEmote).queue() } returns mockk()
-
-        handler.onMessageReceived(event)
-
-        verify {
-            channel.sendMessageFormat(any(), any(), any())
-            message.addReaction(tobyEmote)
-        }
-    }
-
-    @Test
-    fun `onMessageReceived should respond correctly to sigh message`() {
-        val event = mockk<MessageReceivedEvent>()
-        val message = mockk<Message>()
-        val author = mockk<User>()
-        val channel = mockk<MessageChannelUnion>()
-        val guild = mockk<Guild>()
-        val member = mockk<Member>()
-
-        every { event.message } returns message
-        every { event.author } returns author
-        every { event.channel } returns channel
-        every { event.guild } returns guild
-        every { event.member } returns member
-        every { author.isBot } returns false
-        every { event.isWebhookMessage } returns false
-        every { message.contentRaw } returns "sigh"
-        every { member.effectiveName } returns "Matt"
-
-        val jessEmote = mockk<RichCustomEmoji> {
-            every { asMention } returns "<:jess:987654321>"
-        }
-        every { guild.jda.getEmojiById(Emotes.JESS) } returns jessEmote
-
-        every { channel.sendMessageFormat("Hey %s, what's up champ?", "Matt", jessEmote).queue() } returns mockk()
-
-        handler.onMessageReceived(event)
-
-        verify {
-            channel.sendMessageFormat("Hey %s, what's up champ?", "Matt", any())
-        }
-    }
-
-    @Test
-    fun `onMessageReceived should respond correctly to yeah message`() {
-        val event = mockk<MessageReceivedEvent>()
-        val message = mockk<Message>()
-        val author = mockk<User>()
-        val channel = mockk<MessageChannelUnion>()
-        val guild = mockk<Guild>()
-        val member = mockk<Member>()
-
-        every { event.message } returns message
-        every { event.author } returns author
-        every { event.channel } returns channel
-        every { event.guild } returns guild
-        every { event.member } returns member
-        every { author.isBot } returns false
-        every { event.isWebhookMessage } returns false
-        every { message.contentRaw } returns "yeah"
-
-        every { channel.sendMessage("YEAH????").queue() } returns mockk()
-
-        handler.onMessageReceived(event)
-
-        verify {
-            channel.sendMessage("YEAH????")
-        }
     }
 
 
@@ -233,8 +136,7 @@ class HandlerTest {
         every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "1") } returns null
         every {
             configService.getConfigByName(
-                ConfigDto.Configurations.DELETE_DELAY.configValue,
-                "1"
+                ConfigDto.Configurations.DELETE_DELAY.configValue, "1"
             )
         } returns deleteDelayConfig
         every { userService.getUserById(1L, 1L) } returns mockk()

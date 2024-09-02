@@ -4,7 +4,6 @@ import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
-import org.springframework.stereotype.Service
 import toby.helpers.HttpHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
@@ -13,7 +12,6 @@ import toby.menu.MenuContext
 import toby.menu.menus.dnd.DndMenu
 import java.util.*
 
-@Service
 @Configurable
 class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper) {
     private val menus: MutableList<IMenu> = ArrayList()
