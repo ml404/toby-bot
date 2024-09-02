@@ -62,7 +62,7 @@ class VoiceEventHandler @Autowired constructor(
         when {
             event.channelJoined != null && event.channelLeft != null -> {
                 logger.info("Voice move event triggered for guild $guildId from channel ${event.channelLeft} to channel ${event.channelJoined} for user ${event.member.effectiveName}")
-                onGuildVoiceMove(event)
+//                onGuildVoiceMove(event)
             }
 
             event.channelJoined != null -> {
