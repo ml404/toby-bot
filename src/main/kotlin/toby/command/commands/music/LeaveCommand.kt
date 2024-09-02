@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
@@ -63,6 +64,7 @@ class LeaveCommand(private val configService: IConfigService) : IMusicCommand {
             volume = defaultVolume
         }
         audioManager.closeAudioConnection()
+        lastConnectedChannel.remove(event.guild!!.idLong)
 
         event.hook
             .sendMessage("Disconnecting from `\uD83D\uDD0A ${selfVoiceState?.channel?.name}`")
