@@ -20,6 +20,9 @@ class StartUpHandler @Autowired constructor(
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
+        jda.updateCommands().queue()
+        logger.info { "Reset commands known to ${event.jda.selfUser.name}" }
         jda.updateCommands().addCommands(commandManager.allSlashCommands).queue()
+        logger.info { "Registered ${commandManager.allSlashCommands.size} commands to ${event.jda.selfUser.name}" }
     }
 }
