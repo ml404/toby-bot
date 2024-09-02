@@ -3,7 +3,6 @@ package toby.managers
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
-import org.springframework.stereotype.Service
 import toby.button.ButtonContext
 import toby.button.IButton
 import toby.button.buttons.*
@@ -12,9 +11,7 @@ import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IUserService
-import java.util.*
 
-@Service
 @Configurable
 class ButtonManager @Autowired constructor(
     private val configService: IConfigService,

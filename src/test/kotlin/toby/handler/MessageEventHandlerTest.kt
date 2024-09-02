@@ -15,31 +15,23 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.emote.Emotes
 import toby.handler.MessageEventHandler
-import toby.helpers.HttpHelper
-import toby.jpa.service.*
+import toby.managers.ButtonManager
 import toby.managers.CommandManager
+import toby.managers.MenuManager
 
 @ExtendWith(MockKExtension::class)
 class MessageEventHandlerTest {
 
     private val jda: JDA = mockk()
-    private val configService: IConfigService = mockk()
-    private val userService: IUserService = mockk()
-    private val brotherService: IBrotherService = mockk()
-    private val musicFileService: IMusicFileService = mockk()
-    private val excuseService: IExcuseService = mockk()
     private val commandManager: CommandManager = mockk()
-    private val httpHelper: HttpHelper = mockk()
+    private val buttonManager: ButtonManager = mockk()
+    private val menuManager: MenuManager = mockk()
     private val handler = spyk(
         MessageEventHandler(
             jda,
-            configService,
-            brotherService,
-            userService,
-            musicFileService,
-            excuseService,
-            httpHelper,
-            commandManager
+            commandManager,
+            buttonManager,
+            menuManager
         )
     )
 

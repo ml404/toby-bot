@@ -10,8 +10,6 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import toby.emote.Emotes
-import toby.helpers.HttpHelper
-import toby.jpa.service.*
 import toby.managers.ButtonManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
@@ -19,22 +17,9 @@ import toby.managers.MenuManager
 @Service
 class MessageEventHandler @Autowired constructor(
     private val jda: JDA,
-    private val configService: IConfigService,
-    brotherService: IBrotherService,
-    private val userService: IUserService,
-    musicFileService: IMusicFileService,
-    excuseService: IExcuseService,
-    httpHelper: HttpHelper,
-    private val commandManager: CommandManager = CommandManager(
-        configService,
-        brotherService,
-        userService,
-        musicFileService,
-        excuseService,
-        httpHelper
-    ),
-    private val buttonManager: ButtonManager = ButtonManager(configService, userService, commandManager),
-    private val menuManager: MenuManager = MenuManager(configService, httpHelper)
+    private val commandManager: CommandManager,
+    private val buttonManager: ButtonManager,
+    private val menuManager: MenuManager
 ) : ListenerAdapter() {
 
     private val logger = KotlinLogging.logger {}

@@ -27,12 +27,6 @@ class StartUpHandlerTest {
     private val handler = spyk(
         StartUpHandler(
             jda,
-            configService,
-            brotherService,
-            userService,
-            musicFileService,
-            excuseService,
-            httpHelper,
             commandManager
         )
     )

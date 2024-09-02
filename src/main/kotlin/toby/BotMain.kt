@@ -7,37 +7,37 @@ import org.springframework.stereotype.Service
 import toby.handler.MessageEventHandler
 import toby.handler.StartUpHandler
 import toby.handler.VoiceEventHandler
-import toby.helpers.HttpHelper
-import toby.jpa.service.*
+import toby.jpa.service.IConfigService
+import toby.jpa.service.IUserService
+import toby.managers.ButtonManager
+import toby.managers.CommandManager
+import toby.managers.MenuManager
 
 @Service
 @Configurable
 open class BotMain @Autowired constructor(
     jda: JDA,
     configService: IConfigService,
-    brotherService: IBrotherService,
     userService: IUserService,
-    musicFileService: IMusicFileService,
-    excuseService: IExcuseService,
-    httpHelper: HttpHelper
+    commandManager: CommandManager,
+    buttonManager: ButtonManager,
+    menuManager: MenuManager
 ) {
     init {
-        jda.addEventListener(StartUpHandler(
-            jda,
-            configService,
-            brotherService,
-            userService,
-            musicFileService,
-            excuseService,
-            httpHelper
-        ))
+        jda.addEventListener(
+            StartUpHandler(
+                jda,
+                commandManager
+            )
+        )
         jda.addEventListener(VoiceEventHandler(jda, configService, userService))
-        jda.addEventListener(MessageEventHandler(jda,
-            configService,
-            brotherService,
-            userService,
-            musicFileService,
-            excuseService,
-            httpHelper))
+        jda.addEventListener(
+            MessageEventHandler(
+                jda,
+                commandManager,
+                buttonManager,
+                menuManager
+            )
+        )
     }
 }

@@ -5,7 +5,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
-import org.springframework.stereotype.Service
 import toby.command.CommandContext
 import toby.command.ICommand
 import toby.command.commands.dnd.DnDCommand
@@ -25,15 +24,14 @@ import toby.jpa.dto.UserDto
 import toby.jpa.service.*
 import java.util.*
 
-@Service
 @Configurable
 class CommandManager @Autowired constructor(
     private val configService: IConfigService,
-    private val brotherService: IBrotherService,
+    brotherService: IBrotherService,
     private val userService: IUserService,
-    private val musicFileService: IMusicFileService,
-    private val excuseService: IExcuseService,
-    private val httpHelper: HttpHelper
+    musicFileService: IMusicFileService,
+    excuseService: IExcuseService,
+    httpHelper: HttpHelper
 ) {
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
