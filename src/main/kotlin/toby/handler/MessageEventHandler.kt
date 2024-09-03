@@ -1,5 +1,6 @@
 package toby.handler
 
+import kotlinx.coroutines.*
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -13,15 +14,18 @@ import toby.emote.Emotes
 import toby.managers.ButtonManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
+import kotlin.coroutines.CoroutineContext
 
 @Service
 class MessageEventHandler @Autowired constructor(
     private val jda: JDA,
     private val commandManager: CommandManager,
     private val buttonManager: ButtonManager,
-    private val menuManager: MenuManager
-) : ListenerAdapter() {
+    private val menuManager: MenuManager,
+) : ListenerAdapter(), CoroutineScope {
 
+    private val job = SupervisorJob()
+    override val coroutineContext: CoroutineContext = job + Dispatchers.Default
     private val logger = KotlinLogging.logger {}
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
@@ -63,8 +67,12 @@ class MessageEventHandler @Autowired constructor(
     }
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
+        logger.info { "SlashCommandInteractionEvent '${event.name}' received on guild ${event.guild?.idLong}" }
         if (!event.user.isBot) {
-            commandManager.handle(event)
+            launch {
+                logger.info { "Launching coroutine for '${event.name}' received on guild ${event.guild?.idLong}" }
+                commandManager.handle(event)
+            }
         }
     }
 
