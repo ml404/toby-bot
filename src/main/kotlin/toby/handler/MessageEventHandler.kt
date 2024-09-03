@@ -1,6 +1,9 @@
 package toby.handler
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -21,7 +24,7 @@ class MessageEventHandler @Autowired constructor(
     private val jda: JDA,
     private val commandManager: CommandManager,
     private val buttonManager: ButtonManager,
-    private val menuManager: MenuManager,
+    private val menuManager: MenuManager
 ) : ListenerAdapter(), CoroutineScope {
 
     private val job = SupervisorJob()
