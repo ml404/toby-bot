@@ -45,6 +45,8 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
                 event.guild!!.id)
             event.channel.sendTyping().queue()
             val ctx = MenuContext(event)
+            val disabledActionRows = event.message.actionRows.map { it.asDisabled() }
+            event.message.editMessageComponents(disabledActionRows).queue()
 
             menu.handle(ctx, deleteDelayConfig?.value!!.toInt())
         }
