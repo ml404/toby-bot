@@ -14,6 +14,7 @@ class PollCommand : IModerationCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val hook = event.hook
+        event.deferReply().queue()
 
         val choiceOption = event.getOption(CHOICES)?.asString
         if (!choiceOption.isNullOrEmpty()) {
@@ -36,7 +37,7 @@ class PollCommand : IModerationCommand {
                 poll.appendDescription("${emojiList[index]} - **$option** \n")
             }
 
-            event.channel.sendMessageEmbeds(poll.build()).queue { message ->
+            hook.sendMessageEmbeds(poll.build()).queue { message ->
                 for (i in pollArgs.indices) {
                     message.addReaction(Emoji.fromUnicode(emojiList[i])).queue()
                 }
