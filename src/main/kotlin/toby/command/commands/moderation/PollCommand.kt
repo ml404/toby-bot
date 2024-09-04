@@ -14,7 +14,6 @@ class PollCommand : IModerationCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val hook = event.hook
-        event.deferReply().queue()
 
         val choiceOption = event.getOption(CHOICES)?.asString
         if (!choiceOption.isNullOrEmpty()) {
