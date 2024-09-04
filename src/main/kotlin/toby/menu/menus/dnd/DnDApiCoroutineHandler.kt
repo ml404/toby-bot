@@ -22,7 +22,7 @@ class DndApiCoroutineHandler(
         hook: InteractionHook
     ) {
         logger.info("Starting launchFetchAndSendEmbed")
-        event.message.delete().queue()
+        event.message.actionRows.replaceAll { it.asDisabled() }
         CoroutineScope(dispatcher).launch {
             val query = event.values.firstOrNull() ?: return@launch
             val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }

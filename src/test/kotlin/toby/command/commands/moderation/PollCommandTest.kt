@@ -52,7 +52,7 @@ internal class PollCommandTest : CommandTest {
 
         // Assert
         verify(exactly = 1) {
-            CommandTest.messageChannelUnion.sendMessageEmbeds(any<MessageEmbed>())
+            event.hook.sendMessageEmbeds(any<MessageEmbed>())
         }
     }
 
@@ -68,7 +68,7 @@ internal class PollCommandTest : CommandTest {
 
         // Assert
         verify(exactly = 1) {
-            CommandTest.messageChannelUnion.sendMessageEmbeds(any<MessageEmbed>())
+            event.hook.sendMessageEmbeds(any<MessageEmbed>())
         }
     }
 
