@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import toby.button.ButtonTest.Companion.introHelper
 import toby.command.CommandContext
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
@@ -38,10 +39,10 @@ internal class IntroSongCommandTest : MusicCommandTest {
         userService = mockk(relaxed = true)
         musicFileService = mockk(relaxed = true)
         mentionedUserDto = mockk(relaxed = true) {
-            every { musicDto } returns null
+            every { musicDtos } returns emptyList<MusicDto>().toMutableList()
         }
         configService = mockk()
-        introSongCommand = IntroSongCommand(userService, musicFileService, configService)
+        introSongCommand = IntroSongCommand(introHelper)
 
         every { event.getOption("volume") } returns mockk {
             every { asInt } returns 20
@@ -93,7 +94,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
-        every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 20, null)
+        every { requestingUserDto.musicDtos } returns listOf(MusicDto(1L, 1L, 1, "filename", 20, null)).toMutableList()
         every { event.getOption("attachment") } returns attachmentOptionMapping
         setupAttachments(attachmentOptionMapping)
 

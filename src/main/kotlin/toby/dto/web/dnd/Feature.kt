@@ -1,6 +1,8 @@
 package toby.dto.web.dnd
 
 import com.google.gson.annotations.SerializedName
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.MessageEmbed
 
 data class Feature(
     val index: String?,
@@ -20,4 +22,23 @@ data class Feature(
                 prerequisites.isEmpty() &&
                 desc.isNullOrEmpty() &&
                 url.isNullOrEmpty())
+
+    override fun toEmbed(): MessageEmbed {
+        val embedBuilder = EmbedBuilder()
+        if (name != null) {
+            embedBuilder.setTitle(name)
+        }
+        if (!desc.isNullOrEmpty()) {
+            embedBuilder.setDescription(desc.transformListToString())
+        }
+        if (classInfo != null) {
+            embedBuilder.addField("Class", classInfo.name, true)
+        }
+        level?.let { embedBuilder.addField("Level", level.toString(), true) }
+        if (prerequisites.isNotEmpty()) {
+            embedBuilder.addField("Prerequisites", prerequisites.transformListToString(), false)
+        }
+        embedBuilder.setColor(0x42f5a7)
+        return embedBuilder.build()
+    }
 }

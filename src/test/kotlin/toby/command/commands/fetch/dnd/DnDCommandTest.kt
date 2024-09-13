@@ -40,7 +40,7 @@ class DnDCommandTest : CommandTest {
         every { anyConstructed<DnDCommandQueryHandler>().processQuery(any(), any(), any()) } just Runs
 
         // Initialize the DnDCommand with mocked HttpHelper
-        command = DnDCommand(dispatcher, mockk(relaxed = true))
+        command = DnDCommand(dispatcher, mockk(relaxed = true), mockk(relaxed = true))
     }
 
     @AfterEach

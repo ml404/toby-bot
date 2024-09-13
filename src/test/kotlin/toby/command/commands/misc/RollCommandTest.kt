@@ -4,7 +4,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
-import net.dv8tion.jda.api.interactions.components.buttons.Button
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandContext
@@ -20,7 +19,7 @@ class RollCommandTest : CommandTest {
     fun setUp() {
         setUpCommonMocks()
         every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
-        rollCommand = RollCommand()
+        rollCommand = RollCommand(mockk())
     }
 
     fun tearDown() {

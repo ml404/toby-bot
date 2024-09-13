@@ -50,7 +50,7 @@ class DnDCommandQueryHandlerTest {
         every { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay)
+        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
 
         queryHandler.processQuery("spell", "spells", "fireball")
 
@@ -70,7 +70,7 @@ class DnDCommandQueryHandlerTest {
         every { hook.sendMessage(any<String>()).setActionRow(any<StringSelectMenu>()).queue() } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay)
+        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
 
         queryHandler.processQuery("condition", "conditions", "blind")
 
@@ -90,7 +90,7 @@ class DnDCommandQueryHandlerTest {
         every { hook.sendMessage(any<String>()).queue(any()) } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay)
+        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
 
         queryHandler.processQuery("condition", "conditions", "bin")
 

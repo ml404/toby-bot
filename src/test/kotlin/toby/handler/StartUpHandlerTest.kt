@@ -9,21 +9,28 @@ import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.handler.StartUpHandler
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
-import toby.jpa.service.*
+import toby.helpers.IntroHelper
+import toby.helpers.UserDtoHelper
+import toby.jpa.service.IBrotherService
+import toby.jpa.service.IConfigService
+import toby.jpa.service.IExcuseService
+import toby.jpa.service.IUserService
 import toby.managers.CommandManager
 
 @ExtendWith(MockKExtension::class)
 class StartUpHandlerTest {
-
     private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
     private val userService: IUserService = mockk()
     private val brotherService: IBrotherService = mockk()
-    private val musicFileService: IMusicFileService = mockk()
     private val excuseService: IExcuseService = mockk()
     private val httpHelper: HttpHelper = mockk()
-    private val commandManager: CommandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper)
+    private val userDtoHelper: UserDtoHelper = mockk()
+    private val introHelper: IntroHelper = mockk()
+    private val dndHelper: DnDHelper = mockk()
+    private val commandManager: CommandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
     private val handler = spyk(
         StartUpHandler(
             jda,

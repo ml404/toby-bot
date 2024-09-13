@@ -12,6 +12,7 @@ import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 
@@ -107,7 +108,7 @@ class HelloThereCommandTest : CommandTest {
                 digPermission = true,
                 memePermission = true,
                 socialCredit = 0L,
-                musicDto = null
+                musicDtos = emptyList<MusicDto>().toMutableList()
             )
     }
 }

@@ -18,8 +18,7 @@ import toby.command.commands.fetch.MemeCommand
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
-import toby.helpers.HttpHelper
-import toby.helpers.MusicPlayerHelper
+import toby.helpers.*
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.*
 import toby.lavaplayer.PlayerManager
@@ -32,6 +31,9 @@ class CommandManagerTest {
     lateinit var musicFileService: IMusicFileService
     lateinit var excuseService: IExcuseService
     lateinit var httpHelper: HttpHelper
+    lateinit var userDtoHelper: UserDtoHelper
+    lateinit var introHelper: IntroHelper
+    lateinit var dndHelper: DnDHelper
     lateinit var commandManager: CommandManager
 
     @BeforeEach
@@ -42,7 +44,10 @@ class CommandManagerTest {
         musicFileService = mockk()
         excuseService = mockk()
         httpHelper = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper)
+        userDtoHelper = mockk()
+        introHelper = mockk()
+        dndHelper = mockk()
+        commandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }
@@ -144,6 +149,7 @@ class CommandManagerTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
         every { userService.updateUser(any()) } returns mockk(relaxed = true)
+        every { userDtoHelper.calculateUserDto(any(), any(), any()) } returns mockk(relaxed = true)
 
         // Real instance of CommandManager is used, so you can't mock it directly
         // Instead, spy on the CommandManager and mock its getCommand method

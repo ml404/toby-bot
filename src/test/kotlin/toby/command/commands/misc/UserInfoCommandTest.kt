@@ -44,7 +44,7 @@ class UserInfoCommandTest : CommandTest {
         // Mock the requesting user's DTO
         every { userService.getUserById(any(), any()) } returns requestingUserDto
         requestingUserDto.apply {
-            every { musicDto } returns MusicDto()
+            every { musicDtos } returns listOf(MusicDto()).toMutableList()
         }
 
         // Test handle method
@@ -69,7 +69,7 @@ class UserInfoCommandTest : CommandTest {
         // Mock a mentioned user's DTO
         val mentionedUserDto = UserDto()
         every { userService.getUserById(any(), any()) } returns requestingUserDto
-        every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 10, null)
+        every { requestingUserDto.musicDtos } returns listOf(MusicDto(1L, 1L, 1, "filename", 10, null)).toMutableList()
 
         // Mock mentions
         val mentions = mockk<Mentions>()

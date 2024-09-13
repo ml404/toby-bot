@@ -35,7 +35,7 @@ class BotController(
 
     @GetMapping("/music")
     @ResponseBody
-    fun getMusicBlob(@RequestParam("id") id: String?): ByteArray? = musicFileService.getMusicFileById(id)?.musicBlob
+    fun getMusicBlob(@RequestParam("id") id: String): ByteArray? = musicFileService.getMusicFileById(id)?.musicBlob
 
 
     @GetMapping("/user")

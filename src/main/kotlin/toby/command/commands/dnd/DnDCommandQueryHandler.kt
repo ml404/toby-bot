@@ -12,14 +12,13 @@ import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.dto.web.dnd.ApiInfo
 import toby.dto.web.dnd.DnDResponse
 import toby.dto.web.dnd.QueryResult
-import toby.helpers.DnDHelper.doInitialLookup
-import toby.helpers.DnDHelper.queryNonMatchRetry
-import toby.helpers.DnDHelper.toEmbed
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
 class DnDCommandQueryHandler(
     private val dispatcher: CoroutineDispatcher,
     private val httpHelper: HttpHelper,
+    private val dndHelper: DnDHelper,
     private val hook: InteractionHook,
     private val deleteDelay: Int
 ) {
@@ -30,8 +29,8 @@ class DnDCommandQueryHandler(
             var hasReplied = false
             runCatching {
                 logger.info("Accessing DnD API...")
-                val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
-                val nonMatchQueryResultDeferred = async { queryNonMatchRetry(typeValue, query, httpHelper) }
+                val initialQueryDeferred = async { dndHelper.doInitialLookup(typeName, typeValue, query, httpHelper) }
+                val nonMatchQueryResultDeferred = async { dndHelper.queryNonMatchRetry(typeValue, query, httpHelper) }
 
                 // Handle initial query result
                 initialQueryDeferred.await()?.let {

@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Test
 import toby.button.ButtonContext
 import toby.button.ButtonTest
 import toby.button.ButtonTest.Companion.configService
+import toby.button.ButtonTest.Companion.dndHelper
 import toby.button.ButtonTest.Companion.event
 import toby.button.ButtonTest.Companion.userService
-import toby.helpers.DnDHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.*
@@ -58,13 +58,13 @@ class InitiativeNextButtonTest : ButtonTest {
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
         // Mock clearInitiative method to just verify the call
-        mockkObject(DnDHelper)
-        every { DnDHelper.incrementTurnTable(any(), any(), any()) } just Runs
+
+        every { dndHelper.incrementTurnTable(any(), any(), any()) } just Runs
 
         // Invoke the handler
-        InitiativeNextButton().handle(ButtonContext(event), UserDto(), 0)
+        InitiativeNextButton(dndHelper).handle(ButtonContext(event), UserDto(), 0)
 
         // Verify expected interactions
-        verify(exactly = 1) { DnDHelper.incrementTurnTable(mockHook, event, 0) }
+        verify(exactly = 1) { dndHelper.incrementTurnTable(mockHook, event, 0) }
     }
 }

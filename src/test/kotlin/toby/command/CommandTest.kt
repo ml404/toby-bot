@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
 import net.dv8tion.jda.internal.requests.restaction.WebhookMessageCreateActionImpl
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 
 interface CommandTest {
@@ -82,7 +83,7 @@ interface CommandTest {
         every { requestingUserDto.discordId } returns 1L
         every { requestingUserDto.guildId } returns 1L
         every { requestingUserDto.socialCredit } returns 0L
-        every { requestingUserDto.musicDto } returns null
+        every { requestingUserDto.musicDtos } returns emptyList<MusicDto>().toMutableList()
         every { guildVoiceState.channel } returns audioChannelUnion
         every { audioChannelUnion.members } returns listOf(member)
     }

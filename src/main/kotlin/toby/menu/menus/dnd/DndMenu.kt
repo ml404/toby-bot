@@ -3,6 +3,7 @@ package toby.menu.menus.dnd
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import mu.KotlinLogging
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
@@ -10,7 +11,8 @@ import toby.menu.MenuContext
 class DndMenu(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val httpHelper: HttpHelper,
-    private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper),
+    private val dnDHelper: DnDHelper,
+    private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper, dnDHelper),
     private val eventProcessor: DndEventProcessor = DndEventProcessor()
 ) : IMenu {
     private val logger = KotlinLogging.logger {}

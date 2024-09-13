@@ -15,22 +15,22 @@ open class MusicFileServiceImpl : IMusicFileService {
 
 
     @CachePut(value = ["music"], key = "#musicDto.id")
-    override fun createNewMusicFile(musicDto: MusicDto?): MusicDto? {
+    override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
         return musicFileService.createNewMusicFile(musicDto)
     }
 
     @CachePut(value = ["music"], key = "#id")
-    override fun getMusicFileById(id: String?): MusicDto? {
+    override fun getMusicFileById(id: String): MusicDto? {
         return musicFileService.getMusicFileById(id)
     }
 
     @CachePut(value = ["music"], key = "#musicDto.id")
-    override fun updateMusicFile(musicDto: MusicDto?): MusicDto? {
+    override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
         return musicFileService.updateMusicFile(musicDto)
     }
 
     @CacheEvict(value = ["music"], key = "#musicDto.id")
-    override fun deleteMusicFile(musicDto: MusicDto?) {
+    override fun deleteMusicFile(musicDto: MusicDto) {
         musicFileService.deleteMusicFile(musicDto)
     }
 

@@ -26,7 +26,10 @@ CREATE TABLE public.music_files (
     file_name character varying(100),
     music_blob blob,
     id character varying(100) NOT NULL,
-    file_vol integer
+    file_vol integer,
+    discord_id bigint,
+    guild_id bigint,
+    index integer
 );
 
 DROP TABLE IF EXISTS public."user";
@@ -37,7 +40,7 @@ CREATE TABLE public."user" (
     music_permission boolean DEFAULT true NOT NULL,
     dig_permission boolean DEFAULT true NOT NULL,
     meme_permission boolean DEFAULT true NOT NULL,
-    music_file_id character varying(100) NOT NULL,
+    music_file_id character varying(100),
     social_credit bigint,
     initiative smallint default 0
 );

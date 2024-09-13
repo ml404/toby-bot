@@ -16,12 +16,13 @@ import toby.command.commands.fetch.MemeCommand
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
-import toby.helpers.Cache
-import toby.helpers.HttpHelper
-import toby.helpers.UserDtoHelper
+import toby.helpers.*
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
-import toby.jpa.service.*
+import toby.jpa.service.IBrotherService
+import toby.jpa.service.IConfigService
+import toby.jpa.service.IExcuseService
+import toby.jpa.service.IUserService
 import java.util.*
 
 @Configurable
@@ -29,9 +30,11 @@ class CommandManager @Autowired constructor(
     private val configService: IConfigService,
     brotherService: IBrotherService,
     private val userService: IUserService,
-    musicFileService: IMusicFileService,
     excuseService: IExcuseService,
-    httpHelper: HttpHelper
+    httpHelper: HttpHelper,
+    private val userDtoHelper: UserDtoHelper,
+    introHelper: IntroHelper,
+    dndHelper: DnDHelper
 ) {
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
@@ -42,7 +45,7 @@ class CommandManager @Autowired constructor(
 
         //misc commands
         addCommand(HelpCommand(this))
-        addCommand(RollCommand())
+        addCommand(RollCommand(dndHelper))
         addCommand(MemeCommand())
         addCommand(Kf2RandomMapCommand(cache))
         addCommand(DbdRandomKillerCommand(cache))
@@ -62,7 +65,7 @@ class CommandManager @Autowired constructor(
         addCommand(ShhCommand())
         addCommand(TalkCommand())
         addCommand(PollCommand())
-        addCommand(AdjustUserCommand(userService))
+        addCommand(AdjustUserCommand(userService, userDtoHelper))
         addCommand(SocialCreditCommand(userService))
 
         //music commands
@@ -79,11 +82,11 @@ class CommandManager @Autowired constructor(
         addCommand(NowPlayingCommand())
         addCommand(QueueCommand())
         addCommand(ShuffleCommand())
-        addCommand(IntroSongCommand(userService, musicFileService, configService))
+        addCommand(IntroSongCommand(introHelper))
 
         //dnd commands
-        addCommand(InitiativeCommand(userService))
-        addCommand(DnDCommand(httpHelper = httpHelper))
+        addCommand(InitiativeCommand(dndHelper))
+        addCommand(DnDCommand(httpHelper = httpHelper, dndHelper = dndHelper))
     }
 
     private fun addCommand(cmd: ICommand) {
@@ -110,15 +113,11 @@ class CommandManager @Autowired constructor(
             ConfigDto.Configurations.DELETE_DELAY.configValue,
             guildId
         )?.value?.toIntOrNull() ?: 0
-        val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val defaultVolume = configService.getConfigByName(volumePropertyName, guildId)?.value?.toIntOrNull()
         val requestingUserDto = event.member?.let {
-            UserDtoHelper.calculateUserDto(
+            userDtoHelper.calculateUserDto(
                 guildId.toLong(),
                 event.user.idLong,
                 it.isOwner,
-                userService,
-                defaultVolume ?: 0
             )
         }
         val invoke = event.name.lowercase(Locale.getDefault())

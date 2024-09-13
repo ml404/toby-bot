@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service
 import toby.handler.MessageEventHandler
 import toby.handler.StartUpHandler
 import toby.handler.VoiceEventHandler
+import toby.helpers.UserDtoHelper
 import toby.jpa.service.IConfigService
-import toby.jpa.service.IUserService
 import toby.managers.ButtonManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
@@ -18,7 +18,7 @@ import toby.managers.MenuManager
 open class BotMain @Autowired constructor(
     jda: JDA,
     configService: IConfigService,
-    userService: IUserService,
+    userDtoHelper: UserDtoHelper,
     commandManager: CommandManager,
     buttonManager: ButtonManager,
     menuManager: MenuManager
@@ -30,7 +30,7 @@ open class BotMain @Autowired constructor(
                 commandManager
             )
         )
-        jda.addEventListener(VoiceEventHandler(jda, configService, userService))
+        jda.addEventListener(VoiceEventHandler(jda, configService, userDtoHelper))
         jda.addEventListener(
             MessageEventHandler(
                 jda,

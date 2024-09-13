@@ -39,17 +39,19 @@ object MusicPlayerHelper {
         deleteDelay: Int,
         startPosition: Long
     ) {
-        val musicDto = dbUser.musicDto
+        val musicDto = dbUser.musicDtos
         val instance = PlayerManager.instance
         val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
-        musicDto?.let {
-            logger.info { "User ${dbUser.discordId} has a musicDto. Preparing to play intro." }
-            val introVolume = it.introVolume
-            instance.setPreviousVolume(currentVolume)
-            val url = if (it.fileName != null) "$WEB_URL/music?id=${it.id}" else it.musicBlob.contentToString()
-            instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
-        } ?: run {
+        runCatching {
+            musicDto.random().let {
+                logger.info { "User ${dbUser.discordId} has a musicDto. Preparing to play intro." }
+                val introVolume = it.introVolume
+                instance.setPreviousVolume(currentVolume)
+                val url = if (it.fileName != null) "$WEB_URL/music?id=${it.id}" else it.musicBlob.contentToString()
+                instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
+            }
+        }.onFailure {
             logger.warn { "User ${dbUser.discordId} does not have a musicDto. Cannot play intro." }
         }
     }

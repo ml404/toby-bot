@@ -21,21 +21,25 @@ import toby.command.CommandTest.Companion.replyCallbackAction
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.CommandTest.Companion.user
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
-import toby.helpers.DnDHelper.initButtons
+import toby.helpers.DnDHelper
 import toby.jpa.service.IUserService
 import toby.jpa.service.impl.UserServiceImpl
 
 internal class InitiativeCommandTest : CommandTest {
-    lateinit var initiativeCommand: InitiativeCommand
+    private lateinit var initiativeCommand: InitiativeCommand
     lateinit var userService: IUserService
-    lateinit var channelOption: OptionMapping
+    private lateinit var dndHelper: DnDHelper
+    private lateinit var channelOption: OptionMapping
+    private lateinit var initButtons: DnDHelper.TableButtons
 
     @BeforeEach
     fun setup() {
         setUpCommonMocks()
         userService = mockk<UserServiceImpl>()
-        initiativeCommand = InitiativeCommand(userService)
+        dndHelper = mockk(relaxed = true)
+        initiativeCommand = InitiativeCommand(dndHelper)
         channelOption = mockk<OptionMapping>()
+        initButtons = dndHelper.initButtons
         every { event.getOption("channel") } returns channelOption
         every { channelOption.asChannel.asAudioChannel().members } returns listOf(member)
     }

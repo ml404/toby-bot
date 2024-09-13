@@ -16,24 +16,12 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import toby.button.ButtonTest.Companion.dndHelper
 import toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import toby.dto.web.dnd.Condition
 import toby.dto.web.dnd.Feature
 import toby.dto.web.dnd.Rule
 import toby.dto.web.dnd.Spell
-import toby.helpers.DnDHelper.clearInitiative
-import toby.helpers.DnDHelper.decrementTurnTable
-import toby.helpers.DnDHelper.doInitialLookup
-import toby.helpers.DnDHelper.incrementTurnTable
-import toby.helpers.DnDHelper.initButtons
-import toby.helpers.DnDHelper.initiativeEmbedBuilder
-import toby.helpers.DnDHelper.queryNonMatchRetry
-import toby.helpers.DnDHelper.rollDice
-import toby.helpers.DnDHelper.rollDiceWithModifier
-import toby.helpers.DnDHelper.rollInitiativeForMembers
-import toby.helpers.DnDHelper.rollInitiativeForString
-import toby.helpers.DnDHelper.sendOrEditInitiativeMessage
-import toby.helpers.DnDHelper.sortedEntries
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 import toby.jpa.service.impl.UserServiceImpl
@@ -53,6 +41,8 @@ internal class DnDHelperTest {
     lateinit var messageEditAction: MessageEditAction
     lateinit var memberList: List<Member>
     lateinit var initiativeMap: MutableMap<String, Int>
+    lateinit var dndHelper: DnDHelper
+    lateinit var userDtoHelper: UserDtoHelper
 
     @BeforeEach
     fun setUp() {
@@ -67,6 +57,8 @@ internal class DnDHelperTest {
         messageEditAction = mockk()
         memberList = mockk()
         initiativeMap = mutableMapOf()
+        userDtoHelper = mockk()
+        dndHelper = DnDHelper(userDtoHelper)
 
         val player1 = mockk<Member>()
         val player2 = mockk<Member>()
@@ -115,7 +107,7 @@ internal class DnDHelperTest {
         every { messageEditAction.queue() } just Runs
         every { message.delete() } returns auditableRestAction
 
-        clearInitiative()
+        dndHelper.clearInitiative()
 
         every { hook.deleteOriginal() } returns mockk<RestAction<Void>>()
         every { hook.setEphemeral(true) } returns hook
@@ -145,50 +137,50 @@ internal class DnDHelperTest {
     @AfterEach
     fun tearDown() {
         clearAllMocks()
-        clearInitiative()
+        dndHelper.clearInitiative()
     }
 
     @Test
     fun testRollDiceWithModifier() {
-        val result = rollDiceWithModifier(20, 1, 5)
+        val result = dndHelper.rollDiceWithModifier(20, 1, 5)
         Assertions.assertTrue(result in 6..25, "Result should be between 6 and 25 (inclusive)")
     }
 
     @Test
     fun testRollDice() {
-        val result = rollDice(20, 2)
+        val result = dndHelper.rollDice(20, 2)
         Assertions.assertTrue(result in 2..40, "Result should be between 2 and 40 (inclusive)")
     }
 
     @Test
     fun testIncrementTurnTable() {
-        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
-        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
-        incrementTurnTable(hook, event, 0)
+        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
+        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
+        dndHelper.incrementTurnTable(hook, event, 0)
         verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
         verify(exactly = 1) { webhookMessageCreateAction.queue(any()) }
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.queue() }
-        Assertions.assertEquals(1, DnDHelper.initiativeIndex.get())
+        Assertions.assertEquals(1, dndHelper.initiativeIndex.get())
     }
 
     @Test
     fun testDecrementTurnTable() {
-        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
-        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
-        decrementTurnTable(hook, event, 0)
+        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
+        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
+        dndHelper.decrementTurnTable(hook, event, 0)
         verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
         verify(exactly = 1) { webhookMessageCreateAction.queue(any()) }
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.queue() }
-        Assertions.assertEquals(2, DnDHelper.initiativeIndex.get())
+        Assertions.assertEquals(2, dndHelper.initiativeIndex.get())
     }
 
     @Test
     fun testGetInitButtons() {
-        val buttons = initButtons
+        val buttons = dndHelper.initButtons
 
         Assertions.assertNotNull(buttons)
         Assertions.assertEquals(Emoji.fromUnicode("⬅️").name, buttons.prev.label)
@@ -198,7 +190,7 @@ internal class DnDHelperTest {
 
     @Test
     fun testGetInitiativeEmbedBuilder() {
-        val embedBuilder = initiativeEmbedBuilder
+        val embedBuilder = dndHelper.initiativeEmbedBuilder
 
         Assertions.assertNotNull(embedBuilder)
         Assertions.assertEquals("Initiative Order", embedBuilder.build().title)
@@ -206,24 +198,24 @@ internal class DnDHelperTest {
 
     @Test
     fun testClearInitiative() {
-        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
-        clearInitiative()
+        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
+        dndHelper.clearInitiative()
 
-        Assertions.assertEquals(0, DnDHelper.initiativeIndex.get())
-        Assertions.assertEquals(0, sortedEntries.size)
+        Assertions.assertEquals(0, dndHelper.initiativeIndex.get())
+        Assertions.assertEquals(0, dndHelper.sortedEntries.size)
     }
 
     @Test
     fun testRollInitiativeForMembersWithEmptyList() {
-        clearInitiative()
-        rollInitiativeForMembers(emptyList(), member, initiativeMap, userService)
-        Assertions.assertTrue(sortedEntries.isEmpty(), "Sorted entries should be empty for an empty member list")
+        dndHelper.clearInitiative()
+        dndHelper.rollInitiativeForMembers(emptyList(), member, initiativeMap)
+        Assertions.assertTrue(dndHelper.sortedEntries.isEmpty(), "Sorted entries should be empty for an empty member list")
     }
 
     @Test
     fun testRollInitiativeForString() {
         val names = listOf("Alice", "Bob", "Charlie")
-        rollInitiativeForString(names, initiativeMap)
+        dndHelper.rollInitiativeForString(names, initiativeMap)
         Assertions.assertEquals(3, initiativeMap.size, "There should be an entry for each name")
         names.forEach { name ->
             Assertions.assertTrue(initiativeMap.containsKey(name), "Initiative map should contain entry for $name")
@@ -232,9 +224,9 @@ internal class DnDHelperTest {
 
     @Test
     fun testSendOrEditInitiativeMessageForNewMessage() {
-        clearInitiative()
-        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
-        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, null, 0)
+        dndHelper.clearInitiative()
+        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
+        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
 
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() }
@@ -242,9 +234,9 @@ internal class DnDHelperTest {
 
     @Test
     fun testSendOrEditInitiativeMessageForExistingMessage() {
-        clearInitiative()
-        rollInitiativeForMembers(memberList, member, initiativeMap, userService)
-        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, event, 0)
+        dndHelper.clearInitiative()
+        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
+        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, event, 0)
 
         verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.setActionRow(any(), any(), any()) }
@@ -260,7 +252,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val response = doInitialLookup(SPELL_NAME, "spell", "fireball", httpHelper)
+        val response = dndHelper.doInitialLookup(SPELL_NAME, "spell", "fireball", httpHelper)
         Assertions.assertTrue(response is Spell, "Response should be of type Spell")
         Assertions.assertEquals("Fireball", (response as Spell).name, "Spell name should be 'Fireball'")
     }
@@ -273,7 +265,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val response = doInitialLookup(CONDITION_NAME, "condition", "blinded", httpHelper)
+        val response = dndHelper.doInitialLookup(CONDITION_NAME, "condition", "blinded", httpHelper)
         Assertions.assertTrue(response is Condition, "Response should be of type Condition")
         Assertions.assertEquals("Blinded", (response as Condition).name, "Condition name should be 'Blinded'")
     }
@@ -285,7 +277,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val response = doInitialLookup(RULE_NAME, "rule", "cover", httpHelper)
+        val response = dndHelper.doInitialLookup(RULE_NAME, "rule", "cover", httpHelper)
         Assertions.assertTrue(response is Rule, "Response should be of type Rule")
         Assertions.assertEquals("Cover", (response as Rule).name, "Rule name should be 'Cover'")
     }
@@ -297,7 +289,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val response = doInitialLookup(FEATURE_NAME, "feature", "darkvision", httpHelper)
+        val response = dndHelper.doInitialLookup(FEATURE_NAME, "feature", "darkvision", httpHelper)
         Assertions.assertTrue(response is Feature, "Response should be of type Feature")
         Assertions.assertEquals("Darkvision", (response as Feature).name, "Feature name should be 'Darkvision'")
     }
@@ -309,7 +301,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val result = queryNonMatchRetry("spell", "fireball", httpHelper)
+        val result = dndHelper.queryNonMatchRetry("spell", "fireball", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Fireball", result?.results?.firstOrNull()?.name, "Query result name should be 'Fireball'")
     }
@@ -321,7 +313,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val result = queryNonMatchRetry("rule", "cover", httpHelper)
+        val result = dndHelper.queryNonMatchRetry("rule", "cover", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Cover", result?.results?.firstOrNull()?.name, "Query result name should be 'Cover'")
     }
@@ -333,7 +325,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val result = queryNonMatchRetry("feature", "darkvision", httpHelper)
+        val result = dndHelper.queryNonMatchRetry("feature", "darkvision", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Darkvision", result?.results?.firstOrNull()?.name, "Query result name should be 'Darkvision'")
     }
@@ -345,7 +337,7 @@ internal class DnDHelperTest {
         val httpHelper = mockk<HttpHelper>()
         coEvery { httpHelper.fetchFromGet(any()) } returns mockResponse
 
-        val result = queryNonMatchRetry("condition", "blinded", httpHelper)
+        val result = dndHelper.queryNonMatchRetry("condition", "blinded", httpHelper)
         Assertions.assertNotNull(result, "Query result should not be null")
         Assertions.assertEquals("Blinded", result?.results?.firstOrNull()?.name, "Query result name should be 'Blinded'")
     }
@@ -355,6 +347,7 @@ internal class DnDHelperTest {
             webhookMessageCreateAction: WebhookMessageCreateAction<*>,
             messageEditAction: MessageEditAction
         ) {
+            val initButtons = dndHelper.initButtons
             verify(exactly = 1) {
                 webhookMessageCreateAction.setActionRow(
                     eq(initButtons.prev),

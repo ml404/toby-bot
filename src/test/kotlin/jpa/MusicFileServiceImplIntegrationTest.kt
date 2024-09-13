@@ -10,7 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import toby.Application
 import toby.jpa.dto.MusicDto
+import toby.jpa.dto.UserDto
 import toby.jpa.service.IMusicFileService
+import toby.jpa.service.IUserService
 import java.io.IOException
 import java.net.URISyntaxException
 import java.nio.file.Files
@@ -20,8 +22,14 @@ import java.nio.file.Paths
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("test")
 class MusicFileServiceImplIntegrationTest {
+
     @Autowired
     lateinit var musicFileService: IMusicFileService
+
+    @Autowired
+    lateinit var userService: IUserService
+
+    private val validUserDto = UserDto(1, 1)
 
     @BeforeEach
     fun setUp() {
@@ -29,16 +37,20 @@ class MusicFileServiceImplIntegrationTest {
 
     @AfterEach
     fun tearDown() {
+        userService.deleteUserById(1, 1)
     }
 
     @Test
     fun whenValidDiscordIdAndGuild_thenUserShouldBeFound() {
-        val musicDto1 = MusicDto()
-        musicDto1.id = "1_1"
-        musicDto1.fileName = "filename"
-        musicDto1.musicBlob = "Some data".toByteArray()
+        val musicDto1 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = "Some data".toByteArray()
+            userDto = validUserDto
+        }
+
         musicFileService.createNewMusicFile(musicDto1)
-        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.id)
+        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.id!!)
 
         Assertions.assertEquals(dbMusicDto1!!.id, musicDto1.id)
         Assertions.assertEquals(dbMusicDto1.fileName, musicDto1.fileName)
@@ -47,24 +59,28 @@ class MusicFileServiceImplIntegrationTest {
 
     @Test
     fun testUpdate_thenNewUserValuesShouldBeReturned() {
-        var musicDto1: MusicDto? = MusicDto()
-        musicDto1!!.id = "1_1"
-        musicDto1.fileName = "file 1"
-        musicDto1.musicBlob = "some data 1".toByteArray()
-        musicDto1 = musicFileService.createNewMusicFile(musicDto1)
-        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1!!.id)
+        val musicDto1 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = "Some data".toByteArray()
+            userDto = validUserDto
+        }
+        musicFileService.createNewMusicFile(musicDto1)
+        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.id!!)
 
         Assertions.assertEquals(dbMusicDto1!!.id, musicDto1.id)
         Assertions.assertEquals(dbMusicDto1.fileName, musicDto1.fileName)
         Assertions.assertArrayEquals(dbMusicDto1.musicBlob, musicDto1.musicBlob)
 
 
-        var musicDto2: MusicDto? = MusicDto()
-        musicDto2!!.id = "1_1"
-        musicDto2.fileName = "file 2"
-        musicDto2.musicBlob = "some data 2".toByteArray()
-        musicDto2 = musicFileService.updateMusicFile(musicDto2)
-        val dbMusicDto2 = musicFileService.getMusicFileById(musicDto2!!.id)
+        val musicDto2 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename 2"
+            musicBlob = "Some data 2".toByteArray()
+            userDto = validUserDto
+        }
+        musicFileService.updateMusicFile(musicDto2)
+        val dbMusicDto2 = musicFileService.getMusicFileById(musicDto2.id!!)
 
         Assertions.assertEquals(dbMusicDto2!!.id, musicDto2.id)
         Assertions.assertEquals(dbMusicDto2.fileName, musicDto2.fileName)
@@ -78,16 +94,17 @@ class MusicFileServiceImplIntegrationTest {
     fun musicDtoBlobSerializesAndDeserializesCorrectly() {
         val classLoader = javaClass.classLoader
         val mp3Resource = classLoader.getResource("test.mp3")
-        val musicData = Files.readAllBytes(Paths.get(mp3Resource.toURI()))
+        val musicData = Files.readAllBytes(Paths.get(mp3Resource!!.toURI()))
 
-        val musicDto = MusicDto()
-        musicDto.musicBlob = musicData
-
-        musicDto.id = "1_1"
-        musicDto.fileName = "filename"
+        val musicDto = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = musicData
+            userDto = validUserDto
+        }
 
         musicFileService.createNewMusicFile(musicDto)
-        val dbMusicDto = musicFileService.getMusicFileById(musicDto.id)
+        val dbMusicDto = musicFileService.getMusicFileById(musicDto.id!!)
 
         Assertions.assertEquals(dbMusicDto!!.id, musicDto.id)
         Assertions.assertEquals(dbMusicDto.fileName, musicDto.fileName)

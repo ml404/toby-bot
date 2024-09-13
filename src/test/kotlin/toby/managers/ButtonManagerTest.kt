@@ -16,8 +16,7 @@ import toby.button.buttons.*
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
-import toby.helpers.HttpHelper
-import toby.helpers.MusicPlayerHelper
+import toby.helpers.*
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.*
 import toby.lavaplayer.GuildMusicManager
@@ -35,6 +34,9 @@ class ButtonManagerTest {
     lateinit var commandManager: CommandManager
     lateinit var buttonManager: ButtonManager
     lateinit var httpHelper: HttpHelper
+    lateinit var userDtoHelper: UserDtoHelper
+    lateinit var introHelper: IntroHelper
+    lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun openMocks() {
@@ -44,8 +46,11 @@ class ButtonManagerTest {
         musicFileService = mockk()
         excuseService = mockk()
         httpHelper = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper)
-        buttonManager = ButtonManager(configService,  userService, commandManager)
+        userDtoHelper = mockk()
+        introHelper = mockk()
+        dndHelper = mockk()
+        commandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
+        buttonManager = ButtonManager(configService,  userDtoHelper, dndHelper, commandManager)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }
@@ -96,7 +101,7 @@ class ButtonManagerTest {
             every { channel } returns mockChannel
             every { componentId } returns "stop"
             every { hook } returns mockHook
-            every { user } returns mockk() {
+            every { user } returns mockk {
                 every { idLong } returns 1L
             }
             every { member } returns mockk {
