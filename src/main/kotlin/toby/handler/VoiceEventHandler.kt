@@ -115,11 +115,11 @@ class VoiceEventHandler @Autowired constructor(
 
         if (audioManager.connectedChannel == event.channelJoined) {
             logger.info("Audiomanager channel ${audioManager.connectedChannel} and event joined channel ${event.channelJoined} are the same")
-            setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
+            setupAndPlayUserIntro(event.member, guild, deleteDelayConfig)
         }
     }
 
-    private fun setupAndPlayUserIntro(member: Member, guild: Guild, defaultVolume: Int, deleteDelayConfig: ConfigDto?) {
+    private fun setupAndPlayUserIntro(member: Member, guild: Guild, deleteDelayConfig: ConfigDto?) {
         val requestingUserDto = getRequestingUserDto(member)
         playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
     }

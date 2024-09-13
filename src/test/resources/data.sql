@@ -23,7 +23,7 @@ INSERT INTO public.music_files (file_name, music_blob, id, file_vol, guild_id, d
     ('file3', 'base64encodeddata3', '103_1_1', 3, 103, 1, 1);
 
 -- Insert data into the user table
-INSERT INTO public."user" (discord_id, guild_id, super_user, music_permission, dig_permission ,meme_permission, music_file_id, social_credit) VALUES
-    (101, 1, true, true, false, true, '101_1', 100),
-    (102, 1, false, true, true, true, '102_1', 50),
-    (103, 1, false, false, false, true, '103_1', 75);
+INSERT INTO public."user" (discord_id, guild_id, super_user, music_permission, dig_permission ,meme_permission, social_credit) VALUES
+    (101, 1, true, true, false, true, 100),
+    (102, 1, false, true, true, true, 50),
+    (103, 1, false, false, false, true, 75);

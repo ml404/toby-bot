@@ -40,7 +40,6 @@ CREATE TABLE public."user" (
     music_permission boolean DEFAULT true NOT NULL,
     dig_permission boolean DEFAULT true NOT NULL,
     meme_permission boolean DEFAULT true NOT NULL,
-    music_file_id character varying(100),
     social_credit bigint,
     initiative smallint default 0
 );

@@ -11,7 +11,8 @@ import toby.jpa.service.IMusicFileService
 
 @Repository
 @Transactional
-open class UserPersistenceImpl internal constructor(private val musicFileService: IMusicFileService) : IUserPersistence {
+open class UserPersistenceImpl internal constructor(private val musicFileService: IMusicFileService) :
+    IUserPersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
 
@@ -43,15 +44,6 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
 
     override fun updateUser(userDto: UserDto): UserDto {
         val dbUser = getUserById(userDto.discordId, userDto.guildId)
-        userDto.musicDtos.forEach {
-            val musicFileById = musicFileService.getMusicFileById(it.id!!)
-            val requestMusicDtos = dbUser?.musicDtos
-            if (requestMusicDtos?.contains(musicFileById) == true) {
-                musicFileService.updateMusicFile(it)
-            }
-
-        }
-
         if (userDto != dbUser) {
             entityManager.merge(userDto)
             entityManager.flush()

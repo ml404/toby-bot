@@ -44,7 +44,7 @@ class UserServiceImplIntegrationTest {
         val userDto = UserDto()
         userDto.discordId = 6L
         userDto.guildId = 1L
-        val musicDto = MusicDto(userDto.discordId, userDto.guildId, 1, null, 0, null).apply { this.userDto = userDto }
+        val musicDto = MusicDto(userDto, 1, null, 0, null)
         userDto.musicDtos.add(musicDto)
         userService.createNewUser(userDto)
         val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
@@ -63,7 +63,7 @@ class UserServiceImplIntegrationTest {
         var userDto1: UserDto? = UserDto()
         userDto1!!.discordId = 6L
         userDto1.guildId = 1L
-        val musicDto1 = MusicDto(userDto1.discordId, userDto1.guildId).apply { this.userDto = userDto1 }
+        val musicDto1 = MusicDto(userDto1)
         userDto1.musicDtos+=musicDto1
         userDto1 = userService.createNewUser(userDto1)
         val dbUser1 = userService.getUserById(userDto1.discordId, userDto1.guildId)
@@ -81,7 +81,7 @@ class UserServiceImplIntegrationTest {
         var userDto2: UserDto? = UserDto()
         userDto2!!.discordId = 6L
         userDto2.guildId = 1L
-        val musicDto2 = MusicDto(userDto2.discordId, userDto2.guildId).apply { this.userDto = userDto2 }
+        val musicDto2 = MusicDto(userDto2)
         userDto2.musicDtos += musicDto2
         userDto2.digPermission = false
         userDto2 = userService.updateUser(userDto2)
@@ -107,7 +107,7 @@ class UserServiceImplIntegrationTest {
         val userDto = UserDto()
         userDto.discordId = 6L
         userDto.guildId = 1L
-        val musicDto = MusicDto(userDto.discordId, userDto.guildId, 1, fileName = "test").apply { this.userDto = userDto }
+        val musicDto = MusicDto(userDto, 1, fileName = "test")
         userDto.musicDtos += musicDto
         userService.createNewUser(userDto)
         val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
@@ -129,7 +129,7 @@ class UserServiceImplIntegrationTest {
         val userDto = UserDto()
         userDto.discordId = 6L
         userDto.guildId = 1L
-        val musicDto = MusicDto(userDto.discordId, userDto.guildId,0, null).apply { this.userDto = userDto }
+        val musicDto = MusicDto(userDto, 0, null)
         userDto.musicDtos += musicDto
         userService.createNewUser(userDto)
         val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
@@ -170,7 +170,7 @@ class UserServiceImplIntegrationTest {
         val userDto = UserDto()
         userDto.discordId = 6L
         userDto.guildId = 1L
-        val musicDto = MusicDto(userDto.discordId, userDto.guildId,0, null).apply { this.userDto = userDto }
+        val musicDto = MusicDto(userDto, 0, null)
         userDto.musicDtos += musicDto
         userService.createNewUser(userDto)
         val dbUser = userService.getUserById(userDto.discordId, userDto.guildId)
@@ -182,7 +182,7 @@ class UserServiceImplIntegrationTest {
         assertTrue(dbUser.memePermission)
         assertTrue(dbUser.digPermission)
         assertFalse(dbUser.superUser)
-        var dbMusicFileDto = userDto.musicDtos[0]
+        val dbMusicFileDto = userDto.musicDtos[0]
         assertNotNull(dbMusicFileDto)
         assertEquals(dbMusicFileDto.id, musicDto.id)
         assertEquals(dbMusicFileDto.fileName, musicDto.fileName)

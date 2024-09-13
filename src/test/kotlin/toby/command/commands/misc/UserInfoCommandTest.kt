@@ -19,7 +19,6 @@ import toby.jpa.service.IUserService
 
 class UserInfoCommandTest : CommandTest {
     lateinit var userService: IUserService
-
     lateinit var userInfoCommand: UserInfoCommand
 
     @BeforeEach
@@ -52,7 +51,7 @@ class UserInfoCommandTest : CommandTest {
 
         // Verify interactions
         verify(exactly = 1) {
-            event.hook.sendMessage("There is no intro music file associated with your user.")
+            event.hook.sendMessage("There is no valid intro music file associated with user Effective Name.")
         }
         verify(exactly = 0) {
             userService.getUserById(any(), any())
@@ -69,7 +68,15 @@ class UserInfoCommandTest : CommandTest {
         // Mock a mentioned user's DTO
         val mentionedUserDto = UserDto()
         every { userService.getUserById(any(), any()) } returns requestingUserDto
-        every { requestingUserDto.musicDtos } returns listOf(MusicDto(1L, 1L, 1, "filename", 10, null)).toMutableList()
+        every { requestingUserDto.musicDtos } returns listOf(
+            MusicDto(
+                UserDto(1, 1),
+                1,
+                "filename",
+                10,
+                null
+            )
+        ).toMutableList()
 
         // Mock mentions
         val mentions = mockk<Mentions>()

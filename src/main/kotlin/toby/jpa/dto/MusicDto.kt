@@ -40,14 +40,14 @@ data class MusicDto(
 ) : Serializable {
 
     constructor(
-        discordId: Long,
-        guildId: Long,
+        userDto: UserDto,
         index: Int = 1,
         fileName: String? = null,
         introVolume: Int = 20,
         musicBlob: ByteArray? = null
     ) : this(
-        id = "${guildId}_${discordId}_${index}",
+        id = "${userDto.guildId}_${userDto.discordId}_${index}",
+        userDto = userDto,
         fileName = fileName,
         introVolume = introVolume,
         musicBlob = musicBlob

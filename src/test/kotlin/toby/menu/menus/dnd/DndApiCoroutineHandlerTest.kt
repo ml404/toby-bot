@@ -13,6 +13,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
@@ -22,16 +25,19 @@ import toby.helpers.HttpHelper
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)
+@SpringBootTest
+@ActiveProfiles("test")
 class DndApiCoroutineHandlerTest {
 
     private lateinit var handler: DndApiCoroutineHandler
     private lateinit var httpHelper: HttpHelper
+
+    @Autowired
     private lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun setup() {
         httpHelper = mockk(relaxed = true)
-        dndHelper = mockk(relaxed = true)
     }
 
     @AfterEach

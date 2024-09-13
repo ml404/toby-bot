@@ -42,6 +42,7 @@ class IntroMenu(
                 introHelper.handleAttachment(
                     ctx.event,
                     requestingUserDto,
+                    ctx.selectEvent.user.effectiveName,
                     deleteDelay,
                     pendingDtoAttachment,
                     introVolume,

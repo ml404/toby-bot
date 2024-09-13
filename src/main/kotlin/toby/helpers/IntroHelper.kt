@@ -39,25 +39,30 @@ class IntroHelper(
         attachment: Attachment?,
         link: String?,
         introVolume: Int,
-        selectedMusicDto: MusicDto?
+        selectedMusicDto: MusicDto?,
+        userName: String = event.user.effectiveName
     ) {
         when {
             attachment != null -> handleAttachment(
                 event,
                 requestingUserDto,
+                userName,
                 deleteDelay,
                 attachment,
                 introVolume,
                 selectedMusicDto
             )
+
             link != null && URLHelper.isValidURL(link) -> handleUrl(
                 event,
                 requestingUserDto,
+                userName,
                 deleteDelay,
                 Optional.of(URI.create(link)),
                 introVolume,
                 selectedMusicDto
             )
+
             else -> event.hook.sendMessage("Please provide a valid link or attachment")
                 .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
         }
@@ -66,10 +71,11 @@ class IntroHelper(
     fun handleAttachment(
         event: SlashCommandInteractionEvent,
         requestingUserDto: UserDto,
+        userName: String,
         deleteDelay: Int?,
         attachment: Attachment,
         introVolume: Int,
-        selectedMusicDto: MusicDto? = MusicDto()
+        selectedMusicDto: MusicDto? = null
     ) {
         when {
             attachment.fileExtension != "mp3" -> {
@@ -88,11 +94,12 @@ class IntroHelper(
                     persistMusicFile(
                         event,
                         requestingUserDto,
+                        userName,
                         deleteDelay,
                         attachment.fileName,
                         introVolume,
                         it,
-                        selectedMusicDto
+                        selectedMusicDto,
                     )
                 }
             }
@@ -102,10 +109,11 @@ class IntroHelper(
     fun handleUrl(
         event: SlashCommandInteractionEvent,
         requestingUserDto: UserDto,
+        userName: String,
         deleteDelay: Int?,
         optionalURI: Optional<URI>,
         introVolume: Int,
-        selectedMusicDto: MusicDto? = MusicDto()
+        selectedMusicDto: MusicDto? = null
     ) {
         val urlString = optionalURI.map(URI::toString).orElse("")
         persistMusicUrl(
@@ -114,11 +122,13 @@ class IntroHelper(
             deleteDelay,
             urlString,
             urlString,
-            event.user.name,
+            userName,
             introVolume,
             selectedMusicDto
         )
     }
+
+    fun findUserById(discordId: Long, guildId: Long) = userService.getUserById(discordId, guildId)
 
     private fun downloadAttachment(attachment: Attachment): InputStream? {
         return runCatching {
@@ -131,11 +141,12 @@ class IntroHelper(
     private fun persistMusicFile(
         event: SlashCommandInteractionEvent,
         targetDto: UserDto,
+        userName: String = event.user.effectiveName,
         deleteDelay: Int?,
         filename: String,
         introVolume: Int,
         inputStream: InputStream,
-        selectedMusicDto: MusicDto?
+        selectedMusicDto: MusicDto? = null
     ) {
         val fileContents = runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
@@ -143,29 +154,21 @@ class IntroHelper(
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
         val index = targetDto.musicDtos.size + 1
-        val musicDto = selectedMusicDto ?: MusicDto(
-            targetDto.discordId,
-            targetDto.guildId,
-            index,
-            filename,
-            introVolume,
-            fileContents
-        )
-        musicDto.apply {
-            this.fileName = filename
-            this.introVolume = introVolume
-            this.musicBlob = fileContents
-            this.userDto = targetDto
-        }
+        val musicDto = selectedMusicDto.apply {
+            this?.musicBlob = fileContents
+            this?.fileName = filename
+            this?.introVolume = introVolume
+            this?.userDto = targetDto
+        } ?: MusicDto(targetDto, index, filename, introVolume, fileContents)
 
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
-            targetDto.musicDtos[index] = musicDto
+            targetDto.musicDtos += musicDto
             userService.updateUser(targetDto)
-            sendSuccessMessage(event, event.user.effectiveName, filename, introVolume, deleteDelay)
+            sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay)
         } else {
             musicFileService.updateMusicFile(musicDto)
-            sendUpdateMessage(event, event.user.effectiveName, filename, introVolume, deleteDelay)
+            sendUpdateMessage(event, userName, filename, introVolume, index, deleteDelay)
         }
     }
 
@@ -181,23 +184,22 @@ class IntroHelper(
     ) {
         val urlBytes = url.toByteArray()
         val index = targetDto.musicDtos.size + 1
-        val musicDto = selectedMusicDto ?: MusicDto(targetDto.discordId, targetDto.guildId, index, filename, introVolume, urlBytes)
-        musicDto.apply {
+        val musicDto = selectedMusicDto?.apply {
+            this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
+            this.userDto = targetDto
+            this.musicBlob = urlBytes
             this.fileName = filename
             this.introVolume = introVolume
-            this.musicBlob = urlBytes
-            this.userDto = targetDto
-        }
-
+        } ?: MusicDto(targetDto, index, filename, introVolume, urlBytes)
 
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
-            targetDto.musicDtos[index] = musicDto
+            targetDto.musicDtos += musicDto
             userService.updateUser(targetDto)
-            sendSuccessMessage(event, memberName, filename, introVolume, deleteDelay)
+            sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay)
         } else {
             musicFileService.updateMusicFile(musicDto)
-            sendUpdateMessage(event, memberName, filename, introVolume, deleteDelay)
+            sendUpdateMessage(event, memberName, filename, introVolume, index, deleteDelay)
         }
     }
 
@@ -206,10 +208,11 @@ class IntroHelper(
         memberName: String,
         filename: String,
         introVolume: Int,
+        index: Int,
         deleteDelay: Int?
     ) {
         event.hook
-            .sendMessage("Successfully set $memberName's intro song to '$filename' with volume '$introVolume'")
+            .sendMessage("Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
             .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
@@ -219,13 +222,15 @@ class IntroHelper(
         memberName: String?,
         filename: String,
         introVolume: Int,
+        index: Int,
         deleteDelay: Int?
     ) {
         event.hook
-            .sendMessage("Successfully updated $memberName's intro song to '$filename' with volume '$introVolume'")
+            .sendMessage("Successfully updated $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
             .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
+
 
     companion object {
         private const val VOLUME = "volume"

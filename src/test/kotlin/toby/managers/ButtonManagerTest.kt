@@ -27,15 +27,15 @@ import java.util.concurrent.LinkedBlockingQueue
 class ButtonManagerTest {
 
     lateinit var configService: IConfigService
-    lateinit var brotherService: IBrotherService
+    private lateinit var brotherService: IBrotherService
     lateinit var userService: IUserService
-    lateinit var musicFileService: IMusicFileService
-    lateinit var excuseService: IExcuseService
-    lateinit var commandManager: CommandManager
-    lateinit var buttonManager: ButtonManager
+    private lateinit var musicFileService: IMusicFileService
+    private lateinit var excuseService: IExcuseService
+    private lateinit var commandManager: CommandManager
+    private lateinit var buttonManager: ButtonManager
     lateinit var httpHelper: HttpHelper
-    lateinit var userDtoHelper: UserDtoHelper
-    lateinit var introHelper: IntroHelper
+    private lateinit var userDtoHelper: UserDtoHelper
+    private lateinit var introHelper: IntroHelper
     lateinit var dndHelper: DnDHelper
 
     @BeforeEach
@@ -53,6 +53,8 @@ class ButtonManagerTest {
         buttonManager = ButtonManager(configService,  userDtoHelper, dndHelper, commandManager)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
+
+        every { userDtoHelper.calculateUserDto(1, 1, true) } returns mockk(relaxed = true)
     }
 
     @AfterEach

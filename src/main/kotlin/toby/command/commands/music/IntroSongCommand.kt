@@ -3,6 +3,7 @@ package toby.command.commands.music
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
@@ -16,7 +17,7 @@ import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
 
 class IntroSongCommand(
-    private val introHelper: IntroHelper
+    private val introHelper: IntroHelper,
 ) : IMusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
@@ -33,8 +34,9 @@ class IntroSongCommand(
         event.deferReply().queue()
 
         val introVolume = introHelper.calculateIntroVolume(event)
+        val mentionedMembers = event.getOptionMentionedMembers()
 
-        if (!requestingUserDto.superUser && event.getMentionedMembers().isNotEmpty()) {
+        if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {
             sendErrorMessage(event, deleteDelay!!)
             return
         }
@@ -42,6 +44,43 @@ class IntroSongCommand(
         val attachmentOption = event.getOption(ATTACHMENT)
         val linkOption = event.getOption(LINK)?.asString.orEmpty()
 
+        val mentionedUserDtoList = mentionedMembers.mapNotNull { introHelper.findUserById(it.idLong, it.guild.idLong) }
+
+        if (mentionedUserDtoList.isEmpty()) {
+            checkAndSetIntro(
+                event,
+                requestingUserDto,
+                linkOption,
+                event.user.effectiveName,
+                deleteDelay,
+                introVolume,
+                attachmentOption
+            )
+        } else {
+            mentionedMembers.forEach {
+                checkAndSetIntro(
+                    event,
+                    introHelper.findUserById(it.idLong, it.guild.idLong)!!,
+                    linkOption,
+                    it.effectiveName,
+                    deleteDelay,
+                    introVolume,
+                    attachmentOption
+                )
+            }
+        }
+
+    }
+
+    private fun checkAndSetIntro(
+        event: SlashCommandInteractionEvent,
+        requestingUserDto: UserDto,
+        linkOption: String,
+        userName: String,
+        deleteDelay: Int?,
+        introVolume: Int,
+        attachmentOption: OptionMapping?
+    ) {
 
         when {
             checkForOverIntroLimit(event.hook, requestingUserDto.musicDtos) -> {
@@ -50,16 +89,25 @@ class IntroSongCommand(
 
             linkOption.isNotEmpty() -> {
                 val optionalURI = URLHelper.fromUrlString(linkOption)
-                introHelper.handleUrl(event, requestingUserDto, deleteDelay, optionalURI, introVolume)
+                introHelper.handleUrl(
+                    event,
+                    requestingUserDto,
+                    userName = userName,
+                    deleteDelay,
+                    optionalURI,
+                    introVolume
+                )
             }
 
             attachmentOption != null -> {
                 introHelper.handleAttachment(
                     event,
                     requestingUserDto,
+                    userName,
                     deleteDelay,
                     attachmentOption.asAttachment,
-                    introVolume)
+                    introVolume
+                )
             }
 
             else -> {
@@ -84,7 +132,7 @@ class IntroSongCommand(
     }
 
 
-    private fun SlashCommandInteractionEvent.getMentionedMembers(): List<Member> {
+    private fun SlashCommandInteractionEvent.getOptionMentionedMembers(): List<Member> {
         return this.getOption(USERS)?.mentions?.members.orEmpty()
     }
 
@@ -97,7 +145,7 @@ class IntroSongCommand(
     override val optionData: List<OptionData>
         get() {
             return listOf(
-                OptionData(OptionType.STRING, USERS, "User whose intro to change"),
+                OptionData(OptionType.MENTIONABLE, USERS, "User whose intro to change"),
                 OptionData(OptionType.STRING, LINK, "Link to set as your discord intro"),
                 OptionData(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro"),
                 OptionData(OptionType.INTEGER, VOLUME, "Volume to set your intro to")

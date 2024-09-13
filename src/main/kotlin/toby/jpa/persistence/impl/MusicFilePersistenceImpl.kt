@@ -29,14 +29,18 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     private fun createUserForMusicFile(userDto: UserDto) {
-        val databaseUser = entityManager.find(UserDto::class.java, userDto)
-        if ((databaseUser == null)) persistUserDto(userDto)
+        runCatching {
+            entityManager
+                .createNamedQuery("UserDto.getById", UserDto::class.java)
+                .setParameter("discordId", userDto.discordId)
+                .setParameter("guildId", userDto.guildId)
+                .singleResult
+        }.getOrElse { persistUserDto(userDto) }
     }
 
-    private fun persistUserDto(userDto: UserDto): UserDto {
+    private fun persistUserDto(userDto: UserDto) {
         entityManager.persist(userDto)
         entityManager.flush()
-        return userDto
     }
 
     override fun getMusicFileById(id: String): MusicDto? {
@@ -63,6 +67,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto {
+        createUserForMusicFile(musicDto.userDto!!)
         entityManager.merge(musicDto)
         entityManager.flush()
         return musicDto
