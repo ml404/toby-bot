@@ -119,7 +119,7 @@ class IntroSongCommand(
 
     private fun checkForOverIntroLimit(hook: InteractionHook, introList: MutableList<MusicDto>): Boolean {
         if (introList.size >= LIMIT) {
-            val builder = StringSelectMenu.create("intro").setPlaceholder("")
+            val builder = StringSelectMenu.create("intro").setPlaceholder(null)
             introList.forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
             val stringSelectMenu = builder.build()
             hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")

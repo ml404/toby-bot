@@ -255,6 +255,70 @@ internal class IntroSongCommandTest : MusicCommandTest {
         }
     }
 
+    @Test
+    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFiles_doesNotCreateMusicFileWhenAtLimit() {
+        // Arrange
+        val commandContext = CommandContext(event)
+        val attachmentOptionMapping = mockk<OptionMapping>()
+
+
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { requestingUserDto.musicDtos } returns listOf(
+            MusicDto(
+                UserDto(1, 1),
+                1,
+                "filename1",
+                20,
+                null
+            ),
+            MusicDto(
+                UserDto(1, 1),
+                2,
+                "filename2",
+                20,
+                null
+            ),
+            MusicDto(
+                UserDto(1, 1),
+                3,
+                "filename3",
+                20,
+                null
+            ),
+            MusicDto(
+                UserDto(1, 1),
+                4,
+                "filename4",
+                20,
+                null
+            ),
+            MusicDto(
+                UserDto(1, 1),
+                5,
+                "filename5",
+                20,
+                null
+            )
+        ).toMutableList()
+        every { event.getOption("attachment") } returns attachmentOptionMapping
+        setupAttachments(attachmentOptionMapping)
+
+        // Act
+        introSongCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            requestingUserDto,
+            0
+        )
+
+        // Assert
+        verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
+        verify {
+            event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 5 intros")
+        }
+    }
+
     private fun setupMentions(userOptionMapping: OptionMapping) {
         val mentions = mockk<Mentions>()
         val mentionedMember = mockk<Member>(relaxed = true)
