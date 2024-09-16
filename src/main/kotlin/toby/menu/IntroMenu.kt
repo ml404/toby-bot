@@ -35,18 +35,19 @@ class IntroMenu(
         )
 
         val musicDtoToReplace = requestingUserDto.musicDtos[selectedIndex]
-        val attachmentIntPair = introHelper.pendingIntros[requestingUserDto.discordId]
-        if (attachmentIntPair != null) {
-            val (pendingDtoAttachment, introVolume) = attachmentIntPair
+        val pendingIntroTriple = introHelper.pendingIntros[requestingUserDto.discordId]
+        if (pendingIntroTriple != null) {
+            val (pendingDtoAttachment, url, introVolume) = pendingIntroTriple
             runCatching {
-                introHelper.handleAttachment(
+                introHelper.handleMedia(
                     ctx.event,
                     requestingUserDto,
-                    ctx.selectEvent.user.effectiveName,
                     deleteDelay,
                     pendingDtoAttachment,
+                    url,
                     introVolume,
-                    musicDtoToReplace
+                    musicDtoToReplace,
+                    ctx.selectEvent.user.effectiveName
                 )
             }.onFailure {
                 logger.error(it) { "Error handling intro replacement" }

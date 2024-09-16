@@ -21,8 +21,8 @@ class IntroHelper(
     private val configService: IConfigService
 ) {
 
-    // Store the pending intro in a cache
-    val pendingIntros = mutableMapOf<Long, Pair<Attachment, Int>?>()
+    // Store the pending intro in a cache (as either an attachment or a URL string)
+    val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
 
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {

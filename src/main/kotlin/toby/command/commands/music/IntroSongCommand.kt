@@ -83,7 +83,14 @@ class IntroSongCommand(
     ) {
 
         when {
-            checkForOverIntroLimit(event.hook, requestingUserDto.musicDtos) -> {
+            checkForOverIntroLimit(
+                event.hook,
+                requestingUserDto.discordId,
+                requestingUserDto.musicDtos,
+                linkOption,
+                attachmentOption,
+                introVolume
+            ) -> {
                 return
             }
 
@@ -117,8 +124,16 @@ class IntroSongCommand(
         }
     }
 
-    private fun checkForOverIntroLimit(hook: InteractionHook, introList: MutableList<MusicDto>): Boolean {
+    private fun checkForOverIntroLimit(
+        hook: InteractionHook,
+        discordId: Long,
+        introList: MutableList<MusicDto>,
+        linkOption: String? = null,
+        attachmentOption: OptionMapping? = null,
+        introVolume: Int
+    ): Boolean {
         if (introList.size >= LIMIT) {
+            introHelper.pendingIntros[discordId] = Triple(attachmentOption?.asAttachment, linkOption, introVolume)
             val builder = StringSelectMenu.create("intro").setPlaceholder(null)
             introList.forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
             val stringSelectMenu = builder.build()
