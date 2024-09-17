@@ -2,6 +2,7 @@ package toby.helpers
 
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.jpa.dto.ConfigDto
@@ -130,7 +131,7 @@ class IntroHelper(
 
     fun findUserById(discordId: Long, guildId: Long) = userService.getUserById(discordId, guildId)
 
-    private fun downloadAttachment(attachment: Attachment): InputStream? {
+    fun downloadAttachment(attachment: Attachment): InputStream? {
         return runCatching {
             attachment.proxy.download().get()
         }.onFailure {
@@ -138,7 +139,8 @@ class IntroHelper(
         }.getOrNull()
     }
 
-    private fun persistMusicFile(
+    @VisibleForTesting
+    fun persistMusicFile(
         event: SlashCommandInteractionEvent,
         targetDto: UserDto,
         userName: String = event.user.effectiveName,
@@ -172,7 +174,7 @@ class IntroHelper(
         }
     }
 
-    private fun persistMusicUrl(
+    fun persistMusicUrl(
         event: SlashCommandInteractionEvent,
         targetDto: UserDto,
         deleteDelay: Int?,

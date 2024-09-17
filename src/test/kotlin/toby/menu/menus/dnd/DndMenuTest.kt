@@ -1,3 +1,5 @@
+package toby.menu.menus.dnd
+
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -11,9 +13,6 @@ import org.junit.jupiter.api.Test
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.menu.MenuContext
-import toby.menu.menus.dnd.DndApiCoroutineHandler
-import toby.menu.menus.dnd.DndEventProcessor
-import toby.menu.menus.dnd.DndMenu
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DndMenuTest {

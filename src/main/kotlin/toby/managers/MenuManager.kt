@@ -11,8 +11,8 @@ import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
 import toby.menu.IMenu
-import toby.menu.IntroMenu
 import toby.menu.MenuContext
+import toby.menu.menus.IntroMenu
 import toby.menu.menus.dnd.DndMenu
 import java.util.*
 

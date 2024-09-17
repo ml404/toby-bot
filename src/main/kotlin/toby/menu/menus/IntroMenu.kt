@@ -1,9 +1,10 @@
-package toby.menu
+package toby.menu.menus
 
 import mu.KotlinLogging
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
+import toby.menu.IMenu
+import toby.menu.MenuContext
 
 
 class IntroMenu(
@@ -15,15 +16,15 @@ class IntroMenu(
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.info { "Intro menu event started for guild ${ctx.guild.idLong}" }
-        val event = ctx.selectEvent as? StringSelectInteractionEvent
-        event?.deferReply()?.queue()
+        val event = ctx.selectEvent
+        event.deferReply().queue()
 
-        val selectedIndex = event?.selectedOptions?.firstOrNull()?.value?.toIntOrNull()
+        val selectedIndex = event.selectedOptions.firstOrNull()?.value?.toIntOrNull()
 
         if (selectedIndex == null) {
-            event?.hook
-                ?.sendMessage("Invalid selection or user data. Please try again.")
-                ?.setEphemeral(true)?.queue()
+            event.hook
+                .sendMessage("Invalid selection or user data. Please try again.")
+                .setEphemeral(true).queue()
             return
         }
 
