@@ -205,11 +205,11 @@ class IntroHelper(
         } ?: MusicDto(targetDto, index, filename, introVolume, urlBytes)
 
         if (selectedMusicDto == null) {
+            logger.info { "Creating new music file $musicDto" }
             musicFileService.createNewMusicFile(musicDto)
-            targetDto.musicDtos += musicDto
-            userService.updateUser(targetDto)
             sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay)
         } else {
+            logger.info { "Updating music file $musicDto" }
             musicFileService.updateMusicFile(musicDto)
             sendUpdateMessage(event, memberName, filename, introVolume, musicDto.index!!, deleteDelay)
         }
