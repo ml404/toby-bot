@@ -33,6 +33,9 @@ data class MusicDto(
     @Column(name = "file_vol")
     var introVolume: Int? = 20,
 
+    @Column(name = "index")
+    var index: Int? = 1,
+
     @Lob
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "TEXT")

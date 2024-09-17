@@ -211,7 +211,7 @@ class IntroHelper(
             sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay)
         } else {
             musicFileService.updateMusicFile(musicDto)
-            sendUpdateMessage(event, memberName, filename, introVolume, index, deleteDelay)
+            sendUpdateMessage(event, memberName, filename, introVolume, musicDto.index!!, deleteDelay)
         }
     }
 
