@@ -286,20 +286,6 @@ internal class IntroSongCommandTest : MusicCommandTest {
                 "filename3",
                 20,
                 null
-            ),
-            MusicDto(
-                UserDto(1, 1),
-                4,
-                "filename4",
-                20,
-                null
-            ),
-            MusicDto(
-                UserDto(1, 1),
-                5,
-                "filename5",
-                20,
-                null
             )
         ).toMutableList()
         every { event.getOption("attachment") } returns attachmentOptionMapping
@@ -316,7 +302,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         // Assert
         verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
-            event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 5 intros")
+            event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 3 intros")
         }
     }
 

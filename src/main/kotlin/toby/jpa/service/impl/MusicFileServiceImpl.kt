@@ -42,4 +42,8 @@ open class MusicFileServiceImpl : IMusicFileService {
     @CacheEvict(value = ["music"], allEntries = true)
     override fun clearCache() {
     }
+
+    override fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean {
+        return musicFileService.isFileAlreadyUploaded(musicDto)
+    }
 }

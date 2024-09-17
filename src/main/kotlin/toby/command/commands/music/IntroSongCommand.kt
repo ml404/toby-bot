@@ -172,6 +172,6 @@ class IntroSongCommand(
         private const val USERS = "users"
         private const val LINK = "link"
         private const val ATTACHMENT = "attachment"
-        private const val LIMIT = 5
+        private const val LIMIT = 3
     }
 }

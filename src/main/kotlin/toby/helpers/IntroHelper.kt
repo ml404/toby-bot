@@ -207,11 +207,13 @@ class IntroHelper(
         if (selectedMusicDto == null) {
             logger.info { "Creating new music file $musicDto" }
             musicFileService.createNewMusicFile(musicDto)
-            sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay)
+                ?.let { sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay) }
+                ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
         } else {
             logger.info { "Updating music file $musicDto" }
             musicFileService.updateMusicFile(musicDto)
-            sendUpdateMessage(event, memberName, filename, introVolume, musicDto.index!!, deleteDelay)
+                ?.let { sendUpdateMessage(event, memberName, filename, introVolume, musicDto.index!!, deleteDelay) }
+                ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
         }
     }
 
@@ -240,6 +242,19 @@ class IntroHelper(
     ) {
         event.hook
             .sendMessage("Successfully updated $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
+            .setEphemeral(true)
+            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+    }
+
+    private fun rejectIntroForDuplication(
+        event: IReplyCallback,
+        memberName: String,
+        filename: String,
+        deleteDelay: Int?
+    ) {
+        logger.info { "$memberName's intro song '$filename' was rejected for duplication" }
+        event.hook
+            .sendMessage("$memberName's intro song '$filename' was rejected as it already exists as one of their intros for this server")
             .setEphemeral(true)
             .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }

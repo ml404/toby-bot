@@ -22,10 +22,26 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
         return musicDto
     }
 
-    override fun createNewMusicFile(musicDto: MusicDto): MusicDto {
+    // Method to check if the same file exists for a given discordId and guildId
+    override fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean {
+        val query = entityManager.createQuery(
+            "SELECT COUNT(m) FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+            Long::class.java
+        )
+        query.setParameter("musicBlob", musicDto.musicBlob)
+        query.setParameter("discordId", musicDto.userDto?.discordId)
+        query.setParameter("guildId", musicDto.userDto?.guildId)
+
+        return (query.singleResult as Long) > 0
+    }
+
+    override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
         createUserForMusicFile(musicDto.userDto!!)
+        if (isFileAlreadyUploaded(musicDto)) {
+            return null
+        }
         val databaseMusicFile = entityManager.find(MusicDto::class.java, musicDto.id)
-        return if ((databaseMusicFile == null)) persistMusicDto(musicDto) else updateMusicFile(musicDto)
+        return if (databaseMusicFile == null) persistMusicDto(musicDto) else updateMusicFile(musicDto)
     }
 
     private fun createUserForMusicFile(userDto: UserDto) {
@@ -66,7 +82,10 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
         }.getOrNull()
     }
 
-    override fun updateMusicFile(musicDto: MusicDto): MusicDto {
+    override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
+        if (isFileAlreadyUploaded(musicDto)) {
+            return null
+        }
         createUserForMusicFile(musicDto.userDto!!)
         entityManager.merge(musicDto)
         entityManager.flush()

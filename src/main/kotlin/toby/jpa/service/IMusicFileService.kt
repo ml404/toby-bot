@@ -8,6 +8,7 @@ interface IMusicFileService {
     fun updateMusicFile(musicDto: MusicDto): MusicDto?
     fun deleteMusicFile(musicDto: MusicDto)
     fun deleteMusicFileById(id: String?)
-
     fun clearCache()
+    fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean
+
 }
