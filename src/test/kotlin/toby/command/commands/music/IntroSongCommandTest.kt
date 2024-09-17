@@ -93,6 +93,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
 
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { userService.getUserById(1L, 1L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
