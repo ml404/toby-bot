@@ -13,6 +13,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import toby.command.commands.dnd.DnDCommandQueryHandler
 import toby.command.commands.fetch.TestHttpHelperHelper.BLIND_QUERY_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.EMPTY_QUERY_RESPONSE
@@ -23,10 +26,14 @@ import toby.helpers.HttpHelper
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)
+@SpringBootTest
+@ActiveProfiles("test")
 class DnDCommandQueryHandlerTest {
 
     private lateinit var queryHandler: DnDCommandQueryHandler
     private lateinit var httpHelper: HttpHelper
+
+    @Autowired
     private lateinit var dndHelper: DnDHelper
     private val hook = mockk<InteractionHook>(relaxed = true)
     private val deleteDelay = 0
@@ -34,7 +41,6 @@ class DnDCommandQueryHandlerTest {
     @BeforeEach
     fun setUp() {
         httpHelper = mockk()
-        dndHelper = mockk()
     }
 
     @AfterEach
@@ -50,7 +56,7 @@ class DnDCommandQueryHandlerTest {
         every { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay)
+        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
 
         queryHandler.processQuery("spell", "spells", "fireball")
 
@@ -70,7 +76,7 @@ class DnDCommandQueryHandlerTest {
         every { hook.sendMessage(any<String>()).setActionRow(any<StringSelectMenu>()).queue() } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay)
+        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
 
         queryHandler.processQuery("condition", "conditions", "blind")
 
@@ -90,7 +96,7 @@ class DnDCommandQueryHandlerTest {
         every { hook.sendMessage(any<String>()).queue(any()) } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay)
+        queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
 
         queryHandler.processQuery("condition", "conditions", "bin")
 

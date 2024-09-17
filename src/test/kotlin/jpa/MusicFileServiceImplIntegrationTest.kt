@@ -1,45 +1,74 @@
-package jpa
-
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import toby.Application
+import io.mockk.*
+import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertNull
 import toby.jpa.dto.MusicDto
+import toby.jpa.dto.UserDto
 import toby.jpa.service.IMusicFileService
+import toby.jpa.service.IUserService
 import java.io.IOException
 import java.net.URISyntaxException
 import java.nio.file.Files
 import java.nio.file.Paths
 
-@SpringBootTest(classes = [Application::class])
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
-@ActiveProfiles("test")
-class MusicFileServiceImplIntegrationTest {
-    @Autowired
-    lateinit var musicFileService: IMusicFileService
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class MusicFileServiceImplTest {
+
+    private lateinit var musicFileService: IMusicFileService
+    private lateinit var userService: IUserService
+
+    private val validUserDto = UserDto(1, 1)
 
     @BeforeEach
     fun setUp() {
+        musicFileService = mockk(relaxed = true)
+        userService = mockk(relaxed = true)
+
+        // Mocking behavior
+        every { musicFileService.createNewMusicFile(any()) } answers {
+            firstArg()
+        } andThen null
+
+        // Mock getMusicFileById to return different MusicDto on consecutive calls
+        val musicDto1 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = "Some data".toByteArray()
+            userDto = validUserDto
+        }
+
+        val musicDto2 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename 2"
+            musicBlob = "Some data 2".toByteArray()
+            userDto = validUserDto
+        }
+
+        every { musicFileService.getMusicFileById("1_1_1") }
+            .returns(musicDto1) andThen musicDto2
+
+        every { userService.deleteUserById(any(), any()) } just Runs
     }
 
     @AfterEach
     fun tearDown() {
+        // Reset mocks
+        unmockkAll()
     }
 
     @Test
     fun whenValidDiscordIdAndGuild_thenUserShouldBeFound() {
-        val musicDto1 = MusicDto()
-        musicDto1.id = "1_1"
-        musicDto1.fileName = "filename"
-        musicDto1.musicBlob = "Some data".toByteArray()
-        musicFileService.createNewMusicFile(musicDto1)
-        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.id)
+        val musicDto1 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = "Some data".toByteArray()
+            userDto = validUserDto
+        }
 
+        // Act
+        musicFileService.createNewMusicFile(musicDto1)
+        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.id!!)
+
+        // Assert
         Assertions.assertEquals(dbMusicDto1!!.id, musicDto1.id)
         Assertions.assertEquals(dbMusicDto1.fileName, musicDto1.fileName)
         Assertions.assertArrayEquals(dbMusicDto1.musicBlob, musicDto1.musicBlob)
@@ -47,24 +76,27 @@ class MusicFileServiceImplIntegrationTest {
 
     @Test
     fun testUpdate_thenNewUserValuesShouldBeReturned() {
-        var musicDto1: MusicDto? = MusicDto()
-        musicDto1!!.id = "1_1"
-        musicDto1.fileName = "file 1"
-        musicDto1.musicBlob = "some data 1".toByteArray()
-        musicDto1 = musicFileService.createNewMusicFile(musicDto1)
-        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1!!.id)
+        val musicDto1 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = "Some data".toByteArray()
+            userDto = validUserDto
+        }
+        musicFileService.createNewMusicFile(musicDto1)
+        val dbMusicDto1 = musicFileService.getMusicFileById(musicDto1.id!!)
 
         Assertions.assertEquals(dbMusicDto1!!.id, musicDto1.id)
         Assertions.assertEquals(dbMusicDto1.fileName, musicDto1.fileName)
         Assertions.assertArrayEquals(dbMusicDto1.musicBlob, musicDto1.musicBlob)
 
-
-        var musicDto2: MusicDto? = MusicDto()
-        musicDto2!!.id = "1_1"
-        musicDto2.fileName = "file 2"
-        musicDto2.musicBlob = "some data 2".toByteArray()
-        musicDto2 = musicFileService.updateMusicFile(musicDto2)
-        val dbMusicDto2 = musicFileService.getMusicFileById(musicDto2!!.id)
+        val musicDto2 = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename 2"
+            musicBlob = "Some data 2".toByteArray()
+            userDto = validUserDto
+        }
+        musicFileService.createNewMusicFile(musicDto2)
+        val dbMusicDto2 = musicFileService.getMusicFileById(musicDto2.id!!)
 
         Assertions.assertEquals(dbMusicDto2!!.id, musicDto2.id)
         Assertions.assertEquals(dbMusicDto2.fileName, musicDto2.fileName)
@@ -78,19 +110,39 @@ class MusicFileServiceImplIntegrationTest {
     fun musicDtoBlobSerializesAndDeserializesCorrectly() {
         val classLoader = javaClass.classLoader
         val mp3Resource = classLoader.getResource("test.mp3")
-        val musicData = Files.readAllBytes(Paths.get(mp3Resource.toURI()))
+        val musicData = Files.readAllBytes(Paths.get(mp3Resource!!.toURI()))
 
-        val musicDto = MusicDto()
-        musicDto.musicBlob = musicData
+        val musicDto = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = musicData
+            userDto = validUserDto
+        }
 
-        musicDto.id = "1_1"
-        musicDto.fileName = "filename"
-
+        // Act
         musicFileService.createNewMusicFile(musicDto)
-        val dbMusicDto = musicFileService.getMusicFileById(musicDto.id)
+        val dbMusicDto = musicFileService.getMusicFileById(musicDto.id!!)
 
+        // Assert
         Assertions.assertEquals(dbMusicDto!!.id, musicDto.id)
         Assertions.assertEquals(dbMusicDto.fileName, musicDto.fileName)
         Assertions.assertArrayEquals(musicDto.musicBlob, dbMusicDto.musicBlob)
+    }
+
+    @Test
+    fun `should not allow duplicate file upload for the same discordId and guildId`() {
+        // Arrange
+        val musicDto = MusicDto().apply {
+            id = "1_1_1"
+            fileName = "filename"
+            musicBlob = "someBlob".toByteArray()
+            userDto = UserDto(1234L, 5678L)
+        }
+
+        every { musicFileService.isFileAlreadyUploaded(musicDto) } returns true
+
+        // Act & Assert
+        musicFileService.createNewMusicFile(musicDto)
+        assertNull(musicFileService.createNewMusicFile(musicDto))
     }
 }

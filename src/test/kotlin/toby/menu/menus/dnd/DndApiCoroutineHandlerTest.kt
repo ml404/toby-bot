@@ -13,18 +13,27 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import toby.command.commands.fetch.TestHttpHelperHelper.ACTION_SURGE_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.COVER_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_RESPONSE
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)
+@SpringBootTest
+@ActiveProfiles("test")
 class DndApiCoroutineHandlerTest {
 
     private lateinit var handler: DndApiCoroutineHandler
     private lateinit var httpHelper: HttpHelper
+
+    @Autowired
+    private lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun setup() {
@@ -47,7 +56,7 @@ class DndApiCoroutineHandlerTest {
         coEvery { httpHelper.fetchFromGet(any()) } returns FIREBALL_INITIAL_RESPONSE
         every { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() } returns Unit
 
-        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper)
+        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper, dndHelper)
 
         // Act
         handler.launchFetchAndSendEmbed(event, "spell", "spells", hook)
@@ -66,7 +75,7 @@ class DndApiCoroutineHandlerTest {
         every { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() } returns Unit
 
 
-        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper)
+        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper, dndHelper)
 
         every { event.values.firstOrNull() } returns "cover"
 
@@ -87,7 +96,7 @@ class DndApiCoroutineHandlerTest {
         every { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() } returns Unit
 
 
-        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper)
+        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper, dndHelper)
 
         every { event.values.firstOrNull() } returns "action-surge-1-use"
 
@@ -107,7 +116,7 @@ class DndApiCoroutineHandlerTest {
         coEvery { httpHelper.fetchFromGet(any()) } returns GRAPPLED_INITIAL_RESPONSE
         every { hook.sendMessageEmbeds(any<MessageEmbed>()).queue() } returns Unit
 
-        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper)
+        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper, dndHelper)
 
         every { event.values.firstOrNull() } returns "grappled"
 
@@ -127,7 +136,7 @@ class DndApiCoroutineHandlerTest {
         coEvery { httpHelper.fetchFromGet(any()) } returns ""
         every { hook.sendMessage(any<String>()).queue() } returns Unit
 
-        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper)
+        handler = DndApiCoroutineHandler(StandardTestDispatcher(testScheduler), httpHelper, dndHelper)
 
         every { event.values.firstOrNull() } returns "grappled"
 

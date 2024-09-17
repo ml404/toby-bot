@@ -4,13 +4,13 @@ import kotlinx.coroutines.*
 import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import toby.helpers.DnDHelper.doInitialLookup
-import toby.helpers.DnDHelper.toEmbed
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 
 class DndApiCoroutineHandler(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val httpHelper: HttpHelper
+    private val httpHelper: HttpHelper,
+    private val dndHelper: DnDHelper
 
 ) {
     private val logger = KotlinLogging.logger {}
@@ -24,7 +24,7 @@ class DndApiCoroutineHandler(
         logger.info("Starting launchFetchAndSendEmbed")
         CoroutineScope(dispatcher).launch {
             val query = event.values.firstOrNull() ?: return@launch
-            val initialQueryDeferred = async { doInitialLookup(typeName, typeValue, query, httpHelper) }
+            val initialQueryDeferred = async { dndHelper.doInitialLookup(typeName, typeValue, query, httpHelper) }
             val response = initialQueryDeferred.await()
             logger.info("Response is: ${response.toString()}")
             response?.let {

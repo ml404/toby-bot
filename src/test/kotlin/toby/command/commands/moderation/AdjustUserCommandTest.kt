@@ -1,28 +1,40 @@
 package toby.command.commands.moderation
 
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.CommandTest.Companion.targetMember
+import toby.helpers.UserDtoHelper
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
+@SpringBootTest
+@ActiveProfiles("test")
 internal class AdjustUserCommandTest : CommandTest {
     private lateinit var adjustUserCommand: AdjustUserCommand
 
     private val userService: IUserService = mockk()
 
+    @Autowired
+    lateinit var userDtoHelper: UserDtoHelper
+
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        adjustUserCommand = AdjustUserCommand(userService)
+        adjustUserCommand = AdjustUserCommand(userService, userDtoHelper)
     }
 
     @AfterEach

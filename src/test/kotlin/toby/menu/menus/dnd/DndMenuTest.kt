@@ -1,3 +1,5 @@
+package toby.menu.menus.dnd
+
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -8,11 +10,9 @@ import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionE
 import net.dv8tion.jda.api.interactions.InteractionHook
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.menu.MenuContext
-import toby.menu.menus.dnd.DndApiCoroutineHandler
-import toby.menu.menus.dnd.DndEventProcessor
-import toby.menu.menus.dnd.DndMenu
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DndMenuTest {
@@ -22,13 +22,15 @@ class DndMenuTest {
     private lateinit var handler: DndApiCoroutineHandler
     private lateinit var processor: DndEventProcessor
     private lateinit var httpHelper: HttpHelper
+    private lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun setup() {
         httpHelper = mockk()
+        dndHelper = mockk()
         handler = mockk(relaxed = true)
         processor = mockk(relaxed = true)
-        dndMenu = DndMenu(dispatcher, httpHelper, handler, processor)
+        dndMenu = DndMenu(dispatcher, httpHelper, dndHelper, handler, processor)
     }
 
     @Test

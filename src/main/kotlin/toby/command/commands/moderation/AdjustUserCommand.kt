@@ -1,9 +1,7 @@
 package toby.command.commands.moderation
 
 import net.dv8tion.jda.api.entities.Member
-import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
@@ -12,7 +10,7 @@ import toby.helpers.UserDtoHelper
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
-class AdjustUserCommand(private val userService: IUserService) : IModerationCommand {
+class AdjustUserCommand(private val userService: IUserService, private val userDtoHelper: UserDtoHelper) : IModerationCommand {
     private val PERMISSION_NAME = "name"
     private val USERS = "users"
 
@@ -44,7 +42,7 @@ class AdjustUserCommand(private val userService: IUserService) : IModerationComm
         targetMember: Member
     ) {
         val isSameGuild = requestingUserDto.guildId == targetUserDto.guildId
-        val requesterCanAdjustPermissions = UserDtoHelper.userAdjustmentValidation(requestingUserDto, targetUserDto) || member!!.isOwner
+        val requesterCanAdjustPermissions = userDtoHelper.userAdjustmentValidation(requestingUserDto, targetUserDto) || member!!.isOwner
 
         if (requesterCanAdjustPermissions && isSameGuild) {
             validateArgumentsAndUpdateUser(event, targetUserDto, member!!.isOwner, deleteDelay)

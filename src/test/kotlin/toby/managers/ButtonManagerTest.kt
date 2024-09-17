@@ -16,8 +16,7 @@ import toby.button.buttons.*
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
-import toby.helpers.HttpHelper
-import toby.helpers.MusicPlayerHelper
+import toby.helpers.*
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.*
 import toby.lavaplayer.GuildMusicManager
@@ -28,13 +27,16 @@ import java.util.concurrent.LinkedBlockingQueue
 class ButtonManagerTest {
 
     lateinit var configService: IConfigService
-    lateinit var brotherService: IBrotherService
+    private lateinit var brotherService: IBrotherService
     lateinit var userService: IUserService
-    lateinit var musicFileService: IMusicFileService
-    lateinit var excuseService: IExcuseService
-    lateinit var commandManager: CommandManager
-    lateinit var buttonManager: ButtonManager
+    private lateinit var musicFileService: IMusicFileService
+    private lateinit var excuseService: IExcuseService
+    private lateinit var commandManager: CommandManager
+    private lateinit var buttonManager: ButtonManager
     lateinit var httpHelper: HttpHelper
+    private lateinit var userDtoHelper: UserDtoHelper
+    private lateinit var introHelper: IntroHelper
+    lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun openMocks() {
@@ -44,10 +46,15 @@ class ButtonManagerTest {
         musicFileService = mockk()
         excuseService = mockk()
         httpHelper = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, musicFileService, excuseService, httpHelper)
-        buttonManager = ButtonManager(configService,  userService, commandManager)
+        userDtoHelper = mockk()
+        introHelper = mockk()
+        dndHelper = mockk()
+        commandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
+        buttonManager = ButtonManager(configService,  userDtoHelper, dndHelper, commandManager)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
+
+        every { userDtoHelper.calculateUserDto(1, 1, true) } returns mockk(relaxed = true)
     }
 
     @AfterEach
@@ -96,7 +103,7 @@ class ButtonManagerTest {
             every { channel } returns mockChannel
             every { componentId } returns "stop"
             every { hook } returns mockHook
-            every { user } returns mockk() {
+            every { user } returns mockk {
                 every { idLong } returns 1L
             }
             every { member } returns mockk {

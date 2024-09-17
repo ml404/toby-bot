@@ -5,7 +5,7 @@ import toby.button.IButton
 import toby.helpers.DnDHelper
 import toby.jpa.dto.UserDto
 
-class InitiativeClearButton: IButton {
+class InitiativeClearButton(private val dnDHelper: DnDHelper): IButton {
     override val name: String
         get() = "init:clear"
     override val description: String
@@ -14,7 +14,6 @@ class InitiativeClearButton: IButton {
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val hook = ctx.event.hook
-        DnDHelper.clearInitiative(hook, event)
-
+        dnDHelper.clearInitiative(hook, event)
     }
 }

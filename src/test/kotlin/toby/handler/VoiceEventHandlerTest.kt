@@ -15,9 +15,9 @@ import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.handler.VoiceEventHandler
+import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
-import toby.jpa.service.IUserService
 import toby.lavaplayer.PlayerManager
 
 @ExtendWith(MockKExtension::class)
@@ -25,12 +25,12 @@ class VoiceEventHandlerTest {
 
     private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
-    private val userService: IUserService = mockk()
+    private val userDtoHelper: UserDtoHelper = mockk()
     private val handler = spyk(
         VoiceEventHandler(
             jda,
             configService,
-            userService
+            userDtoHelper
         )
     )
 
@@ -89,7 +89,7 @@ class VoiceEventHandlerTest {
         val handler = VoiceEventHandler(
             jda = jda,
             configService = mockk(),
-            userService = mockk(),
+            userDtoHelper = mockk(),
         )
 
         handler.onReady(readyEvent)
@@ -139,7 +139,6 @@ class VoiceEventHandlerTest {
                 ConfigDto.Configurations.DELETE_DELAY.configValue, "1"
             )
         } returns deleteDelayConfig
-        every { userService.getUserById(1L, 1L) } returns mockk()
 
         handler.onGuildVoiceUpdate(event)
 

@@ -7,12 +7,14 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.commands.fetch.IFetchCommand
+import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.jpa.dto.UserDto
 
 class DnDCommand(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val httpHelper: HttpHelper
+    private val httpHelper: HttpHelper,
+    private val dndHelper: DnDHelper
 ) : IDnDCommand, IFetchCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
@@ -27,7 +29,7 @@ class DnDCommand(
         val hook = event.hook
 
         // Create and run coroutine scope
-        DnDCommandQueryHandler(dispatcher, httpHelper, hook, deleteDelay).processQuery(typeName, typeValue, query)
+        DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay).processQuery(typeName, typeValue, query)
     }
 
     private fun getName(typeOptionMapping: OptionMapping?): String {

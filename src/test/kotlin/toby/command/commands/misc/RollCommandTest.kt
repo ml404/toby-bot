@@ -4,23 +4,32 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
-import net.dv8tion.jda.api.interactions.components.buttons.Button
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
+import toby.Application
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
+import toby.helpers.DnDHelper
 import toby.jpa.dto.UserDto
 
+@SpringBootTest(classes = [Application::class])
+@ActiveProfiles("test")
 class RollCommandTest : CommandTest {
-    lateinit var rollCommand: RollCommand
+    private lateinit var rollCommand: RollCommand
+
+    @Autowired
+    lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
         every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
-        rollCommand = RollCommand()
+        rollCommand = RollCommand(dndHelper)
     }
 
     fun tearDown() {

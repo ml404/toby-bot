@@ -7,8 +7,9 @@ import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 
 @NamedQueries(
-    NamedQuery(name = "MusicDto.getById", query = "select a from MusicDto as a WHERE a.id = :id"),
-    NamedQuery(name = "MusicDto.deleteById", query = "delete from MusicDto as a WHERE a.id = :id")
+    NamedQuery(name = "MusicDto.getById", query = "select m from MusicDto as m WHERE m.id = :id"),
+    NamedQuery(name = "MusicDto.deleteById", query = "delete from MusicDto as m WHERE m.id = :id"),
+    NamedQuery(name = "MusicDto.deleteByUser", query = "delete from MusicDto as m WHERE m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId")
 )
 @Entity
 @Table(name = "music_files", schema = "public")
@@ -19,26 +20,38 @@ data class MusicDto(
     @JsonIgnore
     var id: String? = null,
 
+    @ManyToOne
+    @JoinColumns(
+        JoinColumn(name = "discord_id", referencedColumnName = "discord_id"),
+        JoinColumn(name = "guild_id", referencedColumnName = "guild_id")
+    )
+    var userDto: UserDto? = null,
+
     @Column(name = "file_name")
     var fileName: String? = null,
 
     @Column(name = "file_vol")
     var introVolume: Int? = 20,
 
+    @Column(name = "index")
+    var index: Int? = 1,
+
     @Lob
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "TEXT")
-    var musicBlob: ByteArray? = null
+    var musicBlob: ByteArray? = null,
 ) : Serializable {
 
     constructor(
-        discordId: Long,
-        guildId: Long,
+        userDto: UserDto,
+        index: Int = 1,
         fileName: String? = null,
         introVolume: Int = 20,
         musicBlob: ByteArray? = null
     ) : this(
-        id = createMusicId(guildId, discordId),
+        id = "${userDto.guildId}_${userDto.discordId}_${index}",
+        index = index,
+        userDto = userDto,
         fileName = fileName,
         introVolume = introVolume,
         musicBlob = musicBlob
@@ -55,10 +68,8 @@ data class MusicDto(
         }
     }
 
-    companion object {
-        private fun createMusicId(guildId: Long, discordId: Long): String {
-            return "${guildId}_$discordId"
-        }
+    override fun toString(): String {
+        return "MusicDto(id=${id}, fileName=$fileName, introVolume=$introVolume)"
     }
 
     override fun equals(other: Any?): Boolean {
@@ -81,12 +92,8 @@ data class MusicDto(
     override fun hashCode(): Int {
         var result = id?.hashCode() ?: 0
         result = 31 * result + (fileName?.hashCode() ?: 0)
-        result = 31 * result + (introVolume?.hashCode() ?: 0)
+        result = 31 * result + (introVolume ?: 0)
         result = 31 * result + (musicBlob?.contentHashCode() ?: 0)
         return result
-    }
-
-    override fun toString(): String {
-        return "MusicDto(id=$id, fileName=$fileName, introVolume=$introVolume)"
     }
 }

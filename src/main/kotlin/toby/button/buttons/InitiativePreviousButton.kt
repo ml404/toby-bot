@@ -5,7 +5,7 @@ import toby.button.IButton
 import toby.helpers.DnDHelper
 import toby.jpa.dto.UserDto
 
-class InitiativePreviousButton: IButton {
+class InitiativePreviousButton(private val dndHelper: DnDHelper): IButton {
     override val name: String
         get() = "init:prev"
     override val description: String
@@ -14,6 +14,6 @@ class InitiativePreviousButton: IButton {
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val hook = event.hook
-        DnDHelper.decrementTurnTable(hook, event, deleteDelay)
+        dndHelper.decrementTurnTable(hook, event, deleteDelay)
     }
 }

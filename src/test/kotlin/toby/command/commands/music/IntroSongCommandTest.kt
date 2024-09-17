@@ -15,6 +15,7 @@ import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
+import toby.helpers.IntroHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
@@ -27,21 +28,21 @@ import java.util.concurrent.ExecutionException
 
 internal class IntroSongCommandTest : MusicCommandTest {
     private lateinit var introSongCommand: IntroSongCommand
-    private lateinit var userService: IUserService
-    private lateinit var musicFileService: IMusicFileService
-    private lateinit var configService: IConfigService
+    private var userService: IUserService = mockk(relaxed = true)
+    private var musicFileService: IMusicFileService = mockk(relaxed = true)
+    private var configService: IConfigService = mockk(relaxed = true)
     private lateinit var mentionedUserDto: UserDto
+
+    private var introHelper: IntroHelper = IntroHelper(userService, musicFileService, configService)
 
     @BeforeEach
     fun setUp() {
         setupCommonMusicMocks()
-        userService = mockk(relaxed = true)
-        musicFileService = mockk(relaxed = true)
         mentionedUserDto = mockk(relaxed = true) {
-            every { musicDto } returns null
+            every { musicDtos } returns emptyList<MusicDto>().toMutableList()
         }
         configService = mockk()
-        introSongCommand = IntroSongCommand(userService, musicFileService, configService)
+        introSongCommand = IntroSongCommand(introHelper)
 
         every { event.getOption("volume") } returns mockk {
             every { asInt } returns 20
@@ -78,22 +79,31 @@ internal class IntroSongCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify { musicFileService.createNewMusicFile(any()) }
+        verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
-            event.hook.sendMessage("Successfully set UserName's intro song to 'https://www.youtube.com/' with volume '20'")
+            event.hook.sendMessage("Successfully set UserName's intro song #1 to 'https://www.youtube.com/' with volume '20'")
         }
     }
 
     @Test
-    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFile_setsIntroViaUrl() {
+    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFile_createsSecondIntroViaUrl() {
         // Arrange
         val commandContext = CommandContext(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
 
 
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { userService.getUserById(1L, 1L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
-        every { requestingUserDto.musicDto } returns MusicDto(1L, 1L, "filename", 20, null)
+        every { requestingUserDto.musicDtos } returns listOf(
+            MusicDto(
+                UserDto(1, 1),
+                1,
+                "filename",
+                20,
+                null
+            )
+        ).toMutableList()
         every { event.getOption("attachment") } returns attachmentOptionMapping
         setupAttachments(attachmentOptionMapping)
 
@@ -106,9 +116,9 @@ internal class IntroSongCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify { musicFileService.updateMusicFile(any()) }
+        verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
-            event.hook.sendMessage("Successfully updated UserName's intro song to 'https://www.youtube.com/' with volume '20'")
+            event.hook.sendMessage("Successfully set UserName's intro song #2 to 'https://www.youtube.com/' with volume '20'")
         }
     }
 
@@ -135,10 +145,10 @@ internal class IntroSongCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify { musicFileService.createNewMusicFile(any()) }
+        verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
             event.hook.sendMessage(
-                "Successfully set Another Username's intro song to 'https://www.youtube.com/' with volume '20'"
+                "Successfully set Another Username's intro song #1 to 'https://www.youtube.com/' with volume '20'"
             )
         }
     }
@@ -203,7 +213,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         verify { userService.updateUser(eq(requestingUserDto)) }
         verify {
             event.hook.sendMessage(
-                eq("Successfully set UserName's intro song to 'filename' with volume '20'")
+                eq("Successfully set UserName's intro song #1 to 'filename' with volume '20'")
             )
         }
     }
@@ -237,12 +247,62 @@ internal class IntroSongCommandTest : MusicCommandTest {
         )
 
         // Assert
-        verify { musicFileService.createNewMusicFile(any()) }
+        verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify { userService.updateUser(eq(requestingUserDto)) }
         verify {
             event.hook.sendMessage(
-                "Successfully set Another Username's intro song to 'filename' with volume '20'"
+                "Successfully set Another Username's intro song #1 to 'filename' with volume '20'"
             )
+        }
+    }
+
+    @Test
+    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFiles_doesNotCreateMusicFileWhenAtLimit() {
+        // Arrange
+        val commandContext = CommandContext(event)
+        val attachmentOptionMapping = mockk<OptionMapping>()
+
+
+        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { requestingUserDto.musicDtos } returns listOf(
+            MusicDto(
+                UserDto(1, 1),
+                1,
+                "filename1",
+                20,
+                null
+            ),
+            MusicDto(
+                UserDto(1, 1),
+                2,
+                "filename2",
+                20,
+                null
+            ),
+            MusicDto(
+                UserDto(1, 1),
+                3,
+                "filename3",
+                20,
+                null
+            )
+        ).toMutableList()
+        every { event.getOption("attachment") } returns attachmentOptionMapping
+        setupAttachments(attachmentOptionMapping)
+
+        // Act
+        introSongCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            requestingUserDto,
+            0
+        )
+
+        // Assert
+        verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
+        verify {
+            event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 3 intros")
         }
     }
 

@@ -13,11 +13,10 @@ import net.dv8tion.jda.api.managers.AudioManager
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import toby.helpers.MusicPlayerHelper.playUserIntro
-import toby.helpers.UserDtoHelper.calculateUserDto
+import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
-import toby.jpa.service.IUserService
 import toby.lavaplayer.PlayerManager
 import java.util.concurrent.ConcurrentHashMap
 
@@ -27,7 +26,7 @@ private const val teamRegex = "(?i)team\\s[0-9]+"
 class VoiceEventHandler @Autowired constructor(
     private val jda: JDA,
     private val configService: IConfigService,
-    private val userService: IUserService
+    private val userDtoHelper: UserDtoHelper
 ) : ListenerAdapter() {
 
     private val logger = KotlinLogging.logger {}
@@ -116,12 +115,12 @@ class VoiceEventHandler @Autowired constructor(
 
         if (audioManager.connectedChannel == event.channelJoined) {
             logger.info("Audiomanager channel ${audioManager.connectedChannel} and event joined channel ${event.channelJoined} are the same")
-            setupAndPlayUserIntro(event.member, guild, defaultVolume, deleteDelayConfig)
+            setupAndPlayUserIntro(event.member, guild, deleteDelayConfig)
         }
     }
 
-    private fun setupAndPlayUserIntro(member: Member, guild: Guild, defaultVolume: Int, deleteDelayConfig: ConfigDto?) {
-        val requestingUserDto = getRequestingUserDto(member, defaultVolume)
+    private fun setupAndPlayUserIntro(member: Member, guild: Guild, deleteDelayConfig: ConfigDto?) {
+        val requestingUserDto = getRequestingUserDto(member)
         playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
     }
 
@@ -158,10 +157,10 @@ class VoiceEventHandler @Autowired constructor(
         return config?.value?.toInt() ?: defaultValue
     }
 
-    private fun getRequestingUserDto(member: Member, defaultVolume: Int): UserDto {
+    private fun getRequestingUserDto(member: Member): UserDto {
         val discordId = member.idLong
         val guildId = member.guild.idLong
-        return calculateUserDto(guildId, discordId, member.isOwner, userService, defaultVolume)
+        return userDtoHelper.calculateUserDto(guildId, discordId, member.isOwner)
     }
 
     companion object {

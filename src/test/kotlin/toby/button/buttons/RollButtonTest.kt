@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.button.ButtonContext
 import toby.button.ButtonTest
+import toby.button.ButtonTest.Companion.dndHelper
 import toby.button.ButtonTest.Companion.event
 import toby.button.ButtonTest.Companion.mockChannel
 import toby.command.commands.misc.RollCommand
@@ -26,7 +27,7 @@ class RollButtonTest : ButtonTest {
         super.setup()
 
         // Initialize RollCommand and mock its methods
-        rollCommand = spyk(RollCommand())
+        rollCommand = spyk(RollCommand(dndHelper))
         every { rollCommand.handleDiceRoll(any(), any(), any(), any()) } returns mockk<WebhookMessageCreateAction<Message>> {
             every { queue(any()) } just Runs
         }
