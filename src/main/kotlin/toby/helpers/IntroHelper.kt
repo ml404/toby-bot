@@ -164,7 +164,7 @@ class IntroHelper(
                 .setEphemeral(true)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
-        val index = targetDto.musicDtos.size + 1
+        val index = userService.getUserById(targetDto.discordId, targetDto.guildId)?.musicDtos?.size?.plus(1) ?: 1
         val musicDto = selectedMusicDto.apply {
             this?.musicBlob = fileContents
             this?.fileName = filename
@@ -195,7 +195,7 @@ class IntroHelper(
     ) {
         logger.info { "Persisting music url for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
-        val index = targetDto.musicDtos.size + 1
+        val index = userService.getUserById(targetDto.discordId, targetDto.guildId)?.musicDtos?.size?.plus(1) ?: 1
         val musicDto = selectedMusicDto?.apply {
             this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
             this.userDto = targetDto
