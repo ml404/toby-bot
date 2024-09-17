@@ -81,7 +81,7 @@ internal class IntroMenuTest : MenuTest {
         // Assert
         verify {
             introHelper.handleMedia(
-                menuContext.event,
+                menuEvent,
                 userDto,
                 10,
                 any(), // pendingDtoAttachment

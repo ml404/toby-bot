@@ -21,7 +21,7 @@ class IntroMenu(
 
         val musicDtoId = event.selectedOptions.firstOrNull()?.value
 
-        logger.info { "Replacing musicDto with id '$musicDtoId' on guild ${ctx.guild.idLong}" }
+        logger.info { "Replacing musicDto with id '$musicDtoId' on guild ${event.idLong}" }
 
         val jdaUser = event.user
         val requestingUserDto = userDtoHelper.calculateUserDto(
@@ -42,7 +42,7 @@ class IntroMenu(
             val (pendingDtoAttachment, url, introVolume) = pendingIntroTriple
             runCatching {
                 introHelper.handleMedia(
-                    ctx.event,
+                    event,
                     requestingUserDto,
                     deleteDelay,
                     pendingDtoAttachment,
