@@ -1,5 +1,6 @@
 package toby.helpers
 
+import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import org.jetbrains.annotations.VisibleForTesting
@@ -21,6 +22,7 @@ class IntroHelper(
     private val musicFileService: IMusicFileService,
     private val configService: IConfigService
 ) {
+    private val logger = KotlinLogging.logger {}
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
@@ -43,6 +45,7 @@ class IntroHelper(
         selectedMusicDto: MusicDto?,
         userName: String = event.user.effectiveName
     ) {
+        logger.info { "Handling media inside intro helper for guild ${event.guild?.idLong} and user '$userName' ..." }
         when {
             attachment != null -> handleAttachment(
                 event,
@@ -78,13 +81,16 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
+        logger.info { "Handling attachment inside intro helper for guild ${event.guild?.idLong} and user '$userName' ..." }
         when {
             attachment.fileExtension != "mp3" -> {
+                logger.info { "invalid file extension was used" }
                 event.hook.sendMessage("Please use mp3 files only")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
 
             attachment.size > 400000 -> {
+                logger.info { "file size was too large" }
                 event.hook.sendMessage("Please keep the file size under 400kb")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
@@ -116,6 +122,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
+        logger.info { "Handling url inside intro helper for guild ${event.guild?.idLong} and user '$userName' ..." }
         val urlString = optionalURI.map(URI::toString).orElse("")
         persistMusicUrl(
             event,
@@ -150,6 +157,7 @@ class IntroHelper(
         inputStream: InputStream,
         selectedMusicDto: MusicDto? = null
     ) {
+        logger.info { "Persisting music file for user '$userName' on guild: ${event.guild?.idLong}" }
         val fileContents = runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
                 .setEphemeral(true)
@@ -184,6 +192,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto?
     ) {
+        logger.info { "Persisting music url for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
         val index = targetDto.musicDtos.size + 1
         val musicDto = selectedMusicDto?.apply {
@@ -213,6 +222,7 @@ class IntroHelper(
         index: Int,
         deleteDelay: Int?
     ) {
+        logger.info { "Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'" }
         event.hook
             .sendMessage("Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
