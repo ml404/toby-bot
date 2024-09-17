@@ -3,6 +3,7 @@ package toby.helpers
 import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
@@ -36,7 +37,7 @@ class IntroHelper(
     }
 
     fun handleMedia(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         requestingUserDto: UserDto,
         deleteDelay: Int?,
         attachment: Attachment?,
@@ -73,7 +74,7 @@ class IntroHelper(
     }
 
     fun handleAttachment(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         requestingUserDto: UserDto,
         userName: String,
         deleteDelay: Int?,
@@ -114,7 +115,7 @@ class IntroHelper(
     }
 
     fun handleUrl(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         requestingUserDto: UserDto,
         userName: String,
         deleteDelay: Int?,
@@ -148,7 +149,7 @@ class IntroHelper(
 
     @VisibleForTesting
     fun persistMusicFile(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         targetDto: UserDto,
         userName: String = event.user.effectiveName,
         deleteDelay: Int?,
@@ -183,7 +184,7 @@ class IntroHelper(
     }
 
     fun persistMusicUrl(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         targetDto: UserDto,
         deleteDelay: Int?,
         filename: String,
@@ -215,7 +216,7 @@ class IntroHelper(
     }
 
     private fun sendSuccessMessage(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         memberName: String,
         filename: String,
         introVolume: Int,
@@ -230,7 +231,7 @@ class IntroHelper(
     }
 
     private fun sendUpdateMessage(
-        event: SlashCommandInteractionEvent,
+        event: IReplyCallback,
         memberName: String?,
         filename: String,
         introVolume: Int,
