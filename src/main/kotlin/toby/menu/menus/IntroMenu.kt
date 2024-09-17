@@ -19,14 +19,7 @@ class IntroMenu(
         val event = ctx.selectEvent
         event.deferReply().queue()
 
-        val selectedIndex = event.selectedOptions.firstOrNull()?.value?.toIntOrNull()
-
-        if (selectedIndex == null) {
-            event.hook
-                .sendMessage("Invalid selection or user data. Please try again.")
-                .setEphemeral(true).queue()
-            return
-        }
+        val musicDtoId = event.selectedOptions.firstOrNull()?.value
 
         val jdaUser = event.user
         val requestingUserDto = userDtoHelper.calculateUserDto(
@@ -35,7 +28,13 @@ class IntroMenu(
             event.member?.isOwner ?: false
         )
 
-        val musicDtoToReplace = requestingUserDto.musicDtos[selectedIndex]
+        val musicDtoToReplace = requestingUserDto.musicDtos.firstOrNull { it.id == musicDtoId }
+        if (musicDtoToReplace == null) {
+            event.hook
+                .sendMessage("Invalid selection or user data. Please try again.")
+                .setEphemeral(true).queue()
+            return
+        }
         val pendingIntroTriple = introHelper.pendingIntros[requestingUserDto.discordId]
         if (pendingIntroTriple != null) {
             val (pendingDtoAttachment, url, introVolume) = pendingIntroTriple

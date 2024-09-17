@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandTest.Companion.interactionHook
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
+import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.menu.MenuContext
 import toby.menu.MenuTest
@@ -45,7 +46,10 @@ internal class IntroMenuTest : MenuTest {
         // Arrange
         val userDto = mockk<UserDto>(relaxed = true) {
             every { discordId } returns 1234L
-            every { musicDtos } returns mutableListOf(mockk(relaxed = true), mockk(relaxed = true))
+            every { musicDtos } returns mutableListOf(
+                mockk<MusicDto>(relaxed = true) { every { id } returns "1" },
+                mockk<MusicDto>(relaxed = true) { every { id } returns "2" }
+            )
         }
 
         val guild = mockk<Guild> {
@@ -64,11 +68,11 @@ internal class IntroMenuTest : MenuTest {
         every { menuEvent.member } returns member
         every { menuEvent.user } returns jdaUser
         every { menuEvent.selectedOptions } returns listOf(mockk {
-            every { value } returns "1"
+            every { value } returns "2" // Represents a valid musicDtoId, not a list index
         })
 
         every { userDtoHelper.calculateUserDto(1L, 1234L, true) } returns userDto
-        val musicDtoToReplace = userDto.musicDtos[1]
+        val musicDtoToReplace = userDto.musicDtos.first { it.id == "2" } // Match the selectedMusicDtoId
         every { introHelper.pendingIntros[1234L] } returns Triple(mockk(), "url", 50)
 
         // Act
@@ -83,11 +87,12 @@ internal class IntroMenuTest : MenuTest {
                 any(), // pendingDtoAttachment
                 "url",
                 50,
-                musicDtoToReplace,
+                musicDtoToReplace, // Ensure we are using the correct MusicDto
                 "Effective Name"
             )
         }
     }
+
 
     @Test
     fun `test handle with invalid selection`() {
