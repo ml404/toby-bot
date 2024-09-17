@@ -47,4 +47,8 @@ open class UserServiceImpl : IUserService {
     @CacheEvict(value = ["users"], allEntries = true)
     override fun clearCache() {
     }
+
+    @CacheEvict(value = ["users"], key = "#discordId+#guildId")
+    override fun evictUserFromCache(discordId: Long?, guildId: Long?) {
+    }
 }

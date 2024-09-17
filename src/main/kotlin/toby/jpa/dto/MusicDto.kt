@@ -50,6 +50,7 @@ data class MusicDto(
         musicBlob: ByteArray? = null
     ) : this(
         id = "${userDto.guildId}_${userDto.discordId}_${index}",
+        index = index,
         userDto = userDto,
         fileName = fileName,
         introVolume = introVolume,
