@@ -13,10 +13,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import toby.Application
 import toby.command.commands.dnd.DnDCommandQueryHandler
 import toby.command.commands.fetch.TestHttpHelperHelper.BLIND_QUERY_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.EMPTY_QUERY_RESPONSE
@@ -24,24 +20,25 @@ import toby.command.commands.fetch.TestHttpHelperHelper.ERROR_NOT_FOUND_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
+import toby.helpers.UserDtoHelper
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)
-@SpringBootTest(classes = [Application::class])
-@ActiveProfiles("test")
 class DnDCommandQueryHandlerTest {
 
     private lateinit var queryHandler: DnDCommandQueryHandler
     private lateinit var httpHelper: HttpHelper
-
-    @Autowired
+    private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var dndHelper: DnDHelper
     private val hook = mockk<InteractionHook>(relaxed = true)
     private val deleteDelay = 0
 
     @BeforeEach
     fun setUp() {
-        httpHelper = mockk()
+        userDtoHelper = mockk(relaxed = true)
+        httpHelper = mockk(relaxed = true)
+        dndHelper = DnDHelper(userDtoHelper)
+
     }
 
     @AfterEach

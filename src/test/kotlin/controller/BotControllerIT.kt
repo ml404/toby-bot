@@ -1,5 +1,6 @@
 package controller
 
+import configuration.*
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -13,7 +14,16 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import toby.Application
 
-@SpringBootTest(classes = [Application::class])
+@SpringBootTest(
+    classes = [
+        Application::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
+        TestCachingConfig::class,
+        TestDataSourceConfig::class,
+        TestManagerConfig::class
+    ]
+)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class BotControllerIT {

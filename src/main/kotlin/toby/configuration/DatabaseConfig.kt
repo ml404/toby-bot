@@ -16,8 +16,8 @@ import java.net.URISyntaxException
 import java.util.*
 import javax.sql.DataSource
 
-@Configuration
 @Profile("prod")
+@Configuration
 open class DatabaseConfig(private val env: Environment) {
 
     @Bean
