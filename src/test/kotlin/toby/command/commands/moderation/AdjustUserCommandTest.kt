@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
+import toby.Application
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
@@ -21,7 +22,7 @@ import toby.helpers.UserDtoHelper
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
 
-@SpringBootTest
+@SpringBootTest(classes = [Application::class])
 @ActiveProfiles("test")
 internal class AdjustUserCommandTest : CommandTest {
     private lateinit var adjustUserCommand: AdjustUserCommand

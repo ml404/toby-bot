@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
+import toby.Application
 import toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import toby.dto.web.dnd.Condition
 import toby.dto.web.dnd.Feature
@@ -31,7 +32,7 @@ import toby.menu.menus.dnd.DndMenu.Companion.FEATURE_NAME
 import toby.menu.menus.dnd.DndMenu.Companion.RULE_NAME
 import toby.menu.menus.dnd.DndMenu.Companion.SPELL_NAME
 
-@SpringBootTest
+@SpringBootTest(classes = [Application::class])
 @ActiveProfiles("test")
 internal class DnDHelperTest {
     lateinit var hook: InteractionHook

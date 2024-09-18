@@ -51,6 +51,9 @@ class IntroMenu(
                     musicDtoToReplace,
                     ctx.selectEvent.user.effectiveName
                 )
+            }.onSuccess {
+                logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}' on guild '${requestingUserDto.guildId}'" }
+                introHelper.pendingIntros.remove(requestingUserDto.discordId)
             }.onFailure {
                 logger.error(it) { "Error handling intro replacement" }
                 event.hook
