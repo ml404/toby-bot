@@ -12,10 +12,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import toby.Application
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
@@ -26,16 +22,14 @@ import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.CommandTest.Companion.user
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
 import toby.helpers.DnDHelper
+import toby.helpers.UserDtoHelper
 import toby.jpa.service.IUserService
-import toby.jpa.service.impl.UserServiceImpl
 
-@SpringBootTest(classes = [Application::class])
-@ActiveProfiles("test")
 internal class InitiativeCommandTest : CommandTest {
     private lateinit var initiativeCommand: InitiativeCommand
     lateinit var userService: IUserService
 
-    @Autowired
+    private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var dndHelper: DnDHelper
     private lateinit var channelOption: OptionMapping
     private lateinit var initButtons: DnDHelper.TableButtons
@@ -43,7 +37,8 @@ internal class InitiativeCommandTest : CommandTest {
     @BeforeEach
     fun setup() {
         setUpCommonMocks()
-        userService = mockk<UserServiceImpl>()
+        userDtoHelper = mockk()
+        dndHelper = DnDHelper(userDtoHelper)
         initiativeCommand = InitiativeCommand(dndHelper)
         channelOption = mockk<OptionMapping>()
         initButtons = dndHelper.initButtons
