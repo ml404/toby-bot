@@ -22,23 +22,24 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
         return musicDto
     }
 
-    // Method to check if the same file exists for a given discordId and guildId
-    override fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean =
-        runCatching {
+    @Transactional(readOnly = true)
+    override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
+        return runCatching {
             val query = entityManager.createQuery(
-                "SELECT COUNT(m) FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
-                Long::class.java
+                "SELECT m FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+                MusicDto::class.java
             )
             query.setParameter("musicBlob", musicDto.musicBlob)
             query.setParameter("discordId", musicDto.userDto?.discordId)
             query.setParameter("guildId", musicDto.userDto?.guildId)
 
-            return (query.singleResult as Long) > 0
-        }.getOrElse { false }
+            query.resultList.firstOrNull() // Fetch the first matching record, if any
+        }.getOrNull()
+    }
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
         createUserForMusicFile(musicDto.userDto!!)
-        if (isFileAlreadyUploaded(musicDto)) {
+        if (isFileAlreadyUploaded(musicDto) == null) {
             return null
         }
         val databaseMusicFile = entityManager.find(MusicDto::class.java, musicDto.id)
@@ -84,7 +85,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
-        if (isFileAlreadyUploaded(musicDto)) {
+        if (isFileAlreadyUploaded(musicDto) == null) {
             return null
         }
         createUserForMusicFile(musicDto.userDto!!)
