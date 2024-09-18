@@ -47,6 +47,7 @@ repositories {
         name 'm2-duncte123'
         url 'https://m2.duncte123.dev/releases'
     }
+    maven { url = "https://maven.lavalink.dev/releases" }
 }
 
 configurations {
@@ -83,6 +84,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
+    implementation 'dev.lavalink.youtube:common:1.7.2'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
     runtimeOnly 'org.hibernate.orm:hibernate-core:6.3.1.Final'
     runtimeOnly 'com.h2database:h2'
