@@ -16,10 +16,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import toby.Application
 import toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import toby.dto.web.dnd.Condition
 import toby.dto.web.dnd.Feature
@@ -32,8 +28,6 @@ import toby.menu.menus.dnd.DndMenu.Companion.FEATURE_NAME
 import toby.menu.menus.dnd.DndMenu.Companion.RULE_NAME
 import toby.menu.menus.dnd.DndMenu.Companion.SPELL_NAME
 
-@SpringBootTest(classes = [Application::class])
-@ActiveProfiles("test")
 internal class DnDHelperTest {
     lateinit var hook: InteractionHook
     lateinit var message: Message
@@ -46,8 +40,7 @@ internal class DnDHelperTest {
     lateinit var messageEditAction: MessageEditAction
     lateinit var memberList: List<Member>
     lateinit var initiativeMap: MutableMap<String, Int>
-
-    @Autowired
+    lateinit var userDtoHelper: UserDtoHelper
     lateinit var dndHelper: DnDHelper
 
     @BeforeEach
@@ -63,6 +56,8 @@ internal class DnDHelperTest {
         messageEditAction = mockk()
         memberList = mockk()
         initiativeMap = mutableMapOf()
+        userDtoHelper = mockk()
+        dndHelper = DnDHelper(userDtoHelper)
 
         val player1 = mockk<Member>()
         val player2 = mockk<Member>()
@@ -128,9 +123,9 @@ internal class DnDHelperTest {
         every { userDto3.initiativeModifier } returns 2
 
         every { userService.listGuildUsers(any()) } returns listOf(userDto1, userDto2, userDto3)
-        every { userService.getUserById(1L, 1L) } returns userDto1
-        every { userService.getUserById(2L, 1L) } returns userDto2
-        every { userService.getUserById(3L, 1L) } returns userDto3
+        every { userDtoHelper.calculateUserDto(1L, 1L) } returns userDto1
+        every { userDtoHelper.calculateUserDto(2L, 1L) } returns userDto2
+        every { userDtoHelper.calculateUserDto(3L, 1L) } returns userDto3
         every { hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue(any()) } just Runs
         every { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() } just Runs

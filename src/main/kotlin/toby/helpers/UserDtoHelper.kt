@@ -10,7 +10,7 @@ class UserDtoHelper(private val userService: IUserService) {
     fun calculateUserDto(
         guildId: Long,
         discordId: Long,
-        isSuperUser: Boolean
+        isSuperUser: Boolean = false
     ): UserDto {
         return userService.getUserById(discordId, guildId) ?: UserDto().apply {
             this.discordId = discordId
