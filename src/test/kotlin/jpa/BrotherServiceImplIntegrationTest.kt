@@ -1,5 +1,6 @@
 package jpa
 
+import configuration.*
 import org.apache.commons.collections4.IterableUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
@@ -14,7 +15,16 @@ import toby.Application
 import toby.jpa.dto.BrotherDto
 import toby.jpa.service.IBrotherService
 
-@SpringBootTest(classes = [Application::class])
+@SpringBootTest(
+    classes = [
+        Application::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
+        TestCachingConfig::class,
+        TestDataSourceConfig::class,
+        TestManagerConfig::class
+    ]
+)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("test")
 class BrotherServiceImplIntegrationTest {

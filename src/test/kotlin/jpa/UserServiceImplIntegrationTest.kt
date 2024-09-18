@@ -1,5 +1,6 @@
 package jpa
 
+import configuration.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -14,7 +15,16 @@ import toby.jpa.dto.UserDto
 import toby.jpa.service.IMusicFileService
 import toby.jpa.service.IUserService
 
-@SpringBootTest(classes = [Application::class])
+@SpringBootTest(
+    classes = [
+        Application::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
+        TestCachingConfig::class,
+        TestDataSourceConfig::class,
+        TestManagerConfig::class
+    ]
+)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @ActiveProfiles("test")
 class UserServiceImplIntegrationTest {

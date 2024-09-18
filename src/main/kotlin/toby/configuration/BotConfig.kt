@@ -9,11 +9,13 @@ import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import org.yaml.snakeyaml.error.MissingEnvironmentVariableException
 import java.util.*
 
+@Profile("prod")
 @Configuration
-open class BotConfiguration {
+open class BotConfig {
 
     @Bean
     open fun jda(): JDA {
