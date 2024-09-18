@@ -11,15 +11,15 @@ Toby Bot is a feature-rich Discord bot built using Kotlin and powered by various
 
 - **Discord Integration:** Toby Bot seamlessly integrates with your Discord server to provide engaging features.
 - **Spring Boot:** Leveraging the Spring Boot framework to efficiently configure and deploy the bot.
-- **JDA:** Utilizing JDA, a robust Java library for interacting with the Discord API.
+- **JDA:** Utilising JDA, a robust Java library for interacting with the Discord API.
 - **JPA and Hibernate:** Storing and managing data in a relational database for efficient data management.
-- **Spring Web:** Opportunity to create web interfaces to interact with your bot.
 
 ## Prerequisites
 
 Ensure you have the following prerequisites set up before getting started:
 
-- **Java Development Kit (JDK):** You'll need a Java development environment.
+- **Kotlin installation:** You'll need to a Kotlin development environment
+- **Java Development Kit (JDK):** You'll need a Java development environment as Kotlin compiles to Java.
 - **Discord Bot Token:** Obtain a Discord bot token and define its permissions.
 - **Database:** Set up a relational database, such as PostgreSQL.
 - **Dependency Management:** Choose between Maven or Gradle for dependency management.
