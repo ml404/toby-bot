@@ -21,7 +21,7 @@ import toby.jpa.service.IUserService
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,
-        TestDataSourceConfig::class,
+        TestDatabaseConfig::class,
         TestManagerConfig::class
     ]
 )

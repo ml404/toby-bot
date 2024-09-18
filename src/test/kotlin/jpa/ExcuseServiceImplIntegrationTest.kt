@@ -20,7 +20,7 @@ import toby.jpa.service.IExcuseService
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,
-        TestDataSourceConfig::class,
+        TestDatabaseConfig::class,
         TestManagerConfig::class
     ]
 )

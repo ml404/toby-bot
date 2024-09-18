@@ -26,7 +26,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     override fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean =
         runCatching {
             val query = entityManager.createQuery(
-                "SELECT COUNT(m) FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+                "SELECT COUNT(m) FROM MusicDto m WHERE m.musicBlob = :musicBlob AND CAST(m.userDto.discordId AS long) = :discordId AND CAST(m.userDto.guildId AS long) = :guildId",
                 Long::class.java
             )
             query.setParameter("musicBlob", musicDto.musicBlob)

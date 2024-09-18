@@ -9,7 +9,10 @@ import java.io.Serializable
 @NamedQueries(
     NamedQuery(name = "MusicDto.getById", query = "select m from MusicDto as m WHERE m.id = :id"),
     NamedQuery(name = "MusicDto.deleteById", query = "delete from MusicDto as m WHERE m.id = :id"),
-    NamedQuery(name = "MusicDto.deleteByUser", query = "delete from MusicDto as m WHERE m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId")
+    NamedQuery(
+        name = "MusicDto.deleteByUser",
+        query = "delete from MusicDto as m WHERE m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId"
+    )
 )
 @Entity
 @Table(name = "music_files", schema = "public")
@@ -38,7 +41,7 @@ data class MusicDto(
 
     @Lob
     @JsonIgnore
-    @Column(name = "music_blob", columnDefinition = "TEXT")
+    @Column(name = "music_blob", columnDefinition = "BYTEA")
     var musicBlob: ByteArray? = null,
 ) : Serializable {
 
