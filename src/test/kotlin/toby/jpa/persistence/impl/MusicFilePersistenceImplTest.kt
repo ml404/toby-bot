@@ -3,8 +3,8 @@ package toby.jpa.persistence.impl
 import configuration.*
 import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -47,7 +47,7 @@ class MusicRepositoryTest {
         val result = isFileAlreadyUploaded(musicDto)
 
         // Assert: Check if the result is true since the file was already uploaded
-        assertTrue(result, "The file should be marked as already uploaded")
+        assertNotNull(result, "The file should be marked as already uploaded")
     }
 
     @Test
@@ -61,20 +61,20 @@ class MusicRepositoryTest {
         val result = isFileAlreadyUploaded(musicDto)
 
         // Assert: Check if the result is false since the file is not in the database
-        assertFalse(result, "The file should not be marked as uploaded")
+        assertNull(result, "The file should not be marked as uploaded")
     }
 
     // Use the same method under test
-    private fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean =
+    private fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? =
         runCatching {
             val query = entityManager.createQuery(
-                "SELECT COUNT(m) FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
-                Long::class.java
+                "SELECT m FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+                MusicDto::class.java
             )
             query.setParameter("musicBlob", musicDto.musicBlob)
             query.setParameter("discordId", musicDto.userDto?.discordId)
             query.setParameter("guildId", musicDto.userDto?.guildId)
 
-            return (query.singleResult as Long) > 0
-        }.getOrElse { false }
+            query.resultList.firstOrNull() // Fetch the first matching record, if any
+        }.getOrNull()
 }
