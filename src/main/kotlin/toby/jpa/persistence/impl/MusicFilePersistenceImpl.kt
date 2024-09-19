@@ -42,7 +42,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
         logger.info { "Creating new music file for ${musicDto.userDto}" }
-        if (isFileAlreadyUploaded(musicDto) == null) {
+        if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
@@ -90,7 +90,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
         logger.info { "Updating music file for ${musicDto.userDto}" }
-        if (isFileAlreadyUploaded(musicDto) == null) {
+        if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
