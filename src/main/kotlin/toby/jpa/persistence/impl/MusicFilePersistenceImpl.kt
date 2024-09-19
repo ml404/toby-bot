@@ -42,7 +42,6 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
         logger.info { "Creating new music file for ${musicDto.userDto}" }
-        createUserForMusicFile(musicDto.userDto!!)
         if (isFileAlreadyUploaded(musicDto) == null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
@@ -95,7 +94,6 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
-        createUserForMusicFile(musicDto.userDto!!)
         entityManager.merge(musicDto)
         entityManager.flush()
         return musicDto
