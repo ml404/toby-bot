@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 import org.apache.commons.lang3.EnumUtils
 import org.springframework.transaction.annotation.Transactional
+import toby.helpers.FileUtils.computeHash
 import java.io.Serializable
 
 @NamedQueries(
@@ -43,6 +44,9 @@ data class MusicDto(
     @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "BYTEA")
     var musicBlob: ByteArray? = null,
+
+    @Column(name = "music_blob_hash")
+    var musicBlobHash: String? = null
 ) : Serializable {
 
     constructor(
@@ -57,7 +61,8 @@ data class MusicDto(
         userDto = userDto,
         fileName = fileName,
         introVolume = introVolume,
-        musicBlob = musicBlob
+        musicBlob = musicBlob,
+        musicBlobHash = computeHash(musicBlob ?: ByteArray(0))
     )
 
     enum class Adjustment(val adjustment: String) {

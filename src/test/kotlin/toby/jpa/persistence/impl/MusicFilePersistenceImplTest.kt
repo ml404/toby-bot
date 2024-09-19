@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import toby.Application
+import toby.helpers.FileUtils.computeHash
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 
@@ -36,7 +37,7 @@ class MusicRepositoryTest {
     fun `should return true when file is already uploaded`() {
         // Arrange: Set up the test data
         val userDto = UserDto(discordId = 123456789L, guildId = 987654321L)
-        val musicDto = MusicDto(musicBlob = "musicBlob1".toByteArray(), userDto = userDto)
+        val musicDto = MusicDto(userDto, 1, "filename", 10, "SomeBlob".toByteArray())
 
         // Persist the userDto and musicDto in the in-memory H2 database
         entityManager.persist(userDto)
@@ -65,16 +66,17 @@ class MusicRepositoryTest {
     }
 
     // Use the same method under test
-    private fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? =
-        runCatching {
+    private fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
+        return runCatching {
             val query = entityManager.createQuery(
-                "SELECT m FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+                "SELECT m FROM MusicDto m WHERE m.musicBlobHash = :musicBlobHash AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
                 MusicDto::class.java
             )
-            query.setParameter("musicBlob", musicDto.musicBlob)
+            query.setParameter("musicBlobHash", computeHash(musicDto.musicBlob ?: ByteArray(0)))
             query.setParameter("discordId", musicDto.userDto?.discordId)
             query.setParameter("guildId", musicDto.userDto?.guildId)
 
             query.resultList.firstOrNull() // Fetch the first matching record, if any
         }.getOrNull()
+    }
 }

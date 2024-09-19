@@ -5,6 +5,7 @@ import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Query
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import toby.helpers.FileUtils.computeHash
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.persistence.IMusicFilePersistence
@@ -26,10 +27,10 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
         return runCatching {
             val query = entityManager.createQuery(
-                "SELECT m FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+                "SELECT m FROM MusicDto m WHERE m.musicBlobHash = :musicBlobHash AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
                 MusicDto::class.java
             )
-            query.setParameter("musicBlob", musicDto.musicBlob)
+            query.setParameter("musicBlobHash", computeHash(musicDto.musicBlob ?: ByteArray(0)))
             query.setParameter("discordId", musicDto.userDto?.discordId)
             query.setParameter("guildId", musicDto.userDto?.guildId)
 

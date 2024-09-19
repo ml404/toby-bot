@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.helpers.FileUtils.computeHash
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
@@ -165,11 +166,12 @@ class IntroHelper(
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
         val index = userService.getUserById(targetDto.discordId, targetDto.guildId)?.musicDtos?.size?.plus(1) ?: 1
-        val musicDto = selectedMusicDto.apply {
-            this?.musicBlob = fileContents
-            this?.fileName = filename
-            this?.introVolume = introVolume
-            this?.userDto = targetDto
+        val musicDto = selectedMusicDto?.apply {
+            this.musicBlob = fileContents
+            this.musicBlobHash = computeHash(fileContents)
+            this.fileName = filename
+            this.introVolume = introVolume
+            this.userDto = targetDto
         } ?: MusicDto(targetDto, index, filename, introVolume, fileContents)
 
         if (selectedMusicDto == null) {
@@ -200,6 +202,7 @@ class IntroHelper(
             this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
             this.userDto = targetDto
             this.musicBlob = urlBytes
+            this.musicBlobHash = computeHash(urlBytes)
             this.fileName = filename
             this.introVolume = introVolume
         } ?: MusicDto(targetDto, index, filename, introVolume, urlBytes)

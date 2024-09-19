@@ -23,13 +23,14 @@ CREATE TABLE public.excuse (
 
 DROP TABLE IF EXISTS public.music_files;
 CREATE TABLE public.music_files (
-    file_name character varying(100),
-    music_blob blob,
-    id character varying(100) NOT NULL,
-    file_vol integer,
-    discord_id bigint,
-    guild_id bigint,
-    index integer
+    id VARCHAR(255) PRIMARY KEY NOT NULL,
+    file_name VARCHAR,
+    file_vol INT,
+    discord_id BIGINT,
+    guild_id BIGINT,
+    index INT,
+    music_blob BYTEA,
+    music_blob_hash VARCHAR(64)
 );
 
 DROP TABLE IF EXISTS public."user";
