@@ -176,8 +176,6 @@ class IntroHelper(
 
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
-            targetDto.musicDtos += musicDto
-            userService.updateUser(targetDto)
             sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay)
         } else {
             musicFileService.updateMusicFile(musicDto)

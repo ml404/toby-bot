@@ -210,7 +210,6 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         // Assert
         verify { musicFileService.createNewMusicFile(any()) }
-        verify { userService.updateUser(eq(requestingUserDto)) }
         verify {
             event.hook.sendMessage(
                 eq("Successfully set UserName's intro song #1 to 'filename' with volume '20'")
@@ -248,7 +247,6 @@ internal class IntroSongCommandTest : MusicCommandTest {
 
         // Assert
         verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
-        verify { userService.updateUser(eq(requestingUserDto)) }
         verify {
             event.hook.sendMessage(
                 "Successfully set Another Username's intro song #1 to 'filename' with volume '20'"

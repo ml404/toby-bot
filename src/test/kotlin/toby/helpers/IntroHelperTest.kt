@@ -222,7 +222,6 @@ class IntroHelperTest {
 
         verify {
             musicFileService.createNewMusicFile(any())
-            userService.updateUser(userDto)
         }
     }
 
