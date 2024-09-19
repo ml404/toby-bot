@@ -12,7 +12,7 @@ import java.io.Serializable
     ),
     NamedQuery(
         name = "UserDto.getById",
-        query = "select u from UserDto u join u.musicDtos m where u.guildId = :guildId and u.discordId = :discordId"
+        query = "select u from UserDto u where u.guildId = :guildId and u.discordId = :discordId"
     ),
     NamedQuery(
         name = "UserDto.deleteById",
