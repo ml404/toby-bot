@@ -7,10 +7,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.button.ButtonContext
 import toby.button.ButtonTest
-import toby.button.ButtonTest.Companion.buttonManager
 import toby.button.ButtonTest.Companion.configService
 import toby.button.ButtonTest.Companion.event
-import toby.button.ButtonTest.Companion.mockChannel
 import toby.button.ButtonTest.Companion.mockGuild
 import toby.button.ButtonTest.Companion.userService
 import toby.helpers.MusicPlayerHelper
@@ -58,7 +56,7 @@ class StopButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        StopButton().handle(ButtonContext(event), UserDto(), 0)
+        StopButton().handle(ButtonContext(event), UserDto(6L, 1L), 0)
 
         verify { MusicPlayerHelper.stopSong(any(), any(), any(), any()) }
     }

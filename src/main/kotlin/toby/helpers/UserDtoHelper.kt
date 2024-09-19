@@ -16,9 +16,7 @@ class UserDtoHelper(private val userService: IUserService) {
         isSuperUser: Boolean = false
     ): UserDto {
         logger.info("Processing lookup for user: $discordId, guild: $guildId")
-        return userService.getUserById(discordId, guildId) ?: UserDto().apply {
-            this.discordId = discordId
-            this.guildId = guildId
+        return userService.getUserById(discordId, guildId) ?: UserDto(discordId, guildId).apply {
             this.superUser = isSuperUser
             this.musicDtos = emptyList<MusicDto>().toMutableList()
             userService.createNewUser(this)

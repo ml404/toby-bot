@@ -90,10 +90,7 @@ class AdjustUserCommand(private val userService: IUserService, private val userD
     }
 
     private fun createNewUser(event: SlashCommandInteractionEvent, targetMember: Member, deleteDelay: Int) {
-        val newDto = UserDto().apply {
-            discordId = targetMember.idLong
-            guildId = targetMember.guild.idLong
-        }
+        val newDto = UserDto(targetMember.idLong, targetMember.guild.idLong)
         userService.createNewUser(newDto)
         event.hook.sendMessageFormat(
             "User %s's permissions did not exist in this server's database, they have now been created",

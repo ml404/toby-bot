@@ -5,11 +5,6 @@ import org.apache.commons.lang3.EnumUtils
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 
-data class UserKey(
-    var discordId: Long? = null,
-    var guildId: Long? = null
-) : Serializable
-
 @NamedQueries(
     NamedQuery(
         name = "UserDto.getGuildAll",
@@ -24,18 +19,17 @@ data class UserKey(
         query = "delete from UserDto u WHERE u.guildId = :guildId AND u.discordId = :discordId"
     )
 )
-@IdClass(UserKey::class)
 @Entity
 @Table(name = "\"user\"", schema = "public")
 @Transactional
 data class UserDto(
     @Id
     @Column(name = "discord_id")
-    var discordId: Long? = null,
+    var discordId: Long = 0,
 
     @Id
     @Column(name = "guild_id")
-    var guildId: Long? = null,
+    var guildId: Long = 0,
 
     @Column(name = "super_user")
     var superUser: Boolean = false,

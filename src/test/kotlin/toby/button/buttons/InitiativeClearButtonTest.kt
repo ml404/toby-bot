@@ -61,7 +61,7 @@ class InitiativeClearButtonTest : ButtonTest {
         every { dndHelper.clearInitiative(any(), any()) } just Runs
 
         // Invoke the handler
-        InitiativeClearButton(dndHelper).handle(ButtonContext(event), UserDto(), 0)
+        InitiativeClearButton(dndHelper).handle(ButtonContext(event), UserDto(6L, 1L), 0)
 
         // Verify expected interactions
         verify(exactly = 1) { dndHelper.clearInitiative(mockHook, event) }

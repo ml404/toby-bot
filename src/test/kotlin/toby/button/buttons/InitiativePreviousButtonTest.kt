@@ -61,7 +61,7 @@ class InitiativePreviousButtonTest : ButtonTest {
         every { dndHelper.decrementTurnTable(any(), any(), any()) } just Runs
 
         // Invoke the handler
-        InitiativePreviousButton(dndHelper).handle(ButtonContext(event), UserDto(), 0)
+        InitiativePreviousButton(dndHelper).handle(ButtonContext(event), UserDto(6L, 1L), 0)
 
         // Verify expected interactions
         verify(exactly = 1) { dndHelper.decrementTurnTable(mockHook, event, 0) }
