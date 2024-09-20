@@ -40,8 +40,6 @@ data class MusicDto(
     @Column(name = "index")
     var index: Int? = 1,
 
-    @Lob
-    @JsonIgnore
     @Column(name = "music_blob", columnDefinition = "BYTEA")
     var musicBlob: ByteArray? = null,
 
