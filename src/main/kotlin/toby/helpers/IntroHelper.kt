@@ -176,10 +176,14 @@ class IntroHelper(
 
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
-            sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay)
+                ?.let { sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay) }
+                ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
+
         } else {
             musicFileService.updateMusicFile(musicDto)
-            sendUpdateMessage(event, userName, filename, introVolume, musicDto.index!!, deleteDelay)
+                ?.let { sendUpdateMessage(event, userName, filename, introVolume, musicDto.index!!, deleteDelay) }
+                ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
+
         }
     }
 

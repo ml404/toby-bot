@@ -18,7 +18,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     private val logger = KotlinLogging.logger {}
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
-        logger.info { "Persisting MusicDto: fileName=${musicDto.fileName}, index=${musicDto.index}, fileVol=${musicDto.introVolume}, musicBlobType=${musicDto.musicBlob?.javaClass?.name}, musicBlobHash=${musicDto.musicBlobHash}, discordId=${musicDto.userDto?.discordId}, guildId=${musicDto.userDto?.guildId}, id=${musicDto.id}" }
+        logger.info { "Persisting $musicDto" }
         entityManager.persist(musicDto)
         entityManager.flush()
         logger.info { "Persisted $musicDto" }

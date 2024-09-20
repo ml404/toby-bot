@@ -48,9 +48,6 @@ open class DatabaseConfig(private val env: Environment) {
 
         val jpaProperties = Properties()
         jpaProperties["hibernate.dialect"] = "org.hibernate.dialect.PostgreSQLDialect"
-        jpaProperties["hibernate.show_sql"] = "true"
-        jpaProperties["hibernate.format_sql"] = "true"
-        jpaProperties["hibernate.use_sql_comments"] = "true"
         entityManagerFactory.setJpaProperties(jpaProperties)
 
         return entityManagerFactory
