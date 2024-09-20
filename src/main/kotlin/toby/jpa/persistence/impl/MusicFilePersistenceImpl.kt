@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import toby.helpers.FileUtils.computeHash
 import toby.jpa.dto.MusicDto
-import toby.jpa.dto.UserDto
 import toby.jpa.persistence.IMusicFilePersistence
 
 @Repository
@@ -19,8 +18,10 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     private val logger = KotlinLogging.logger {}
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
+        logger.info { "Persisting $musicDto..." }
         entityManager.persist(musicDto)
         entityManager.flush()
+        logger.info { "Persisted $musicDto" }
         return musicDto
     }
 
@@ -41,28 +42,13 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
-        logger.info { "Creating new music file for ${musicDto.userDto}" }
+        logger.info { "Creating new music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
         if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
         val databaseMusicFile = entityManager.find(MusicDto::class.java, musicDto.id)
         return if (databaseMusicFile == null) persistMusicDto(musicDto) else updateMusicFile(musicDto)
-    }
-
-    private fun createUserForMusicFile(userDto: UserDto) {
-        runCatching {
-            entityManager
-                .createNamedQuery("UserDto.getById", UserDto::class.java)
-                .setParameter("discordId", userDto.discordId)
-                .setParameter("guildId", userDto.guildId)
-                .singleResult
-        }.getOrElse { persistUserDto(userDto) }
-    }
-
-    private fun persistUserDto(userDto: UserDto) {
-        entityManager.persist(userDto)
-        entityManager.flush()
     }
 
     override fun getMusicFileById(id: String): MusicDto? {
@@ -89,13 +75,14 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
-        logger.info { "Updating music file for ${musicDto.userDto}" }
+        logger.info { "Updating music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
         if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
         entityManager.merge(musicDto)
         entityManager.flush()
+        logger.info { "Updated music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
         return musicDto
     }
 

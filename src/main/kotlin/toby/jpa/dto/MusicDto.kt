@@ -77,7 +77,8 @@ data class MusicDto(
     }
 
     override fun toString(): String {
-        return "MusicDto(id=${id}, fileName=$fileName, introVolume=$introVolume)"
+        val blobPreview = musicBlob?.take(10)?.joinToString(", ") { it.toString() } // First 10 bytes
+        return "MusicDto(id=$id, fileName=$fileName, introVolume=$introVolume, musicBlobPreview=[$blobPreview])"
     }
 
     override fun equals(other: Any?): Boolean {
