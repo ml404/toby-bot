@@ -34,7 +34,7 @@ class IntroSongCommand(
         deleteDelay: Int?
     ) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
 
         val introVolume = introHelper.calculateIntroVolume(event)
         val mentionedMembers = event.getOptionMentionedMembers()
