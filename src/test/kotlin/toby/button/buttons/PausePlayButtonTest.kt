@@ -63,7 +63,7 @@ class PausePlayButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        PausePlayButton().handle(ButtonContext(event), UserDto(), 0)
+        PausePlayButton().handle(ButtonContext(event), UserDto(6L, 1L), 0)
 
         verify { MusicPlayerHelper.changePauseStatusOnTrack(any(), any(), any()) }
     }

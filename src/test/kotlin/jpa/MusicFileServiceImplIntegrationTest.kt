@@ -139,7 +139,7 @@ class MusicFileServiceImplTest {
             userDto = UserDto(1234L, 5678L)
         }
 
-        every { musicFileService.isFileAlreadyUploaded(musicDto) } returns true
+        every { musicFileService.isFileAlreadyUploaded(musicDto) } returns musicDto
 
         // Act & Assert
         musicFileService.createNewMusicFile(musicDto)

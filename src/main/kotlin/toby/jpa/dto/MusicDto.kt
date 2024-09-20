@@ -4,12 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 import org.apache.commons.lang3.EnumUtils
 import org.springframework.transaction.annotation.Transactional
+import toby.helpers.FileUtils.computeHash
 import java.io.Serializable
 
 @NamedQueries(
     NamedQuery(name = "MusicDto.getById", query = "select m from MusicDto as m WHERE m.id = :id"),
     NamedQuery(name = "MusicDto.deleteById", query = "delete from MusicDto as m WHERE m.id = :id"),
-    NamedQuery(name = "MusicDto.deleteByUser", query = "delete from MusicDto as m WHERE m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId")
+    NamedQuery(
+        name = "MusicDto.deleteByUser",
+        query = "delete from MusicDto as m WHERE m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId"
+    )
 )
 @Entity
 @Table(name = "music_files", schema = "public")
@@ -36,10 +40,11 @@ data class MusicDto(
     @Column(name = "index")
     var index: Int? = 1,
 
-    @Lob
-    @JsonIgnore
-    @Column(name = "music_blob", columnDefinition = "TEXT")
+    @Column(name = "music_blob", columnDefinition = "BYTEA")
     var musicBlob: ByteArray? = null,
+
+    @Column(name = "music_blob_hash")
+    var musicBlobHash: String? = null
 ) : Serializable {
 
     constructor(
@@ -54,7 +59,8 @@ data class MusicDto(
         userDto = userDto,
         fileName = fileName,
         introVolume = introVolume,
-        musicBlob = musicBlob
+        musicBlob = musicBlob,
+        musicBlobHash = musicBlob?.let { computeHash(it) }
     )
 
     enum class Adjustment(val adjustment: String) {
@@ -69,7 +75,8 @@ data class MusicDto(
     }
 
     override fun toString(): String {
-        return "MusicDto(id=${id}, fileName=$fileName, introVolume=$introVolume)"
+        val blobPreview = musicBlob?.take(10)?.joinToString(", ") { it.toString() } // First 10 bytes
+        return "MusicDto(id=$id, fileName=$fileName, introVolume=$introVolume, musicBlobPreview=[$blobPreview])"
     }
 
     override fun equals(other: Any?): Boolean {

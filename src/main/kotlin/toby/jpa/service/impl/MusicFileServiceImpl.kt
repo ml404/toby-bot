@@ -43,7 +43,7 @@ open class MusicFileServiceImpl : IMusicFileService {
     override fun clearCache() {
     }
 
-    override fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean {
+    override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
         return musicFileService.isFileAlreadyUploaded(musicDto)
     }
 }

@@ -1,5 +1,6 @@
 package toby.command.commands.music
 
+import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -20,6 +21,8 @@ class IntroSongCommand(
     private val introHelper: IntroHelper,
 ) : IMusicCommand {
 
+    private val logger = KotlinLogging.logger {}
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -31,11 +34,12 @@ class IntroSongCommand(
         deleteDelay: Int?
     ) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
 
         val introVolume = introHelper.calculateIntroVolume(event)
         val mentionedMembers = event.getOptionMentionedMembers()
 
+        logger.info { "Inside handleMusicCommand for $name on guild '${event.guild?.idLong}'" }
         if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {
             sendErrorMessage(event, deleteDelay!!)
             return

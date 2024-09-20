@@ -1,40 +1,27 @@
-package toby.configuration
+package configuration
 
-import com.zaxxer.hikari.HikariDataSource
-import org.postgresql.Driver
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
-import org.springframework.core.env.Environment
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType
 import org.springframework.orm.jpa.JpaTransactionManager
 import org.springframework.orm.jpa.JpaVendorAdapter
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter
 import org.springframework.transaction.PlatformTransactionManager
-import java.net.URI
-import java.net.URISyntaxException
 import java.util.*
 import javax.sql.DataSource
 
-@Profile("prod")
-@Configuration
-open class DatabaseConfig(private val env: Environment) {
-
+@Profile("test")
+@TestConfiguration
+open class TestDatabaseConfig {
     @Bean
-    @Throws(URISyntaxException::class)
-    open fun dataSource(): DataSource {
-        val dbUri = URI(env.getRequiredProperty("DATABASE_URL"))
-        val (username, password) = dbUri.userInfo.split(":")
-        val dbUrl = "jdbc:postgresql://${dbUri.host}:${dbUri.port}${dbUri.path}?sslmode=require"
-
-        val dataSource = HikariDataSource()
-        dataSource.driverClassName = Driver::class.java.name
-        dataSource.jdbcUrl = dbUrl
-        dataSource.username = username
-        dataSource.password = password
-
-        // Additional HikariCP settings can be set here if necessary
-        return dataSource
+    open fun dataSource(): EmbeddedDatabase {
+        return EmbeddedDatabaseBuilder()
+            .setType(EmbeddedDatabaseType.H2) // Use H2 in-memory database
+            .build()
     }
 
     @Bean
@@ -48,6 +35,7 @@ open class DatabaseConfig(private val env: Environment) {
 
         val jpaProperties = Properties()
         jpaProperties["hibernate.dialect"] = "org.hibernate.dialect.PostgreSQLDialect"
+        // Add other properties as needed
         entityManagerFactory.setJpaProperties(jpaProperties)
 
         return entityManagerFactory
@@ -60,3 +48,4 @@ open class DatabaseConfig(private val env: Environment) {
         return transactionManager
     }
 }
+

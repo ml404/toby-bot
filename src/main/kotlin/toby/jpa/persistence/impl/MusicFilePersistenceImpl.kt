@@ -3,10 +3,11 @@ package toby.jpa.persistence.impl
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Query
+import mu.KotlinLogging
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import toby.helpers.FileUtils.computeHash
 import toby.jpa.dto.MusicDto
-import toby.jpa.dto.UserDto
 import toby.jpa.persistence.IMusicFilePersistence
 
 @Repository
@@ -14,50 +15,40 @@ import toby.jpa.persistence.IMusicFilePersistence
 open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
-
+    private val logger = KotlinLogging.logger {}
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
+        logger.info { "Persisting $musicDto" }
         entityManager.persist(musicDto)
         entityManager.flush()
+        logger.info { "Persisted $musicDto" }
         return musicDto
     }
 
-    // Method to check if the same file exists for a given discordId and guildId
-    override fun isFileAlreadyUploaded(musicDto: MusicDto): Boolean =
-        runCatching {
+    @Transactional(readOnly = true)
+    override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
+        return runCatching {
+            logger.info { "Checking to see if '${musicDto.musicBlobHash}' has already been uploaded for this guild and user..." }
             val query = entityManager.createQuery(
-                "SELECT COUNT(m) FROM MusicDto m WHERE m.musicBlob = :musicBlob AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
-                Long::class.java
+                "SELECT m FROM MusicDto m WHERE m.musicBlobHash = :musicBlobHash AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
+                MusicDto::class.java
             )
-            query.setParameter("musicBlob", musicDto.musicBlob)
+            query.setParameter("musicBlobHash", computeHash(musicDto.musicBlob ?: ByteArray(0)))
             query.setParameter("discordId", musicDto.userDto?.discordId)
             query.setParameter("guildId", musicDto.userDto?.guildId)
 
-            return (query.singleResult as Long) > 0
-        }.getOrElse { false }
+            query.resultList.firstOrNull() // Fetch the first matching record, if any
+        }.getOrNull()
+    }
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
-        createUserForMusicFile(musicDto.userDto!!)
-        if (isFileAlreadyUploaded(musicDto)) {
+        logger.info { "Creating new music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
+        if (isFileAlreadyUploaded(musicDto) != null) {
+            logger.info { "Duplicate detected, not persisting file" }
             return null
         }
         val databaseMusicFile = entityManager.find(MusicDto::class.java, musicDto.id)
         return if (databaseMusicFile == null) persistMusicDto(musicDto) else updateMusicFile(musicDto)
-    }
-
-    private fun createUserForMusicFile(userDto: UserDto) {
-        runCatching {
-            entityManager
-                .createNamedQuery("UserDto.getById", UserDto::class.java)
-                .setParameter("discordId", userDto.discordId)
-                .setParameter("guildId", userDto.guildId)
-                .singleResult
-        }.getOrElse { persistUserDto(userDto) }
-    }
-
-    private fun persistUserDto(userDto: UserDto) {
-        entityManager.persist(userDto)
-        entityManager.flush()
     }
 
     override fun getMusicFileById(id: String): MusicDto? {
@@ -84,12 +75,14 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
-        if (isFileAlreadyUploaded(musicDto)) {
+        logger.info { "Updating music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
+        if (isFileAlreadyUploaded(musicDto) != null) {
+            logger.info { "Duplicate detected, not persisting file" }
             return null
         }
-        createUserForMusicFile(musicDto.userDto!!)
         entityManager.merge(musicDto)
         entityManager.flush()
+        logger.info { "Updated music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
         return musicDto
     }
 

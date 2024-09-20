@@ -66,7 +66,7 @@ class UserInfoCommandTest : CommandTest {
         every { event.options } returns listOf(mockk<OptionMapping>())
 
         // Mock a mentioned user's DTO
-        val mentionedUserDto = UserDto()
+        val mentionedUserDto = UserDto(6L, 1L)
         every { userService.getUserById(any(), any()) } returns requestingUserDto
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(

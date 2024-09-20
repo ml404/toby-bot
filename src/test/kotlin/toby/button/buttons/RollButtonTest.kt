@@ -58,7 +58,7 @@ class RollButtonTest : ButtonTest {
         }
 
         // Invoke the handle method on the RollButton
-        rollButton.handle(ButtonContext(event), UserDto(), 5)
+        rollButton.handle(ButtonContext(event), UserDto(6L, 1L), 5)
 
         // Verify interactions
         verify { mockChannel.sendTyping().queue() }

@@ -7,12 +7,10 @@ import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import toby.jpa.dto.UserDto
 import toby.jpa.persistence.IUserPersistence
-import toby.jpa.service.IMusicFileService
 
 @Repository
 @Transactional
-open class UserPersistenceImpl internal constructor(private val musicFileService: IMusicFileService) :
-    IUserPersistence {
+open class UserPersistenceImpl : IUserPersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
 
@@ -24,15 +22,8 @@ open class UserPersistenceImpl internal constructor(private val musicFileService
     }
 
     override fun createNewUser(userDto: UserDto): UserDto {
-        createMusicFileEntry(userDto)
         val databaseUser = entityManager.find(UserDto::class.java, userDto)
-
         return if ((databaseUser == null)) persistUserDto(userDto) else databaseUser
-    }
-
-    private fun createMusicFileEntry(userDto: UserDto) {
-        userDto.musicDtos.forEach { musicFileService.createNewMusicFile(it) }
-        entityManager.flush()
     }
 
     override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {
