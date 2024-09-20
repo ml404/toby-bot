@@ -62,7 +62,7 @@ data class MusicDto(
         fileName = fileName,
         introVolume = introVolume,
         musicBlob = musicBlob,
-        musicBlobHash = computeHash(musicBlob ?: ByteArray(0))
+        musicBlobHash = musicBlob?.let { computeHash(it) }
     )
 
     enum class Adjustment(val adjustment: String) {
