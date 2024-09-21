@@ -25,7 +25,7 @@ class DnDCommand(
         val query = event.getOption(QUERY)!!.asString
         val deleteDelay = deleteDelay ?: 0
 
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         val hook = event.hook
 
         // Create and run coroutine scope

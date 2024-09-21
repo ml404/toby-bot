@@ -20,7 +20,7 @@ class DndMenu(
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.info { "DnD menu event started for guild ${ctx.guild.idLong}" }
         val event = ctx.selectEvent
-        event.deferReply().queue()
+        event.deferReply(true).queue()
 
         val hook = event.hook
         val typeName = eventProcessor.toTypeString(event)

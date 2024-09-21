@@ -6,11 +6,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import net.dv8tion.jda.api.interactions.commands.Command
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import toby.emote.Emotes
@@ -68,6 +70,22 @@ class MessageEventHandler @Autowired constructor(
             }
         }
     }
+
+    override fun onCommandAutoCompleteInteraction(event: CommandAutoCompleteInteractionEvent) {
+        if (event.name == "help" && event.focusedOption.name == "command") {
+            val input = event.focusedOption.value // Get the current user input
+            val suggestions = suggestCommands(input) // Get matching commands
+            val optionChoices = suggestions.map { Command.Choice(it, it) } // Convert suggestions to choices
+
+            // Reply with the suggestions
+            event.replyChoices(optionChoices).queue()
+        }
+    }
+
+    private fun suggestCommands(input: String): List<String> {
+        return commandManager.allCommands.filter { it.name.startsWith(input, ignoreCase = true) }.map { it.name }
+    }
+
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
         logger.info { "SlashCommandInteractionEvent '${event.name}' received on guild ${event.guild?.idLong}" }

@@ -30,8 +30,8 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
             event.hook.sendMessageFormat(builder.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
-        val searchOptional = event.getOption(COMMAND).toString()
-        val command =  manager.getCommand(searchOptional)
+        val searchOptional = event.getOption(COMMAND)?.asString
+        val command = manager.getCommand(searchOptional!!)
         if (command == null) {
             event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
@@ -44,5 +44,5 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
     override val description: String
         get() = "get help with the command you give this command"
     override val optionData: List<OptionData>
-        get() = listOf(OptionData(OptionType.STRING, COMMAND, "Command you would like help with"))
+        get() = listOf(OptionData(OptionType.STRING, COMMAND, "Command you would like help with", false, true))
 }
