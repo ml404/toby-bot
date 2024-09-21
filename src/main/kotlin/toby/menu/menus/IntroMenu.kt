@@ -17,7 +17,7 @@ class IntroMenu(
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.info { "Intro menu event started for guild ${ctx.guild.idLong}" }
         val event = ctx.selectEvent
-        event.deferReply().queue()
+        event.deferReply(true).queue()
 
         val musicDtoId = event.selectedOptions.firstOrNull()?.value
 
@@ -34,7 +34,8 @@ class IntroMenu(
         if (musicDtoToReplace == null) {
             event.hook
                 .sendMessage("Invalid selection or user data. Please try again.")
-                .setEphemeral(true).queue()
+                .setEphemeral(true)
+                .queue()
             return
         }
         val pendingIntroTriple = introHelper.pendingIntros[requestingUserDto.discordId]
@@ -58,7 +59,8 @@ class IntroMenu(
                 logger.error(it) { "Error handling intro replacement" }
                 event.hook
                     .sendMessage("Something went wrong while processing your selection. Please try again.")
-                    .setEphemeral(true).queue()
+                    .setEphemeral(true)
+                    .queue()
             }
         }
     }

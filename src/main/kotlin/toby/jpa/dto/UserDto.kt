@@ -67,6 +67,6 @@ data class UserDto(
     }
 
     override fun toString(): String {
-        return "UserDto(discordId=$discordId, guildId=$guildId, socialCredit=$socialCredit, initiativeModifier=$initiativeModifier, isSuperUser=$superUser, musicPermission=$musicPermission, digPermission=$digPermission, memePermission=$memePermission, musicDto=$musicDtos)"
+        return "UserDto(discordId=$discordId, guildId=$guildId)"
     }
 }
