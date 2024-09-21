@@ -21,6 +21,7 @@ Ensure you have the following prerequisites set up before getting started:
 - **Kotlin installation:** You'll need to a Kotlin development environment
 - **Java Development Kit (JDK):** You'll need a Java development environment as Kotlin compiles to Java.
 - **Discord Bot Token:** Obtain a Discord bot token and define its permissions.
+- **Google Refresh Token** Obtain a google refresh token to allow Oauth2 to be set for the YoutubeAudioSourceManager inside the PlayerManager class
 - **Database:** Set up a relational database, such as PostgreSQL.
 - **Dependency Management:** Choose between Maven or Gradle for dependency management.
 
