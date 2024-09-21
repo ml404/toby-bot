@@ -13,7 +13,7 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
     private val USERS = "users"
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         printUserInfo(event, requestingUserDto, deleteDelay)
     }
 

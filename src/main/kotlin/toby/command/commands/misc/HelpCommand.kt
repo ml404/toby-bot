@@ -14,7 +14,7 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val args = ctx.event.options
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         if (args.isEmpty()) {
             val builder = StringBuilder()
             val commandConsumer = Consumer { command: ICommand -> builder.append('`').append("/").append(command.name).append('`').append("\n") }

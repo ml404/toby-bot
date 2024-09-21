@@ -16,7 +16,7 @@ class AdjustUserCommand(private val userService: IUserService, private val userD
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         val member = ctx.member
         val guild = event.guild!!
         val adjustedDeleteDelay = deleteDelay ?: 0

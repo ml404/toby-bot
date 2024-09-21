@@ -2,14 +2,12 @@ package toby.command.commands.moderation
 
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
-import java.util.*
 
 class SocialCreditCommand(private val userService: IUserService) : IModerationCommand {
     private val LEADERBOARD = "leaderboard"
@@ -18,7 +16,7 @@ class SocialCreditCommand(private val userService: IUserService) : IModerationCo
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         val member = ctx.member
         val guild = event.guild ?: return
         if (!guild.isLoaded) guild.loadMembers()

@@ -15,7 +15,7 @@ class QueueCommand : IMusicCommand {
 
     override fun handleMusicCommand(ctx: CommandContext, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         val queue = instance.getMusicManager(ctx.guild).scheduler.queue
         if (!requestingUserDto.musicPermission) {
             sendErrorMessage(event, deleteDelay!!)

@@ -15,7 +15,7 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event
-        event.deferReply().queue()
+        event.deferReply(true).queue()
         val member = ctx.member
         if (member?.isOwner != true) {
             event.hook.sendMessage("This is currently reserved for the owner of the server only, this may change in future")
