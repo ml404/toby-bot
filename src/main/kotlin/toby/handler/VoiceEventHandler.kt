@@ -120,8 +120,6 @@ class VoiceEventHandler @Autowired constructor(
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
         val deleteDelayConfig =
             configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
-        lastConnectedChannel[guild.idLong] = event.channelJoined!!.asVoiceChannel()
-
         checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
         if (audioManager.connectedChannel == event.channelJoined) {
@@ -136,11 +134,15 @@ class VoiceEventHandler @Autowired constructor(
         guild: Guild,
         defaultVolume: Int
     ) {
-        val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
-        if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-            logger.info { "Joined channel has non bot users, and the AudioManager is not connected, joining new channel '${event.channelJoined?.name}' on guild ${event.guild.idLong}" }
-            PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-            audioManager.openAudioConnection(event.channelJoined)
+        //Ignore the bot joining voice event
+        if (event.member.user.idLong != jda.selfUser.idLong) {
+            val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
+            if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
+                logger.info { "Joined channel has non bot users, and the AudioManager is not connected, joining new channel '${event.channelJoined?.name}' on guild ${event.guild.idLong}" }
+                PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
+                audioManager.openAudioConnection(event.channelJoined)
+                lastConnectedChannel[guild.idLong] = event.channelJoined!!.asVoiceChannel()
+            }
         }
     }
 

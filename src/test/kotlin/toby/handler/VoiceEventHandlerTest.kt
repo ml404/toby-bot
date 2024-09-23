@@ -12,6 +12,8 @@ import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import net.dv8tion.jda.api.managers.AudioManager
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction
 import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.handler.VoiceEventHandler
@@ -34,9 +36,21 @@ class VoiceEventHandlerTest {
         )
     )
 
+    @BeforeEach
+    fun setup() {
+        val selfUser = mockk<SelfUser>()
+        every { jda.selfUser } returns selfUser
+        every { selfUser.name } returns "TestBot"
+        every { selfUser.idLong } returns 12345L
+    }
+
+    @AfterEach
+    fun tearDown() {
+        unmockkAll()
+    }
+
     @Test
     fun `onReady should connect to the most populated voice channel`() {
-        val selfUser = mockk<SelfUser>()
         val guild1 = mockk<Guild>()
         val guild2 = mockk<Guild>()
         val readyEvent = mockk<ReadyEvent>()
@@ -48,15 +62,12 @@ class VoiceEventHandlerTest {
         val audioManager1 = mockk<AudioManager>()
         val audioManager2 = mockk<AudioManager>()
         val guildCache = mockk<SnowflakeCacheView<Guild>>()
-
-        every { readyEvent.jda } returns jda
-        every { jda.selfUser } returns selfUser
-        every { selfUser.name } returns "TestBot"
-        every { jda.guildCache } returns guildCache
         val commandListUpdateAction = mockk<CommandListUpdateAction>()
 
         // Mocking the chain
+        every { readyEvent.jda } returns jda
         every { jda.updateCommands() } returns commandListUpdateAction
+        every { jda.guildCache } returns guildCache
         every { commandListUpdateAction.addCommands(any<List<CommandData>>()) } returns commandListUpdateAction
         every { commandListUpdateAction.queue() } just Runs
 
@@ -121,6 +132,9 @@ class VoiceEventHandlerTest {
         every { member.isOwner } returns false
         every { member.idLong } returns 1L
         every { member.effectiveName } returns "Effective Name"
+        every { member.user } returns mockk {
+            every { idLong } returns 1L
+        }
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
         every { audioManager.isConnected } returns false
