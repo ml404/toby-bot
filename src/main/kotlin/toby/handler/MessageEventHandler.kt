@@ -89,10 +89,10 @@ class MessageEventHandler @Autowired constructor(
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
         logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
-        logger.info { "SlashCommandInteractionEvent '${event.name}' received on guild ${event.guild?.idLong}" }
+        logger.info { "SlashCommandInteractionEvent '${event.name}' received" }
         if (!event.user.isBot) {
             launch {
-                logger.info { "Launching coroutine for '${event.name}' received on guild ${event.guild?.idLong}" }
+                logger.info { "Launching coroutine for '${event.name}'" }
                 commandManager.handle(event)
             }
         }

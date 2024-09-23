@@ -175,7 +175,7 @@ class VoiceEventHandler @Autowired constructor(
         if (connectedChannel != null) {
             if (connectedChannel.members.none { !it.user.isBot }) {
                 this.closeAudioConnection()
-                logger.info("Audio connection closed on guild '${this.guild.idLong}' due to empty channel.")
+                logger.info("Audio connection closed due to empty channel.")
                 lastConnectedChannel.remove(this.guild.idLong)
             }
         }
