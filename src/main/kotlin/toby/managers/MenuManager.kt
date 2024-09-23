@@ -1,6 +1,5 @@
 package toby.managers
 
-import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
@@ -10,6 +9,7 @@ import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
+import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
 import toby.menu.menus.IntroMenu
@@ -19,8 +19,7 @@ import java.util.*
 @Configurable
 class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper, introHelper: IntroHelper, userDtoHelper: UserDtoHelper, dndHelper: DnDHelper) {
     private val menus: MutableList<IMenu> = ArrayList()
-    private val logger = KotlinLogging.logger {}
-
+    private lateinit var logger: DiscordLogger
     init {
         addMenu(DndMenu(httpHelper = httpHelper, dnDHelper = dndHelper))
         addMenu(IntroMenu(introHelper, userDtoHelper))
@@ -30,7 +29,6 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
         val nameFound = menus.stream().anyMatch { it: IMenu -> it.name.equals(menu.name, ignoreCase = true) }
         require(!nameFound) { "A menu with this name is already present" }
         menus.add(menu)
-        logger.info { "Added menu ${menu.name}" }
     }
 
     val allMenus: List<IMenu>
@@ -39,12 +37,13 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
     fun getMenu(search: String): IMenu? = menus.find { search.contains(it.name, ignoreCase = true) }
 
     fun handle(event: StringSelectInteractionEvent) {
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
         val invoke = event.componentId.lowercase(Locale.getDefault())
         val menu = this.getMenu(invoke)
 
         // Build the response embed
         if (menu != null) {
-            logger.info { "Handling menu: ${menu.name} on guild: ${event.guild?.idLong}" }
+            logger.info { "Handling menu: ${menu.name}" }
             val deleteDelayConfig = configService.getConfigByName(
                 ConfigDto.Configurations.DELETE_DELAY.configValue,
                 event.guild!!.id)

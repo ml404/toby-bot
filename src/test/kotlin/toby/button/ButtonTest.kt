@@ -37,6 +37,7 @@ interface ButtonTest {
             every { idLong } returns 1L
             every { id } returns "1"
             every { audioManager } returns mockk(relaxed = true)
+            every { name } returns "guildName"
         }
         mockChannel = mockk<MessageChannelUnion> {
             every { sendTyping().queue() } just Runs
@@ -68,6 +69,13 @@ interface ButtonTest {
             }
             every { member } returns mockk {
                 every { isOwner } returns true
+                every { effectiveName } returns "effectiveName"
+                every { user } returns mockk {
+                    every {effectiveName} returns "effectiveName"
+                    every {idLong} returns 123L
+                }
+                every { idLong } returns 1234L
+
             }
             every { interaction } returns mockInteraction
             every { component } returns mockk {

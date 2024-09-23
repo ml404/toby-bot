@@ -1,14 +1,14 @@
 package toby.helpers
 
-import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IUserService
+import toby.logging.DiscordLogger
 
 @Service
 class UserDtoHelper(private val userService: IUserService) {
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     fun calculateUserDto(
         guildId: Long,

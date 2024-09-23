@@ -15,7 +15,7 @@ import toby.jpa.persistence.IMusicFilePersistence
 open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
-    private val logger = KotlinLogging.logger {}
+    private val logger =  KotlinLogging.logger {}
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
         logger.info { "Persisting $musicDto" }

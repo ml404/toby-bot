@@ -111,6 +111,7 @@ class CommandManagerTest {
         val mockGuild = mockk<Guild> {
             every { id } returns "1"
             every { idLong } returns 1L
+            every { name } returns "guildName"
             every { audioManager } returns mockk(relaxed = true) {
 
             }
@@ -137,6 +138,11 @@ class CommandManagerTest {
             }
             every { member } returns mockk {
                 every { isOwner } returns true
+                every { effectiveName } returns "effectiveName"
+                every { idLong } returns 123L
+                every { user } returns mockk {
+                    every { user.idLong } returns 123L
+                }
             }
             every { deferReply().queue() } just Runs
             every { hook } returns mockHook

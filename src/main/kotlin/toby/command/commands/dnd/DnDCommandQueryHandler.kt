@@ -22,8 +22,7 @@ class DnDCommandQueryHandler(
     private val hook: InteractionHook,
     private val deleteDelay: Int
 ) {
-    private val logger = KotlinLogging.logger {}
-
+    private val logger =  KotlinLogging.logger {}
     fun processQuery(typeName: String?, typeValue: String?, query: String) {
         CoroutineScope(dispatcher).launch {
             var hasReplied = false
@@ -49,7 +48,7 @@ class DnDCommandQueryHandler(
                 }
 
             }.onFailure {
-                logger.error("An error occurred while handling the DnD query", it)
+                logger.error { "An error occurred while handling the DnD query: $it" }
                 hook.sendMessage("An error occurred while processing your request. Please try again later.")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay))
                 hasReplied = true
