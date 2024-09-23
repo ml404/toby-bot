@@ -1,5 +1,6 @@
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
+import mu.KLogger
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -28,11 +29,14 @@ class VoiceEventHandlerTest {
     private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
+    private val logger = mockk<KLogger>(relaxed = true)  // Mock logger
+
     private val handler = spyk(
         VoiceEventHandler(
             jda,
             configService,
-            userDtoHelper
+            userDtoHelper,
+            logger
         )
     )
 
@@ -190,4 +194,107 @@ class VoiceEventHandlerTest {
             channel.delete().queue()
         }
     }
+
+    @Test
+    fun `onGuildVoiceMove should rejoin previous channel when bot is moved`() {
+        val guild = mockk<Guild>()
+        val event = mockk<GuildVoiceUpdateEvent>()
+        val audioManager = mockk<AudioManager>()
+        val member = mockk<Member>()
+        val previousChannel = mockk<VoiceChannel>()
+
+        // Mocking event and guild behavior
+        every { event.guild } returns guild
+        every { event.member } returns member
+        every { guild.audioManager } returns audioManager
+        every { audioManager.guild } returns guild
+        every { guild.idLong } returns 1L
+        every { member.user.idLong } returns 12345L  // Simulate the bot's ID
+        every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
+
+        // Simulate previous channel in lastConnectedChannel
+        VoiceEventHandler.lastConnectedChannel[guild.idLong] = previousChannel
+
+        // Mock the audioManager behavior
+        every { audioManager.openAudioConnection(any()) } just Runs
+        every { previousChannel.name } returns "PreviousChannel"
+
+        handler.onGuildVoiceMove(event)
+
+        // Verifying that the bot tries to rejoin the previous channel
+        verify(exactly = 1) { audioManager.openAudioConnection(previousChannel) }
+    }
+
+    @Test
+    fun `onGuildVoiceMove should log warning when bot is moved and no previous channel exists`() {
+        val guild = mockk<Guild>()
+        val event = mockk<GuildVoiceUpdateEvent>()
+        val audioManager = mockk<AudioManager>()
+        val member = mockk<Member>()
+
+        // Mocking event and guild behavior
+        every { event.guild } returns guild
+        every { event.member } returns member
+        every { guild.audioManager } returns audioManager
+        every { audioManager.guild } returns guild
+        every { member.user.idLong } returns 12345L  // Simulate the bot's ID
+        every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
+        every { guild.idLong } returns 1L
+        every { event.channelJoined } returns mockk {
+            every { asVoiceChannel() } returns mockk(relaxed = true)
+        }
+        every { event.channelLeft } returns mockk {
+            every { asVoiceChannel() } returns mockk(relaxed = true)
+        }
+
+        every { member.effectiveName } returns "BotName"
+
+
+        // Simulate no previous channel in lastConnectedChannel
+        VoiceEventHandler.lastConnectedChannel.remove(guild.idLong)
+
+        handler.onGuildVoiceUpdate(event)
+
+        // Verifying that a warning log is printed
+        verify { logger.warn("Bot was moved from a channel but no previous channel found.") }
+    }
+
+
+    @Test
+    fun `onGuildVoiceMove should check to close connection and join user`() {
+        val guild = mockk<Guild>()
+        val event = mockk<GuildVoiceUpdateEvent>()
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>()
+        val newChannel = mockk<AudioChannelUnion>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.member } returns member
+        every { event.channelJoined } returns newChannel
+        every { event.channelLeft } returns mockk()
+        every { guild.audioManager } returns audioManager
+        every { audioManager.guild } returns guild
+        every { member.user.idLong } returns 54321L  // Not bot's ID
+        every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
+        every { member.effectiveName } returns "Some User"
+        every { member.user.isBot } returns false
+        every { newChannel.members } returns listOf(member)
+
+        // Mock configuration service
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.VOLUME.configValue,
+                "1"
+            )
+        } returns ConfigDto().apply { value = "50" }
+
+        handler.onGuildVoiceUpdate(event)
+
+        // Verify that the bot checked to close connection and joined the new channel
+        verify(exactly = 1) { audioManager.closeAudioConnection() }
+        verify(exactly = 1) { audioManager.openAudioConnection(newChannel) }
+    }
+
+
 }

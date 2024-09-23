@@ -1,5 +1,6 @@
 package toby.handler
 
+import mu.KLogger
 import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
@@ -26,10 +27,9 @@ private const val teamRegex = "(?i)team\\s[0-9]+"
 class VoiceEventHandler @Autowired constructor(
     private val jda: JDA,
     private val configService: IConfigService,
-    private val userDtoHelper: UserDtoHelper
+    private val userDtoHelper: UserDtoHelper,
+    private val logger: KLogger = KotlinLogging.logger {}
 ) : ListenerAdapter() {
-
-    private val logger = KotlinLogging.logger {}
 
     override fun onReady(event: ReadyEvent) {
         event.jda.guildCache.forEach { it.connectToMostPopulatedVoiceChannel() }
@@ -57,7 +57,7 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-        val guildId = event.guild.id
+        val guildId = event.guild.idLong
 
         when {
             event.channelJoined != null && event.channelLeft != null -> {
@@ -77,7 +77,7 @@ class VoiceEventHandler @Autowired constructor(
         }
     }
 
-    private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
+    fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
         val tobyBot = jda.selfUser
         val member = event.member
         val guild = event.guild
@@ -108,9 +108,9 @@ class VoiceEventHandler @Autowired constructor(
     private fun AudioManager.rejoin(channel: VoiceChannel) {
         runCatching {
             this.openAudioConnection(channel)
-            logger.info("Rejoined previous channel '${channel.name}' on guild '${guild.id}'")
+            logger.info("Rejoined previous channel '${channel.name}' on guild '${guild.idLong}'")
         }.onFailure {
-            logger.error("Failed to rejoin channel '${channel.name}' on guild '${guild.id}': ${it.message}")
+            logger.error("Failed to rejoin channel '${channel.name}' on guild '${guild.idLong}': ${it.message}")
         }
     }
 
@@ -166,7 +166,7 @@ class VoiceEventHandler @Autowired constructor(
         if (connectedChannel != null) {
             if (connectedChannel.members.none { !it.user.isBot }) {
                 this.closeAudioConnection()
-                logger.info("Audio connection closed on guild '${this.guild.id}' due to empty channel.")
+                logger.info("Audio connection closed on guild '${this.guild.idLong}' due to empty channel.")
                 lastConnectedChannel.remove(this.guild.idLong)
             }
         }
