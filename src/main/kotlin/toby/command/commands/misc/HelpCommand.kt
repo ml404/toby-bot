@@ -17,7 +17,7 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
         event.deferReply(true).queue()
         if (args.isEmpty()) {
             val builder = StringBuilder()
-            val commandConsumer = Consumer { command: ICommand -> builder.append('`').append("/").append(command.name).append('`').append("\n") }
+            val commandConsumer = Consumer { command: ICommand -> builder.append("`/${command.name}` - `${command.description}` \n") }
             builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", "/"))
             builder.append("**Music Commands**:\n")
             manager.musicCommands.forEach(commandConsumer)
@@ -27,7 +27,7 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
             manager.moderationCommands.forEach(commandConsumer)
             builder.append("**Fetch Commands**:\n")
             manager.fetchCommands.forEach(commandConsumer)
-            event.hook.sendMessageFormat(builder.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage(builder.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
         val searchOptional = event.getOption(COMMAND)?.asString

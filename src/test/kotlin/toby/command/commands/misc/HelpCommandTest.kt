@@ -43,15 +43,19 @@ internal class HelpCommandTest : CommandTest {
         every { commandManager.moderationCommands } returns listOf(moderationCommand)
         every { commandManager.fetchCommands } returns listOf(fetchCommand)
         every { musicCommand.name } returns "musicName"
+        every { musicCommand.description } returns "musicDesc"
         every { miscCommand.name } returns "miscName"
+        every { miscCommand.description } returns "miscDesc"
         every { moderationCommand.name } returns "modName"
+        every { moderationCommand.description } returns "modDesc"
         every { fetchCommand.name } returns "fetchName"
+        every { fetchCommand.description } returns "fetchDesc"
 
         // Test handle method
         helpCommand.handle(CommandContext(event), mockk(), 0)
 
         // Verify interactions
-        verify(exactly = 1) { event.hook.sendMessageFormat(any()) }
+        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
     }
 
     @Test
