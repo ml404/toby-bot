@@ -86,7 +86,7 @@ class VoiceEventHandler @Autowired constructor(
         // Check if the bot is being moved
         if (member.user.idLong == tobyBot.idLong) {
             // Bot is being moved
-            logger.info { "$tobyBot has been moved, checking to see if a previously connected channel is valid for me to rejoin ..." }
+            logger.info { "${tobyBot.name} has been moved, checking to see if a previously connected channel is valid for me to rejoin ..." }
             val previousChannel = lastConnectedChannel[guild.idLong]
             if (previousChannel != null) {
                 // Bot should rejoin the previous channel
@@ -97,7 +97,7 @@ class VoiceEventHandler @Autowired constructor(
             }
         } else {
             // Another member is moving, handle user movements
-            logger.info { "Another user has moved, checking to see if I should close the audioConnection and join them" }
+            logger.info { "User '${member.user.effectiveName}' has moved on guild '${guild.idLong}', checking to see if AudioConnection should close on current channel and then join them ..." }
             audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
             val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
             checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
@@ -138,7 +138,7 @@ class VoiceEventHandler @Autowired constructor(
     ) {
         val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
         if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-            logger.info { "Joined channel has non bot users, and the AudioManager is not connected, joining new channel ${event.channelJoined?.name} on guild ${event.guild.idLong}" }
+            logger.info { "Joined channel has non bot users, and the AudioManager is not connected, joining new channel '${event.channelJoined?.name}' on guild ${event.guild.idLong}" }
             PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
             audioManager.openAudioConnection(event.channelJoined)
         }
@@ -164,7 +164,7 @@ class VoiceEventHandler @Autowired constructor(
         if (connectedChannel != null) {
             if (connectedChannel.members.none { !it.user.isBot }) {
                 this.closeAudioConnection()
-                logger.info("Audio connection closed on guild ${this.guild.id} due to empty channel.")
+                logger.info("Audio connection closed on guild '${this.guild.id}' due to empty channel.")
                 lastConnectedChannel.remove(this.guild.idLong)
             }
         }
@@ -172,7 +172,7 @@ class VoiceEventHandler @Autowired constructor(
 
     private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel) {
         if (channelLeft.name.matches(teamRegex.toRegex()) && nonBotConnectedMembersEmpty) {
-            logger.info("Deleting temporary channel: {}", channelLeft.name)
+            logger.info { "Deleting temporary channel: '${channelLeft.name}'" }
             channelLeft.delete().queue()
         }
     }
