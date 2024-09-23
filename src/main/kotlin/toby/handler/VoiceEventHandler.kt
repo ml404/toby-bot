@@ -81,6 +81,7 @@ class VoiceEventHandler @Autowired constructor(
         val member = event.member
         val guild = event.guild
         val audioManager = guild.audioManager
+        audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
         if (member.user.jda.selfUser == jda.selfUser) {
             val previousChannel = lastConnectedChannel[guild.idLong]
             if (previousChannel != null) {
