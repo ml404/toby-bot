@@ -13,7 +13,7 @@ interface CustomLogger {
     fun warn(message: () -> String) // Lambda method
     fun error(message: String)
     fun error(message: () -> String) // Lambda method
-    fun setUserContext(member: Member): DiscordLogger
+    fun setUserContext(member: Member?): DiscordLogger
 }
 
 class DiscordLogger(
@@ -47,8 +47,8 @@ class DiscordLogger(
     }
 
     // Replaces user context with the new member's context
-    override fun setUserContext(member: Member): DiscordLogger {
-        this.userContext = "[User: '${member.effectiveName}' (ID: '${member.idLong}')] | "
+    override fun setUserContext(member: Member?): DiscordLogger {
+        this.userContext = member?.let { "[User: '${it.effectiveName}' (ID: '${it.idLong}')] | " } ?: ""
         return this
     }
 

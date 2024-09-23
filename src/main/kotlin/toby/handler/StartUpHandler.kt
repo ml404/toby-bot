@@ -26,6 +26,7 @@ class StartUpHandler @Autowired constructor(
     }
 
     override fun onGuildReady(event: GuildReadyEvent) {
+        DiscordLogger.getLoggerForGuild(event.guild)
         event.guild.updateCommands().queue()
         logger.info { "Reset guild commands for ${event.guild.name}" }
     }
