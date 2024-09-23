@@ -17,16 +17,17 @@ class StartUpHandler @Autowired constructor(
     private val commandManager: CommandManager
 ) : ListenerAdapter() {
 
-    private val logger: DiscordLogger = DiscordLogger()
+    lateinit var logger: DiscordLogger
 
     override fun onReady(event: ReadyEvent) {
+        logger = DiscordLogger()
         logger.info("${event.jda.selfUser.name} is ready")
         jda.updateCommands().addCommands(commandManager.allSlashCommands).queue()
         logger.info { "Registered ${commandManager.allSlashCommands.size} commands to ${event.jda.selfUser.name}" }
     }
 
     override fun onGuildReady(event: GuildReadyEvent) {
-        DiscordLogger.getLoggerForGuild(event.guild)
+        logger = DiscordLogger.getLoggerForGuild(event.guild)
         event.guild.updateCommands().queue()
         logger.info { "Reset guild commands for ${event.guild.name}" }
     }

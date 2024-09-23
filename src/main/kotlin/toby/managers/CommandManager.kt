@@ -125,7 +125,7 @@ class CommandManager @Autowired constructor(
         logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
-        logger.info("Processing slash command '${cmd?.name}' ...")
+        logger.info("Processing command '${cmd?.name}' ...")
 
         cmd?.let {
             event.channel.sendTyping().queue()
@@ -135,6 +135,10 @@ class CommandManager @Autowired constructor(
                 it.handle(ctx, userDto, deleteDelay)
                 attributeSocialCredit(ctx, userService, userDto, deleteDelay)
             }
+        }
+
+        cmd?.let {
+            logger.info("Command '${it.name}' has been processed.")
         }
     }
 
