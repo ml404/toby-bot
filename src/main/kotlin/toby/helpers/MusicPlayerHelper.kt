@@ -28,6 +28,7 @@ object MusicPlayerHelper {
     val nowPlayingManager = NowPlayingManager()
 
     fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
+        logger = DiscordLogger.createLoggerForGuildAndUser(guild, guild.selfMember)
         logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
         playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
     }
