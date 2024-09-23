@@ -4,6 +4,8 @@ Documentation:
 Config:
  - '**/*.properties'
  - '**/*.gradle'
+ - src/main/kotlin/toby/configuration/**
+ - src/test/kotlin/toby/configuration/**
 
 Commands:
   - src/main/kotlin/toby/command/**
@@ -22,6 +24,12 @@ Database:
 
 Lavaplayer:
   - src/main/kotlin/toby/lavaplayer/**
+
+Logging:
+ - src/main/kotlin/toby/logging/**
+
+Listeners:
+ - src/main/kotlin/toby/handler/**
 
 Tests:
   -src/test/kotlin/**
