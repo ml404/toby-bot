@@ -17,7 +17,7 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
         event.deferReply(true).queue()
         if (args.isEmpty()) {
             val builder = StringBuilder()
-            val commandConsumer = Consumer { command: ICommand -> builder.append("`/${command.name}` - `${command.description}` \n") }
+            val commandConsumer = Consumer { command: ICommand -> builder.append("`/${command.name}` \n") }
             builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", "/"))
             builder.append("**Music Commands**:\n")
             manager.musicCommands.forEach(commandConsumer)
