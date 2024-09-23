@@ -5,12 +5,12 @@ import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
+import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.helpers.MusicPlayerHelper.deriveDeleteDelayFromTrack
 import toby.helpers.MusicPlayerHelper.nowPlaying
 import toby.helpers.MusicPlayerHelper.resetMessages
-import toby.logging.DiscordLogger
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -20,11 +20,10 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     var event: SlashCommandInteractionEvent? = null
     var deleteDelay: Int? = null
     private var previousVolume: Int? = null
-    private lateinit var logger: DiscordLogger
+    private val logger = KotlinLogging.logger {}
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
-        setupLogger()
-        logger.info("Adding ${track.info.title} by ${track.info.author} to the queue")
+        logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild ${event?.guild?.idLong}")
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -38,8 +37,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
-        setupLogger()
-        logger.info { "Adding ${playList.name} to the queue" }
+        logger.info { "Adding ${playList.name} to the queue for guild ${event?.guild?.idLong}" }
         event?.hook
             ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -60,15 +58,13 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     override fun onTrackStart(player: AudioPlayer, track: AudioTrack) {
-        setupLogger()
-        logger.info { "${track.info.title} by ${track.info.author} started" }
+        logger.info { "${track.info.title} by ${track.info.author} started for guild ${event?.guild?.idLong}" }
         super.onTrackStart(player, track)
         player.volume = track.userData as Int
         event?.let { nowPlaying(it, PlayerManager.instance, deriveDeleteDelayFromTrack(track)) }
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-        setupLogger()
         event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         if (endReason.mayStartNext) {
@@ -122,9 +118,5 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
 
     private fun Long?.resetMessagesForGuildId() {
         this?.let { resetMessages(it) }
-    }
-
-    private fun setupLogger() {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event?.guild!!, event?.member!!)
     }
 }
