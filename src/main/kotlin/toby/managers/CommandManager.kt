@@ -123,9 +123,9 @@ class CommandManager @Autowired constructor(
             )
         }
         logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
-        logger.info("Processing slash command ...")
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
+        logger.info("Processing slash command '${cmd?.name}' ...")
 
         cmd?.let {
             event.channel.sendTyping().queue()
