@@ -27,9 +27,10 @@ private const val teamRegex = "(?i)team\\s[0-9]+"
 class VoiceEventHandler @Autowired constructor(
     private val jda: JDA,
     private val configService: IConfigService,
-    private val userDtoHelper: UserDtoHelper,
-    private val logger: KLogger = KotlinLogging.logger {}
+    private val userDtoHelper: UserDtoHelper
 ) : ListenerAdapter() {
+
+    private val logger: KLogger = KotlinLogging.logger {}
 
     override fun onReady(event: ReadyEvent) {
         event.jda.guildCache.forEach { it.connectToMostPopulatedVoiceChannel() }

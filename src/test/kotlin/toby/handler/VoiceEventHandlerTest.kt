@@ -1,6 +1,5 @@
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
-import mu.KLogger
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -29,14 +28,12 @@ class VoiceEventHandlerTest {
     private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
-    private val logger = mockk<KLogger>(relaxed = true)  // Mock logger
 
     private val handler = spyk(
         VoiceEventHandler(
             jda,
             configService,
-            userDtoHelper,
-            logger
+            userDtoHelper
         )
     )
 
@@ -256,7 +253,8 @@ class VoiceEventHandlerTest {
         handler.onGuildVoiceUpdate(event)
 
         // Verifying that a warning log is printed
-        verify { logger.warn("Bot was moved from a channel but no previous channel found.") }
+        verify(exactly = 0) { audioManager.closeAudioConnection() }
+        verify(exactly = 0) { audioManager.openAudioConnection(any()) }
     }
 
 
