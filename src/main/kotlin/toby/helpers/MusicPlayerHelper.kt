@@ -4,6 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
@@ -27,24 +28,20 @@ object MusicPlayerHelper {
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
 
-    fun playUserIntro(dbUser: UserDto, guild: Guild, deleteDelay: Int, startPosition: Long = 0L) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(guild, guild.selfMember)
-        logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
-        playUserIntro(dbUser, guild, null, deleteDelay, startPosition)
-    }
-
     fun playUserIntro(
         dbUser: UserDto,
         guild: Guild,
-        event: SlashCommandInteractionEvent?,
+        event: SlashCommandInteractionEvent? = null,
         deleteDelay: Int,
-        startPosition: Long
+        startPosition: Long = 0,
+        member: Member? = null
     ) {
+        logger = DiscordLogger.createLoggerForGuildAndUser(guild, member)
+        logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
         val musicDto = dbUser.musicDtos
         val instance = PlayerManager.instance
         val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
-        DiscordLogger.createLoggerForGuildAndUser(event?.guild!!, event.member!!)
         runCatching {
             musicDto.random().let {
                 logger.info { "User ${dbUser.discordId} has a musicDto. Preparing to play intro." }

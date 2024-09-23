@@ -70,7 +70,7 @@ class DiscordLogger(
         }
 
         // Optionally create a logger with both guild and user context
-        fun createLoggerForGuildAndUser(guild: Guild, member: Member): DiscordLogger {
+        fun createLoggerForGuildAndUser(guild: Guild, member: Member?): DiscordLogger {
             return getLoggerForGuild(guild).setUserContext(member)
         }
 

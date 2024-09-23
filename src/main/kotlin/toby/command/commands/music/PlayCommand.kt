@@ -18,7 +18,12 @@ class PlayCommand : IMusicCommand {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
-    override fun handleMusicCommand(ctx: CommandContext, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+    override fun handleMusicCommand(
+        ctx: CommandContext,
+        instance: PlayerManager,
+        requestingUserDto: UserDto,
+        deleteDelay: Int?
+    ) {
         val event = ctx.event
         event.deferReply().queue()
         if (!requestingUserDto.musicPermission) {
@@ -33,7 +38,14 @@ class PlayCommand : IMusicCommand {
         val startPosition = MusicPlayerHelper.adjustTrackPlayingTimes(Optional.ofNullable(event.getOption(START_POSITION)).map { obj: OptionMapping -> obj.asLong }.orElse(0L))
         val volume = Optional.ofNullable(event.getOption(VOLUME)).map { obj: OptionMapping -> obj.asInt }.orElse(currentVolume)
         if (type == INTRO) {
-            MusicPlayerHelper.playUserIntro(requestingUserDto, guild, event, deleteDelay!!, startPosition)
+            MusicPlayerHelper.playUserIntro(
+                requestingUserDto,
+                guild,
+                event,
+                deleteDelay ?: 0,
+                startPosition,
+                event.member
+            )
         } else {
             var link = Optional.ofNullable(event.getOption(LINK)).map { obj: OptionMapping -> obj.asString }.orElse("")
             if (link.contains("youtube") && !MusicPlayerHelper.isUrl(link)) {

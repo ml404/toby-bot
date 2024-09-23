@@ -127,7 +127,8 @@ class VoiceEventHandler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig =
+            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
 
         checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
@@ -157,7 +158,12 @@ class VoiceEventHandler @Autowired constructor(
 
     private fun setupAndPlayUserIntro(member: Member, guild: Guild, deleteDelayConfig: ConfigDto?) {
         val requestingUserDto = member.getRequestingUserDto()
-        playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
+        playUserIntro(
+            requestingUserDto,
+            guild,
+            deleteDelay = deleteDelayConfig?.value?.toInt() ?: 0,
+            member = member
+        )
     }
 
     private fun onGuildVoiceLeave(event: GuildVoiceUpdateEvent) {
