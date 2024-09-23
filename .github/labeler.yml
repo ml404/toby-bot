@@ -1,17 +1,17 @@
 Documentation:
-- '**/*.md'
+  - '**/*.md'
 
 Config:
- - '**/*.properties'
- - '**/*.gradle'
- - src/main/kotlin/toby/configuration/**
- - src/test/kotlin/toby/configuration/**
+  - '**/*.properties'
+  - '**/*.gradle'
+  - src/main/kotlin/toby/configuration/**
+  - src/test/kotlin/toby/configuration/**
 
 Commands:
   - src/main/kotlin/toby/command/**
 
 Buttons:
- - src/main/kotlin/toby/button/**
+  - src/main/kotlin/toby/button/**
 
 Helpers:
   - src/main/kotlin/toby/helpers/*
@@ -26,10 +26,10 @@ Lavaplayer:
   - src/main/kotlin/toby/lavaplayer/**
 
 Logging:
- - src/main/kotlin/toby/logging/**
+  - src/main/kotlin/toby/logging/**
 
 Listeners:
- - src/main/kotlin/toby/handler/**
+  - src/main/kotlin/toby/handler/**
 
 Tests:
   -src/test/kotlin/**
