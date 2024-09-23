@@ -28,17 +28,7 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
         } else {
             if (requestingUserDto.superUser) {
                 val memberList = event.getOption(USERS)?.mentions?.members ?: emptyList()
-                memberList.forEach { member ->
-                    val mentionedUser = userService.getUserById(member.idLong, member.guild.idLong)
-                    val userInfoMessage = mentionedUser?.let {
-                        val introMessage = calculateMusicFileData(event.member!!, requestingUserDto)
-                        "Here are the permissions for '${member.effectiveName}': '$mentionedUser'. \n $introMessage"
-                    } ?: "I was unable to retrieve information for '${member.effectiveName}'."
-                    event.hook
-                        .sendMessage(userInfoMessage)
-                        .setEphemeral(true)
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
-                }
+                memberList.forEach { member -> member.listUserInfoForMember(event, requestingUserDto, deleteDelay) }
             } else {
                 event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
                     .setEphemeral(true).queue(
@@ -46,6 +36,22 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
                 )
             }
         }
+    }
+
+    private fun Member.listUserInfoForMember(
+        event: SlashCommandInteractionEvent,
+        requestingUserDto: UserDto,
+        deleteDelay: Int?
+    ) {
+        val userSearched = userService.getUserById(this.idLong, this.guild.idLong)
+        val userInfoMessage = userSearched?.let {
+            val introMessage = calculateMusicFileData(event.member!!, requestingUserDto)
+            "Here are the permissions for '${this.effectiveName}': '$userSearched'. \n $introMessage"
+        } ?: "I was unable to retrieve information for '${this.effectiveName}'."
+        event.hook
+            .sendMessage(userInfoMessage)
+            .setEphemeral(true)
+            .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     private fun calculateMusicFileData(member: Member, requestingUserDto: UserDto): String {

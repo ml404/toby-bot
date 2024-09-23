@@ -1,8 +1,8 @@
 package toby.menu.menus
 
-import mu.KotlinLogging
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
+import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -12,10 +12,11 @@ class IntroMenu(
     private val userDtoHelper: UserDtoHelper
 ) : IMenu {
 
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        logger.info { "Intro menu event started for guild ${ctx.guild.idLong}" }
+        logger = DiscordLogger.createLoggerForGuildAndUser(ctx.guild, ctx.selectEvent.member!!)
+        logger.info { "Intro menu event started" }
         val event = ctx.selectEvent
         event.deferReply(true).queue()
 
@@ -56,7 +57,7 @@ class IntroMenu(
                 logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}' on guild '${requestingUserDto.guildId}'" }
                 introHelper.pendingIntros.remove(requestingUserDto.discordId)
             }.onFailure {
-                logger.error(it) { "Error handling intro replacement" }
+                logger.error { "Error handling intro replacement" }
                 event.hook
                     .sendMessage("Something went wrong while processing your selection. Please try again.")
                     .setEphemeral(true)

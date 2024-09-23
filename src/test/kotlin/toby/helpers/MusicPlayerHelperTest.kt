@@ -53,10 +53,12 @@ class MusicPlayerHelperTest {
         // Mock guild and interaction hook
         every { replyCallback.guild } returns guildMock
         every { guildMock.idLong } returns guildId
+        every { guildMock.name } returns "guildName"
         every { replyCallback.hook.interaction } returns mockk {
             every { guild } returns guildMock
             every { channel } returns channelMock
         }
+        every { replyCallback.member } returns mockk(relaxed = true)
         every { replyCallback.hook.deleteOriginal().queue() } just Runs
     }
 

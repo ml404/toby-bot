@@ -1,6 +1,5 @@
 package toby.managers
 
-import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
@@ -24,6 +23,7 @@ import toby.jpa.service.IBrotherService
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IExcuseService
 import toby.jpa.service.IUserService
+import toby.logging.DiscordLogger
 import java.util.*
 
 @Configurable
@@ -40,7 +40,7 @@ class CommandManager @Autowired constructor(
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
     val lastCommands: MutableMap<Guild, Pair<ICommand, CommandContext>> = HashMap()
-    private val logger = KotlinLogging.logger {}
+    lateinit var logger: DiscordLogger
 
     init {
         val cache = Cache(86400, 3600, 2)
@@ -122,9 +122,10 @@ class CommandManager @Autowired constructor(
                 it.isOwner,
             )
         }
-        logger.info("Processing request from user '$requestingUserDto' on guild '${event.guild?.idLong}'")
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
+        logger.info("Processing slash command '${cmd?.name}' ...")
 
         cmd?.let {
             event.channel.sendTyping().queue()

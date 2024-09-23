@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -16,6 +15,7 @@ import net.dv8tion.jda.api.interactions.commands.Command
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import toby.emote.Emotes
+import toby.logging.DiscordLogger
 import toby.managers.ButtonManager
 import toby.managers.CommandManager
 import toby.managers.MenuManager
@@ -31,7 +31,7 @@ class MessageEventHandler @Autowired constructor(
 
     private val job = SupervisorJob()
     override val coroutineContext: CoroutineContext = job + Dispatchers.Default
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
         val message = event.message
@@ -88,10 +88,11 @@ class MessageEventHandler @Autowired constructor(
 
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-        logger.info { "SlashCommandInteractionEvent '${event.name}' received on guild ${event.guild?.idLong}" }
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.info { "SlashCommandInteractionEvent '${event.name}' received" }
         if (!event.user.isBot) {
             launch {
-                logger.info { "Launching coroutine for '${event.name}' received on guild ${event.guild?.idLong}" }
+                logger.info { "Launching coroutine for '${event.name}'" }
                 commandManager.handle(event)
             }
         }
@@ -105,7 +106,8 @@ class MessageEventHandler @Autowired constructor(
     }
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
-        logger.info { "StringSelectInteractionEvent received on guild ${event.guild?.idLong}" }
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.info { "StringSelectInteractionEvent received" }
         menuManager.handle(event)
     }
 }

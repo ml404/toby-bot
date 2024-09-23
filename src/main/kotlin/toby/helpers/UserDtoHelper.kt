@@ -9,7 +9,6 @@ import toby.jpa.service.IUserService
 @Service
 class UserDtoHelper(private val userService: IUserService) {
     private val logger = KotlinLogging.logger {}
-
     fun calculateUserDto(
         guildId: Long,
         discordId: Long,

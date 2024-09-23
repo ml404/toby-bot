@@ -85,6 +85,7 @@ class ButtonManagerTest {
             every { idLong } returns 1L
             every { id } returns "1"
             every { audioManager } returns mockk(relaxed = true)
+            every { name } returns "guildName"
         }
         val mockChannel = mockk<MessageChannelUnion> {
             every { sendTyping().queue() } just Runs
@@ -108,6 +109,12 @@ class ButtonManagerTest {
             }
             every { member } returns mockk {
                 every { isOwner } returns true
+                every { effectiveName } returns "effectiveName"
+                every { idLong } returns 123L
+                every { user } returns mockk {
+                    every { effectiveName } returns "effectiveName"
+                    every { idLong } returns 123L
+                }
             }
         }
 

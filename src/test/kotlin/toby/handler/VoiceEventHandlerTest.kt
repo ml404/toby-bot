@@ -138,6 +138,7 @@ class VoiceEventHandlerTest {
         }
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
+        every { guild.name } returns "guildName"
         every { audioManager.isConnected } returns false
         every { audioManager.connectedChannel } returns null
         every { audioManager.openAudioConnection(channel) } just Runs
@@ -177,10 +178,15 @@ class VoiceEventHandlerTest {
         every { event.channelLeft } returns channel
         every { event.member } returns mockk {
             every { effectiveName } returns "Effective Name"
+            every { idLong } returns 123L
+            every { user } returns mockk {
+                every { idLong } returns 123L
+            }
         }
         every { channel.members } returns emptyList()
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
+        every { guild.name } returns "guildName"
         every { channel.name } returns "team 1"
         every { audioManager.connectedChannel } returns null
         every { channel.delete().queue() } just Runs
@@ -199,6 +205,7 @@ class VoiceEventHandlerTest {
         val audioManager = mockk<AudioManager>()
         val member = mockk<Member>()
         val previousChannel = mockk<VoiceChannel>()
+        val newChannel = mockk<AudioChannelUnion>(relaxed = true)
 
         // Mocking event and guild behavior
         every { event.guild } returns guild
@@ -206,8 +213,13 @@ class VoiceEventHandlerTest {
         every { guild.audioManager } returns audioManager
         every { audioManager.guild } returns guild
         every { guild.idLong } returns 1L
+        every { guild.name } returns "guildName"
         every { member.user.idLong } returns 12345L  // Simulate the bot's ID
+        every { member.effectiveName } returns "effectiveName" // Simulate the bot's ID
+        every { member.idLong } returns 1234L
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
+        every { event.channelJoined } returns newChannel
+        every { event.channelLeft } returns mockk()
 
         // Simulate previous channel in lastConnectedChannel
         VoiceEventHandler.lastConnectedChannel[guild.idLong] = previousChannel
@@ -216,7 +228,7 @@ class VoiceEventHandlerTest {
         every { audioManager.openAudioConnection(any()) } just Runs
         every { previousChannel.name } returns "PreviousChannel"
 
-        handler.onGuildVoiceMove(event)
+        handler.onGuildVoiceUpdate(event)
 
         // Verifying that the bot tries to rejoin the previous channel
         verify(exactly = 1) { audioManager.openAudioConnection(previousChannel) }
@@ -233,8 +245,10 @@ class VoiceEventHandlerTest {
         every { event.guild } returns guild
         every { event.member } returns member
         every { guild.audioManager } returns audioManager
+        every { guild.name } returns "guildName"
         every { audioManager.guild } returns guild
         every { member.user.idLong } returns 12345L  // Simulate the bot's ID
+        every { member.idLong } returns 12345L  // Simulate the bot's ID
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
         every { guild.idLong } returns 1L
         every { event.channelJoined } returns mockk {
@@ -273,8 +287,10 @@ class VoiceEventHandlerTest {
         every { guild.audioManager } returns audioManager
         every { audioManager.guild } returns guild
         every { member.user.idLong } returns 54321L  // Not bot's ID
+        every { member.idLong } returns 54321L  // Not bot's ID
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
+        every { guild.name } returns "guildName"
         every { member.effectiveName } returns "Some User"
         every { member.user.isBot } returns false
         every { newChannel.members } returns listOf(member)
@@ -293,6 +309,4 @@ class VoiceEventHandlerTest {
         verify(exactly = 1) { audioManager.closeAudioConnection() }
         verify(exactly = 1) { audioManager.openAudioConnection(newChannel) }
     }
-
-
 }

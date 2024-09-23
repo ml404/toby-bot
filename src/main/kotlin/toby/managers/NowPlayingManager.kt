@@ -2,21 +2,19 @@ package toby.managers
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import toby.helpers.MusicPlayerHelper.formatTime
+import toby.logging.DiscordLogger
 import java.awt.Color
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
-private val logger = KotlinLogging.logger {}
-
 class NowPlayingManager {
-
+    private lateinit var logger: DiscordLogger
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
     private val scheduledTasks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
     private val lock = ReentrantReadWriteLock()
@@ -24,6 +22,7 @@ class NowPlayingManager {
 
     fun setNowPlayingMessage(guildId: Long, message: Message) {
         lock.write {
+            logger = DiscordLogger.getLoggerForGuildId(guildId)
             logger.info { "Setting now playing message ${message.idLong} for guild $guildId" }
             guildLastNowPlayingMessage[guildId] = message
         }
@@ -31,6 +30,7 @@ class NowPlayingManager {
 
     fun getLastNowPlayingMessage(guildId: Long): Message? {
         return lock.read {
+            logger = DiscordLogger.getLoggerForGuildId(guildId)
             guildLastNowPlayingMessage[guildId]?.also {
                 logger.info { "Retrieved now playing message ${it.idLong} for guild $guildId" }
             } ?: run {
@@ -42,8 +42,8 @@ class NowPlayingManager {
 
     fun resetNowPlayingMessage(guildId: Long) {
         lock.write {
+            logger = DiscordLogger.getLoggerForGuildId(guildId)
             logger.info { "Resetting now playing message and cancelling scheduler for guild $guildId" }
-
             val message = guildLastNowPlayingMessage.remove(guildId)
             scheduledTasks.remove(guildId)?.cancel(true)
 
@@ -51,24 +51,31 @@ class NowPlayingManager {
                 logger.info { "Attempting to delete now playing message ${message.idLong} for guild $guildId" }
                 message.delete().submit().whenComplete { _, error ->
                     if (error != null) {
-                        logger.error(error) { "Failed to delete now playing message ${message.idLong} for guild $guildId" }
+                        logger.error{ "Failed to delete now playing message ${message.idLong} for guild $guildId" }
                     } else {
                         logger.info { "Deleted now playing message ${message.idLong} for guild $guildId" }
                     }
                 }
             } else {
-                logger.info { "No now playing message to reset for guild $guildId" }
+                logger.info { "No now playing message to reset" }
             }
         }
     }
 
-    fun scheduleNowPlayingUpdate(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer, delay: Long, period: Long) {
+    fun scheduleNowPlayingUpdate(
+        guildId: Long,
+        track: AudioTrack,
+        audioPlayer: AudioPlayer,
+        delay: Long,
+        period: Long
+    ) {
+        logger = DiscordLogger.getLoggerForGuildId(guildId)
         cancelScheduledTask(guildId)
         val scheduledTask = scheduler.scheduleAtFixedRate({
             try {
                 updateNowPlayingMessage(guildId, track, audioPlayer)
             } catch (e: Exception) {
-                logger.error(e) { "Error occurred while updating now playing message for guild $guildId" }
+                logger.error{ "Error occurred while updating now playing message" }
             }
         }, delay, period, TimeUnit.SECONDS)
 
@@ -77,11 +84,12 @@ class NowPlayingManager {
 
     private fun updateNowPlayingMessage(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer) {
         lock.read {
+            logger = DiscordLogger.getLoggerForGuildId(guildId)
             val message = guildLastNowPlayingMessage[guildId]
             message?.let {
                 val embed = buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)
                 message.editMessageEmbeds(embed).queue()
-                logger.info { "Updated now playing message ${message.idLong} for guild $guildId" }
+                logger.info { "Updated now playing message ${message.idLong}" }
             }
         }
     }

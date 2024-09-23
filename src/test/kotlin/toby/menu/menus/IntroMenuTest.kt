@@ -62,6 +62,8 @@ internal class IntroMenuTest : MenuTest {
 
         val member = mockk<Member> {
             every { isOwner } returns true
+            every { effectiveName } returns "Effective Name"
+            every { idLong } returns 123L
         }
 
         every { menuEvent.guild } returns guild
@@ -128,6 +130,10 @@ internal class IntroMenuTest : MenuTest {
 
         val member = mockk<Member> {
             every { isOwner } returns true
+            every { effectiveName } returns "Effective Name"
+            every { user } returns jdaUser
+            every { idLong } returns 1234L
+
         }
 
         every { menuEvent.guild } returns guild

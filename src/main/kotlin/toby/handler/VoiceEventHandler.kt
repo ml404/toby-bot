@@ -1,7 +1,5 @@
 package toby.handler
 
-import mu.KLogger
-import mu.KotlinLogging
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -19,6 +17,7 @@ import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.lavaplayer.PlayerManager
+import toby.logging.DiscordLogger
 import java.util.concurrent.ConcurrentHashMap
 
 private const val teamRegex = "(?i)team\\s[0-9]+"
@@ -30,10 +29,13 @@ class VoiceEventHandler @Autowired constructor(
     private val userDtoHelper: UserDtoHelper
 ) : ListenerAdapter() {
 
-    private val logger: KLogger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     override fun onReady(event: ReadyEvent) {
-        event.jda.guildCache.forEach { it.connectToMostPopulatedVoiceChannel() }
+        event.jda.guildCache.forEach {
+            logger = DiscordLogger.getLoggerForGuild(it)
+            it.connectToMostPopulatedVoiceChannel()
+        }
     }
 
     private fun Guild.connectToMostPopulatedVoiceChannel() {
@@ -41,11 +43,8 @@ class VoiceEventHandler @Autowired constructor(
             .filter { channel -> channel.members.any { !it.user.isBot } }
             .maxByOrNull { channel -> channel.members.count { !it.user.isBot } }
 
-        if (mostPopulatedChannel != null && mostPopulatedChannel.members.count { !it.user.isBot } > 0) {
-            mostPopulatedChannel.checkStateAndConnectToVoiceChannel()
-        } else {
-            logger.info("No occupied voice channel to join found in guild: ${this.name}")
-        }
+        mostPopulatedChannel?.checkStateAndConnectToVoiceChannel()
+            ?: logger.info("No occupied voice channel to join found")
     }
 
     private fun VoiceChannel.checkStateAndConnectToVoiceChannel() {
@@ -53,32 +52,44 @@ class VoiceEventHandler @Autowired constructor(
         val audioManager = guild.audioManager
         if (!audioManager.isConnected) {
             audioManager.openAudioConnection(this)
-            logger.info { "Connected to voice channel: ${this.name} in guild: ${guild.name}" }
+            logger.info { "Connected to voice channel: ${this.name}" }
         }
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-        val guildId = event.guild.idLong
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild, event.member)
 
         when {
             event.channelJoined != null && event.channelLeft != null -> {
-                logger.info("Voice move event triggered for guild $guildId from channel ${event.channelLeft} to channel ${event.channelJoined} for user ${event.member.effectiveName}")
+                logVoiceMove(event)
                 onGuildVoiceMove(event)
             }
 
             event.channelJoined != null -> {
-                logger.info("Voice join event triggered for guild $guildId in channel ${event.channelJoined} for user ${event.member.effectiveName}")
+                logVoiceJoin(event)
                 onGuildVoiceJoin(event)
             }
 
             event.channelLeft != null -> {
-                logger.info("Voice leave event triggered for guild $guildId from channel ${event.channelLeft} for user ${event.member.effectiveName}")
+                logVoiceLeave(event)
                 onGuildVoiceLeave(event)
             }
         }
     }
 
-    fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
+    private fun logVoiceMove(event: GuildVoiceUpdateEvent) {
+        logger.info { "Voice move event triggered from channel ${event.channelLeft} to channel ${event.channelJoined}" }
+    }
+
+    private fun logVoiceJoin(event: GuildVoiceUpdateEvent) {
+        logger.info { "Voice join event triggered in channel ${event.channelJoined}" }
+    }
+
+    private fun logVoiceLeave(event: GuildVoiceUpdateEvent) {
+        logger.info { "Voice leave event triggered from channel ${event.channelLeft}" }
+    }
+
+    private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
         val tobyBot = jda.selfUser
         val member = event.member
         val guild = event.guild
@@ -86,19 +97,16 @@ class VoiceEventHandler @Autowired constructor(
 
         // Check if the bot is being moved
         if (member.user.idLong == tobyBot.idLong) {
-            // Bot is being moved
-            logger.info { "${tobyBot.name} has been moved, checking to see if a previously connected channel is valid for me to rejoin ..." }
+            logger.info { "${tobyBot.name} has been moved, checking for previous channel to rejoin..." }
             val previousChannel = lastConnectedChannel[guild.idLong]
             if (previousChannel != null) {
-                // Bot should rejoin the previous channel
-                logger.info { "Rejoining '${previousChannel.name}' on guild '${guild.idLong}'" }
+                logger.info { "Rejoining '${previousChannel.name}'" }
                 audioManager.rejoin(previousChannel)
             } else {
-                logger.warn("Bot was moved from a channel but no previous channel found.")
+                logger.warn("Bot was moved but no previous channel found.")
             }
         } else {
-            // Another member is moving, handle user movements
-            logger.info { "User '${member.user.effectiveName}' has moved on guild '${guild.idLong}', checking to see if AudioConnection should close on current channel and then join them ..." }
+            logger.info { "User '${member.user.effectiveName}' has moved, checking if AudioConnection should close..." }
             audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
             val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
             checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
@@ -109,9 +117,9 @@ class VoiceEventHandler @Autowired constructor(
     private fun AudioManager.rejoin(channel: VoiceChannel) {
         runCatching {
             this.openAudioConnection(channel)
-            logger.info("Rejoined previous channel '${channel.name}' on guild '${guild.idLong}'")
+            logger.info("Rejoined previous channel '${channel.name}'")
         }.onFailure {
-            logger.error("Failed to rejoin channel '${channel.name}' on guild '${guild.idLong}': ${it.message}")
+            logger.error("Failed to rejoin channel '${channel.name}': ${it.message}")
         }
     }
 
@@ -119,12 +127,12 @@ class VoiceEventHandler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig =
-            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val deleteDelayConfig = configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+
         checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
         if (audioManager.connectedChannel == event.channelJoined) {
-            logger.info("AudioManager channel ${audioManager.connectedChannel} and event joined channel ${event.channelJoined} are the same")
+            logger.info { "AudioManager channel and event joined channel are the same" }
             setupAndPlayUserIntro(event.member, guild, deleteDelayConfig)
         }
     }
@@ -139,7 +147,7 @@ class VoiceEventHandler @Autowired constructor(
         if (event.member.user.idLong != jda.selfUser.idLong) {
             val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
             if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-                logger.info { "Joined channel has non bot users, and the AudioManager is not connected, joining new channel '${event.channelJoined?.name}' on guild ${event.guild.idLong}" }
+                logger.info { "Joining new channel '${event.channelJoined?.name}'." }
                 PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
                 audioManager.openAudioConnection(event.channelJoined)
                 lastConnectedChannel[guild.idLong] = event.channelJoined!!.asVoiceChannel()
@@ -167,7 +175,7 @@ class VoiceEventHandler @Autowired constructor(
         if (connectedChannel != null) {
             if (connectedChannel.members.none { !it.user.isBot }) {
                 this.closeAudioConnection()
-                logger.info("Audio connection closed on guild '${this.guild.idLong}' due to empty channel.")
+                logger.info("Audio connection closed due to empty channel.")
                 lastConnectedChannel.remove(this.guild.idLong)
             }
         }
@@ -193,6 +201,5 @@ class VoiceEventHandler @Autowired constructor(
 
     companion object {
         var lastConnectedChannel = ConcurrentHashMap<Long, VoiceChannel>()
-
     }
 }

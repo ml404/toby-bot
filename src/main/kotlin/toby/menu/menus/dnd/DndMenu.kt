@@ -2,9 +2,9 @@ package toby.menu.menus.dnd
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import mu.KotlinLogging
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
+import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -15,10 +15,11 @@ class DndMenu(
     private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper, dnDHelper),
     private val eventProcessor: DndEventProcessor = DndEventProcessor()
 ) : IMenu {
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        logger.info { "DnD menu event started for guild ${ctx.guild.idLong}" }
+        logger = DiscordLogger.createLoggerForGuildAndUser(ctx.guild, ctx.selectEvent.member!!)
+        logger.info { "DnD menu event started" }
         val event = ctx.selectEvent
         event.deferReply(true).queue()
 
@@ -29,7 +30,7 @@ class DndMenu(
         runCatching {
             coroutineHandler.launchFetchAndSendEmbed(event, typeName, typeValue, hook)
         }.onFailure {
-            logger.error(it) { "Error handling DnD retry request" }
+            logger.error { "Error handling DnD retry request" }
             hook.sendMessage("Something went wrong trying to send off the API call for your selection, sorry about that")
                 .setEphemeral(true).queue()
         }

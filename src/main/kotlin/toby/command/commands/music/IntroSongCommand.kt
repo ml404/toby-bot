@@ -1,6 +1,5 @@
 package toby.command.commands.music
 
-import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -16,12 +15,12 @@ import toby.helpers.URLHelper
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
+import toby.logging.DiscordLogger
 
 class IntroSongCommand(
     private val introHelper: IntroHelper,
 ) : IMusicCommand {
-
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
@@ -35,11 +34,11 @@ class IntroSongCommand(
     ) {
         val event = ctx.event
         event.deferReply(true).queue()
-
         val introVolume = introHelper.calculateIntroVolume(event)
         val mentionedMembers = event.getOptionMentionedMembers()
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
 
-        logger.info { "Inside handleMusicCommand for $name on guild '${event.guild?.idLong}'" }
+        logger.info { "Inside handleMusicCommand" }
         if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {
             sendErrorMessage(event, deleteDelay!!)
             return
@@ -150,10 +149,10 @@ class IntroSongCommand(
         return false
     }
 
-
     private fun SlashCommandInteractionEvent.getOptionMentionedMembers(): List<Member> {
         return this.getOption(USERS)?.mentions?.members.orEmpty()
     }
+
 
     override val name: String
         get() = "introsong"
