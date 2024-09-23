@@ -110,7 +110,7 @@ object MusicPlayerHelper {
         logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
-            logger.info { "Stopping the song and clearing the queue on guild ${event.guild?.idLong}." }
+            logger.info { "Stopping the song and clearing the queue." }
             musicManager.scheduler.apply {
                 stopTrack(true)
                 queue.clear()
@@ -137,7 +137,7 @@ object MusicPlayerHelper {
         val audioPlayer = musicManager.audioPlayer
         val paused = audioPlayer.isPaused
         val message = if (paused) "Resuming: `" else "Pausing: `"
-        logger.info { "Changing pause status to ${!paused} for track ${audioPlayer.playingTrack?.info?.title} on guild ${event.guild?.idLong}." }
+        logger.info { "Changing pause status to ${!paused} for track ${audioPlayer.playingTrack?.info?.title} ." }
         sendMessageAndSetPaused(audioPlayer, event, message, deleteDelay, !paused)
     }
 
@@ -170,10 +170,10 @@ object MusicPlayerHelper {
         val hook = event.hook
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
-
+        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
         when {
             audioPlayer.playingTrack == null -> {
-                logger.warn { "Attempted to skip tracks but no track is currently playing on guild ${event.guild?.idLong}." }
+                logger.warn { "Attempted to skip tracks but no track is currently playing ." }
                 val embed = EmbedBuilder()
                     .setTitle("No Track Playing")
                     .setDescription("There is no track playing currently")
@@ -185,7 +185,7 @@ object MusicPlayerHelper {
             }
 
             tracksToSkip < 0 -> {
-                logger.warn { "Attempted to skip a negative number of tracks: $tracksToSkip on guild ${event.guild?.idLong}." }
+                logger.warn { "Attempted to skip a negative number of tracks: $tracksToSkip ." }
                 val embed = EmbedBuilder()
                     .setTitle("Invalid Skip Request")
                     .setDescription("You're not too bright, but thanks for trying")
@@ -198,7 +198,7 @@ object MusicPlayerHelper {
         }
 
         if (playerManager.isCurrentlyStoppable || canOverrideSkips) {
-            logger.info { "Skipping $tracksToSkip track(s) on guild ${event.guild?.idLong}." }
+            logger.info { "Skipping $tracksToSkip track(s)." }
             nowPlayingManager.cancelScheduledTask(event.guild?.idLong!!)
             repeat(tracksToSkip) {
                 musicManager.scheduler.nextTrack()

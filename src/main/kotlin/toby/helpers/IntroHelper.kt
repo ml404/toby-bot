@@ -48,7 +48,7 @@ class IntroHelper(
         userName: String = event.user.effectiveName
     ) {
         logger = setupLogger(event)
-        logger.info { "Handling media inside intro helper for guild ${event.guild?.idLong} and user '$userName' ..." }
+        logger.info { "Handling media inside intro helper ..." }
         when {
             attachment != null -> handleAttachment(
                 event,
@@ -85,7 +85,7 @@ class IntroHelper(
         selectedMusicDto: MusicDto? = null
     ) {
         logger = setupLogger(event)
-        logger.info { "Handling attachment inside intro helper for guild ${event.guild?.idLong} and user '$userName' ..." }
+        logger.info { "Handling attachment inside intro helper ..." }
         when {
             attachment.fileExtension != "mp3" -> {
                 logger.info { "invalid file extension was used" }
@@ -127,7 +127,7 @@ class IntroHelper(
         selectedMusicDto: MusicDto? = null
     ) {
         logger = setupLogger(event)
-        logger.info { "Handling url inside intro helper for guild ${event.guild?.idLong} and user '$userName' ..." }
+        logger.info { "Handling url inside intro helper ..." }
         val urlString = optionalURI.map(URI::toString).orElse("")
         persistMusicUrl(
             event,
@@ -163,7 +163,7 @@ class IntroHelper(
         selectedMusicDto: MusicDto? = null
     ) {
         logger = setupLogger(event)
-        logger.info { "Persisting music file for user '$userName' on guild: ${event.guild?.idLong}" }
+        logger.info { "Persisting music file" }
         val fileContents = runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
                 .setEphemeral(true)
