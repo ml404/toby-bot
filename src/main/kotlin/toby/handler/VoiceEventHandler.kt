@@ -41,13 +41,13 @@ class VoiceEventHandler @Autowired constructor(
             .maxByOrNull { channel -> channel.members.count { !it.user.isBot } }
 
         if (mostPopulatedChannel != null && mostPopulatedChannel.members.count { !it.user.isBot } > 0) {
-            mostPopulatedChannel.connectToVoiceChannel()
+            mostPopulatedChannel.checkStateAndConnectToVoiceChannel()
         } else {
             logger.info("No occupied voice channel to join found in guild: ${this.name}")
         }
     }
 
-    private fun VoiceChannel.connectToVoiceChannel() {
+    private fun VoiceChannel.checkStateAndConnectToVoiceChannel() {
         val guild = this.guild
         val audioManager = guild.audioManager
         if (!audioManager.isConnected) {
@@ -80,20 +80,23 @@ class VoiceEventHandler @Autowired constructor(
     private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
         val member = event.member
         val guild = event.guild
-        guild.audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
+        val audioManager = guild.audioManager
         if (member.user.jda.selfUser == jda.selfUser) {
             val previousChannel = lastConnectedChannel[guild.idLong]
             if (previousChannel != null) {
-                rejoinPreviousChannel(guild, previousChannel)
+                audioManager.rejoin(previousChannel)
             } else {
                 logger.warn("Bot was moved from a channel but no previous channel found.")
             }
+        } else {
+            val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
+            checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
         }
     }
 
-    private fun rejoinPreviousChannel(guild: Guild, channel: VoiceChannel) {
+    private fun AudioManager.rejoin(channel: VoiceChannel) {
         runCatching {
-            guild.audioManager.openAudioConnection(channel)
+            this.openAudioConnection(channel)
             logger.info("Rejoined previous channel '${channel.name}' on guild '${guild.id}'")
         }.onFailure {
             logger.error("Failed to rejoin channel '${channel.name}' on guild '${guild.id}': ${it.message}")
@@ -108,11 +111,7 @@ class VoiceEventHandler @Autowired constructor(
             configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
         lastConnectedChannel[guild.idLong] = event.channelJoined!!.asVoiceChannel()
 
-        val nonBotConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
-        if (nonBotConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-            PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-            audioManager.openAudioConnection(event.channelJoined)
-        }
+        checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
         if (audioManager.connectedChannel == event.channelJoined) {
             logger.info("Audiomanager channel ${audioManager.connectedChannel} and event joined channel ${event.channelJoined} are the same")
@@ -120,8 +119,22 @@ class VoiceEventHandler @Autowired constructor(
         }
     }
 
+    private fun checkStateAndConnectToVoiceChannel(
+        event: GuildVoiceUpdateEvent,
+        audioManager: AudioManager,
+        guild: Guild,
+        defaultVolume: Int
+    ) {
+        val leftChannelConnectedMembers = event.channelLeft?.members?.filter { !it.user.isBot } ?: emptyList()
+        val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
+        if (leftChannelConnectedMembers.isEmpty() && joinedChannelConnectedMembers.isNotEmpty()) {
+            PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
+            audioManager.openAudioConnection(event.channelJoined)
+        }
+    }
+
     private fun setupAndPlayUserIntro(member: Member, guild: Guild, deleteDelayConfig: ConfigDto?) {
-        val requestingUserDto = getRequestingUserDto(member)
+        val requestingUserDto = member.getRequestingUserDto()
         playUserIntro(requestingUserDto, guild, deleteDelayConfig?.value?.toInt() ?: 0)
     }
 
@@ -158,10 +171,10 @@ class VoiceEventHandler @Autowired constructor(
         return config?.value?.toInt() ?: defaultValue
     }
 
-    private fun getRequestingUserDto(member: Member): UserDto {
-        val discordId = member.idLong
-        val guildId = member.guild.idLong
-        return userDtoHelper.calculateUserDto(guildId, discordId, member.isOwner)
+    private fun Member.getRequestingUserDto(): UserDto {
+        val discordId = this.idLong
+        val guildId = this.guild.idLong
+        return userDtoHelper.calculateUserDto(guildId, discordId, this.isOwner)
     }
 
     companion object {
