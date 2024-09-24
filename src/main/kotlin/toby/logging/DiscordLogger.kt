@@ -17,10 +17,17 @@ interface CustomLogger {
 }
 
 class DiscordLogger(
-    private val logger: KLogger = KotlinLogging.logger {},
-    private val guildContext: String = "",
+    private var logger: KLogger = KotlinLogging.logger {},
+    private var guildContext: String = "",
     private var userContext: String = ""
 ) : CustomLogger {
+
+    constructor(guildId: Long) : this() {
+        val existingLogger = getLoggerForGuildId(guildId)
+        this.logger = existingLogger.logger
+        this.guildContext = existingLogger.guildContext
+        this.userContext = existingLogger.userContext
+    }
 
     override fun info(message: String) {
         logger.info { "[INFO] $guildContext$userContext $message" }
