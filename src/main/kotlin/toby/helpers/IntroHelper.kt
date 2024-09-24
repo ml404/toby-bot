@@ -31,10 +31,10 @@ class IntroHelper(
 
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
-        val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
-        val defaultVolume = configService.getConfigByName(volumePropertyName, event.guild?.id)?.value?.toIntOrNull()
+        val volumePropertyName = ConfigDto.Configurations.INTRO_VOLUME.configValue
+        val defaultIntroVolume = configService.getConfigByName(volumePropertyName, event.guild?.id)?.value?.toIntOrNull()
         val volumeOption = event.getOption(VOLUME)?.asInt
-        return (volumeOption ?: defaultVolume ?: 100).coerceIn(1, 100)
+        return (volumeOption ?: defaultIntroVolume ?: 100).coerceIn(1, 100)
     }
 
     fun handleMedia(
