@@ -13,12 +13,13 @@ import toby.command.CommandTest.Companion.guild
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.commands.music.MusicCommandTest.Companion.audioManager
-import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.botMember
 import toby.command.commands.music.MusicCommandTest.Companion.memberVoiceState
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.track
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import toby.command.commands.music.channel.JoinCommand
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
 

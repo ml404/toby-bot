@@ -7,7 +7,7 @@ import toby.menu.IMenu
 import toby.menu.MenuContext
 
 
-class IntroMenu(
+class SetIntroMenu(
     private val introHelper: IntroHelper,
     private val userDtoHelper: UserDtoHelper
 ) : IMenu {
@@ -67,5 +67,5 @@ class IntroMenu(
     }
 
     override val name: String
-        get() = "intro"
+        get() = "setintro"
 }

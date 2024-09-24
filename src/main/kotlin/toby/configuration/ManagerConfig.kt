@@ -3,6 +3,7 @@ package toby.configuration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import toby.handler.EventWaiter
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.helpers.IntroHelper
@@ -46,9 +47,10 @@ open class ManagerConfig {
         httpHelper: HttpHelper,
         userDtoHelper: UserDtoHelper,
         introHelper: IntroHelper,
-        dndHelper: DnDHelper
+        dndHelper: DnDHelper,
+        eventWaiter: EventWaiter
     ): MenuManager {
-        return MenuManager(configService, httpHelper, introHelper, userDtoHelper, dndHelper)
+        return MenuManager(configService, httpHelper, introHelper, userDtoHelper, dndHelper, eventWaiter)
     }
 
     @Bean

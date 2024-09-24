@@ -14,6 +14,7 @@ import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
+import toby.command.commands.music.player.PauseCommand
 import java.awt.Color
 import java.util.concurrent.ArrayBlockingQueue
 

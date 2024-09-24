@@ -3,6 +3,7 @@ package toby.managers
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
+import toby.handler.EventWaiter
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.helpers.IntroHelper
@@ -12,17 +13,19 @@ import toby.jpa.service.IConfigService
 import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
-import toby.menu.menus.IntroMenu
+import toby.menu.menus.EditIntroMenu
+import toby.menu.menus.SetIntroMenu
 import toby.menu.menus.dnd.DndMenu
 import java.util.*
 
 @Configurable
-class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper, introHelper: IntroHelper, userDtoHelper: UserDtoHelper, dndHelper: DnDHelper) {
+class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper, introHelper: IntroHelper, userDtoHelper: UserDtoHelper, dndHelper: DnDHelper, eventWaiter: EventWaiter) {
     private val menus: MutableList<IMenu> = ArrayList()
     private lateinit var logger: DiscordLogger
     init {
         addMenu(DndMenu(httpHelper = httpHelper, dnDHelper = dndHelper))
-        addMenu(IntroMenu(introHelper, userDtoHelper))
+        addMenu(SetIntroMenu(introHelper, userDtoHelper))
+        addMenu(EditIntroMenu(introHelper, eventWaiter))
     }
 
     private fun addMenu(menu: IMenu) {

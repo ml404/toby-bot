@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.interactions.Interaction
 import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.managers.AudioManager
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
@@ -45,6 +46,7 @@ interface MusicCommandTest : CommandTest {
         every { webhookMessageCreateAction.setActionRow(listOf(pausePlay, stop)) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.complete() } returns message
         every { webhookMessageCreateAction.setActionRow(any(), any()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.addActionRow(any<StringSelectMenu>()) } returns webhookMessageCreateAction
         every { message.delete() } returns auditableRestAction as AuditableRestAction<Void>
         every { auditableRestAction.queue() } just Runs
         every { message.editMessage(any<String>()) } returns messageEditAction

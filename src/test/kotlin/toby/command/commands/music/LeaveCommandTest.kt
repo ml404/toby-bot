@@ -13,11 +13,12 @@ import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest.Companion.audioChannelUnion
 import toby.command.commands.music.MusicCommandTest.Companion.audioManager
-import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.memberVoiceState
+import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.musicManager
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import toby.command.commands.music.channel.LeaveCommand
 import toby.jpa.service.IConfigService
 import java.util.concurrent.LinkedBlockingQueue
 

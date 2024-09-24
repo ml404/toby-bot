@@ -2,7 +2,10 @@ package toby.command.commands.music
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
+import toby.command.commands.music.player.ShuffleCommand
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class ShuffleCommandTest : MusicCommandTest {

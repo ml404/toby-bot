@@ -1,9 +1,10 @@
-package toby.command.commands.music
+package toby.command.commands.music.channel
 
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand
 import toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto

@@ -1,10 +1,11 @@
-package toby.command.commands.music
+package toby.command.commands.music.player
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand
 import toby.helpers.MusicPlayerHelper
 import toby.helpers.URLHelper
 import toby.jpa.dto.UserDto

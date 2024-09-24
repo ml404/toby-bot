@@ -4,6 +4,7 @@ import io.mockk.mockk
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Profile
+import toby.handler.EventWaiter
 import toby.helpers.HttpHelper
 
 @Profile("test")
@@ -12,6 +13,11 @@ open class TestAppConfig {
 
     @Bean
     open fun httpHelper(): HttpHelper {
+        return mockk(relaxed = true)
+    }
+
+    @Bean
+    open fun eventWaiter(): EventWaiter {
         return mockk(relaxed = true)
     }
 }
