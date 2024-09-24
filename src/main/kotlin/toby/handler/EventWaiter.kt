@@ -1,11 +1,11 @@
 package toby.handler
 
+import kotlinx.coroutines.*
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
-import kotlin.concurrent.thread
 
-class EventWaiter : ListenerAdapter() {
-
+class EventWaiter(val dispatcher: CoroutineDispatcher = Dispatchers.Default) : ListenerAdapter() {
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val waitingEvents = mutableListOf<WaitingEvent<MessageReceivedEvent>>()
 
     // Function to add an event listener
@@ -18,9 +18,9 @@ class EventWaiter : ListenerAdapter() {
         val waitingEvent = WaitingEvent(condition, action, timeoutAction)
         waitingEvents.add(waitingEvent)
 
-        // Timeout logic
-        thread {
-            Thread.sleep(timeout)
+        // Non-blocking timeout logic using coroutines
+        scope.launch {
+            delay(timeout)
             if (waitingEvents.contains(waitingEvent)) {
                 waitingEvents.remove(waitingEvent)
                 timeoutAction.invoke()
