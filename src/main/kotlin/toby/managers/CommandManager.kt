@@ -18,6 +18,7 @@ import toby.command.commands.moderation.*
 import toby.command.commands.music.IMusicCommand
 import toby.command.commands.music.channel.JoinCommand
 import toby.command.commands.music.channel.LeaveCommand
+import toby.command.commands.music.intro.EditIntroCommand
 import toby.command.commands.music.intro.SetIntroCommand
 import toby.command.commands.music.player.*
 import toby.helpers.*
@@ -89,6 +90,7 @@ class CommandManager @Autowired constructor(
         addCommand(QueueCommand())
         addCommand(ShuffleCommand())
         addCommand(SetIntroCommand(introHelper))
+        addCommand(EditIntroCommand())
 
         //dnd commands
         addCommand(InitiativeCommand(dndHelper))
