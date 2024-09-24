@@ -24,7 +24,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
         setUpLogger()
-        logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild ${event?.guild?.idLong}")
+        logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -39,7 +39,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
         setUpLogger()
-        logger.info { "Adding ${playList.name} to the queue for guild ${event?.guild?.idLong}" }
+        logger.info { "Adding ${playList.name} to the queue for guild $guildId" }
         event?.hook
             ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
@@ -61,7 +61,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
 
     override fun onTrackStart(player: AudioPlayer, track: AudioTrack) {
         setUpLogger()
-        logger.info { "${track.info.title} by ${track.info.author} started for guild ${event?.guild?.idLong}" }
+        logger.info { "${track.info.title} by ${track.info.author} started for guild $guildId" }
         super.onTrackStart(player, track)
         player.volume = track.userData as Int
         event?.let { nowPlaying(it, PlayerManager.instance, deriveDeleteDelayFromTrack(track)) }
