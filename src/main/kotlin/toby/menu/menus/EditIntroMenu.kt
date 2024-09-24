@@ -1,5 +1,6 @@
 package toby.menu.menus
 
+import toby.command.ICommand.Companion.deleteAfter
 import toby.handler.EventWaiter
 import toby.helpers.IntroHelper
 import toby.logging.DiscordLogger
@@ -47,18 +48,23 @@ class EditIntroMenu(
                         selectedIntro.introVolume = newVolume
                         introHelper.saveIntro(selectedIntro)
 
-                        msgEvent.channel.sendMessage("Volume updated successfully to $newVolume!").queue()
+                        msgEvent.channel.sendMessage("Volume updated successfully to $newVolume!").queue{ it?.deleteAfter(deleteDelay) }
+                        logger.info { "Volume updated successfully to $newVolume!" }
+
+                        msgEvent.message.deleteAfter(0)
                     } else {
-                        msgEvent.channel.sendMessage("Invalid volume. Please enter a number between 0 and 100.").queue()
+                        logger.warn { "Invalid volume was sent" }
+                        msgEvent.channel.sendMessage("Invalid volume. Please enter a number between 0 and 100.").queue{ it?.deleteAfter(deleteDelay) }
+                        msgEvent.message.deleteAfter(0)
                     }
                 },
-                timeout = 3000L,  // 3-second timeout
+                timeout = 10000L,  // 10-second timeout
                 timeoutAction = {
-                    event.hook.sendMessage("No response received. Volume update canceled.").queue()
+                    event.hook.sendMessage("No response received. Volume update canceled.").setEphemeral(true).queue{ it?.deleteAfter(deleteDelay) }
                 }
             )
         } else {
-            event.hook.sendMessage("Unable to find the selected intro.").setEphemeral(true).queue()
+            event.hook.sendMessage("Unable to find the selected intro.").setEphemeral(true).queue{ it?.deleteAfter(deleteDelay) }
         }
     }
 
