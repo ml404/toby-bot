@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import mu.KotlinLogging
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
@@ -14,6 +13,7 @@ import toby.dto.web.dnd.DnDResponse
 import toby.dto.web.dnd.QueryResult
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
+import toby.logging.DiscordLogger
 
 class DnDCommandQueryHandler(
     private val dispatcher: CoroutineDispatcher,
@@ -22,8 +22,10 @@ class DnDCommandQueryHandler(
     private val hook: InteractionHook,
     private val deleteDelay: Int
 ) {
-    private val logger =  KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
+
     fun processQuery(typeName: String?, typeValue: String?, query: String) {
+        setupLogger()
         CoroutineScope(dispatcher).launch {
             var hasReplied = false
             runCatching {
@@ -84,5 +86,9 @@ class DnDCommandQueryHandler(
             return true
         }
         return false
+    }
+
+    private fun setupLogger(){
+        logger = DiscordLogger.getLoggerForGuildId(hook.interaction.guild!!.idLong)
     }
 }

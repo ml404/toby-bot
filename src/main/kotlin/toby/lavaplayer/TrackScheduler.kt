@@ -5,24 +5,25 @@ import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
-import mu.KotlinLogging
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.helpers.MusicPlayerHelper.deriveDeleteDelayFromTrack
 import toby.helpers.MusicPlayerHelper.nowPlaying
 import toby.helpers.MusicPlayerHelper.resetMessages
+import toby.logging.DiscordLogger
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
-class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
+class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : AudioEventAdapter() {
     var queue: BlockingQueue<AudioTrack?> = LinkedBlockingQueue()
     var isLooping: Boolean = false
     var event: SlashCommandInteractionEvent? = null
     var deleteDelay: Int? = null
     private var previousVolume: Int? = null
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
+        setUpLogger()
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild ${event?.guild?.idLong}")
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
@@ -37,6 +38,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
+        setUpLogger()
         logger.info { "Adding ${playList.name} to the queue for guild ${event?.guild?.idLong}" }
         event?.hook
             ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
@@ -58,6 +60,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     override fun onTrackStart(player: AudioPlayer, track: AudioTrack) {
+        setUpLogger()
         logger.info { "${track.info.title} by ${track.info.author} started for guild ${event?.guild?.idLong}" }
         super.onTrackStart(player, track)
         player.volume = track.userData as Int
@@ -65,6 +68,7 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
+        setUpLogger()
         event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         if (endReason.mayStartNext) {
@@ -114,6 +118,10 @@ class TrackScheduler(val player: AudioPlayer) : AudioEventAdapter() {
 
     fun setPreviousVolume(previousVolume: Int?) {
         this.previousVolume = previousVolume
+    }
+
+    private fun setUpLogger() {
+        logger = DiscordLogger.getLoggerForGuildId(guildId)
     }
 
     private fun Long?.resetMessagesForGuildId() {

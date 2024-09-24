@@ -36,7 +36,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
 
     fun getMusicManager(guild: Guild): GuildMusicManager {
         return musicManagers.computeIfAbsent(guild.idLong) {
-            val guildMusicManager = GuildMusicManager(this.audioPlayerManager)
+            val guildMusicManager = GuildMusicManager(this.audioPlayerManager, guild.idLong)
             guild.audioManager.sendingHandler = guildMusicManager.sendHandler
             guildMusicManager
         }

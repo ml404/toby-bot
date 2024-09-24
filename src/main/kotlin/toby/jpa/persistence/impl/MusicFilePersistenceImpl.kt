@@ -3,21 +3,22 @@ package toby.jpa.persistence.impl
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Query
-import mu.KotlinLogging
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import toby.helpers.FileUtils.computeHash
 import toby.jpa.dto.MusicDto
 import toby.jpa.persistence.IMusicFilePersistence
+import toby.logging.DiscordLogger
 
 @Repository
 @Transactional
 open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
-    private val logger = KotlinLogging.logger {}
+    private lateinit var logger: DiscordLogger
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
+        logger = DiscordLogger(musicDto.userDto!!.guildId)
         logger.info { "Persisting $musicDto" }
         entityManager.persist(musicDto)
         entityManager.flush()
@@ -28,6 +29,7 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @Transactional(readOnly = true)
     override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
         return runCatching {
+            logger = DiscordLogger(musicDto.userDto!!.guildId)
             logger.info { "Checking to see if '${musicDto.musicBlobHash}' has already been uploaded for this guild and user..." }
             val query = entityManager.createQuery(
                 "SELECT m FROM MusicDto m WHERE m.musicBlobHash = :musicBlobHash AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
@@ -42,7 +44,8 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
-        logger.info { "Creating new music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
+        logger = DiscordLogger(musicDto.userDto!!.guildId)
+        logger.info { "Creating new music file for ${musicDto.userDto}" }
         if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
@@ -75,14 +78,15 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
-        logger.info { "Updating music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
+        logger = DiscordLogger(musicDto.userDto!!.guildId)
+        logger.info { "Updating music file for ${musicDto.userDto} " }
         if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
         entityManager.merge(musicDto)
         entityManager.flush()
-        logger.info { "Updated music file for ${musicDto.userDto} on guild '${musicDto.userDto?.guildId}'" }
+        logger.info { "Updated music file for ${musicDto.userDto}" }
         return musicDto
     }
 
