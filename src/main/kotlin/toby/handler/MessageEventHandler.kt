@@ -101,13 +101,18 @@ class MessageEventHandler @Autowired constructor(
     override fun onButtonInteraction(event: ButtonInteractionEvent) {
         event.deferReply(true).queue()
         if (!event.user.isBot) {
-            buttonManager.handle(event)
+            launch {
+                buttonManager.handle(event)
+            }
         }
     }
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
         logger.info { "StringSelectInteractionEvent received" }
-        menuManager.handle(event)
+        launch {
+            logger.info { "Launching coroutine for '${event}'" }
+            menuManager.handle(event)
+        }
     }
 }
