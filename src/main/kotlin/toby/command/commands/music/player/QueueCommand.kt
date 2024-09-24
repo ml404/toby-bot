@@ -1,8 +1,9 @@
-package toby.command.commands.music
+package toby.command.commands.music.player
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand
 import toby.helpers.MusicPlayerHelper
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager

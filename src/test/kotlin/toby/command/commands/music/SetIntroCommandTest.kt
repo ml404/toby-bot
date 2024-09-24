@@ -15,6 +15,7 @@ import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.guild
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
+import toby.command.commands.music.intro.SetIntroCommand
 import toby.helpers.IntroHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.MusicDto
@@ -26,8 +27,8 @@ import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
-internal class IntroSongCommandTest : MusicCommandTest {
-    private lateinit var introSongCommand: IntroSongCommand
+internal class SetIntroCommandTest : MusicCommandTest {
+    private lateinit var setIntroCommand: SetIntroCommand
     private var userService: IUserService = mockk(relaxed = true)
     private var musicFileService: IMusicFileService = mockk(relaxed = true)
     private var configService: IConfigService = mockk(relaxed = true)
@@ -42,7 +43,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
             every { musicDtos } returns emptyList<MusicDto>().toMutableList()
         }
         configService = mockk()
-        introSongCommand = IntroSongCommand(introHelper)
+        setIntroCommand = SetIntroCommand(introHelper)
 
         every { event.getOption("volume") } returns mockk {
             every { asInt } returns 20
@@ -71,7 +72,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns volumeConfig
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,
@@ -108,7 +109,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         setupAttachments(attachmentOptionMapping)
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,
@@ -137,7 +138,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         setupMentions(userOptionMapping)
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,
@@ -171,7 +172,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         every { requestingUserDto.superUser } returns false
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,
@@ -201,7 +202,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         }
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,
@@ -238,7 +239,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         setupMentions(userOptionMapping)
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,
@@ -290,7 +291,7 @@ internal class IntroSongCommandTest : MusicCommandTest {
         setupAttachments(attachmentOptionMapping)
 
         // Act
-        introSongCommand.handleMusicCommand(
+        setIntroCommand.handleMusicCommand(
             commandContext,
             MusicCommandTest.playerManager,
             requestingUserDto,

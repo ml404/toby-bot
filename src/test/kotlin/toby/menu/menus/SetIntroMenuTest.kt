@@ -17,9 +17,9 @@ import toby.menu.MenuContext
 import toby.menu.MenuTest
 import toby.menu.MenuTest.Companion.menuEvent
 
-internal class IntroMenuTest : MenuTest {
+internal class SetIntroMenuTest : MenuTest {
 
-    private lateinit var introMenu: IntroMenu
+    private lateinit var setIntroMenu: SetIntroMenu
     private lateinit var introHelper: IntroHelper
     private lateinit var userDtoHelper: UserDtoHelper
 
@@ -34,7 +34,7 @@ internal class IntroMenuTest : MenuTest {
         userDtoHelper = mockk(relaxed = true)
 
         // Initialize the class under test
-        introMenu = IntroMenu(introHelper, userDtoHelper)
+        setIntroMenu = SetIntroMenu(introHelper, userDtoHelper)
 
         // Mock the context
         menuContext = mockk(relaxed = true)
@@ -78,7 +78,7 @@ internal class IntroMenuTest : MenuTest {
         every { introHelper.pendingIntros[1234L] } returns Triple(mockk(), "url", 50)
 
         // Act
-        introMenu.handle(menuContext, 10)
+        setIntroMenu.handle(menuContext, 10)
 
         // Assert
         verify {
@@ -104,7 +104,7 @@ internal class IntroMenuTest : MenuTest {
         })
 
         // Act
-        introMenu.handle(menuContext, 10)
+        setIntroMenu.handle(menuContext, 10)
 
         // Assert
         verify {
@@ -147,7 +147,7 @@ internal class IntroMenuTest : MenuTest {
         every { introHelper.pendingIntros[1234L] } returns null
 
         // Act
-        introMenu.handle(menuContext, 10)
+        setIntroMenu.handle(menuContext, 10)
 
         // Assert
         verify(exactly = 0) {

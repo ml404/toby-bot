@@ -12,6 +12,7 @@ import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import toby.command.commands.music.player.LoopCommand
 
 internal class LoopCommandTest : MusicCommandTest {
     lateinit var loopCommand: LoopCommand

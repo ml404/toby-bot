@@ -18,6 +18,11 @@ import toby.command.commands.fetch.MemeCommand
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
 import toby.command.commands.music.*
+import toby.command.commands.music.channel.JoinCommand
+import toby.command.commands.music.channel.LeaveCommand
+import toby.command.commands.music.intro.EditIntroCommand
+import toby.command.commands.music.intro.SetIntroCommand
+import toby.command.commands.music.player.*
 import toby.helpers.*
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.*
@@ -89,7 +94,8 @@ class CommandManagerTest {
             QueueCommand::class.java,
             ShuffleCommand::class.java,
             AdjustUserCommand::class.java,
-            IntroSongCommand::class.java,
+            SetIntroCommand::class.java,
+            EditIntroCommand::class.java,
             UserInfoCommand::class.java,
             RandomCommand::class.java,
             Kf2RandomMapCommand::class.java,
@@ -101,8 +107,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(37, commandManager.allCommands.size)
-        Assertions.assertEquals(37, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(38, commandManager.allCommands.size)
+        Assertions.assertEquals(38, commandManager.allSlashCommands.size)
     }
 
     @Test

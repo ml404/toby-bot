@@ -16,6 +16,7 @@ import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import toby.command.commands.music.MusicCommandTest.Companion.track
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import toby.command.commands.music.player.PlayCommand
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class PlayCommandTest : MusicCommandTest {

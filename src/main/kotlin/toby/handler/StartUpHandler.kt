@@ -24,6 +24,7 @@ class StartUpHandler @Autowired constructor(
         logger.info("${event.jda.selfUser.name} is ready")
         jda.updateCommands().addCommands(commandManager.allSlashCommands).queue()
         logger.info { "Registered ${commandManager.allSlashCommands.size} commands to ${event.jda.selfUser.name}" }
+        logger.info { "Commands being registered: ${commandManager.allSlashCommands.map { it?.name }}" }
     }
 
     override fun onGuildReady(event: GuildReadyEvent) {

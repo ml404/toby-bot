@@ -3,6 +3,7 @@ package toby
 import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import toby.handler.EventWaiter
 import toby.handler.MessageEventHandler
 import toby.handler.StartUpHandler
 import toby.handler.VoiceEventHandler
@@ -19,7 +20,8 @@ open class BotMain @Autowired constructor(
     userDtoHelper: UserDtoHelper,
     commandManager: CommandManager,
     buttonManager: ButtonManager,
-    menuManager: MenuManager
+    menuManager: MenuManager,
+    eventWaiter: EventWaiter
 ) {
     init {
         jda.addEventListener(
@@ -37,5 +39,6 @@ open class BotMain @Autowired constructor(
                 menuManager
             )
         )
+        jda.addEventListener(eventWaiter)
     }
 }

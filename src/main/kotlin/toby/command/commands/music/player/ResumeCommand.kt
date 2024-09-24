@@ -1,34 +1,31 @@
-package toby.command.commands.music
+package toby.command.commands.music.player
 
 import toby.command.CommandContext
+import toby.command.ICommand.Companion.deleteAfter
+import toby.command.commands.music.IMusicCommand
 import toby.helpers.MusicPlayerHelper
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
 
-class PauseCommand : IMusicCommand {
+class ResumeCommand : IMusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(ctx: CommandContext, instance: PlayerManager, requestingUserDto: UserDto, deleteDelay: Int?) {
+        ctx.event.hook.deleteAfter(deleteDelay ?: 0)
         val event = ctx.event
         event.deferReply().queue()
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay ?: 0)
             return
         }
         if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
-        val guild = event.guild!!
-        val musicManager = instance.getMusicManager(guild)
-        if (instance.isCurrentlyStoppable || requestingUserDto.superUser) {
-            MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay ?: 0)
-        } else {
-            IMusicCommand.sendDeniedStoppableMessage(event.hook, musicManager, deleteDelay)
-        }
+        MusicPlayerHelper.changePauseStatusOnTrack(event, instance.getMusicManager(ctx.guild), deleteDelay ?: 0)
     }
 
     override val name: String
-        get() = "pause"
+        get() = "resume"
     override val description: String
-        get() = "Pauses the current song if one is playing"
+        get() = "Resumes the current song if one is paused."
 }

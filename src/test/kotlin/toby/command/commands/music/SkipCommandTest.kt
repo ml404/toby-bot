@@ -12,6 +12,7 @@ import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
+import toby.command.commands.music.player.SkipCommand
 import java.awt.Color
 import java.util.concurrent.ArrayBlockingQueue
 

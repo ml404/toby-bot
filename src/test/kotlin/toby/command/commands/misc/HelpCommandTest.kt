@@ -10,7 +10,7 @@ import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.ICommand
-import toby.command.commands.music.PlayCommand
+import toby.command.commands.music.player.PlayCommand
 import toby.managers.CommandManager
 
 internal class HelpCommandTest : CommandTest {

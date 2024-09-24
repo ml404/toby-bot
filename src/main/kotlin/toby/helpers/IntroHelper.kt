@@ -32,7 +32,8 @@ class IntroHelper(
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
         val volumePropertyName = ConfigDto.Configurations.INTRO_VOLUME.configValue
-        val defaultIntroVolume = configService.getConfigByName(volumePropertyName, event.guild?.id)?.value?.toIntOrNull()
+        val defaultIntroVolume =
+            configService.getConfigByName(volumePropertyName, event.guild?.id)?.value?.toIntOrNull()
         val volumeOption = event.getOption(VOLUME)?.asInt
         return (volumeOption ?: defaultIntroVolume ?: 100).coerceIn(1, 100)
     }
@@ -142,6 +143,10 @@ class IntroHelper(
     }
 
     fun findUserById(discordId: Long, guildId: Long) = userService.getUserById(discordId, guildId)
+
+    fun findIntroById(musicFileId: String) = musicFileService.getMusicFileById(musicFileId)
+
+    fun saveIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
 
     fun downloadAttachment(attachment: Attachment): InputStream? {
         return runCatching {

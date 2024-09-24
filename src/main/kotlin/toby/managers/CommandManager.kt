@@ -15,7 +15,12 @@ import toby.command.commands.fetch.Kf2RandomMapCommand
 import toby.command.commands.fetch.MemeCommand
 import toby.command.commands.misc.*
 import toby.command.commands.moderation.*
-import toby.command.commands.music.*
+import toby.command.commands.music.IMusicCommand
+import toby.command.commands.music.channel.JoinCommand
+import toby.command.commands.music.channel.LeaveCommand
+import toby.command.commands.music.intro.EditIntroCommand
+import toby.command.commands.music.intro.SetIntroCommand
+import toby.command.commands.music.player.*
 import toby.helpers.*
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.UserDto
@@ -84,7 +89,8 @@ class CommandManager @Autowired constructor(
         addCommand(NowPlayingCommand())
         addCommand(QueueCommand())
         addCommand(ShuffleCommand())
-        addCommand(IntroSongCommand(introHelper))
+        addCommand(SetIntroCommand(introHelper))
+        addCommand(EditIntroCommand())
 
         //dnd commands
         addCommand(InitiativeCommand(dndHelper))

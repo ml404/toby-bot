@@ -1,4 +1,4 @@
-package toby.command.commands.music
+package toby.command.commands.music.intro
 
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand
 import toby.helpers.IntroHelper
 import toby.helpers.URLHelper
 import toby.jpa.dto.MusicDto
@@ -17,7 +18,7 @@ import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
 import toby.logging.DiscordLogger
 
-class IntroSongCommand(
+class SetIntroCommand(
     private val introHelper: IntroHelper,
 ) : IMusicCommand {
     private lateinit var logger: DiscordLogger
@@ -155,7 +156,7 @@ class IntroSongCommand(
 
 
     override val name: String
-        get() = "introsong"
+        get() = "setintro"
 
     override val description: String
         get() = "Upload an **MP3** file to play when you join a voice channel. Can use YouTube links instead."

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
+import toby.command.commands.music.player.QueueCommand
 import java.util.concurrent.ArrayBlockingQueue
 
 internal class QueueCommandTest : MusicCommandTest {

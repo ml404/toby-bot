@@ -1,7 +1,8 @@
-package toby.command.commands.music
+package toby.command.commands.music.player
 
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.command.commands.music.IMusicCommand
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
 

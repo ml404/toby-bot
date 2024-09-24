@@ -1,6 +1,9 @@
 package toby.command.commands.music
 
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
@@ -9,6 +12,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
+import toby.command.commands.music.player.SetVolumeCommand
 import toby.emote.Emotes
 
 internal class SetVolumeCommandTest : MusicCommandTest {

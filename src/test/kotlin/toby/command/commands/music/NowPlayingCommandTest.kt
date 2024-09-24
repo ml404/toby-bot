@@ -10,7 +10,7 @@ import toby.command.CommandTest.Companion.event
 import toby.command.commands.music.MusicCommandTest
 import toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import toby.command.commands.music.MusicCommandTest.Companion.track
-import toby.command.commands.music.NowPlayingCommand
+import toby.command.commands.music.player.NowPlayingCommand
 
 internal class NowPlayingCommandTest : MusicCommandTest {
     private lateinit var nowPlayingCommand: NowPlayingCommand

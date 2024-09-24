@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import toby.command.CommandContext
 import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
+import toby.command.commands.music.player.ResumeCommand
 import java.awt.Color
 
 internal class ResumeCommandTest : MusicCommandTest {

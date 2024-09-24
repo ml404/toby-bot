@@ -80,10 +80,6 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
         logger = DiscordLogger(musicDto.userDto!!.guildId)
         logger.info { "Updating music file for ${musicDto.userDto} " }
-        if (isFileAlreadyUploaded(musicDto) != null) {
-            logger.info { "Duplicate detected, not persisting file" }
-            return null
-        }
         entityManager.merge(musicDto)
         entityManager.flush()
         logger.info { "Updated music file for ${musicDto.userDto}" }
