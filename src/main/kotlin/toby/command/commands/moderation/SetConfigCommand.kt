@@ -46,6 +46,8 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
                     deleteDelay,
                     "Set default delete message delay for TobyBot music messages to '${optionMapping.asInt}' seconds"
                 )
+                ConfigDto.Configurations.INTRO_VOLUME -> setConfigAndSendMessage(event, optionMapping, deleteDelay,
+                    "Set default intro volume to '${optionMapping.asInt}'")
             }
         }
     }
@@ -113,6 +115,12 @@ class SetConfigCommand(private val configService: IConfigService) : IModerationC
                 OptionType.INTEGER,
                 ConfigDto.Configurations.VOLUME.name.lowercase(Locale.getDefault()),
                 "Default volume for audio player on your server (100 without an override)",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.INTRO_VOLUME.name.lowercase(Locale.getDefault()),
+                "Default volume of intros for users on your server (90 without an override)",
                 false
             ),
             OptionData(

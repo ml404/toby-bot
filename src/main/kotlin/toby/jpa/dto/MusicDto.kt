@@ -35,7 +35,7 @@ data class MusicDto(
     var fileName: String? = null,
 
     @Column(name = "file_vol")
-    var introVolume: Int? = 20,
+    var introVolume: Int? = 90,
 
     @Column(name = "index")
     var index: Int? = 1,
