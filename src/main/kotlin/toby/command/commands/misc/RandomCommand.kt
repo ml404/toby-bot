@@ -1,12 +1,10 @@
 package toby.command.commands.misc
 
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.jpa.dto.UserDto
-import java.util.*
 
 class RandomCommand : IMiscCommand {
     private val LIST = "list"
@@ -17,7 +15,7 @@ class RandomCommand : IMiscCommand {
             event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
-        val stringList = listOf(*Optional.ofNullable(event.getOption(LIST)).map { obj: OptionMapping -> obj.asString }.orElse("").split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
+        val stringList = event.getOption(LIST)?.asString?.split(",")?.dropLastWhile { it.isEmpty() }?.toList()
         event.hook.sendMessage(getRandomElement(stringList)).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
@@ -29,9 +27,8 @@ class RandomCommand : IMiscCommand {
         get() = listOf(OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from", true))
 
     companion object {
-        fun getRandomElement(args: List<*>): String {
-            val i = Random().nextInt(args.size)
-            return args[i] as String
+        fun getRandomElement(args: List<String>?): String {
+            return args?.random()?.trim() ?: ""
         }
     }
 }
