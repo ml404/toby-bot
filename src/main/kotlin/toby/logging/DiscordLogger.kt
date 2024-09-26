@@ -1,14 +1,14 @@
 package toby.logging
 
-import mu.KotlinLogging
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.slf4j.MDC
 
-class DiscordLogger {
-
+class DiscordLogger(clazz: Class<*>) {
     // Dynamically fetches the logger for the calling class
-    private val logger = KotlinLogging.logger {}
+    private val logger: Logger = LogManager.getLogger(clazz)
 
     fun setGuildAndUserContext(guild: Guild?, member: Member?) {
         guild?.let {
@@ -27,36 +27,36 @@ class DiscordLogger {
 
     // Logging methods with contextual info
     fun info(message: String) {
-        logger.info { message }
+        logger.info(message)
     }
 
     fun warn(message: String) {
-        logger.warn { message }
+        logger.warn(message)
     }
 
     fun error(message: String) {
-        logger.error { message }
+        logger.error(message)
     }
 
     // Optional: Lambda-based logging
     fun info(message: () -> String) {
-        logger.info { message() }
+        logger.info(message())
     }
 
     // Optional: Lambda-based logging
     fun warn(message: () -> String) {
-        logger.warn { message() }
+        logger.warn(message())
     }
 
     // Optional: Lambda-based logging
     fun error(message: () -> String) {
-        logger.error { message() }
+        logger.error (message())
     }
 
     companion object {
         // Create a new logger instance dynamically for each class
-        fun createLogger(): DiscordLogger {
-            return DiscordLogger()
+        fun createLogger(clazz: Class<*>): DiscordLogger {
+            return DiscordLogger(clazz)
         }
     }
 }

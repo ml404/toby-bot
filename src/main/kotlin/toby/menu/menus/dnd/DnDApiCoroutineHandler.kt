@@ -13,7 +13,7 @@ class DndApiCoroutineHandler(
     private val dndHelper: DnDHelper
 
 ) {
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     fun launchFetchAndSendEmbed(
         event: StringSelectInteractionEvent,

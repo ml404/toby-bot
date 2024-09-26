@@ -20,7 +20,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
     var event: SlashCommandInteractionEvent? = null
     var deleteDelay: Int? = null
     private var previousVolume: Int? = null
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")

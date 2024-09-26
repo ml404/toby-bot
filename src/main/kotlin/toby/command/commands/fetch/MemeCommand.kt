@@ -25,7 +25,7 @@ class MemeCommand : IFetchCommand {
     private val SUBREDDIT = "subreddit"
     private val TIME_PERIOD = "timeperiod"
     private val LIMIT = "limit"
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         try {

@@ -31,7 +31,7 @@ class MessageEventHandler @Autowired constructor(
 
     private val job = SupervisorJob()
     override val coroutineContext: CoroutineContext = job + Dispatchers.Default
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
         val message = event.message

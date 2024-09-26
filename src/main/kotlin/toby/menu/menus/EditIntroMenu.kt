@@ -12,7 +12,7 @@ class EditIntroMenu(
     private val eventWaiter: EventWaiter
 ) : IMenu {
 
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.selectEvent

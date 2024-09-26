@@ -21,9 +21,8 @@ import java.awt.Color
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
-private val logger: DiscordLogger = DiscordLogger.createLogger()
-
 object MusicPlayerHelper {
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()

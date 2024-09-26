@@ -15,7 +15,7 @@ import toby.logging.DiscordLogger
 open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
         logger.info { "Persisting $musicDto" }

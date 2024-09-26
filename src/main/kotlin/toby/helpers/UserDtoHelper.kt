@@ -8,7 +8,7 @@ import toby.logging.DiscordLogger
 
 @Service
 class UserDtoHelper(private val userService: IUserService) {
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     fun calculateUserDto(
         guildId: Long,
         discordId: Long,

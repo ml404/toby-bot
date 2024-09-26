@@ -22,7 +22,7 @@ class DnDCommandQueryHandler(
     private val hook: InteractionHook,
     private val deleteDelay: Int
 ) {
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     fun processQuery(typeName: String?, typeValue: String?, query: String) {
         logger.setGuildAndUserContext(hook.interaction.guild, hook.interaction.member)

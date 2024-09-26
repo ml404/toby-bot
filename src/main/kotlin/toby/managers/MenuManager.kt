@@ -21,7 +21,7 @@ import java.util.*
 @Configurable
 class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper, introHelper: IntroHelper, userDtoHelper: UserDtoHelper, dndHelper: DnDHelper, eventWaiter: EventWaiter) {
     private val menus: MutableList<IMenu> = ArrayList()
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     init {
         addMenu(DndMenu(httpHelper = httpHelper, dnDHelper = dndHelper))
         addMenu(SetIntroMenu(introHelper, userDtoHelper))

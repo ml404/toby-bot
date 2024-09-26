@@ -12,7 +12,7 @@ class SetIntroMenu(
     private val userDtoHelper: UserDtoHelper
 ) : IMenu {
 
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndUserContext(ctx.guild, ctx.member)

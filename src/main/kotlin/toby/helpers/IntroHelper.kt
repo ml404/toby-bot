@@ -24,7 +24,7 @@ class IntroHelper(
     private val musicFileService: IMusicFileService,
     private val configService: IConfigService
 ) {
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()

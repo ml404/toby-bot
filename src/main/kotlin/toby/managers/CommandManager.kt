@@ -45,7 +45,7 @@ class CommandManager @Autowired constructor(
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
     val lastCommands: MutableMap<Guild, Pair<ICommand, CommandContext>> = HashMap()
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     init {
         val cache = Cache(86400, 3600, 2)

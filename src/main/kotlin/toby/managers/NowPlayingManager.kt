@@ -14,7 +14,7 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 class NowPlayingManager {
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
     private val scheduledTasks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
     private val lock = ReentrantReadWriteLock()

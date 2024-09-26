@@ -15,7 +15,7 @@ class DndMenu(
     private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper, dnDHelper),
     private val eventProcessor: DndEventProcessor = DndEventProcessor()
 ) : IMenu {
-    private val logger: DiscordLogger = DiscordLogger.createLogger()
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndUserContext(ctx.guild, ctx.selectEvent.member!!)
