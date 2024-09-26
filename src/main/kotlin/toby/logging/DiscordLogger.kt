@@ -11,6 +11,9 @@ class DiscordLogger(clazz: Class<*>) {
     private val logger: Logger = LogManager.getLogger(clazz)
 
     fun setGuildAndUserContext(guild: Guild?, member: Member?) {
+        // Clear existing MDC context
+        MDC.clear()
+
         guild?.let {
             MDC.put("guildName", it.name)
             MDC.put("guildId", it.id)
@@ -25,32 +28,43 @@ class DiscordLogger(clazz: Class<*>) {
         MDC.clear()
     }
 
+    // Construct a dynamic log message based on the context
+    private fun buildLogMessage(message: String): String {
+        val guildName = MDC.get("guildName") ?: ""
+        val guildId = MDC.get("guildId") ?: ""
+        val userName = MDC.get("userName") ?: ""
+        val userId = MDC.get("userId") ?: ""
+
+        val guildInfo = if (guildName.isNotBlank()) "[Guild: '$guildName' (ID: $guildId)]" else ""
+        val userInfo = if (userName.isNotBlank()) "[User: '$userName' (ID: $userId)]" else ""
+
+        return "$guildInfo$userInfo - $message"
+    }
+
     // Logging methods with contextual info
     fun info(message: String) {
-        logger.info(message)
+        logger.info(buildLogMessage(message)) // Log the constructed message
     }
 
     fun warn(message: String) {
-        logger.warn(message)
+        logger.warn(buildLogMessage(message)) // Log the constructed message
     }
 
     fun error(message: String) {
-        logger.error(message)
+        logger.error(buildLogMessage(message)) // Log the constructed message
     }
 
     // Optional: Lambda-based logging
     fun info(message: () -> String) {
-        logger.info(message())
+        logger.info(buildLogMessage(message())) // Log the constructed message
     }
 
-    // Optional: Lambda-based logging
     fun warn(message: () -> String) {
-        logger.warn(message())
+        logger.warn(buildLogMessage(message())) // Log the constructed message
     }
 
-    // Optional: Lambda-based logging
     fun error(message: () -> String) {
-        logger.error (message())
+        logger.error(buildLogMessage(message())) // Log the constructed message
     }
 
     companion object {
