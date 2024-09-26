@@ -1,13 +1,13 @@
 package toby.menu
 
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
-import toby.command.commands.ICommandContext
+import toby.menu.menus.IMenuContext
 
-class MenuContext(var interaction: IReplyCallback) : ICommandContext {
-    override val guild: Guild get() = selectEvent.guild!!
-    override val event: SlashCommandInteractionEvent get() = interaction as SlashCommandInteractionEvent
-    val selectEvent: StringSelectInteractionEvent get() = interaction as StringSelectInteractionEvent
+class MenuContext(var interaction: IReplyCallback) : IMenuContext {
+    override val guild: Guild get() = event.guild!!
+    override val event: StringSelectInteractionEvent get() = interaction as StringSelectInteractionEvent
+    val member: Member? get() = event.member
 }

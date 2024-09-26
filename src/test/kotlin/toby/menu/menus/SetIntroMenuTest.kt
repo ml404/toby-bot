@@ -38,7 +38,7 @@ internal class SetIntroMenuTest : MenuTest {
 
         // Mock the context
         menuContext = mockk(relaxed = true)
-        every { menuContext.selectEvent } returns menuEvent
+        every { menuContext.event } returns menuEvent
     }
 
     @Test
