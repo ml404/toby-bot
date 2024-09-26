@@ -142,10 +142,6 @@ class CommandManager @Autowired constructor(
                 attributeSocialCredit(ctx, userService, userDto, deleteDelay)
             }
         }
-
-        cmd?.let {
-            logger.info("Command '${it.name}' has been processed.")
-        }
     }
 
     private fun attributeSocialCredit(

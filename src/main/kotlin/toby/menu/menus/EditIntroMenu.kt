@@ -3,6 +3,7 @@ package toby.menu.menus
 import toby.command.ICommand.Companion.deleteAfter
 import toby.handler.EventWaiter
 import toby.helpers.IntroHelper
+import toby.helpers.MenuHelper.EDIT_INTRO
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -74,6 +75,5 @@ class EditIntroMenu(
     }
 
 
-    override val name: String
-        get() = "editintro"
+    override val name: String get() = EDIT_INTRO
 }

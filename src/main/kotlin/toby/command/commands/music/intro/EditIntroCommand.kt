@@ -3,6 +3,7 @@ package toby.command.commands.music.intro
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import toby.command.CommandContext
 import toby.command.commands.music.IMusicCommand
+import toby.helpers.MenuHelper.EDIT_INTRO
 import toby.jpa.dto.UserDto
 import toby.lavaplayer.PlayerManager
 
@@ -29,7 +30,7 @@ class EditIntroCommand : IMusicCommand {
         }
 
         // Create the string select menu with the user's intros
-        val builder = StringSelectMenu.create("editintro").setPlaceholder("Select an intro to edit")
+        val builder = StringSelectMenu.create(EDIT_INTRO).setPlaceholder("Select an intro to edit")
 
         introList.forEach { intro -> builder.addOption(intro.fileName ?: "Unknown", intro.id.toString()) }
 

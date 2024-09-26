@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
+import toby.helpers.MenuHelper.DND
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -34,8 +35,7 @@ class DndMenu(
         }
     }
 
-    override val name: String
-        get() = "dnd"
+    override val name: String get() = DND
 
     companion object {
         const val SPELL_NAME = "spell"

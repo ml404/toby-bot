@@ -1,6 +1,7 @@
 package toby.menu.menus
 
 import toby.helpers.IntroHelper
+import toby.helpers.MenuHelper.SET_INTRO
 import toby.helpers.UserDtoHelper
 import toby.menu.IMenu
 import toby.menu.MenuContext
@@ -19,7 +20,7 @@ class SetIntroMenu(
 
         val musicDtoId = event.selectedOptions.firstOrNull()?.value
 
-        logger.info { "Replacing musicDto with id '$musicDtoId' on guild ${event.idLong}" }
+        logger.info { "Replacing musicDto with id '$musicDtoId'" }
 
         val jdaUser = event.user
         val requestingUserDto = userDtoHelper.calculateUserDto(
@@ -51,7 +52,7 @@ class SetIntroMenu(
                     ctx.event.user.effectiveName
                 )
             }.onSuccess {
-                logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}' on guild '${requestingUserDto.guildId}'" }
+                logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}'" }
                 introHelper.pendingIntros.remove(requestingUserDto.discordId)
             }.onFailure {
                 logger.error { "Error handling intro replacement" }
@@ -63,6 +64,5 @@ class SetIntroMenu(
         }
     }
 
-    override val name: String
-        get() = "setintro"
+    override val name: String get() = SET_INTRO
 }
