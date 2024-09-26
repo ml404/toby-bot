@@ -69,4 +69,14 @@ data class UserDto(
     override fun toString(): String {
         return "UserDto(discordId=$discordId, guildId=$guildId)"
     }
+
+    fun getPermissionsAsString(): String {
+        val permissionsMap = mapOf(
+            "MUSIC" to musicPermission,
+            "MEME" to memePermission,
+            "DIG" to digPermission,
+            "SUPERUSER" to superUser
+        )
+        return permissionsMap.entries.joinToString(separator = ", ") { "${it.key}: ${it.value}" }
+    }
 }

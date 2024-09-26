@@ -41,33 +41,54 @@ class UserInfoCommandTest : CommandTest {
         every { event.options } returns listOf()
 
         // Mock the requesting user's DTO
-        every { userService.getUserById(any(), any()) } returns requestingUserDto
+        val userDto = UserDto(
+            1, 1,
+            superUser = true,
+            musicPermission = true,
+            digPermission = true,
+            memePermission = true,
+            socialCredit = 0,
+            initiativeModifier = 0,
+            musicDtos = emptyList<MusicDto>().toMutableList()
+        )
+        every { userService.getUserById(any(), any()) } returns userDto
         requestingUserDto.apply {
             every { musicDtos } returns listOf(MusicDto()).toMutableList()
         }
 
         // Test handle method
-        userInfoCommand.handle(CommandContext(event), requestingUserDto, 0)
+        userInfoCommand.handle(CommandContext(event), userDto, 0)
 
         // Verify interactions
         verify(exactly = 1) {
-            event.hook.sendMessage("There is no valid intro music file associated with user Effective Name.")
+            event.hook.sendMessage("Here are the permissions for 'Effective Name': 'MUSIC: true, MEME: true, DIG: true, SUPERUSER: true'. \n" +
+                    " There is no valid intro music file associated with user Effective Name.")
         }
-        verify(exactly = 0) {
+        verify(exactly = 1) {
             userService.getUserById(any(), any())
         }
     }
 
     @Test
     fun testHandleCommandWithMentionedUserAndValidRequestingPermissions() {
-        // Mock user interaction with mentioned user
+        // Mock the requesting user's DTO
+        val userDto = UserDto(
+            1, 1,
+            superUser = true,
+            musicPermission = true,
+            digPermission = true,
+            memePermission = true,
+            socialCredit = 0,
+            initiativeModifier = 0,
+            musicDtos = emptyList<MusicDto>().toMutableList()
+        )
 
         // Mock the event's options to include mentions
         every { event.options } returns listOf(mockk<OptionMapping>())
 
         // Mock a mentioned user's DTO
         val mentionedUserDto = UserDto(6L, 1L)
-        every { userService.getUserById(any(), any()) } returns requestingUserDto
+        every { userService.getUserById(any(), any()) } returns userDto
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
                 UserDto(1, 1),
