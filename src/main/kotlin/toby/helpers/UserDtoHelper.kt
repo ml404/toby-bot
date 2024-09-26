@@ -8,13 +8,12 @@ import toby.logging.DiscordLogger
 
 @Service
 class UserDtoHelper(private val userService: IUserService) {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     fun calculateUserDto(
         guildId: Long,
         discordId: Long,
         isSuperUser: Boolean = false
     ): UserDto {
-        logger = DiscordLogger(guildId)
         logger.info("Processing lookup for user: $discordId, guild: $guildId")
         return userService.getUserById(discordId, guildId) ?: UserDto(discordId, guildId).apply {
             this.superUser = isSuperUser

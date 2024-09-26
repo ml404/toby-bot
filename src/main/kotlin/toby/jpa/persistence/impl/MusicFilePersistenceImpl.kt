@@ -15,10 +15,9 @@ import toby.logging.DiscordLogger
 open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
-        logger = DiscordLogger(musicDto.userDto!!.guildId)
         logger.info { "Persisting $musicDto" }
         entityManager.persist(musicDto)
         entityManager.flush()
@@ -29,7 +28,6 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     @Transactional(readOnly = true)
     override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
         return runCatching {
-            logger = DiscordLogger(musicDto.userDto!!.guildId)
             logger.info { "Checking to see if '${musicDto.musicBlobHash}' has already been uploaded for this guild and user..." }
             val query = entityManager.createQuery(
                 "SELECT m FROM MusicDto m WHERE m.musicBlobHash = :musicBlobHash AND m.userDto.discordId = :discordId AND m.userDto.guildId = :guildId",
@@ -44,7 +42,6 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
-        logger = DiscordLogger(musicDto.userDto!!.guildId)
         logger.info { "Creating new music file for ${musicDto.userDto}" }
         if (isFileAlreadyUploaded(musicDto) != null) {
             logger.info { "Duplicate detected, not persisting file" }
@@ -78,7 +75,6 @@ open class MusicFilePersistenceImpl : IMusicFilePersistence {
     }
 
     override fun updateMusicFile(musicDto: MusicDto): MusicDto? {
-        logger = DiscordLogger(musicDto.userDto!!.guildId)
         logger.info { "Updating music file for ${musicDto.userDto} " }
         entityManager.merge(musicDto)
         entityManager.flush()

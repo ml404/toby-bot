@@ -13,7 +13,7 @@ class DndApiCoroutineHandler(
     private val dndHelper: DnDHelper
 
 ) {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     fun launchFetchAndSendEmbed(
         event: StringSelectInteractionEvent,
@@ -21,7 +21,7 @@ class DndApiCoroutineHandler(
         typeValue: String,
         hook: InteractionHook
     ) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild!!, event.member!!)
         logger.info("Starting launchFetchAndSendEmbed")
         CoroutineScope(dispatcher).launch {
             val query = event.values.firstOrNull() ?: return@launch

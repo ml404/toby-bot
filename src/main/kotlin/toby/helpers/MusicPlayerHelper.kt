@@ -21,9 +21,8 @@ import java.awt.Color
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
-private lateinit var logger: DiscordLogger
-
 object MusicPlayerHelper {
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com/"
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
@@ -36,7 +35,7 @@ object MusicPlayerHelper {
         startPosition: Long = 0,
         member: Member? = null
     ) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(guild, member)
+        logger.setGuildAndUserContext(guild, member)
         logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
         val musicDto = dbUser.musicDtos
         val instance = PlayerManager.instance
@@ -56,7 +55,7 @@ object MusicPlayerHelper {
     }
 
     fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
         val track = audioPlayer.playingTrack
@@ -105,7 +104,7 @@ object MusicPlayerHelper {
     }
 
     fun stopSong(event: IReplyCallback, musicManager: GuildMusicManager, canOverrideSkips: Boolean, deleteDelay: Int?) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
             logger.info { "Stopping the song and clearing the queue." }
@@ -131,7 +130,7 @@ object MusicPlayerHelper {
     }
 
     fun changePauseStatusOnTrack(event: IReplyCallback, musicManager: GuildMusicManager, deleteDelay: Int) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         val audioPlayer = musicManager.audioPlayer
         val paused = audioPlayer.isPaused
         val message = if (paused) "Resuming: `" else "Pausing: `"
@@ -168,7 +167,7 @@ object MusicPlayerHelper {
         val hook = event.hook
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         when {
             audioPlayer.playingTrack == null -> {
                 logger.warn { "Attempted to skip tracks but no track is currently playing ." }

@@ -14,7 +14,7 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 class NowPlayingManager {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
     private val scheduledTasks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
     private val lock = ReentrantReadWriteLock()
@@ -22,7 +22,6 @@ class NowPlayingManager {
 
     fun setNowPlayingMessage(guildId: Long, message: Message) {
         lock.write {
-            logger = DiscordLogger.getLoggerForGuildId(guildId)
             logger.info { "Setting now playing message ${message.idLong} for guild $guildId" }
             guildLastNowPlayingMessage[guildId] = message
         }
@@ -30,7 +29,6 @@ class NowPlayingManager {
 
     fun getLastNowPlayingMessage(guildId: Long): Message? {
         return lock.read {
-            logger = DiscordLogger.getLoggerForGuildId(guildId)
             guildLastNowPlayingMessage[guildId]?.also {
                 logger.info { "Retrieved now playing message ${it.idLong} for guild $guildId" }
             } ?: run {
@@ -42,7 +40,6 @@ class NowPlayingManager {
 
     fun resetNowPlayingMessage(guildId: Long) {
         lock.write {
-            logger = DiscordLogger.getLoggerForGuildId(guildId)
             logger.info { "Resetting now playing message and cancelling scheduler for guild $guildId" }
             val message = guildLastNowPlayingMessage.remove(guildId)
             scheduledTasks.remove(guildId)?.cancel(true)
@@ -69,7 +66,6 @@ class NowPlayingManager {
         delay: Long,
         period: Long
     ) {
-        logger = DiscordLogger.getLoggerForGuildId(guildId)
         cancelScheduledTask(guildId)
         val scheduledTask = scheduler.scheduleAtFixedRate({
             try {
@@ -84,7 +80,6 @@ class NowPlayingManager {
 
     private fun updateNowPlayingMessage(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer) {
         lock.read {
-            logger = DiscordLogger.getLoggerForGuildId(guildId)
             val message = guildLastNowPlayingMessage[guildId]
             message?.let {
                 val embed = buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)

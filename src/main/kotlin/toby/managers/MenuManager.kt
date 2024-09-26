@@ -21,7 +21,7 @@ import java.util.*
 @Configurable
 class MenuManager @Autowired constructor(private val configService: IConfigService, httpHelper: HttpHelper, introHelper: IntroHelper, userDtoHelper: UserDtoHelper, dndHelper: DnDHelper, eventWaiter: EventWaiter) {
     private val menus: MutableList<IMenu> = ArrayList()
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     init {
         addMenu(DndMenu(httpHelper = httpHelper, dnDHelper = dndHelper))
         addMenu(SetIntroMenu(introHelper, userDtoHelper))
@@ -40,7 +40,7 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
     fun getMenu(search: String): IMenu? = menus.find { search.contains(it.name, ignoreCase = true) }
 
     fun handle(event: StringSelectInteractionEvent) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         val invoke = event.componentId.lowercase(Locale.getDefault())
         val menu = this.getMenu(invoke)
 

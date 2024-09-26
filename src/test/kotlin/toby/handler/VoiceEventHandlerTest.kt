@@ -76,14 +76,18 @@ class VoiceEventHandlerTest {
 
         every { guild1.voiceChannels } returns listOf(voiceChannel1)
         every { guild1.idLong } returns 1L
+        every { guild1.id } returns "1"
         every { guild1.name } returns "Guild 1"
         every { guild2.voiceChannels } returns listOf(voiceChannel2)
         every { guild2.idLong } returns 2L
+        every { guild2.id } returns "2"
         every { guild2.name } returns "Guild 2"
 
         every { voiceChannel1.members } returns listOf(nonBotMember1, botMember)
+        every { voiceChannel1.name } returns "voiceChannel1Name"
         every { voiceChannel1.guild } returns guild1
         every { voiceChannel2.members } returns listOf(nonBotMember2)
+        every { voiceChannel2.name } returns "voiceChannel2Name"
         every { voiceChannel2.guild } returns guild2
 
         every { nonBotMember1.user.isBot } returns false
@@ -127,16 +131,19 @@ class VoiceEventHandlerTest {
         every { event.channelJoined } returns channel
         every { event.channelLeft } returns null
         every { channel.members } returns listOf(nonBotMember)
+        every { channel.name } returns "voiceChannelName"
         every { channel.asVoiceChannel() } returns mockk(relaxed = true)
         every { nonBotMember.user.isBot } returns false
         every { member.guild } returns guild
         every { member.isOwner } returns false
         every { member.idLong } returns 1L
+        every { member.id } returns "1234"
         every { member.effectiveName } returns "Effective Name"
         every { member.user } returns mockk {
             every { idLong } returns 1L
         }
         every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
         every { guild.id } returns "1"
         every { guild.name } returns "guildName"
         every { audioManager.isConnected } returns false
@@ -179,6 +186,7 @@ class VoiceEventHandlerTest {
         every { event.member } returns mockk {
             every { effectiveName } returns "Effective Name"
             every { idLong } returns 123L
+            every { id } returns "1234"
             every { user } returns mockk {
                 every { idLong } returns 123L
             }
@@ -213,10 +221,12 @@ class VoiceEventHandlerTest {
         every { guild.audioManager } returns audioManager
         every { audioManager.guild } returns guild
         every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
         every { guild.name } returns "guildName"
         every { member.user.idLong } returns 12345L  // Simulate the bot's ID
         every { member.effectiveName } returns "effectiveName" // Simulate the bot's ID
         every { member.idLong } returns 1234L
+        every { member.id } returns "1234"
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
         every { event.channelJoined } returns newChannel
         every { event.channelLeft } returns mockk()
@@ -249,8 +259,10 @@ class VoiceEventHandlerTest {
         every { audioManager.guild } returns guild
         every { member.user.idLong } returns 12345L  // Simulate the bot's ID
         every { member.idLong } returns 12345L  // Simulate the bot's ID
+        every { member.id } returns "12345"  // Simulate the bot's ID
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
         every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
         every { event.channelJoined } returns mockk {
             every { asVoiceChannel() } returns mockk(relaxed = true)
         }
@@ -288,6 +300,7 @@ class VoiceEventHandlerTest {
         every { audioManager.guild } returns guild
         every { member.user.idLong } returns 54321L  // Not bot's ID
         every { member.idLong } returns 54321L  // Not bot's ID
+        every { member.id } returns "54321"  // Not bot's ID
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
         every { guild.name } returns "guildName"

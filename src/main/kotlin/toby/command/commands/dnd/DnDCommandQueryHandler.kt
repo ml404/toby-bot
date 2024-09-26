@@ -22,10 +22,10 @@ class DnDCommandQueryHandler(
     private val hook: InteractionHook,
     private val deleteDelay: Int
 ) {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     fun processQuery(typeName: String?, typeValue: String?, query: String) {
-        setupLogger()
+        logger.setGuildAndUserContext(hook.interaction.guild, hook.interaction.member)
         CoroutineScope(dispatcher).launch {
             var hasReplied = false
             runCatching {
@@ -86,9 +86,5 @@ class DnDCommandQueryHandler(
             return true
         }
         return false
-    }
-
-    private fun setupLogger(){
-        logger = DiscordLogger.getLoggerForGuildId(hook.interaction.guild!!.idLong)
     }
 }

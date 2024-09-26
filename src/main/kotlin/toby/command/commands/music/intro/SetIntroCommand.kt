@@ -21,7 +21,7 @@ import toby.logging.DiscordLogger
 class SetIntroCommand(
     private val introHelper: IntroHelper,
 ) : IMusicCommand {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
@@ -37,7 +37,8 @@ class SetIntroCommand(
         event.deferReply(true).queue()
         val introVolume = introHelper.calculateIntroVolume(event)
         val mentionedMembers = event.getOptionMentionedMembers()
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
+
 
         logger.info { "Inside handleMusicCommand" }
         if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {

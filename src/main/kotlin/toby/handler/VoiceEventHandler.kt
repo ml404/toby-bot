@@ -29,11 +29,11 @@ class VoiceEventHandler @Autowired constructor(
     private val userDtoHelper: UserDtoHelper
 ) : ListenerAdapter() {
 
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun onReady(event: ReadyEvent) {
         event.jda.guildCache.forEach {
-            logger = DiscordLogger.getLoggerForGuild(it)
+            logger.setGuildAndUserContext(it, null)
             it.connectToMostPopulatedVoiceChannel()
         }
     }
@@ -57,8 +57,7 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild, event.member)
-
+        logger.setGuildAndUserContext(event.guild, event.member)
         when {
             event.channelJoined != null && event.channelLeft != null -> {
                 logVoiceMove(event)
@@ -106,7 +105,7 @@ class VoiceEventHandler @Autowired constructor(
                 logger.warn("Bot was moved but no previous channel found.")
             }
         } else {
-            logger.info { "User '${member.user.effectiveName}' has moved, checking if AudioConnection should close..." }
+            logger.info { "User '${member.effectiveName}' has moved, checking if AudioConnection should close..." }
             audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
             val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
             checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)

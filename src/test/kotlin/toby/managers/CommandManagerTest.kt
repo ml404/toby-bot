@@ -141,11 +141,13 @@ class CommandManagerTest {
             every { name } returns "8ball"
             every { user } returns mockk {
                 every { idLong } returns 1
+                every { id } returns "1"
             }
             every { member } returns mockk {
                 every { isOwner } returns true
                 every { effectiveName } returns "effectiveName"
                 every { idLong } returns 123L
+                every { id } returns "123"
                 every { user } returns mockk {
                     every { user.idLong } returns 123L
                 }
