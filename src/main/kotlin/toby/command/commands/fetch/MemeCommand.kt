@@ -16,7 +16,6 @@ import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import toby.dto.web.RedditAPIDto
 import toby.dto.web.RedditAPIDto.TimePeriod
 import toby.jpa.dto.UserDto
-import toby.logging.DiscordLogger
 import java.io.IOException
 import java.io.InputStreamReader
 import kotlin.random.Random
@@ -25,7 +24,6 @@ class MemeCommand : IFetchCommand {
     private val SUBREDDIT = "subreddit"
     private val TIME_PERIOD = "timeperiod"
     private val LIMIT = "limit"
-    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         try {

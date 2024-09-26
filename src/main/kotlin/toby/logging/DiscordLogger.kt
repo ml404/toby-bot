@@ -35,10 +35,27 @@ class DiscordLogger(clazz: Class<*>) {
         val userName = MDC.get("userName") ?: ""
         val userId = MDC.get("userId") ?: ""
 
-        val guildInfo = if (guildName.isNotBlank()) "[Guild: '$guildName' (ID: $guildId)]" else ""
-        val userInfo = if (userName.isNotBlank()) "[User: '$userName' (ID: $userId)]" else ""
+        // Build Guild Info
+        val guildInfo = when {
+            guildName.isNotBlank() && guildId.isNotBlank() -> "[Guild: '$guildName' (ID: $guildId)]"
+            guildName.isNotBlank() -> "[Guild: '$guildName']"
+            guildId.isNotBlank() -> "[Guild: (ID: $guildId)]"
+            else -> ""
+        }
 
-        return "$guildInfo$userInfo - $message"
+        // Build User Info
+        val userInfo = when {
+            userName.isNotBlank() && userId.isNotBlank() -> "[User: '$userName' (ID: $userId)]"
+            userName.isNotBlank() -> "[User: '$userName']"
+            userId.isNotBlank() -> "[User: (ID: $userId)]"
+            else -> ""
+        }
+
+        // Combine and clean up the final log message
+        return listOf(guildInfo, userInfo)
+            .filter { it.isNotBlank() } // Remove empty strings
+            .joinToString(" ") // Join with a space
+            .let { if (it.isNotBlank()) "$it - $message" else message } // Include the original message
     }
 
     // Logging methods with contextual info
