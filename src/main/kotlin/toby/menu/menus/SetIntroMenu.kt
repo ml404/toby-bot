@@ -14,7 +14,7 @@ class SetIntroMenu(
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndUserContext(ctx.guild, ctx.member)
         logger.info { "Intro menu event started" }
-        val event = ctx.selectEvent
+        val event = ctx.event
         event.deferReply(true).queue()
 
         val musicDtoId = event.selectedOptions.firstOrNull()?.value
@@ -48,7 +48,7 @@ class SetIntroMenu(
                     url,
                     introVolume,
                     musicDtoToReplace,
-                    ctx.selectEvent.user.effectiveName
+                    ctx.event.user.effectiveName
                 )
             }.onSuccess {
                 logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}' on guild '${requestingUserDto.guildId}'" }

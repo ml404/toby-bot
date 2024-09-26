@@ -27,7 +27,7 @@ class MemeCommand : IFetchCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         try {
-            logger.setGuildAndUserContext(ctx.event.guild, ctx.event.member)
+            logger.setGuildAndUserContext(ctx.guild, ctx.member)
             handle(ctx, HttpClients.createDefault(), requestingUserDto, deleteDelay)
         } catch (e: IOException) {
             logger.error("IOException occurred while handling command: $e")
@@ -38,7 +38,7 @@ class MemeCommand : IFetchCommand {
     @Throws(IOException::class)
     fun handle(ctx: CommandContext, httpClient: HttpClient, requestingUserDto: UserDto?, deleteDelay: Int?) {
         val event = ctx.event
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndUserContext(ctx.guild, ctx.member)
         event.deferReply().queue()
 
         if (requestingUserDto?.memePermission != true) {

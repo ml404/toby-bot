@@ -40,7 +40,7 @@ class DndMenuTest {
         val event = mockk<StringSelectInteractionEvent>(relaxed = true)
         val hook = mockk<InteractionHook>(relaxed = true)
 
-        every { ctx.selectEvent } returns event
+        every { ctx.event } returns event
         every { event.hook } returns hook
         every { processor.toTypeString(event) } returns "spell"
         every { processor.determineTypeValue("spell") } returns "spells"

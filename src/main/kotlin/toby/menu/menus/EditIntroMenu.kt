@@ -12,7 +12,7 @@ class EditIntroMenu(
 ) : IMenu {
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        val event = ctx.selectEvent
+        val event = ctx.event
         logger.setGuildAndUserContext(ctx.guild, event.member)
         event.deferReply(true).queue()
 

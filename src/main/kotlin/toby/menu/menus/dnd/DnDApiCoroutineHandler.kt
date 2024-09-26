@@ -21,7 +21,7 @@ class DndApiCoroutineHandler(
         typeValue: String,
         hook: InteractionHook
     ) {
-        logger.setGuildAndUserContext(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info("Starting launchFetchAndSendEmbed")
         CoroutineScope(dispatcher).launch {
             val query = event.values.firstOrNull() ?: return@launch

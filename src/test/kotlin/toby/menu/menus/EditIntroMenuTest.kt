@@ -39,7 +39,7 @@ class EditIntroMenuTest : MenuTest {
 
         // Mock the context
         menuContext = mockk(relaxed = true)
-        every { menuContext.selectEvent } returns menuEvent
+        every { menuContext.event } returns menuEvent
     }
 
     @AfterEach
@@ -53,26 +53,26 @@ class EditIntroMenuTest : MenuTest {
 
         val intro = MusicDto(userDto, 1, "Intro1")
         every { introHelper.findIntroById("1") } returns intro
-        every { menuContext.selectEvent.values.firstOrNull() } returns "1"
+        every { menuContext.event.values.firstOrNull() } returns "1"
 
 
         // Call handle
         editIntroMenu.handle(menuContext, 0)
 
         // Verify that the user is prompted for a new volume
-        verify { menuContext.selectEvent.hook.sendMessage("You've selected Intro1. Please reply with the new volume (0-100).") }
+        verify { menuContext.event.hook.sendMessage("You've selected Intro1. Please reply with the new volume (0-100).") }
     }
 
     @Test
     fun `test invalid intro selection`() {
         // Return null when trying to find the intro
         every { introHelper.findIntroById("1") } returns null
-        every { menuContext.selectEvent.values.firstOrNull() } returns "1"
+        every { menuContext.event.values.firstOrNull() } returns "1"
 
         // Call handle
         editIntroMenu.handle(menuContext, 0)
 
         // Verify that the user is informed the intro wasn't found
-        verify { menuContext.selectEvent.hook.sendMessage("Unable to find the selected intro.") }
+        verify { menuContext.event.hook.sendMessage("Unable to find the selected intro.") }
     }
 }
