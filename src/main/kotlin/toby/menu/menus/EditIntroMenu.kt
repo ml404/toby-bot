@@ -3,7 +3,6 @@ package toby.menu.menus
 import toby.command.ICommand.Companion.deleteAfter
 import toby.handler.EventWaiter
 import toby.helpers.IntroHelper
-import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -11,8 +10,6 @@ class EditIntroMenu(
     private val introHelper: IntroHelper,
     private val eventWaiter: EventWaiter
 ) : IMenu {
-
-    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.selectEvent

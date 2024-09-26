@@ -2,7 +2,6 @@ package toby.menu.menus
 
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
-import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -11,8 +10,6 @@ class SetIntroMenu(
     private val introHelper: IntroHelper,
     private val userDtoHelper: UserDtoHelper
 ) : IMenu {
-
-    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndUserContext(ctx.guild, ctx.member)

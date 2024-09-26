@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData
 import toby.jpa.dto.UserDto
+import toby.logging.DiscordLogger
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
@@ -14,6 +15,8 @@ interface ICommand {
     fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?)
     val name: String
     val description: String
+    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
+
     fun getErrorMessage(serverOwner: String?): String {
         return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to $serverOwner"
     }

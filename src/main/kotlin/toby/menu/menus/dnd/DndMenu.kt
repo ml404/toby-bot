@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
-import toby.logging.DiscordLogger
 import toby.menu.IMenu
 import toby.menu.MenuContext
 
@@ -15,7 +14,6 @@ class DndMenu(
     private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper, dnDHelper),
     private val eventProcessor: DndEventProcessor = DndEventProcessor()
 ) : IMenu {
-    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndUserContext(ctx.guild, ctx.selectEvent.member!!)
