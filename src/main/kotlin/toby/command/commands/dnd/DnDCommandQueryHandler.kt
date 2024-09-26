@@ -13,6 +13,7 @@ import toby.dto.web.dnd.DnDResponse
 import toby.dto.web.dnd.QueryResult
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
+import toby.helpers.MenuHelper.DND
 import toby.logging.DiscordLogger
 
 class DnDCommandQueryHandler(
@@ -77,7 +78,7 @@ class DnDCommandQueryHandler(
     private fun QueryResult.isValidNonMatchQueryReturn(typeName: String?, query: String): Boolean {
         logger.info("No initial query result, handling non-match query result")
         if (this.count > 0) {
-            val builder = StringSelectMenu.create("dnd:$typeName").setPlaceholder("Choose an option")
+            val builder = StringSelectMenu.create("$DND:$typeName").setPlaceholder("Choose an option")
             this.results.forEach { info: ApiInfo -> builder.addOptions(SelectOption.of(info.index, info.index)) }
             val stringSelectMenu = builder.build()
             hook.sendMessage("Your query '$query' didn't return a value, but these close matches were found, please select one as appropriate")

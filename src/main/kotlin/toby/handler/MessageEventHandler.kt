@@ -94,6 +94,8 @@ class MessageEventHandler @Autowired constructor(
             launch {
                 logger.info { "Launching coroutine for '${event.name}'" }
                 commandManager.handle(event)
+            }.invokeOnCompletion {
+                logger.info { "Finished coroutine for '${event.name}'" }
             }
         }
     }
@@ -113,6 +115,8 @@ class MessageEventHandler @Autowired constructor(
         launch {
             logger.info { "Launching coroutine for '${event.componentId}'" }
             menuManager.handle(event)
+        }.invokeOnCompletion {
+            logger.info { "Finished coroutine for '${event.componentId}'" }
         }
     }
 }
