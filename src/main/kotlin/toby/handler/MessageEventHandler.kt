@@ -109,9 +109,9 @@ class MessageEventHandler @Autowired constructor(
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
         logger.setGuildAndUserContext(event.guild, event.member)
-        logger.info { "StringSelectInteractionEvent received" }
+        logger.info { "StringSelectInteractionEvent '${event.componentId}' received" }
         launch {
-            logger.info { "Launching coroutine for '${event}'" }
+            logger.info { "Launching coroutine for '${event.componentId}'" }
             menuManager.handle(event)
         }
     }
