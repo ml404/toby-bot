@@ -19,12 +19,7 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
 
     private fun printUserInfo(event: SlashCommandInteractionEvent, requestingUserDto: UserDto, deleteDelay: Int?) {
         if (event.options.isEmpty()) {
-            val introMessage = if (requestingUserDto.musicDtos.isEmpty()) {
-                "There is no intro music file associated with your user."
-            } else {
-                calculateMusicFileData(event.member!!, requestingUserDto)
-            }
-            event.hook.sendMessage(introMessage).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.member?.listUserInfoForMember(event, requestingUserDto, deleteDelay)
         } else {
             if (requestingUserDto.superUser) {
                 val memberList = event.getOption(USERS)?.mentions?.members ?: emptyList()
@@ -32,8 +27,8 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
             } else {
                 event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
                     .setEphemeral(true).queue(
-                    invokeDeleteOnMessageResponse(deleteDelay!!)
-                )
+                        invokeDeleteOnMessageResponse(deleteDelay!!)
+                    )
             }
         }
     }
@@ -46,7 +41,7 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
         val userSearched = userService.getUserById(this.idLong, this.guild.idLong)
         val userInfoMessage = userSearched?.let {
             val introMessage = calculateMusicFileData(event.member!!, requestingUserDto)
-            "Here are the permissions for '${this.effectiveName}': '$userSearched'. \n $introMessage"
+            "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $introMessage"
         } ?: "I was unable to retrieve information for '${this.effectiveName}'."
         event.hook
             .sendMessage(userInfoMessage)
