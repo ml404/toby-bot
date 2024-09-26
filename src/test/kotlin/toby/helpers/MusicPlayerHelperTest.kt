@@ -53,6 +53,7 @@ class MusicPlayerHelperTest {
         // Mock guild and interaction hook
         every { replyCallback.guild } returns guildMock
         every { guildMock.idLong } returns guildId
+        every { guildMock.id } returns guildId.toString()
         every { guildMock.name } returns "guildName"
         every { replyCallback.hook.interaction } returns mockk {
             every { guild } returns guildMock

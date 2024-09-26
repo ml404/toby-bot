@@ -111,6 +111,7 @@ class ButtonManagerTest {
                 every { isOwner } returns true
                 every { effectiveName } returns "effectiveName"
                 every { idLong } returns 123L
+                every { id } returns "123"
                 every { user } returns mockk {
                     every { effectiveName } returns "effectiveName"
                     every { idLong } returns 123L

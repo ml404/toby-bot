@@ -45,7 +45,7 @@ class CommandManager @Autowired constructor(
     private val commands: MutableList<ICommand> = ArrayList()
     private val slashCommands: MutableList<CommandData?> = ArrayList()
     val lastCommands: MutableMap<Guild, Pair<ICommand, CommandContext>> = HashMap()
-    lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     init {
         val cache = Cache(86400, 3600, 2)
@@ -128,7 +128,7 @@ class CommandManager @Autowired constructor(
                 it.isOwner,
             )
         }
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild!!, event.member!!)
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
         logger.info("Processing command '${cmd?.name}' ...")

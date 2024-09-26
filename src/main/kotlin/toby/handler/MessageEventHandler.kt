@@ -31,7 +31,7 @@ class MessageEventHandler @Autowired constructor(
 
     private val job = SupervisorJob()
     override val coroutineContext: CoroutineContext = job + Dispatchers.Default
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     override fun onMessageReceived(event: MessageReceivedEvent) {
         val message = event.message
@@ -88,7 +88,7 @@ class MessageEventHandler @Autowired constructor(
 
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "SlashCommandInteractionEvent '${event.name}' received" }
         if (!event.user.isBot) {
             launch {
@@ -108,7 +108,7 @@ class MessageEventHandler @Autowired constructor(
     }
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "StringSelectInteractionEvent received" }
         launch {
             logger.info { "Launching coroutine for '${event}'" }

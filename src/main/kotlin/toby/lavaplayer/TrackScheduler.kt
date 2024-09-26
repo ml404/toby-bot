@@ -20,10 +20,9 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
     var event: SlashCommandInteractionEvent? = null
     var deleteDelay: Int? = null
     private var previousVolume: Int? = null
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
-        setUpLogger()
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
@@ -38,7 +37,6 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
     }
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
-        setUpLogger()
         logger.info { "Adding ${playList.name} to the queue for guild $guildId" }
         event?.hook
             ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
@@ -60,7 +58,6 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
     }
 
     override fun onTrackStart(player: AudioPlayer, track: AudioTrack) {
-        setUpLogger()
         logger.info { "${track.info.title} by ${track.info.author} started for guild $guildId" }
         super.onTrackStart(player, track)
         player.volume = track.userData as Int
@@ -68,7 +65,6 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-        setUpLogger()
         event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         if (endReason.mayStartNext) {
@@ -118,10 +114,6 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
 
     fun setPreviousVolume(previousVolume: Int?) {
         this.previousVolume = previousVolume
-    }
-
-    private fun setUpLogger() {
-        logger = DiscordLogger.getLoggerForGuildId(guildId)
     }
 
     private fun Long?.resetMessagesForGuildId() {

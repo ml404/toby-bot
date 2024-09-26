@@ -12,10 +12,10 @@ class SetIntroMenu(
     private val userDtoHelper: UserDtoHelper
 ) : IMenu {
 
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(ctx.guild, ctx.selectEvent.member!!)
+        logger.setGuildAndUserContext(ctx.guild, ctx.member)
         logger.info { "Intro menu event started" }
         val event = ctx.selectEvent
         event.deferReply(true).queue()

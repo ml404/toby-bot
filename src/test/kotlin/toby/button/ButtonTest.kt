@@ -66,6 +66,7 @@ interface ButtonTest {
             every { hook } returns mockHook
             every { user } returns mockk {
                 every { idLong } returns 1L
+                every { id } returns "1"
             }
             every { member } returns mockk {
                 every { isOwner } returns true
@@ -73,8 +74,10 @@ interface ButtonTest {
                 every { user } returns mockk {
                     every {effectiveName} returns "effectiveName"
                     every {idLong} returns 123L
+                    every {id} returns "123"
                 }
                 every { idLong } returns 1234L
+                every { id } returns "1234"
 
             }
             every { interaction } returns mockInteraction

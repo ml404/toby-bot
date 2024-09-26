@@ -132,11 +132,13 @@ class VoiceEventHandlerTest {
         every { member.guild } returns guild
         every { member.isOwner } returns false
         every { member.idLong } returns 1L
+        every { member.id } returns "1234"
         every { member.effectiveName } returns "Effective Name"
         every { member.user } returns mockk {
             every { idLong } returns 1L
         }
         every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
         every { guild.id } returns "1"
         every { guild.name } returns "guildName"
         every { audioManager.isConnected } returns false
@@ -179,6 +181,7 @@ class VoiceEventHandlerTest {
         every { event.member } returns mockk {
             every { effectiveName } returns "Effective Name"
             every { idLong } returns 123L
+            every { id } returns "1234"
             every { user } returns mockk {
                 every { idLong } returns 123L
             }
@@ -213,10 +216,12 @@ class VoiceEventHandlerTest {
         every { guild.audioManager } returns audioManager
         every { audioManager.guild } returns guild
         every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
         every { guild.name } returns "guildName"
         every { member.user.idLong } returns 12345L  // Simulate the bot's ID
         every { member.effectiveName } returns "effectiveName" // Simulate the bot's ID
         every { member.idLong } returns 1234L
+        every { member.id } returns "1234"
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
         every { event.channelJoined } returns newChannel
         every { event.channelLeft } returns mockk()
@@ -249,8 +254,10 @@ class VoiceEventHandlerTest {
         every { audioManager.guild } returns guild
         every { member.user.idLong } returns 12345L  // Simulate the bot's ID
         every { member.idLong } returns 12345L  // Simulate the bot's ID
+        every { member.id } returns "12345"  // Simulate the bot's ID
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
         every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
         every { event.channelJoined } returns mockk {
             every { asVoiceChannel() } returns mockk(relaxed = true)
         }
@@ -288,6 +295,7 @@ class VoiceEventHandlerTest {
         every { audioManager.guild } returns guild
         every { member.user.idLong } returns 54321L  // Not bot's ID
         every { member.idLong } returns 54321L  // Not bot's ID
+        every { member.id } returns "54321"  // Not bot's ID
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
         every { guild.name } returns "guildName"

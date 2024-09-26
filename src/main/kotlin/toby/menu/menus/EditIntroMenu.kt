@@ -12,11 +12,11 @@ class EditIntroMenu(
     private val eventWaiter: EventWaiter
 ) : IMenu {
 
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        logger = DiscordLogger.getLoggerForGuildId(ctx.guild.idLong)
         val event = ctx.selectEvent
+        logger.setGuildAndUserContext(ctx.guild, event.member)
         event.deferReply(true).queue()
 
         logger.info { "Getting the selectedIntroId" }

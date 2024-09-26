@@ -15,10 +15,10 @@ class DndMenu(
     private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper, dnDHelper),
     private val eventProcessor: DndEventProcessor = DndEventProcessor()
 ) : IMenu {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(ctx.guild, ctx.selectEvent.member!!)
+        logger.setGuildAndUserContext(ctx.guild, ctx.selectEvent.member!!)
         logger.info { "DnD menu event started" }
         val event = ctx.selectEvent
         event.deferReply(true).queue()

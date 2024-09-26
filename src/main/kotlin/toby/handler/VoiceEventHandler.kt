@@ -29,11 +29,10 @@ class VoiceEventHandler @Autowired constructor(
     private val userDtoHelper: UserDtoHelper
 ) : ListenerAdapter() {
 
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     override fun onReady(event: ReadyEvent) {
         event.jda.guildCache.forEach {
-            logger = DiscordLogger.getLoggerForGuild(it)
             it.connectToMostPopulatedVoiceChannel()
         }
     }
@@ -57,8 +56,7 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild, event.member)
-
+        logger.setGuildAndUserContext(event.guild, event.member)
         when {
             event.channelJoined != null && event.channelLeft != null -> {
                 logVoiceMove(event)

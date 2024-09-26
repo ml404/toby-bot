@@ -24,11 +24,10 @@ class IntroHelper(
     private val musicFileService: IMusicFileService,
     private val configService: IConfigService
 ) {
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
-
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
         val volumePropertyName = ConfigDto.Configurations.INTRO_VOLUME.configValue
@@ -48,7 +47,7 @@ class IntroHelper(
         selectedMusicDto: MusicDto?,
         userName: String = event.user.effectiveName
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Handling media inside intro helper ..." }
         when {
             attachment != null -> handleAttachment(
@@ -85,7 +84,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Handling attachment inside intro helper ..." }
         when {
             attachment.fileExtension != "mp3" -> {
@@ -127,7 +126,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Handling url inside intro helper ..." }
         val urlString = optionalURI.map(URI::toString).orElse("")
         persistMusicUrl(
@@ -167,7 +166,7 @@ class IntroHelper(
         inputStream: InputStream,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Persisting music file" }
         val fileContents = runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
@@ -206,7 +205,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto?
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Persisting music url for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
         val index = userService.getUserById(targetDto.discordId, targetDto.guildId)?.musicDtos?.size?.plus(1) ?: 1
@@ -240,7 +239,7 @@ class IntroHelper(
         index: Int,
         deleteDelay: Int?
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'" }
         event.hook
             .sendMessage("Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
@@ -268,16 +267,13 @@ class IntroHelper(
         filename: String,
         deleteDelay: Int?
     ) {
-        logger = setupLogger(event)
+        logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "$memberName's intro song '$filename' was rejected for duplication" }
         event.hook
             .sendMessage("$memberName's intro song '$filename' was rejected as it already exists as one of their intros for this server")
             .setEphemeral(true)
             .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
-
-    private fun setupLogger(event: IReplyCallback) =
-        DiscordLogger.createLoggerForGuildAndUser(event.guild!!, event.member!!)
 
     companion object {
         private const val VOLUME = "volume"

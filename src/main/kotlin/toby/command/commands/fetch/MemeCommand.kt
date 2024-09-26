@@ -25,11 +25,11 @@ class MemeCommand : IFetchCommand {
     private val SUBREDDIT = "subreddit"
     private val TIME_PERIOD = "timeperiod"
     private val LIMIT = "limit"
-    private lateinit var logger: DiscordLogger
+    private val logger: DiscordLogger = DiscordLogger.createLogger()
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         try {
-            logger = DiscordLogger.createLoggerForGuildAndUser(ctx.event.guild!!, ctx.member!!)
+            logger.setGuildAndUserContext(ctx.event.guild, ctx.event.member)
             handle(ctx, HttpClients.createDefault(), requestingUserDto, deleteDelay)
         } catch (e: IOException) {
             logger.error("IOException occurred while handling command: $e")
@@ -40,7 +40,7 @@ class MemeCommand : IFetchCommand {
     @Throws(IOException::class)
     fun handle(ctx: CommandContext, httpClient: HttpClient, requestingUserDto: UserDto?, deleteDelay: Int?) {
         val event = ctx.event
-        logger = DiscordLogger.createLoggerForGuildAndUser(event.guild!!, ctx.member!!)
+        logger.setGuildAndUserContext(event.guild, event.member)
         event.deferReply().queue()
 
         if (requestingUserDto?.memePermission != true) {
