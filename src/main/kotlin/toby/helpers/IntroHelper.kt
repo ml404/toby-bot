@@ -42,7 +42,7 @@ class IntroHelper(
         deleteDelay: Int?,
         input: InputData?,
         introVolume: Int,
-        selectedMusicDto: MusicDto? = null,
+        selectedMusicDto: MusicDto?,
         userName: String = event.user.effectiveName
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
@@ -163,7 +163,7 @@ class IntroHelper(
         )
     }
 
-    fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(discordId, guildId)
+    fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(guildId, discordId)
 
     fun findIntroById(musicFileId: String) = musicFileService.getMusicFileById(musicFileId)
 
@@ -197,7 +197,7 @@ class IntroHelper(
                 .setEphemeral(true)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
-        val index = userDtoHelper.calculateUserDto(targetDto.guildId, targetDto.discordId).musicDtos.size.plus(1)
+        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos.size.plus(1)
         val musicDto = selectedMusicDto?.apply {
             this.musicBlob = fileContents
             this.musicBlobHash = computeHash(fileContents)
@@ -227,12 +227,12 @@ class IntroHelper(
         url: String,
         memberName: String,
         introVolume: Int,
-        selectedMusicDto: MusicDto?
+        selectedMusicDto: MusicDto? = null
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
-        val index = userDtoHelper.calculateUserDto(targetDto.guildId, targetDto.discordId).musicDtos.size.plus(1)
+        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos.size.plus(1)
         val musicDto = selectedMusicDto?.apply {
             this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
             this.userDto = targetDto

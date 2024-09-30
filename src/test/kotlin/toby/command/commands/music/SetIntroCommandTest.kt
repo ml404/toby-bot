@@ -130,7 +130,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
         every { event.getOption("users") } returns userOptionMapping
-        every { userDtoHelper.calculateUserDto(1L, 0L) } returns requestingUserDto
+        every { userDtoHelper.calculateUserDto(0L, 1L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns mockk(relaxed = true)
 
         setupMentions(userOptionMapping)
@@ -226,7 +226,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("attachment") } returns attachmentOptionMapping
         setupAttachments(attachmentOptionMapping)
-        every { userDtoHelper.calculateUserDto(1L, 0L) } returns requestingUserDto
+        every { userDtoHelper.calculateUserDto(0L, 1L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { event.getOption("link") } returns mockk {
             every { asString } returns ""

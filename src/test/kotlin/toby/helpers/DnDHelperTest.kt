@@ -124,8 +124,8 @@ internal class DnDHelperTest {
 
         every { userService.listGuildUsers(any()) } returns listOf(userDto1, userDto2, userDto3)
         every { userDtoHelper.calculateUserDto(1L, 1L) } returns userDto1
-        every { userDtoHelper.calculateUserDto(2L, 1L) } returns userDto2
-        every { userDtoHelper.calculateUserDto(3L, 1L) } returns userDto3
+        every { userDtoHelper.calculateUserDto(1L, 2L) } returns userDto2
+        every { userDtoHelper.calculateUserDto(1L, 3L) } returns userDto3
         every { hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue(any()) } just Runs
         every { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() } just Runs

@@ -123,8 +123,8 @@ class CommandManager @Autowired constructor(
         )?.value?.toIntOrNull() ?: 0
         val requestingUserDto = event.member?.let {
             userDtoHelper.calculateUserDto(
-                event.guild?.idLong!!,
                 event.user.idLong,
+                event.guild?.idLong!!,
                 it.isOwner,
             )
         }

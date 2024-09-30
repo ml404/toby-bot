@@ -75,7 +75,7 @@ internal class SetIntroMenuTest : MenuTest {
             every { value } returns "2" // Represents a valid musicDtoId, not a list index
         })
 
-        every { userDtoHelper.calculateUserDto(1L, 1234L, true) } returns userDto
+        every { userDtoHelper.calculateUserDto(1234L, 1L, true) } returns userDto
         val musicDtoToReplace = userDto.musicDtos.first { it.id == "2" } // Match the selectedMusicDtoId
         every { introHelper.pendingIntros[1234L] } returns Triple(mockk(), "url", 50)
 
@@ -146,7 +146,7 @@ internal class SetIntroMenuTest : MenuTest {
             every { value } returns "1"
         })
 
-        every { userDtoHelper.calculateUserDto(1L, 1234L, true) } returns userDto
+        every { userDtoHelper.calculateUserDto(1234L, 1L, true) } returns userDto
         every { introHelper.pendingIntros[1234L] } returns null
 
         // Act

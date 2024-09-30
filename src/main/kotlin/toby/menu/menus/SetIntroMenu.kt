@@ -25,8 +25,8 @@ class SetIntroMenu(
 
         val jdaUser = event.user
         val requestingUserDto = userDtoHelper.calculateUserDto(
-            event.guild?.idLong!!,
             jdaUser.idLong,
+            event.guild?.idLong!!,
             event.member?.isOwner ?: false
         )
 
