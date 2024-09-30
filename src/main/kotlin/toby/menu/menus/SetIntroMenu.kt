@@ -1,5 +1,6 @@
 package toby.menu.menus
 
+import toby.helpers.InputData
 import toby.helpers.IntroHelper
 import toby.helpers.MenuHelper.SET_INTRO
 import toby.helpers.UserDtoHelper
@@ -24,8 +25,8 @@ class SetIntroMenu(
 
         val jdaUser = event.user
         val requestingUserDto = userDtoHelper.calculateUserDto(
-            event.guild?.idLong!!,
             jdaUser.idLong,
+            event.guild?.idLong!!,
             event.member?.isOwner ?: false
         )
 
@@ -41,12 +42,12 @@ class SetIntroMenu(
         if (pendingIntroTriple != null) {
             val (pendingDtoAttachment, url, introVolume) = pendingIntroTriple
             runCatching {
+                val input = if (pendingDtoAttachment!= null) InputData.Attachment(pendingDtoAttachment) else InputData.Url(url!!)
                 introHelper.handleMedia(
                     event,
                     requestingUserDto,
                     deleteDelay,
-                    pendingDtoAttachment,
-                    url,
+                    input,
                     introVolume,
                     musicDtoToReplace,
                     ctx.event.user.effectiveName

@@ -50,7 +50,7 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
     }
 
     private fun calculateMusicFileData(member: Member, requestingUserDto: UserDto): String {
-        val musicFiles = requestingUserDto.musicDtos.filter { !it.fileName.isNullOrBlank() }
+        val musicFiles = requestingUserDto.musicDtos.filter { !it.fileName.isNullOrBlank() }.sortedBy { it.index }
         return if (musicFiles.isEmpty()) {
             "There is no valid intro music file associated with user ${member.effectiveName}."
         } else {

@@ -48,7 +48,7 @@ class SetIntroCommand(
         val attachmentOption = event.getOption(ATTACHMENT)
         val linkOption = event.getOption(LINK)?.asString.orEmpty()
 
-        val mentionedUserDtoList = mentionedMembers.mapNotNull { introHelper.findUserById(it.idLong, it.guild.idLong) }
+        val mentionedUserDtoList = mentionedMembers.map { introHelper.findUserById(it.idLong, it.guild.idLong) }
 
         if (mentionedUserDtoList.isEmpty()) {
             checkAndSetIntro(
@@ -64,7 +64,7 @@ class SetIntroCommand(
             mentionedMembers.forEach {
                 checkAndSetIntro(
                     event,
-                    introHelper.findUserById(it.idLong, it.guild.idLong)!!,
+                    introHelper.findUserById(it.idLong, it.guild.idLong),
                     linkOption,
                     it.effectiveName,
                     deleteDelay,
@@ -139,7 +139,9 @@ class SetIntroCommand(
         if (introList.size >= LIMIT) {
             introHelper.pendingIntros[discordId] = Triple(attachmentOption?.asAttachment, linkOption, introVolume)
             val builder = StringSelectMenu.create(SET_INTRO).setPlaceholder(null)
-            introList.forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
+            introList
+                .sortedBy { it.index }
+                .forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
             val stringSelectMenu = builder.build()
             hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
                 .setActionRow(stringSelectMenu)

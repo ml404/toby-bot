@@ -2,6 +2,7 @@ package toby.menu.menus
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -9,6 +10,7 @@ import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandTest.Companion.interactionHook
+import toby.helpers.InputData
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.MusicDto
@@ -73,12 +75,14 @@ internal class SetIntroMenuTest : MenuTest {
             every { value } returns "2" // Represents a valid musicDtoId, not a list index
         })
 
-        every { userDtoHelper.calculateUserDto(1L, 1234L, true) } returns userDto
+        every { userDtoHelper.calculateUserDto(1234L, 1L, true) } returns userDto
         val musicDtoToReplace = userDto.musicDtos.first { it.id == "2" } // Match the selectedMusicDtoId
         every { introHelper.pendingIntros[1234L] } returns Triple(mockk(), "url", 50)
 
         // Act
         setIntroMenu.handle(menuContext, 10)
+
+        val inputData = slot<InputData>()
 
         // Assert
         verify {
@@ -86,8 +90,7 @@ internal class SetIntroMenuTest : MenuTest {
                 menuEvent,
                 userDto,
                 10,
-                any(), // pendingDtoAttachment
-                "url",
+                capture(inputData),
                 50,
                 musicDtoToReplace, // Ensure we are using the correct MusicDto
                 "Effective Name"
@@ -143,7 +146,7 @@ internal class SetIntroMenuTest : MenuTest {
             every { value } returns "1"
         })
 
-        every { userDtoHelper.calculateUserDto(1L, 1234L, true) } returns userDto
+        every { userDtoHelper.calculateUserDto(1234L, 1L, true) } returns userDto
         every { introHelper.pendingIntros[1234L] } returns null
 
         // Act
@@ -151,7 +154,7 @@ internal class SetIntroMenuTest : MenuTest {
 
         // Assert
         verify(exactly = 0) {
-            introHelper.handleMedia(any(), any(), any(), any(), any(), any(), any(), any())
+            introHelper.handleMedia(any(), any(), any(), any(), any(), any(), any())
         }
     }
 }

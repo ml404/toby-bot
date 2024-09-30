@@ -1,5 +1,6 @@
 package toby.helpers
 
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
@@ -12,15 +13,13 @@ import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IMusicFileService
-import toby.jpa.service.IUserService
 import toby.logging.DiscordLogger
 import java.io.InputStream
 import java.net.URI
-import java.util.*
 
 @Service
 class IntroHelper(
-    private val userService: IUserService,
+    private val userDtoHelper: UserDtoHelper,
     private val musicFileService: IMusicFileService,
     private val configService: IConfigService
 ) {
@@ -41,39 +40,62 @@ class IntroHelper(
         event: IReplyCallback,
         requestingUserDto: UserDto,
         deleteDelay: Int?,
-        attachment: Attachment?,
-        link: String?,
+        input: InputData?,
         introVolume: Int,
         selectedMusicDto: MusicDto?,
         userName: String = event.user.effectiveName
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Handling media inside intro helper ..." }
-        when {
-            attachment != null -> handleAttachment(
-                event,
-                requestingUserDto,
-                userName,
-                deleteDelay,
-                attachment,
-                introVolume,
-                selectedMusicDto
-            )
 
-            link != null && URLHelper.isValidURL(link) -> handleUrl(
-                event,
-                requestingUserDto,
-                userName,
-                deleteDelay,
-                Optional.of(URI.create(link)),
-                introVolume,
-                selectedMusicDto
-            )
+        when (input) {
+            is InputData.Attachment -> {
+                // Validate the attachment before proceeding
+                if (!isValidAttachment(input.attachment)) {
+                    event.hook.sendMessage("Please provide a valid mp3 file under 400kb.")
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    return
+                }
+                handleAttachment(
+                    event,
+                    requestingUserDto,
+                    userName,
+                    deleteDelay,
+                    input.attachment,
+                    introVolume,
+                    selectedMusicDto
+                )
+            }
 
-            else -> event.hook.sendMessage("Please provide a valid link or attachment")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            is InputData.Url -> {
+                val uriString = input.uri
+                if (!URLHelper.isValidURL(uriString)) {
+                    event.hook.sendMessage("Please provide a valid URL.")
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    return
+                }
+                val uri = URI.create(uriString)
+                handleUrl(
+                    event,
+                    requestingUserDto,
+                    userName,
+                    deleteDelay,
+                    uri,
+                    introVolume,
+                    selectedMusicDto
+                )
+            }
+            else -> {
+                event.hook.sendMessage("Please provide a valid link or attachment.")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            }
         }
     }
+
+    private fun isValidAttachment(attachment: Attachment): Boolean {
+        return attachment.fileExtension == "mp3" && attachment.size <= 400000 // Max size in bytes
+    }
+
 
     fun handleAttachment(
         event: IReplyCallback,
@@ -85,16 +107,16 @@ class IntroHelper(
         selectedMusicDto: MusicDto? = null
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
-        logger.info { "Handling attachment inside intro helper ..." }
+        logger.info { "Handling attachment inside intro helper..." }
         when {
             attachment.fileExtension != "mp3" -> {
-                logger.info { "invalid file extension was used" }
+                logger.info { "Invalid file extension used" }
                 event.hook.sendMessage("Please use mp3 files only")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
 
             attachment.size > 400000 -> {
-                logger.info { "file size was too large" }
+                logger.info { "File size was too large" }
                 event.hook.sendMessage("Please keep the file size under 400kb")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
@@ -122,13 +144,13 @@ class IntroHelper(
         requestingUserDto: UserDto,
         userName: String,
         deleteDelay: Int?,
-        optionalURI: Optional<URI>,
+        uri: URI?,
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
-        logger.info { "Handling url inside intro helper ..." }
-        val urlString = optionalURI.map(URI::toString).orElse("")
+        logger.info { "Handling URL inside intro helper..." }
+        val urlString = uri.toString()
         persistMusicUrl(
             event,
             requestingUserDto,
@@ -141,11 +163,13 @@ class IntroHelper(
         )
     }
 
-    fun findUserById(discordId: Long, guildId: Long) = userService.getUserById(discordId, guildId)
+    fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(guildId, discordId)
 
     fun findIntroById(musicFileId: String) = musicFileService.getMusicFileById(musicFileId)
 
-    fun saveIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
+    fun updateIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
+
+    fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
 
     fun downloadAttachment(attachment: Attachment): InputStream? {
         return runCatching {
@@ -173,7 +197,7 @@ class IntroHelper(
                 .setEphemeral(true)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
-        val index = userService.getUserById(targetDto.discordId, targetDto.guildId)?.musicDtos?.size?.plus(1) ?: 1
+        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos.size.plus(1)
         val musicDto = selectedMusicDto?.apply {
             this.musicBlob = fileContents
             this.musicBlobHash = computeHash(fileContents)
@@ -203,12 +227,12 @@ class IntroHelper(
         url: String,
         memberName: String,
         introVolume: Int,
-        selectedMusicDto: MusicDto?
+        selectedMusicDto: MusicDto? = null
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
-        logger.info { "Persisting music url for user '$memberName' on guild: ${event.guild?.idLong}" }
+        logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
-        val index = userService.getUserById(targetDto.discordId, targetDto.guildId)?.musicDtos?.size?.plus(1) ?: 1
+        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos.size.plus(1)
         val musicDto = selectedMusicDto?.apply {
             this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
             this.userDto = targetDto
@@ -249,7 +273,7 @@ class IntroHelper(
 
     private fun sendUpdateMessage(
         event: IReplyCallback,
-        memberName: String?,
+        memberName: String,
         filename: String,
         introVolume: Int,
         index: Int,
@@ -278,4 +302,9 @@ class IntroHelper(
     companion object {
         private const val VOLUME = "volume"
     }
+}
+
+sealed class InputData {
+    data class Attachment(val attachment: Message.Attachment) : InputData()
+    data class Url(val uri: String) : InputData()
 }

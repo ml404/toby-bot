@@ -9,7 +9,6 @@ interface IUserService {
     fun updateUser(userDto: UserDto): UserDto?
     fun deleteUser(userDto: UserDto)
     fun deleteUserById(discordId: Long?, guildId: Long?)
-
     fun clearCache()
     fun evictUserFromCache(discordId: Long?, guildId: Long?)
 }

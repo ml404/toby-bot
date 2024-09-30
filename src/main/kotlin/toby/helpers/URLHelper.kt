@@ -2,7 +2,6 @@ package toby.helpers
 
 import java.net.URI
 import java.net.URL
-import java.util.*
 
 object URLHelper {
     fun isValidURL(url: String?): Boolean {
@@ -17,14 +16,14 @@ object URLHelper {
         }
     }
 
-    fun fromUrlString(url: String?): Optional<URI> {
+    fun fromUrlString(url: String?): URI? {
         /* Try creating a valid URL */
         return try {
-            Optional.of(URL(url).toURI())
+            URL(url).toURI()
         } // If there was an Exception
         // while creating URL object
         catch (e: Exception) {
-            Optional.empty()
+            null
         }
     }
 }

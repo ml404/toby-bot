@@ -48,7 +48,7 @@ class ButtonManager @Autowired constructor(
             guild.id
         )?.value?.toIntOrNull() ?: 0
         val requestingUserDto = event.member?.let {
-            userDtoHelper.calculateUserDto(guildId, event.user.idLong, it.isOwner)
+            userDtoHelper.calculateUserDto(event.user.idLong, guildId, it.isOwner)
         } ?: return
 
 
