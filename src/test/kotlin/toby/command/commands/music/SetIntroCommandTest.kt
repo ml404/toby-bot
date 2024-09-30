@@ -17,24 +17,24 @@ import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.commands.music.intro.SetIntroCommand
 import toby.helpers.IntroHelper
+import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IMusicFileService
-import toby.jpa.service.IUserService
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 
 internal class SetIntroCommandTest : MusicCommandTest {
     private lateinit var setIntroCommand: SetIntroCommand
-    private var userService: IUserService = mockk(relaxed = true)
+    private var userDtoHelper: UserDtoHelper = mockk(relaxed = true)
     private var musicFileService: IMusicFileService = mockk(relaxed = true)
     private var configService: IConfigService = mockk(relaxed = true)
     private lateinit var mentionedUserDto: UserDto
 
-    private var introHelper: IntroHelper = IntroHelper(userService, musicFileService, configService)
+    private var introHelper: IntroHelper = IntroHelper(userDtoHelper, musicFileService, configService)
 
     @BeforeEach
     fun setUp() {
@@ -93,8 +93,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         val attachmentOptionMapping = mockk<OptionMapping>()
 
 
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
-        every { userService.getUserById(1L, 1L) } returns requestingUserDto
+        every { userDtoHelper.calculateUserDto(1L, 1L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
@@ -131,8 +130,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
         every { event.getOption("users") } returns userOptionMapping
-        every { userService.createNewUser(any()) } returns requestingUserDto
-        every { userService.getUserById(1L, 0L) } returns requestingUserDto
+        every { userDtoHelper.calculateUserDto(1L, 0L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns mockk(relaxed = true)
 
         setupMentions(userOptionMapping)
@@ -165,7 +163,6 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { userOptionMapping.mentions } returns mentions
         every { mentions.members } returns listOf(member)
 
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { guild.owner } returns member
         every { member.effectiveName } returns "Effective Name"
@@ -229,8 +226,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("attachment") } returns attachmentOptionMapping
         setupAttachments(attachmentOptionMapping)
-        every { userService.getUserById(1L, 0L) } returns requestingUserDto
-        every { userService.createNewUser(any()) } returns mentionedUserDto
+        every { userDtoHelper.calculateUserDto(1L, 0L) } returns requestingUserDto
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { event.getOption("link") } returns mockk {
             every { asString } returns ""
@@ -262,7 +258,6 @@ internal class SetIntroCommandTest : MusicCommandTest {
         val attachmentOptionMapping = mockk<OptionMapping>()
 
 
-        every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto)
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
@@ -311,7 +306,6 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { userOptionMapping.mentions } returns mentions
         every { mentions.members } returns listOf(mentionedMember)
         every { mentionedMember.idLong } returns 1L
-        every { userService.createNewUser(any()) } returns mentionedUserDto
         every { mentionedMember.effectiveName } returns "Another Username"
     }
 

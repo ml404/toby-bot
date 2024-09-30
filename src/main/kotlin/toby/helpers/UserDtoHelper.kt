@@ -1,5 +1,6 @@
 package toby.helpers
 
+import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
@@ -24,5 +25,13 @@ class UserDtoHelper(private val userService: IUserService) {
 
     fun userAdjustmentValidation(requester: UserDto, target: UserDto): Boolean {
         return requester.superUser && !target.superUser
+    }
+
+    companion object {
+        fun Member.getRequestingUserDto(userDtoHelper: UserDtoHelper): UserDto {
+            val discordId = this.idLong
+            val guildId = this.guild.idLong
+            return userDtoHelper.calculateUserDto(guildId, discordId, this.isOwner)
+        }
     }
 }

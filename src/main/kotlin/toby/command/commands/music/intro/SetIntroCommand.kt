@@ -48,7 +48,7 @@ class SetIntroCommand(
         val attachmentOption = event.getOption(ATTACHMENT)
         val linkOption = event.getOption(LINK)?.asString.orEmpty()
 
-        val mentionedUserDtoList = mentionedMembers.mapNotNull { introHelper.findUserById(it.idLong, it.guild.idLong) }
+        val mentionedUserDtoList = mentionedMembers.map { introHelper.findUserById(it.idLong, it.guild.idLong) }
 
         if (mentionedUserDtoList.isEmpty()) {
             checkAndSetIntro(
@@ -64,7 +64,7 @@ class SetIntroCommand(
             mentionedMembers.forEach {
                 checkAndSetIntro(
                     event,
-                    introHelper.findUserById(it.idLong, it.guild.idLong)!!,
+                    introHelper.findUserById(it.idLong, it.guild.idLong),
                     linkOption,
                     it.effectiveName,
                     deleteDelay,

@@ -44,7 +44,7 @@ class EditIntroMenu(
 
                             if (newVolume != null && newVolume in 0..100) {
                                 selectedIntro.introVolume = newVolume
-                                introHelper.saveIntro(selectedIntro)
+                                introHelper.updateIntro(selectedIntro)
 
                                 messageHook.editMessage("Volume updated successfully to $newVolume!")
                                     .queue { it?.deleteAfter(deleteDelay) }

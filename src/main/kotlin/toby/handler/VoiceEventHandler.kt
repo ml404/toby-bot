@@ -2,7 +2,6 @@ package toby.handler
 
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
@@ -13,8 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import toby.helpers.MusicPlayerHelper.playUserIntro
 import toby.helpers.UserDtoHelper
+import toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import toby.jpa.dto.ConfigDto
-import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.lavaplayer.PlayerManager
 import toby.logging.DiscordLogger
@@ -133,7 +132,7 @@ class VoiceEventHandler @Autowired constructor(
 
         if (audioManager.connectedChannel == event.channelJoined) {
             logger.info { "AudioManager channel and event joined channel are the same" }
-            setupAndPlayUserIntro(event.member, guild, deleteDelayConfig)
+            setupAndPlayUserIntro(event, guild, deleteDelayConfig)
         }
     }
 
@@ -155,14 +154,22 @@ class VoiceEventHandler @Autowired constructor(
         }
     }
 
-    private fun setupAndPlayUserIntro(member: Member, guild: Guild, deleteDelayConfig: ConfigDto?) {
-        val requestingUserDto = member.getRequestingUserDto()
-        playUserIntro(
-            requestingUserDto,
-            guild,
-            deleteDelay = deleteDelayConfig?.value?.toInt() ?: 0,
-            member = member
-        )
+    private fun setupAndPlayUserIntro(event: GuildVoiceUpdateEvent, guild: Guild, deleteDelayConfig: ConfigDto?) {
+        val member = event.member
+        val requestingUserDto = member.getRequestingUserDto(userDtoHelper)
+        if (requestingUserDto.musicDtos.isNotEmpty()) {
+            logger.info { "User has musicDto associated with them, preparing to play intro" }
+            playUserIntro(
+                requestingUserDto,
+                guild,
+                deleteDelay = deleteDelayConfig?.value?.toInt() ?: 0,
+                member = member
+            )
+        }
+        else {
+            logger.info { "User has no musicDto associated with them, no intro will be played" }
+//            introHelper.promptUserForMusicInfo(member.user, guild)
+        }
     }
 
     private fun onGuildVoiceLeave(event: GuildVoiceUpdateEvent) {
@@ -196,12 +203,6 @@ class VoiceEventHandler @Autowired constructor(
     private fun getConfigValue(configName: String, guildId: String, defaultValue: Int = 100): Int {
         val config = configService.getConfigByName(configName, guildId)
         return config?.value?.toInt() ?: defaultValue
-    }
-
-    private fun Member.getRequestingUserDto(): UserDto {
-        val discordId = this.idLong
-        val guildId = this.guild.idLong
-        return userDtoHelper.calculateUserDto(guildId, discordId, this.isOwner)
     }
 
     companion object {

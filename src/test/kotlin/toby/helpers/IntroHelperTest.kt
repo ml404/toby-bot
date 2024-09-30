@@ -12,15 +12,13 @@ import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IMusicFileService
-import toby.jpa.service.IUserService
 import java.io.InputStream
 import java.net.URI
-import java.util.*
 
 class IntroHelperTest {
 
     private lateinit var introHelper: IntroHelper
-    private lateinit var userService: IUserService
+    private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var musicFileService: IMusicFileService
     private lateinit var configService: IConfigService
 
@@ -32,11 +30,11 @@ class IntroHelperTest {
 
     @BeforeEach
     fun setup() {
-        userService = mockk(relaxed = true)
+        userDtoHelper = mockk(relaxed = true)
         musicFileService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
 
-        introHelper = IntroHelper(userService, musicFileService, configService)
+        introHelper = IntroHelper(userDtoHelper, musicFileService, configService)
 
         event = mockk(relaxed = true)
         userDto = mockk(relaxed = true)
@@ -103,13 +101,13 @@ class IntroHelperTest {
 
         // Call handleMedia
         spykIntroHelper.handleMedia(
-            event, userDto, 10, null, "http://valid.url", 70, musicDto
+            event, userDto, 10, InputData.Url("http://valid.url"), 70, musicDto
         )
 
         // Verify that handleUrl was called
         verify {
             spykIntroHelper.handleUrl(
-                event, userDto, "TestUser", 10, Optional.of(URI.create("http://valid.url")), 70, musicDto
+                event, userDto, "TestUser", 10, URI.create("http://valid.url"), 70, musicDto
             )
         }
     }
@@ -127,9 +125,7 @@ class IntroHelperTest {
         every { spykIntroHelper.downloadAttachment(attachment) } returns mockk<InputStream>()
 
 
-        spykIntroHelper.handleMedia(
-            event, userDto, 10, attachment, null, 70, musicDto
-        )
+        spykIntroHelper.handleMedia(event, userDto, 10, InputData.Attachment(attachment), 70, musicDto)
 
         verify {
             spykIntroHelper.handleAttachment(
@@ -144,13 +140,11 @@ class IntroHelperTest {
         every { URLHelper.isValidURL(any()) } returns false
 
         // Running the handleMedia method with an invalid URL
-        introHelper.handleMedia(
-            event, userDto, 10, null, "invalid-url", 70, musicDto
-        )
+        introHelper.handleMedia(event, userDto, 10, InputData.Url("invalid"),70, musicDto)
 
         // Verifying that the correct error message is sent
         verify(exactly = 1) {
-            hook.sendMessage("Please provide a valid link or attachment").queue(any())
+            hook.sendMessage("Please provide a valid URL.").queue(any())
         }
     }
 

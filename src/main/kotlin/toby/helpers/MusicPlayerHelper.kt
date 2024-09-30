@@ -36,21 +36,21 @@ object MusicPlayerHelper {
         member: Member? = null
     ) {
         logger.setGuildAndUserContext(guild, member)
-        logger.info { "Playing user intro for user ${dbUser.discordId} in guild ${guild.id}" }
+        logger.info { "Finding intro to play ..." }
         val musicDto = dbUser.musicDtos
         val instance = PlayerManager.instance
         val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
         runCatching {
             musicDto.random().let {
-                logger.info { "User ${dbUser.discordId} has a musicDto. Preparing to play intro." }
+                logger.info { "User has a musicDto. Preparing to play intro." }
                 val introVolume = it.introVolume
                 instance.setPreviousVolume(currentVolume)
-                val url = if (it.fileName != null) "$WEB_URL/music?id=${it.id}" else it.musicBlob.contentToString()
+                val url = determineUrlFromMusicDto(it)
                 instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
             }
         }.onFailure {
-            logger.warn { "User ${dbUser.discordId} does not have a musicDto. Cannot play intro." }
+            logger.warn { "User does not have a musicDto. Cannot play intro." }
         }
     }
 
@@ -212,6 +212,14 @@ object MusicPlayerHelper {
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }
+    }
+
+    private fun determineUrlFromMusicDto(it: MusicDto) = if (isUrl(it.fileName)) {
+        // Handle YouTube or any external URL
+        it.fileName!!
+    } else {
+        // Serve binary blob via local endpoint
+        "$WEB_URL/music?id=${it.id}" // The REST endpoint to serve the binary data
     }
 
     fun formatTime(timeInMillis: Long): String {

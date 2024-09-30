@@ -2,6 +2,7 @@ package toby.menu.menus
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -9,6 +10,7 @@ import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import toby.command.CommandTest.Companion.interactionHook
+import toby.helpers.InputData
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.MusicDto
@@ -80,14 +82,15 @@ internal class SetIntroMenuTest : MenuTest {
         // Act
         setIntroMenu.handle(menuContext, 10)
 
+        val inputData = slot<InputData>()
+
         // Assert
         verify {
             introHelper.handleMedia(
                 menuEvent,
                 userDto,
                 10,
-                any(), // pendingDtoAttachment
-                "url",
+                capture(inputData),
                 50,
                 musicDtoToReplace, // Ensure we are using the correct MusicDto
                 "Effective Name"
@@ -151,7 +154,7 @@ internal class SetIntroMenuTest : MenuTest {
 
         // Assert
         verify(exactly = 0) {
-            introHelper.handleMedia(any(), any(), any(), any(), any(), any(), any(), any())
+            introHelper.handleMedia(any(), any(), any(), any(), any(), any(), any())
         }
     }
 }
