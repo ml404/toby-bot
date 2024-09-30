@@ -139,7 +139,9 @@ class SetIntroCommand(
         if (introList.size >= LIMIT) {
             introHelper.pendingIntros[discordId] = Triple(attachmentOption?.asAttachment, linkOption, introVolume)
             val builder = StringSelectMenu.create(SET_INTRO).setPlaceholder(null)
-            introList.forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
+            introList
+                .sortedBy { it.index }
+                .forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
             val stringSelectMenu = builder.build()
             hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
                 .setActionRow(stringSelectMenu)
