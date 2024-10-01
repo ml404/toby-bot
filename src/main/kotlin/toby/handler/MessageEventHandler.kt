@@ -41,6 +41,7 @@ class MessageEventHandler @Autowired constructor(
         runCatching {
             val guild = event.guild
             val member = event.member
+            logger.setGuildAndMemberContext(guild, member)
 
             if (author.isBot || event.isWebhookMessage) return
 
@@ -77,6 +78,7 @@ class MessageEventHandler @Autowired constructor(
             }
         }.onFailure {
             // Handle DM context, log the case
+            logger.setGuildContext(null)
             logger.warn("Received a message from '${author.name}' in a DM context.")
         }
     }
