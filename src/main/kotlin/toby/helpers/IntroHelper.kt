@@ -178,7 +178,7 @@ class IntroHelper(
 
     fun updateIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
 
-    fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
+    private fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
 
     fun downloadAttachment(attachment: Attachment): InputStream? {
         return runCatching {
@@ -319,7 +319,7 @@ class IntroHelper(
 
     fun promptUserForMusicInfo(user: User, guild: Guild) {
         user.openPrivateChannel().queue { channel ->
-            channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (0-100). E.g. 'https://www.youtube.com/watch?v=nVIzQdZnOaw 90'")
+            channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'")
                 .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
 
             // Wait for a response in the user's DM
@@ -382,9 +382,13 @@ class IntroHelper(
         logger.info("Constructing musicDto from input ...")
         val requestingUserDto = userDtoHelper.calculateUserDto(user.idLong, guild.idLong)
         // Logic to save the musicDto in the database
-        val musicDto =
-            MusicDto(requestingUserDto, 1, determineFileName(inputData), volume ?: 90, determineMusicBlob(inputData))
+        val musicDto = MusicDto(requestingUserDto, 1, determineFileName(inputData), volume ?: 90, determineMusicBlob(inputData))
         createIntro(musicDto)
+        user.openPrivateChannel().queue {
+            channel ->
+                channel.sendMessage("Successfully set your intro on server '${guild.name}'")
+                    .queue(invokeDeleteOnMessageResponse(1.minutes.toInt(DurationUnit.SECONDS)))
+        }
     }
 
     @VisibleForTesting

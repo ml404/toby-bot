@@ -332,7 +332,7 @@ class IntroHelperTest {
 
         // Verify the correct message was sent in the user's DM
         verify {
-            privateChannel.sendMessage("You don't have an intro song yet on server 'TestGuild'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (0-100). E.g. 'https://www.youtube.com/watch?v=nVIzQdZnOaw 90'").queue()
+            privateChannel.sendMessage("You don't have an intro song yet on server 'TestGuild'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=nVIzQdZnOaw 90'").queue(any())
         }
 
         // Capture the arguments for waitForMessage to assert them
