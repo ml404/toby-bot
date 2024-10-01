@@ -44,6 +44,13 @@ class MessageEventHandler @Autowired constructor(
 
         val messageStringLowercase = message.contentRaw.lowercase()
 
+        // Check if the message is from a guild or a DM
+        if (guild == null) {
+            // Handle DM context, log the case
+            logger.warn("Received a message from ${author.name} in a DM context.")
+            return  // or provide a response to the user if necessary
+        }
+
         when {
             messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs") -> {
                 val tobyEmote = guild.jda.getEmojiById(Emotes.TOBY)
@@ -70,6 +77,7 @@ class MessageEventHandler @Autowired constructor(
             }
         }
     }
+
 
     override fun onCommandAutoCompleteInteraction(event: CommandAutoCompleteInteractionEvent) {
         if (event.name == "help" && event.focusedOption.name == "command") {

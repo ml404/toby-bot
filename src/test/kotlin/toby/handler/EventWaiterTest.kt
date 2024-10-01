@@ -10,6 +10,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class EventWaiterTest {
 
@@ -28,7 +30,7 @@ class EventWaiterTest {
         eventWaiter.waitForMessage(
             condition = { it.author.idLong == 12345L },
             action = { actionExecuted = true },
-            timeout = 1000L,
+            timeout = 1.seconds,
             timeoutAction = {}
         )
 
@@ -51,7 +53,7 @@ class EventWaiterTest {
         eventWaiter.waitForMessage(
             condition = { false },
             action = { },
-            timeout = 100L,
+            timeout = 100.milliseconds,
             timeoutAction = { timeoutExecuted = true }
         )
 

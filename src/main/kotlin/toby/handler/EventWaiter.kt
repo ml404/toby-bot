@@ -3,6 +3,7 @@ package toby.handler
 import kotlinx.coroutines.*
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import kotlin.time.Duration
 
 class EventWaiter(val dispatcher: CoroutineDispatcher = Dispatchers.Default) : ListenerAdapter() {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -12,7 +13,7 @@ class EventWaiter(val dispatcher: CoroutineDispatcher = Dispatchers.Default) : L
     fun waitForMessage(
         condition: (MessageReceivedEvent) -> Boolean,
         action: (MessageReceivedEvent) -> Unit,
-        timeout: Long,
+        timeout:  Duration,
         timeoutAction: () -> Unit
     ) {
         val waitingEvent = WaitingEvent(condition, action, timeoutAction)

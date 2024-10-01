@@ -6,6 +6,7 @@ import toby.helpers.IntroHelper
 import toby.helpers.MenuHelper.EDIT_INTRO
 import toby.menu.IMenu
 import toby.menu.MenuContext
+import kotlin.time.Duration.Companion.seconds
 
 class EditIntroMenu(
     private val introHelper: IntroHelper,
@@ -60,7 +61,7 @@ class EditIntroMenu(
                                 msgEvent.message.deleteAfter(0)
                             }
                         },
-                        timeout = 10000L,  // 10-second timeout
+                        timeout = 10.seconds,
                         timeoutAction = {
                             messageHook
                                 .editMessage("No response received. Volume update canceled.")

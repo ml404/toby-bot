@@ -29,6 +29,7 @@ open class BotConfig {
 
         return JDABuilder.createDefault(
             discordToken,
+            GatewayIntent.DIRECT_MESSAGES,
             GatewayIntent.MESSAGE_CONTENT,
             GatewayIntent.GUILD_MESSAGE_TYPING,
             GatewayIntent.GUILD_MEMBERS,

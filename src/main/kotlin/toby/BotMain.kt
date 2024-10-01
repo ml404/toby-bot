@@ -7,6 +7,7 @@ import toby.handler.EventWaiter
 import toby.handler.MessageEventHandler
 import toby.handler.StartUpHandler
 import toby.handler.VoiceEventHandler
+import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.service.IConfigService
 import toby.managers.ButtonManager
@@ -21,7 +22,8 @@ open class BotMain @Autowired constructor(
     commandManager: CommandManager,
     buttonManager: ButtonManager,
     menuManager: MenuManager,
-    eventWaiter: EventWaiter
+    eventWaiter: EventWaiter,
+    introHelper: IntroHelper
 ) {
     init {
         jda.addEventListener(
@@ -30,7 +32,7 @@ open class BotMain @Autowired constructor(
                 commandManager
             )
         )
-        jda.addEventListener(VoiceEventHandler(jda, configService, userDtoHelper))
+        jda.addEventListener(VoiceEventHandler(jda, configService, userDtoHelper, introHelper))
         jda.addEventListener(
             MessageEventHandler(
                 jda,
