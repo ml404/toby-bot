@@ -336,7 +336,7 @@ class IntroHelper(
         }
     }
 
-    fun handleUserMusicResponse(event: MessageReceivedEvent, guild: Guild) {
+    private fun handleUserMusicResponse(event: MessageReceivedEvent, guild: Guild) {
         val message = event.message
         val content = message.contentRaw
         val attachment = message.attachments.firstOrNull()
