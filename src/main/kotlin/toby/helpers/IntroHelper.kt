@@ -346,10 +346,10 @@ class IntroHelper(
             val inputData = InputData.Attachment(attachment)
             logger.info("User uploaded a music file: $inputData")
             inputData to parseVolume(content)
-        } else if (isUrl(content)) {
+        } else if (isUrl(extractUrl(content))) {
             // User sent a URL
             logger.info("User provided a URL: $content")
-            InputData.Url(content) to parseVolume(content)
+            InputData.Url(extractUrl(content)) to parseVolume(content)
         } else {
             event.channel.sendMessage("Please provide a valid URL or upload a file.").queue()
             return
@@ -363,6 +363,16 @@ class IntroHelper(
         val volumeRegex = """\b(\d{1,3})\b""".toRegex()
         val volumeMatch = volumeRegex.find(content)
         return volumeMatch?.value?.toIntOrNull()?.takeIf { it in 0..100 }
+    }
+
+    // Method to extract URL using regex
+    private fun extractUrl(content: String): String {
+        // Regex pattern to match a URL
+        val urlRegex = Regex(
+            """\b(https?://[^\s/$.?#].\S*)\b""",
+            RegexOption.IGNORE_CASE
+        )
+        return urlRegex.find(content)?.value ?: ""
     }
 
     @VisibleForTesting
