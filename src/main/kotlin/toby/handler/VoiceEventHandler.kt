@@ -138,7 +138,7 @@ class VoiceEventHandler @Autowired constructor(
             logger.info { "AudioManager channel and event joined channel are the same" }
             setupAndPlayUserIntro(event, guild, deleteDelayConfig, requestingUserDto)
         }
-        if (requestingUserDto.musicDtos.isEmpty()) {
+        if (requestingUserDto.musicDtos.isEmpty() && event.member.user.idLong != jda.selfUser.idLong) {
             logger.info { "Prompting user to set an intro ..." }
             introHelper.promptUserForMusicInfo(event.member.user, guild)
         }
