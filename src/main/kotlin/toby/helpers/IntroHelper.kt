@@ -22,6 +22,7 @@ import toby.logging.DiscordLogger
 import java.io.InputStream
 import java.net.URI
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
 
 @Service
 class IntroHelper(
@@ -319,7 +320,7 @@ class IntroHelper(
     fun promptUserForMusicInfo(user: User, guild: Guild) {
         user.openPrivateChannel().queue { channel ->
             channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (0-100). E.g. 'https://www.youtube.com/watch?v=nVIzQdZnOaw 90'")
-                .queue()
+                .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
 
             // Wait for a response in the user's DM
             eventWaiter.waitForMessage(
@@ -330,7 +331,7 @@ class IntroHelper(
                 5.minutes,
                 {
                     channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
-                        .queue()
+                        .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
                 }
             )
         }
