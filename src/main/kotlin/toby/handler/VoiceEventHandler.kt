@@ -15,6 +15,7 @@ import toby.helpers.MusicPlayerHelper.playUserIntro
 import toby.helpers.UserDtoHelper
 import toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.lavaplayer.PlayerManager
 import toby.logging.DiscordLogger
@@ -132,9 +133,14 @@ class VoiceEventHandler @Autowired constructor(
 
         checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
+        val requestingUserDto = event.member.getRequestingUserDto(userDtoHelper)
         if (audioManager.connectedChannel == event.channelJoined) {
             logger.info { "AudioManager channel and event joined channel are the same" }
-            setupAndPlayUserIntro(event, guild, deleteDelayConfig)
+            setupAndPlayUserIntro(event, guild, deleteDelayConfig, requestingUserDto)
+        }
+        if (requestingUserDto.musicDtos.isEmpty()) {
+            logger.info { "Prompting user to set an intro ..." }
+            introHelper.promptUserForMusicInfo(event.member.user, guild)
         }
     }
 
@@ -156,9 +162,10 @@ class VoiceEventHandler @Autowired constructor(
         }
     }
 
-    private fun setupAndPlayUserIntro(event: GuildVoiceUpdateEvent, guild: Guild, deleteDelayConfig: ConfigDto?) {
+    private fun setupAndPlayUserIntro(
+        event: GuildVoiceUpdateEvent, guild: Guild, deleteDelayConfig: ConfigDto?, requestingUserDto: UserDto
+    ) {
         val member = event.member
-        val requestingUserDto = member.getRequestingUserDto(userDtoHelper)
         if (requestingUserDto.musicDtos.isNotEmpty()) {
             logger.info { "User has musicDto associated with them, preparing to play intro" }
             playUserIntro(
@@ -167,10 +174,8 @@ class VoiceEventHandler @Autowired constructor(
                 deleteDelay = deleteDelayConfig?.value?.toInt() ?: 0,
                 member = member
             )
-        }
-        else {
+        } else {
             logger.info { "User has no musicDto associated with them, no intro will be played" }
-            introHelper.promptUserForMusicInfo(member.user, guild)
         }
     }
 
