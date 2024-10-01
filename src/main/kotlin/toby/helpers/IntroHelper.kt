@@ -1,13 +1,18 @@
 package toby.helpers
 
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.Attachment
+import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import toby.handler.EventWaiter
 import toby.helpers.FileUtils.computeHash
+import toby.helpers.MusicPlayerHelper.isUrl
 import toby.jpa.dto.ConfigDto
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
@@ -16,12 +21,14 @@ import toby.jpa.service.IMusicFileService
 import toby.logging.DiscordLogger
 import java.io.InputStream
 import java.net.URI
+import kotlin.time.Duration.Companion.minutes
 
 @Service
 class IntroHelper(
     private val userDtoHelper: UserDtoHelper,
     private val musicFileService: IMusicFileService,
-    private val configService: IConfigService
+    private val configService: IConfigService,
+    private val eventWaiter: EventWaiter
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -85,6 +92,7 @@ class IntroHelper(
                     selectedMusicDto
                 )
             }
+
             else -> {
                 event.hook.sendMessage("Please provide a valid link or attachment.")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
@@ -192,12 +200,15 @@ class IntroHelper(
     ) {
         logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Persisting music file" }
-        val fileContents = runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
+        val fileContents = getFileContents(inputStream)
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
                 .setEphemeral(true)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
-        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos.size.plus(1)
+        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
+            targetDto.discordId,
+            targetDto.guildId
+        ).musicDtos.size.plus(1)
         val musicDto = selectedMusicDto?.apply {
             this.musicBlob = fileContents
             this.musicBlobHash = computeHash(fileContents)
@@ -219,6 +230,9 @@ class IntroHelper(
         }
     }
 
+    private fun getFileContents(inputStream: InputStream) =
+        runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
+
     fun persistMusicUrl(
         event: IReplyCallback,
         targetDto: UserDto,
@@ -232,7 +246,10 @@ class IntroHelper(
         logger.setGuildAndUserContext(event.guild, event.member)
         logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
-        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos.size.plus(1)
+        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
+            targetDto.discordId,
+            targetDto.guildId
+        ).musicDtos.size.plus(1)
         val musicDto = selectedMusicDto?.apply {
             this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
             this.userDto = targetDto
@@ -298,6 +315,99 @@ class IntroHelper(
             .setEphemeral(true)
             .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
+
+    fun promptUserForMusicInfo(user: User, guild: Guild) {
+        user.openPrivateChannel().queue { channel ->
+            channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (0-100). E.g. 'https://www.youtube.com/watch?v=nVIzQdZnOaw 90'")
+                .queue()
+
+            // Wait for a response in the user's DM
+            eventWaiter.waitForMessage(
+                { event -> event.author.idLong == user.idLong && event.channel == channel },
+                { event ->
+                    handleUserMusicResponse(event, guild)
+                },
+                5.minutes,
+                {
+                    channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
+                        .queue()
+                }
+            )
+        }
+    }
+
+    fun handleUserMusicResponse(event: MessageReceivedEvent, guild: Guild) {
+        val message = event.message
+        val content = message.contentRaw
+        val attachment = message.attachments.firstOrNull()
+
+        val (inputData, volume) = if (attachment != null) {
+            // User uploaded a file, treat it as a music file
+            val inputData = InputData.Attachment(attachment)
+            logger.info("User uploaded a music file: $inputData")
+            inputData to parseVolume(content)
+        } else if (isUrl(content)) {
+            // User sent a URL
+            logger.info("User provided a URL: $content")
+            InputData.Url(content) to parseVolume(content)
+        } else {
+            event.channel.sendMessage("Please provide a valid URL or upload a file.").queue()
+            return
+        }
+        saveUserMusicDto(event.author, guild, inputData, volume)
+    }
+
+
+    fun parseVolume(content: String): Int? {
+        // Try to extract a volume value (0-100) from the message content
+        val volumeRegex = """\b(\d{1,3})\b""".toRegex()
+        val volumeMatch = volumeRegex.find(content)
+        return volumeMatch?.value?.toIntOrNull()?.takeIf { it in 0..100 }
+    }
+
+    @VisibleForTesting
+    fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?) {
+        // Save the musicDto for the user with the provided URL and volume
+        logger.info("Constructing musicDto from input ...")
+        val requestingUserDto = userDtoHelper.calculateUserDto(user.idLong, guild.idLong)
+        // Logic to save the musicDto in the database
+        val musicDto =
+            MusicDto(requestingUserDto, 1, determineFileName(inputData), volume ?: 90, determineMusicBlob(inputData))
+        createIntro(musicDto)
+    }
+
+    @VisibleForTesting
+    fun determineMusicBlob(input: InputData): ByteArray? {
+        return when (input) {
+            is InputData.Url -> {
+                logger.info("Processing URL input...")
+                // Logic for handling URL, e.g., downloading content, converting to blob, etc.
+                input.uri.toByteArray()  // Convert the URL to a ByteArray
+            }
+
+            is InputData.Attachment -> {
+                logger.info("Processing attachment input...")
+                val inputStream = downloadAttachment(input.attachment)
+                inputStream?.let { getFileContents(it) }  // Get the file contents as ByteArray if the input stream isn't null
+            }
+        }
+    }
+
+    @VisibleForTesting
+    fun determineFileName(input: InputData): String {
+        return when (input) {
+            is InputData.Url -> {
+                // Ensure the URL is not null or empty
+                input.uri.takeIf { it.isNotBlank() } ?: "" // Provide a default name if the URL is null or blank
+            }
+
+            is InputData.Attachment -> {
+                // Check if the attachment or its fileName is null
+                input.attachment.fileName
+            }
+        }
+    }
+
 
     companion object {
         private const val VOLUME = "volume"

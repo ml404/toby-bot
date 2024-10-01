@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import toby.handler.VoiceEventHandler
+import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
 import toby.jpa.service.IConfigService
@@ -28,12 +29,14 @@ class VoiceEventHandlerTest {
     private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
+    private val introHelper: IntroHelper = mockk()
 
     private val handler = spyk(
         VoiceEventHandler(
             jda,
             configService,
-            userDtoHelper
+            userDtoHelper,
+            introHelper
         )
     )
 
@@ -106,6 +109,7 @@ class VoiceEventHandlerTest {
             jda = jda,
             configService = mockk(),
             userDtoHelper = mockk(),
+            introHelper = mockk()
         )
 
         handler.onReady(readyEvent)

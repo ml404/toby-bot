@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.managers.AudioManager
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import toby.helpers.IntroHelper
 import toby.helpers.MusicPlayerHelper.playUserIntro
 import toby.helpers.UserDtoHelper
 import toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
@@ -25,7 +26,8 @@ private const val teamRegex = "(?i)team\\s[0-9]+"
 class VoiceEventHandler @Autowired constructor(
     private val jda: JDA,
     private val configService: IConfigService,
-    private val userDtoHelper: UserDtoHelper
+    private val userDtoHelper: UserDtoHelper,
+    private val introHelper: IntroHelper
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -168,7 +170,7 @@ class VoiceEventHandler @Autowired constructor(
         }
         else {
             logger.info { "User has no musicDto associated with them, no intro will be played" }
-//            introHelper.promptUserForMusicInfo(member.user, guild)
+            introHelper.promptUserForMusicInfo(member.user, guild)
         }
     }
 

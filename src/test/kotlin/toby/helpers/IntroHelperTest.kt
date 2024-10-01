@@ -1,19 +1,27 @@
 package toby.helpers
 
 import io.mockk.*
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message.Attachment
+import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import toby.handler.EventWaiter
 import toby.jpa.dto.MusicDto
 import toby.jpa.dto.UserDto
 import toby.jpa.service.IConfigService
 import toby.jpa.service.IMusicFileService
 import java.io.InputStream
 import java.net.URI
+import java.util.function.Consumer
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 class IntroHelperTest {
 
@@ -21,7 +29,7 @@ class IntroHelperTest {
     private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var musicFileService: IMusicFileService
     private lateinit var configService: IConfigService
-
+    private lateinit var eventWaiter: EventWaiter
     private lateinit var event: SlashCommandInteractionEvent
     private lateinit var userDto: UserDto
     private lateinit var musicDto: MusicDto
@@ -33,8 +41,9 @@ class IntroHelperTest {
         userDtoHelper = mockk(relaxed = true)
         musicFileService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        eventWaiter = mockk(relaxed = true)
 
-        introHelper = IntroHelper(userDtoHelper, musicFileService, configService)
+        introHelper = IntroHelper(userDtoHelper, musicFileService, configService, eventWaiter)
 
         event = mockk(relaxed = true)
         userDto = mockk(relaxed = true)
@@ -244,4 +253,168 @@ class IntroHelperTest {
             musicFileService.updateMusicFile(any())
         }
     }
+
+    @Test
+    fun `handleMedia should send error when URL is empty`() {
+        // Empty URL input
+        introHelper.handleMedia(event, userDto, 10, InputData.Url(""), 70, musicDto)
+
+        // Verify the error message is sent
+        verify {
+            hook.sendMessage("Please provide a valid URL.").queue(any())
+        }
+    }
+
+    @Test
+    fun `handleAttachment should not persist for invalid attachments`() {
+        // Invalid file (wrong extension and too large)
+        every { attachment.fileExtension } returns "wav"
+        every { attachment.size } returns 500_000
+
+        // Call handleAttachment
+        introHelper.handleAttachment(event, userDto, "TestUser", 10, attachment, 70, musicDto)
+
+        // Verify that the musicFileService is never called for invalid attachments
+        verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+    }
+
+    @Test
+    fun `calculateIntroVolume should clamp volume to max value`() {
+        // Mock volume greater than 100
+        val optionMapping = mockk<OptionMapping> {
+            every { asInt } returns 120
+        }
+        every { event.getOption("volume") } returns optionMapping
+
+        // Call calculateIntroVolume
+        val result = introHelper.calculateIntroVolume(event)
+
+        // Assert that the volume is clamped to 100
+        assert(result == 100)
+    }
+
+    @Test
+    fun `calculateIntroVolume should clamp volume to min value`() {
+        // Mock volume less than 0
+        val optionMapping = mockk<OptionMapping> {
+            every { asInt } returns -10
+        }
+        every { event.getOption("volume") } returns optionMapping
+
+        // Call calculateIntroVolume
+        val result = introHelper.calculateIntroVolume(event)
+
+        // Assert that the volume is clamped to 0
+        assert(result == 1)
+    }
+
+    @Test
+    fun `promptUserForMusicInfo should send DM with prompt message`() {
+        val user = mockk<User>(relaxed = true)
+        val guild = mockk<Guild>(relaxed = true)
+        val privateChannel = mockk<PrivateChannel>(relaxed = true)
+
+        // Use a slot to capture the Consumer passed to queue
+        val consumerSlot = slot<Consumer<PrivateChannel>>()
+
+        // Mock opening the user's private channel and invoking the queue lambda
+        every { user.openPrivateChannel() } returns mockk {
+            every { queue(capture(consumerSlot)) } answers {
+                consumerSlot.captured.accept(privateChannel) // invoke the consumer
+            }
+        }
+
+        every { guild.name } returns "TestGuild"
+
+        // Call the method
+        introHelper.promptUserForMusicInfo(user, guild)
+
+        // Verify the correct message was sent in the user's DM
+        verify {
+            privateChannel.sendMessage("You don't have an intro song yet on server 'TestGuild'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (0-100). E.g. 'https://www.youtube.com/watch?v=nVIzQdZnOaw 90'").queue()
+        }
+
+        // Capture the arguments for waitForMessage to assert them
+        val messageWaiterSlot1 = slot<(MessageReceivedEvent) -> Boolean>()
+        val messageWaiterSlot2 = slot<(MessageReceivedEvent) -> Unit>()
+        val timeoutSlot = slot<Duration>()
+
+        // Adjust the verification for waitForMessage
+        verify {
+            eventWaiter.waitForMessage(capture(messageWaiterSlot1), capture(messageWaiterSlot2), capture(timeoutSlot), any())
+        }
+
+        // Assert the timeout value if necessary
+        assert(timeoutSlot.captured == 5.minutes) // Check the timeout value
+    }
+
+    @Test
+    fun `parseVolume should extract valid volume from message`() {
+        val content = "https://www.youtube.com/watch?v=dQw4w9WgXcQ 85"
+
+        val result = introHelper.parseVolume(content)
+
+        assert(result == 85)
+    }
+
+    @Test
+    fun `parseVolume should return null if no volume is present`() {
+        val content = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+        val result = introHelper.parseVolume(content)
+
+        assert(result == null)
+    }
+
+    @Test
+    fun `saveUserMusicDto should persist musicDto`() {
+        val user = mockk<User>(relaxed = true)
+        val guild = mockk<Guild>(relaxed = true)
+        val inputData = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns mockk {
+            every { guildId } returns guild.idLong
+            every { discordId } returns 1234L
+        }
+        every { musicFileService.createNewMusicFile(any()) } returns mockk()
+
+        introHelper.saveUserMusicDto(user, guild, inputData, 70)
+
+        verify {
+            musicFileService.createNewMusicFile(any())
+        }
+    }
+
+    @Test
+    fun `determineMusicBlob should process URL into byte array`() {
+        val input = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        val result = introHelper.determineMusicBlob(input)
+
+        assert(result != null)
+        assert(result!!.isNotEmpty())
+    }
+
+    @Test
+    fun `determineFileName should return URL as file name for URL input`() {
+        val input = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        val result = introHelper.determineFileName(input)
+
+        assert(result == "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    }
+
+    @Test
+    fun `determineFileName should return attachment file name`() {
+        val attachment = mockk<Attachment>(relaxed = true)
+        every { attachment.fileName } returns "test.mp3"
+
+        val input = InputData.Attachment(attachment)
+
+        val result = introHelper.determineFileName(input)
+
+        assert(result == "test.mp3")
+    }
+
 }

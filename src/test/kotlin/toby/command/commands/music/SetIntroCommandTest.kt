@@ -16,6 +16,7 @@ import toby.command.CommandTest.Companion.guild
 import toby.command.CommandTest.Companion.member
 import toby.command.CommandTest.Companion.requestingUserDto
 import toby.command.commands.music.intro.SetIntroCommand
+import toby.handler.EventWaiter
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
@@ -32,9 +33,10 @@ internal class SetIntroCommandTest : MusicCommandTest {
     private var userDtoHelper: UserDtoHelper = mockk(relaxed = true)
     private var musicFileService: IMusicFileService = mockk(relaxed = true)
     private var configService: IConfigService = mockk(relaxed = true)
+    private var eventWaiter: EventWaiter = mockk(relaxed = true)
     private lateinit var mentionedUserDto: UserDto
 
-    private var introHelper: IntroHelper = IntroHelper(userDtoHelper, musicFileService, configService)
+    private var introHelper: IntroHelper = IntroHelper(userDtoHelper, musicFileService, configService, eventWaiter)
 
     @BeforeEach
     fun setUp() {
