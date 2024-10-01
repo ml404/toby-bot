@@ -15,7 +15,7 @@ class EditIntroMenu(
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.event
-        logger.setGuildAndUserContext(ctx.guild, event.member)
+        logger.setGuildAndMemberContext(ctx.guild, event.member)
         event.deferReply(true).queue()
 
         logger.info { "Getting the selectedIntroId" }

@@ -35,7 +35,7 @@ object MusicPlayerHelper {
         startPosition: Long = 0,
         member: Member? = null
     ) {
-        logger.setGuildAndUserContext(guild, member)
+        logger.setGuildAndMemberContext(guild, member)
         logger.info { "Finding intro to play ..." }
         val musicDto = dbUser.musicDtos
         val instance = PlayerManager.instance
@@ -55,7 +55,7 @@ object MusicPlayerHelper {
     }
 
     fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
         val track = audioPlayer.playingTrack
@@ -104,7 +104,7 @@ object MusicPlayerHelper {
     }
 
     fun stopSong(event: IReplyCallback, musicManager: GuildMusicManager, canOverrideSkips: Boolean, deleteDelay: Int?) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
             logger.info { "Stopping the song and clearing the queue." }
@@ -130,7 +130,7 @@ object MusicPlayerHelper {
     }
 
     fun changePauseStatusOnTrack(event: IReplyCallback, musicManager: GuildMusicManager, deleteDelay: Int) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         val audioPlayer = musicManager.audioPlayer
         val paused = audioPlayer.isPaused
         val message = if (paused) "Resuming: `" else "Pausing: `"
@@ -167,7 +167,7 @@ object MusicPlayerHelper {
         val hook = event.hook
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         when {
             audioPlayer.playingTrack == null -> {
                 logger.warn { "Attempted to skip tracks but no track is currently playing ." }

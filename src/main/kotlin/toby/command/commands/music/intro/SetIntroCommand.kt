@@ -36,7 +36,7 @@ class SetIntroCommand(
         event.deferReply(true).queue()
         val introVolume = introHelper.calculateIntroVolume(event)
         val mentionedMembers = event.getOptionMentionedMembers()
-        logger.setGuildAndUserContext(ctx.guild, ctx.member)
+        logger.setGuildAndMemberContext(ctx.guild, ctx.member)
 
 
         logger.info { "Inside handleMusicCommand" }

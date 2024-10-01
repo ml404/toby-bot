@@ -128,7 +128,7 @@ class CommandManager @Autowired constructor(
                 it.isOwner,
             )
         }
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         val invoke = event.name.lowercase(Locale.getDefault())
         val cmd = getCommand(invoke)
         logger.info("Processing command '${cmd?.name}' ...")

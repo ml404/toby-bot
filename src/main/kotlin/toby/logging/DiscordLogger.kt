@@ -2,6 +2,7 @@ package toby.logging
 
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.User
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.slf4j.MDC
@@ -10,17 +11,40 @@ class DiscordLogger(clazz: Class<*>) {
     // Dynamically fetches the logger for the calling class
     private val logger: Logger = LogManager.getLogger(clazz)
 
-    fun setGuildAndUserContext(guild: Guild?, member: Member?) {
+    fun setGuildAndMemberContext(guild: Guild?, member: Member?) {
         // Clear existing MDC context
         MDC.clear()
 
-        guild?.let {
-            MDC.put("guildName", it.name)
-            MDC.put("guildId", it.id)
-        }
+        setGuildContext(guild)
+        setMemberContext(member)
+    }
+
+    fun setGuildAndUserContext(guild: Guild?, user: User?) {
+        // Clear existing MDC context
+        MDC.clear()
+
+        setGuildContext(guild)
+        setUserContext(user)
+    }
+
+    fun setMemberContext(member: Member?) {
         member?.let {
             MDC.put("userName", it.effectiveName)
             MDC.put("userId", it.id)
+        }
+    }
+
+    fun setUserContext(user: User?) {
+        user?.let {
+            MDC.put("userName", it.effectiveName)
+            MDC.put("userId", it.id)
+        }
+    }
+
+    fun setGuildContext(guild: Guild?) {
+        guild?.let {
+            MDC.put("guildName", it.name)
+            MDC.put("guildId", it.id)
         }
     }
 

@@ -27,7 +27,7 @@ class StartUpHandler @Autowired constructor(
     }
 
     override fun onGuildReady(event: GuildReadyEvent) {
-        logger.setGuildAndUserContext(event.guild, null)
+        logger.setGuildContext(event.guild)
         event.guild.updateCommands().queue()
         logger.info { "Reset guild commands for ${event.guild.name}" }
     }

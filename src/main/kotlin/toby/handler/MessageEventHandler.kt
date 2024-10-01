@@ -77,7 +77,7 @@ class MessageEventHandler @Autowired constructor(
             }
         }.onFailure {
             // Handle DM context, log the case
-            logger.warn("Received a message from ${author.name} in a DM context.")
+            logger.warn("Received a message from '${author.name}' in a DM context.")
         }
     }
 
@@ -99,7 +99,7 @@ class MessageEventHandler @Autowired constructor(
 
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "SlashCommandInteractionEvent '${event.name}' received" }
         if (!event.user.isBot) {
             launch {
@@ -121,7 +121,7 @@ class MessageEventHandler @Autowired constructor(
     }
 
     override fun onStringSelectInteraction(event: StringSelectInteractionEvent) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "StringSelectInteractionEvent '${event.componentId}' received" }
         launch {
             logger.info { "Launching coroutine for '${event.componentId}'" }

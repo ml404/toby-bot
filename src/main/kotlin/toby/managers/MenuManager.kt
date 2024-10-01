@@ -40,7 +40,7 @@ class MenuManager @Autowired constructor(private val configService: IConfigServi
     fun getMenu(search: String): IMenu? = menus.find { search.contains(it.name, ignoreCase = true) }
 
     fun handle(event: StringSelectInteractionEvent) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         val invoke = event.componentId.lowercase(Locale.getDefault())
         val menu = this.getMenu(invoke)
 

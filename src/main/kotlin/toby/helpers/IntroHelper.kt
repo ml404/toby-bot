@@ -53,7 +53,7 @@ class IntroHelper(
         selectedMusicDto: MusicDto?,
         userName: String = event.user.effectiveName
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling media inside intro helper ..." }
 
         when (input) {
@@ -115,7 +115,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling attachment inside intro helper..." }
         when {
             attachment.fileExtension != "mp3" -> {
@@ -157,7 +157,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling URL inside intro helper..." }
         val urlString = uri.toString()
         persistMusicUrl(
@@ -199,7 +199,7 @@ class IntroHelper(
         inputStream: InputStream,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music file" }
         val fileContents = getFileContents(inputStream)
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
@@ -244,7 +244,7 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
         val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
@@ -281,7 +281,7 @@ class IntroHelper(
         index: Int,
         deleteDelay: Int?
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'" }
         event.hook
             .sendMessage("Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
@@ -309,7 +309,7 @@ class IntroHelper(
         filename: String,
         deleteDelay: Int?
     ) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "$memberName's intro song '$filename' was rejected for duplication" }
         event.hook
             .sendMessage("$memberName's intro song '$filename' was rejected as it already exists as one of their intros for this server")
@@ -318,6 +318,8 @@ class IntroHelper(
     }
 
     fun promptUserForMusicInfo(user: User, guild: Guild) {
+        logger.setGuildAndUserContext(guild, user)
+        logger.info { "Prompting user to set an intro for the server that they don't have one on" }
         user.openPrivateChannel().queue { channel ->
             channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'")
                 .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
@@ -330,6 +332,7 @@ class IntroHelper(
                 },
                 5.minutes,
                 {
+                    logger.info { "User did not set intro for the server that they don't have one on within the timeout period" }
                     channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
                         .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
                 }
@@ -384,10 +387,10 @@ class IntroHelper(
         // Logic to save the musicDto in the database
         val musicDto = MusicDto(requestingUserDto, 1, determineFileName(inputData), volume ?: 90, determineMusicBlob(inputData))
         createIntro(musicDto)
-        user.openPrivateChannel().queue {
-            channel ->
-                channel.sendMessage("Successfully set your intro on server '${guild.name}'")
-                    .queue(invokeDeleteOnMessageResponse(1.minutes.toInt(DurationUnit.SECONDS)))
+        logger.info { "User successfully uploaded intro as a result of the prompt!" }
+        user.openPrivateChannel().queue { channel ->
+            channel.sendMessage("Successfully set your intro on server '${guild.name}'")
+                .queue(invokeDeleteOnMessageResponse(1.minutes.toInt(DurationUnit.SECONDS)))
         }
     }
 

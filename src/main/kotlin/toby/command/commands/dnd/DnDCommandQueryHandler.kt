@@ -26,7 +26,7 @@ class DnDCommandQueryHandler(
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     fun processQuery(typeName: String?, typeValue: String?, query: String) {
-        logger.setGuildAndUserContext(hook.interaction.guild, hook.interaction.member)
+        logger.setGuildAndMemberContext(hook.interaction.guild, hook.interaction.member)
         CoroutineScope(dispatcher).launch {
             var hasReplied = false
             runCatching {

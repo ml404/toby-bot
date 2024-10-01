@@ -35,7 +35,7 @@ class VoiceEventHandler @Autowired constructor(
 
     override fun onReady(event: ReadyEvent) {
         event.jda.guildCache.forEach {
-            logger.setGuildAndUserContext(it, null)
+            logger.setGuildContext(it)
             it.connectToMostPopulatedVoiceChannel()
         }
     }
@@ -59,7 +59,7 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     override fun onGuildVoiceUpdate(event: GuildVoiceUpdateEvent) {
-        logger.setGuildAndUserContext(event.guild, event.member)
+        logger.setGuildAndMemberContext(event.guild, event.member)
         when {
             event.channelJoined != null && event.channelLeft != null -> {
                 logVoiceMove(event)

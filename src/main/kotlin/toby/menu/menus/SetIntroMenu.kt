@@ -14,7 +14,7 @@ class SetIntroMenu(
 ) : IMenu {
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        logger.setGuildAndUserContext(ctx.guild, ctx.member)
+        logger.setGuildAndMemberContext(ctx.guild, ctx.member)
         logger.info { "Intro menu event started" }
         val event = ctx.event
         event.deferReply(true).queue()
