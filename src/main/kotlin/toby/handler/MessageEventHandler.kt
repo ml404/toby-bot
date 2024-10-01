@@ -41,8 +41,6 @@ class MessageEventHandler @Autowired constructor(
         runCatching {
             val guild = event.guild
             val member = event.member
-            logger.setGuildAndMemberContext(guild, member)
-
             if (author.isBot || event.isWebhookMessage) return
 
             val messageStringLowercase = message.contentRaw.lowercase()
