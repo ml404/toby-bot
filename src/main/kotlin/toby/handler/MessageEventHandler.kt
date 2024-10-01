@@ -37,44 +37,47 @@ class MessageEventHandler @Autowired constructor(
         val message = event.message
         val author = event.author
         val channel = event.channel
-        val guild = event.guild
-        val member = event.member
 
-        if (author.isBot || event.isWebhookMessage) return
+        runCatching {
+            val guild = event.guild
+            val member = event.member
 
-        val messageStringLowercase = message.contentRaw.lowercase()
+            if (author.isBot || event.isWebhookMessage) return
 
-        // Check if the message is from a guild or a DM
-        if (guild == null) {
+            val messageStringLowercase = message.contentRaw.lowercase()
+
+            when {
+                messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs") -> {
+                    val tobyEmote = guild.jda.getEmojiById(Emotes.TOBY)
+                    channel.sendMessageFormat(
+                        "%s... that's not my name %s",
+                        member?.effectiveName ?: author.name,
+                        tobyEmote
+                    ).queue()
+                    message.addReaction(tobyEmote!!).queue()
+                }
+
+                messageStringLowercase.trim() == "sigh" -> {
+                    val jessEmote = guild.jda.getEmojiById(Emotes.JESS)
+                    channel.sendMessageFormat(
+                        "Hey %s, what's up champ?",
+                        member?.effectiveName ?: author.name,
+                        jessEmote
+                    )
+                        .queue()
+                }
+
+                messageStringLowercase.contains("yeah") -> {
+                    channel.sendMessage("YEAH????").queue()
+                }
+
+                jda.selfUser.let { message.mentions.isMentioned(it) } -> {
+                    channel.sendMessage("Don't talk to me").queue()
+                }
+            }
+        }.onFailure {
             // Handle DM context, log the case
             logger.warn("Received a message from ${author.name} in a DM context.")
-            return  // or provide a response to the user if necessary
-        }
-
-        when {
-            messageStringLowercase.contains("toby") || messageStringLowercase.contains("tobs") -> {
-                val tobyEmote = guild.jda.getEmojiById(Emotes.TOBY)
-                channel.sendMessageFormat(
-                    "%s... that's not my name %s",
-                    member?.effectiveName ?: author.name,
-                    tobyEmote
-                ).queue()
-                message.addReaction(tobyEmote!!).queue()
-            }
-
-            messageStringLowercase.trim() == "sigh" -> {
-                val jessEmote = guild.jda.getEmojiById(Emotes.JESS)
-                channel.sendMessageFormat("Hey %s, what's up champ?", member?.effectiveName ?: author.name, jessEmote)
-                    .queue()
-            }
-
-            messageStringLowercase.contains("yeah") -> {
-                channel.sendMessage("YEAH????").queue()
-            }
-
-            jda.selfUser.let { message.mentions.isMentioned(it) } -> {
-                channel.sendMessage("Don't talk to me").queue()
-            }
         }
     }
 
