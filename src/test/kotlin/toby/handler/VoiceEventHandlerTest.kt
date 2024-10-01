@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.SelfUser
+import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
@@ -20,6 +21,7 @@ import toby.handler.VoiceEventHandler
 import toby.helpers.IntroHelper
 import toby.helpers.UserDtoHelper
 import toby.jpa.dto.ConfigDto
+import toby.jpa.dto.MusicDto
 import toby.jpa.service.IConfigService
 import toby.lavaplayer.PlayerManager
 
@@ -167,12 +169,80 @@ class VoiceEventHandlerTest {
             )
         } returns deleteDelayConfig
 
+        every { userDtoHelper.calculateUserDto(1, 1, false) } returns mockk(relaxed = true) {
+            every { musicDtos } returns listOf(mockk<MusicDto>()).toMutableList()
+        }
+
         handler.onGuildVoiceUpdate(event)
 
         verify {
             audioManager.openAudioConnection(channel)
             PlayerManager.instance
             audioPlayerManager.getMusicManager(guild).audioPlayer.volume = any()
+        }
+    }
+
+    @Test
+    fun `onGuildVoiceUpdate should prompt user to set intro when they have none`() {
+        val guild = mockk<Guild>()
+        val event = mockk<GuildVoiceUpdateEvent>()
+        val audioManager = mockk<AudioManager>()
+        val member = mockk<Member>()
+        val channel = mockk<AudioChannelUnion>()
+        val nonBotMember = mockk<Member>()
+        val audioPlayerManager = mockk<PlayerManager>()
+
+        every { event.guild } returns guild
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(nonBotMember)
+        every { channel.name } returns "voiceChannelName"
+        every { channel.asVoiceChannel() } returns mockk(relaxed = true)
+        every { nonBotMember.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.id } returns "1234"
+        every { member.effectiveName } returns "Effective Name"
+        every { member.user } returns mockk {
+            every { idLong } returns 1L
+        }
+        every { guild.idLong } returns 1L
+        every { guild.id } returns "1"
+        every { guild.id } returns "1"
+        every { guild.name } returns "guildName"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns null
+        every { audioManager.openAudioConnection(channel) } just Runs
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        every { audioPlayerManager.getMusicManager(guild).audioPlayer.volume = any() } just Runs
+
+        val deleteDelayConfig = ConfigDto()
+        deleteDelayConfig.value = "30"
+        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "1") } returns null
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.DELETE_DELAY.configValue, "1"
+            )
+        } returns deleteDelayConfig
+
+        every { userDtoHelper.calculateUserDto(1, 1, false) } returns mockk(relaxed = true) {
+            every { musicDtos } returns emptyList<MusicDto>().toMutableList()
+        }
+
+        every { introHelper.promptUserForMusicInfo(any(), any()) } just Runs
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify {
+            audioManager.openAudioConnection(channel)
+            PlayerManager.instance
+            audioPlayerManager.getMusicManager(guild).audioPlayer.volume = any()
+            introHelper.promptUserForMusicInfo(any<User>(), any<Guild>())
         }
     }
 
