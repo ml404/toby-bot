@@ -1,4 +1,4 @@
-name: Update Wiki on Deploy
+name: Update Wiki
 
 on:
   push:
@@ -11,35 +11,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the main branch
+      - name: Checkout Repository
         uses: actions/checkout@v2
         with:
-          ref: master
+          submodules: true  # If your wiki is a submodule
 
-      - name: Generate Command Documentation
+      - name: Update Submodules
         run: |
-          # Make sure to run your Spring Boot application and fetch the command documentation as HTML
-          # Assuming your application exposes the /commands/wiki endpoint
-          curl -o commands.html http://localhost:8080/commands/wiki
+          git submodule update --init --recursive  # Fetch the latest changes for the wiki submodule
 
-      - name: Checkout the wiki
-        uses: actions/checkout@v2
-        with:
-          repository: ml404/toby-bot.wiki
-          path: wiki
-
-      - name: Update Wiki with New Documentation
+      - name: Get Command Documentation
         run: |
-          # Move the generated HTML file to the wiki folder
-          mv commands.html wiki/commands.html
+          # Start your Spring Boot application in the background
+          nohup ./gradlew bootRun > app.log 2>&1 &
+          APP_PID=$!  # Capture the PID of the background process
+
+          # Poll for the application to start
+          for i in {1..90}; do  # Wait up to 90 seconds
+            if curl -s http://localhost:8080/commands; then
+              echo "Spring Boot application is up!"
+              break
+            else
+              echo "Waiting for Spring Boot application to start..."
+              sleep 10  # Wait for 10 seconds before retrying
+            fi
+
+            # Check if we reached the timeout
+            if [ $i -eq 90 ]; then
+              echo "Application did not start in time."
+              kill $APP_PID || true  # Ensure to stop the application if it’s still running
+              exit 1  # Fail the step
+            fi
+          done
+
+          # Fetch commands and save to Commands.md
+          curl -X GET http://localhost:8080/commands/wiki > wiki/Commands.md
+
+          # Stop the Spring Boot application
+          kill $APP_PID || true  # Kill the process; ignore errors if it already exited
 
       - name: Commit and Push Changes
         run: |
           cd wiki
-          git config --local user.name "github-actions"
-          git config --local user.email "github-actions@github.com"
-          git add commands.html
-          git commit -m "Update command documentation" || echo "No changes to commit"
-          git push
+          git config --local user.name "GitHub Action"
+          git config --local user.email "action@github.com"
+          git add Commands.md
+          git commit -m "Update commands documentation"
+          git push origin master  # Ensure this matches your wiki's branch
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided by GitHub Actions
