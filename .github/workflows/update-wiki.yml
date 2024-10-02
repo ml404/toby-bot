@@ -58,28 +58,31 @@ jobs:
           # Configure Git user information
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-
+          
+          # Pull the latest changes from the remote master
+          git pull origin master
+          
           # Check if there are changes to commit
           if [ -n "$(git status --porcelain)" ]; then
             # Stage changes in the wiki submodule
             git add Commands.md
-
+          
             # Commit changes in the submodule
             git commit -m "Update commands documentation"
             echo "Submodule changes committed."
-
-            # Push changes to the submodule branch
+          
+            # Push changes to the wiki submodule
             git push origin master  # Ensure this matches your wiki's branch
-
+          
             # Navigate back to the root of the main repository
             cd ..
-
+          
             # Stage the updated submodule reference in the main repository
             git add wiki
-
+          
             # Commit the updated submodule reference in the main repository
             git commit -m "Update submodule reference" || echo "No changes to commit for submodule reference."
-
+          
             # Push the updated reference to the main repository
             git push origin master  # Ensure this matches your main branch
           else
