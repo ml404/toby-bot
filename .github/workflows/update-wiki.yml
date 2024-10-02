@@ -45,7 +45,7 @@ jobs:
       - name: Commit and Push Changes
         run: |
           cd wiki
-          # Configure Git user information
+          # Configure Git user information (global for this run)
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
@@ -58,20 +58,15 @@ jobs:
             git commit -m "Update commands documentation"
             echo "Submodule changes committed."
 
-            # Push changes to the submodule branch
-            git push origin master  # Ensure this matches your wiki's branch
+            # Push changes to a new branch
+            BRANCH_NAME="update-wiki-$(date +%s)"  # Use a timestamp to ensure uniqueness
+            git push origin HEAD:$BRANCH_NAME  # Push to new branch
 
-            # Navigate back to the root of the main repository
-            cd ..
-
-            # Stage the updated submodule reference in the main repository
-            git add wiki
-
-            # Commit the updated submodule reference in the main repository
-            git commit -m "Update submodule reference" || echo "No changes to commit for submodule reference."
-
-            # Push the updated reference to the main repository
-            git push origin master  # Ensure this matches your main branch
+            # Create a pull request
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -d "{\"title\":\"Update Wiki from Action\",\"head\":\"$BRANCH_NAME\",\"base\":\"master\"}" \
+              https://api.github.com/repos/${{ github.repository }}/pulls
           else
             echo "No changes to commit."
           fi
