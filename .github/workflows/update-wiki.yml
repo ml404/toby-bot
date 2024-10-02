@@ -5,7 +5,7 @@ on:
     branches:
       - master
   pull_request:
-    types: [ closed ]
+    types: [closed]
     branches:
       - master
 
@@ -16,19 +16,19 @@ jobs:
       - name: Checkout base code
         uses: actions/checkout@v2
         with:
-          submodules: true  # Ensure submodules are checked out with the main repo
+          fetch-depth: 0  # Fetch all history for all branches
 
       - name: Checkout wiki code
         uses: actions/checkout@v2
         with:
-          repository: ${{github.repository}}.wiki  # Checkout the wiki repo as a separate directory
-          path: wiki
+          repository: ${{ github.repository }}.wiki  # Checkout the wiki repository
+          path: wiki  # Save it in the 'wiki' directory
 
       - name: Get Command Documentation
         env:
           BASE_URL: ${{ vars.BASE_URL }}
         run: |
-          # Fetch commands and save to a temporary file in the markdown directory
+          # Fetch commands and save to a temporary file in the wiki directory
           TEMP_FILE="wiki/Commands_temp.md"
           if curl -X GET "$BASE_URL/commands/wiki" -o "$TEMP_FILE"; then
             echo "Successfully fetched command documentation."
@@ -59,9 +59,9 @@ jobs:
             exit 0  # Exit successfully without making changes
           fi
 
-      - name: Push to wiki
+      - name: Commit and Push Changes
         run: |
-          cd markdown  # Enter the wiki repository directory
+          cd wiki  # Navigate to the wiki directory
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
