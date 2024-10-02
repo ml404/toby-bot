@@ -22,14 +22,14 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: ${{github.repository}}.wiki  # Checkout the wiki repo as a separate directory
-          path: markdown
+          path: wiki
 
       - name: Get Command Documentation
         env:
           BASE_URL: ${{ vars.BASE_URL }}
         run: |
           # Fetch commands and save to a temporary file in the markdown directory
-          TEMP_FILE="markdown/Commands_temp.md"
+          TEMP_FILE="wiki/Commands_temp.md"
           if curl -X GET "$BASE_URL/commands/wiki" -o "$TEMP_FILE"; then
             echo "Successfully fetched command documentation."
           else
@@ -41,19 +41,19 @@ jobs:
         run: |
           # Log the contents of the temporary Commands file
           echo "=== Contents of Commands_temp.md ==="
-          cat "markdown/Commands_temp.md"
+          cat "wiki/Commands_temp.md"
           echo "====================================="
 
           # Log the contents of the existing Commands file
           echo "=== Contents of Commands.md ==="
-          cat "markdown/Commands.md"
+          cat "wiki/Commands.md"
           echo "====================================="
 
           # Compare the fetched file with the existing Commands.md
-          if ! diff -q "markdown/Commands_temp.md" "markdown/Commands.md" > /dev/null; then
+          if ! diff -q "wiki/Commands_temp.md" "wiki/Commands.md" > /dev/null; then
             echo "Differences found. Updating Commands.md."
             # If differences are found, overwrite the existing Commands.md
-            mv "markdown/Commands_temp.md" "markdown/Commands.md"
+            mv "wiki/Commands_temp.md" "wiki/Commands.md"
           else
             echo "No differences found. Skipping update."
             exit 0  # Exit successfully without making changes
