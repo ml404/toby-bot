@@ -1,0 +1,52 @@
+name: Update Wiki
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main  # Change this to your default branch if it's different
+
+jobs:
+  update-wiki:
+    if: github.event.pull_request.merged == true  # Only run if the PR was merged
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true  # If your wiki is a submodule
+
+      - name: Get Command Documentation
+        run: |
+          # Fetch commands and save to a temporary file
+          TEMP_FILE="wiki/Commands_temp.md"
+          if curl -X GET ${{ vars.BASE_URL }}/commands/wiki -o "$TEMP_FILE"; then
+            echo "Successfully fetched command documentation."
+          else
+            echo "Failed to fetch command documentation."
+            exit 1  # Exit with an error code if curl fails
+          fi
+
+      - name: Check for Differences
+        run: |
+          # Compare the fetched file with the existing Commands.md
+          if ! diff -q "$TEMP_FILE" "wiki/Commands.md" > /dev/null; then
+            echo "Differences found. Updating Commands.md."
+            # If differences are found, overwrite the existing Commands.md
+            mv "$TEMP_FILE" "wiki/Commands.md"
+          else
+            echo "No differences found. Skipping update."
+            exit 0  # Exit successfully without making changes
+          fi
+
+      - name: Commit and Push Changes
+        run: |
+          cd wiki
+          git config --local user.name "GitHub Action"
+          git config --local user.email "action@github.com"
+          git add Commands.md
+          git commit -m "Update commands documentation"
+          git push origin master  # Ensure this matches your wiki's branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided by GitHub Actions
