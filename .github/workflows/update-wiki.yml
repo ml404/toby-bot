@@ -1,27 +1,29 @@
 name: Update Wiki
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     types: [closed]
     branches:
-      - main  # Change this to your default branch if it's different
+      - main
 
 jobs:
   update-wiki:
-    if: github.event.pull_request.merged == true  # Only run if the PR was merged
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
           submodules: true  # If your wiki is a submodule
-
       - name: Get Command Documentation
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}
         run: |
           # Fetch commands and save to a temporary file
           TEMP_FILE="wiki/Commands_temp.md"
-          if curl -X GET ${{ vars.BASE_URL }}/commands/wiki -o "$TEMP_FILE"; then
+          if curl -X GET "$BASE_URL/commands/wiki" -o "$TEMP_FILE"; then
             echo "Successfully fetched command documentation."
           else
             echo "Failed to fetch command documentation."
