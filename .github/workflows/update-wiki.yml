@@ -5,7 +5,7 @@ on:
     branches:
       - master
   pull_request:
-    types: [closed]
+    types: [ closed ]
     branches:
       - master
 
@@ -13,16 +13,23 @@ jobs:
   update-wiki:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout base code
         uses: actions/checkout@v2
         with:
-          submodules: true  # If your wiki is a submodule
+          submodules: true  # Ensure submodules are checked out with the main repo
+
+      - name: Checkout wiki code
+        uses: actions/checkout@v2
+        with:
+          repository: ${{github.repository}}.wiki  # Checkout the wiki repo as a separate directory
+          path: markdown
+
       - name: Get Command Documentation
         env:
           BASE_URL: ${{ vars.BASE_URL }}
         run: |
-          # Fetch commands and save to a temporary file
-          TEMP_FILE="wiki/Commands_temp.md"
+          # Fetch commands and save to a temporary file in the markdown directory
+          TEMP_FILE="markdown/Commands_temp.md"
           if curl -X GET "$BASE_URL/commands/wiki" -o "$TEMP_FILE"; then
             echo "Successfully fetched command documentation."
           else
@@ -34,65 +41,34 @@ jobs:
         run: |
           # Log the contents of the temporary Commands file
           echo "=== Contents of Commands_temp.md ==="
-          cat "wiki/Commands_temp.md"
+          cat "markdown/Commands_temp.md"
           echo "====================================="
 
           # Log the contents of the existing Commands file
           echo "=== Contents of Commands.md ==="
-          cat "wiki/Commands.md"
+          cat "markdown/Commands.md"
           echo "====================================="
 
           # Compare the fetched file with the existing Commands.md
-          if ! diff -q "wiki/Commands_temp.md" "wiki/Commands.md" > /dev/null; then
+          if ! diff -q "markdown/Commands_temp.md" "markdown/Commands.md" > /dev/null; then
             echo "Differences found. Updating Commands.md."
             # If differences are found, overwrite the existing Commands.md
-            mv "wiki/Commands_temp.md" "wiki/Commands.md"
+            mv "markdown/Commands_temp.md" "markdown/Commands.md"
           else
             echo "No differences found. Skipping update."
             exit 0  # Exit successfully without making changes
-          fi    
-
-      - name: Commit and Push Changes
-        run: |
-          cd wiki
-          # Configure Git user information
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          
-          # Pull the latest changes from the remote master
-          git pull origin master
-
-          # Debugging status after pulling
-          echo "=== Git Status after Pull ==="
-          git status
-          echo "=== Last Commit Log ==="
-          git log -1
-          
-          # Check if there are changes to commit
-          if [ -n "$(git status --porcelain)" ]; then
-            # Stage changes in the wiki submodule
-            git add Commands.md
-          
-            # Commit changes in the submodule
-            git commit -m "Update commands documentation"
-            echo "Submodule changes committed."
-          
-            # Push changes to the wiki submodule
-            git push origin master  # Ensure this matches your wiki's branch
-          
-            # Navigate back to the root of the main repository
-            cd ..
-          
-            # Stage the updated submodule reference in the main repository
-            git add wiki
-          
-            # Commit the updated submodule reference in the main repository
-            git commit -m "Update submodule reference" || echo "No changes to commit for submodule reference."
-          
-            # Push the updated reference to the main repository
-            git push origin master  # Ensure this matches your main branch
-          else
-            echo "No changes to commit."
           fi
+
+      - name: Push to wiki
+        run: |
+          cd markdown  # Enter the wiki repository directory
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Stage any changes
+          git add .
+          
+          # Commit and push changes if there are any
+          git diff-index --quiet HEAD || git commit -m "Update commands documentation" && git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided by GitHub Actions
