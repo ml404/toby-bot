@@ -63,6 +63,7 @@ jobs:
             git push origin HEAD:refs/heads/$BRANCH_NAME  # Push to new branch
 
             # Create a pull request
+            echo "Trying to create a pull request from branch: $BRANCH_NAME"
             curl -L \
               -X POST \
               -H "Accept: application/vnd.github+json" \
@@ -72,7 +73,7 @@ jobs:
               -d '{
                 "title": "Update Wiki from Action",
                 "body": "This pull request updates the wiki documentation based on the latest command changes.",
-                "head": "${{ github.actor }}:'"$BRANCH_NAME"'",
+                "head": "'"${BRANCH_NAME}"'",  # Ensure the branch name is correctly referenced
                 "base": "master"
               }'
           else
