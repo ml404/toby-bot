@@ -58,9 +58,9 @@ jobs:
             git commit -m "Update commands documentation"
             echo "Submodule changes committed."
 
-            # Push changes to a new branch
+            # Push changes to a new branch with full refname
             BRANCH_NAME="update-wiki-$(date +%s)"  # Use a timestamp to ensure uniqueness
-            git push origin HEAD:$BRANCH_NAME  # Push to new branch
+            git push origin HEAD:refs/heads/$BRANCH_NAME  # Push to new branch
 
             # Create a pull request
             curl -X POST \
