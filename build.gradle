@@ -124,17 +124,6 @@ tasks.named('build').configure {
     finalizedBy tasks.named('deleteExtras')
 }
 
-tasks.register('updateWiki') {
-    doLast {
-        // Check if the wiki submodule is updated
-        exec {
-            commandLine 'git', 'submodule', 'update', '--init', '--remote'
-        }
-    }
-}
-
-tasks.build.dependsOn updateWiki
-
 bootJar {
     launchScript()
     mainClassName = 'toby.Application'
