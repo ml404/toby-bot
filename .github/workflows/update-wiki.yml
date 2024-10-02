@@ -1,0 +1,45 @@
+name: Update Wiki on Deploy
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the main branch
+        uses: actions/checkout@v2
+        with:
+          ref: master
+
+      - name: Generate Command Documentation
+        run: |
+          # Make sure to run your Spring Boot application and fetch the command documentation as HTML
+          # Assuming your application exposes the /commands/wiki endpoint
+          curl -o commands.html http://localhost:8080/commands/wiki
+
+      - name: Checkout the wiki
+        uses: actions/checkout@v2
+        with:
+          repository: ml404/toby-bot.wiki
+          path: wiki
+
+      - name: Update Wiki with New Documentation
+        run: |
+          # Move the generated HTML file to the wiki folder
+          mv commands.html wiki/commands.html
+
+      - name: Commit and Push Changes
+        run: |
+          cd wiki
+          git config --local user.name "github-actions"
+          git config --local user.email "github-actions@github.com"
+          git add commands.html
+          git commit -m "Update command documentation" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -84,6 +84,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
+    implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
+    implementation 'org.springdoc:springdoc-openapi-kotlin:1.7.0'
     implementation 'dev.lavalink.youtube:common:1.7.2'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
     runtimeOnly 'org.hibernate.orm:hibernate-core:6.3.1.Final'
