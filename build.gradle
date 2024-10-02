@@ -126,12 +126,24 @@ tasks.named('build').configure {
 
 tasks.register('updateWiki') {
     doLast {
-        // Check if the wiki submodule is updated
-        exec {
+        println "Starting to update Git submodules..."
+
+        // Execute the command to update Git submodules
+        def exitValue = exec {
+            workingDir project.projectDir
             commandLine 'git', 'submodule', 'update', '--init', '--remote'
+            ignoreExitValue = true  // Capture exit status even if it fails
+        }.exitValue
+
+        if (exitValue != 0) {
+            println "Git submodule update failed with exit code: ${exitValue}"
+        } else {
+            println "Git submodule update completed successfully."
         }
     }
 }
+
+
 
 tasks.build.dependsOn updateWiki
 
