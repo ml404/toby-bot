@@ -3,11 +3,11 @@ name: Update Wiki
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types: [closed]
     branches:
-      - master
+      - main
 
 jobs:
   update-wiki:
@@ -33,10 +33,10 @@ jobs:
       - name: Check for Differences
         run: |
           # Compare the fetched file with the existing Commands.md
-          if ! diff -q "$TEMP_FILE" "wiki/Commands.md" > /dev/null; then
+          if ! diff -q "wiki/Commands_temp.md" "wiki/Commands.md" > /dev/null; then
             echo "Differences found. Updating Commands.md."
             # If differences are found, overwrite the existing Commands.md
-            mv "$TEMP_FILE" "wiki/Commands.md"
+            mv "wiki/Commands_temp.md" "wiki/Commands.md"
           else
             echo "No differences found. Skipping update."
             exit 0  # Exit successfully without making changes
