@@ -45,7 +45,7 @@ jobs:
       - name: Commit and Push Changes
         run: |
           cd wiki
-          # Configure Git user information (global for this run)
+          # Configure Git user information
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
@@ -58,15 +58,23 @@ jobs:
             git commit -m "Update commands documentation"
             echo "Submodule changes committed."
 
-            # Push changes to a new branch with full refname
+            # Push changes to a new branch
             BRANCH_NAME="update-wiki-$(date +%s)"  # Use a timestamp to ensure uniqueness
             git push origin HEAD:refs/heads/$BRANCH_NAME  # Push to new branch
 
             # Create a pull request
-            curl -X POST \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -d "{\"title\":\"Update Wiki from Action\",\"head\":\"${{ github.actor }}:$BRANCH_NAME\",\"base\":\"master\"}" \
-              https://api.github.com/repos/${{ github.repository }}/pulls
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ github.repository }}/pulls \
+              -d '{
+                "title": "Update Wiki from Action",
+                "body": "This pull request updates the wiki documentation based on the latest command changes.",
+                "head": "${{ github.actor }}:'"$BRANCH_NAME"'",
+                "base": "master"
+              }'
           else
             echo "No changes to commit."
           fi
