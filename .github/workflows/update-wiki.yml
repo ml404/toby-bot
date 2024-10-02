@@ -65,7 +65,7 @@ jobs:
             # Create a pull request
             curl -X POST \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -d "{\"title\":\"Update Wiki from Action\",\"head\":\"$BRANCH_NAME\",\"base\":\"master\"}" \
+              -d "{\"title\":\"Update Wiki from Action\",\"head\":\"${{ github.actor }}:$BRANCH_NAME\",\"base\":\"master\"}" \
               https://api.github.com/repos/${{ github.repository }}/pulls
           else
             echo "No changes to commit."
