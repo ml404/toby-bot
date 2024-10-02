@@ -32,6 +32,16 @@ jobs:
 
       - name: Check for Differences
         run: |
+          # Log the contents of the temporary Commands file
+          echo "=== Contents of Commands_temp.md ==="
+          cat "wiki/Commands_temp.md"
+          echo "====================================="
+
+          # Log the contents of the existing Commands file
+          echo "=== Contents of Commands.md ==="
+          cat "wiki/Commands.md"
+          echo "====================================="
+
           # Compare the fetched file with the existing Commands.md
           if ! diff -q "wiki/Commands_temp.md" "wiki/Commands.md" > /dev/null; then
             echo "Differences found. Updating Commands.md."
@@ -40,7 +50,7 @@ jobs:
           else
             echo "No differences found. Skipping update."
             exit 0  # Exit successfully without making changes
-          fi
+          fi    
 
       - name: Commit and Push Changes
         run: |
