@@ -34,8 +34,7 @@ open class TestDatabaseConfig {
         entityManagerFactory.jpaVendorAdapter = jpaVendorAdapter
 
         val jpaProperties = Properties()
-        jpaProperties["hibernate.dialect"] = "org.hibernate.dialect.PostgreSQLDialect"
-        // Add other properties as needed
+        jpaProperties["hibernate.dialect"] = "org.hibernate.dialect.H2Dialect" // Use H2 dialect for in-memory DB
         entityManagerFactory.setJpaProperties(jpaProperties)
 
         return entityManagerFactory
