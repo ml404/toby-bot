@@ -1,0 +1,45 @@
+name: Publish wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - wiki/**
+      - .github/workflows/publish-wiki.yml
+  workflow_dispatch:
+
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-publish-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base repository
+        uses: actions/checkout@v3
+
+      - name: Fetch Commands Documentation
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}  # Define your base URL as a repository or action variable
+        run: |
+          # Fetch the commands documentation
+          curl -X GET "$BASE_URL/commands/wiki" -o "wiki/Commands.md"
+          echo "Commands.md generated in the wiki folder."
+
+      - name: Commit changes to repository
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add the new/updated Commands.md
+          git add wiki/Commands.md
+
+          # Commit changes if there are any
+          git diff-index --quiet HEAD || git commit -m "Update Commands.md in wiki"
+
+      - name: Publish to Wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
