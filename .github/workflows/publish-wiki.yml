@@ -28,6 +28,9 @@ jobs:
           distribution: 'adopt'
           java-version: '17'
 
+      - name: Grant execute permission to Gradle wrapper
+        run: chmod +x ./gradlew
+
       - name: Build and run Spring Boot app
         run: |
           ./gradlew bootJar  # Or ./mvnw clean package if you're using Maven
