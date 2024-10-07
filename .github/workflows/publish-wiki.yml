@@ -32,6 +32,9 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build and run Spring Boot app
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # Fetch from GitHub Secrets
+          TOKEN: ${{ secrets.TOKEN }}  # Fetch from GitHub Secrets
         run: |
           ./gradlew bootJar  # Or ./mvnw clean package if you're using Maven
           java -jar build/libs/toby-bot-6.0-SNAPSHOT.jar &  # Start the app in the background
