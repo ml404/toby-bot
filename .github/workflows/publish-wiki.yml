@@ -2,7 +2,7 @@ name: Publish wiki
 
 on:
   push:
-    branches: [main]
+    branches: [main, github-publishing]
     paths:
       - wiki/**
       - .github/workflows/publish-wiki.yml
@@ -22,12 +22,22 @@ jobs:
       - name: Checkout base repository
         uses: actions/checkout@v3
 
-      - name: Fetch Commands Documentation
-        env:
-          BASE_URL: ${{ vars.BASE_URL }}  # Define your base URL as a repository or action variable
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Build and run Spring Boot app
         run: |
-          # Fetch the commands documentation
-          curl -X GET "$BASE_URL/commands/wiki" -o "wiki/Commands.md"
+          ./gradlew bootJar  # Or ./mvnw clean package if you're using Maven
+          java -jar build/libs/toby-bot-6.0-SNAPSHOT.jar &  # Start the app in the background
+          sleep 20  # Give the app some time to start
+
+      - name: Fetch Commands Documentation
+        run: |
+          # Fetch the commands documentation from the locally running instance
+          curl -X GET "http://localhost:8080/commands/wiki" -o "wiki/Commands.md"
           echo "Commands.md generated in the wiki folder."
 
       - name: Commit changes to repository
