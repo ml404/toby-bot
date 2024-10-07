@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import toby.command.ICommand
 import toby.documentation.ChoiceDocumentation
 import toby.documentation.CommandDocumentation
 import toby.documentation.OptionDocumentation
@@ -48,29 +49,46 @@ class CommandController(private val commandManager: CommandManager) {
     fun getCommandsWiki(): String {
         val htmlBuilder = StringBuilder()
 
+        // Add the basic structure
         htmlBuilder.append("<html><head><title>Command Documentation</title></head><body>")
         htmlBuilder.append("<h1>Command Documentation</h1>")
 
-        val commands = commandManager.allCommands
-        for (command in commands) {
-            htmlBuilder.append("<h2>${command.name}</h2>")
-            htmlBuilder.append("<p>${command.description}</p>")
+        // Function to append a category of commands
+        fun appendCommandCategory(title: String, commands: List<ICommand>) {
+            htmlBuilder.append("<h2>$title</h2>")
+            htmlBuilder.append("<table border='1'><thead><tr><th>Command</th><th>Description</th><th>Options</th></tr></thead><tbody>")
+            for (command in commands.sortedBy { it.name }) {
+                htmlBuilder.append("<tr>")
+                htmlBuilder.append("<td><strong>${command.name}</strong></td>")
+                htmlBuilder.append("<td>${command.description}</td>")
 
-            if (command.optionData.isNotEmpty()) {
-                htmlBuilder.append("<h3>Options:</h3><ul>")
-                for (option in command.optionData) {
-                    htmlBuilder.append("<li><strong>${option.name}</strong>: ${option.description} (Type: ${option.type.name})</li>")
-                    if (option.choices.isNotEmpty()) {
-                        htmlBuilder.append("<ul>")
-                        for (choice in option.choices) {
-                            htmlBuilder.append("<li>${choice.name}: ${choice.asString}</li>")
+                // Add options
+                if (command.optionData.isNotEmpty()) {
+                    htmlBuilder.append("<td><ul>")
+                    for (option in command.optionData) {
+                        htmlBuilder.append("<li><strong>${option.name}</strong>: ${option.description} (Type: ${option.type.name})</li>")
+                        if (option.choices.isNotEmpty()) {
+                            htmlBuilder.append("<ul>")
+                            for (choice in option.choices) {
+                                htmlBuilder.append("<li>${choice.name}: ${choice.asString}</li>")
+                            }
+                            htmlBuilder.append("</ul>")
                         }
-                        htmlBuilder.append("</ul>")
                     }
+                    htmlBuilder.append("</ul></td>")
+                } else {
+                    htmlBuilder.append("<td>No options</td>")
                 }
-                htmlBuilder.append("</ul>")
+                htmlBuilder.append("</tr>")
             }
+            htmlBuilder.append("</tbody></table>")
         }
+
+        // Append each subcategory of commands
+        appendCommandCategory("Music Commands", commandManager.musicCommands)
+        appendCommandCategory("Moderation Commands", commandManager.moderationCommands)
+        appendCommandCategory("Miscellaneous Commands", commandManager.miscCommands)
+        appendCommandCategory("Fetch Commands", commandManager.fetchCommands)
 
         htmlBuilder.append("</body></html>")
         return htmlBuilder.toString()
