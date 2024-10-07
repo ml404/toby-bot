@@ -33,8 +33,8 @@ jobs:
 
       - name: Build and run Spring Boot app
         run: |
-          ./gradlew bootJar  # Or ./mvnw clean package if you're using Maven
-          java -jar build/libs/toby-bot-6.0-SNAPSHOT.jar &  # Start the app in the background
+          ./gradlew bootJar
+          java -jar build/libs/toby-bot-6.0-SNAPSHOT.jar --spring.profiles.active=test &  # Start the app in the background
           sleep 20  # Give the app some time to start
 
       - name: Fetch Commands Documentation
