@@ -50,7 +50,6 @@ class CommandController(private val commandManager: CommandManager) {
         val htmlBuilder = StringBuilder()
 
         // Add the basic structure
-        htmlBuilder.append("<html><head><title>Command Documentation</title></head><body>")
         htmlBuilder.append("<h1>Command Documentation</h1>")
 
         // Function to append a category of commands
@@ -59,7 +58,7 @@ class CommandController(private val commandManager: CommandManager) {
             htmlBuilder.append("<table border='1'><thead><tr><th>Command</th><th>Description</th><th>Options</th></tr></thead><tbody>")
             for (command in commands.sortedBy { it.name }) {
                 htmlBuilder.append("<tr>")
-                htmlBuilder.append("<td><strong>${command.name}</strong></td>")
+                htmlBuilder.append("<td><strong>/${command.name}</strong></td>")
                 htmlBuilder.append("<td>${command.description}</td>")
 
                 // Add options
