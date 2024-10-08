@@ -1,9 +1,9 @@
 name: Publish wiki
 
 on:
-  deployment_status:
-    types: [success]  # Trigger after a successful deployment
-  workflow_dispatch:  # Allows manual trigger if needed
+  repository_dispatch:
+    types: [heroku_deploy]  # Event triggered from Heroku
+  workflow_dispatch:  # Manual trigger option
 
 concurrency:
   group: publish-wiki
