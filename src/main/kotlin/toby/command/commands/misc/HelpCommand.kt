@@ -21,6 +21,8 @@ class HelpCommand(private val manager: CommandManager) : IMiscCommand {
             builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", "/"))
             builder.append("**Music Commands**:\n")
             manager.musicCommands.forEach(commandConsumer)
+            builder.append("**DnD Commands**:\n")
+            manager.dndCommands.forEach(commandConsumer)
             builder.append("**Miscellaneous Commands**:\n")
             manager.miscCommands.forEach(commandConsumer)
             builder.append("**Moderation Commands**:\n")

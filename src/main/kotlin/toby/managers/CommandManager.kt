@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Configurable
 import toby.command.CommandContext
 import toby.command.ICommand
 import toby.command.commands.dnd.DnDCommand
+import toby.command.commands.dnd.IDnDCommand
 import toby.command.commands.dnd.InitiativeCommand
+import toby.command.commands.dnd.RollCommand
 import toby.command.commands.fetch.DbdRandomKillerCommand
 import toby.command.commands.fetch.IFetchCommand
 import toby.command.commands.fetch.Kf2RandomMapCommand
@@ -109,6 +111,7 @@ class CommandManager @Autowired constructor(
     val allSlashCommands: List<CommandData?> get() = slashCommands
     val allCommands: List<ICommand> get() = commands
     val musicCommands: List<ICommand> get() = commands.filterIsInstance<IMusicCommand>().toList()
+    val dndCommands: List<ICommand> get() = commands.filterIsInstance<IDnDCommand>().toList()
     val moderationCommands: List<ICommand> get() = commands.filterIsInstance<IModerationCommand>().toList()
     val miscCommands: List<ICommand> get() = commands.filterIsInstance<IMiscCommand>().toList()
     val fetchCommands: List<ICommand> get() = commands.filterIsInstance<IFetchCommand>().toList()

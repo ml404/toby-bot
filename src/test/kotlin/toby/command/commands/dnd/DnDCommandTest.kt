@@ -1,4 +1,4 @@
-package toby.command.commands.fetch.dnd
+package toby.command.commands.dnd
 
 import coroutines.MainCoroutineExtension
 import io.mockk.*
@@ -18,8 +18,6 @@ import toby.command.CommandTest
 import toby.command.CommandTest.Companion.event
 import toby.command.CommandTest.Companion.interactionHook
 import toby.command.CommandTest.Companion.webhookMessageCreateAction
-import toby.command.commands.dnd.DnDCommand
-import toby.command.commands.dnd.DnDCommandQueryHandler
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ExtendWith(MainCoroutineExtension::class)

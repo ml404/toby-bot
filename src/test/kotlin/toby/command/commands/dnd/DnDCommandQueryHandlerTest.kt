@@ -1,4 +1,4 @@
-package toby.command.commands.fetch.dnd
+package toby.command.commands.dnd
 
 import coroutines.MainCoroutineExtension
 import io.mockk.*
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import toby.command.commands.dnd.DnDCommandQueryHandler
 import toby.command.commands.fetch.TestHttpHelperHelper.BLIND_QUERY_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.EMPTY_QUERY_RESPONSE
 import toby.command.commands.fetch.TestHttpHelperHelper.ERROR_NOT_FOUND_RESPONSE

@@ -1,4 +1,4 @@
-package toby.command.commands.misc
+package toby.command.commands.dnd
 
 import io.mockk.every
 import io.mockk.mockk

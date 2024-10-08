@@ -12,7 +12,7 @@ import toby.button.ButtonTest
 import toby.button.ButtonTest.Companion.dndHelper
 import toby.button.ButtonTest.Companion.event
 import toby.button.ButtonTest.Companion.mockChannel
-import toby.command.commands.misc.RollCommand
+import toby.command.commands.dnd.RollCommand
 import toby.jpa.dto.UserDto
 import toby.managers.CommandManager
 

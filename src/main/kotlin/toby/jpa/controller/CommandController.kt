@@ -85,6 +85,7 @@ class CommandController(private val commandManager: CommandManager) {
 
         // Append each subcategory of commands
         appendCommandCategory("Music Commands", commandManager.musicCommands)
+        appendCommandCategory("Music Commands", commandManager.dndCommands)
         appendCommandCategory("Moderation Commands", commandManager.moderationCommands)
         appendCommandCategory("Miscellaneous Commands", commandManager.miscCommands)
         appendCommandCategory("Fetch Commands", commandManager.fetchCommands)

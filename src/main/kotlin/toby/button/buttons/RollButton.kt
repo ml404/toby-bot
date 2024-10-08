@@ -3,7 +3,7 @@ package toby.button.buttons
 import toby.button.ButtonContext
 import toby.button.IButton
 import toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import toby.command.commands.misc.RollCommand
+import toby.command.commands.dnd.RollCommand
 import toby.jpa.dto.UserDto
 import toby.managers.CommandManager
 import java.util.*

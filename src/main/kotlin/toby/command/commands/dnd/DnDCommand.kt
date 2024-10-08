@@ -6,7 +6,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import toby.command.CommandContext
-import toby.command.commands.fetch.IFetchCommand
 import toby.helpers.DnDHelper
 import toby.helpers.HttpHelper
 import toby.jpa.dto.UserDto
@@ -15,7 +14,7 @@ class DnDCommand(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val httpHelper: HttpHelper,
     private val dndHelper: DnDHelper
-) : IDnDCommand, IFetchCommand {
+) : IDnDCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         val event = ctx.event

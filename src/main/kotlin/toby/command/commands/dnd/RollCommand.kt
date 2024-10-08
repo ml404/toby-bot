@@ -1,4 +1,4 @@
-package toby.command.commands.misc
+package toby.command.commands.dnd
 
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
@@ -15,7 +15,7 @@ import toby.helpers.DnDHelper
 import toby.jpa.dto.UserDto
 import java.util.*
 
-class RollCommand(private val dndHelper: DnDHelper) : IMiscCommand {
+class RollCommand(private val dndHelper: DnDHelper) : IDnDCommand {
     private val DICE_NUMBER = "number"
     private val DICE_TO_ROLL = "amount"
     private val MODIFIER = "modifier"
