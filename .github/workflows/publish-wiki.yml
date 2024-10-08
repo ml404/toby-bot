@@ -16,6 +16,9 @@ jobs:
   generate-and-publish-wiki:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3  # Check out the code from the repository
+
       - name: Fetch Commands Documentation
         env:
           BASE_URL: ${{ vars.BASE_URL }}  # Define your base URL as a repository or action variable
