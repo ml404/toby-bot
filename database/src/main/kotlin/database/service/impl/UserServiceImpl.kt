@@ -1,6 +1,6 @@
 package database.service.impl
 
-import IUserService
+import database.service.IUserService
 import database.dto.UserDto
 import database.persistence.IUserPersistence
 import org.springframework.beans.factory.annotation.Autowired

@@ -1,3 +1,5 @@
+package database.service
+
 import database.dto.UserDto
 
 interface IUserService {

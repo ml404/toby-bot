@@ -1,6 +1,6 @@
 package database.service.impl
 
-import IUserService
+import database.service.IUserService
 import database.dto.MusicDto
 import database.dto.UserDto
 import database.service.IMusicFileService
