@@ -10,7 +10,7 @@ plugins {
 
 group = 'com.github.ml404'
 version = '6.0-SNAPSHOT'
-mainClassName = "toby.Application"
+mainClassName = "bot.Application"
 
 repositories {
     mavenCentral()
@@ -97,7 +97,7 @@ tasks.named('build').configure {
 
 bootJar {
     launchScript()
-    mainClassName = 'toby.Application'
+    mainClassName = 'bot.Application'
 }
 
 tasks.withType(JavaCompile).configureEach {
