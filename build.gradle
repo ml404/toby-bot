@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     ext {
-        springBootVersion = '3.1.4'
+        springBootVersion = '3.3.4'
         jdaVersion = '5.0.2'
         kotlin_version = '2.0.0-RC3'
         kotlinx_version = '1.9.0-RC'
@@ -12,7 +12,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion} '
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -91,15 +91,12 @@ dependencies {
     runtimeOnly 'org.hibernate.orm:hibernate-core:6.3.1.Final'
     runtimeOnly 'com.h2database:h2'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
     testImplementation 'io.mockk:mockk:1.13.11'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'com.h2database:h2'
     testRuntimeOnly 'com.h2database:h2:2.2.224'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter:5.8.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 }
 
 tasks.register('deleteExtras', Delete) {
@@ -141,7 +138,7 @@ java {
 
 tasks.withType(KotlinCompile).configureEach {
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "22"
     }
 }
 
@@ -150,5 +147,5 @@ test {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(22)
 }
