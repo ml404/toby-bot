@@ -1,6 +1,7 @@
 package bot.toby.helpers
 
 import bot.database.dto.MusicDto
+import bot.database.dto.UserDto
 import bot.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.music.IMusicCommand.Companion.sendDeniedStoppableMessage
@@ -27,7 +28,7 @@ object MusicPlayerHelper {
     val nowPlayingManager = NowPlayingManager()
 
     fun playUserIntro(
-        dbUser: bot.database.dto.UserDto,
+        dbUser: UserDto,
         guild: Guild,
         event: SlashCommandInteractionEvent? = null,
         deleteDelay: Int,
@@ -46,6 +47,7 @@ object MusicPlayerHelper {
                 val introVolume = it.introVolume
                 instance.setPreviousVolume(currentVolume)
                 val url = determineUrlFromMusicDto(it)
+                logger.info { "Url to play is: '$url'" }
                 instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
             }
         }.onFailure {
