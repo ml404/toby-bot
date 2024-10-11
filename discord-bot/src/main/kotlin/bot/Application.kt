@@ -8,11 +8,11 @@ import org.springframework.context.annotation.ComponentScan
 @SpringBootApplication
 @ComponentScan
 @EnableCaching
-open class Application
-
-fun main(args: Array<String>) {
-    SpringApplication.run(Application::class.java, *args)
+open class Application {
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) {
+            SpringApplication.run(Application::class.java, *args)
+        }
+    }
 }
-
-
-

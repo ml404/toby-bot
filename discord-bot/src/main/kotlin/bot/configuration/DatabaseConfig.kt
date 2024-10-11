@@ -1,4 +1,4 @@
-package configuration
+package bot.configuration
 
 import com.zaxxer.hikari.HikariDataSource
 import org.postgresql.Driver

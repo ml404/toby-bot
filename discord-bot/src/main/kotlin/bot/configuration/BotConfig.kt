@@ -1,4 +1,4 @@
-package configuration
+package bot.configuration
 
 import me.duncte123.botcommons.messaging.EmbedUtils
 import net.dv8tion.jda.api.EmbedBuilder
