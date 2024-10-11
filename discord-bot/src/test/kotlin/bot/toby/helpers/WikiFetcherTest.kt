@@ -1,4 +1,4 @@
-package bot.helpers
+package bot.toby.helpers
 
 import bot.toby.helpers.*
 import org.junit.jupiter.api.*

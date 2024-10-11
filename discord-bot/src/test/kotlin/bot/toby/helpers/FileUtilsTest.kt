@@ -1,4 +1,4 @@
-package bot.helpers
+package bot.toby.helpers
 
 import bot.toby.helpers.FileUtils.readByteArrayToInputStream
 import bot.toby.helpers.FileUtils.readInputStreamToByteArray
