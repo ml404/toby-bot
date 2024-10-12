@@ -215,13 +215,14 @@ object MusicPlayerHelper {
         }
     }
 
-    private fun determineUrlFromMusicDto(it: MusicDto) = if (isUrl(it.fileName)) {
-        // Handle YouTube or any external URL
-        it.fileName!!
-    } else {
-        // Serve binary blob via local endpoint
-        "$WEB_URL/music?id=${it.id}" // The REST endpoint to serve the binary data
-    }
+    private fun determineUrlFromMusicDto(it: MusicDto): String =
+        if (isUrl(it.fileName)) {
+            // It's a URL, return it directly
+            it.fileName!!
+        } else {
+            // It's an MP3 file, return the local URL serving the binary data
+            "$WEB_URL/music?id=${it.id}"
+        }
 
     fun formatTime(timeInMillis: Long): String {
         val hours = TimeUnit.MILLISECONDS.toHours(timeInMillis)
