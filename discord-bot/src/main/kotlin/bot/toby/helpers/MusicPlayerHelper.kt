@@ -18,12 +18,11 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import java.awt.Color
-import java.net.URI
 import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
-    private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com/"
+    private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com"
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
 
@@ -216,7 +215,7 @@ object MusicPlayerHelper {
     }
 
     private fun determineUrlFromMusicDto(it: MusicDto): String =
-        if (isUrl(it.fileName)) {
+        if (isUrl(it.fileName!!).isNotEmpty()) {
             // It's a URL, return it directly
             it.fileName!!
         } else {
@@ -238,11 +237,15 @@ object MusicPlayerHelper {
         return adjustmentMap[MusicDto.Adjustment.START.name]?.times(SECOND_MULTIPLIER) ?: 0L
     }
 
-    fun isUrl(url: String?): Boolean = runCatching {
-        if (url != null) {
-            URI(url)
-        }
-    }.isSuccess
+    // Method to extract URL using regex
+    fun isUrl(content: String): String {
+        // Regex pattern to match a URL
+        val urlRegex = Regex(
+            """\b(https?://[^\s/$.?#].\S*)\b""",
+            RegexOption.IGNORE_CASE
+        )
+        return urlRegex.find(content)?.value ?: ""
+    }
 
     @JvmStatic
     fun deriveDeleteDelayFromTrack(track: AudioTrack): Int {

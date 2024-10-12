@@ -48,7 +48,7 @@ class PlayCommand : IMusicCommand {
             )
         } else {
             var link = Optional.ofNullable(event.getOption(LINK)).map { obj: OptionMapping -> obj.asString }.orElse("")
-            if (link.contains("youtube") && !MusicPlayerHelper.isUrl(link)) {
+            if (link.contains("youtube") && MusicPlayerHelper.isUrl(link).isEmpty()) {
                 link = "ytsearch:$link"
             }
             instance.loadAndPlay(ctx.guild, event, link, true, deleteDelay!!, startPosition, volume)
