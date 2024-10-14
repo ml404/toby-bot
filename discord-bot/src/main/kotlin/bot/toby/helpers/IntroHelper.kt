@@ -3,11 +3,13 @@ package bot.toby.helpers
 import bot.database.dto.ConfigDto
 import bot.database.dto.MusicDto
 import bot.database.service.IConfigService
+import bot.database.service.IMusicFileService
 import bot.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.FileUtils.computeHash
 import bot.toby.helpers.MusicPlayerHelper.isUrl
+import kotlinx.coroutines.runBlocking
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.Attachment
@@ -19,17 +21,22 @@ import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
 @Service
 class IntroHelper(
     private val userDtoHelper: UserDtoHelper,
-    private val musicFileService: bot.database.service.IMusicFileService,
+    private val musicFileService: IMusicFileService,
     private val configService: IConfigService,
+    private val httpHelper: HttpHelper,
     private val eventWaiter: EventWaiter
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+    private val introLimit = 20.seconds
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
@@ -351,6 +358,12 @@ class IntroHelper(
         } else if (isUrl(content).isNotEmpty()) {
             // User sent a URL
             logger.info("User provided a URL: $content")
+            if (checkForOverlyLongIntroDuration(content)) {
+                logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds" }
+                event.channel.sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
+                    .queue()
+                return
+            }
             InputData.Url(isUrl(content)) to parseVolume(content)
         } else {
             event.channel.sendMessage("Please provide a valid URL or upload a file.").queue()
@@ -359,6 +372,14 @@ class IntroHelper(
         saveUserMusicDto(event.author, guild, inputData, volume)
     }
 
+    fun checkForOverlyLongIntroDuration(url: String): Boolean {
+        val duration = runBlocking { httpHelper.getYouTubeVideoDuration(url) }
+        if (duration != null) {
+            logger.info { "Duration of intro is: ${duration.prettyPrintDuration()}" }
+            return duration > introLimit
+        }
+        return false
+    }
 
     fun parseVolume(content: String): Int? {
         // Try to extract a volume value (0-100) from the message content
@@ -366,7 +387,6 @@ class IntroHelper(
         val volumeMatch = volumeRegex.find(content)
         return volumeMatch?.value?.toIntOrNull()?.takeIf { it in 0..100 }
     }
-
 
     @VisibleForTesting
     fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?) {
@@ -412,6 +432,19 @@ class IntroHelper(
                 // Check if the attachment or its fileName is null
                 input.attachment.fileName
             }
+        }
+    }
+
+    // Function to format the Kotlin Duration into H:MM:SS or MM:SS
+    private fun Duration.prettyPrintDuration(): String {
+        val hours = this.inWholeHours
+        val minutes = (this - hours.hours).inWholeMinutes
+        val seconds = (this - hours.hours - minutes.minutes).inWholeSeconds
+
+        return if (hours > 0) {
+            "%d:%02d:%02d".format(hours, minutes, seconds)
+        } else {
+            "%02d:%02d".format(minutes, seconds)
         }
     }
 

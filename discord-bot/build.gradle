@@ -6,6 +6,7 @@ plugins {
     id 'org.springframework.boot'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id 'org.jetbrains.kotlin.jvm'
+    id "org.jetbrains.kotlin.plugin.serialization" version "$kotlin_version"
 }
 
 group = 'com.github.ml404'
@@ -41,11 +42,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     implementation 'me.duncte123:botCommons:3.1.18'
     implementation 'com.google.code.gson:gson:2.10.1'
-    implementation "io.ktor:ktor-client-core:2.3.12"
-    implementation "io.ktor:ktor-client-cio:2.3.12"
-    implementation "io.ktor:ktor-client-json:2.3.12"
-    implementation "io.ktor:ktor-client-serialization:2.3.12"
-    testImplementation "io.ktor:ktor-client-mock:2.3.12"
+    implementation "io.ktor:ktor-client-core:$ktor_version"
+    implementation "io.ktor:ktor-client-cio:$ktor_version"
+    implementation "io.ktor:ktor-client-json:$ktor_version"
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+    implementation "io.ktor:ktor-client-serialization:$ktor_version"
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    testImplementation "io.ktor:ktor-client-mock:$ktor_version"
     implementation 'org.postgresql:postgresql'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-web-services'
@@ -56,18 +60,18 @@ dependencies {
     implementation 'org.springframework:spring-context'
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
-    implementation 'io.github.microutils:kotlin-logging-jvm:2.1.23'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.10"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
     implementation 'org.springdoc:springdoc-openapi-kotlin:1.7.0'
     implementation 'dev.lavalink.youtube:common:1.7.2'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
-    runtimeOnly 'org.hibernate.orm:hibernate-core:6.3.1.Final'
+    runtimeOnly 'org.hibernate.orm:hibernate-core:6.6.1.Final'
     runtimeOnly 'com.h2database:h2'
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC"
-    testImplementation 'io.mockk:mockk:1.13.11'
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
+    // duration nullable intermittently broken, seems to work in 1.13.13
+    testImplementation 'io.mockk:mockk:1.13.13'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     testImplementation 'com.h2database:h2'

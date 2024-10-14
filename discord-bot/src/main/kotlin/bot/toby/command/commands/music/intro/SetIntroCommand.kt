@@ -18,7 +18,7 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 
 class SetIntroCommand(
-    private val introHelper: IntroHelper,
+    private val introHelper: IntroHelper
 ) : IMusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
@@ -94,6 +94,11 @@ class SetIntroCommand(
                 attachmentOption,
                 introVolume
             ) -> {
+                return
+            }
+
+            introHelper.checkForOverlyLongIntroDuration(linkOption) -> {
+                event.hook.sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
                 return
             }
 

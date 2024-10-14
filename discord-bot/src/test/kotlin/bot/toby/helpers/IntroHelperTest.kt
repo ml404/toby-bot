@@ -13,6 +13,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.InputStream
@@ -20,6 +22,7 @@ import java.net.URI
 import java.util.function.Consumer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class IntroHelperTest {
 
@@ -27,6 +30,7 @@ class IntroHelperTest {
     private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var musicFileService: bot.database.service.IMusicFileService
     private lateinit var configService: IConfigService
+    private lateinit var httpHelper: HttpHelper
     private lateinit var eventWaiter: EventWaiter
     private lateinit var event: SlashCommandInteractionEvent
     private lateinit var userDto: bot.database.dto.UserDto
@@ -39,9 +43,10 @@ class IntroHelperTest {
         userDtoHelper = mockk(relaxed = true)
         musicFileService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        httpHelper = mockk(relaxed = true)
         eventWaiter = mockk(relaxed = true)
 
-        introHelper = IntroHelper(userDtoHelper, musicFileService, configService, eventWaiter)
+        introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter)
 
         event = mockk(relaxed = true)
         userDto = mockk(relaxed = true)
@@ -147,7 +152,7 @@ class IntroHelperTest {
         every { URLHelper.isValidURL(any()) } returns false
 
         // Running the handleMedia method with an invalid URL
-        introHelper.handleMedia(event, userDto, 10, InputData.Url("invalid"),70, musicDto)
+        introHelper.handleMedia(event, userDto, 10, InputData.Url("invalid"), 70, musicDto)
 
         // Verifying that the correct error message is sent
         verify(exactly = 1) {
@@ -330,7 +335,8 @@ class IntroHelperTest {
 
         // Verify the correct message was sent in the user's DM
         verify {
-            privateChannel.sendMessage("You don't have an intro song yet on server 'TestGuild'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'").queue(any())
+            privateChannel.sendMessage("You don't have an intro song yet on server 'TestGuild'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'")
+                .queue(any())
         }
 
         // Capture the arguments for waitForMessage to assert them
@@ -340,7 +346,12 @@ class IntroHelperTest {
 
         // Adjust the verification for waitForMessage
         verify {
-            eventWaiter.waitForMessage(capture(messageWaiterSlot1), capture(messageWaiterSlot2), capture(timeoutSlot), any())
+            eventWaiter.waitForMessage(
+                capture(messageWaiterSlot1),
+                capture(messageWaiterSlot2),
+                capture(timeoutSlot),
+                any()
+            )
         }
 
         // Assert the timeout value if necessary
@@ -415,4 +426,55 @@ class IntroHelperTest {
         assert(result == "test.mp3")
     }
 
+    @Test
+    fun `checkForOverlyLongIntroDuration returns false when duration is below intro limit`() {
+        // Arrange
+        val url = "https://www.youtube.com/watch?v=validVideoId"
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 15.seconds
+
+        // Act
+        val result = introHelper.checkForOverlyLongIntroDuration(url)
+
+        // Assert
+        assertFalse(result)
+    }
+
+    @Test
+    fun `checkForOverlyLongIntroDuration returns true when duration is above intro limit`() {
+        // Arrange
+        val url = "https://www.youtube.com/watch?v=validVideoId"
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 25.seconds
+
+        // Act
+        val result = introHelper.checkForOverlyLongIntroDuration(url)
+
+        // Assert
+        assertTrue(result)
+    }
+
+    @Test
+    fun `checkForOverlyLongIntroDuration returns false when duration is equal to intro limit`() {
+        // Arrange
+        val url = "https://www.youtube.com/watch?v=validVideoId"
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 20.seconds
+
+        // Act
+        val result = introHelper.checkForOverlyLongIntroDuration(url)
+
+        // Assert
+        assertFalse(result) // As the duration equals the limit
+    }
+
+    @Test
+    fun `checkForOverlyLongIntroDuration returns false when duration is null`() {
+        // Arrange
+        val url = "https://www.youtube.com/watch?v=invalidVideoId"
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns null
+
+        // Act
+        val result = introHelper.checkForOverlyLongIntroDuration(url)
+
+        // Assert
+        assertFalse(result)
+    }
 }

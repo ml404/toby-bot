@@ -8,8 +8,12 @@ import io.ktor.http.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class HttpHelper(private val client: HttpClient, private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
+    private val YOUTUBE_API_KEY = System.getenv("YOUTUBE_API_KEY")
 
     suspend fun fetchFromGet(url: String?): String = withContext(dispatcher) {
         if (url.isNullOrBlank()) return@withContext ""
@@ -29,4 +33,43 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
             throw RuntimeException("HTTP error occurred", e)
         }
     }
+
+    suspend fun getYouTubeVideoDuration(youtubeUrl: String): Duration? = withContext(dispatcher) {
+        val videoId = extractVideoIdFromUrl(youtubeUrl) ?: return@withContext null
+        val apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=contentDetails&key=$YOUTUBE_API_KEY"
+        val response: HttpResponse = client.get(apiUrl)
+        val videoResponse: YouTubeVideoResponse = response.body()
+        client.close()
+
+        val durationIso = videoResponse.items?.firstOrNull()?.contentDetails?.duration ?: return@withContext null
+        return@withContext parseIso8601Duration(durationIso) // Return Duration
+    }
+
+    // Function to parse ISO 8601 duration manually and return a Kotlin `Duration`
+    private fun parseIso8601Duration(duration: String): Duration? {
+        val regex = Regex("""PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?""")
+        val matchResult = regex.matchEntire(duration) ?: return null
+
+        val hours = matchResult.groups[1]?.value?.toLongOrNull() ?: 0
+        val minutes = matchResult.groups[2]?.value?.toLongOrNull() ?: 0
+        val seconds = matchResult.groups[3]?.value?.toLongOrNull() ?: 0
+
+        return (hours * 3600 + minutes * 60 + seconds).seconds
+    }
+
+    // Helper function to extract video ID from YouTube URL
+    private fun extractVideoIdFromUrl(url: String): String? {
+        val regex = Regex("(?<=v=|/videos/|embed/|youtu.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/)([^#&?\\n]+)")
+        return regex.find(url)?.value
+    }
+
+    @Serializable
+    data class YouTubeVideoResponse(val items: List<VideoItem>?)
+
+    @Serializable
+    data class VideoItem(val contentDetails: ContentDetails?)
+
+    @Serializable
+    data class ContentDetails(val duration: String?)
+
 }

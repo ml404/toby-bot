@@ -10,12 +10,10 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.handler.EventWaiter
+import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
-import io.mockk.clearAllMocks
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -25,6 +23,7 @@ import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import kotlin.time.Duration.Companion.seconds
 
 internal class SetIntroCommandTest : MusicCommandTest {
     private lateinit var setIntroCommand: SetIntroCommand
@@ -32,9 +31,16 @@ internal class SetIntroCommandTest : MusicCommandTest {
     private var musicFileService: bot.database.service.IMusicFileService = mockk(relaxed = true)
     private var configService: IConfigService = mockk(relaxed = true)
     private var eventWaiter: EventWaiter = mockk(relaxed = true)
+    private var httpHelper: HttpHelper = mockk(relaxed = true)
     private lateinit var mentionedUserDto: bot.database.dto.UserDto
 
-    private var introHelper: IntroHelper = IntroHelper(userDtoHelper, musicFileService, configService, eventWaiter)
+    private var introHelper: IntroHelper = IntroHelper(
+        userDtoHelper,
+        musicFileService,
+        configService,
+        httpHelper,
+        eventWaiter
+    )
 
     @BeforeEach
     fun setUp() {
@@ -54,6 +60,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { event.getOption("users")?.mentions } returns mockk {
             every { members } returns emptyList()
         }
+        coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 15.seconds
     }
 
     @AfterEach
@@ -83,6 +90,31 @@ internal class SetIntroCommandTest : MusicCommandTest {
         verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
             event.hook.sendMessage("Successfully set UserName's intro song #1 to 'https://www.youtube.com/' with volume '20'")
+        }
+    }
+
+    @Test
+    fun testIntroSong_withSuperuser_andValidLinkAttached_rejectsIntroIfTooLong() {
+        // Arrange
+        val commandContext = CommandContext(event)
+        val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
+
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns volumeConfig
+        coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 21.seconds
+
+        // Act
+        setIntroCommand.handleMusicCommand(
+            commandContext,
+            MusicCommandTest.playerManager,
+            requestingUserDto,
+            0
+        )
+
+        // Assert
+        verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
+        verify {
+            event.hook.sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
         }
     }
 
