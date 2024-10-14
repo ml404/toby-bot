@@ -86,6 +86,11 @@ class SetIntroCommand(
     ) {
 
         when {
+            introHelper.checkForOverlyLongIntroDuration(linkOption) -> {
+                event.hook.sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
+                return
+            }
+
             checkForOverIntroLimit(
                 event.hook,
                 requestingUserDto.discordId,
@@ -94,11 +99,6 @@ class SetIntroCommand(
                 attachmentOption,
                 introVolume
             ) -> {
-                return
-            }
-
-            introHelper.checkForOverlyLongIntroDuration(linkOption) -> {
-                event.hook.sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
                 return
             }
 
