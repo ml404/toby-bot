@@ -88,6 +88,7 @@ class SetIntroCommand(
         when {
             introHelper.checkForOverlyLongIntroDuration(linkOption) -> {
                 event.hook.sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                 return
             }
 
