@@ -45,16 +45,22 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
         return@withContext parseIso8601Duration(durationIso) // Return Duration
     }
 
-    // Function to parse ISO 8601 duration manually and return a Kotlin `Duration`
-    private fun parseIso8601Duration(duration: String): Duration? {
+    // Function to parse ISO 8601 duration and return a Kotlin `Duration`
+    fun parseIso8601Duration(duration: String): Duration? {
+        // Regex to match ISO 8601 duration
         val regex = Regex("""PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?""")
         val matchResult = regex.matchEntire(duration) ?: return null
 
+        // Safely extract hours, minutes, and seconds from the regex match result
         val hours = matchResult.groups[1]?.value?.toLongOrNull() ?: 0
         val minutes = matchResult.groups[2]?.value?.toLongOrNull() ?: 0
         val seconds = matchResult.groups[3]?.value?.toLongOrNull() ?: 0
 
-        return (hours * 3600 + minutes * 60 + seconds).seconds
+        // Calculate total seconds
+        val totalSeconds = hours * 3600 + minutes * 60 + seconds
+
+        // Return as Duration
+        return totalSeconds.seconds
     }
 
     // Helper function to extract video ID from YouTube URL
