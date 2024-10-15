@@ -395,7 +395,7 @@ class IntroHelper(
     suspend fun checkForOverlyLongIntroDuration(url: String): Boolean {
         val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
         if (duration != null) {
-            logger.info { "Duration of intro is '$duration' vs limit of '$introLimit" }
+            logger.info { "Duration of intro is '$duration' vs limit of '$introLimit'" }
             return duration > introLimit
         }
         return false
