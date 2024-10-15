@@ -1,9 +1,13 @@
 package bot.toby.helpers
 
+import bot.coroutines.MainCoroutineExtension
 import bot.database.dto.MusicDto
 import bot.database.service.IConfigService
 import bot.toby.handler.EventWaiter
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.entities.User
@@ -17,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.io.InputStream
 import java.net.URI
 import java.util.function.Consumer
@@ -24,6 +29,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalCoroutinesApi::class)
+@ExtendWith(MainCoroutineExtension::class)
 class IntroHelperTest {
 
     private lateinit var introHelper: IntroHelper
@@ -426,21 +433,23 @@ class IntroHelperTest {
         assert(result == "test.mp3")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun `checkForOverlyLongIntroDuration returns false when duration is below intro limit`() {
+    fun `checkForOverlyLongIntroDuration returns false when duration is below intro limit`() = runTest {
         // Arrange
         val url = "https://www.youtube.com/watch?v=validVideoId"
         coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 15.seconds
 
         // Act
         val result = introHelper.checkForOverlyLongIntroDuration(url)
+        advanceUntilIdle()
 
         // Assert
         assertFalse(result)
     }
 
     @Test
-    fun `checkForOverlyLongIntroDuration returns true when duration is above intro limit`() {
+    fun `checkForOverlyLongIntroDuration returns true when duration is above intro limit`() = runTest {
         // Arrange
         val url = "https://www.youtube.com/watch?v=validVideoId"
         coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 25.seconds
@@ -453,7 +462,7 @@ class IntroHelperTest {
     }
 
     @Test
-    fun `checkForOverlyLongIntroDuration returns false when duration is equal to intro limit`() {
+    fun `checkForOverlyLongIntroDuration returns false when duration is equal to intro limit`() = runTest {
         // Arrange
         val url = "https://www.youtube.com/watch?v=validVideoId"
         coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 20.seconds
@@ -466,7 +475,7 @@ class IntroHelperTest {
     }
 
     @Test
-    fun `checkForOverlyLongIntroDuration returns false when duration is null`() {
+    fun `checkForOverlyLongIntroDuration returns false when duration is null`() = runTest {
         // Arrange
         val url = "https://www.youtube.com/watch?v=invalidVideoId"
         coEvery { httpHelper.getYouTubeVideoDuration(url) } returns null

@@ -1,7 +1,9 @@
 package bot.toby.command.commands.music
 
+import bot.coroutines.MainCoroutineExtension
 import bot.database.dto.ConfigDto
 import bot.database.dto.MusicDto
+import bot.database.dto.UserDto
 import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest.Companion.event
@@ -14,17 +16,24 @@ import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalCoroutinesApi::class)
+@ExtendWith(MainCoroutineExtension::class)
 internal class SetIntroCommandTest : MusicCommandTest {
     private lateinit var setIntroCommand: SetIntroCommand
     private var userDtoHelper: UserDtoHelper = mockk(relaxed = true)
@@ -32,15 +41,8 @@ internal class SetIntroCommandTest : MusicCommandTest {
     private var configService: IConfigService = mockk(relaxed = true)
     private var eventWaiter: EventWaiter = mockk(relaxed = true)
     private var httpHelper: HttpHelper = mockk(relaxed = true)
-    private lateinit var mentionedUserDto: bot.database.dto.UserDto
+    private lateinit var mentionedUserDto: UserDto
 
-    private var introHelper: IntroHelper = IntroHelper(
-        userDtoHelper,
-        musicFileService,
-        configService,
-        httpHelper,
-        eventWaiter
-    )
 
     @BeforeEach
     fun setUp() {
@@ -48,8 +50,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mentionedUserDto = mockk(relaxed = true) {
             every { musicDtos } returns emptyList<MusicDto>().toMutableList()
         }
-        configService = mockk()
-        setIntroCommand = SetIntroCommand(introHelper)
+        configService = mockk(relaxed = true)
 
         every { event.getOption("volume") } returns mockk {
             every { asInt } returns 20
@@ -70,7 +71,19 @@ internal class SetIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun testIntroSong_withSuperuser_andValidLinkAttached_setsIntroViaUrl() {
+    fun testIntroSong_withSuperuser_andValidLinkAttached_setsIntroViaUrl() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
+
         // Arrange
         val commandContext = CommandContext(event)
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
@@ -86,6 +99,8 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
         // Assert
         verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
@@ -94,7 +109,18 @@ internal class SetIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun testIntroSong_withSuperuser_andValidLinkAttached_rejectsIntroIfTooLong() {
+    fun testIntroSong_withSuperuser_andValidLinkAttached_rejectsIntroIfTooLong() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
         // Arrange
         val commandContext = CommandContext(event)
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
@@ -111,6 +137,8 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
         // Assert
         verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
@@ -119,8 +147,19 @@ internal class SetIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFile_createsSecondIntroViaUrl() {
+    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFile_createsSecondIntroViaUrl() = runTest {
         // Arrange
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
         val commandContext = CommandContext(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
 
@@ -129,7 +168,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
-                bot.database.dto.UserDto(1, 1),
+                UserDto(1, 1),
                 1,
                 "filename",
                 20,
@@ -147,6 +186,8 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
         // Assert
         verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
@@ -155,8 +196,18 @@ internal class SetIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun testIntroSong_withSuperuser_andMentionedMembers_setsMentionedMembersIntroViaUrl() {
-        // Arrange
+    fun testIntroSong_withSuperuser_andMentionedMembers_setsMentionedMembersIntroViaUrl() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
         val commandContext = CommandContext(event)
         val userOptionMapping = mockk<OptionMapping>()
 
@@ -175,6 +226,9 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
+
         // Assert
         verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
@@ -185,8 +239,18 @@ internal class SetIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun testIntroSong_withoutPermissionsAndSomeoneMentioned_andValidLinkAttached_doesNotSetIntroViaUrl() {
-        // Arrange
+    fun testIntroSong_withoutPermissionsAndSomeoneMentioned_andValidLinkAttached_doesNotSetIntroViaUrl() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
         val commandContext = CommandContext(event)
         val userOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
@@ -208,6 +272,9 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
+
         // Assert
         verify {
             event.hook.sendMessageFormat(
@@ -218,8 +285,18 @@ internal class SetIntroCommandTest : MusicCommandTest {
 
     @Test
     @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
-    fun testIntroSong_withSuperuser_andValidAttachment_setsIntroViaAttachment_andCreatesNewMusicFile() {
-        // Arrange
+    fun testIntroSong_withSuperuser_andValidAttachment_setsIntroViaAttachment_andCreatesNewMusicFile() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
         val commandContext = CommandContext(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
 
@@ -238,6 +315,9 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
+
         // Assert
         verify { musicFileService.createNewMusicFile(any()) }
         verify {
@@ -249,8 +329,18 @@ internal class SetIntroCommandTest : MusicCommandTest {
 
     @Test
     @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
-    fun testIntroSong_withSuperuser_andMentionedMembers_setsIntroViaAttachment() {
-        // Arrange
+    fun testIntroSong_withSuperuser_andMentionedMembers_setsIntroViaAttachment() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+
+        val introHelper = IntroHelper(
+            userDtoHelper,
+            musicFileService,
+            configService,
+            httpHelper,
+            eventWaiter,
+            dispatcher
+        )
+        setIntroCommand = SetIntroCommand(introHelper)
         val commandContext = CommandContext(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
         val userOptionMapping = mockk<OptionMapping>()
@@ -274,6 +364,9 @@ internal class SetIntroCommandTest : MusicCommandTest {
             0
         )
 
+        advanceUntilIdle()
+
+
         // Assert
         verify { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
         verify {
@@ -284,53 +377,71 @@ internal class SetIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFiles_doesNotCreateMusicFileWhenAtLimit() {
-        // Arrange
-        val commandContext = CommandContext(event)
-        val attachmentOptionMapping = mockk<OptionMapping>()
+    fun testIntroSong_withSuperuser_andValidLinkAttachedWithExistingMusicFiles_doesNotCreateMusicFileWhenAtLimit() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
 
-
-        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
-        every { requestingUserDto.musicDtos } returns listOf(
-            MusicDto(
-                bot.database.dto.UserDto(1, 1),
-                1,
-                "filename1",
-                20,
-                null
-            ),
-            MusicDto(
-                bot.database.dto.UserDto(1, 1),
-                2,
-                "filename2",
-                20,
-                null
-            ),
-            MusicDto(
-                bot.database.dto.UserDto(1, 1),
-                3,
-                "filename3",
-                20,
-                null
+            val introHelper = IntroHelper(
+                userDtoHelper,
+                musicFileService,
+                configService,
+                httpHelper,
+                eventWaiter,
+                dispatcher
             )
-        ).toMutableList()
-        every { event.getOption("attachment") } returns attachmentOptionMapping
-        setupAttachments(attachmentOptionMapping)
+            setIntroCommand = SetIntroCommand(introHelper)
+            val commandContext = CommandContext(event)
+            val attachmentOptionMapping = mockk<OptionMapping>()
 
-        // Act
-        setIntroCommand.handleMusicCommand(
-            commandContext,
-            MusicCommandTest.playerManager,
-            requestingUserDto,
-            0
-        )
 
-        // Assert
-        verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
-        verify {
-            event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 3 intros")
+            every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto(
+                "DEFAULT_VOLUME",
+                "20",
+                "1"
+            )
+            every { requestingUserDto.musicDtos } returns listOf(
+                MusicDto(
+                    UserDto(1, 1),
+                    1,
+                    "filename1",
+                    20,
+                    null
+                ),
+                MusicDto(
+                    UserDto(1, 1),
+                    2,
+                    "filename2",
+                    20,
+                    null
+                ),
+                MusicDto(
+                    UserDto(1, 1),
+                    3,
+                    "filename3",
+                    20,
+                    null
+                )
+            ).toMutableList()
+            every { event.getOption("attachment") } returns attachmentOptionMapping
+            setupAttachments(attachmentOptionMapping)
+
+            // Act
+            setIntroCommand.handleMusicCommand(
+                commandContext,
+                MusicCommandTest.playerManager,
+                requestingUserDto,
+                0
+            )
+
+            advanceUntilIdle()
+
+
+            // Assert
+            verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
+            verify {
+                event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 3 intros")
+            }
         }
-    }
 
     private fun setupMentions(userOptionMapping: OptionMapping) {
         val mentions = mockk<Mentions>()

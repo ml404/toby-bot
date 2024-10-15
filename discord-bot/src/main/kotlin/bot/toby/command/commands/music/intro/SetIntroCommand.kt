@@ -1,6 +1,7 @@
 package bot.toby.command.commands.music.intro
 
 import bot.database.dto.MusicDto
+import bot.database.dto.UserDto
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.music.IMusicCommand
@@ -21,14 +22,14 @@ class SetIntroCommand(
     private val introHelper: IntroHelper
 ) : IMusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: UserDto,
         deleteDelay: Int?
     ) {
         val event = ctx.event
@@ -77,21 +78,44 @@ class SetIntroCommand(
 
     private fun checkAndSetIntro(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: UserDto,
         linkOption: String,
         userName: String,
         deleteDelay: Int?,
         introVolume: Int,
         attachmentOption: OptionMapping?
     ) {
-
-        when {
-            introHelper.checkForOverlyLongIntroDuration(linkOption) -> {
-                event.hook.sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
+        introHelper.validateIntroLength(linkOption) { isOverLimit ->
+            // Handle overly long intro case
+            if (isOverLimit) {
+                event.hook
+                    .sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
-                return
+                return@validateIntroLength
+            } else {
+                validateAndSetIntro(
+                    event,
+                    requestingUserDto,
+                    linkOption,
+                    attachmentOption,
+                    introVolume,
+                    userName,
+                    deleteDelay
+                )
             }
+        }
+    }
 
+    private fun validateAndSetIntro(
+        event: SlashCommandInteractionEvent,
+        requestingUserDto: UserDto,
+        linkOption: String,
+        attachmentOption: OptionMapping?,
+        introVolume: Int,
+        userName: String,
+        deleteDelay: Int?
+    ) {
+        when {
             checkForOverIntroLimit(
                 event.hook,
                 requestingUserDto.discordId,
@@ -99,7 +123,8 @@ class SetIntroCommand(
                 linkOption,
                 attachmentOption,
                 introVolume
-            ) -> {
+            )
+                -> {
                 return
             }
 

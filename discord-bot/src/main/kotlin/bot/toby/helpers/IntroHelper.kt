@@ -9,7 +9,7 @@ import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.FileUtils.computeHash
 import bot.toby.helpers.MusicPlayerHelper.isUrl
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.Attachment
@@ -34,7 +34,8 @@ class IntroHelper(
     private val musicFileService: IMusicFileService,
     private val configService: IConfigService,
     private val httpHelper: HttpHelper,
-    private val eventWaiter: EventWaiter
+    private val eventWaiter: EventWaiter,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val introLimit = 20.seconds
@@ -334,7 +335,7 @@ class IntroHelper(
             eventWaiter.waitForMessage(
                 { event -> event.author.idLong == user.idLong && event.channel == channel },
                 { event ->
-                    handleUserMusicResponse(event, channel, guild)
+                    CoroutineScope(dispatcher).launch { handleUserMusicResponse(event, channel, guild) }
                 },
                 5.minutes,
                 {
@@ -352,20 +353,25 @@ class IntroHelper(
         val attachment = message.attachments.firstOrNull()
 
         val (inputData, volume) = if (attachment != null) {
-            // User uploaded a file, treat it as a music file
             val inputData = InputData.Attachment(attachment)
             logger.info("User uploaded a music file: $inputData")
             inputData to parseVolume(content)
         } else if (isUrl(content).isNotEmpty()) {
-            // User sent a URL
             logger.info("User provided a URL: $content")
-            if (checkForOverlyLongIntroDuration(content)) {
-                logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds" }
-                channel.sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
-                    .queue()
-                return
+
+            // Validate the intro length asynchronously
+            validateIntroLength(content) { isOverLimit ->
+                if (isOverLimit) {
+                    logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds" }
+                    channel
+                        .sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
+                        .queue()
+                } else {
+                    val inputData = InputData.Url(isUrl(content))
+                    saveUserMusicDto(event.author, guild, inputData, parseVolume(content))
+                }
             }
-            InputData.Url(isUrl(content)) to parseVolume(content)
+            return // Return early since the result will be handled in the callback
         } else {
             channel.sendMessage("Please provide a valid URL or upload a file.").queue()
             return
@@ -373,8 +379,16 @@ class IntroHelper(
         saveUserMusicDto(event.author, guild, inputData, volume)
     }
 
-    fun checkForOverlyLongIntroDuration(url: String): Boolean {
-        val duration = runBlocking { httpHelper.getYouTubeVideoDuration(url) }
+    fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) {
+        CoroutineScope(dispatcher).launch {
+            val isOverLimit = checkForOverlyLongIntroDuration(url)
+            onResult(isOverLimit) // Call the callback with the result
+        }
+    }
+
+    suspend fun checkForOverlyLongIntroDuration(url: String): Boolean {
+        logger.info { "Checking duration of '$url'" }
+        val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
         if (duration != null) {
             logger.info { "Duration of intro is: ${duration.prettyPrintDuration()}" }
             return duration > introLimit
