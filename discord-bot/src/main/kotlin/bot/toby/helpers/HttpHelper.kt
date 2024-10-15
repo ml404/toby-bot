@@ -39,7 +39,6 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
         val apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=contentDetails&key=$YOUTUBE_API_KEY"
         val response: HttpResponse = client.get(apiUrl)
         val videoResponse: YouTubeVideoResponse = response.body()
-        client.close()
 
         val durationIso = videoResponse.items?.firstOrNull()?.contentDetails?.duration ?: return@withContext null
         return@withContext parseIso8601Duration(durationIso) // Return Duration
