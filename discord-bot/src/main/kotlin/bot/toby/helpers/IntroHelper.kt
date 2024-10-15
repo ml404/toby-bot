@@ -387,7 +387,7 @@ class IntroHelper(
                 onResult(isOverLimit)
             } catch (e: Exception) {
                 logger.error { "Error checking intro length for '$url'" }
-                onResult(false) // You can choose to handle this differently
+                onResult(true) // You can choose to handle this differently
             }
         }
     }
