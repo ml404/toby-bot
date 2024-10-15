@@ -26,6 +26,7 @@ import java.io.InputStream
 import java.net.URI
 import java.util.function.Consumer
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -485,5 +486,31 @@ class IntroHelperTest {
 
         // Assert
         assertFalse(result)
+    }
+
+    @Test
+    fun `checkForOverlyLongIntroDuration returns true when duration is over a minute`() = runTest {
+        // Arrange
+        val url = "https://www.youtube.com/watch?v=validVideoId"
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 1.minutes
+
+        // Act
+        val result = introHelper.checkForOverlyLongIntroDuration(url)
+
+        // Assert
+        assertTrue(result) // As the duration equals the limit
+    }
+
+    @Test
+    fun `checkForOverlyLongIntroDuration returns true when duration is over an hour`() = runTest {
+        // Arrange
+        val url = "https://www.youtube.com/watch?v=validVideoId"
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 1.hours
+
+        // Act
+        val result = introHelper.checkForOverlyLongIntroDuration(url)
+
+        // Assert
+        assertTrue(result) // As the duration equals the limit
     }
 }
