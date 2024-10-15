@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
@@ -333,7 +334,7 @@ class IntroHelper(
             eventWaiter.waitForMessage(
                 { event -> event.author.idLong == user.idLong && event.channel == channel },
                 { event ->
-                    handleUserMusicResponse(event, guild)
+                    handleUserMusicResponse(event, channel, guild)
                 },
                 5.minutes,
                 {
@@ -345,7 +346,7 @@ class IntroHelper(
         }
     }
 
-    private fun handleUserMusicResponse(event: MessageReceivedEvent, guild: Guild) {
+    private fun handleUserMusicResponse(event: MessageReceivedEvent, channel: PrivateChannel, guild: Guild) {
         val message = event.message
         val content = message.contentRaw
         val attachment = message.attachments.firstOrNull()
@@ -360,13 +361,13 @@ class IntroHelper(
             logger.info("User provided a URL: $content")
             if (checkForOverlyLongIntroDuration(content)) {
                 logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds" }
-                event.channel.sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
+                channel.sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
                     .queue()
                 return
             }
             InputData.Url(isUrl(content)) to parseVolume(content)
         } else {
-            event.channel.sendMessage("Please provide a valid URL or upload a file.").queue()
+            channel.sendMessage("Please provide a valid URL or upload a file.").queue()
             return
         }
         saveUserMusicDto(event.author, guild, inputData, volume)
