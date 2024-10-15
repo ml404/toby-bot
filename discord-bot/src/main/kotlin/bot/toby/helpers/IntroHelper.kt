@@ -360,32 +360,69 @@ class IntroHelper(
         val content = message.contentRaw
         val attachment = message.attachments.firstOrNull()
 
-        val (inputData, volume) = if (attachment != null) {
-            val inputData = InputData.Attachment(attachment)
-            logger.info("User uploaded a music file: $inputData")
-            inputData to parseVolume(content)
-        } else if (isUrl(content).isNotEmpty()) {
-            logger.info("User provided a URL: $content")
-            // Validate the intro length asynchronously
-            validateIntroLength(content) { isOverLimit ->
-                if (isOverLimit) {
-                    logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds, trying again..." }
-                    channel
-                        .sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
-                        .queue()
-                    setupWaiterForIntroMessage(event.author, channel, guild)
-                } else {
-                    val inputData = InputData.Url(isUrl(content))
-                    saveUserMusicDto(event.author, guild, inputData, parseVolume(content))
-                }
+        when {
+            attachment != null -> {
+                handleAttachmentInput(event, channel, guild, attachment, content)
             }
-            return // Return early since the result will be handled in the callback
-        } else {
-            channel.sendMessage("Please provide a valid URL or upload a file.").queue()
-            setupWaiterForIntroMessage(event.author, channel, guild)
+
+            isUrl(content).isNotEmpty() -> {
+                handleUrlInput(event, channel, guild, content)
+            }
+
+            else -> {
+                channel.sendMessage("Please provide a valid URL or upload a file.").queue()
+                setupWaiterForIntroMessage(event.author, channel, guild)
+            }
+        }
+    }
+
+    private fun handleAttachmentInput(
+        event: MessageReceivedEvent,
+        channel: PrivateChannel,
+        guild: Guild,
+        attachment: Attachment,
+        content: String
+    ) {
+        val inputData = InputData.Attachment(attachment)
+        logger.info("User uploaded a music file: $inputData")
+
+        if (!isValidAttachment(attachment)) {
+            handleInvalidAttachment(channel, event.author, guild)
             return
         }
+
+        val volume = parseVolume(content)
         saveUserMusicDto(event.author, guild, inputData, volume)
+    }
+
+    private fun handleUrlInput(event: MessageReceivedEvent, channel: PrivateChannel, guild: Guild, content: String) {
+        logger.info("User provided a URL: $content")
+
+        // Validate the intro length asynchronously
+        validateIntroLength(content) { isOverLimit ->
+            if (isOverLimit) {
+                handleOverLimitIntro(channel, event.author, guild)
+            } else {
+                val inputData = InputData.Url(isUrl(content))
+                saveUserMusicDto(event.author, guild, inputData, parseVolume(content))
+            }
+        }
+    }
+
+    private fun handleInvalidAttachment(channel: PrivateChannel, author: User, guild: Guild) {
+        logger.info { "Intro was rejected for not adhering to attachment requirements, trying again..." }
+        channel
+            .sendMessage("Intro provided was either not an mp3 file or too large. Please try again.")
+            .queue()
+        setupWaiterForIntroMessage(author, channel, guild)
+    }
+
+    private fun handleOverLimitIntro(channel: PrivateChannel, author: User, guild: Guild) {
+        logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds, trying again..." }
+        channel
+            .sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
+            .queue()
+        setupWaiterForIntroMessage(author, channel, guild)
     }
 
     fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) {
