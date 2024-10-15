@@ -390,7 +390,7 @@ class IntroHelper(
         logger.info { "Checking duration of '$url'" }
         val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
         if (duration != null) {
-            logger.info { "Duration of intro is: ${duration.prettyPrintDuration()}" }
+            logger.info { "Checking duration of intro '${duration.prettyPrintDuration()}' vs limit of '$introLimit" }
             return duration > introLimit
         }
         return false
@@ -452,6 +452,10 @@ class IntroHelper(
 
     // Function to format the Kotlin Duration into H:MM:SS or MM:SS
     private fun Duration.prettyPrintDuration(): String {
+        if (this.isNegative()) {
+            return "Invalid Duration" // Handle negative duration
+        }
+
         val hours = this.inWholeHours
         val minutes = (this - hours.hours).inWholeMinutes
         val seconds = (this - hours.hours - minutes.minutes).inWholeSeconds

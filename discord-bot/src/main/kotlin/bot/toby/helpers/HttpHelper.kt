@@ -57,7 +57,7 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
         val seconds = matchResult.groups[3]?.value?.toLongOrNull() ?: 0
 
         // Calculate total seconds
-        val totalSeconds = hours * 3600 + minutes * 60 + seconds
+        val totalSeconds = (hours * 3600) + (minutes * 60) + seconds
 
         // Return as Duration
         return totalSeconds.seconds
