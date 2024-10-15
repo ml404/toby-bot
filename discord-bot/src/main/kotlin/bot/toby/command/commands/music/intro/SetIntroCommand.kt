@@ -88,6 +88,7 @@ class SetIntroCommand(
         introHelper.validateIntroLength(linkOption) { isOverLimit ->
             // Handle overly long intro case
             if (isOverLimit) {
+                logger.info { "Intro was rejected for being over the specified intro limit length of 20 seconds" }
                 event.hook
                     .sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))

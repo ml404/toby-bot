@@ -378,6 +378,7 @@ class IntroHelper(
     }
 
     fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) {
+        logger.info { "Checking duration of '$url'" }
         CoroutineScope(dispatcher).launch {
             val isOverLimit = checkForOverlyLongIntroDuration(url)
             onResult(isOverLimit) // Call the callback with the result
@@ -385,10 +386,9 @@ class IntroHelper(
     }
 
     suspend fun checkForOverlyLongIntroDuration(url: String): Boolean {
-        logger.info { "Checking duration of '$url'" }
         val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
         if (duration != null) {
-            logger.info { "Comparing duration of intro '$duration' vs limit of '$introLimit" }
+            logger.info { "Duration of intro is '$duration' vs limit of '$introLimit" }
             return duration > introLimit
         }
         return false
