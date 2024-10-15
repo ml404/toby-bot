@@ -1,5 +1,6 @@
 package bot.toby.helpers
 
+import bot.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import bot.toby.command.commands.dnd.DnDCommand.Companion.FEATURE_NAME
@@ -7,7 +8,6 @@ import bot.toby.command.commands.dnd.DnDCommand.Companion.RULE_NAME
 import bot.toby.command.commands.dnd.DnDCommand.Companion.SPELL_NAME
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
-import mu.KotlinLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -23,7 +23,7 @@ import kotlin.random.Random
 class DnDHelper(private val userDtoHelper: UserDtoHelper) {
     val initiativeIndex = AtomicInteger(0)
     var sortedEntries = LinkedList<Map.Entry<String, Int>>()
-    private val logger = KotlinLogging.logger {}
+    private val logger = DiscordLogger(this::class.java)
 
     fun rollInitiativeForMembers(
         memberList: List<Member>,
