@@ -36,6 +36,8 @@ class IntroHelper(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+    private val supervisorJob = SupervisorJob()
+    private val coroutineScope = CoroutineScope(supervisorJob + dispatcher)
     private val introLimit = 20.seconds
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
@@ -379,9 +381,14 @@ class IntroHelper(
 
     fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) {
         logger.info { "Checking duration of '$url'" }
-        CoroutineScope(dispatcher).launch {
-            val isOverLimit = checkForOverlyLongIntroDuration(url)
-            onResult(isOverLimit) // Call the callback with the result
+        coroutineScope.launch {
+            try {
+                val isOverLimit = checkForOverlyLongIntroDuration(url)
+                onResult(isOverLimit)
+            } catch (e: Exception) {
+                logger.error { "Error checking intro length for '$url'" }
+                onResult(false) // You can choose to handle this differently
+            }
         }
     }
 
