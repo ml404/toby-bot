@@ -22,8 +22,6 @@ import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -390,7 +388,7 @@ class IntroHelper(
         logger.info { "Checking duration of '$url'" }
         val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
         if (duration != null) {
-            logger.info { "Checking duration of intro '${duration.prettyPrintDuration()}' vs limit of '$introLimit" }
+            logger.info { "Comparing duration of intro '$duration' vs limit of '$introLimit" }
             return duration > introLimit
         }
         return false
@@ -449,24 +447,6 @@ class IntroHelper(
             }
         }
     }
-
-    // Function to format the Kotlin Duration into H:MM:SS or MM:SS
-    private fun Duration.prettyPrintDuration(): String {
-        if (this.isNegative()) {
-            return "Invalid Duration" // Handle negative duration
-        }
-
-        val hours = this.inWholeHours
-        val minutes = (this - hours.hours).inWholeMinutes
-        val seconds = (this - hours.hours - minutes.minutes).inWholeSeconds
-
-        return if (hours > 0) {
-            "%d:%02d:%02d".format(hours, minutes, seconds)
-        } else {
-            "%02d:%02d".format(minutes, seconds)
-        }
-    }
-
 
     companion object {
         private const val VOLUME = "volume"
