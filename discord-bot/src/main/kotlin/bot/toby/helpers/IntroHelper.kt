@@ -332,19 +332,27 @@ class IntroHelper(
                 .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
 
             // Wait for a response in the user's DM
-            eventWaiter.waitForMessage(
-                { event -> event.author.idLong == user.idLong && event.channel == channel },
-                { event ->
-                    CoroutineScope(dispatcher).launch { handleUserMusicResponse(event, channel, guild) }
-                },
-                5.minutes,
-                {
-                    logger.info { "User did not set intro for the server that they don't have one on within the timeout period" }
-                    channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
-                        .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
-                }
-            )
+            setupWaiterForIntroMessage(user, channel, guild)
         }
+    }
+
+    private fun setupWaiterForIntroMessage(
+        user: User,
+        channel: PrivateChannel,
+        guild: Guild
+    ) {
+        eventWaiter.waitForMessage(
+            { event -> event.author.idLong == user.idLong && event.channel == channel },
+            { event ->
+                handleUserMusicResponse(event, channel, guild)
+            },
+            5.minutes,
+            {
+                logger.info { "User did not set intro for the server that they don't have one on within the timeout period" }
+                channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
+                    .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
+            }
+        )
     }
 
     private fun handleUserMusicResponse(event: MessageReceivedEvent, channel: PrivateChannel, guild: Guild) {
@@ -358,14 +366,14 @@ class IntroHelper(
             inputData to parseVolume(content)
         } else if (isUrl(content).isNotEmpty()) {
             logger.info("User provided a URL: $content")
-
             // Validate the intro length asynchronously
             validateIntroLength(content) { isOverLimit ->
                 if (isOverLimit) {
-                    logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds" }
+                    logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds, trying again..." }
                     channel
                         .sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
                         .queue()
+                    setupWaiterForIntroMessage(event.author, channel, guild)
                 } else {
                     val inputData = InputData.Url(isUrl(content))
                     saveUserMusicDto(event.author, guild, inputData, parseVolume(content))
@@ -374,6 +382,7 @@ class IntroHelper(
             return // Return early since the result will be handled in the callback
         } else {
             channel.sendMessage("Please provide a valid URL or upload a file.").queue()
+            setupWaiterForIntroMessage(event.author, channel, guild)
             return
         }
         saveUserMusicDto(event.author, guild, inputData, volume)
