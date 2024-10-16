@@ -7,8 +7,11 @@ import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class ExcuseCommand(private val excuseService: IExcuseService) : IMiscCommand {
+@Component
+class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseService) : IMiscCommand {
     private val EXCUSE = "excuse"
     private val EXCUSE_ID = "id"
     private val AUTHOR = "author"

@@ -5,11 +5,14 @@ import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-class HelloThereCommand(private val configService: IConfigService) : IMiscCommand {
+@Component
+class HelloThereCommand @Autowired constructor(private val configService: IConfigService) : IMiscCommand {
     private val DEFAULT_DATE_FORMAT = "yyyy/MM/dd"
     private val REFERENCE_DATE = LocalDate.of(2005, 5, 19)
 

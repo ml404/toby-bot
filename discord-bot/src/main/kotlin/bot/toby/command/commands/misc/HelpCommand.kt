@@ -6,9 +6,12 @@ import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.managers.CommandManager
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.util.function.Consumer
 
-class HelpCommand(private val manager: CommandManager) : IMiscCommand {
+@Component
+class HelpCommand @Autowired constructor(private val manager: CommandManager) : IMiscCommand {
     private val COMMAND = "command"
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val args = ctx.event.options

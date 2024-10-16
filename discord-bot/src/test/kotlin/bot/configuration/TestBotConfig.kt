@@ -1,4 +1,4 @@
-package configuration
+package bot.configuration
 
 import bot.toby.BotMain
 import io.mockk.mockk

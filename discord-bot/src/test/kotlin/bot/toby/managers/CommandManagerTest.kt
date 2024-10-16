@@ -1,5 +1,7 @@
 package bot.toby.managers
 
+import bot.Application
+import bot.configuration.*
 import bot.database.dto.ConfigDto
 import bot.database.service.*
 import bot.toby.command.ICommand
@@ -28,32 +30,39 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 
+@SpringBootTest(
+    classes = [
+        Application::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
+        TestCachingConfig::class,
+        TestDatabaseConfig::class,
+        TestManagerConfig::class
+    ]
+)
+@ActiveProfiles("test")
 class CommandManagerTest {
 
     lateinit var configService: IConfigService
-    lateinit var brotherService: IBrotherService
     lateinit var userService: IUserService
-    lateinit var musicFileService: IMusicFileService
-    lateinit var excuseService: IExcuseService
     lateinit var httpHelper: HttpHelper
     lateinit var userDtoHelper: UserDtoHelper
-    lateinit var introHelper: IntroHelper
     lateinit var dndHelper: DnDHelper
     lateinit var commandManager: CommandManager
+
+    @Autowired
+    lateinit var commands: List<ICommand>
 
     @BeforeEach
     fun openMocks() {
         configService = mockk()
-        brotherService = mockk()
         userService = mockk()
-        musicFileService = mockk()
-        excuseService = mockk()
-        httpHelper = mockk()
         userDtoHelper = mockk()
-        introHelper = mockk()
-        dndHelper = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
+        commandManager = CommandManager(configService, userService, userDtoHelper, commands)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }

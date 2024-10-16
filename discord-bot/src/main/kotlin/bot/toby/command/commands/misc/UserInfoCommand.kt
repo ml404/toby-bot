@@ -7,8 +7,11 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
+@Component
+class UserInfoCommand @Autowired constructor(private val userService: IUserService) : IMiscCommand {
     private val USERS = "users"
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

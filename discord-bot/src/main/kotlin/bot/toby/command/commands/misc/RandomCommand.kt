@@ -4,7 +4,9 @@ import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.stereotype.Component
 
+@Component
 class RandomCommand : IMiscCommand {
     private val LIST = "list"
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {

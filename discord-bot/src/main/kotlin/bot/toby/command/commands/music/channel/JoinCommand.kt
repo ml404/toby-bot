@@ -9,8 +9,11 @@ import bot.toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import bot.toby.lavaplayer.PlayerManager
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class JoinCommand(private val configService: IConfigService) : IMusicCommand {
+@Component
+class JoinCommand @Autowired constructor(private val configService: IConfigService) : IMusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

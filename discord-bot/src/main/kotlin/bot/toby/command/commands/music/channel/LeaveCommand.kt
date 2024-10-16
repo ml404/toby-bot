@@ -11,8 +11,11 @@ import bot.toby.lavaplayer.PlayerManager
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.managers.AudioManager
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class LeaveCommand(private val configService: IConfigService) : IMusicCommand {
+@Component
+class LeaveCommand @Autowired constructor(private val configService: IConfigService) : IMusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

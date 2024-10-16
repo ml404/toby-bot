@@ -12,9 +12,12 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.util.*
 
-class RollCommand(private val dndHelper: DnDHelper) : IDnDCommand {
+@Component
+class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : IDnDCommand {
     private val DICE_NUMBER = "number"
     private val DICE_TO_ROLL = "amount"
     private val MODIFIER = "modifier"

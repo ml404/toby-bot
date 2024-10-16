@@ -1,6 +1,8 @@
 package bot.configuration
 
-import bot.database.service.*
+import bot.database.service.IConfigService
+import bot.database.service.IUserService
+import bot.toby.command.ICommand
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
@@ -20,24 +22,15 @@ open class ManagerConfig {
     @Bean
     open fun commandManager(
         configService: IConfigService,
-        brotherService: IBrotherService,
         userService: IUserService,
-        musicFileService: IMusicFileService,
-        excuseService: IExcuseService,
-        httpHelper: HttpHelper,
         userDtoHelper: UserDtoHelper,
-        introHelper: IntroHelper,
-        dndHelper: DnDHelper
+        commandList: List<ICommand>
     ): CommandManager {
         return CommandManager(
             configService,
-            brotherService,
             userService,
-            excuseService,
-            httpHelper,
             userDtoHelper,
-            introHelper,
-            dndHelper
+            commandList
         )
     }
 

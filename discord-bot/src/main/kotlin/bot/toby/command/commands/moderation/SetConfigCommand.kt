@@ -8,9 +8,12 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.util.*
 
-class SetConfigCommand(private val configService: IConfigService) : IModerationCommand {
+@Component
+class SetConfigCommand @Autowired constructor(private val configService: IConfigService) : IModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

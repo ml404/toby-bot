@@ -28,7 +28,7 @@ interface ButtonTest {
         userDtoHelper = mockk()
         introHelper = mockk()
         dndHelper = mockk()
-        commandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
+        commandManager = CommandManager(configService, userService, userDtoHelper, emptyList())
         buttonManager = ButtonManager(configService, userDtoHelper, dndHelper, commandManager)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)

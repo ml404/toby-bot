@@ -1,5 +1,6 @@
 package bot.toby.command.commands.misc
 
+import bot.database.service.IBrotherService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.emote.Emotes
@@ -8,9 +9,12 @@ import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.util.*
 
-class BrotherCommand(private val brotherService: bot.database.service.IBrotherService) :
+@Component
+class BrotherCommand @Autowired constructor(private val brotherService: IBrotherService) :
     IMiscCommand {
     override val name = "brother"
 

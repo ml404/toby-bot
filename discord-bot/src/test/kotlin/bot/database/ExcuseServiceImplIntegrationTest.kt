@@ -1,9 +1,9 @@
 package bot.database
 
 import bot.Application
+import bot.configuration.*
 import bot.database.dto.ExcuseDto
 import bot.database.service.IExcuseService
-import configuration.*
 import org.apache.commons.collections4.IterableUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions

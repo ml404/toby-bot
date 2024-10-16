@@ -7,8 +7,10 @@ import bot.toby.lavaplayer.PlayerManager
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.stereotype.Component
 import java.util.*
 
+@Component
 class PlayCommand : IMusicCommand {
     private val TYPE = "type"
     private val START_POSITION = "start"

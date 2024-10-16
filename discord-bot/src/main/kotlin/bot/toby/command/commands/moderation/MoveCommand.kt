@@ -10,8 +10,11 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class MoveCommand(private val configService: IConfigService) : IModerationCommand {
+@Component
+class MoveCommand @Autowired constructor(private val configService: IConfigService) : IModerationCommand {
 
     companion object {
         private const val USERS = "users"

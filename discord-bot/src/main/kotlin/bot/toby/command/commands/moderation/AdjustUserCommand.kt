@@ -8,8 +8,14 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class AdjustUserCommand(private val userService: IUserService, private val userDtoHelper: UserDtoHelper) : IModerationCommand {
+@Component
+class AdjustUserCommand @Autowired constructor(
+    private val userService: IUserService,
+    private val userDtoHelper: UserDtoHelper
+) : IModerationCommand {
     private val PERMISSION_NAME = "name"
     private val USERS = "users"
 

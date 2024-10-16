@@ -1,5 +1,5 @@
 import bot.Application
-import configuration.*
+import bot.configuration.*
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles

@@ -10,8 +10,11 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class InitiativeCommand(private val dndHelper: DnDHelper) : IDnDCommand {
+@Component
+class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper) : IDnDCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

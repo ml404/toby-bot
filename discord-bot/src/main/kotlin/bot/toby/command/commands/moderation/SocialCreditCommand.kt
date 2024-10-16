@@ -7,8 +7,11 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class SocialCreditCommand(private val userService: IUserService) : IModerationCommand {
+@Component
+class SocialCreditCommand @Autowired constructor(private val userService: IUserService) : IModerationCommand {
     private val LEADERBOARD = "leaderboard"
     private val USERS = "users"
     private val SOCIAL_CREDIT = "credit"

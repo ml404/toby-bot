@@ -1,9 +1,9 @@
 package bot.toby.jpa.persistence.impl
 
 import bot.Application
+import bot.configuration.*
 import bot.database.dto.MusicDto
 import bot.toby.helpers.FileUtils.computeHash
-import configuration.*
 import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import org.junit.jupiter.api.Assertions.assertNotNull
