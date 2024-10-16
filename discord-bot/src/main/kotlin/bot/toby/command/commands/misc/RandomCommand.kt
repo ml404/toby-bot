@@ -15,7 +15,7 @@ class RandomCommand : IMiscCommand {
             return
         }
         val stringList = event.getOption(LIST)?.asString?.split(",")?.dropLastWhile { it.isEmpty() }?.toList()
-        event.hook.sendMessage(getRandomElement(stringList)).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(stringList?.random() ?: "").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     override val name: String
@@ -23,11 +23,12 @@ class RandomCommand : IMiscCommand {
     override val description: String
         get() = "Return one item from a list you provide with options separated by commas."
     override val optionData: List<OptionData>
-        get() = listOf(OptionData(OptionType.STRING, LIST, "List of elements you want to pick a random value from", true))
-
-    companion object {
-        fun getRandomElement(args: List<String>?): String {
-            return args?.random()?.trim() ?: ""
-        }
-    }
+        get() = listOf(
+            OptionData(
+                OptionType.STRING,
+                LIST,
+                "List of elements you want to pick a random value from",
+                true
+            )
+        )
 }

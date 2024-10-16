@@ -1,5 +1,6 @@
 package bot.database.service.impl
 
+import bot.database.dto.UserDto
 import bot.database.persistence.IUserPersistence
 import bot.database.service.IUserService
 import org.springframework.beans.factory.annotation.Autowired
@@ -14,27 +15,27 @@ open class UserServiceImpl : IUserService {
     lateinit var userService: IUserPersistence
 
     @Cacheable(value = ["users"])
-    override fun listGuildUsers(guildId: Long?): List<bot.database.dto.UserDto?> {
+    override fun listGuildUsers(guildId: Long?): List<UserDto?> {
         return userService.listGuildUsers(guildId)
     }
 
     @CachePut(value = ["users"], key = "#userDto.discordId+#userDto.guildId")
-    override fun createNewUser(userDto: bot.database.dto.UserDto): bot.database.dto.UserDto {
+    override fun createNewUser(userDto: UserDto): UserDto {
         return userService.createNewUser(userDto)
     }
 
     @CachePut(value = ["users"], key = "#discordId+#guildId")
-    override fun getUserById(discordId: Long?, guildId: Long?): bot.database.dto.UserDto? {
+    override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {
         return userService.getUserById(discordId, guildId)
     }
 
     @CachePut(value = ["users"], key = "#userDto.discordId+#userDto.guildId")
-    override fun updateUser(userDto: bot.database.dto.UserDto): bot.database.dto.UserDto {
+    override fun updateUser(userDto: UserDto): UserDto {
         return userService.updateUser(userDto)
     }
 
     @CacheEvict(value = ["users"], key = "#userDto.discordId+#user.guildId")
-    override fun deleteUser(userDto: bot.database.dto.UserDto) {
+    override fun deleteUser(userDto: UserDto) {
         userService.deleteUser(userDto)
     }
 
