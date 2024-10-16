@@ -22,11 +22,11 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
         deleteDelay: Int?
     ) {
         if (event.options.isEmpty()) {
-            event.member?.listUserInfoForMember(event, requestingUserDto, deleteDelay)
+            event.member?.listUserInfoForMember(event, deleteDelay)
         } else {
             if (requestingUserDto.superUser) {
                 val memberList = event.getOption(USERS)?.mentions?.members ?: emptyList()
-                memberList.forEach { member -> member.listUserInfoForMember(event, requestingUserDto, deleteDelay) }
+                memberList.forEach { member -> member.listUserInfoForMember(event, deleteDelay) }
             } else {
                 event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
                     .setEphemeral(true).queue(
@@ -38,12 +38,13 @@ class UserInfoCommand(private val userService: IUserService) : IMiscCommand {
 
     private fun Member.listUserInfoForMember(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: bot.database.dto.UserDto,
         deleteDelay: Int?
     ) {
+        logger.info { " Doing lookup on user for guildId '${this.guild.idLong}' and discordId '${this.idLong}' " }
         val userSearched = userService.getUserById(this.idLong, this.guild.idLong)
         val userInfoMessage = userSearched?.let {
-            val introMessage = calculateMusicFileData(event.member!!, requestingUserDto)
+            logger.info { " Found user '${it}' from lookup " }
+            val introMessage = calculateMusicFileData(event.member!!, userSearched)
             "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $introMessage"
         } ?: "I was unable to retrieve information for '${this.effectiveName}'."
         event.hook

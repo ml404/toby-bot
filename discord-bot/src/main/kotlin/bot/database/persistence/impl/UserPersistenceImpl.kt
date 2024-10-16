@@ -1,5 +1,6 @@
 package bot.database.persistence.impl
 
+import bot.database.dto.UserDto
 import bot.database.persistence.IUserPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -14,25 +15,25 @@ open class UserPersistenceImpl : IUserPersistence {
     lateinit var entityManager: EntityManager
 
 
-    override fun listGuildUsers(guildId: Long?): List<bot.database.dto.UserDto?> {
-        val q: Query = entityManager.createNamedQuery("UserDto.getGuildAll", bot.database.dto.UserDto::class.java)
+    override fun listGuildUsers(guildId: Long?): List<UserDto?> {
+        val q: Query = entityManager.createNamedQuery("UserDto.getGuildAll", UserDto::class.java)
         q.setParameter("guildId", guildId)
-        return q.resultList as List<bot.database.dto.UserDto?>
+        return q.resultList as List<UserDto?>
     }
 
-    override fun createNewUser(userDto: bot.database.dto.UserDto): bot.database.dto.UserDto {
-        val databaseUser = entityManager.find(bot.database.dto.UserDto::class.java, userDto)
+    override fun createNewUser(userDto: UserDto): UserDto {
+        val databaseUser = entityManager.find(UserDto::class.java, userDto)
         return if ((databaseUser == null)) persistUserDto(userDto) else databaseUser
     }
 
-    override fun getUserById(discordId: Long?, guildId: Long?): bot.database.dto.UserDto? {
-        val userQuery: Query = entityManager.createNamedQuery("UserDto.getById", bot.database.dto.UserDto::class.java)
+    override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {
+        val userQuery: Query = entityManager.createNamedQuery("UserDto.getById", UserDto::class.java)
         userQuery.setParameter("discordId", discordId)
         userQuery.setParameter("guildId", guildId)
-        return runCatching { userQuery.singleResult as bot.database.dto.UserDto? }.getOrNull()
+        return runCatching { userQuery.singleResult as UserDto? }.getOrNull()
     }
 
-    override fun updateUser(userDto: bot.database.dto.UserDto): bot.database.dto.UserDto {
+    override fun updateUser(userDto: UserDto): UserDto {
         val dbUser = getUserById(userDto.discordId, userDto.guildId)
         if (userDto != dbUser) {
             entityManager.merge(userDto)
@@ -42,7 +43,7 @@ open class UserPersistenceImpl : IUserPersistence {
         return userDto
     }
 
-    override fun deleteUser(userDto: bot.database.dto.UserDto) {
+    override fun deleteUser(userDto: UserDto) {
         entityManager.remove(userDto.musicDtos)
         entityManager.remove(userDto)
         entityManager.flush()
@@ -64,7 +65,7 @@ open class UserPersistenceImpl : IUserPersistence {
         musicFileQuery.executeUpdate()
     }
 
-    private fun persistUserDto(userDto: bot.database.dto.UserDto): bot.database.dto.UserDto {
+    private fun persistUserDto(userDto: UserDto): UserDto {
         entityManager.persist(userDto)
         entityManager.flush()
         return userDto
