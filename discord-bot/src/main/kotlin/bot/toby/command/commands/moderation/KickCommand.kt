@@ -5,7 +5,9 @@ import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.stereotype.Component
 
+@Component
 class KickCommand : IModerationCommand {
     companion object {
         private const val USERS = "users"

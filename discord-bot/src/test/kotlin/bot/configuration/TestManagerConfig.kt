@@ -1,4 +1,4 @@
-package configuration
+package bot.configuration
 
 import bot.toby.managers.ButtonManager
 import bot.toby.managers.CommandManager

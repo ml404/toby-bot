@@ -5,7 +5,9 @@ import bot.toby.command.commands.music.IMusicCommand
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
 import bot.toby.lavaplayer.PlayerManager
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import org.springframework.stereotype.Component
 
+@Component
 class EditIntroCommand : IMusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {

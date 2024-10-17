@@ -1,7 +1,7 @@
 package bot.controller
 
 import bot.Application
-import configuration.*
+import bot.configuration.*
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

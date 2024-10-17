@@ -1,5 +1,6 @@
 package bot.configuration
 
+import bot.toby.helpers.Cache
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching
 import org.springframework.cache.concurrent.ConcurrentMapCache
@@ -25,5 +26,10 @@ open class CachingConfig {
             )
         )
         return cacheManager
+    }
+
+    @Bean
+    open fun cache(): Cache {
+        return Cache(86400, 3600, 2)
     }
 }

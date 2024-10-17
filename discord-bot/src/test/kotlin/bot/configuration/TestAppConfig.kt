@@ -1,4 +1,4 @@
-package configuration
+package bot.configuration
 
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper

@@ -6,9 +6,12 @@ import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
 import bot.toby.menu.IMenu
 import bot.toby.menu.MenuContext
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import kotlin.time.Duration.Companion.seconds
 
-class EditIntroMenu(
+@Component
+class EditIntroMenu @Autowired constructor(
     private val introHelper: IntroHelper,
     private val eventWaiter: EventWaiter
 ) : IMenu {

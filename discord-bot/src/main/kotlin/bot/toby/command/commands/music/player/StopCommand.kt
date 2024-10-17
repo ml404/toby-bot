@@ -4,7 +4,9 @@ import bot.toby.command.CommandContext
 import bot.toby.command.commands.music.IMusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import org.springframework.stereotype.Component
 
+@Component
 class StopCommand : IMusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

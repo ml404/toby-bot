@@ -1,5 +1,6 @@
-package configuration
+package bot.configuration
 
+import bot.toby.helpers.Cache
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching
@@ -26,4 +27,10 @@ open class TestCachingConfig {
         )
         return cacheManager
     }
+
+    @Bean
+    open fun cache(): Cache {
+        return Cache(86400, 3600, 2)
+    }
+
 }

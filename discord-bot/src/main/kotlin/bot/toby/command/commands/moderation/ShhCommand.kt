@@ -2,7 +2,9 @@ package bot.toby.command.commands.moderation
 
 import bot.toby.command.CommandContext
 import bot.toby.helpers.VoiceStateHelper.muteOrUnmuteMembers
+import org.springframework.stereotype.Component
 
+@Component
 class ShhCommand : IModerationCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

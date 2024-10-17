@@ -1,10 +1,5 @@
 import bot.database.service.IConfigService
-import bot.database.service.IExcuseService
-import bot.database.service.IUserService
 import bot.toby.handler.StartUpHandler
-import bot.toby.helpers.DnDHelper
-import bot.toby.helpers.HttpHelper
-import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.CommandManager
 import io.mockk.*
@@ -22,14 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 class StartUpHandlerTest {
     private val jda: JDA = mockk()
     private val configService: IConfigService = mockk()
-    private val userService: IUserService = mockk()
-    private val brotherService: bot.database.service.IBrotherService = mockk()
-    private val excuseService: IExcuseService = mockk()
-    private val httpHelper: HttpHelper = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
-    private val introHelper: IntroHelper = mockk()
-    private val dndHelper: DnDHelper = mockk()
-    private val commandManager: CommandManager = CommandManager(configService, brotherService, userService, excuseService, httpHelper, userDtoHelper, introHelper, dndHelper)
+    private val commandManager: CommandManager = CommandManager(configService, userDtoHelper, emptyList())
     private val handler = spyk(
         StartUpHandler(
             jda,

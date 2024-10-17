@@ -1,9 +1,9 @@
 package bot.database
 
 import bot.Application
+import bot.configuration.*
 import bot.database.dto.MusicDto
 import bot.database.service.IUserService
-import configuration.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach

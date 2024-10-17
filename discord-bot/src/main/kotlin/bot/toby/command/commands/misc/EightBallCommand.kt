@@ -3,9 +3,12 @@ package bot.toby.command.commands.misc
 import bot.database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.util.*
 
-class EightBallCommand(private val userService: IUserService) : IMiscCommand {
+@Component
+class EightBallCommand @Autowired constructor(private val userService: IUserService) : IMiscCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()

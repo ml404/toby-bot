@@ -3,8 +3,11 @@ package bot.toby.button.buttons
 import bot.toby.button.ButtonContext
 import bot.toby.button.IButton
 import bot.toby.helpers.DnDHelper
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class InitiativeClearButton(private val dnDHelper: DnDHelper): IButton {
+@Component
+class InitiativeClearButton @Autowired constructor(private val dnDHelper: DnDHelper) : IButton {
     override val name: String
         get() = "init:clear"
     override val description: String

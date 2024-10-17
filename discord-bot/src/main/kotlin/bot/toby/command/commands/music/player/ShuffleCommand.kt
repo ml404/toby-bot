@@ -5,10 +5,12 @@ import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.music.IMusicCommand
 import bot.toby.lavaplayer.PlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
+@Component
 class ShuffleCommand : IMusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

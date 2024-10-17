@@ -6,9 +6,11 @@ import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.menu.IMenu
 import bot.toby.menu.MenuContext
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-
-class SetIntroMenu(
+@Component
+class SetIntroMenu @Autowired constructor(
     private val introHelper: IntroHelper,
     private val userDtoHelper: UserDtoHelper
 ) : IMenu {

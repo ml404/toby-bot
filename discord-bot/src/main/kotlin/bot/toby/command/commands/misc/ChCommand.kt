@@ -4,8 +4,10 @@ import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.stereotype.Component
 import java.util.*
 
+@Component
 class ChCommand : IMiscCommand {
     override val name: String = "ch"
     override val description: String = "Allow me to 'ch' whatever you type."

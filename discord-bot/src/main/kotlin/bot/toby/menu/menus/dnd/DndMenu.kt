@@ -7,8 +7,11 @@ import bot.toby.menu.IMenu
 import bot.toby.menu.MenuContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class DndMenu(
+@Component
+class DndMenu @Autowired constructor(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val httpHelper: HttpHelper,
     private val dnDHelper: DnDHelper,

@@ -8,8 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class DnDCommand(
+@Component
+class DnDCommand @Autowired constructor(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val httpHelper: HttpHelper,
     private val dndHelper: DnDHelper

@@ -6,8 +6,10 @@ import bot.toby.command.commands.music.IMusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import org.springframework.stereotype.Component
 import kotlin.math.min
 
+@Component
 class QueueCommand : IMusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

@@ -15,10 +15,12 @@ import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
+import org.springframework.stereotype.Component
 import java.io.IOException
 import java.io.InputStreamReader
 import kotlin.random.Random
 
+@Component
 class MemeCommand : IFetchCommand {
     private val SUBREDDIT = "subreddit"
     private val TIME_PERIOD = "timeperiod"

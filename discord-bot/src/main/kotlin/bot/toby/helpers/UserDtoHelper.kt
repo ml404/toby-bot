@@ -1,6 +1,7 @@
 package bot.toby.helpers
 
 import bot.database.dto.MusicDto
+import bot.database.dto.UserDto
 import bot.database.service.IUserService
 import bot.logging.DiscordLogger
 import net.dv8tion.jda.api.entities.Member
@@ -13,21 +14,25 @@ class UserDtoHelper(private val userService: IUserService) {
         discordId: Long,
         guildId: Long,
         isSuperUser: Boolean = false
-    ): bot.database.dto.UserDto {
+    ): UserDto {
         logger.info("Processing lookup for user: $discordId, guild: $guildId")
-        return userService.getUserById(discordId, guildId) ?: bot.database.dto.UserDto(discordId, guildId).apply {
+        return userService.getUserById(discordId, guildId) ?: UserDto(discordId, guildId).apply {
             this.superUser = isSuperUser
             this.musicDtos = emptyList<MusicDto>().toMutableList()
             userService.createNewUser(this)
         }
     }
 
-    fun userAdjustmentValidation(requester: bot.database.dto.UserDto, target: bot.database.dto.UserDto): Boolean {
+    fun userAdjustmentValidation(requester: UserDto, target: UserDto): Boolean {
         return requester.superUser && !target.superUser
     }
 
+    fun updateUser(userDto: UserDto) {
+        userService.updateUser(userDto)
+    }
+
     companion object {
-        fun Member.getRequestingUserDto(userDtoHelper: UserDtoHelper): bot.database.dto.UserDto {
+        fun Member.getRequestingUserDto(userDtoHelper: UserDtoHelper): UserDto {
             val discordId = this.idLong
             val guildId = this.guild.idLong
             return userDtoHelper.calculateUserDto(discordId, guildId, this.isOwner)

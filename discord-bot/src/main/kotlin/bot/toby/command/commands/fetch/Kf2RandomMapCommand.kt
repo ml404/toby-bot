@@ -4,9 +4,12 @@ import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.deleteAfter
 import bot.toby.helpers.Cache
 import bot.toby.helpers.WikiFetcher
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.io.IOException
 
-class Kf2RandomMapCommand(private val cache: Cache) : IFetchCommand {
+@Component
+class Kf2RandomMapCommand @Autowired constructor(private val cache: Cache) : IFetchCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         ctx.event.hook.deleteAfter(deleteDelay ?: 0)
         val event = ctx.event

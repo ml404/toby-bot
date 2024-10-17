@@ -6,7 +6,9 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.stereotype.Component
 
+@Component
 class TeamCommand : IMiscCommand {
     private val TEAM_MEMBERS = "members"
     private val TEAM_SIZE = "size"

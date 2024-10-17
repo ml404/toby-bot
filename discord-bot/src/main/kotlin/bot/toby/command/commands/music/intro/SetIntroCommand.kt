@@ -17,8 +17,11 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class SetIntroCommand(
+@Component
+class SetIntroCommand @Autowired constructor(
     private val introHelper: IntroHelper
 ) : IMusicCommand {
 

@@ -1,6 +1,7 @@
 package bot.toby.button.buttons
 
 import bot.database.dto.ConfigDto
+import bot.database.dto.UserDto
 import bot.database.service.*
 import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
@@ -60,7 +61,7 @@ class InitiativeClearButtonTest : ButtonTest {
         every { dndHelper.clearInitiative(any(), any()) } just Runs
 
         // Invoke the handler
-        InitiativeClearButton(dndHelper).handle(ButtonContext(event), bot.database.dto.UserDto(6L, 1L), 0)
+        InitiativeClearButton(dndHelper).handle(ButtonContext(event), UserDto(6L, 1L), 0)
 
         // Verify expected interactions
         verify(exactly = 1) { dndHelper.clearInitiative(mockHook, event) }

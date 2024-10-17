@@ -4,7 +4,9 @@ import bot.toby.button.ButtonContext
 import bot.toby.button.IButton
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import org.springframework.stereotype.Component
 
+@Component
 class StopButton : IButton {
     override val name: String
         get() = "stop"

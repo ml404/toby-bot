@@ -9,7 +9,9 @@ import bot.toby.lavaplayer.PlayerManager
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.stereotype.Component
 
+@Component
 class NowDigOnThisCommand : IMusicCommand {
     private val LINK = "link"
     private val START_POSITION = "start"

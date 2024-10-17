@@ -1,7 +1,7 @@
 package bot.database
 
 import bot.Application
-import configuration.*
+import bot.configuration.*
 import org.apache.commons.collections4.IterableUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions

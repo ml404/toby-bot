@@ -1,14 +1,13 @@
 package bot.configuration
 
-import bot.database.service.*
-import bot.toby.handler.EventWaiter
-import bot.toby.helpers.DnDHelper
-import bot.toby.helpers.HttpHelper
-import bot.toby.helpers.IntroHelper
+import bot.database.service.IConfigService
+import bot.toby.button.IButton
+import bot.toby.command.ICommand
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.ButtonManager
 import bot.toby.managers.CommandManager
 import bot.toby.managers.MenuManager
+import bot.toby.menu.IMenu
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -20,46 +19,30 @@ open class ManagerConfig {
     @Bean
     open fun commandManager(
         configService: IConfigService,
-        brotherService: IBrotherService,
-        userService: IUserService,
-        musicFileService: IMusicFileService,
-        excuseService: IExcuseService,
-        httpHelper: HttpHelper,
         userDtoHelper: UserDtoHelper,
-        introHelper: IntroHelper,
-        dndHelper: DnDHelper
+        commandList: List<ICommand>
     ): CommandManager {
         return CommandManager(
             configService,
-            brotherService,
-            userService,
-            excuseService,
-            httpHelper,
             userDtoHelper,
-            introHelper,
-            dndHelper
+            commandList
         )
     }
 
     @Bean
     open fun menuManager(
         configService: IConfigService,
-        httpHelper: HttpHelper,
-        userDtoHelper: UserDtoHelper,
-        introHelper: IntroHelper,
-        dndHelper: DnDHelper,
-        eventWaiter: EventWaiter
+        menus: List<IMenu>
     ): MenuManager {
-        return MenuManager(configService, httpHelper, introHelper, userDtoHelper, dndHelper, eventWaiter)
+        return MenuManager(configService, menus)
     }
 
     @Bean
     open fun buttonManager(
         configService: IConfigService,
         userDtoHelper: UserDtoHelper,
-        dndHelper: DnDHelper,
-        commandManager: CommandManager
+        buttons: List<IButton>
     ): ButtonManager {
-        return ButtonManager(configService, userDtoHelper, dndHelper, commandManager)
+        return ButtonManager(configService, userDtoHelper, buttons)
     }
 }
