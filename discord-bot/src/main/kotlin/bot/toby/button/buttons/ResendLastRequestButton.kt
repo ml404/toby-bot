@@ -3,8 +3,11 @@ package bot.toby.button.buttons
 import bot.toby.button.ButtonContext
 import bot.toby.button.IButton
 import bot.toby.managers.CommandManager
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class ResendLastRequestButton(private val commandManager: CommandManager) : IButton {
+@Component
+class ResendLastRequestButton @Autowired constructor(private val commandManager: CommandManager) : IButton {
     override val name: String
         get() = "resend_last_request"
     override val description: String

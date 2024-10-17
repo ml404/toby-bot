@@ -49,10 +49,9 @@ class CommandManagerTest {
 
     lateinit var configService: IConfigService
     lateinit var userService: IUserService
-    lateinit var httpHelper: HttpHelper
     lateinit var userDtoHelper: UserDtoHelper
     lateinit var dndHelper: DnDHelper
-    lateinit var commandManager: CommandManager
+    private lateinit var commandManager: CommandManager
 
     @Autowired
     lateinit var commands: List<ICommand>

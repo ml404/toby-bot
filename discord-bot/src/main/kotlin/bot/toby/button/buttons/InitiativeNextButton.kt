@@ -3,8 +3,11 @@ package bot.toby.button.buttons
 import bot.toby.button.ButtonContext
 import bot.toby.button.IButton
 import bot.toby.helpers.DnDHelper
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-class InitiativeNextButton(private val dndHelper: DnDHelper) : IButton {
+@Component
+class InitiativeNextButton @Autowired constructor(private val dndHelper: DnDHelper) : IButton {
     override val name: String
         get() = "init:next"
     override val description: String

@@ -1,11 +1,8 @@
 package bot.toby.managers
 
+import bot.Application
+import bot.configuration.*
 import bot.database.service.IConfigService
-import bot.toby.handler.EventWaiter
-import bot.toby.helpers.DnDHelper
-import bot.toby.helpers.HttpHelper
-import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.UserDtoHelper
 import bot.toby.menu.IMenu
 import bot.toby.menu.menus.EditIntroMenu
 import bot.toby.menu.menus.SetIntroMenu
@@ -16,24 +13,34 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 
+@SpringBootTest(
+    classes = [
+        Application::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
+        TestCachingConfig::class,
+        TestDatabaseConfig::class,
+        TestManagerConfig::class
+    ]
+)
+@ActiveProfiles("test")
 internal class MenuManagerTest {
 
     lateinit var configService: IConfigService
-    lateinit var httpHelper: HttpHelper
-    lateinit var userDtoHelper: UserDtoHelper
-    lateinit var introHelper: IntroHelper
-    lateinit var dndHelper: DnDHelper
-    lateinit var eventWaiter: EventWaiter
+
+    @Autowired
+    lateinit var menus: List<IMenu>
+    private lateinit var menuManager: MenuManager
+
 
     @BeforeEach
     fun setUp() {
         configService = mockk()
-        httpHelper = mockk()
-        userDtoHelper = mockk()
-        introHelper = mockk()
-        dndHelper = mockk()
-        eventWaiter = mockk()
+        menuManager = MenuManager(configService, menus)
     }
     @AfterEach
     fun tearDown(){
@@ -42,15 +49,14 @@ internal class MenuManagerTest {
 
     @Test
     fun testAllMenus() {
-        val menuManager = MenuManager(configService, httpHelper, introHelper, userDtoHelper, dndHelper, eventWaiter)
         val availableMenus: List<Class<out IMenu>> = listOf(DndMenu::class.java, SetIntroMenu::class.java, EditIntroMenu::class.java )
-        assertEquals(3, menuManager.allMenus.size)
-        assertTrue(availableMenus.containsAll(menuManager.allMenus.map { it.javaClass }.toList()))
+        assertEquals(3, menuManager.menus.size)
+        assertTrue(availableMenus.containsAll(menuManager.menus.map { it.javaClass }.toList()))
     }
 
     @Test
     fun testMenu() {
-        val menuManager = MenuManager(configService, httpHelper, introHelper, userDtoHelper, dndHelper, eventWaiter)
+        val menuManager = MenuManager(configService, menus)
         val menu = menuManager.getMenu("dnd")
         assertNotNull(menu)
         assertEquals("dnd", menu?.name)
@@ -58,7 +64,7 @@ internal class MenuManagerTest {
 
     @Test
     fun testMenuWithLongerName() {
-        val menuManager =  MenuManager(configService, httpHelper, introHelper, userDtoHelper, dndHelper, eventWaiter)
+        val menuManager = MenuManager(configService, menus)
         val menu = menuManager.getMenu("dnd:spell")
         assertNotNull(menu)
         assertEquals("dnd", menu?.name)

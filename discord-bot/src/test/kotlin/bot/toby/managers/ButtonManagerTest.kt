@@ -1,7 +1,10 @@
 package bot.toby.managers
 
+import bot.Application
+import bot.configuration.*
 import bot.database.dto.ConfigDto
 import bot.database.service.*
+import bot.toby.button.IButton
 import bot.toby.button.buttons.*
 import bot.toby.command.commands.misc.*
 import bot.toby.command.commands.moderation.*
@@ -22,35 +25,36 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
 
+@SpringBootTest(
+    classes = [
+        Application::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
+        TestCachingConfig::class,
+        TestDatabaseConfig::class,
+        TestManagerConfig::class
+    ]
+)
+@ActiveProfiles("test")
 class ButtonManagerTest {
 
     lateinit var configService: IConfigService
-    private lateinit var brotherService: IBrotherService
-    lateinit var userService: IUserService
-    private lateinit var musicFileService: IMusicFileService
-    private lateinit var excuseService: IExcuseService
-    private lateinit var commandManager: CommandManager
     private lateinit var buttonManager: ButtonManager
-    lateinit var httpHelper: HttpHelper
     private lateinit var userDtoHelper: UserDtoHelper
-    private lateinit var introHelper: IntroHelper
-    lateinit var dndHelper: DnDHelper
+
+    @Autowired
+    lateinit var buttons: List<IButton>
 
     @BeforeEach
     fun openMocks() {
         configService = mockk()
-        brotherService = mockk()
-        userService = mockk()
-        musicFileService = mockk()
-        excuseService = mockk()
-        httpHelper = mockk()
         userDtoHelper = mockk()
-        introHelper = mockk()
-        dndHelper = mockk()
-        commandManager = CommandManager(configService, userService, userDtoHelper, emptyList())
-        buttonManager = ButtonManager(configService,  userDtoHelper, dndHelper, commandManager)
+        buttonManager = ButtonManager(configService, userDtoHelper, buttons)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
 
@@ -75,8 +79,8 @@ class ButtonManagerTest {
             StopButton::class.java,
         )
 
-        assertTrue(availableButtons.containsAll(buttonManager.allButtons.map { it.javaClass }.toList()))
-        assertEquals(7, buttonManager.allButtons.size)
+        assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
+        assertEquals(7, buttonManager.buttons.size)
     }
 
     @Test
@@ -134,7 +138,6 @@ class ButtonManagerTest {
         }
 
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
-        every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
         buttonManager.handle(event)
 
@@ -204,7 +207,6 @@ class ButtonManagerTest {
 
         every { playerManager.getMusicManager(mockGuild) } returns musicManager
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
-        every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
         buttonManager.handle(event)
 
