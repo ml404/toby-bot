@@ -3,45 +3,36 @@ package bot.toby.command.commands.misc
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.managers.CommandManager
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.util.function.Consumer
 
 @Component
-class HelpCommand @Autowired constructor(private val manager: CommandManager) : IMiscCommand {
+class HelpCommand @Autowired constructor(private val commands: List<ICommand>) : IMiscCommand {
     private val COMMAND = "command"
     override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
         val args = ctx.event.options
         val event = ctx.event
         event.deferReply(true).queue()
+        // If no specific command is provided, direct users to the general wiki page
         if (args.isEmpty()) {
-            val builder = StringBuilder()
-            val commandConsumer = Consumer { command: ICommand -> builder.append("`/${command.name}` \n") }
-            builder.append(String.format("List of all current commands below. If you want to find out how to use one of the commands try doing `%shelp commandName`\n", "/"))
-            builder.append("**Music Commands**:\n")
-            manager.musicCommands.forEach(commandConsumer)
-            builder.append("**DnD Commands**:\n")
-            manager.dndCommands.forEach(commandConsumer)
-            builder.append("**Miscellaneous Commands**:\n")
-            manager.miscCommands.forEach(commandConsumer)
-            builder.append("**Moderation Commands**:\n")
-            manager.moderationCommands.forEach(commandConsumer)
-            builder.append("**Fetch Commands**:\n")
-            manager.fetchCommands.forEach(commandConsumer)
-            event.hook.sendMessage(builder.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            val helpMessage =
+                "For a list of all available commands, visit the [Toby Bot Commands Wiki](https://github.com/ml404/toby-bot/wiki/Commands)"
+            event.hook.sendMessage(helpMessage).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
+
         val searchOptional = event.getOption(COMMAND)?.asString
-        val command = manager.getCommand(searchOptional!!)
+        val command = getCommand(searchOptional!!)
         if (command == null) {
             event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
         event.hook.sendMessage(command.description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
+
+    private fun getCommand(searchOptional: String) = commands.find { it.name.lowercase() == searchOptional }
 
     override val name: String
         get() = "help"
