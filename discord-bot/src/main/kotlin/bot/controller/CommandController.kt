@@ -1,8 +1,5 @@
 package bot.controller
 
-import bot.documentation.ChoiceDocumentation
-import bot.documentation.CommandDocumentation
-import bot.documentation.OptionDocumentation
 import bot.toby.command.ICommand
 import bot.toby.managers.CommandManager
 import io.swagger.v3.oas.annotations.Operation
@@ -93,4 +90,22 @@ class CommandController(private val commandManager: CommandManager) {
         htmlBuilder.append("</body></html>")
         return htmlBuilder.toString()
     }
+
+    data class CommandDocumentation(
+        val name: String,
+        val description: String,
+        val options: List<OptionDocumentation>
+    )
+
+    data class OptionDocumentation(
+        val name: String,
+        val description: String,
+        val type: String,
+        val choices: List<ChoiceDocumentation>? = null
+    )
+
+    data class ChoiceDocumentation(
+        val name: String,
+        val value: String
+    )
 }
