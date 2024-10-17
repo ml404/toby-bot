@@ -1,9 +1,5 @@
 package bot.toby.managers
 
-import bot.database.dto.ConfigDto
-import bot.database.dto.UserDto
-import bot.database.service.IConfigService
-import bot.logging.DiscordLogger
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand
 import bot.toby.command.commands.dnd.IDnDCommand
@@ -12,6 +8,10 @@ import bot.toby.command.commands.misc.IMiscCommand
 import bot.toby.command.commands.moderation.IModerationCommand
 import bot.toby.command.commands.music.IMusicCommand
 import bot.toby.helpers.UserDtoHelper
+import common.logging.DiscordLogger
+import database.dto.ConfigDto
+import database.dto.UserDto
+import database.service.IConfigService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData

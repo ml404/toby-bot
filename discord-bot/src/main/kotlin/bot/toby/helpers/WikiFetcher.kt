@@ -1,5 +1,6 @@
 package bot.toby.helpers
 
+import common.helpers.Cache
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.io.IOException

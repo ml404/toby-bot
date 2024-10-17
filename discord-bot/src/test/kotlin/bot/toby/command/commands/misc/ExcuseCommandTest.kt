@@ -1,11 +1,11 @@
 package bot.toby.command.commands.misc
 
-import bot.database.dto.ExcuseDto
-import bot.database.service.IExcuseService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
+import database.dto.ExcuseDto
+import database.service.IExcuseService
 import io.mockk.*
 import io.mockk.InternalPlatformDsl.toStr
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -34,7 +34,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun aRandomApprovedExcuse_WhenNoOptionsUsed() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -64,7 +64,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun listAllApprovedExcuses_WithValidApprovedOnes() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -90,7 +90,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun listAllApprovedExcuses_WithNoValidApprovedOnes() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -111,7 +111,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun createNewExcuse() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
         val excuseMapping = mockk<OptionMapping>()
@@ -142,7 +142,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun createNewExcuse_thatExists_throwsError() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
@@ -175,7 +175,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun approvePendingExcuse_asSuperUser() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
@@ -234,7 +234,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun listAllPendingExcuses_WithValidPendingOnes() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -260,7 +260,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun listAllPendingExcuses_WithNoValidPendingOnes() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
         // Mock the behavior of the excuseService when listing approved guild excuses
@@ -281,7 +281,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun deleteExcuse_asValidUser() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
         val excuseMapping = mockk<OptionMapping>()
@@ -308,7 +308,7 @@ internal class ExcuseCommandTest : CommandTest {
     fun deleteExcuse_asInvalidUser() {
         // Arrange
         val ctx = CommandContext(event)
-        val userDto = mockk<bot.database.dto.UserDto>()
+        val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)

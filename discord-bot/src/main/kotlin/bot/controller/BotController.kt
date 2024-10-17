@@ -1,17 +1,19 @@
 package bot.controller
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
-import bot.database.service.IUserService
+import database.dto.ConfigDto
+import database.service.IBrotherService
+import database.service.IConfigService
+import database.service.IMusicFileService
+import database.service.IUserService
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/")
 class BotController(
     var userService: IUserService,
-    var musicFileService: bot.database.service.IMusicFileService,
+    var musicFileService: IMusicFileService,
     var configService: IConfigService,
-    var brotherService: bot.database.service.IBrotherService
+    var brotherService: IBrotherService
 ) {
     @GetMapping("/")
     fun index(): String =
@@ -22,7 +24,7 @@ class BotController(
 
     @GetMapping("/brother")
     @ResponseBody
-    fun getBrother(@RequestParam("discordId") discordId: String): bot.database.dto.BrotherDto? =
+    fun getBrother(@RequestParam("discordId") discordId: String): database.dto.BrotherDto? =
         brotherService.getBrotherById(discordId.toLong())
 
     @GetMapping("/config")
@@ -40,5 +42,5 @@ class BotController(
     fun getUser(
         @RequestParam("discordId") discordId: Long?,
         @RequestParam("guildId") guildId: Long?
-    ): bot.database.dto.UserDto? = userService.getUserById(discordId, guildId)
+    ): database.dto.UserDto? = userService.getUserById(discordId, guildId)
 }

@@ -2,15 +2,15 @@ package bot.toby.command.commands.fetch
 
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.helpers.Cache
 import bot.toby.helpers.WikiFetcher
+import common.helpers.Cache
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.io.IOException
 
 @Component
 class DbdRandomKillerCommand @Autowired constructor(private val cache: Cache) : IFetchCommand {
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         try {

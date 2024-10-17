@@ -1,6 +1,6 @@
 package bot.toby.menu
 
-import bot.logging.DiscordLogger
+import common.logging.DiscordLogger
 
 interface IMenu {
     fun handle(ctx: MenuContext, deleteDelay: Int)

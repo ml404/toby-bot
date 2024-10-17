@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component
 @Component
 class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper) : IDnDCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         val member = ctx.member

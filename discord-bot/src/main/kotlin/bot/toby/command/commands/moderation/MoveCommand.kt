@@ -1,9 +1,9 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import database.dto.ConfigDto
+import database.service.IConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -21,7 +21,7 @@ class MoveCommand @Autowired constructor(private val configService: IConfigServi
         private const val CHANNEL = "channel"
     }
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
 

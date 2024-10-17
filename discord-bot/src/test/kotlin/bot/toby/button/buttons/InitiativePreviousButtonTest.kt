@@ -1,13 +1,13 @@
 package bot.toby.button.buttons
 
-import bot.database.dto.ConfigDto
-import bot.database.service.*
 import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.configService
 import bot.toby.button.ButtonTest.Companion.dndHelper
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.userService
+import database.dto.ConfigDto
+import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -60,7 +60,7 @@ class InitiativePreviousButtonTest : ButtonTest {
         every { dndHelper.decrementTurnTable(any(), any(), any()) } just Runs
 
         // Invoke the handler
-        InitiativePreviousButton(dndHelper).handle(ButtonContext(event), bot.database.dto.UserDto(6L, 1L), 0)
+        InitiativePreviousButton(dndHelper).handle(ButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         // Verify expected interactions
         verify(exactly = 1) { dndHelper.decrementTurnTable(mockHook, event, 0) }

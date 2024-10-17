@@ -1,10 +1,10 @@
 package bot.toby.handler
 
-import bot.logging.DiscordLogger
 import bot.toby.emote.Emotes
 import bot.toby.managers.ButtonManager
 import bot.toby.managers.CommandManager
 import bot.toby.managers.MenuManager
+import common.logging.DiscordLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -1,14 +1,14 @@
 package bot.toby.helpers
 
-import bot.database.dto.ConfigDto
-import bot.database.dto.MusicDto
-import bot.database.service.IConfigService
-import bot.database.service.IMusicFileService
-import bot.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.handler.EventWaiter
-import bot.toby.helpers.FileUtils.computeHash
 import bot.toby.helpers.MusicPlayerHelper.isUrl
+import common.logging.DiscordLogger
+import database.dto.ConfigDto
+import database.dto.MusicDto
+import database.dto.MusicDto.Companion.computeHash
+import database.service.IConfigService
+import database.service.IMusicFileService
 import kotlinx.coroutines.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
@@ -53,7 +53,7 @@ class IntroHelper(
 
     fun handleMedia(
         event: IReplyCallback,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         deleteDelay: Int?,
         input: InputData?,
         introVolume: Int,
@@ -115,7 +115,7 @@ class IntroHelper(
 
     fun handleAttachment(
         event: IReplyCallback,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         userName: String,
         deleteDelay: Int?,
         attachment: Attachment,
@@ -157,7 +157,7 @@ class IntroHelper(
 
     fun handleUrl(
         event: IReplyCallback,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         userName: String,
         deleteDelay: Int?,
         uri: URI?,
@@ -198,7 +198,7 @@ class IntroHelper(
     @VisibleForTesting
     fun persistMusicFile(
         event: IReplyCallback,
-        targetDto: bot.database.dto.UserDto,
+        targetDto: database.dto.UserDto,
         userName: String = event.user.effectiveName,
         deleteDelay: Int?,
         filename: String,
@@ -243,7 +243,7 @@ class IntroHelper(
 
     fun persistMusicUrl(
         event: IReplyCallback,
-        targetDto: bot.database.dto.UserDto,
+        targetDto: database.dto.UserDto,
         deleteDelay: Int?,
         filename: String,
         url: String,

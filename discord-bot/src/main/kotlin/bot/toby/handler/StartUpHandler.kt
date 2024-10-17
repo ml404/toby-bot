@@ -1,6 +1,6 @@
 package bot.toby.handler
 
-import bot.logging.DiscordLogger
+import common.logging.DiscordLogger
 import bot.toby.managers.CommandManager
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent

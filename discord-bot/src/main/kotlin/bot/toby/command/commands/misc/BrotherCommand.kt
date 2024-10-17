@@ -1,9 +1,9 @@
 package bot.toby.command.commands.misc
 
-import bot.database.service.IBrotherService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.emote.Emotes
+import database.service.IBrotherService
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -18,7 +18,7 @@ class BrotherCommand @Autowired constructor(private val brotherService: IBrother
     IMiscCommand {
     override val name = "brother"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         val tobyEmote: RichCustomEmoji? = event.guild?.jda?.getEmojiById(Emotes.TOBY)

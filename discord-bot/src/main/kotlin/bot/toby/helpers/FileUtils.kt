@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.util.concurrent.ExecutionException
 
 object FileUtils {
@@ -69,9 +68,4 @@ object FileUtils {
         return inputStream.readAllBytes().contentToString().toByteArray(StandardCharsets.UTF_8)
     }
 
-    fun computeHash(data: ByteArray): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val hashBytes = md.digest(data)
-        return hashBytes.joinToString("") { "%02x".format(it) }
-    }
 }

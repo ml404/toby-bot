@@ -10,14 +10,14 @@ import org.springframework.stereotype.Component
 @Component
 class EditIntroCommand : IMusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         deleteDelay: Int?
     ) {
         val event = ctx.event

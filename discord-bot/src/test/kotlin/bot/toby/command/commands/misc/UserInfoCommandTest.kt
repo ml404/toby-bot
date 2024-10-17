@@ -1,7 +1,7 @@
 package bot.toby.command.commands.misc
 
-import bot.database.dto.MusicDto
-import bot.database.service.IUserService
+import database.dto.MusicDto
+import database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
@@ -40,7 +40,7 @@ class UserInfoCommandTest : CommandTest {
         every { event.options } returns listOf()
 
         // Mock the requesting user's DTO
-        val userDto = bot.database.dto.UserDto(
+        val userDto = database.dto.UserDto(
             1, 1,
             superUser = true,
             musicPermission = true,
@@ -71,7 +71,7 @@ class UserInfoCommandTest : CommandTest {
     @Test
     fun testHandleCommandWithMentionedUserAndValidRequestingPermissions() {
         // Mock the requesting user's DTO
-        val userDto = bot.database.dto.UserDto(
+        val userDto = database.dto.UserDto(
             1, 1,
             superUser = true,
             musicPermission = true,
@@ -86,11 +86,11 @@ class UserInfoCommandTest : CommandTest {
         every { event.options } returns listOf(mockk<OptionMapping>())
 
         // Mock a mentioned user's DTO
-        val mentionedUserDto = bot.database.dto.UserDto(6L, 1L)
+        val mentionedUserDto = database.dto.UserDto(6L, 1L)
         every { userService.getUserById(any(), any()) } returns userDto
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
-                bot.database.dto.UserDto(1, 1),
+                database.dto.UserDto(1, 1),
                 1,
                 "filename",
                 10,

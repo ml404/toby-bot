@@ -1,9 +1,9 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.helpers.UserDtoHelper
+import database.service.IUserService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -19,7 +19,7 @@ class AdjustUserCommand @Autowired constructor(
     private val PERMISSION_NAME = "name"
     private val USERS = "users"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply(true).queue()
         val member = ctx.member
@@ -39,8 +39,8 @@ class AdjustUserCommand @Autowired constructor(
     }
 
     private fun updateUserPermissions(
-        requestingUserDto: bot.database.dto.UserDto,
-        targetUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
+        targetUserDto: database.dto.UserDto,
         member: Member?,
         event: SlashCommandInteractionEvent,
         deleteDelay: Int,
@@ -64,7 +64,7 @@ class AdjustUserCommand @Autowired constructor(
 
     private fun validateArgumentsAndUpdateUser(
         event: SlashCommandInteractionEvent,
-        targetUserDto: bot.database.dto.UserDto,
+        targetUserDto: database.dto.UserDto,
         isOwner: Boolean,
         deleteDelay: Int
     ) {
@@ -81,15 +81,15 @@ class AdjustUserCommand @Autowired constructor(
         modifier?.let { targetUserDto.initiativeModifier = it }
 
         permission?.uppercase()?.let {
-            when (bot.database.dto.UserDto.Permissions.valueOf(it)) {
-                bot.database.dto.UserDto.Permissions.MUSIC -> targetUserDto.musicPermission =
+            when (database.dto.UserDto.Permissions.valueOf(it)) {
+                database.dto.UserDto.Permissions.MUSIC -> targetUserDto.musicPermission =
                     !targetUserDto.musicPermission
 
-                bot.database.dto.UserDto.Permissions.DIG -> targetUserDto.digPermission = !targetUserDto.digPermission
-                bot.database.dto.UserDto.Permissions.MEME -> targetUserDto.memePermission =
+                database.dto.UserDto.Permissions.DIG -> targetUserDto.digPermission = !targetUserDto.digPermission
+                database.dto.UserDto.Permissions.MEME -> targetUserDto.memePermission =
                     !targetUserDto.memePermission
 
-                bot.database.dto.UserDto.Permissions.SUPERUSER -> {
+                database.dto.UserDto.Permissions.SUPERUSER -> {
                     if (isOwner) targetUserDto.superUser = !targetUserDto.superUser
                 }
             }
@@ -99,7 +99,7 @@ class AdjustUserCommand @Autowired constructor(
     }
 
     private fun createNewUser(event: SlashCommandInteractionEvent, targetMember: Member, deleteDelay: Int) {
-        val newDto = bot.database.dto.UserDto(targetMember.idLong, targetMember.guild.idLong)
+        val newDto = database.dto.UserDto(targetMember.idLong, targetMember.guild.idLong)
         userService.createNewUser(newDto)
         event.hook.sendMessageFormat(
             "User %s's permissions did not exist in this server's database, they have now been created",
@@ -109,7 +109,7 @@ class AdjustUserCommand @Autowired constructor(
 
     private fun channelAndArgumentValidation(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: bot.database.dto.UserDto?,
+        requestingUserDto: database.dto.UserDto?,
         member: Member?,
         guildOwner: Member?,
         deleteDelay: Int
@@ -148,17 +148,17 @@ class AdjustUserCommand @Autowired constructor(
             val userOption = OptionData(OptionType.STRING, USERS, "User(s) who you would like to adjust the permissions of.", true)
             val permission = OptionData(OptionType.STRING, PERMISSION_NAME, "What permission to adjust for the user", true).apply {
                 addChoice(
-                    bot.database.dto.UserDto.Permissions.MUSIC.name,
-                    bot.database.dto.UserDto.Permissions.MUSIC.name
+                    database.dto.UserDto.Permissions.MUSIC.name,
+                    database.dto.UserDto.Permissions.MUSIC.name
                 )
                 addChoice(
-                    bot.database.dto.UserDto.Permissions.MEME.name,
-                    bot.database.dto.UserDto.Permissions.MEME.name
+                    database.dto.UserDto.Permissions.MEME.name,
+                    database.dto.UserDto.Permissions.MEME.name
                 )
-                addChoice(bot.database.dto.UserDto.Permissions.DIG.name, bot.database.dto.UserDto.Permissions.DIG.name)
+                addChoice(database.dto.UserDto.Permissions.DIG.name, database.dto.UserDto.Permissions.DIG.name)
                 addChoice(
-                    bot.database.dto.UserDto.Permissions.SUPERUSER.name,
-                    bot.database.dto.UserDto.Permissions.SUPERUSER.name
+                    database.dto.UserDto.Permissions.SUPERUSER.name,
+                    database.dto.UserDto.Permissions.SUPERUSER.name
                 )
             }
             val initiative = OptionData(OptionType.INTEGER, MODIFIER, "modifier for the initiative command when used on your user")

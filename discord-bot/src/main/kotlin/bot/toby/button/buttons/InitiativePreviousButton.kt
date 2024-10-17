@@ -13,7 +13,7 @@ class InitiativePreviousButton @Autowired constructor(private val dndHelper: DnD
     override val description: String
         get() = "Move the initiative table back a turn"
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val hook = event.hook
         dndHelper.decrementTurnTable(hook, event, deleteDelay)

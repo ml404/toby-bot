@@ -1,6 +1,5 @@
 package bot.configuration
 
-import bot.database.service.IConfigService
 import bot.toby.button.IButton
 import bot.toby.command.ICommand
 import bot.toby.helpers.UserDtoHelper
@@ -8,6 +7,7 @@ import bot.toby.managers.ButtonManager
 import bot.toby.managers.CommandManager
 import bot.toby.managers.MenuManager
 import bot.toby.menu.IMenu
+import database.service.IConfigService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile

@@ -7,6 +7,7 @@ buildscript {
         kotlin_version = '2.0.0-RC3'
         kotlinx_version = '1.9.0-RC'
         ktor_version = '2.3.12'
+        mockk_version = '1.13.13'
     }
     repositories {
         mavenCentral()

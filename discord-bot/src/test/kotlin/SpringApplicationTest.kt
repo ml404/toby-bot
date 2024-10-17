@@ -1,5 +1,9 @@
 import bot.Application
-import bot.configuration.*
+import bot.configuration.TestAppConfig
+import bot.configuration.TestBotConfig
+import common.configuration.TestCachingConfig
+import bot.configuration.TestManagerConfig
+import database.configuration.TestDatabaseConfig
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles

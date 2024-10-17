@@ -10,7 +10,7 @@ object VoiceStateHelper {
 
     fun muteOrUnmuteMembers(
         member: Member?,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         event: SlashCommandInteractionEvent,
         deleteDelay: Int?,
         guild: Guild,

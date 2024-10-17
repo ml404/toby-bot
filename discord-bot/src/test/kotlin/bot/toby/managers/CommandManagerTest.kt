@@ -2,8 +2,6 @@ package bot.toby.managers
 
 import bot.Application
 import bot.configuration.*
-import bot.database.dto.ConfigDto
-import bot.database.service.*
 import bot.toby.command.ICommand
 import bot.toby.command.commands.dnd.DnDCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
@@ -21,6 +19,10 @@ import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.command.commands.music.player.*
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.PlayerManager
+import common.configuration.TestCachingConfig
+import database.configuration.TestDatabaseConfig
+import database.dto.ConfigDto
+import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion

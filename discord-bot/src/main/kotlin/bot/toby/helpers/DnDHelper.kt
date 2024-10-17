@@ -1,6 +1,5 @@
 package bot.toby.helpers
 
-import bot.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import bot.toby.command.commands.dnd.DnDCommand.Companion.FEATURE_NAME
@@ -8,6 +7,7 @@ import bot.toby.command.commands.dnd.DnDCommand.Companion.RULE_NAME
 import bot.toby.command.commands.dnd.DnDCommand.Companion.SPELL_NAME
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
+import common.logging.DiscordLogger
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent

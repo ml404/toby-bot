@@ -13,7 +13,7 @@ class InitiativeClearButton @Autowired constructor(private val dnDHelper: DnDHel
     override val description: String
         get() = "Clear and delete the initiative table"
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val hook = ctx.event.hook
         dnDHelper.clearInitiative(hook, event)

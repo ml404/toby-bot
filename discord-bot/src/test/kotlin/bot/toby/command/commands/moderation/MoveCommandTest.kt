@@ -1,7 +1,5 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.botMember
@@ -9,6 +7,8 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.targetMember
+import database.dto.ConfigDto
+import database.service.IConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState

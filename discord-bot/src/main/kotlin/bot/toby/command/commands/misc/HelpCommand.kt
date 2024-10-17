@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 @Component
 class HelpCommand @Autowired constructor(private val commands: List<ICommand>) : IMiscCommand {
     private val COMMAND = "command"
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val args = ctx.event.options
         val event = ctx.event
         event.deferReply(true).queue()

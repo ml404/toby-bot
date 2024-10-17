@@ -1,7 +1,5 @@
 package bot.toby.helpers
 
-import bot.database.service.IUserService
-import bot.database.service.impl.UserServiceImpl
 import bot.toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
 import bot.toby.dto.web.dnd.Condition
 import bot.toby.dto.web.dnd.Feature
@@ -10,6 +8,8 @@ import bot.toby.dto.web.dnd.Spell
 import bot.toby.menu.menus.dnd.DndMenu.Companion.FEATURE_NAME
 import bot.toby.menu.menus.dnd.DndMenu.Companion.RULE_NAME
 import bot.toby.menu.menus.dnd.DndMenu.Companion.SPELL_NAME
+import database.service.IUserService
+import database.service.impl.UserServiceImpl
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -64,9 +64,9 @@ internal class DnDHelperTest {
         val user1 = mockk<User>()
         val user2 = mockk<User>()
         val user3 = mockk<User>()
-        val userDto1 = mockk<bot.database.dto.UserDto>()
-        val userDto2 = mockk<bot.database.dto.UserDto>()
-        val userDto3 = mockk<bot.database.dto.UserDto>()
+        val userDto1 = mockk<database.dto.UserDto>()
+        val userDto2 = mockk<database.dto.UserDto>()
+        val userDto3 = mockk<database.dto.UserDto>()
 
         memberList = listOf(player1, player2, player3)
 

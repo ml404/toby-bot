@@ -2,8 +2,6 @@ package bot.toby.managers
 
 import bot.Application
 import bot.configuration.*
-import bot.database.dto.ConfigDto
-import bot.database.service.*
 import bot.toby.button.IButton
 import bot.toby.button.buttons.*
 import bot.toby.command.commands.misc.*
@@ -15,6 +13,10 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import common.configuration.TestCachingConfig
+import database.configuration.TestDatabaseConfig
+import database.dto.ConfigDto
+import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.MessageEmbed

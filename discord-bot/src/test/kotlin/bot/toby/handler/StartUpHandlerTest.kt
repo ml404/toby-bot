@@ -1,4 +1,4 @@
-import bot.database.service.IConfigService
+import database.service.IConfigService
 import bot.toby.handler.StartUpHandler
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.CommandManager

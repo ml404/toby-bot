@@ -1,7 +1,5 @@
 package bot.toby.command.commands.music
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
@@ -15,6 +13,8 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.track
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.JoinCommand
+import database.dto.ConfigDto
+import database.service.IConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel

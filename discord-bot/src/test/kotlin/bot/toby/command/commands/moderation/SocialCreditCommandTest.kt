@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.service.IUserService
+import database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
@@ -109,7 +109,7 @@ internal class SocialCreditCommandTest : CommandTest {
         val userOptionMapping = mockk<OptionMapping>()
         val scOptionMapping = mockk<OptionMapping>()
         val leaderboardOptionMapping = mockk<OptionMapping>()
-        val targetUserDto = mockk<bot.database.dto.UserDto>(relaxed = true)
+        val targetUserDto = mockk<database.dto.UserDto>(relaxed = true)
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
@@ -143,7 +143,7 @@ internal class SocialCreditCommandTest : CommandTest {
         val commandContext = CommandContext(event)
         val userOptionMapping = mockk<OptionMapping>(relaxed = true)
         val leaderboardOptionMapping = mockk<OptionMapping>()
-        val targetUserDto = mockk<bot.database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.UserDto>()
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
@@ -173,7 +173,7 @@ internal class SocialCreditCommandTest : CommandTest {
     fun test_leaderboard_printsLeaderboard() {
         // Arrange
         val commandContext = CommandContext(event)
-        val targetUserDto = mockk<bot.database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.UserDto>()
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false

@@ -1,6 +1,6 @@
 package bot.toby.lavaplayer
 
-import bot.logging.DiscordLogger
+import common.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.helpers.MusicPlayerHelper.deriveDeleteDelayFromTrack
 import bot.toby.helpers.MusicPlayerHelper.nowPlaying

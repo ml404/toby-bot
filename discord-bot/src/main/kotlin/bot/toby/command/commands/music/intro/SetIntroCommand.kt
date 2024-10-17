@@ -1,7 +1,7 @@
 package bot.toby.command.commands.music.intro
 
-import bot.database.dto.MusicDto
-import bot.database.dto.UserDto
+import database.dto.MusicDto
+import database.dto.UserDto
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.music.IMusicCommand

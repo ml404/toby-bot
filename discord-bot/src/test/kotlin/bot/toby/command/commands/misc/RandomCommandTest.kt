@@ -38,7 +38,7 @@ class RandomCommandTest : CommandTest {
         // Call the handle method with the event
         randomCommand.handle(
             CommandContext(event),
-            mockk<bot.database.dto.UserDto>(),
+            mockk<database.dto.UserDto>(),
             0
         )
 
@@ -52,7 +52,7 @@ class RandomCommandTest : CommandTest {
         // Call the handle method with the event
         randomCommand.handle(
             CommandContext(event),
-            mockk<bot.database.dto.UserDto>(),
+            mockk<database.dto.UserDto>(),
             0
         )
 

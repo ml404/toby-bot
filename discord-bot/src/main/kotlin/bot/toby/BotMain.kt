@@ -1,6 +1,5 @@
 package bot.toby
 
-import bot.database.service.IConfigService
 import bot.toby.handler.EventWaiter
 import bot.toby.handler.MessageEventHandler
 import bot.toby.handler.StartUpHandler
@@ -10,6 +9,7 @@ import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.ButtonManager
 import bot.toby.managers.CommandManager
 import bot.toby.managers.MenuManager
+import database.service.IConfigService
 import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

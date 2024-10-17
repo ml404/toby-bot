@@ -1,6 +1,5 @@
 package bot.toby.command.commands.dnd
 
-import bot.logging.DiscordLogger
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.dto.web.dnd.ApiInfo
 import bot.toby.dto.web.dnd.DnDResponse
@@ -8,6 +7,7 @@ import bot.toby.dto.web.dnd.QueryResult
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.MenuHelper.DND
+import common.logging.DiscordLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async

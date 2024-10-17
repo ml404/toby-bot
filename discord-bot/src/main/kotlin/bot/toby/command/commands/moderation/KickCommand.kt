@@ -13,7 +13,7 @@ class KickCommand : IModerationCommand {
         private const val USERS = "users"
     }
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val deleteDelaySafe = deleteDelay ?: 0
         event.deferReply().queue()

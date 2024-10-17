@@ -16,7 +16,7 @@ class RollButton @Autowired constructor(private val commandManager: CommandManag
     override val description: String
         get() = "Button used to roll dice"
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         val componentId = event.componentId
 

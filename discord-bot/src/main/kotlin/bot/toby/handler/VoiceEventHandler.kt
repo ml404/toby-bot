@@ -1,8 +1,8 @@
 package bot.toby.handler
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
-import bot.logging.DiscordLogger
+import database.dto.ConfigDto
+import database.service.IConfigService
+import common.logging.DiscordLogger
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MusicPlayerHelper.playUserIntro
 import bot.toby.helpers.UserDtoHelper
@@ -165,7 +165,7 @@ class VoiceEventHandler @Autowired constructor(
         event: GuildVoiceUpdateEvent,
         guild: Guild,
         deleteDelayConfig: ConfigDto?,
-        requestingUserDto: bot.database.dto.UserDto
+        requestingUserDto: database.dto.UserDto
     ) {
         val member = event.member
         if (requestingUserDto.musicDtos.isNotEmpty()) {

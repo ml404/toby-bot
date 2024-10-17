@@ -1,7 +1,5 @@
 package bot.toby.button.buttons
 
-import bot.database.dto.ConfigDto
-import bot.database.service.*
 import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.configService
@@ -14,6 +12,8 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
+import database.dto.ConfigDto
+import database.service.*
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -62,7 +62,7 @@ class PausePlayButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        PausePlayButton().handle(ButtonContext(event), bot.database.dto.UserDto(6L, 1L), 0)
+        PausePlayButton().handle(ButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         verify { MusicPlayerHelper.changePauseStatusOnTrack(any(), any(), any()) }
     }
