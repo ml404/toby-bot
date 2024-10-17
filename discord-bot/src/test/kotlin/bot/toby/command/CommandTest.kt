@@ -1,6 +1,6 @@
 package bot.toby.command
 
-import bot.database.dto.MusicDto
+import database.dto.MusicDto
 import io.mockk.*
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.*
@@ -103,7 +103,7 @@ interface CommandTest {
         val targetMember: Member = mockk(relaxed = true)
         val botMember: Member = mockk(relaxed = true)
         val messageChannelUnion: MessageChannelUnion = mockk(relaxed = true)
-        val requestingUserDto: bot.database.dto.UserDto = mockk(relaxed = true)
+        val requestingUserDto: database.dto.UserDto = mockk(relaxed = true)
         val webhookMessageCreateAction: WebhookMessageCreateActionImpl<Message> = mockk(relaxed = true)
         val messageCreateAction: MessageCreateAction = mockk(relaxed = true)
         val replyCallbackAction: ReplyCallbackAction = mockk(relaxed = true)

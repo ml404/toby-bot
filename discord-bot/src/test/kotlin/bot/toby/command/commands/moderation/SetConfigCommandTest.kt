@@ -1,8 +1,8 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.dto.ConfigDto
-import bot.database.dto.ConfigDto.Configurations.*
-import bot.database.service.IConfigService
+import database.dto.ConfigDto
+import database.dto.ConfigDto.Configurations.*
+import database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event

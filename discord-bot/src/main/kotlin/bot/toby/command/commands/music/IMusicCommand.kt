@@ -12,7 +12,7 @@ interface IMusicCommand : ICommand {
     fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         deleteDelay: Int?
     )
 

@@ -1,9 +1,9 @@
 package bot.toby.managers
 
-import bot.logging.DiscordLogger
 import bot.toby.helpers.MusicPlayerHelper.formatTime
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import common.logging.DiscordLogger
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed

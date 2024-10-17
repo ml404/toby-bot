@@ -1,6 +1,5 @@
 package bot.toby.command.commands.dnd
 
-import bot.database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
@@ -12,6 +11,7 @@ import bot.toby.command.CommandTest.Companion.user
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
+import database.service.IUserService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member

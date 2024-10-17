@@ -1,10 +1,10 @@
 package bot.toby.managers
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
-import bot.logging.DiscordLogger
 import bot.toby.menu.IMenu
 import bot.toby.menu.MenuContext
+import common.logging.DiscordLogger
+import database.dto.ConfigDto
+import database.service.IConfigService
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable

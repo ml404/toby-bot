@@ -6,7 +6,7 @@ import org.springframework.cache.annotation.EnableCaching
 import org.springframework.context.annotation.ComponentScan
 
 @SpringBootApplication
-@ComponentScan
+@ComponentScan("database", "common", "bot")
 @EnableCaching
 open class Application {
     companion object {

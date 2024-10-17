@@ -1,9 +1,9 @@
 package bot.toby.helpers
 
-import bot.database.dto.MusicDto
-import bot.database.dto.UserDto
-import bot.database.service.IUserService
-import bot.logging.DiscordLogger
+import database.dto.MusicDto
+import database.dto.UserDto
+import database.service.IUserService
+import common.logging.DiscordLogger
 import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service
 

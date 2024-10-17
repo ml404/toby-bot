@@ -26,7 +26,7 @@ class MemeCommand : IFetchCommand {
     private val TIME_PERIOD = "timeperiod"
     private val LIMIT = "limit"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         try {
             logger.setGuildAndMemberContext(ctx.guild, ctx.member)
             handle(ctx, HttpClients.createDefault(), requestingUserDto, deleteDelay)
@@ -40,7 +40,7 @@ class MemeCommand : IFetchCommand {
     fun handle(
         ctx: CommandContext,
         httpClient: HttpClient,
-        requestingUserDto: bot.database.dto.UserDto?,
+        requestingUserDto: database.dto.UserDto?,
         deleteDelay: Int?
     ) {
         val event = ctx.event

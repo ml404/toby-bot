@@ -1,12 +1,12 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.helpers.UserDtoHelper
+import database.service.IUserService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -40,7 +40,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withCorrectPermissions_updatesTargetUser() {
         // Arrange
         val commandContext = CommandContext(event)
-        val targetUserDto = mockk<bot.database.dto.UserDto>(relaxed = true)
+        val targetUserDto = mockk<database.dto.UserDto>(relaxed = true)
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
         val modifier = mockk<OptionMapping>()
@@ -53,7 +53,7 @@ internal class AdjustUserCommandTest : CommandTest {
         every { event.getOption("name") } returns permissionOptionMapping
         every { event.getOption("modifier") } returns modifier
         every { userOptionMapping.mentions } returns mentions
-        every { permissionOptionMapping.asString } returns bot.database.dto.UserDto.Permissions.MUSIC.name
+        every { permissionOptionMapping.asString } returns database.dto.UserDto.Permissions.MUSIC.name
         every { mentions.members } returns listOf(targetMember)
         every { modifier.asInt } returns 1
 
@@ -75,7 +75,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withCorrectPermissions_createsTargetUser() {
         // Arrange
         val commandContext = CommandContext(event)
-        val targetUserDto = mockk<bot.database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
@@ -84,7 +84,7 @@ internal class AdjustUserCommandTest : CommandTest {
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("name") } returns permissionOptionMapping
         every { userOptionMapping.mentions } returns mentions
-        every { permissionOptionMapping.asString } returns bot.database.dto.UserDto.Permissions.MUSIC.name
+        every { permissionOptionMapping.asString } returns database.dto.UserDto.Permissions.MUSIC.name
         every { mentions.members } returns listOf(targetMember)
         every { userService.getUserById(any(), any()) } returns null
         every { userService.createNewUser(any()) } returns targetUserDto
@@ -107,7 +107,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withNoMentionedPermissions_Errors() {
         // Arrange
         val commandContext = CommandContext(event)
-        val targetUserDto = mockk<bot.database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
 
@@ -132,7 +132,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withNoMentionedUser_Errors() {
         // Arrange
         val commandContext = CommandContext(event)
-        val targetUserDto = mockk<bot.database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
 
         every { userService.getUserById(any(), any()) } returns targetUserDto
@@ -153,7 +153,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_whenUserIsntOwner_Errors() {
         // Arrange
         val commandContext = CommandContext(event)
-        val targetUserDto = mockk<bot.database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
 
         every { userService.getUserById(any(), any()) } returns targetUserDto

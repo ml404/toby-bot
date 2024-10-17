@@ -1,12 +1,12 @@
 package bot.toby.command.commands.music.channel
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.command.commands.music.IMusicCommand
 import bot.toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import bot.toby.lavaplayer.PlayerManager
+import database.dto.ConfigDto
+import database.service.IConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import org.springframework.beans.factory.annotation.Autowired
@@ -15,14 +15,14 @@ import org.springframework.stereotype.Component
 @Component
 class JoinCommand @Autowired constructor(private val configService: IConfigService) : IMusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         deleteDelay: Int?
     ) {
         val event = ctx.event

@@ -1,10 +1,10 @@
 package bot.toby.managers
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
 import bot.toby.button.ButtonContext
 import bot.toby.button.IButton
 import bot.toby.helpers.UserDtoHelper
+import database.dto.ConfigDto
+import database.service.IConfigService
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable

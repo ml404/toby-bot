@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.service.IUserService
+import database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.entities.Member
@@ -16,7 +16,7 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
     private val USERS = "users"
     private val SOCIAL_CREDIT = "credit"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply(true).queue()
         val member = ctx.member
@@ -32,7 +32,7 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
 
     private fun calculateAndUpdateSocialCredit(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: bot.database.dto.UserDto?,
+        requestingUserDto: database.dto.UserDto?,
         requestingMember: Member?,
         deleteDelay: Int?
     ) {
@@ -83,7 +83,7 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
 
     private fun listSocialCreditScore(
         event: SlashCommandInteractionEvent,
-        userDto: bot.database.dto.UserDto?,
+        userDto: database.dto.UserDto?,
         mentionedName: String,
         deleteDelay: Int?
     ) {
@@ -94,9 +94,9 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
     }
 
     private fun updateUserSocialCredit(
-        targetUserDto: bot.database.dto.UserDto,
+        targetUserDto: database.dto.UserDto,
         socialCreditScore: Long
-    ): bot.database.dto.UserDto {
+    ): database.dto.UserDto {
         targetUserDto.socialCredit = targetUserDto.socialCredit?.plus(socialCreditScore)
         userService.updateUser(targetUserDto)
         return targetUserDto

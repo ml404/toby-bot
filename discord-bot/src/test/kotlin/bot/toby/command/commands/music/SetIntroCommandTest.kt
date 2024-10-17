@@ -1,10 +1,10 @@
 package bot.toby.command.commands.music
 
 import bot.coroutines.MainCoroutineExtension
-import bot.database.dto.ConfigDto
-import bot.database.dto.MusicDto
-import bot.database.dto.UserDto
-import bot.database.service.IConfigService
+import database.dto.ConfigDto
+import database.dto.MusicDto
+import database.dto.UserDto
+import database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
@@ -37,7 +37,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class SetIntroCommandTest : MusicCommandTest {
     private lateinit var setIntroCommand: SetIntroCommand
     private var userDtoHelper: UserDtoHelper = mockk(relaxed = true)
-    private var musicFileService: bot.database.service.IMusicFileService = mockk(relaxed = true)
+    private var musicFileService: database.service.IMusicFileService = mockk(relaxed = true)
     private var configService: IConfigService = mockk(relaxed = true)
     private var eventWaiter: EventWaiter = mockk(relaxed = true)
     private var httpHelper: HttpHelper = mockk(relaxed = true)

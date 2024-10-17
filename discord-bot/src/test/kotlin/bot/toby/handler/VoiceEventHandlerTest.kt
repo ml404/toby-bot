@@ -1,6 +1,6 @@
-import bot.database.dto.ConfigDto
-import bot.database.dto.MusicDto
-import bot.database.service.IConfigService
+import database.dto.ConfigDto
+import database.dto.MusicDto
+import database.service.IConfigService
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper

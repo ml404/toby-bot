@@ -1,8 +1,8 @@
 package bot.toby.menu.menus.dnd
 
-import bot.logging.DiscordLogger
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
+import common.logging.DiscordLogger
 import kotlinx.coroutines.*
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook

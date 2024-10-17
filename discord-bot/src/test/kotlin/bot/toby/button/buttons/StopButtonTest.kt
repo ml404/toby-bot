@@ -1,7 +1,7 @@
 package bot.toby.button.buttons
 
-import bot.database.dto.ConfigDto
-import bot.database.service.*
+import database.dto.ConfigDto
+import database.service.*
 import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.configService
@@ -55,7 +55,7 @@ class StopButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        StopButton().handle(ButtonContext(event), bot.database.dto.UserDto(6L, 1L), 0)
+        StopButton().handle(ButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         verify { MusicPlayerHelper.stopSong(any(), any(), any(), any()) }
     }

@@ -14,7 +14,7 @@ class TeamCommand : IMiscCommand {
     private val TEAM_SIZE = "size"
     private val CLEANUP = "cleanup"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         cleanupTemporaryChannels(event.guild!!.channels)

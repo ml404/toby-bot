@@ -1,9 +1,9 @@
 package bot.toby.helpers
 
 import bot.coroutines.MainCoroutineExtension
-import bot.database.dto.MusicDto
-import bot.database.service.IConfigService
 import bot.toby.handler.EventWaiter
+import database.dto.MusicDto
+import database.service.IConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -36,12 +36,12 @@ class IntroHelperTest {
 
     private lateinit var introHelper: IntroHelper
     private lateinit var userDtoHelper: UserDtoHelper
-    private lateinit var musicFileService: bot.database.service.IMusicFileService
+    private lateinit var musicFileService: database.service.IMusicFileService
     private lateinit var configService: IConfigService
     private lateinit var httpHelper: HttpHelper
     private lateinit var eventWaiter: EventWaiter
     private lateinit var event: SlashCommandInteractionEvent
-    private lateinit var userDto: bot.database.dto.UserDto
+    private lateinit var userDto: database.dto.UserDto
     private lateinit var musicDto: MusicDto
     private lateinit var attachment: Attachment
     private lateinit var hook: InteractionHook

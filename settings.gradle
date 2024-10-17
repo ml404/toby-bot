@@ -7,4 +7,6 @@ pluginManagement {
     }
 }
 rootProject.name = 'toby-bot'
+include 'common'
+include 'database'
 include 'discord-bot'

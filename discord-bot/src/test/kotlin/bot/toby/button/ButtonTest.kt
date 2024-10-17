@@ -1,9 +1,9 @@
 package bot.toby.button
 
-import bot.database.service.*
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.ButtonManager
+import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.MessageEmbed

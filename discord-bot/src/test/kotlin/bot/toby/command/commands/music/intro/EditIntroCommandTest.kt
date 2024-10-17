@@ -1,10 +1,10 @@
 package bot.toby.command.commands.music.intro
 
-import bot.database.dto.MusicDto
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.commands.music.MusicCommandTest
+import database.dto.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

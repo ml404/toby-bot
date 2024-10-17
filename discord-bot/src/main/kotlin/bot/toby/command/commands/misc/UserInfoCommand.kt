@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import bot.database.service.IUserService
+import database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.entities.Member
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class UserInfoCommand @Autowired constructor(private val userService: IUserService) : IMiscCommand {
     private val USERS = "users"
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply(true).queue()
         printUserInfo(event, requestingUserDto, deleteDelay)
@@ -21,7 +21,7 @@ class UserInfoCommand @Autowired constructor(private val userService: IUserServi
 
     private fun printUserInfo(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: bot.database.dto.UserDto,
+        requestingUserDto: database.dto.UserDto,
         deleteDelay: Int?
     ) {
         if (event.options.isEmpty()) {
@@ -56,7 +56,7 @@ class UserInfoCommand @Autowired constructor(private val userService: IUserServi
             .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
-    private fun calculateMusicFileData(member: Member, requestingUserDto: bot.database.dto.UserDto): String {
+    private fun calculateMusicFileData(member: Member, requestingUserDto: database.dto.UserDto): String {
         val musicFiles = requestingUserDto.musicDtos.filter { !it.fileName.isNullOrBlank() }.sortedBy { it.index }
         return if (musicFiles.isEmpty()) {
             "There is no valid intro music file associated with user ${member.effectiveName}."

@@ -1,6 +1,6 @@
 package bot.toby.command
 
-import bot.logging.DiscordLogger
+import common.logging.DiscordLogger
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
 interface ICommand {
-    fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?)
+    fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?)
     val name: String
     val description: String
     val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)

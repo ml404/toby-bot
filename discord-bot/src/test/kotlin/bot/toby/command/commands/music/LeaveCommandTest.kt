@@ -1,6 +1,5 @@
 package bot.toby.command.commands.music
 
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
@@ -13,6 +12,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.LeaveCommand
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import database.service.IConfigService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

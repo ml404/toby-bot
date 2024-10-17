@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 @Component
 class PollCommand : IModerationCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         val hook = event.hook

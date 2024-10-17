@@ -1,7 +1,7 @@
 package bot.toby.command.commands.moderation
 
-import bot.database.dto.ConfigDto
-import bot.database.service.IConfigService
+import database.dto.ConfigDto
+import database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -15,7 +15,7 @@ import java.util.*
 @Component
 class SetConfigCommand @Autowired constructor(private val configService: IConfigService) : IModerationCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply(true).queue()
         val member = ctx.member

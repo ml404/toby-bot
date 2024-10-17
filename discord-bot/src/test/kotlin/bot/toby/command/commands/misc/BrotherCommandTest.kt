@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class BrotherCommandTest : CommandTest {
-    lateinit var brotherService: bot.database.service.IBrotherService
+    lateinit var brotherService: database.service.IBrotherService
     lateinit var tobyEmote: RichCustomEmoji
     lateinit var brotherCommand: BrotherCommand
 
@@ -41,7 +41,7 @@ internal class BrotherCommandTest : CommandTest {
     fun testDetermineBrother_BrotherExistsWithNoMention() {
         // Arrange
         val mentions = mockk<Mentions>()
-        val brotherDto = bot.database.dto.BrotherDto().apply {
+        val brotherDto = database.dto.BrotherDto().apply {
             discordId = 1L
             brotherName = "TestBrother"
         }
@@ -69,7 +69,7 @@ internal class BrotherCommandTest : CommandTest {
     fun testDetermineBrother_BrotherDoesntExistWithNoMention() {
         // Arrange
         val mentions = mockk<Mentions>()
-        val brotherDto = bot.database.dto.BrotherDto().apply {
+        val brotherDto = database.dto.BrotherDto().apply {
             discordId = 1
             brotherName = "TestBrother"
         }

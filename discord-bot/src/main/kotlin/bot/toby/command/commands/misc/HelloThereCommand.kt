@@ -1,8 +1,8 @@
 package bot.toby.command.commands.misc
 
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import database.service.IConfigService
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,7 +16,7 @@ class HelloThereCommand @Autowired constructor(private val configService: IConfi
     private val DEFAULT_DATE_FORMAT = "yyyy/MM/dd"
     private val REFERENCE_DATE = LocalDate.of(2005, 5, 19)
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
 

@@ -1,12 +1,16 @@
 package bot.toby.managers
 
 import bot.Application
-import bot.configuration.*
-import bot.database.service.IConfigService
+import bot.configuration.TestAppConfig
+import bot.configuration.TestBotConfig
+import bot.configuration.TestManagerConfig
 import bot.toby.menu.IMenu
 import bot.toby.menu.menus.EditIntroMenu
 import bot.toby.menu.menus.SetIntroMenu
 import bot.toby.menu.menus.dnd.DndMenu
+import common.configuration.TestCachingConfig
+import database.configuration.TestDatabaseConfig
+import database.service.IConfigService
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach

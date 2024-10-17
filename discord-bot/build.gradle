@@ -34,9 +34,16 @@ configurations {
     }
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:$springBootVersion"
+    }
+}
+
 dependencies {
+    implementation project(":common")
+    implementation project(":database")
     compileOnly 'org.jetbrains:annotations:24.0.0'
-    implementation 'org.apache.commons:commons-lang3:3.13.0'
     implementation "net.dv8tion:JDA:5.0.2"
     implementation 'dev.arbjerg:lavaplayer:2.2.1'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
@@ -60,21 +67,17 @@ dependencies {
     implementation 'org.springframework:spring-context'
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.10"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
     implementation 'org.springdoc:springdoc-openapi-kotlin:1.7.0'
     implementation 'dev.lavalink.youtube:common:1.7.2'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
-    runtimeOnly 'org.hibernate.orm:hibernate-core:6.6.1.Final'
-    runtimeOnly 'com.h2database:h2'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
-    // duration nullable intermittently broken, seems to work in 1.13.13
-    testImplementation 'io.mockk:mockk:1.13.13'
+    testImplementation project(path: ':database', configuration: 'testArtifacts')
+    testImplementation project(path: ':common', configuration: 'testArtifacts')
+    testImplementation "io.mockk:mockk:$mockk_version"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    testImplementation 'com.h2database:h2'
 }
 
 tasks.register('deleteExtras', Delete) {
@@ -126,4 +129,17 @@ test {
 
 kotlin {
     jvmToolchain(22)
+}
+
+configurations {
+    testArtifacts
+}
+
+task testJar(type: Jar) {
+    archiveClassifier = 'tests'  // Naming the JAR with a 'tests' classifier
+    from sourceSets.test.output  // Include test classes in the JAR
+}
+
+artifacts {
+    testArtifacts testJar
 }

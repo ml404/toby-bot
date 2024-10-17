@@ -1,9 +1,9 @@
 package bot.toby.command.commands.misc
 
-import bot.database.service.IUserService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import database.service.IUserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -48,7 +48,7 @@ internal class EightBallCommandTest : CommandTest {
         val ctx = CommandContext(event)
 
         // Mock requestingUserDto
-        val tomsDiscordUser = bot.database.dto.UserDto(
+        val tomsDiscordUser = database.dto.UserDto(
             EightBallCommand.TOMS_DISCORD_ID,
             1L,
             superUser = true,

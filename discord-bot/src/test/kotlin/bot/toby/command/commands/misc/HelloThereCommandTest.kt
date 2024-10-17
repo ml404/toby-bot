@@ -1,11 +1,11 @@
 package bot.toby.command.commands.misc
 
-import bot.database.dto.ConfigDto
-import bot.database.dto.MusicDto
-import bot.database.service.IConfigService
 import bot.toby.command.CommandContext
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import database.dto.ConfigDto
+import database.dto.MusicDto
+import database.service.IConfigService
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -100,8 +100,8 @@ class HelloThereCommandTest : CommandTest {
     }
 
     companion object {
-        private val userDto: bot.database.dto.UserDto
-            get() = bot.database.dto.UserDto(
+        private val userDto: database.dto.UserDto
+            get() = database.dto.UserDto(
                 1L, 1L,
                 superUser = true,
                 musicPermission = true,

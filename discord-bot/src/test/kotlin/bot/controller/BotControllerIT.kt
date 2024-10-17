@@ -1,7 +1,11 @@
 package bot.controller
 
 import bot.Application
-import bot.configuration.*
+import bot.configuration.TestAppConfig
+import bot.configuration.TestBotConfig
+import bot.configuration.TestManagerConfig
+import common.configuration.TestCachingConfig
+import database.configuration.TestDatabaseConfig
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

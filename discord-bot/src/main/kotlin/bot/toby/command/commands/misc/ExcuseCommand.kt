@@ -1,9 +1,9 @@
 package bot.toby.command.commands.misc
 
-import bot.database.dto.ExcuseDto
-import bot.database.service.IExcuseService
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import database.dto.ExcuseDto
+import database.service.IExcuseService
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -19,7 +19,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
 
     override val name = "excuse"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: bot.database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         val guildId = event.guild!!.idLong
@@ -59,7 +59,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
     }
 
     private fun approveExcuse(
-        requestingUserDto: bot.database.dto.UserDto?,
+        requestingUserDto: database.dto.UserDto?,
         event: SlashCommandInteractionEvent,
         deleteDelay: Int?
     ) {
@@ -132,7 +132,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
     }
 
     private fun deleteExcuse(
-        requestingUserDto: bot.database.dto.UserDto?,
+        requestingUserDto: database.dto.UserDto?,
         event: SlashCommandInteractionEvent,
         deleteDelay: Int?
     ) {
