@@ -1,8 +1,8 @@
 package bot.toby.managers
 
 import bot.database.dto.ConfigDto
+import bot.database.dto.UserDto
 import bot.database.service.IConfigService
-import bot.database.service.IUserService
 import bot.logging.DiscordLogger
 import bot.toby.command.CommandContext
 import bot.toby.command.ICommand
@@ -22,7 +22,6 @@ import java.util.*
 @Configurable
 class CommandManager @Autowired constructor(
     private val configService: IConfigService,
-    private val userService: IUserService,
     private val userDtoHelper: UserDtoHelper,
     private val commands: List<ICommand>
 ) {
@@ -76,15 +75,15 @@ class CommandManager @Autowired constructor(
             lastCommands[event.guild!!] = Pair(it, ctx)
             requestingUserDto?.let { userDto ->
                 it.handle(ctx, userDto, deleteDelay)
-                attributeSocialCredit(ctx, userService, userDto, deleteDelay)
+                attributeSocialCredit(ctx, userDtoHelper, userDto, deleteDelay)
             }
         }
     }
 
     private fun attributeSocialCredit(
         ctx: CommandContext,
-        userService: IUserService,
-        requestingUserDto: bot.database.dto.UserDto,
+        userDtoHelper: UserDtoHelper,
+        requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
         val socialCreditScore = requestingUserDto.socialCredit
@@ -92,7 +91,7 @@ class CommandManager @Autowired constructor(
         val socialCredit = r.nextInt(5)
         val awardedSocialCredit = socialCredit * 5
         requestingUserDto.socialCredit = socialCreditScore?.plus(awardedSocialCredit)
-        userService.updateUser(requestingUserDto)
+        userDtoHelper.updateUser(requestingUserDto)
         //        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 }

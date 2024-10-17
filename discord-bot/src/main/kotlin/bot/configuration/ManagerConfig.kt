@@ -1,7 +1,6 @@
 package bot.configuration
 
 import bot.database.service.IConfigService
-import bot.database.service.IUserService
 import bot.toby.button.IButton
 import bot.toby.command.ICommand
 import bot.toby.helpers.UserDtoHelper
@@ -20,13 +19,11 @@ open class ManagerConfig {
     @Bean
     open fun commandManager(
         configService: IConfigService,
-        userService: IUserService,
         userDtoHelper: UserDtoHelper,
         commandList: List<ICommand>
     ): CommandManager {
         return CommandManager(
             configService,
-            userService,
             userDtoHelper,
             commandList
         )

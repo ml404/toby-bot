@@ -48,9 +48,7 @@ import org.springframework.test.context.ActiveProfiles
 class CommandManagerTest {
 
     lateinit var configService: IConfigService
-    lateinit var userService: IUserService
     lateinit var userDtoHelper: UserDtoHelper
-    lateinit var dndHelper: DnDHelper
     private lateinit var commandManager: CommandManager
 
     @Autowired
@@ -59,9 +57,8 @@ class CommandManagerTest {
     @BeforeEach
     fun openMocks() {
         configService = mockk()
-        userService = mockk()
         userDtoHelper = mockk()
-        commandManager = CommandManager(configService, userService, userDtoHelper, commands)
+        commandManager = CommandManager(configService, userDtoHelper, commands)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }
@@ -170,8 +167,7 @@ class CommandManagerTest {
             every { handle(any(), any(), any()) } just Runs
         }
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
-        every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
-        every { userService.updateUser(any()) } returns mockk(relaxed = true)
+        every { userDtoHelper.updateUser(any()) } returns mockk(relaxed = true)
         every { userDtoHelper.calculateUserDto(any(), any(), any()) } returns mockk(relaxed = true)
 
         // Real instance of CommandManager is used, so you can't mock it directly
