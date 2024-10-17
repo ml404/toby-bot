@@ -5,23 +5,31 @@ Config:
  - '**/*.properties'
  - '**/*.gradle'
 
+Bot:
+ - discord-bot/src/main/kotlin/**
+
+Common:
+ - common/src/main/kotlin/**
+
 Commands:
-  - src/main/kotlin/toby/command/**
+ - discord-bot/src/main/kotlin/bot/toby/command/**
 
 Buttons:
- - src/main/kotlin/toby/button/**
+ - discord-bot/src/main/kotlin/bot/toby/button/**
 
 Helpers:
-  - src/main/kotlin/toby/helpers/*
+ - discord-bot/src/main/kotlin/bot/toby/helpers/*
 
 Managers:
-  - src/main/kotlin/toby/managers/*
+ - discord-bot/src/main/kotlin/bot/toby/managers/*
 
 Database:
-  - src/main/kotlin/toby/jpa/**
+ - database/src/main/kotlin/database/**
 
 Lavaplayer:
-  - src/main/kotlin/toby/lavaplayer/**
+ - discord-bot/src/main/kotlin/bot/toby/lavaplayer/**
 
 Tests:
-  -src/test/kotlin/**
+ - database/src/test/kotlin/**
+ - discord-bot/src/test/kotlin/**
+ - common/src/test/kotlin/**

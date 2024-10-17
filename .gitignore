@@ -1,9 +1,15 @@
 # Project exclude paths
 /.gradle/
-/build/
-/build/classes/java/main/
 /out/
 /.idea/gradle.xml
 /.idea/libraries
 /.idea/modules
 /.kotlin/
+
+# Ignore build directories
+common/build/
+database/build/
+discord-bot/build/
+
+# Ignore test resources
+common/src/test/resources/
