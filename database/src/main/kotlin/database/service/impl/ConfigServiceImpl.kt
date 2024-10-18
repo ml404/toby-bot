@@ -15,12 +15,12 @@ open class ConfigServiceImpl : IConfigService {
     lateinit var configService: IConfigPersistence
 
     @Cacheable(value = ["configs"])
-    override fun listAllConfig(): List<ConfigDto?>? {
+    override fun listAllConfig(): List<ConfigDto?> {
         return configService.listAllConfig()
     }
 
     @Cacheable(value = ["configs"])
-    override fun listGuildConfig(guildId: String?): List<ConfigDto?>? {
+    override fun listGuildConfig(guildId: String?): List<ConfigDto?> {
         return configService.listGuildConfig(guildId)
     }
 

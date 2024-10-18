@@ -1,5 +1,6 @@
 package database.persistence.impl
 
+import database.dto.BrotherDto
 import database.persistence.IBrotherPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -14,30 +15,30 @@ open class BrotherPersistenceImpl : IBrotherPersistence {
     lateinit var entityManager: EntityManager
 
 
-    override fun getBrotherById(discordId: Long?): database.dto.BrotherDto {
-        return entityManager.find(database.dto.BrotherDto::class.java, discordId)
+    override fun getBrotherById(discordId: Long?): BrotherDto {
+        return entityManager.find(BrotherDto::class.java, discordId)
     }
 
-    override fun getUserByName(name: String?): database.dto.BrotherDto {
-        val q: Query = entityManager.createNamedQuery("BrotherDto.getName", database.dto.BrotherDto::class.java)
+    override fun getUserByName(name: String?): BrotherDto {
+        val q: Query = entityManager.createNamedQuery("BrotherDto.getName", BrotherDto::class.java)
         q.setParameter("name", name)
-        return q.singleResult as database.dto.BrotherDto
+        return q.singleResult as BrotherDto
     }
 
-    override fun updateBrother(brotherDto: database.dto.BrotherDto?): database.dto.BrotherDto? {
+    override fun updateBrother(brotherDto: BrotherDto?): BrotherDto? {
         entityManager.merge(brotherDto)
         entityManager.flush()
         return brotherDto
     }
 
-    override fun listBrothers(): List<database.dto.BrotherDto?> {
-        val q: Query = entityManager.createNamedQuery("BrotherDto.getAll", database.dto.BrotherDto::class.java)
-        return q.resultList as List<database.dto.BrotherDto?>
+    override fun listBrothers(): List<BrotherDto?> {
+        val q: Query = entityManager.createNamedQuery("BrotherDto.getAll", BrotherDto::class.java)
+        return q.resultList as List<BrotherDto?>
     }
 
 
-    override fun createNewBrother(brotherDto: database.dto.BrotherDto): database.dto.BrotherDto {
-        val databaseBrother = entityManager.find(database.dto.BrotherDto::class.java, brotherDto.discordId)
+    override fun createNewBrother(brotherDto: BrotherDto): BrotherDto {
+        val databaseBrother = entityManager.find(BrotherDto::class.java, brotherDto.discordId)
         return if (databaseBrother == null) {
             persistBrotherDto(brotherDto)
         } else if (brotherDto.discordId != databaseBrother.discordId) {
@@ -45,7 +46,7 @@ open class BrotherPersistenceImpl : IBrotherPersistence {
         } else databaseBrother
     }
 
-    override fun deleteBrother(brotherDto: database.dto.BrotherDto?) {
+    override fun deleteBrother(brotherDto: BrotherDto?) {
         entityManager.remove(brotherDto)
         entityManager.flush()
     }
@@ -56,7 +57,7 @@ open class BrotherPersistenceImpl : IBrotherPersistence {
         q.executeUpdate()
     }
 
-    private fun persistBrotherDto(brotherDto: database.dto.BrotherDto): database.dto.BrotherDto {
+    private fun persistBrotherDto(brotherDto: BrotherDto): BrotherDto {
         entityManager.persist(brotherDto)
         entityManager.flush()
         return brotherDto
