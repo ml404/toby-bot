@@ -343,9 +343,7 @@ class IntroHelper(
     ) {
         eventWaiter.waitForMessage(
             { event -> event.author.idLong == user.idLong && event.channel == channel },
-            { event ->
-                handleUserMusicResponse(event, channel, guild)
-            },
+            { event -> handleUserMusicResponse(event, channel, guild) },
             5.minutes,
             {
                 logger.info { "User did not set intro for the server that they don't have one on within the timeout period" }
