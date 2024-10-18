@@ -1,7 +1,7 @@
 package bot.toby.handler
 
-import bot.toby.managers.DefaultCommandManager
 import common.logging.DiscordLogger
+import core.managers.CommandManager
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
@@ -14,16 +14,16 @@ import org.springframework.stereotype.Service
 @Configurable
 class StartUpHandler @Autowired constructor(
     private val jda: JDA,
-    private val commandManager: DefaultCommandManager
+    private val commandManager: CommandManager
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
-        jda.updateCommands().addCommands(commandManager.allSlashCommands).queue()
-        logger.info { "Registered ${commandManager.allSlashCommands.size} commands to ${event.jda.selfUser.name}" }
-        logger.info { "Commands being registered: ${commandManager.allSlashCommands.map { it?.name }}" }
+        jda.updateCommands().addCommands(commandManager.slashCommands).queue()
+        logger.info { "Registered ${commandManager.slashCommands.size} commands to ${event.jda.selfUser.name}" }
+        logger.info { "Commands being registered: ${commandManager.slashCommands.map { it?.name }}" }
     }
 
     override fun onGuildReady(event: GuildReadyEvent) {

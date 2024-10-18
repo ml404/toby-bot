@@ -1,10 +1,10 @@
 package bot.toby.handler
 
 import bot.toby.emote.Emotes
-import bot.toby.managers.DefaultButtonManager
-import bot.toby.managers.DefaultCommandManager
-import bot.toby.managers.DefaultMenuManager
 import common.logging.DiscordLogger
+import core.managers.ButtonManager
+import core.managers.CommandManager
+import core.managers.MenuManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,9 +24,9 @@ import kotlin.coroutines.CoroutineContext
 @Service
 class MessageEventHandler @Autowired constructor(
     private val jda: JDA,
-    private val commandManager: DefaultCommandManager,
-    private val buttonManager: DefaultButtonManager,
-    private val menuManager: DefaultMenuManager
+    private val commandManager: CommandManager,
+    private val buttonManager: ButtonManager,
+    private val menuManager: MenuManager
 ) : ListenerAdapter(), CoroutineScope {
 
     private val job = SupervisorJob()
@@ -94,7 +94,7 @@ class MessageEventHandler @Autowired constructor(
     }
 
     private fun suggestCommands(input: String): List<String> {
-        return commandManager.allCommands.filter { it.name.startsWith(input, ignoreCase = true) }.map { it.name }
+        return commandManager.commands.filter { it.name.startsWith(input, ignoreCase = true) }.map { it.name }
     }
 
 
