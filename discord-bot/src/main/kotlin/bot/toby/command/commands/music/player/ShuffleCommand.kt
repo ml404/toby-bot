@@ -1,17 +1,16 @@
 package bot.toby.command.commands.music.player
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.lavaplayer.PlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import core.command.CommandContext
 import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 @Component
-class ShuffleCommand : IMusicCommand {
+class ShuffleCommand : MusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -25,17 +24,25 @@ class ShuffleCommand : IMusicCommand {
         val event = ctx.event
         event.deferReply().queue()
         if (requestingUserDto.musicPermission) {
-            if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+            if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
             val guild = event.guild!!
             val trackScheduler = instance.getMusicManager(guild).scheduler
             val queue = trackScheduler.queue
             if (queue.size == 0) {
-                event.hook.sendMessage("I can't shuffle a queue that doesn't exist").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                event.hook.sendMessage("I can't shuffle a queue that doesn't exist").queue(
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                        deleteDelay!!
+                    )
+                )
                 return
             }
             val shuffledAudioTracks = shuffleAudioTracks(queue)
             trackScheduler.queue = shuffledAudioTracks
-            event.hook.sendMessage("The queue has been shuffled 🦧").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage("The queue has been shuffled 🦧").queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
         }
     }
 

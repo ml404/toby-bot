@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
@@ -37,7 +37,7 @@ internal class TeamCommandTest : CommandTest {
         val deleteDelay = 0
 
         // Create a CommandContext
-        val ctx = CommandContext(event)
+        val ctx = CommandContextImpl(event)
 
         // Test the handle method
         teamCommand.handle(ctx, requestingUserDto, deleteDelay)
@@ -91,7 +91,7 @@ internal class TeamCommandTest : CommandTest {
         guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember2)
 
         // Create a CommandContext
-        val ctx = CommandContext(event)
+        val ctx = CommandContextImpl(event)
 
         // Test the handle method
         teamCommand.handle(ctx, requestingUserDto, deleteDelay)

@@ -3,8 +3,8 @@ package bot.toby.menu.menus.dnd
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.MenuHelper.DND
-import bot.toby.menu.IMenu
-import bot.toby.menu.MenuContext
+import core.menu.Menu
+import core.menu.MenuContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,7 +17,7 @@ class DndMenu @Autowired constructor(
     private val dnDHelper: DnDHelper,
     private val coroutineHandler: DndApiCoroutineHandler = DndApiCoroutineHandler(dispatcher, httpHelper, dnDHelper),
     private val eventProcessor: DndEventProcessor = DndEventProcessor()
-) : IMenu {
+) : Menu {
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)

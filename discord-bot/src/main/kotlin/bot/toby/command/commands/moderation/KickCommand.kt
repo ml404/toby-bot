@@ -1,14 +1,13 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
 
 @Component
-class KickCommand : IModerationCommand {
+class KickCommand : ModerationCommand {
     companion object {
         private const val USERS = "users"
     }
@@ -27,7 +26,11 @@ class KickCommand : IModerationCommand {
             ?.members
 
         if (mentionedMembers.isNullOrEmpty()) {
-            event.hook.sendMessage("You must mention 1 or more Users to kick.").queue(invokeDeleteOnMessageResponse(deleteDelaySafe))
+            event.hook.sendMessage("You must mention 1 or more Users to kick.").queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelaySafe
+                )
+            )
             return
         }
 
@@ -36,17 +39,29 @@ class KickCommand : IModerationCommand {
                 !member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS) -> {
                     event.hook
                         .sendMessage("You can't kick ${target.effectiveName}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelaySafe))
+                        .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelaySafe))
                 }
                 !botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS) -> {
                     event.hook
                         .sendMessage("I'm not allowed to kick ${target.effectiveName}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelaySafe))
+                        .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelaySafe))
                 }
                 else -> {
                     guild.kick(target).reason("because you told me to.").queue(
-                        { event.hook.sendMessage("Shot hit the mark... something about fortnite?").queue(invokeDeleteOnMessageResponse(deleteDelaySafe)) },
-                        { error -> event.hook.sendMessage("Could not kick: ${error.message}").queue(invokeDeleteOnMessageResponse(deleteDelaySafe)) }
+                        {
+                            event.hook.sendMessage("Shot hit the mark... something about fortnite?").queue(
+                                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                                    deleteDelaySafe
+                                )
+                            )
+                        },
+                        { error ->
+                            event.hook.sendMessage("Could not kick: ${error.message}").queue(
+                                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                                    deleteDelaySafe
+                                )
+                            )
+                        }
                     )
                 }
             }

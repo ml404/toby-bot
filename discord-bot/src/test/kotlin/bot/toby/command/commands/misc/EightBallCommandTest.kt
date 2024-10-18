@@ -1,9 +1,9 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -15,7 +15,7 @@ internal class EightBallCommandTest : CommandTest {
 
     lateinit var command: EightBallCommand
 
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
 
     @BeforeEach
     fun setUp() {
@@ -32,7 +32,7 @@ internal class EightBallCommandTest : CommandTest {
     @Test
     fun testCommand_WithNotTom() {
         // Create a CommandContext
-        val ctx = CommandContext(event)
+        val ctx = CommandContextImpl(event)
         val deleteDelay = 0 // Set your desired deleteDelay
 
         // Test the handle method
@@ -45,7 +45,7 @@ internal class EightBallCommandTest : CommandTest {
     @Test
     fun testCommand_WithTom() {
         // Create a CommandContext
-        val ctx = CommandContext(event)
+        val ctx = CommandContextImpl(event)
 
         // Mock requestingUserDto
         val tomsDiscordUser = database.dto.UserDto(

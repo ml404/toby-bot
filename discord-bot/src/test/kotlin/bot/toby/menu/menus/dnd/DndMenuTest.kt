@@ -2,7 +2,7 @@ package bot.toby.menu.menus.dnd
 
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
-import bot.toby.menu.MenuContext
+import bot.toby.menu.DefaultMenuContext
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -36,7 +36,7 @@ class DndMenuTest {
     @Test
     fun `handle should call handler with correct parameters`() = runTest(dispatcher) {
         // Arrange
-        val ctx = mockk<MenuContext>(relaxed = true)
+        val ctx = mockk<DefaultMenuContext>(relaxed = true)
         val event = mockk<StringSelectInteractionEvent>(relaxed = true)
         val hook = mockk<InteractionHook>(relaxed = true)
 

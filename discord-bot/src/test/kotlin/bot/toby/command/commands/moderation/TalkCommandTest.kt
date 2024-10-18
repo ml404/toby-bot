@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.botMember
 import bot.toby.command.CommandTest.Companion.event
@@ -36,7 +36,7 @@ internal class TalkCommandTest : CommandTest {
     @Test
     fun test_talkWithValidPermissions_unmutesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         talkSetup(true, true, listOf(targetMember))
 
         // Act
@@ -50,7 +50,7 @@ internal class TalkCommandTest : CommandTest {
     @Test
     fun test_talkWithValidPermissionsAndMultipleMembers_unmutesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         talkSetup(true, true, listOf(member, targetMember))
 
         // Act
@@ -65,7 +65,7 @@ internal class TalkCommandTest : CommandTest {
     @Test
     fun test_talkWithInvalidBotPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         talkSetup(false, true, listOf(targetMember))
 
         // Act
@@ -83,7 +83,7 @@ internal class TalkCommandTest : CommandTest {
     @Test
     fun test_talkWithInvalidUserPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         talkSetup(true, false, listOf(targetMember))
 
         // Act

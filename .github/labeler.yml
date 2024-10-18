@@ -8,28 +8,36 @@ Config:
 Bot:
  - discord-bot/src/main/kotlin/**
 
-Common:
- - common/src/main/kotlin/**
+Buttons:
+ - discord-bot/src/main/kotlin/bot/toby/button/**
 
 Commands:
  - discord-bot/src/main/kotlin/bot/toby/command/**
 
-Buttons:
- - discord-bot/src/main/kotlin/bot/toby/button/**
+Common:
+ - common/src/main/kotlin/**
 
-Helpers:
- - discord-bot/src/main/kotlin/bot/toby/helpers/*
-
-Managers:
- - discord-bot/src/main/kotlin/bot/toby/managers/*
+Core-api:
+ - core-api/src/main/kotlin/**
 
 Database:
  - database/src/main/kotlin/database/**
 
+Helpers:
+ - discord-bot/src/main/kotlin/bot/toby/helpers/*
+
 Lavaplayer:
  - discord-bot/src/main/kotlin/bot/toby/lavaplayer/**
 
+Managers:
+ - discord-bot/src/main/kotlin/bot/toby/managers/*
+
+web:
+ - web/src/main/kotlin/**
+
 Tests:
+ - common/src/test/kotlin/**
+ - core-api/src/test/kotlin/**
  - database/src/test/kotlin/**
  - discord-bot/src/test/kotlin/**
- - common/src/test/kotlin/**
+ - web/src/test/kotlin/**

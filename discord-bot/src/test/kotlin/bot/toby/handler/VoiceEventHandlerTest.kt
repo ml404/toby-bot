@@ -1,10 +1,10 @@
-import database.dto.ConfigDto
-import database.dto.MusicDto
-import database.service.IConfigService
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.lavaplayer.PlayerManager
+import database.dto.ConfigDto
+import database.dto.MusicDto
+import database.service.ConfigService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 class VoiceEventHandlerTest {
 
     private val jda: JDA = mockk()
-    private val configService: IConfigService = mockk()
+    private val configService: ConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
     private val introHelper: IntroHelper = mockk()
 

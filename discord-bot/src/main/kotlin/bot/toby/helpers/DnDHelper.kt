@@ -1,10 +1,9 @@
 package bot.toby.helpers
 
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
-import bot.toby.command.commands.dnd.DnDCommand.Companion.FEATURE_NAME
-import bot.toby.command.commands.dnd.DnDCommand.Companion.RULE_NAME
-import bot.toby.command.commands.dnd.DnDCommand.Companion.SPELL_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.CONDITION_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.FEATURE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.RULE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SPELL_NAME
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
 import common.logging.DiscordLogger
@@ -111,7 +110,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
                 .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
                 .queue()
             hook.setEphemeral(true).sendMessage("Next turn: ${sortedEntries[initiativeIndex.get()].key}").queue(
-                invokeDeleteOnMessageResponse(deleteDelay ?: 0)
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0)
             )
         }
     }

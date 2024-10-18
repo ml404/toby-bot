@@ -4,13 +4,13 @@ import bot.Application
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
-import bot.toby.menu.IMenu
 import bot.toby.menu.menus.EditIntroMenu
 import bot.toby.menu.menus.SetIntroMenu
 import bot.toby.menu.menus.dnd.DndMenu
 import common.configuration.TestCachingConfig
+import core.menu.Menu
 import database.configuration.TestDatabaseConfig
-import database.service.IConfigService
+import database.service.ConfigService
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
@@ -34,17 +34,17 @@ import org.springframework.test.context.ActiveProfiles
 @ActiveProfiles("test")
 internal class MenuManagerTest {
 
-    lateinit var configService: IConfigService
+    lateinit var configService: ConfigService
 
     @Autowired
-    lateinit var menus: List<IMenu>
-    private lateinit var menuManager: MenuManager
+    lateinit var menus: List<Menu>
+    private lateinit var menuManager: DefaultMenuManager
 
 
     @BeforeEach
     fun setUp() {
         configService = mockk()
-        menuManager = MenuManager(configService, menus)
+        menuManager = DefaultMenuManager(configService, menus)
     }
     @AfterEach
     fun tearDown(){
@@ -53,14 +53,15 @@ internal class MenuManagerTest {
 
     @Test
     fun testAllMenus() {
-        val availableMenus: List<Class<out IMenu>> = listOf(DndMenu::class.java, SetIntroMenu::class.java, EditIntroMenu::class.java )
+        val availableMenus: List<Class<out Menu>> =
+            listOf(DndMenu::class.java, SetIntroMenu::class.java, EditIntroMenu::class.java)
         assertEquals(3, menuManager.menus.size)
         assertTrue(availableMenus.containsAll(menuManager.menus.map { it.javaClass }.toList()))
     }
 
     @Test
     fun testMenu() {
-        val menuManager = MenuManager(configService, menus)
+        val menuManager = DefaultMenuManager(configService, menus)
         val menu = menuManager.getMenu("dnd")
         assertNotNull(menu)
         assertEquals("dnd", menu?.name)
@@ -68,7 +69,7 @@ internal class MenuManagerTest {
 
     @Test
     fun testMenuWithLongerName() {
-        val menuManager = MenuManager(configService, menus)
+        val menuManager = DefaultMenuManager(configService, menus)
         val menu = menuManager.getMenu("dnd:spell")
         assertNotNull(menu)
         assertEquals("dnd", menu?.name)

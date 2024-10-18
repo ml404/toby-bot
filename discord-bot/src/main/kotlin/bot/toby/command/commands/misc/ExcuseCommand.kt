@@ -1,9 +1,8 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import database.dto.ExcuseDto
-import database.service.IExcuseService
+import database.service.ExcuseService
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -11,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseService) : IMiscCommand {
+class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseService) : MiscCommand {
     private val EXCUSE = "excuse"
     private val EXCUSE_ID = "id"
     private val AUTHOR = "author"
@@ -42,11 +41,15 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
         val excuseDtos = excuseService.listApprovedGuildExcuses(guildId)
         if (excuseDtos.isEmpty()) {
             event.hook.sendMessage("There are no approved excuses, consider submitting some.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
         val excusesMessage = buildExcusesMessage(excuseDtos)
-        event.hook.sendMessage(excusesMessage).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(excusesMessage).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     private fun buildExcusesMessage(excuseDtos: List<ExcuseDto?>): String {
@@ -70,9 +73,13 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
                 excuseById.approved = true
                 excuseService.updateExcuse(excuseById)
                 event.hook.sendMessageFormat("Approved excuse '%s'.", excuseById.excuse)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
             } else {
-                event.hook.sendMessage(EXISTING_EXCUSE_MESSAGE).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                event.hook.sendMessage(EXISTING_EXCUSE_MESSAGE).queue(
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                        deleteDelay!!
+                    )
+                )
             }
         } else {
             sendErrorMessage(event, deleteDelay!!)
@@ -83,7 +90,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
         val excuseDtos = excuseService.listApprovedGuildExcuses(event.guild!!.idLong)
         if (excuseDtos.isEmpty()) {
             event.hook.sendMessage("There are no approved excuses, consider submitting some.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
         val randomExcuse = excuseDtos.random()
@@ -93,7 +100,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
             randomExcuse?.excuse,
             randomExcuse?.author
         )
-            .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     private fun createNewExcuse(event: SlashCommandInteractionEvent, deleteDelay: Int?) {
@@ -102,7 +109,11 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
         val author = event.getOption(AUTHOR)?.asMember?.effectiveName ?: event.user.name
         val existingExcuse = excuseService.listAllGuildExcuses(guildId).find { it?.excuse == excuseMessage }
         if (existingExcuse != null) {
-            event.hook.sendMessage(EXISTING_EXCUSE_MESSAGE).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage(EXISTING_EXCUSE_MESSAGE).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
         } else {
             val excuseDto = ExcuseDto().apply {
                 this.guildId = guildId
@@ -116,7 +127,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
                 excuseMessage,
                 author,
                 newExcuse?.id
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            ).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
         }
     }
 
@@ -124,11 +135,15 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
         val excuseDtos = excuseService.listPendingGuildExcuses(guildId)
         if (excuseDtos.isEmpty()) {
             event.hook.sendMessage("There are no excuses pending approval, consider submitting some.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
             return
         }
         val excusesMessage = buildExcusesMessage(excuseDtos)
-        event.hook.sendMessage(excusesMessage).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(excusesMessage).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     private fun deleteExcuse(
@@ -140,7 +155,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseSer
             val excuseId = event.getOption(EXCUSE_ID)?.asLong ?: return
             excuseService.deleteExcuseById(excuseId)
             event.hook.sendMessageFormat("Deleted excuse with id '%d'.", excuseId)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
         } else {
             sendErrorMessage(event, deleteDelay!!)
         }

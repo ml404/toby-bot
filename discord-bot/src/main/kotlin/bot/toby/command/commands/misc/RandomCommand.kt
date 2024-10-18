@@ -1,23 +1,30 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
 
 @Component
-class RandomCommand : IMiscCommand {
+class RandomCommand : MiscCommand {
     private val LIST = "list"
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
         if (event.options.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage(description).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
             return
         }
         val stringList = event.getOption(LIST)?.asString?.split(",")?.dropLastWhile { it.isEmpty() }?.toList()
-        event.hook.sendMessage(stringList?.random() ?: "").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(stringList?.random() ?: "").queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     override val name: String

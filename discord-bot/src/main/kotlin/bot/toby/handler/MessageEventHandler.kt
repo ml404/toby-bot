@@ -1,10 +1,10 @@
 package bot.toby.handler
 
 import bot.toby.emote.Emotes
-import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManager
-import bot.toby.managers.MenuManager
 import common.logging.DiscordLogger
+import core.managers.ButtonManager
+import core.managers.CommandManager
+import core.managers.MenuManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -94,7 +94,7 @@ class MessageEventHandler @Autowired constructor(
     }
 
     private fun suggestCommands(input: String): List<String> {
-        return commandManager.allCommands.filter { it.name.startsWith(input, ignoreCase = true) }.map { it.name }
+        return commandManager.commands.filter { it.name.startsWith(input, ignoreCase = true) }.map { it.name }
     }
 
 

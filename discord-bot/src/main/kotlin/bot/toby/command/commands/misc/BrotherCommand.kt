@@ -1,9 +1,8 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.emote.Emotes
-import database.service.IBrotherService
+import core.command.CommandContext
+import database.service.BrotherService
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -14,8 +13,8 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class BrotherCommand @Autowired constructor(private val brotherService: IBrotherService) :
-    IMiscCommand {
+class BrotherCommand @Autowired constructor(private val brotherService: BrotherService) :
+    MiscCommand {
     override val name = "brother"
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
@@ -38,7 +37,7 @@ class BrotherCommand @Autowired constructor(private val brotherService: IBrother
                 mentions.joinToString("\n") { lookupBrotherMessage(it.idLong, it.effectiveName, tobyEmote) }
             }
         }
-        hook.sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        hook.sendMessage(message).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun lookupBrotherMessage(memberId: Long, memberName: String, tobyEmote: Emoji?): String {

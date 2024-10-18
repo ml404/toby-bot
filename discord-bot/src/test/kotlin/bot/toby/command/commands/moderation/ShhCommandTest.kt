@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
@@ -33,7 +33,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithValidPermissions_mutesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         shhSetup(
             voiceMuteOtherBot = true,
             voiceMuteOtherMember = true,
@@ -51,7 +51,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithValidPermissionsAndMultipleMembers_mutesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         shhSetup(
             voiceMuteOtherBot = true,
             voiceMuteOtherMember = true,
@@ -70,7 +70,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithInvalidBotPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         shhSetup(
             voiceMuteOtherBot = false,
             voiceMuteOtherMember = true,
@@ -91,7 +91,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithInvalidUserPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         shhSetup(
             voiceMuteOtherBot = true,
             voiceMuteOtherMember = false,

@@ -1,6 +1,6 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.commands.music.MusicCommandTest.Companion.audioChannelUnion
@@ -12,7 +12,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.LeaveCommand
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import database.service.IConfigService
+import database.service.ConfigService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -24,7 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 internal class LeaveCommandTest : MusicCommandTest {
     lateinit var command: LeaveCommand
-    lateinit var configService: IConfigService
+    lateinit var configService: ConfigService
 
     @BeforeEach
     fun setup() {
@@ -42,7 +42,7 @@ internal class LeaveCommandTest : MusicCommandTest {
     @Test
     fun test_leaveCommand() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
 
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false

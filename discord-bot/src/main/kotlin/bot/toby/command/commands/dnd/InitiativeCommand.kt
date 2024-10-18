@@ -1,8 +1,7 @@
 package bot.toby.command.commands.dnd
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnHookResponse
 import bot.toby.helpers.DnDHelper
+import core.command.CommandContext
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -14,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper) : IDnDCommand {
+class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnDCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
@@ -62,7 +61,7 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         if (memberList.isEmpty() && nameList.isEmpty()) {
             event.reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.")
                 .setEphemeral(true)
-                .queue(invokeDeleteOnHookResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.Companion.invokeDeleteOnHookResponse(deleteDelay ?: 0))
             return true
         }
         return false
@@ -72,7 +71,7 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         if (dndHelper.sortedEntries.isEmpty()) {
             event.reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
                 .setEphemeral(true)
-                .queue(invokeDeleteOnHookResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.Companion.invokeDeleteOnHookResponse(deleteDelay ?: 0))
             return true
         }
         return false

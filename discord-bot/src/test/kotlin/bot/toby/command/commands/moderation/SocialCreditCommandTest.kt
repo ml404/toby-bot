@@ -1,7 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import database.service.IUserService
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
@@ -9,6 +8,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.CommandTest.Companion.user
+import database.service.UserService
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test
 internal class SocialCreditCommandTest : CommandTest {
     lateinit var socialCreditCommand: SocialCreditCommand
 
-    private lateinit var userService: IUserService
+    private lateinit var userService: UserService
 
     @BeforeEach
     fun setUp() {
@@ -41,7 +41,7 @@ internal class SocialCreditCommandTest : CommandTest {
     @Test
     fun test_socialCreditCommandWithNoArgs_printsRequestingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         val userOptionMapping = mockk<OptionMapping>()
@@ -75,7 +75,7 @@ internal class SocialCreditCommandTest : CommandTest {
     @Test
     fun test_socialCreditCommandWithUserMentionedAndCorrectPermissions_printsRequestingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val userOptionMapping = mockk<OptionMapping>()
         val creditOptionMapping = mockk<OptionMapping>()
         val leaderboardOptionMapping = mockk<OptionMapping>()
@@ -105,7 +105,7 @@ internal class SocialCreditCommandTest : CommandTest {
     @Test
     fun test_socialCreditCommandWithUserMentionedAndCorrectPermissionsAndValueToAdjust_printsAdjustingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val userOptionMapping = mockk<OptionMapping>()
         val scOptionMapping = mockk<OptionMapping>()
         val leaderboardOptionMapping = mockk<OptionMapping>()
@@ -140,7 +140,7 @@ internal class SocialCreditCommandTest : CommandTest {
     @Test
     fun test_socialCreditCommandWithUserMentionedAndIncorrectPermissions_printsRequestingUserDtoScore() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val userOptionMapping = mockk<OptionMapping>(relaxed = true)
         val leaderboardOptionMapping = mockk<OptionMapping>()
         val targetUserDto = mockk<database.dto.UserDto>()
@@ -172,7 +172,7 @@ internal class SocialCreditCommandTest : CommandTest {
     @Test
     fun test_leaderboard_printsLeaderboard() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val targetUserDto = mockk<database.dto.UserDto>()
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)

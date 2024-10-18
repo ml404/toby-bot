@@ -1,13 +1,13 @@
 package bot.toby.button.buttons
 
-import bot.toby.button.ButtonContext
-import bot.toby.button.IButton
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import core.button.Button
+import core.button.ButtonContext
 import org.springframework.stereotype.Component
 
 @Component
-class PausePlayButton : IButton {
+class PausePlayButton : Button {
     override val name: String
         get() = "pause/play"
     override val description: String

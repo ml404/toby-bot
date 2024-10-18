@@ -1,6 +1,6 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.commands.music.player.StopCommand
@@ -32,7 +32,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withBotAndUserBothInSameChannels() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val hook = event.hook
         val embedSlot = slot<MessageEmbed>()
 
@@ -54,7 +54,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withBotNotInChannelAndUserInChannel() {
         // Arrange
         setUpAudioChannelsWithBotNotInChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
@@ -67,7 +67,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withUserNotInChannelAndBotInChannel() {
         // Arrange
         setUpAudioChannelsWithUserNotInChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
@@ -80,7 +80,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withUserInChannelAndBotInChannel_ButChannelsAreDifferent() {
         // Arrange
         setUpAudioChannelsWithUserAndBotInDifferentChannels()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)

@@ -1,7 +1,6 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -9,7 +8,7 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
 
 @Component
-class TeamCommand : IMiscCommand {
+class TeamCommand : MiscCommand {
     private val TEAM_MEMBERS = "members"
     private val TEAM_SIZE = "size"
     private val CLEANUP = "cleanup"
@@ -21,7 +20,11 @@ class TeamCommand : IMiscCommand {
 
         val args = event.options
         if (args.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage(description).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
             return
         }
         if (event.getOption(CLEANUP)?.asBoolean == true) {
@@ -42,7 +45,11 @@ class TeamCommand : IMiscCommand {
             team.forEach { target -> guild.moveVoiceMember(target!!, createdVoiceChannel).queue() }
         }
 
-        event.hook.sendMessage(sb.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(sb.toString()).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     private fun cleanupTemporaryChannels(channels: List<GuildChannel>) {

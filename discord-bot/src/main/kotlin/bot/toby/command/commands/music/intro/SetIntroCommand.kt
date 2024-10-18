@@ -1,14 +1,13 @@
 package bot.toby.command.commands.music.intro
 
-import database.dto.MusicDto
-import database.dto.UserDto
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.helpers.URLHelper
 import bot.toby.lavaplayer.PlayerManager
+import core.command.CommandContext
+import database.dto.MusicDto
+import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -23,7 +22,7 @@ import org.springframework.stereotype.Component
 @Component
 class SetIntroCommand @Autowired constructor(
     private val introHelper: IntroHelper
-) : IMusicCommand {
+) : MusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
@@ -94,7 +93,7 @@ class SetIntroCommand @Autowired constructor(
                 logger.info { "Intro was rejected for being over the specified intro limit length of 20 seconds" }
                 event.hook
                     .sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
                 return@validateIntroLength
             } else {
                 validateAndSetIntro(
@@ -157,7 +156,7 @@ class SetIntroCommand @Autowired constructor(
 
             else -> {
                 event.hook.sendMessage("Please provide a valid link or attachment")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
             }
         }
     }

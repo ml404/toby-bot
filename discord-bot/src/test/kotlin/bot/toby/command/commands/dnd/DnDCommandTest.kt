@@ -1,7 +1,7 @@
 package bot.toby.command.commands.dnd
 
 import bot.coroutines.MainCoroutineExtension
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.interactionHook
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(MainCoroutineExtension::class)
 class DnDCommandTest : CommandTest {
 
-    private lateinit var command: DnDCommand
+    private lateinit var command: DnDSearchCommand
     private val dispatcher: CoroutineDispatcher = StandardTestDispatcher()
     private val deleteDelay = 0
 
@@ -38,7 +38,7 @@ class DnDCommandTest : CommandTest {
         every { anyConstructed<DnDCommandQueryHandler>().processQuery(any(), any(), any()) } just Runs
 
         // Initialize the DnDCommand with mocked HttpHelper
-        command = DnDCommand(dispatcher, mockk(relaxed = true), mockk(relaxed = true))
+        command = DnDSearchCommand(dispatcher, mockk(relaxed = true), mockk(relaxed = true))
     }
 
     @AfterEach
@@ -50,7 +50,7 @@ class DnDCommandTest : CommandTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `should create and call DnDCommandQueryHandler for successful lookup`() = runTest {
-        command.handle(CommandContext(event), mockk(), deleteDelay)
+        command.handle(CommandContextImpl(event), mockk(), deleteDelay)
 
         advanceUntilIdle()
 

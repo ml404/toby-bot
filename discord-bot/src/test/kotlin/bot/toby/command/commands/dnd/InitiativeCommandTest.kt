@@ -1,6 +1,6 @@
 package bot.toby.command.commands.dnd
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guildVoiceState
@@ -11,7 +11,7 @@ import bot.toby.command.CommandTest.Companion.user
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test
 
 internal class InitiativeCommandTest : CommandTest {
     private lateinit var initiativeCommand: InitiativeCommand
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
 
     private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var dndHelper: DnDHelper
@@ -55,7 +55,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithCorrectSetup_WithNames() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val namesMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val dmMember = mockk<Member>()
@@ -88,7 +88,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithCorrectSetup_UsingMemberVoiceState() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val namesMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val dmMember = mockk<Member>()
@@ -127,7 +127,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithNoValidChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val namesMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val dmMember = mockk<Member>()
@@ -169,7 +169,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithNoNonDMMembersAndAValidChannelOption() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val channelOptionMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val guildChannelUnion = mockk<GuildChannelUnion>()

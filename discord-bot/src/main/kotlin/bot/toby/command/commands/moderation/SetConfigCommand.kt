@@ -1,9 +1,8 @@
 package bot.toby.command.commands.moderation
 
+import core.command.CommandContext
 import database.dto.ConfigDto
-import database.service.IConfigService
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import database.service.ConfigService
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -13,7 +12,7 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class SetConfigCommand @Autowired constructor(private val configService: IConfigService) : IModerationCommand {
+class SetConfigCommand @Autowired constructor(private val configService: ConfigService) : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
@@ -21,7 +20,11 @@ class SetConfigCommand @Autowired constructor(private val configService: IConfig
         val member = ctx.member
         if (member?.isOwner != true) {
             event.hook.sendMessage("This is currently reserved for the owner of the server only, this may change in future")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .setEphemeral(true).queue(
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                        deleteDelay ?: 0
+                    )
+                )
             return
         }
         validateArgumentsAndUpdateConfigs(event, deleteDelay ?: 0)
@@ -30,7 +33,11 @@ class SetConfigCommand @Autowired constructor(private val configService: IConfig
     private fun validateArgumentsAndUpdateConfigs(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val options = event.options
         if (options.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.sendMessage(description).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay
+                )
+            )
             return
         }
         options.forEach { optionMapping ->
@@ -63,7 +70,7 @@ class SetConfigCommand @Autowired constructor(private val configService: IConfig
         val newValue = optionMapping.asInt.takeIf { it >= 0 }
         if (newValue == null) {
             event.hook.sendMessage("Value given invalid (a whole number representing percent)")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                .setEphemeral(true).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
 
@@ -79,7 +86,11 @@ class SetConfigCommand @Autowired constructor(private val configService: IConfig
         } else {
             configService.createNewConfig(newConfigDto)
         }
-        event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.sendMessage(messageToSend).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay
+            )
+        )
     }
 
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -98,10 +109,10 @@ class SetConfigCommand @Autowired constructor(private val configService: IConfig
                 configService.createNewConfig(newConfigDto)
             }
             event.hook.sendMessage("Set default move channel to '${newDefaultMoveChannel.name}'")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                .setEphemeral(true).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
         } else {
             event.hook.sendMessage("No valid channel was mentioned, so config was not updated")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                .setEphemeral(true).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 

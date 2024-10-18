@@ -1,15 +1,13 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class HelpCommand @Autowired constructor(private val commands: List<ICommand>) : IMiscCommand {
+class HelpCommand @Autowired constructor(private val commands: List<core.command.Command>) : MiscCommand {
     private val COMMAND = "command"
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val args = ctx.event.options
@@ -19,17 +17,29 @@ class HelpCommand @Autowired constructor(private val commands: List<ICommand>) :
         if (args.isEmpty()) {
             val helpMessage =
                 "For a list of all available commands, visit the [Toby Bot Commands Wiki](https://github.com/ml404/toby-bot/wiki/Commands)"
-            event.hook.sendMessage(helpMessage).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage(helpMessage).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
             return
         }
 
         val searchOptional = event.getOption(COMMAND)?.asString
         val command = getCommand(searchOptional!!)
         if (command == null) {
-            event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
             return
         }
-        event.hook.sendMessage(command.description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage(command.description).setEphemeral(true).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     private fun getCommand(searchOptional: String) = commands.find { it.name.lowercase() == searchOptional }

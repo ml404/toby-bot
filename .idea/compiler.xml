@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <bytecodeTargetLevel target="22"/>
+    <bytecodeTargetLevel target="1.8">
+      <module name="common" target="22" />
+      <module name="toby-bot.core.main" target="22" />
+      <module name="toby-bot.core.test" target="22" />
+      <module name="toby-bot.discord-bot-core.main" target="22" />
+      <module name="toby-bot.discord-bot-core.test" target="22" />
+    </bytecodeTargetLevel>
   </component>
 </project>

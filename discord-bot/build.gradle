@@ -41,10 +41,12 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(":common")
+    implementation project(':common')
     implementation project(":database")
+    implementation project(':core-api')
+    implementation project(":web")
     compileOnly 'org.jetbrains:annotations:24.0.0'
-    implementation "net.dv8tion:JDA:5.0.2"
+    implementation "net.dv8tion:JDA:$jdaVersion"
     implementation 'dev.arbjerg:lavaplayer:2.2.1'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     implementation 'me.duncte123:botCommons:3.1.18'
@@ -75,7 +77,8 @@ dependencies {
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
     testImplementation project(path: ':database', configuration: 'testArtifacts')
-    testImplementation project(path: ':common', configuration: 'testArtifacts')
+    testImplementation project(configuration: 'testArtifacts', path: ':common')
+    testImplementation project(':core-api')
     testImplementation "io.mockk:mockk:$mockk_version"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

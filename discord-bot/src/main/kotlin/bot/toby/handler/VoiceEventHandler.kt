@@ -1,13 +1,13 @@
 package bot.toby.handler
 
-import database.dto.ConfigDto
-import database.service.IConfigService
-import common.logging.DiscordLogger
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MusicPlayerHelper.playUserIntro
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import bot.toby.lavaplayer.PlayerManager
+import common.logging.DiscordLogger
+import database.dto.ConfigDto
+import database.service.ConfigService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
@@ -25,7 +25,7 @@ private const val teamRegex = "(?i)team\\s[0-9]+"
 @Service
 class VoiceEventHandler @Autowired constructor(
     private val jda: JDA,
-    private val configService: IConfigService,
+    private val configService: ConfigService,
     private val userDtoHelper: UserDtoHelper,
     private val introHelper: IntroHelper
 ) : ListenerAdapter() {

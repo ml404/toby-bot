@@ -1,14 +1,13 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import database.service.IUserService
+import core.command.CommandContext
+import database.service.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class EightBallCommand @Autowired constructor(private val userService: IUserService) : IMiscCommand {
+class EightBallCommand @Autowired constructor(private val userService: UserService) : MiscCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()
@@ -38,15 +37,27 @@ class EightBallCommand @Autowired constructor(private val userService: IUserServ
             else -> "I fucked up, please try again"
         }
         if (requestingUserDto.discordId == TOMS_DISCORD_ID) {
-            event.hook.sendMessage("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay!!
+                )
+            )
             val socialCredit = requestingUserDto.socialCredit
             val deductedSocialCredit = -5 * choice
             requestingUserDto.socialCredit = socialCredit?.plus(deductedSocialCredit)
-            event.hook.sendMessage("Deducted: $deductedSocialCredit social credit.").queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.sendMessage("Deducted: $deductedSocialCredit social credit.").queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay
+                )
+            )
             userService.updateUser(requestingUserDto)
             return
         }
-        event.hook.sendMessage("MAGIC 8-BALL SAYS: ${response}.").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage("MAGIC 8-BALL SAYS: ${response}.").queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     override val name: String
