@@ -1,7 +1,6 @@
 package bot.toby.helpers
 
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.command.commands.music.IMusicCommand.Companion.sendDeniedStoppableMessage
+import bot.toby.command.commands.music.MusicCommand.Companion.sendDeniedStoppableMessage
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
@@ -96,7 +95,11 @@ object MusicPlayerHelper {
                 .setColor(Color.RED)
                 .build()
 
-            hook.sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            hook.sendMessageEmbeds(embed).setEphemeral(true).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay ?: 0
+                )
+            )
             true
         } else {
             false
@@ -122,7 +125,7 @@ object MusicPlayerHelper {
                 .build()
 
             hook.sendMessageEmbeds(embed)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
@@ -153,7 +156,7 @@ object MusicPlayerHelper {
             .setColor(Color.CYAN)
             .build()
 
-        hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        hook.sendMessageEmbeds(embed).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
         audioPlayer.isPaused = paused
     }
 
@@ -177,7 +180,11 @@ object MusicPlayerHelper {
                     .setColor(Color.RED)
                     .build()
 
-                hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                hook.sendMessageEmbeds(embed).queue(
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                        deleteDelay ?: 0
+                    )
+                )
                 return
             }
 
@@ -189,7 +196,11 @@ object MusicPlayerHelper {
                     .setColor(Color.RED)
                     .build()
 
-                hook.sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                hook.sendMessageEmbeds(embed).setEphemeral(true).queue(
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                        deleteDelay ?: 0
+                    )
+                )
                 return
             }
         }
@@ -208,7 +219,11 @@ object MusicPlayerHelper {
                 .setColor(Color.CYAN)
                 .build()
 
-            hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            hook.sendMessageEmbeds(embed).queue(
+                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                    deleteDelay ?: 0
+                )
+            )
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }

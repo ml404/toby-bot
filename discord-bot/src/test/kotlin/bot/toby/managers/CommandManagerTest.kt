@@ -2,8 +2,7 @@ package bot.toby.managers
 
 import bot.Application
 import bot.configuration.*
-import bot.toby.command.ICommand
-import bot.toby.command.commands.dnd.DnDCommand
+import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.command.commands.fetch.DbdRandomKillerCommand
@@ -11,7 +10,6 @@ import bot.toby.command.commands.fetch.Kf2RandomMapCommand
 import bot.toby.command.commands.fetch.MemeCommand
 import bot.toby.command.commands.misc.*
 import bot.toby.command.commands.moderation.*
-import bot.toby.command.commands.music.*
 import bot.toby.command.commands.music.channel.JoinCommand
 import bot.toby.command.commands.music.channel.LeaveCommand
 import bot.toby.command.commands.music.intro.EditIntroCommand
@@ -20,6 +18,7 @@ import bot.toby.command.commands.music.player.*
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.PlayerManager
 import common.configuration.TestCachingConfig
+import core.command.Command
 import database.configuration.TestDatabaseConfig
 import database.dto.ConfigDto
 import database.service.*
@@ -51,16 +50,16 @@ class CommandManagerTest {
 
     lateinit var configService: IConfigService
     lateinit var userDtoHelper: UserDtoHelper
-    private lateinit var commandManager: CommandManager
+    private lateinit var commandManager: CommandManagerImpl
 
     @Autowired
-    lateinit var commands: List<ICommand>
+    lateinit var commands: List<Command>
 
     @BeforeEach
     fun openMocks() {
         configService = mockk()
         userDtoHelper = mockk()
-        commandManager = CommandManager(configService, userDtoHelper, commands)
+        commandManager = CommandManagerImpl(configService, userDtoHelper, commands)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }
@@ -80,7 +79,7 @@ class CommandManagerTest {
             MoveCommand::class.java,
             RollCommand::class.java,
             MemeCommand::class.java,
-            DnDCommand::class.java,
+            DnDSearchCommand::class.java,
             InitiativeCommand::class.java,
             HelloThereCommand::class.java,
             BrotherCommand::class.java,
@@ -164,7 +163,7 @@ class CommandManagerTest {
             every { hook } returns mockHook
         }
 
-        val command = mockk<ICommand> {
+        val command = mockk<Command> {
             every { name } returns "8ball"
             every { handle(any(), any(), any()) } just Runs
         }

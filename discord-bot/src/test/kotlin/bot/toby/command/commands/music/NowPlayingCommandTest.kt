@@ -1,4 +1,4 @@
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.commands.music.MusicCommandTest
@@ -35,7 +35,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
     fun testNowPlaying_withNoCurrentTrack_throwsError() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         every { mockAudioPlayer.playingTrack } returns null
 
         // Capture slot for MessageEmbed
@@ -64,7 +64,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
     fun testNowPlaying_withoutCorrectPermission_throwsError() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         every { CommandTest.requestingUserDto.musicPermission } returns false
 
         // Act
@@ -87,7 +87,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
     fun testNowPlaying_withCurrentTrackStream_printsTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         every { track.userData } returns 1
 
         // Capture slot for MessageEmbed
@@ -121,7 +121,7 @@ internal class NowPlayingCommandTest : MusicCommandTest {
     fun testNowPlaying_withCurrentTrackNotStream_printsTrackWithTimestamps() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val audioTrackInfo = AudioTrackInfo("Title", "Author", 1000L, "Identifier", false, "uri")
         every { mockAudioPlayer.playingTrack } returns track
         every { track.info } returns audioTrackInfo

@@ -1,14 +1,16 @@
 package bot.toby.managers
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand
-import bot.toby.command.commands.dnd.IDnDCommand
-import bot.toby.command.commands.fetch.IFetchCommand
-import bot.toby.command.commands.misc.IMiscCommand
-import bot.toby.command.commands.moderation.IModerationCommand
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.CommandContextImpl
+import bot.toby.command.commands.dnd.DnDSearchCommand
+import bot.toby.command.commands.fetch.FetchCommand
+import bot.toby.command.commands.misc.MiscCommand
+import bot.toby.command.commands.moderation.ModerationCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.UserDtoHelper
 import common.logging.DiscordLogger
+import core.command.Command
+import core.command.CommandContext
+import core.managers.CommandManager
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.service.IConfigService
@@ -20,43 +22,45 @@ import org.springframework.beans.factory.annotation.Configurable
 import java.util.*
 
 @Configurable
-class CommandManager @Autowired constructor(
+class CommandManagerImpl @Autowired constructor(
     private val configService: IConfigService,
     private val userDtoHelper: UserDtoHelper,
-    private val commands: List<ICommand>
-) {
-    private val slashCommands: MutableList<CommandData?> = ArrayList()
-    val lastCommands: MutableMap<Guild, Pair<ICommand, CommandContext>> = HashMap()
+    override val commands: List<Command>
+) : CommandManager {
+    override val slashCommands: MutableList<CommandData?> = ArrayList()
+    val lastCommands: MutableMap<Guild, Pair<Command, CommandContext>> = HashMap()
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     init {
         commands.forEach { addCommand(it) }
     }
 
-    private fun addCommand(cmd: ICommand) {
+    private fun addCommand(cmd: Command) {
+        // Accessing the 'name' from the ICommand instance
         val nameFound = slashCommands.any { it?.name.equals(cmd.name, true) }
         require(!nameFound) { "A command with this name is already present" }
+
+        // Accessing 'slashCommand' and 'optionData' from the ICommand instance
         val slashCommand = cmd.slashCommand
         slashCommand.addOptions(cmd.optionData)
         slashCommands.add(slashCommand)
     }
 
     val allSlashCommands: List<CommandData?> get() = slashCommands
-    val allCommands: List<ICommand> get() = commands
-    val musicCommands: List<ICommand> get() = commands.filterIsInstance<IMusicCommand>().toList()
-    val dndCommands: List<ICommand> get() = commands.filterIsInstance<IDnDCommand>().toList()
-    val moderationCommands: List<ICommand> get() = commands.filterIsInstance<IModerationCommand>().toList()
-    val miscCommands: List<ICommand> get() = commands.filterIsInstance<IMiscCommand>().toList()
-    val fetchCommands: List<ICommand> get() = commands.filterIsInstance<IFetchCommand>().toList()
+    val allCommands: List<Command> get() = commands
+    override val musicCommands: List<Command> get() = commands.filterIsInstance<MusicCommand>().toList()
+    override val dndCommands: List<Command> get() = commands.filterIsInstance<DnDSearchCommand>().toList()
+    override val moderationCommands: List<Command> get() = commands.filterIsInstance<ModerationCommand>().toList()
+    override val miscCommands: List<Command> get() = commands.filterIsInstance<MiscCommand>().toList()
+    override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>().toList()
 
-    fun getCommand(search: String): ICommand? = commands.find { it.name.equals(search, true) }
-
-    fun handle(event: SlashCommandInteractionEvent) {
+    override fun handle(event: SlashCommandInteractionEvent) {
         val guildId = event.guild?.id ?: return
         val deleteDelay = configService.getConfigByName(
             ConfigDto.Configurations.DELETE_DELAY.configValue,
             guildId
         )?.value?.toIntOrNull() ?: 0
+
         val requestingUserDto = event.member?.let {
             userDtoHelper.calculateUserDto(
                 event.user.idLong,
@@ -64,14 +68,17 @@ class CommandManager @Autowired constructor(
                 it.isOwner,
             )
         }
+
         logger.setGuildAndMemberContext(event.guild, event.member)
         val invoke = event.name.lowercase(Locale.getDefault())
+
+        // Get the command by name
         val cmd = getCommand(invoke)
         logger.info("Processing command '${cmd?.name}' ...")
 
         cmd?.let {
             event.channel.sendTyping().queue()
-            val ctx = CommandContext(event)
+            val ctx = CommandContextImpl(event)
             lastCommands[event.guild!!] = Pair(it, ctx)
             requestingUserDto?.let { userDto ->
                 it.handle(ctx, userDto, deleteDelay)
@@ -92,6 +99,5 @@ class CommandManager @Autowired constructor(
         val awardedSocialCredit = socialCredit * 5
         requestingUserDto.socialCredit = socialCreditScore?.plus(awardedSocialCredit)
         userDtoHelper.updateUser(requestingUserDto)
-        //        ctx.getEvent().getChannel().sendMessageFormat("Awarded '%s' with %d social credit", ctx.getAuthor().getName(), awardedSocialCredit).queue(invokeDeleteOnMessageResponse(deleteDelay));
     }
 }

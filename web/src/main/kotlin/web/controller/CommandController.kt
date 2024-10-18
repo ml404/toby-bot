@@ -1,7 +1,7 @@
-package bot.controller
+package web.controller
 
-import bot.toby.command.ICommand
-import bot.toby.managers.CommandManager
+import core.command.Command
+import core.managers.CommandManager
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -18,12 +18,13 @@ class CommandController(private val commandManager: CommandManager) {
         ApiResponse(responseCode = "200", description = "Successfully retrieved commands"),
         ApiResponse(responseCode = "500", description = "Internal server error")
     ])
+
     @GetMapping
     fun getCommands(): List<CommandDocumentation> {
-        return commandManager.allCommands.map { command ->
+        return commandManager.commands.map { command ->
             CommandDocumentation(
-                name = command.name,
-                description = command.description,
+                name = command.name, // Accessing instance property
+                description = command.description, // Accessing instance property
                 options = command.optionData.map { option ->
                     OptionDocumentation(
                         name = option.name,
@@ -41,6 +42,7 @@ class CommandController(private val commandManager: CommandManager) {
         }
     }
 
+
     @Operation(summary = "Get command wiki", description = "Fetch an HTML representation of all available commands.")
     @GetMapping("/wiki", produces = ["text/html"])
     fun getCommandsWiki(): String {
@@ -50,7 +52,7 @@ class CommandController(private val commandManager: CommandManager) {
         htmlBuilder.append("<h1>Command Documentation</h1>")
 
         // Function to append a category of commands
-        fun appendCommandCategory(title: String, commands: List<ICommand>) {
+        fun appendCommandCategory(title: String, commands: List<Command>) {
             htmlBuilder.append("<h2>$title</h2>")
             htmlBuilder.append("<table border='1'><thead><tr><th>Command</th><th>Description</th><th>Options</th></tr></thead><tbody>")
             for (command in commands.sortedBy { it.name }) {

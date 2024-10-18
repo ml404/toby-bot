@@ -3,20 +3,18 @@ package bot.toby.button.buttons
 import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.event
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
+import core.command.CommandContext
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ResendLastRequestButtonTest : ButtonTest {
 
-    private lateinit var mockCommand: ICommand
-    private lateinit var commandManager: CommandManager
+    private lateinit var mockCommand: core.command.Command
+    private lateinit var commandManager: CommandManagerImpl
     private lateinit var resendButton: ResendLastRequestButton
     private lateinit var commandContext: CommandContext
 

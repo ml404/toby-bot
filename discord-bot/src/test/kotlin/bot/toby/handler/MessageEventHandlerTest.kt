@@ -1,7 +1,7 @@
 import bot.toby.emote.Emotes
 import bot.toby.handler.MessageEventHandler
 import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
 import bot.toby.managers.MenuManager
 import io.mockk.every
 import io.mockk.junit5.MockKExtension
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 class MessageEventHandlerTest {
 
     private val jda: JDA = mockk()
-    private val commandManager: CommandManager = mockk()
+    private val commandManager: CommandManagerImpl = mockk()
     private val buttonManager: ButtonManager = mockk()
     private val menuManager: MenuManager = mockk()
     private val handler = spyk(

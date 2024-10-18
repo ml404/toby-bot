@@ -1,6 +1,5 @@
 package bot.toby.lavaplayer
 
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
@@ -87,13 +86,13 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
 
             override fun noMatches() {
                 event?.hook?.sendMessageFormat("Nothing found for the link '%s'", trackUrl)?.queue(
-                    invokeDeleteOnMessageResponse(deleteDelay)
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay)
                 )
             }
 
             override fun loadFailed(exception: FriendlyException) {
                 event?.hook?.sendMessageFormat("Could not play: %s", exception.message)?.queue(
-                    invokeDeleteOnMessageResponse(deleteDelay)
+                    core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay)
                 )
             }
         }

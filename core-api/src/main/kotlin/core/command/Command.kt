@@ -1,6 +1,7 @@
-package bot.toby.command
+package core.command
 
 import common.logging.DiscordLogger
+import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -10,11 +11,11 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
-interface ICommand {
-    fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?)
+interface Command {
+    fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?)
     val name: String
     val description: String
-    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
+    val logger: DiscordLogger get() = DiscordLogger.Companion.createLogger(this::class.java)
 
     fun getErrorMessage(serverOwner: String?): String {
         return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to $serverOwner"
@@ -26,11 +27,9 @@ interface ICommand {
         event.hook.sendMessageFormat(getErrorMessage(ownerName)).queue { it.deleteAfter(deleteDelay) }
     }
 
-    val slashCommand: SlashCommandData
-        get() = Commands.slash(name, description)
+    val slashCommand: SlashCommandData get() = Commands.slash(name, description)
 
-    val optionData: List<OptionData>
-        get() = emptyList()
+    val optionData: List<OptionData> get() = emptyList()
 
     companion object {
         @JvmStatic

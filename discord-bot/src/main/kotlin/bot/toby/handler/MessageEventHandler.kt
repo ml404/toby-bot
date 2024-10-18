@@ -2,7 +2,7 @@ package bot.toby.handler
 
 import bot.toby.emote.Emotes
 import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
 import bot.toby.managers.MenuManager
 import common.logging.DiscordLogger
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +24,7 @@ import kotlin.coroutines.CoroutineContext
 @Service
 class MessageEventHandler @Autowired constructor(
     private val jda: JDA,
-    private val commandManager: CommandManager,
+    private val commandManager: CommandManagerImpl,
     private val buttonManager: ButtonManager,
     private val menuManager: MenuManager
 ) : ListenerAdapter(), CoroutineScope {

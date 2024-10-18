@@ -1,14 +1,13 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class ChCommand : IMiscCommand {
+class ChCommand : MiscCommand {
     override val name: String = "ch"
     override val description: String = "Allow me to 'ch' whatever you type."
     private val MESSAGE = "message"
@@ -26,7 +25,11 @@ class ChCommand : IMiscCommand {
             }
         }
 
-        event.hook.sendMessage("Oh! I think you mean: '$newMessage'").queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+        event.hook.sendMessage("Oh! I think you mean: '$newMessage'").queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay ?: 0
+            )
+        )
     }
 
     override val optionData: List<OptionData>

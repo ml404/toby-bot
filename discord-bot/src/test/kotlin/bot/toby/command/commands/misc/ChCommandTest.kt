@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
@@ -36,7 +36,7 @@ internal class ChCommandTest : CommandTest {
     @Test
     fun testHandle() {
         // Create a CommandContext
-        val ctx = CommandContext(event)
+        val ctx = CommandContextImpl(event)
 
         // Mock requestingUserDto
         val deleteDelay = 0 // Set your desired deleteDelay

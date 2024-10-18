@@ -1,6 +1,6 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.commands.music.player.ResumeCommand
@@ -30,7 +30,7 @@ internal class ResumeCommandTest : MusicCommandTest {
     fun test_resumeMethod_withCorrectChannels_andPausableTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val audioPlayer = MusicCommandTest.mockAudioPlayer
         val playerManager = MusicCommandTest.Companion.playerManager
         val hook = event.hook

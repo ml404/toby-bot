@@ -1,8 +1,7 @@
 package bot.toby.command.commands.misc
 
+import core.command.CommandContext
 import database.service.IUserService
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -11,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class UserInfoCommand @Autowired constructor(private val userService: IUserService) : IMiscCommand {
+class UserInfoCommand @Autowired constructor(private val userService: IUserService) : MiscCommand {
     private val USERS = "users"
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
@@ -33,7 +32,7 @@ class UserInfoCommand @Autowired constructor(private val userService: IUserServi
             } else {
                 event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
                     .setEphemeral(true).queue(
-                        invokeDeleteOnMessageResponse(deleteDelay!!)
+                        core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!)
                     )
             }
         }
@@ -53,7 +52,7 @@ class UserInfoCommand @Autowired constructor(private val userService: IUserServi
         event.hook
             .sendMessage(userInfoMessage)
             .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     private fun calculateMusicFileData(member: Member, requestingUserDto: database.dto.UserDto): String {

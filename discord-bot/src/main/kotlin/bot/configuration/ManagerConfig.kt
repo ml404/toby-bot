@@ -1,10 +1,9 @@
 package bot.configuration
 
 import bot.toby.button.IButton
-import bot.toby.command.ICommand
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
 import bot.toby.managers.MenuManager
 import bot.toby.menu.IMenu
 import database.service.IConfigService
@@ -20,9 +19,9 @@ open class ManagerConfig {
     open fun commandManager(
         configService: IConfigService,
         userDtoHelper: UserDtoHelper,
-        commandList: List<ICommand>
-    ): CommandManager {
-        return CommandManager(
+        commandList: List<core.command.Command>
+    ): CommandManagerImpl {
+        return CommandManagerImpl(
             configService,
             userDtoHelper,
             commandList

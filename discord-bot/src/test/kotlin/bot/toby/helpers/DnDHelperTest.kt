@@ -1,6 +1,6 @@
 package bot.toby.helpers
 
-import bot.toby.command.commands.dnd.DnDCommand.Companion.CONDITION_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.CONDITION_NAME
 import bot.toby.dto.web.dnd.Condition
 import bot.toby.dto.web.dnd.Feature
 import bot.toby.dto.web.dnd.Rule

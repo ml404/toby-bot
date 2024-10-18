@@ -1,6 +1,6 @@
 package bot.toby.command.commands.fetch
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
@@ -64,7 +64,7 @@ internal class MemeCommandTest : CommandTest {
     @Throws(IOException::class)
     fun test_memeCommandWithSubreddit_createsAndSendsEmbed() {
         //Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val subredditOptionMapping = mockk<OptionMapping>()
         val httpClient = mockk<HttpClient>()
         val httpResponse = mockk<HttpResponse>()
@@ -93,7 +93,7 @@ internal class MemeCommandTest : CommandTest {
     @Throws(IOException::class)
     fun test_memeCommandWithSubredditAndTimePeriod_createsAndSendsEmbed() {
         //Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val subredditOptionMapping = mockk<OptionMapping>()
         val timePeriodOptionMapping = mockk<OptionMapping>()
         val httpClient = mockk<HttpClient>()

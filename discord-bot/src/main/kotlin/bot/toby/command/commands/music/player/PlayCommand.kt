@@ -1,9 +1,9 @@
 package bot.toby.command.commands.music.player
 
-import bot.toby.command.CommandContext
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import core.command.CommandContext
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class PlayCommand : IMusicCommand {
+class PlayCommand : MusicCommand {
     private val TYPE = "type"
     private val START_POSITION = "start"
     private val LINK = "link"
@@ -32,7 +32,7 @@ class PlayCommand : IMusicCommand {
             sendErrorMessage(event, deleteDelay!!)
             return
         }
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
         val musicManager = instance.getMusicManager(ctx.guild)
         val type = Optional.ofNullable(event.getOption(TYPE)).map { obj: OptionMapping -> obj.asString }.orElse(LINK)
         val guild = event.guild!!

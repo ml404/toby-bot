@@ -1,9 +1,5 @@
-package bot.controller
+package web.controller
 
-import bot.Application
-import bot.configuration.TestAppConfig
-import bot.configuration.TestBotConfig
-import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import org.hamcrest.Matchers.containsString
@@ -17,15 +13,13 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import web.WebApplication
 
 @SpringBootTest(
     classes = [
-        Application::class,
-        TestAppConfig::class,
-        TestBotConfig::class,
+        WebApplication::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
-        TestManagerConfig::class
     ]
 )
 @AutoConfigureMockMvc

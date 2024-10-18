@@ -1,4 +1,4 @@
-package bot.controller
+package web.controller
 
 import database.dto.ConfigDto
 import database.service.IBrotherService

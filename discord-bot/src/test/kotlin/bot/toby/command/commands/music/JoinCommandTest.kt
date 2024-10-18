@@ -1,6 +1,6 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
@@ -47,7 +47,7 @@ internal class JoinCommandTest : MusicCommandTest {
         // Setup mocks and stubs
         val voiceChannel = mockk<VoiceChannel>() // Mock specific type if it's expected to be a VoiceChannel
         val audioChannelUnion = mockk<AudioChannelUnion>()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
 
         // Setup audio channel mocks
         every { audioChannelUnion.asVoiceChannel() } returns voiceChannel

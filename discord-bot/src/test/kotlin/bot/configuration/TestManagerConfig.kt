@@ -1,7 +1,7 @@
 package bot.configuration
 
 import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
 import bot.toby.managers.MenuManager
 import io.mockk.mockk
 import org.springframework.boot.test.context.TestConfiguration
@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Profile
 open class TestManagerConfig {
 
     @Bean
-    open fun commandManager(): CommandManager {
+    open fun commandManager(): CommandManagerImpl {
         return mockk(relaxed = true)
     }
 

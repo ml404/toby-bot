@@ -1,0 +1,53 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' apply false
+    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+group = 'com.github.ml404'
+version = '6.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/libs-snapshot' }
+    maven { url 'https://repo.spring.io/milestone' }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:$springBootVersion"
+    }
+}
+
+dependencies {
+    implementation project(':common')
+    implementation project(':database')
+    implementation "net.dv8tion:JDA:$jdaVersion"
+    implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    implementation 'org.springframework:spring-context'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+}
+
+jar {
+    enabled = true  // Ensure the jar task is enabled to create a regular JAR file
+}
+
+test {
+    useJUnitPlatform()
+}
+
+configurations {
+    testArtifacts
+}
+
+task testJar(type: Jar) {
+    archiveClassifier = 'tests'  // Naming the JAR with a 'tests' classifier
+    from sourceSets.test.output  // Include test classes in the JAR
+}
+
+artifacts {
+    testArtifacts testJar
+}

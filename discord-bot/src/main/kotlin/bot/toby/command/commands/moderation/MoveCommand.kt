@@ -1,7 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import database.dto.ConfigDto
 import database.service.IConfigService
 import net.dv8tion.jda.api.Permission
@@ -14,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class MoveCommand @Autowired constructor(private val configService: IConfigService) : IModerationCommand {
+class MoveCommand @Autowired constructor(private val configService: IConfigService) : ModerationCommand {
 
     companion object {
         private const val USERS = "users"
@@ -32,13 +31,13 @@ class MoveCommand @Autowired constructor(private val configService: IConfigServi
         val memberList = event.getOption(USERS)?.mentions?.members.orEmpty()
         if (memberList.isEmpty()) {
             event.hook.sendMessage("You must mention 1 or more Users to move")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             return
         }
 
         val voiceChannel = getVoiceChannel(event, guild) ?: run {
             event.hook.sendMessage("Could not find a channel on the server that matched the name")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
             return
         }
 
@@ -46,9 +45,11 @@ class MoveCommand @Autowired constructor(private val configService: IConfigServi
             if (!validateChannel(event, botMember, member, target, deleteDelay ?: 0)) {
                 guild.moveVoiceMember(target, voiceChannel).queue(
                     { event.hook.sendMessage("Moved ${target.effectiveName} to '${voiceChannel.name}'")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)) },
+                        .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                    },
                     { error -> event.hook.sendMessage("Could not move '${target.effectiveName}': ${error.message}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0)) }
+                        .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                    }
                 )
             }
         }
@@ -69,17 +70,17 @@ class MoveCommand @Autowired constructor(private val configService: IConfigServi
         return when {
             target.voiceState?.inAudioChannel() == false -> {
                 event.hook.sendMessage("Mentioned user '${target.effectiveName}' is not connected to a voice channel currently, so cannot be moved.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
                 true
             }
             !member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS) -> {
                 event.hook.sendMessage("You can't move '${target.effectiveName}'")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
                 true
             }
             !botMember.hasPermission(Permission.VOICE_MOVE_OTHERS) -> {
                 event.hook.sendMessage("I'm not allowed to move ${target.effectiveName}")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
                 true
             }
             else -> false

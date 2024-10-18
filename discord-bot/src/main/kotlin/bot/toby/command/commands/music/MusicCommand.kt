@@ -1,14 +1,13 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.interactions.InteractionHook
 
-interface IMusicCommand : ICommand {
+interface MusicCommand : core.command.Command {
     fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,

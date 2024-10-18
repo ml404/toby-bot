@@ -6,7 +6,7 @@ import bot.toby.button.ButtonTest.Companion.dndHelper
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockChannel
 import bot.toby.command.commands.dnd.RollCommand
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test
 class RollButtonTest : ButtonTest {
 
     private lateinit var rollCommand: RollCommand
-    private lateinit var commandManager: CommandManager
+    private lateinit var commandManager: CommandManagerImpl
     private lateinit var rollButton: RollButton
 
     @BeforeEach

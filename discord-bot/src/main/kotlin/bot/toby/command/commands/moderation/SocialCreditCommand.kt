@@ -1,8 +1,7 @@
 package bot.toby.command.commands.moderation
 
+import core.command.CommandContext
 import database.service.IUserService
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -11,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class SocialCreditCommand @Autowired constructor(private val userService: IUserService) : IModerationCommand {
+class SocialCreditCommand @Autowired constructor(private val userService: IUserService) : ModerationCommand {
     private val LEADERBOARD = "leaderboard"
     private val USERS = "users"
     private val SOCIAL_CREDIT = "credit"
@@ -49,13 +48,13 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
             event.getOption(SOCIAL_CREDIT)?.asLong?.takeIf { it != Long.MIN_VALUE }?.let { socialCreditScore ->                val updatedUser = updateUserSocialCredit(targetUserDto, socialCreditScore)
                 event.hook.sendMessage("Updated user ${user.effectiveName}'s social credit by $socialCreditScore. New score is: ${updatedUser.socialCredit}")
                     .setEphemeral(true)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
             } ?: listSocialCreditScore(event, targetUserDto, user.effectiveName, deleteDelay)
         } else {
             event.hook
                 .sendMessage("User '${requestingMember?.effectiveName ?: "Unknown"}' is not allowed to adjust the social credit of user '${user.effectiveName}'.")
                 .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
         }
     }
 
@@ -78,7 +77,7 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
 
         event.hook.sendMessage(message)
             .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     private fun listSocialCreditScore(
@@ -90,7 +89,7 @@ class SocialCreditCommand @Autowired constructor(private val userService: IUserS
         val socialCredit = userDto?.socialCredit ?: 0L
         event.hook.sendMessage("${mentionedName}'s social credit is: $socialCredit")
             .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
     }
 
     private fun updateUserSocialCredit(

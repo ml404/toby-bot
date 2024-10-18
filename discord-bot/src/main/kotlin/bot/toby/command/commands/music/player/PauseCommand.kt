@@ -1,13 +1,13 @@
 package bot.toby.command.commands.music.player
 
-import bot.toby.command.CommandContext
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import core.command.CommandContext
 import org.springframework.stereotype.Component
 
 @Component
-class PauseCommand : IMusicCommand {
+class PauseCommand : MusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -24,13 +24,13 @@ class PauseCommand : IMusicCommand {
             sendErrorMessage(event, deleteDelay!!)
             return
         }
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
         val guild = event.guild!!
         val musicManager = instance.getMusicManager(guild)
         if (instance.isCurrentlyStoppable || requestingUserDto.superUser) {
             MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay ?: 0)
         } else {
-            IMusicCommand.sendDeniedStoppableMessage(event.hook, musicManager, deleteDelay)
+            MusicCommand.sendDeniedStoppableMessage(event.hook, musicManager, deleteDelay)
         }
     }
 

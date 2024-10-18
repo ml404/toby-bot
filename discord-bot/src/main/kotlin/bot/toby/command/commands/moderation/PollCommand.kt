@@ -1,8 +1,8 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.emote.Emotes
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -10,7 +10,7 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
 
 @Component
-class PollCommand : IModerationCommand {
+class PollCommand : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

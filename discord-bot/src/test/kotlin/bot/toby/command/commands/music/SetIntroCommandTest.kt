@@ -1,11 +1,7 @@
 package bot.toby.command.commands.music
 
 import bot.coroutines.MainCoroutineExtension
-import database.dto.ConfigDto
-import database.dto.MusicDto
-import database.dto.UserDto
-import database.service.IConfigService
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
@@ -15,6 +11,10 @@ import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
+import database.dto.ConfigDto
+import database.dto.MusicDto
+import database.dto.UserDto
+import database.service.IConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -85,7 +85,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         setIntroCommand = SetIntroCommand(introHelper)
 
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
@@ -122,7 +122,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         )
         setIntroCommand = SetIntroCommand(introHelper)
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeConfig = ConfigDto("DEFAULT_VOLUME", "20", "1")
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
@@ -160,7 +160,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             dispatcher
         )
         setIntroCommand = SetIntroCommand(introHelper)
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
 
 
@@ -208,7 +208,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             dispatcher
         )
         setIntroCommand = SetIntroCommand(introHelper)
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val userOptionMapping = mockk<OptionMapping>()
 
         every { event.getOption("attachment") } returns mockk(relaxed = true)
@@ -251,7 +251,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             dispatcher
         )
         setIntroCommand = SetIntroCommand(introHelper)
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val userOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
 
@@ -297,7 +297,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             dispatcher
         )
         setIntroCommand = SetIntroCommand(introHelper)
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
 
         every { event.getOption("attachment") } returns attachmentOptionMapping
@@ -341,7 +341,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             dispatcher
         )
         setIntroCommand = SetIntroCommand(introHelper)
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val attachmentOptionMapping = mockk<OptionMapping>()
         val userOptionMapping = mockk<OptionMapping>()
 
@@ -390,7 +390,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
                 dispatcher
             )
             setIntroCommand = SetIntroCommand(introHelper)
-            val commandContext = CommandContext(event)
+            val commandContext = CommandContextImpl(event)
             val attachmentOptionMapping = mockk<OptionMapping>()
 
 

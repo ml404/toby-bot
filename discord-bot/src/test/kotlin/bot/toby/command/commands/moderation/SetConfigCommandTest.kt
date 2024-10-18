@@ -1,13 +1,13 @@
 package bot.toby.command.commands.moderation
 
-import database.dto.ConfigDto
-import database.dto.ConfigDto.Configurations.*
-import database.service.IConfigService
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
+import database.dto.ConfigDto
+import database.dto.ConfigDto.Configurations.*
+import database.service.IConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -36,7 +36,7 @@ internal class SetConfigCommandTest : CommandTest {
     @Test
     fun testSetConfig_notAsServerOwner_sendsErrorMessage() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
 
         every { event.getOption(VOLUME.name.lowercase(Locale.getDefault())) } returns volumeOptionMapping
@@ -60,7 +60,7 @@ internal class SetConfigCommandTest : CommandTest {
     @Test
     fun testSetConfig_withOneConfig_createsThatConfig() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
 
         every { event.getOption(VOLUME.name.lowercase(Locale.getDefault())) } returns volumeOptionMapping
@@ -84,7 +84,7 @@ internal class SetConfigCommandTest : CommandTest {
     @Test
     fun testSetConfig_withOneConfig_updatesThatConfig() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         val dbConfig = ConfigDto(VOLUME.configValue, "20", "1")
 
@@ -110,7 +110,7 @@ internal class SetConfigCommandTest : CommandTest {
     @Test
     fun testSetConfig_withDeleteDelay_createsThatConfig() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val deleteDelayOptionMapping = mockk<OptionMapping>()
         every { configService.createNewConfig(any()) } returns ConfigDto(DELETE_DELAY.name, "20", "1")
 
@@ -137,22 +137,22 @@ internal class SetConfigCommandTest : CommandTest {
     @Test
     fun testSetConfig_withMultipleSpecified_createsTwoConfig() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val deleteDelayOptionMapping = mockk<OptionMapping>()
         val volumeOptionMapping = mockk<OptionMapping>()
 
         every { event.member } returns member
         every { member.isOwner } returns true
         every { event.options } returns listOf(deleteDelayOptionMapping, volumeOptionMapping)
-        every { deleteDelayOptionMapping.name } returns ConfigDto.Configurations.DELETE_DELAY.name.lowercase(Locale.getDefault())
+        every { deleteDelayOptionMapping.name } returns DELETE_DELAY.name.lowercase(Locale.getDefault())
         every { deleteDelayOptionMapping.asInt } returns 20
-        every { volumeOptionMapping.name } returns ConfigDto.Configurations.VOLUME.name.lowercase(Locale.getDefault())
+        every { volumeOptionMapping.name } returns VOLUME.name.lowercase(Locale.getDefault())
         every { volumeOptionMapping.asInt } returns 20
         every { event.guild } returns mockk {
             every { id } returns "1"
         }
-        every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "1") } returns null
-        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "1") } returns null
+        every { configService.getConfigByName(DELETE_DELAY.configValue, "1") } returns null
+        every { configService.getConfigByName(VOLUME.configValue, "1") } returns null
         every { configService.createNewConfig(any()) } returns null
         every { event.hook.sendMessage(any<String>()) } returns mockk {
             every { setEphemeral(any()) } returns this
@@ -163,8 +163,8 @@ internal class SetConfigCommandTest : CommandTest {
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
         // Assert
-        verify(exactly = 1) { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "1") }
-        verify(exactly = 1) { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "1") }
+        verify(exactly = 1) { configService.getConfigByName(DELETE_DELAY.configValue, "1") }
+        verify(exactly = 1) { configService.getConfigByName(VOLUME.configValue, "1") }
         verify(exactly = 2) { configService.createNewConfig(any()) }
         verify(exactly = 2) {
             event.hook.sendMessage(any<String>())
@@ -174,7 +174,7 @@ internal class SetConfigCommandTest : CommandTest {
     @Test
     fun testSetConfig_withMoveChannel_createsThatConfig() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val moveOptionMapping = mockk<OptionMapping>()
         val guildChannelUnion = mockk<GuildChannelUnion>()
 

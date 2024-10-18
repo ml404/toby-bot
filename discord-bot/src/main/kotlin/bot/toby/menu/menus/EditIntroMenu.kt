@@ -1,11 +1,11 @@
 package bot.toby.menu.menus
 
-import bot.toby.command.ICommand.Companion.deleteAfter
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
 import bot.toby.menu.IMenu
 import bot.toby.menu.MenuContext
+import core.command.Command.Companion.deleteAfter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import kotlin.time.Duration.Companion.seconds

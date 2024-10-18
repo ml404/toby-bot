@@ -1,8 +1,8 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.helpers.UserDtoHelper
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import database.service.IUserService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 class AdjustUserCommand @Autowired constructor(
     private val userService: IUserService,
     private val userDtoHelper: UserDtoHelper
-) : IModerationCommand {
+) : ModerationCommand {
     private val PERMISSION_NAME = "name"
     private val USERS = "users"
 

@@ -1,13 +1,13 @@
 package bot.toby.command.commands.music.player
 
-import bot.toby.command.CommandContext
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import core.command.CommandContext
 import org.springframework.stereotype.Component
 
 @Component
-class StopCommand : IMusicCommand {
+class StopCommand : MusicCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -20,7 +20,7 @@ class StopCommand : IMusicCommand {
     ) {
         val event = ctx.event
         event.deferReply().queue()
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
         MusicPlayerHelper.stopSong(event, instance.getMusicManager(event.guild!!), requestingUserDto.superUser, deleteDelay)
     }
 

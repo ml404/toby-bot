@@ -7,7 +7,7 @@ import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManager
+import bot.toby.managers.CommandManagerImpl
 import bot.toby.managers.MenuManager
 import database.service.IConfigService
 import net.dv8tion.jda.api.JDA
@@ -19,7 +19,7 @@ open class BotMain @Autowired constructor(
     jda: JDA,
     configService: IConfigService,
     userDtoHelper: UserDtoHelper,
-    commandManager: CommandManager,
+    commandManager: CommandManagerImpl,
     buttonManager: ButtonManager,
     menuManager: MenuManager,
     eventWaiter: EventWaiter,

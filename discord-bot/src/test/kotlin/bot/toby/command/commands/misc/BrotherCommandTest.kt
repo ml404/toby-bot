@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.jda
@@ -57,7 +57,7 @@ internal class BrotherCommandTest : CommandTest {
         every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContext(event), requestingUserDto, 0)
+        brotherCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {
@@ -69,7 +69,7 @@ internal class BrotherCommandTest : CommandTest {
     fun testDetermineBrother_BrotherDoesntExistWithNoMention() {
         // Arrange
         val mentions = mockk<Mentions>()
-        val brotherDto = database.dto.BrotherDto().apply {
+        database.dto.BrotherDto().apply {
             discordId = 1
             brotherName = "TestBrother"
         }
@@ -86,7 +86,7 @@ internal class BrotherCommandTest : CommandTest {
         every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContext(event), requestingUserDto, 0)
+        brotherCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {
@@ -108,7 +108,7 @@ internal class BrotherCommandTest : CommandTest {
         every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContext(event), requestingUserDto, 0)
+        brotherCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {

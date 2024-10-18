@@ -1,10 +1,9 @@
 package bot.toby.command.commands.music.player
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.emote.Emotes
 import bot.toby.lavaplayer.PlayerManager
+import core.command.CommandContext
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -14,7 +13,7 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class SetVolumeCommand : IMusicCommand {
+class SetVolumeCommand : MusicCommand {
     private val VOLUME = "volume"
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
@@ -32,7 +31,7 @@ class SetVolumeCommand : IMusicCommand {
             sendErrorMessage(event, deleteDelay)
             return
         }
-        if (IMusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
+        if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
         val member = ctx.member
         setNewVolume(event, instance, member, requestingUserDto, deleteDelay)
     }
@@ -51,26 +50,48 @@ class SetVolumeCommand : IMusicCommand {
             if (instance.isCurrentlyStoppable || requestingUserDto!!.superUser) {
                 val audioPlayer = musicManager.audioPlayer
                 if (volumeArg > 100) {
-                    hook.sendMessage(description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    hook.sendMessage(description).setEphemeral(true).queue(
+                        core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                            deleteDelay!!
+                        )
+                    )
                     return
                 }
                 val oldVolume = audioPlayer.volume
                 if (volumeArg == oldVolume) {
-                    hook.sendMessageFormat("New volume and old volume are the same value, somebody shoot %s", member!!.effectiveName).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    hook.sendMessageFormat(
+                        "New volume and old volume are the same value, somebody shoot %s",
+                        member!!.effectiveName
+                    ).setEphemeral(true).queue(
+                        core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!)
+                    )
                     return
                 }
                 instance.setPreviousVolume(oldVolume)
                 audioPlayer.volume = volumeArg
-                hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg)
+                    .setEphemeral(true).queue(
+                        core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!)
+                    )
             } else {
                 sendErrorMessage(event, deleteDelay)
             }
-        } else hook.sendMessage(description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        } else hook.sendMessage(description).setEphemeral(true).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int?) {
         event.hook.sendMessageFormat("You aren't allowed to change the volume kid %s", event.guild!!.jda.getEmojiById(
-            Emotes.TOBY)).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            Emotes.TOBY
+        )
+        ).setEphemeral(true).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     override val name: String

@@ -1,11 +1,11 @@
 package bot.toby.command.commands.fetch
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.dto.web.RedditAPIDto
 import bot.toby.dto.web.RedditAPIDto.TimePeriod
 import com.google.gson.Gson
 import com.google.gson.JsonParser
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.CommandContext
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -21,7 +21,7 @@ import java.io.InputStreamReader
 import kotlin.random.Random
 
 @Component
-class MemeCommand : IFetchCommand {
+class MemeCommand : FetchCommand {
     private val SUBREDDIT = "subreddit"
     private val TIME_PERIOD = "timeperiod"
     private val LIMIT = "limit"
@@ -58,7 +58,11 @@ class MemeCommand : IFetchCommand {
 
         if (subredditArg == "sneakybackgroundfeet") {
             logger.info("Requested subreddit 'sneakybackgroundfeet'")
-            event.hook.sendMessageFormat("Don't talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            event.hook.sendMessageFormat("Don't talk to me.").queue(
+                invokeDeleteOnMessageResponse(
+                    deleteDelay ?: 0
+                )
+            )
         } else {
             val embed = fetchRedditPost(result, event, deleteDelay ?: 0, httpClient)
             if (embed != null) {

@@ -1,10 +1,10 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
-import bot.toby.command.ICommand
 import bot.toby.command.commands.music.player.PlayCommand
+import core.command.Command
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 
 internal class HelpCommandTest : CommandTest {
     private lateinit var helpCommand: HelpCommand
-    lateinit var commands: List<ICommand>
+    lateinit var commands: List<Command>
 
     @BeforeEach
     fun setup() {
@@ -32,7 +32,7 @@ internal class HelpCommandTest : CommandTest {
         every { event.getOption("command") } returns null
 
         // Test handle method
-        helpCommand.handle(CommandContext(event), mockk(), 0)
+        helpCommand.handle(CommandContextImpl(event), mockk(), 0)
 
         // Verify interactions
         verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
@@ -47,14 +47,14 @@ internal class HelpCommandTest : CommandTest {
         every { event.options } returns listOf(optionMapping)
 
         // Mock the CommandManager's command
-        val musicCommand: ICommand = mockk<PlayCommand>()
+        val musicCommand: Command = mockk<PlayCommand>()
         every { event.getOption("command") } returns optionMapping
         every { optionMapping.asString } returns "play"
         every { musicCommand.description } returns ""
         every { musicCommand.name } returns "play"
 
         // Test handle method
-        helpCommand.handle(CommandContext(event), mockk(), 0)
+        helpCommand.handle(CommandContextImpl(event), mockk(), 0)
 
         // Verify interactions
         verify(exactly = 1) { event.hook.sendMessage(any<String>()) }

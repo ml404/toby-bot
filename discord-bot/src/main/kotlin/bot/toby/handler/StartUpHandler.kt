@@ -1,7 +1,7 @@
 package bot.toby.handler
 
+import bot.toby.managers.CommandManagerImpl
 import common.logging.DiscordLogger
-import bot.toby.managers.CommandManager
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service
 @Configurable
 class StartUpHandler @Autowired constructor(
     private val jda: JDA,
-    private val commandManager: CommandManager
+    private val commandManager: CommandManagerImpl
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)

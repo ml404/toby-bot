@@ -1,8 +1,7 @@
 package bot.toby.command.commands.dnd
 
-import bot.toby.command.CommandContext
-import bot.toby.command.ICommand.Companion.invokeDeleteOnMessageResponse
 import bot.toby.helpers.DnDHelper
+import core.command.CommandContext
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : IDnDCommand {
+class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnDCommand {
     private val DICE_NUMBER = "number"
     private val DICE_TO_ROLL = "amount"
     private val MODIFIER = "modifier"
@@ -33,7 +32,11 @@ class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : IDn
         val diceToRollInput = diceToRollOptional.orElse(1)
         val diceToRoll = if (diceToRollInput < 1) 1 else diceToRollInput
         val modifier = diceModifierOptional.orElse(0)
-        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(
+            core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                deleteDelay!!
+            )
+        )
     }
 
     fun handleDiceRoll(

@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.botMember
 import bot.toby.command.CommandTest.Companion.event
@@ -46,7 +46,7 @@ internal class MoveCommandTest : CommandTest {
     @Test
     fun test_moveWithValidPermissions_movesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         moveSetup(botMoveOthers = true, memberMoveOthers = true, mentionedMembers = listOf(targetMember))
 
         // Act
@@ -60,7 +60,7 @@ internal class MoveCommandTest : CommandTest {
     @Test
     fun test_moveWithValidPermissionsAndMultipleMembers_movesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         moveSetup(
             botMoveOthers = true,
             memberMoveOthers = true,
@@ -79,7 +79,7 @@ internal class MoveCommandTest : CommandTest {
     @Test
     fun test_moveWithInvalidBotPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         moveSetup(botMoveOthers = false, memberMoveOthers = true, mentionedMembers = listOf(targetMember))
         val guildVoiceState = mockk<GuildVoiceState>()
         every { targetMember.voiceState } returns guildVoiceState
@@ -100,7 +100,7 @@ internal class MoveCommandTest : CommandTest {
     @Test
     fun test_moveWithInvalidUserPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         moveSetup(botMoveOthers = true, memberMoveOthers = false, mentionedMembers = listOf(targetMember))
 
         // Act
@@ -118,7 +118,7 @@ internal class MoveCommandTest : CommandTest {
     @Test
     fun test_moveWithUserNotInChannel_throwsError() {
         // Arrange
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         moveSetup(botMoveOthers = true, memberMoveOthers = true, mentionedMembers = listOf(targetMember))
         val guildVoiceState = mockk<GuildVoiceState>()
         every { targetMember.voiceState } returns guildVoiceState

@@ -1,6 +1,6 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.commands.music.player.SetVolumeCommand
@@ -34,7 +34,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
     fun testSetVolume_withValidArgs() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         every { event.getOption("volume") } returns volumeOptionMapping
         val volumeArg = 20
@@ -66,7 +66,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
     fun testSetVolume_withOldAndNewVolumeBeingTheSame_SendsErrorMessage() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         every { event.getOption("volume") } returns volumeOptionMapping
         val volumeArg = 20
@@ -97,7 +97,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
     fun testSetVolume_withNewVolumeBeingOver100_SendsErrorMessage() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         every { event.getOption("volume") } returns volumeOptionMapping
         val volumeArg = 101
@@ -127,7 +127,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
     fun testSetVolume_withNewVolumeBeingNegative_SendsErrorMessage() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         every { event.getOption("volume") } returns volumeOptionMapping
         val volumeArg = -1
@@ -157,7 +157,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
     fun testSetVolume_withInvalidPermissions() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         every { event.getOption("volume") } returns volumeOptionMapping
         val volumeArg = 20
@@ -191,7 +191,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
     fun testSetVolume_whenSongIsNotStoppableAndWithoutOverridingPermissions_SendsError() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         val volumeOptionMapping = mockk<OptionMapping>()
         every { event.getOption("volume") } returns volumeOptionMapping
         val volumeArg = 20

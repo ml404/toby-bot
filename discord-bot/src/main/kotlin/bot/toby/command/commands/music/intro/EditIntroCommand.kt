@@ -1,14 +1,14 @@
 package bot.toby.command.commands.music.intro
 
-import bot.toby.command.CommandContext
-import bot.toby.command.commands.music.IMusicCommand
+import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
 import bot.toby.lavaplayer.PlayerManager
+import core.command.CommandContext
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import org.springframework.stereotype.Component
 
 @Component
-class EditIntroCommand : IMusicCommand {
+class EditIntroCommand : MusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

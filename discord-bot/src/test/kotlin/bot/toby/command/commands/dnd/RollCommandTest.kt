@@ -1,6 +1,6 @@
 package bot.toby.command.commands.dnd
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
@@ -35,7 +35,7 @@ class RollCommandTest : CommandTest {
     @Test
     fun testRollCommand() {
         // Arrange
-        val ctx = CommandContext(event)
+        val ctx = CommandContextImpl(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 

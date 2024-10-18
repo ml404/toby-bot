@@ -1,4 +1,4 @@
-package bot.toby.command.commands
+package core.command
 
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
@@ -11,7 +11,7 @@ import net.dv8tion.jda.api.sharding.ShardManager
 /**
  * Dummy class that holds the basics for a command context
  */
-interface ICommandContext {
+interface CommandContext {
     /**
      * Returns the [net.dv8tion.jda.api.entities.Guild] for the current command/event
      *

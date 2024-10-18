@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import io.mockk.every
@@ -37,7 +37,7 @@ class RandomCommandTest : CommandTest {
 
         // Call the handle method with the event
         randomCommand.handle(
-            CommandContext(event),
+            CommandContextImpl(event),
             mockk<database.dto.UserDto>(),
             0
         )
@@ -51,7 +51,7 @@ class RandomCommandTest : CommandTest {
 
         // Call the handle method with the event
         randomCommand.handle(
-            CommandContext(event),
+            CommandContextImpl(event),
             mockk<database.dto.UserDto>(),
             0
         )

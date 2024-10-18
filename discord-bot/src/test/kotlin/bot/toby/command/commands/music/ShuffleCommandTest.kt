@@ -1,6 +1,6 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContext
+import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.commands.music.player.ShuffleCommand
@@ -35,7 +35,7 @@ internal class ShuffleCommandTest : MusicCommandTest {
     fun testShuffleCommand_withValidQueue() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
@@ -69,7 +69,7 @@ internal class ShuffleCommandTest : MusicCommandTest {
     fun testShuffleCommand_withNoQueue() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContext(event)
+        val commandContext = CommandContextImpl(event)
         every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
