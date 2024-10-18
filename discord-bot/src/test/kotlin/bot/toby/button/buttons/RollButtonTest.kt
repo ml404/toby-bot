@@ -1,12 +1,12 @@
 package bot.toby.button.buttons
 
-import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.dndHelper
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockChannel
+import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.dnd.RollCommand
-import bot.toby.managers.CommandManagerImpl
+import bot.toby.managers.DefaultCommandManager
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test
 class RollButtonTest : ButtonTest {
 
     private lateinit var rollCommand: RollCommand
-    private lateinit var commandManager: CommandManagerImpl
+    private lateinit var commandManager: DefaultCommandManager
     private lateinit var rollButton: RollButton
 
     @BeforeEach
@@ -57,7 +57,7 @@ class RollButtonTest : ButtonTest {
         }
 
         // Invoke the handle method on the RollButton
-        rollButton.handle(ButtonContext(event), database.dto.UserDto(6L, 1L), 5)
+        rollButton.handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 5)
 
         // Verify interactions
         verify { mockChannel.sendTyping().queue() }

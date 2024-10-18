@@ -3,7 +3,7 @@ package bot.toby.command.commands.misc
 import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -15,7 +15,7 @@ internal class EightBallCommandTest : CommandTest {
 
     lateinit var command: EightBallCommand
 
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
 
     @BeforeEach
     fun setUp() {

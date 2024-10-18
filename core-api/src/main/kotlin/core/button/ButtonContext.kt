@@ -1,4 +1,4 @@
-package bot.toby.button.buttons
+package core.button
 
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
@@ -7,7 +7,7 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 
-interface IButtonContext {
+interface ButtonContext {
 
     /**
      * Returns the [net.dv8tion.jda.api.entities.Guild] for the current command/event

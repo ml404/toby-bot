@@ -1,16 +1,16 @@
 package database.service.impl
 
 import database.dto.MusicDto
-import database.persistence.IMusicFilePersistence
+import database.persistence.MusicFilePersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
 import org.springframework.stereotype.Service
 
 @Service
-open class MusicFileServiceImpl : database.service.IMusicFileService {
+open class DefaultMusicFileService : database.service.MusicFileService {
     @Autowired
-    lateinit var musicFileService: IMusicFilePersistence
+    lateinit var musicFileService: MusicFilePersistence
 
 
     @CachePut(value = ["music"], key = "#musicDto.id")

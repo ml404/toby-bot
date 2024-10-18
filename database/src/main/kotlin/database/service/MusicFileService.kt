@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.MusicDto
 
-interface IMusicFileService {
+interface MusicFileService {
     fun createNewMusicFile(musicDto: MusicDto): MusicDto?
     fun getMusicFileById(id: String): MusicDto?
     fun updateMusicFile(musicDto: MusicDto): MusicDto?

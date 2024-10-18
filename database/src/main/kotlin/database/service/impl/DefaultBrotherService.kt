@@ -1,7 +1,7 @@
 package database.service.impl
 
 import database.dto.BrotherDto
-import database.persistence.IBrotherPersistence
+import database.persistence.BrotherPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
@@ -9,9 +9,9 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class BrotherServiceImpl : database.service.IBrotherService {
+open class DefaultBrotherService : database.service.BrotherService {
     @Autowired
-    lateinit var brotherService: IBrotherPersistence
+    lateinit var brotherService: BrotherPersistence
 
     @Cacheable(value = ["brothers"])
     override fun listBrothers(): List<BrotherDto?> {

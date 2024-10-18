@@ -2,7 +2,7 @@ package bot.toby.command.commands.moderation
 
 import core.command.CommandContext
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class SetConfigCommand @Autowired constructor(private val configService: IConfigService) : ModerationCommand {
+class SetConfigCommand @Autowired constructor(private val configService: ConfigService) : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

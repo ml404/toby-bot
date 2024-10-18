@@ -48,9 +48,9 @@ import org.springframework.test.context.ActiveProfiles
 @ActiveProfiles("test")
 class CommandManagerTest {
 
-    lateinit var configService: IConfigService
+    lateinit var configService: ConfigService
     lateinit var userDtoHelper: UserDtoHelper
-    private lateinit var commandManager: CommandManagerImpl
+    private lateinit var commandManager: DefaultCommandManager
 
     @Autowired
     lateinit var commands: List<Command>
@@ -59,7 +59,7 @@ class CommandManagerTest {
     fun openMocks() {
         configService = mockk()
         userDtoHelper = mockk()
-        commandManager = CommandManagerImpl(configService, userDtoHelper, commands)
+        commandManager = DefaultCommandManager(configService, userDtoHelper, commands)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }

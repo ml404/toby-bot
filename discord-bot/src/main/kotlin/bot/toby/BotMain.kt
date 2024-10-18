@@ -6,10 +6,10 @@ import bot.toby.handler.StartUpHandler
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
-import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManagerImpl
-import bot.toby.managers.MenuManager
-import database.service.IConfigService
+import bot.toby.managers.DefaultButtonManager
+import bot.toby.managers.DefaultCommandManager
+import bot.toby.managers.DefaultMenuManager
+import database.service.ConfigService
 import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -17,11 +17,11 @@ import org.springframework.stereotype.Service
 @Service
 open class BotMain @Autowired constructor(
     jda: JDA,
-    configService: IConfigService,
+    configService: ConfigService,
     userDtoHelper: UserDtoHelper,
-    commandManager: CommandManagerImpl,
-    buttonManager: ButtonManager,
-    menuManager: MenuManager,
+    commandManager: DefaultCommandManager,
+    buttonManager: DefaultButtonManager,
+    menuManager: DefaultMenuManager,
     eventWaiter: EventWaiter,
     introHelper: IntroHelper
 ) {

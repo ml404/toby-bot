@@ -1,11 +1,11 @@
 package bot.toby.button.buttons
 
-import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.configService
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.userService
+import bot.toby.button.DefaultButtonContext
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
@@ -13,10 +13,8 @@ import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import database.dto.ConfigDto
-import database.service.*
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.concurrent.LinkedBlockingQueue
@@ -62,7 +60,7 @@ class PausePlayButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        PausePlayButton().handle(ButtonContext(event), database.dto.UserDto(6L, 1L), 0)
+        PausePlayButton().handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         verify { MusicPlayerHelper.changePauseStatusOnTrack(any(), any(), any()) }
     }

@@ -6,14 +6,14 @@ import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class JoinCommand @Autowired constructor(private val configService: IConfigService) : MusicCommand {
+class JoinCommand @Autowired constructor(private val configService: ConfigService) : MusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

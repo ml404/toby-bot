@@ -8,7 +8,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.targetMember
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test
 
 internal class MoveCommandTest : CommandTest {
     private lateinit var moveCommand: MoveCommand
-    private lateinit var configService: IConfigService
+    private lateinit var configService: ConfigService
 
     @BeforeEach
     fun setUp() {

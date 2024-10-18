@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class BrotherCommandTest : CommandTest {
-    lateinit var brotherService: database.service.IBrotherService
+    lateinit var brotherService: database.service.BrotherService
     lateinit var tobyEmote: RichCustomEmoji
     lateinit var brotherCommand: BrotherCommand
 

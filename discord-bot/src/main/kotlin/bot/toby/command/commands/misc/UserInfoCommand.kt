@@ -1,7 +1,7 @@
 package bot.toby.command.commands.misc
 
 import core.command.CommandContext
-import database.service.IUserService
+import database.service.UserService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class UserInfoCommand @Autowired constructor(private val userService: IUserService) : MiscCommand {
+class UserInfoCommand @Autowired constructor(private val userService: UserService) : MiscCommand {
     private val USERS = "users"
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event

@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import database.dto.ExcuseDto
-import database.service.IExcuseService
+import database.service.ExcuseService
 import io.mockk.*
 import io.mockk.InternalPlatformDsl.toStr
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 internal class ExcuseCommandTest : CommandTest {
     lateinit var excuseCommand: ExcuseCommand
 
-    lateinit var excuseService: IExcuseService
+    lateinit var excuseService: ExcuseService
 
     @BeforeEach
     fun setUp() {

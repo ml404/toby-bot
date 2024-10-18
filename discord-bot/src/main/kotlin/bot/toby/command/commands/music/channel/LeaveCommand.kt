@@ -7,7 +7,7 @@ import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.managers.AudioManager
@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class LeaveCommand @Autowired constructor(private val configService: IConfigService) : MusicCommand {
+class LeaveCommand @Autowired constructor(private val configService: ConfigService) : MusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

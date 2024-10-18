@@ -2,7 +2,7 @@ package database.persistence
 
 import database.dto.UserDto
 
-interface IUserPersistence {
+interface UserPersistence {
     fun listGuildUsers(guildId: Long?): List<UserDto?>
     fun createNewUser(userDto: UserDto): UserDto
     fun getUserById(discordId: Long?, guildId: Long?): UserDto?

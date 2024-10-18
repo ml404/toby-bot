@@ -6,8 +6,8 @@ import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.dto.MusicDto.Companion.computeHash
-import database.service.IConfigService
-import database.service.IMusicFileService
+import database.service.ConfigService
+import database.service.MusicFileService
 import kotlinx.coroutines.*
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
@@ -28,8 +28,8 @@ import kotlin.time.DurationUnit
 @Service
 class IntroHelper(
     private val userDtoHelper: UserDtoHelper,
-    private val musicFileService: IMusicFileService,
-    private val configService: IConfigService,
+    private val musicFileService: MusicFileService,
+    private val configService: ConfigService,
     private val httpHelper: HttpHelper,
     private val eventWaiter: EventWaiter,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO

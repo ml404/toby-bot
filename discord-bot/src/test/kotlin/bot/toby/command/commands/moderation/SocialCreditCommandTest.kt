@@ -8,7 +8,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.CommandTest.Companion.user
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test
 internal class SocialCreditCommandTest : CommandTest {
     lateinit var socialCreditCommand: SocialCreditCommand
 
-    private lateinit var userService: IUserService
+    private lateinit var userService: UserService
 
     @BeforeEach
     fun setUp() {

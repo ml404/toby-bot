@@ -1,24 +1,25 @@
 package database.persistence.impl
 
 import database.dto.UserDto
-import database.persistence.IUserPersistence
+import database.persistence.UserPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Query
+import jakarta.persistence.TypedQuery
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class UserPersistenceImpl : IUserPersistence {
+open class DefaultUserPersistence : UserPersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
 
 
     override fun listGuildUsers(guildId: Long?): List<UserDto?> {
-        val q: Query = entityManager.createNamedQuery("UserDto.getGuildAll", UserDto::class.java)
+        val q: TypedQuery<UserDto> = entityManager.createNamedQuery("UserDto.getGuildAll", UserDto::class.java)
         q.setParameter("guildId", guildId)
-        return q.resultList as List<UserDto?>
+        return q.resultList
     }
 
     override fun createNewUser(userDto: UserDto): UserDto {

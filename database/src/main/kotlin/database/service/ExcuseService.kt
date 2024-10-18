@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.ExcuseDto
 
-interface IExcuseService {
+interface ExcuseService {
     fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?>
     fun listApprovedGuildExcuses(guildId: Long?): List<ExcuseDto?>
     fun listPendingGuildExcuses(guildId: Long?): List<ExcuseDto?>

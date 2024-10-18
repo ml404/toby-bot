@@ -3,7 +3,7 @@ package database
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -24,7 +24,7 @@ import org.springframework.test.context.ActiveProfiles
 @ActiveProfiles("test")
 class ConfigServiceImplIntegrationTest {
     @Autowired
-    lateinit var configService: IConfigService
+    lateinit var configService: ConfigService
 
 
     @BeforeEach

@@ -2,7 +2,7 @@ package database.persistence
 
 import database.dto.ExcuseDto
 
-interface IExcusePersistence {
+interface ExcusePersistence {
     fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?>
     fun listApprovedGuildExcuses(guildId: Long?): List<ExcuseDto?>
     fun listPendingGuildExcuses(guildId: Long?): List<ExcuseDto?>

@@ -2,7 +2,7 @@ package bot.toby.button
 
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.PlayerManager
-import bot.toby.managers.ButtonManager
+import core.managers.ButtonManager
 import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild
@@ -27,6 +27,7 @@ interface ButtonTest {
         userDtoHelper = mockk()
         introHelper = mockk()
         dndHelper = mockk()
+        buttonManager = mockk()
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
 
@@ -98,11 +99,11 @@ interface ButtonTest {
         lateinit var mockChannel: MessageChannelUnion
         lateinit var mockHook: InteractionHook
         lateinit var mockInteraction: ButtonInteraction
-        lateinit var configService: IConfigService
-        lateinit var brotherService: IBrotherService
-        lateinit var userService: IUserService
-        lateinit var musicFileService: IMusicFileService
-        lateinit var excuseService: IExcuseService
+        lateinit var configService: ConfigService
+        lateinit var brotherService: BrotherService
+        lateinit var userService: UserService
+        lateinit var musicFileService: MusicFileService
+        lateinit var excuseService: ExcuseService
         lateinit var buttonManager: ButtonManager
         lateinit var httpHelper: HttpHelper
         lateinit var introHelper: IntroHelper

@@ -1,7 +1,7 @@
 package bot.toby.command.commands.moderation
 
 import core.command.CommandContext
-import database.service.IUserService
+import database.service.UserService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class SocialCreditCommand @Autowired constructor(private val userService: IUserService) : ModerationCommand {
+class SocialCreditCommand @Autowired constructor(private val userService: UserService) : ModerationCommand {
     private val LEADERBOARD = "leaderboard"
     private val USERS = "users"
     private val SOCIAL_CREDIT = "credit"

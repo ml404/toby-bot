@@ -1,16 +1,16 @@
 package database.persistence.impl
 
 import database.dto.BrotherDto
-import database.persistence.IBrotherPersistence
+import database.persistence.BrotherPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
-import jakarta.persistence.Query
+import jakarta.persistence.TypedQuery
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class BrotherPersistenceImpl : IBrotherPersistence {
+open class DefaultBrotherPersistence : BrotherPersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
 
@@ -20,9 +20,9 @@ open class BrotherPersistenceImpl : IBrotherPersistence {
     }
 
     override fun getUserByName(name: String?): BrotherDto {
-        val q: Query = entityManager.createNamedQuery("BrotherDto.getName", BrotherDto::class.java)
+        val q: TypedQuery<BrotherDto> = entityManager.createNamedQuery("BrotherDto.getName", BrotherDto::class.java)
         q.setParameter("name", name)
-        return q.singleResult as BrotherDto
+        return q.singleResult
     }
 
     override fun updateBrother(brotherDto: BrotherDto?): BrotherDto? {
@@ -32,8 +32,8 @@ open class BrotherPersistenceImpl : IBrotherPersistence {
     }
 
     override fun listBrothers(): List<BrotherDto?> {
-        val q: Query = entityManager.createNamedQuery("BrotherDto.getAll", BrotherDto::class.java)
-        return q.resultList as List<BrotherDto?>
+        val q: TypedQuery<BrotherDto> = entityManager.createNamedQuery("BrotherDto.getAll", BrotherDto::class.java)
+        return q.resultList
     }
 
 

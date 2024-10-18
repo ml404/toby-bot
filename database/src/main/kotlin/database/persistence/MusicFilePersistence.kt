@@ -2,7 +2,7 @@ package database.persistence
 
 import database.dto.MusicDto
 
-interface IMusicFilePersistence {
+interface MusicFilePersistence {
     fun createNewMusicFile(musicDto: MusicDto): MusicDto?
     fun getMusicFileById(id: String): MusicDto?
     fun updateMusicFile(musicDto: MusicDto): MusicDto?

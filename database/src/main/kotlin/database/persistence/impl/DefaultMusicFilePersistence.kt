@@ -2,7 +2,7 @@ package database.persistence.impl
 
 import common.logging.DiscordLogger
 import database.dto.MusicDto
-import database.persistence.IMusicFilePersistence
+import database.persistence.MusicFilePersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Query
@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class MusicFilePersistenceImpl : IMusicFilePersistence {
+open class DefaultMusicFilePersistence : MusicFilePersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)

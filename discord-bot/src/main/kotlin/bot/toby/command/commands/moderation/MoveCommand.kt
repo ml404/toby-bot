@@ -2,7 +2,7 @@ package bot.toby.command.commands.moderation
 
 import core.command.CommandContext
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class MoveCommand @Autowired constructor(private val configService: IConfigService) : ModerationCommand {
+class MoveCommand @Autowired constructor(private val configService: ConfigService) : ModerationCommand {
 
     companion object {
         private const val USERS = "users"

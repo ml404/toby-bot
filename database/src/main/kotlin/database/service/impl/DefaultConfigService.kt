@@ -1,8 +1,8 @@
 package database.service.impl
 
 import database.dto.ConfigDto
-import database.persistence.IConfigPersistence
-import database.service.IConfigService
+import database.persistence.ConfigPersistence
+import database.service.ConfigService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
@@ -10,9 +10,9 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class ConfigServiceImpl : IConfigService {
+open class DefaultConfigService : ConfigService {
     @Autowired
-    lateinit var configService: IConfigPersistence
+    lateinit var configService: ConfigPersistence
 
     @Cacheable(value = ["configs"])
     override fun listAllConfig(): List<ConfigDto?> {

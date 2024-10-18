@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import database.dto.ConfigDto
 import database.dto.MusicDto
-import database.service.IConfigService
+import database.service.ConfigService
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test
 class HelloThereCommandTest : CommandTest {
     lateinit var command: HelloThereCommand
 
-    private val configService = mockk<IConfigService>()
+    private val configService = mockk<ConfigService>()
 
     @BeforeEach
     fun setUp() {

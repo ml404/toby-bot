@@ -1,16 +1,16 @@
 package bot.toby.button.buttons
 
-import bot.toby.button.ButtonContext
-import bot.toby.button.IButton
 import bot.toby.command.commands.dnd.RollCommand
-import bot.toby.managers.CommandManagerImpl
+import bot.toby.managers.DefaultCommandManager
+import core.button.Button
+import core.button.ButtonContext
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class RollButton @Autowired constructor(private val commandManager: CommandManagerImpl) : IButton {
+class RollButton @Autowired constructor(private val commandManager: DefaultCommandManager) : Button {
     override val name: String
         get() = "roll"
     override val description: String

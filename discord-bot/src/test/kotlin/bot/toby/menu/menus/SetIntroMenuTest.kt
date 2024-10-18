@@ -1,13 +1,13 @@
 package bot.toby.menu.menus
 
-import database.dto.MusicDto
 import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.helpers.InputData
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
-import bot.toby.menu.MenuContext
+import bot.toby.menu.DefaultMenuContext
 import bot.toby.menu.MenuTest
 import bot.toby.menu.MenuTest.Companion.menuEvent
+import database.dto.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -24,7 +24,7 @@ internal class SetIntroMenuTest : MenuTest {
     private lateinit var introHelper: IntroHelper
     private lateinit var userDtoHelper: UserDtoHelper
 
-    private lateinit var menuContext: MenuContext
+    private lateinit var menuContext: DefaultMenuContext
 
     @BeforeEach
     fun setUp() {

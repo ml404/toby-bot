@@ -4,8 +4,8 @@ import bot.toby.helpers.InputData
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.helpers.UserDtoHelper
-import bot.toby.menu.IMenu
-import bot.toby.menu.MenuContext
+import core.menu.Menu
+import core.menu.MenuContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 class SetIntroMenu @Autowired constructor(
     private val introHelper: IntroHelper,
     private val userDtoHelper: UserDtoHelper
-) : IMenu {
+) : Menu {
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
@@ -29,7 +29,7 @@ class SetIntroMenu @Autowired constructor(
         val requestingUserDto = userDtoHelper.calculateUserDto(
             jdaUser.idLong,
             event.guild?.idLong!!,
-            event.member?.isOwner ?: false
+            event.member?.isOwner == true
         )
 
         val musicDtoToReplace = requestingUserDto.musicDtos.firstOrNull { it.id == musicDtoId }

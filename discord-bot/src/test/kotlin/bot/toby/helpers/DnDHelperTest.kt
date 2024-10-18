@@ -8,8 +8,8 @@ import bot.toby.dto.web.dnd.Spell
 import bot.toby.menu.menus.dnd.DndMenu.Companion.FEATURE_NAME
 import bot.toby.menu.menus.dnd.DndMenu.Companion.RULE_NAME
 import bot.toby.menu.menus.dnd.DndMenu.Companion.SPELL_NAME
-import database.service.IUserService
-import database.service.impl.UserServiceImpl
+import database.service.UserService
+import database.service.impl.DefaultUserService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -35,7 +35,7 @@ internal class DnDHelperTest {
     lateinit var guild: Guild
     lateinit var webhookMessageEditAction: WebhookMessageEditAction<Message>
     lateinit var webhookMessageCreateAction: WebhookMessageCreateAction<Message>
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
     lateinit var messageEditAction: MessageEditAction
     lateinit var memberList: List<Member>
     lateinit var initiativeMap: MutableMap<String, Int>
@@ -51,7 +51,7 @@ internal class DnDHelperTest {
         guild = mockk()
         webhookMessageEditAction = mockk()
         webhookMessageCreateAction = mockk()
-        userService = mockk<UserServiceImpl>()
+        userService = mockk<DefaultUserService>()
         messageEditAction = mockk()
         memberList = mockk()
         initiativeMap = mutableMapOf()

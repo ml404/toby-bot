@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import database.dto.MusicDto
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class UserInfoCommandTest : CommandTest {
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
     lateinit var userInfoCommand: UserInfoCommand
 
     @BeforeEach

@@ -13,7 +13,7 @@ import core.command.CommandContext
 import core.managers.CommandManager
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.service.IConfigService
+import database.service.ConfigService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
@@ -22,8 +22,8 @@ import org.springframework.beans.factory.annotation.Configurable
 import java.util.*
 
 @Configurable
-class CommandManagerImpl @Autowired constructor(
-    private val configService: IConfigService,
+class DefaultCommandManager @Autowired constructor(
+    private val configService: ConfigService,
     private val userDtoHelper: UserDtoHelper,
     override val commands: List<Command>
 ) : CommandManager {
@@ -36,11 +36,11 @@ class CommandManagerImpl @Autowired constructor(
     }
 
     private fun addCommand(cmd: Command) {
-        // Accessing the 'name' from the ICommand instance
+        // Accessing the 'name' from the Command instance
         val nameFound = slashCommands.any { it?.name.equals(cmd.name, true) }
         require(!nameFound) { "A command with this name is already present" }
 
-        // Accessing 'slashCommand' and 'optionData' from the ICommand instance
+        // Accessing 'slashCommand' and 'optionData' from the Command instance
         val slashCommand = cmd.slashCommand
         slashCommand.addOptions(cmd.optionData)
         slashCommands.add(slashCommand)

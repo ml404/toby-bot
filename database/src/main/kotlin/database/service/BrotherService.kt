@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.BrotherDto
 
-interface IBrotherService {
+interface BrotherService {
     fun listBrothers(): List<BrotherDto?>
     fun createNewBrother(brotherDto: BrotherDto): BrotherDto?
     fun getBrotherById(discordId: Long?): BrotherDto?

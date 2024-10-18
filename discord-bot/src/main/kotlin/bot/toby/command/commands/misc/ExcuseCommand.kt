@@ -2,7 +2,7 @@ package bot.toby.command.commands.misc
 
 import core.command.CommandContext
 import database.dto.ExcuseDto
-import database.service.IExcuseService
+import database.service.ExcuseService
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class ExcuseCommand @Autowired constructor(private val excuseService: IExcuseService) : MiscCommand {
+class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseService) : MiscCommand {
     private val EXCUSE = "excuse"
     private val EXCUSE_ID = "id"
     private val AUTHOR = "author"

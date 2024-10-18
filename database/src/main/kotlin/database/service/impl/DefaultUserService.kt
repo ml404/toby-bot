@@ -1,8 +1,8 @@
 package database.service.impl
 
 import database.dto.UserDto
-import database.persistence.IUserPersistence
-import database.service.IUserService
+import database.persistence.UserPersistence
+import database.service.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
@@ -10,9 +10,9 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class UserServiceImpl : IUserService {
+open class DefaultUserService : UserService {
     @Autowired
-    lateinit var userService: IUserPersistence
+    lateinit var userService: UserPersistence
 
     @Cacheable(value = ["users"])
     override fun listGuildUsers(guildId: Long?): List<UserDto?> {

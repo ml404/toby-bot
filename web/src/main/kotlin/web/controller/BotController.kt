@@ -1,19 +1,19 @@
 package web.controller
 
 import database.dto.ConfigDto
-import database.service.IBrotherService
-import database.service.IConfigService
-import database.service.IMusicFileService
-import database.service.IUserService
+import database.service.BrotherService
+import database.service.ConfigService
+import database.service.MusicFileService
+import database.service.UserService
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/")
 class BotController(
-    var userService: IUserService,
-    var musicFileService: IMusicFileService,
-    var configService: IConfigService,
-    var brotherService: IBrotherService
+    var userService: UserService,
+    var musicFileService: MusicFileService,
+    var configService: ConfigService,
+    var brotherService: BrotherService
 ) {
     @GetMapping("/")
     fun index(): String =

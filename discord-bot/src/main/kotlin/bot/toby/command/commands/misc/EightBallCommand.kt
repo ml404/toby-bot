@@ -1,13 +1,13 @@
 package bot.toby.command.commands.misc
 
 import core.command.CommandContext
-import database.service.IUserService
+import database.service.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class EightBallCommand @Autowired constructor(private val userService: IUserService) : MiscCommand {
+class EightBallCommand @Autowired constructor(private val userService: UserService) : MiscCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
         event.deferReply().queue()

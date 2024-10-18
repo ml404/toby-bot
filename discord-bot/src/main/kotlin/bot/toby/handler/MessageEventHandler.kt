@@ -1,9 +1,9 @@
 package bot.toby.handler
 
 import bot.toby.emote.Emotes
-import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManagerImpl
-import bot.toby.managers.MenuManager
+import bot.toby.managers.DefaultButtonManager
+import bot.toby.managers.DefaultCommandManager
+import bot.toby.managers.DefaultMenuManager
 import common.logging.DiscordLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,9 +24,9 @@ import kotlin.coroutines.CoroutineContext
 @Service
 class MessageEventHandler @Autowired constructor(
     private val jda: JDA,
-    private val commandManager: CommandManagerImpl,
-    private val buttonManager: ButtonManager,
-    private val menuManager: MenuManager
+    private val commandManager: DefaultCommandManager,
+    private val buttonManager: DefaultButtonManager,
+    private val menuManager: DefaultMenuManager
 ) : ListenerAdapter(), CoroutineScope {
 
     private val job = SupervisorJob()

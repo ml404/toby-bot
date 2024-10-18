@@ -11,7 +11,7 @@ import bot.toby.command.CommandTest.Companion.user
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test
 
 internal class InitiativeCommandTest : CommandTest {
     private lateinit var initiativeCommand: InitiativeCommand
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
 
     private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var dndHelper: DnDHelper

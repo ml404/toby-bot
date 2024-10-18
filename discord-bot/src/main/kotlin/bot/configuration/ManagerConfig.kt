@@ -1,12 +1,15 @@
 package bot.configuration
 
-import bot.toby.button.IButton
 import bot.toby.helpers.UserDtoHelper
-import bot.toby.managers.ButtonManager
-import bot.toby.managers.CommandManagerImpl
-import bot.toby.managers.MenuManager
-import bot.toby.menu.IMenu
-import database.service.IConfigService
+import bot.toby.managers.DefaultButtonManager
+import bot.toby.managers.DefaultCommandManager
+import bot.toby.managers.DefaultMenuManager
+import core.button.Button
+import core.managers.ButtonManager
+import core.managers.CommandManager
+import core.managers.MenuManager
+import core.menu.Menu
+import database.service.ConfigService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -17,11 +20,11 @@ open class ManagerConfig {
 
     @Bean
     open fun commandManager(
-        configService: IConfigService,
+        configService: ConfigService,
         userDtoHelper: UserDtoHelper,
         commandList: List<core.command.Command>
-    ): CommandManagerImpl {
-        return CommandManagerImpl(
+    ): CommandManager {
+        return DefaultCommandManager(
             configService,
             userDtoHelper,
             commandList
@@ -30,18 +33,18 @@ open class ManagerConfig {
 
     @Bean
     open fun menuManager(
-        configService: IConfigService,
-        menus: List<IMenu>
+        configService: ConfigService,
+        menus: List<Menu>
     ): MenuManager {
-        return MenuManager(configService, menus)
+        return DefaultMenuManager(configService, menus)
     }
 
     @Bean
     open fun buttonManager(
-        configService: IConfigService,
+        configService: ConfigService,
         userDtoHelper: UserDtoHelper,
-        buttons: List<IButton>
+        buttons: List<Button>
     ): ButtonManager {
-        return ButtonManager(configService, userDtoHelper, buttons)
+        return DefaultButtonManager(configService, userDtoHelper, buttons)
     }
 }

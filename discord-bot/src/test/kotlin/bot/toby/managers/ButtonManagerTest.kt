@@ -2,11 +2,7 @@ package bot.toby.managers
 
 import bot.Application
 import bot.configuration.*
-import bot.toby.button.IButton
 import bot.toby.button.buttons.*
-import bot.toby.command.commands.misc.*
-import bot.toby.command.commands.moderation.*
-import bot.toby.command.commands.music.*
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
@@ -14,6 +10,7 @@ import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import common.configuration.TestCachingConfig
+import core.button.Button
 import database.configuration.TestDatabaseConfig
 import database.dto.ConfigDto
 import database.service.*
@@ -45,18 +42,18 @@ import java.util.concurrent.LinkedBlockingQueue
 @ActiveProfiles("test")
 class ButtonManagerTest {
 
-    lateinit var configService: IConfigService
-    private lateinit var buttonManager: ButtonManager
+    lateinit var configService: ConfigService
+    private lateinit var buttonManager: DefaultButtonManager
     private lateinit var userDtoHelper: UserDtoHelper
 
     @Autowired
-    lateinit var buttons: List<IButton>
+    lateinit var buttons: List<Button>
 
     @BeforeEach
     fun openMocks() {
         configService = mockk()
         userDtoHelper = mockk()
-        buttonManager = ButtonManager(configService, userDtoHelper, buttons)
+        buttonManager = DefaultButtonManager(configService, userDtoHelper, buttons)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
 

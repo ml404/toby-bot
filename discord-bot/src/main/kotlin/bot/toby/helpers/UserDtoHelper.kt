@@ -1,14 +1,14 @@
 package bot.toby.helpers
 
+import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
-import database.service.IUserService
-import common.logging.DiscordLogger
+import database.service.UserService
 import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service
 
 @Service
-class UserDtoHelper(private val userService: IUserService) {
+class UserDtoHelper(private val userService: UserService) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     fun calculateUserDto(
         discordId: Long,

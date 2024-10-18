@@ -7,7 +7,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import database.dto.ConfigDto
 import database.dto.ConfigDto.Configurations.*
-import database.service.IConfigService
+import database.service.ConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.channel.unions.GuildChannelUnion
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -18,7 +18,7 @@ import java.util.*
 
 internal class SetConfigCommandTest : CommandTest {
     lateinit var setConfigCommand: SetConfigCommand
-    lateinit var configService: IConfigService
+    lateinit var configService: ConfigService
 
     @BeforeEach
     fun setUp() {

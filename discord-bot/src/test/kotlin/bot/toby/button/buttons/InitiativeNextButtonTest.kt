@@ -1,18 +1,16 @@
 package bot.toby.button.buttons
 
-import bot.toby.button.ButtonContext
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.configService
 import bot.toby.button.ButtonTest.Companion.dndHelper
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.userService
+import bot.toby.button.DefaultButtonContext
 import database.dto.ConfigDto
-import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.InteractionHook
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -61,7 +59,7 @@ class InitiativeNextButtonTest : ButtonTest {
         every { dndHelper.incrementTurnTable(any(), any(), any()) } just Runs
 
         // Invoke the handler
-        InitiativeNextButton(dndHelper).handle(ButtonContext(event), database.dto.UserDto(6L, 1L), 0)
+        InitiativeNextButton(dndHelper).handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         // Verify expected interactions
         verify(exactly = 1) { dndHelper.incrementTurnTable(mockHook, event, 0) }

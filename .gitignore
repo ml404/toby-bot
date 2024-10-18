@@ -8,8 +8,10 @@
 
 # Ignore build directories
 common/build/
+core-api/build/
 database/build/
 discord-bot/build/
+web/build/
 
 # Ignore test resources
 common/src/test/resources/

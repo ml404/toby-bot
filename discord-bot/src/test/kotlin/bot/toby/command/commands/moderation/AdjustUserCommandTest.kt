@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.helpers.UserDtoHelper
-import database.service.IUserService
+import database.service.UserService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
 
 internal class AdjustUserCommandTest : CommandTest {
     private lateinit var adjustUserCommand: AdjustUserCommand
-    private val userService: IUserService = mockk()
+    private val userService: UserService = mockk()
     lateinit var userDtoHelper: UserDtoHelper
 
     @BeforeEach

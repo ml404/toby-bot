@@ -1,39 +1,39 @@
 package database.persistence.impl
 
 import database.dto.ConfigDto
-import database.persistence.IConfigPersistence
+import database.persistence.ConfigPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
-import jakarta.persistence.Query
+import jakarta.persistence.TypedQuery
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class ConfigPersistenceImpl : IConfigPersistence {
+open class DefaultConfigPersistence : ConfigPersistence {
 
     @PersistenceContext
     lateinit var entityManager: EntityManager
 
     override fun getConfigByName(name: String?, guildId: String?): ConfigDto? {
-        val q: Query = entityManager.createNamedQuery("ConfigDto.getValue", ConfigDto::class.java)
+        val q: TypedQuery<ConfigDto> = entityManager.createNamedQuery("ConfigDto.getValue", ConfigDto::class.java)
         q.setParameter("name", name)
         q.setParameter("guildId", guildId ?: "ALL")
 
-        val allInclusiveConfig: List<ConfigDto?> = q.resultList as List<ConfigDto?>
+        val allInclusiveConfig: List<ConfigDto?> = q.resultList
         val serverSpecificConfig = allInclusiveConfig.filter { it?.guildId == guildId }
         return serverSpecificConfig.firstOrNull() ?: allInclusiveConfig.firstOrNull() ?: ConfigDto()
     }
 
     override fun listAllConfig(): List<ConfigDto?> {
-        val q: Query = entityManager.createNamedQuery("ConfigDto.getAll", ConfigDto::class.java)
-        return q.resultList as List<ConfigDto?>
+        val q: TypedQuery<ConfigDto> = entityManager.createNamedQuery("ConfigDto.getAll", ConfigDto::class.java)
+        return q.resultList
     }
 
     override fun listGuildConfig(guildId: String?): List<ConfigDto?> {
-        val q: Query = entityManager.createNamedQuery("ConfigDto.getGuildAll", ConfigDto::class.java)
+        val q: TypedQuery<ConfigDto> = entityManager.createNamedQuery("ConfigDto.getGuildAll", ConfigDto::class.java)
         q.setParameter("guildId", guildId)
-        return q.resultList as List<ConfigDto?>
+        return q.resultList
     }
 
     override fun createNewConfig(configDto: ConfigDto): ConfigDto {

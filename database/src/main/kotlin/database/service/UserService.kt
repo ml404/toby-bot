@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.UserDto
 
-interface IUserService {
+interface UserService {
     fun listGuildUsers(guildId: Long?): List<UserDto?>
     fun createNewUser(userDto: UserDto): UserDto
     fun getUserById(discordId: Long?, guildId: Long?): UserDto?

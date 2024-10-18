@@ -2,7 +2,7 @@ package bot.toby.command.commands.misc
 
 import bot.toby.emote.Emotes
 import core.command.CommandContext
-import database.service.IBrotherService
+import database.service.BrotherService
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class BrotherCommand @Autowired constructor(private val brotherService: IBrotherService) :
+class BrotherCommand @Autowired constructor(private val brotherService: BrotherService) :
     MiscCommand {
     override val name = "brother"
 

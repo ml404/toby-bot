@@ -1,7 +1,7 @@
 package bot.toby.command.commands.misc
 
 import core.command.CommandContext
-import database.service.IConfigService
+import database.service.ConfigService
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 @Component
-class HelloThereCommand @Autowired constructor(private val configService: IConfigService) : MiscCommand {
+class HelloThereCommand @Autowired constructor(private val configService: ConfigService) : MiscCommand {
     private val DEFAULT_DATE_FORMAT = "yyyy/MM/dd"
     private val REFERENCE_DATE = LocalDate.of(2005, 5, 19)
 

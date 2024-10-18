@@ -3,7 +3,7 @@ package database
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.MusicDto
-import database.service.IUserService
+import database.service.UserService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -24,10 +24,10 @@ import org.springframework.test.context.ActiveProfiles
 @ActiveProfiles("test")
 class UserServiceImplIntegrationTest {
     @Autowired
-    lateinit var userService: IUserService
+    lateinit var userService: UserService
 
     @Autowired
-    lateinit var musicService: database.service.IMusicFileService
+    lateinit var musicService: database.service.MusicFileService
 
     @BeforeEach
     fun setUp() {

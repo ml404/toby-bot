@@ -14,7 +14,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.track
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.JoinCommand
 import database.dto.ConfigDto
-import database.service.IConfigService
+import database.service.ConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
@@ -25,12 +25,12 @@ import org.junit.jupiter.api.Test
 
 internal class JoinCommandTest : MusicCommandTest {
     lateinit var command: JoinCommand
-    lateinit var configService: IConfigService
+    lateinit var configService: ConfigService
 
     @BeforeEach
     fun setup() {
         setupCommonMusicMocks()
-        configService = mockk<IConfigService>()
+        configService = mockk<ConfigService>()
         command = JoinCommand(configService)
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("", "100", "1")
     }
