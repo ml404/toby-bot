@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.MusicCommandTest.Companion.audioChannelUnion
 import bot.toby.command.commands.music.MusicCommandTest.Companion.audioManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.memberVoiceState
@@ -42,7 +42,7 @@ internal class LeaveCommandTest : MusicCommandTest {
     @Test
     fun test_leaveCommand() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false

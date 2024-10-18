@@ -1,6 +1,6 @@
 package bot.toby.managers
 
-import bot.toby.command.CommandContextImpl
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.fetch.FetchCommand
 import bot.toby.command.commands.misc.MiscCommand
@@ -78,7 +78,7 @@ class DefaultCommandManager @Autowired constructor(
 
         cmd?.let {
             event.channel.sendTyping().queue()
-            val ctx = CommandContextImpl(event)
+            val ctx = DefaultCommandContext(event)
             lastCommands[event.guild!!] = Pair(it, ctx)
             requestingUserDto?.let { userDto ->
                 it.handle(ctx, userDto, deleteDelay)

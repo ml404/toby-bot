@@ -1,6 +1,5 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.botMember
 import bot.toby.command.CommandTest.Companion.event
@@ -8,6 +7,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
+import bot.toby.command.DefaultCommandContext
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -38,7 +38,7 @@ internal class KickCommandTest : CommandTest {
     @Test
     fun test_KickWithValidPermissions_kicksEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         kickSetup(botKickOthers = true, memberKickOthers = true, mentionedMembers = listOf(targetMember))
 
         // Act
@@ -52,7 +52,7 @@ internal class KickCommandTest : CommandTest {
     @Test
     fun test_KickWithValidPermissionsAndMultipleMembers_kicksEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         kickSetup(
             botKickOthers = true,
             memberKickOthers = true,
@@ -71,7 +71,7 @@ internal class KickCommandTest : CommandTest {
     @Test
     fun test_KickWithInvalidBotPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         kickSetup(botKickOthers = false, memberKickOthers = true, mentionedMembers = listOf(targetMember))
 
         // Act
@@ -85,7 +85,7 @@ internal class KickCommandTest : CommandTest {
     @Test
     fun test_KickWithInvalidUserPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         kickSetup(botKickOthers = true, memberKickOthers = false, mentionedMembers = listOf(targetMember))
 
         // Act

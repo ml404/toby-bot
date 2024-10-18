@@ -1,9 +1,9 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import bot.toby.command.commands.music.MusicCommandTest.Companion.musicManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
@@ -36,7 +36,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
     @Test
     fun test_nowDigOnThisCommand_withValidArguments() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         every { playerManager.getMusicManager(guild) } returns musicManager
@@ -90,7 +90,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
     @Test
     fun test_nowDigOnThisCommand_withInvalidPermissionsArguments() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
 

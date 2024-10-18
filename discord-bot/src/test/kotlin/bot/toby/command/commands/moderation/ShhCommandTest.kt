@@ -1,10 +1,10 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.targetMember
+import bot.toby.command.DefaultCommandContext
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -33,7 +33,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithValidPermissions_mutesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         shhSetup(
             voiceMuteOtherBot = true,
             voiceMuteOtherMember = true,
@@ -51,7 +51,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithValidPermissionsAndMultipleMembers_mutesEveryoneInChannel() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         shhSetup(
             voiceMuteOtherBot = true,
             voiceMuteOtherMember = true,
@@ -70,7 +70,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithInvalidBotPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         shhSetup(
             voiceMuteOtherBot = false,
             voiceMuteOtherMember = true,
@@ -91,7 +91,7 @@ internal class ShhCommandTest : CommandTest {
     @Test
     fun test_shhWithInvalidUserPermissions_throwsError() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         shhSetup(
             voiceMuteOtherBot = true,
             voiceMuteOtherMember = false,

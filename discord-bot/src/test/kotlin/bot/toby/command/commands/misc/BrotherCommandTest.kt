@@ -1,11 +1,11 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.jda
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.user
+import bot.toby.command.DefaultCommandContext
 import bot.toby.emote.Emotes
 import io.mockk.clearMocks
 import io.mockk.every
@@ -57,7 +57,7 @@ internal class BrotherCommandTest : CommandTest {
         every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
+        brotherCommand.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {
@@ -86,7 +86,7 @@ internal class BrotherCommandTest : CommandTest {
         every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
+        brotherCommand.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {
@@ -108,7 +108,7 @@ internal class BrotherCommandTest : CommandTest {
         every { jda.getEmojiById(Emotes.TOBY) } returns tobyEmote
 
         // Act
-        brotherCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
+        brotherCommand.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         // Assert
         verify(exactly = 1) {

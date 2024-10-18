@@ -1,9 +1,9 @@
 package bot.toby.command.commands.fetch
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
+import bot.toby.command.DefaultCommandContext
 import bot.toby.dto.web.RedditAPIDto
 import io.mockk.*
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -64,7 +64,7 @@ internal class MemeCommandTest : CommandTest {
     @Throws(IOException::class)
     fun test_memeCommandWithSubreddit_createsAndSendsEmbed() {
         //Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val subredditOptionMapping = mockk<OptionMapping>()
         val httpClient = mockk<HttpClient>()
         val httpResponse = mockk<HttpResponse>()
@@ -93,7 +93,7 @@ internal class MemeCommandTest : CommandTest {
     @Throws(IOException::class)
     fun test_memeCommandWithSubredditAndTimePeriod_createsAndSendsEmbed() {
         //Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val subredditOptionMapping = mockk<OptionMapping>()
         val timePeriodOptionMapping = mockk<OptionMapping>()
         val httpClient = mockk<HttpClient>()

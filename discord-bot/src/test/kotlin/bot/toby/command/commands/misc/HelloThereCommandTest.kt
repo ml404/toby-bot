@@ -1,8 +1,8 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.service.ConfigService
@@ -44,7 +44,7 @@ class HelloThereCommandTest : CommandTest {
         every { event.getOption(any<String>()) } returns messageOption
         every { configService.getConfigByName("DATEFORMAT", "1") } returns ConfigDto("DATEFORMAT", "yyyy/MM/dd", "1")
 
-        command.handle(CommandContextImpl(event), requestingUserDto, 0)
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         verify { event.hook.sendMessage("General Kenobi.") }
     }
@@ -61,7 +61,7 @@ class HelloThereCommandTest : CommandTest {
         every { event.getOption(any<String>()) } returns messageOption
         every { configService.getConfigByName("DATEFORMAT", "1") } returns ConfigDto("DATEFORMAT", "yyyy/MM/dd", "1")
 
-        command.handle(CommandContextImpl(event), requestingUserDto, 0)
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         verify { event.hook.sendMessage("Hello.") }
     }
@@ -73,7 +73,7 @@ class HelloThereCommandTest : CommandTest {
 
         val requestingUserDto = userDto // You can set the user as needed
 
-        command.handle(CommandContextImpl(event), requestingUserDto, 0)
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         verify { event.hook.sendMessage("I have a bad understanding of time, let me know what the date is so I can greet you appropriately") }
     }
@@ -90,7 +90,7 @@ class HelloThereCommandTest : CommandTest {
         every { event.getOption(any<String>()) } returns messageOption
         every { configService.getConfigByName("DATEFORMAT", "1") } returns ConfigDto("DATEFORMAT", "yyyy/MM/dd", "1")
 
-        command.handle(CommandContextImpl(event), requestingUserDto, 0)
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         verify {
             event.hook.sendMessage(

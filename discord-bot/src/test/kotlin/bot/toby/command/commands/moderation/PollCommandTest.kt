@@ -1,10 +1,10 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.messageCreateAction
 import bot.toby.command.CommandTest.Companion.requestingUserDto
+import bot.toby.command.DefaultCommandContext
 import bot.toby.emote.Emotes
 import io.mockk.*
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -41,7 +41,7 @@ internal class PollCommandTest : CommandTest {
     @Test
     fun test_pollCommandWithChoices_sendsEmbed() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         every { event.getOption("choices") } returns choicesOptionMapping
         every { event.getOption("question") } returns null
@@ -59,7 +59,7 @@ internal class PollCommandTest : CommandTest {
     @Test
     fun test_pollCommandWithChoicesAndQuestion_sendsEmbed() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { choicesOptionMapping.asString } returns "Choice1, Choice2"
         every { questionOptionMapping.asString } returns "Question"
 
@@ -75,7 +75,7 @@ internal class PollCommandTest : CommandTest {
     @Test
     fun test_pollCommandWithoutChoices_sendsError() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         every { questionOptionMapping.asString } returns "Question"
 
@@ -94,7 +94,7 @@ internal class PollCommandTest : CommandTest {
     @Test
     fun test_pollCommandWithTooManyChoices_sendsError() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         every { event.getOption("choices") } returns choicesOptionMapping
         every { choicesOptionMapping.asString } returns "Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1, Choice2,Choice1"

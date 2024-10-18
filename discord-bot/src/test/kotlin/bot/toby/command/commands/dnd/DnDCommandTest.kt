@@ -1,11 +1,11 @@
 package bot.toby.command.commands.dnd
 
 import bot.coroutines.MainCoroutineExtension
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
+import bot.toby.command.DefaultCommandContext
 import io.mockk.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,7 +50,7 @@ class DnDCommandTest : CommandTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `should create and call DnDCommandQueryHandler for successful lookup`() = runTest {
-        command.handle(CommandContextImpl(event), mockk(), deleteDelay)
+        command.handle(DefaultCommandContext(event), mockk(), deleteDelay)
 
         advanceUntilIdle()
 

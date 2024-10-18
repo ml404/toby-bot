@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.player.StopCommand
 import io.mockk.clearMocks
 import io.mockk.slot
@@ -32,7 +32,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withBotAndUserBothInSameChannels() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val hook = event.hook
         val embedSlot = slot<MessageEmbed>()
 
@@ -54,7 +54,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withBotNotInChannelAndUserInChannel() {
         // Arrange
         setUpAudioChannelsWithBotNotInChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
@@ -67,7 +67,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withUserNotInChannelAndBotInChannel() {
         // Arrange
         setUpAudioChannelsWithUserNotInChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)
@@ -80,7 +80,7 @@ internal class StopCommandTest : MusicCommandTest {
     fun test_callStopCommand_withUserInChannelAndBotInChannel_ButChannelsAreDifferent() {
         // Arrange
         setUpAudioChannelsWithUserAndBotInDifferentChannels()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
 
         // Act
         stopCommand.handle(commandContext, CommandTest.requestingUserDto, 0)

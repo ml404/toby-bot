@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
@@ -33,7 +33,7 @@ internal class LoopCommandTest : MusicCommandTest {
     fun test_looping_whenNotCurrentlyLooping() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
         every { trackScheduler.isLooping } returns false
@@ -57,7 +57,7 @@ internal class LoopCommandTest : MusicCommandTest {
     fun test_looping_whenCurrentlyLooping() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
         every { trackScheduler.isLooping } returns true

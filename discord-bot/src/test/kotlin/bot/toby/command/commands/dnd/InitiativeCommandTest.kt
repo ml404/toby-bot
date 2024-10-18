@@ -1,6 +1,5 @@
 package bot.toby.command.commands.dnd
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guildVoiceState
@@ -9,6 +8,7 @@ import bot.toby.command.CommandTest.Companion.replyCallbackAction
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.user
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
+import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
 import database.service.UserService
@@ -55,7 +55,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithCorrectSetup_WithNames() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val namesMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val dmMember = mockk<Member>()
@@ -88,7 +88,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithCorrectSetup_UsingMemberVoiceState() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val namesMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val dmMember = mockk<Member>()
@@ -127,7 +127,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithNoValidChannel() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val namesMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val dmMember = mockk<Member>()
@@ -169,7 +169,7 @@ internal class InitiativeCommandTest : CommandTest {
     @Test
     fun test_initiativeCommandWithNoNonDMMembersAndAValidChannelOption() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val channelOptionMapping = mockk<OptionMapping>()
         val dmOptionMapping = mockk<OptionMapping>()
         val guildChannelUnion = mockk<GuildChannelUnion>()

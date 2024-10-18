@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.MusicCommandTest.Companion.mockAudioPlayer
 import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.player.PauseCommand
@@ -39,7 +39,7 @@ internal class PauseCommandTest : MusicCommandTest {
     fun test_pauseMethod_withCorrectChannels_andPausableTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns true
 
@@ -69,7 +69,7 @@ internal class PauseCommandTest : MusicCommandTest {
     fun test_pauseMethod_withCorrectChannels_andNonPausableTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-            val commandContext = CommandContextImpl(event)
+            val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         every { requestingUserDto.superUser } returns false
@@ -92,7 +92,7 @@ internal class PauseCommandTest : MusicCommandTest {
     fun test_pauseMethod_withCorrectChannels_andNonPausableTrack_AndAQueue() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
         val queue: ArrayBlockingQueue<AudioTrack> = ArrayBlockingQueue(1)

@@ -1,8 +1,8 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.player.PlayCommand
 import core.command.Command
 import io.mockk.every
@@ -32,7 +32,7 @@ internal class HelpCommandTest : CommandTest {
         every { event.getOption("command") } returns null
 
         // Test handle method
-        helpCommand.handle(CommandContextImpl(event), mockk(), 0)
+        helpCommand.handle(DefaultCommandContext(event), mockk(), 0)
 
         // Verify interactions
         verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
@@ -54,7 +54,7 @@ internal class HelpCommandTest : CommandTest {
         every { musicCommand.name } returns "play"
 
         // Test handle method
-        helpCommand.handle(CommandContextImpl(event), mockk(), 0)
+        helpCommand.handle(DefaultCommandContext(event), mockk(), 0)
 
         // Verify interactions
         verify(exactly = 1) { event.hook.sendMessage(any<String>()) }

@@ -1,10 +1,10 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
+import bot.toby.command.DefaultCommandContext
 import database.dto.MusicDto
 import database.service.UserService
 import io.mockk.every
@@ -56,7 +56,7 @@ class UserInfoCommandTest : CommandTest {
         }
 
         // Test handle method
-        userInfoCommand.handle(CommandContextImpl(event), userDto, 0)
+        userInfoCommand.handle(DefaultCommandContext(event), userDto, 0)
 
         // Verify interactions
         verify(exactly = 1) {
@@ -106,7 +106,7 @@ class UserInfoCommandTest : CommandTest {
         every { userService.getUserById(any(), any()) } returns mentionedUserDto
 
         // Test handle method
-        userInfoCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
+        userInfoCommand.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         // Verify interactions
         verify(exactly = 1)
@@ -127,7 +127,7 @@ class UserInfoCommandTest : CommandTest {
 
         // Mock the requesting user without permission
         // Test handle method
-        userInfoCommand.handle(CommandContextImpl(event), requestingUserDto, 0)
+        userInfoCommand.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         // Verify interactions
         verify(exactly = 1) {

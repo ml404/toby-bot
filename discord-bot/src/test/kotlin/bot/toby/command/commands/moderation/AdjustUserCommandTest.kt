@@ -1,10 +1,10 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
+import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
 import database.service.UserService
 import io.mockk.clearAllMocks
@@ -39,7 +39,7 @@ internal class AdjustUserCommandTest : CommandTest {
     @Test
     fun testAdjustUser_withCorrectPermissions_updatesTargetUser() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val targetUserDto = mockk<database.dto.UserDto>(relaxed = true)
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
@@ -74,7 +74,7 @@ internal class AdjustUserCommandTest : CommandTest {
     @Test
     fun testAdjustUser_withCorrectPermissions_createsTargetUser() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
@@ -106,7 +106,7 @@ internal class AdjustUserCommandTest : CommandTest {
     @Test
     fun testAdjustUser_withNoMentionedPermissions_Errors() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
@@ -131,7 +131,7 @@ internal class AdjustUserCommandTest : CommandTest {
     @Test
     fun testAdjustUser_withNoMentionedUser_Errors() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
 
@@ -152,7 +152,7 @@ internal class AdjustUserCommandTest : CommandTest {
     @Test
     fun testAdjustUser_whenUserIsntOwner_Errors() {
         // Arrange
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val targetUserDto = mockk<database.dto.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
 

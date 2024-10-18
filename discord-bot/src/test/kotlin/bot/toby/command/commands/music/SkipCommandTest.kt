@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.player.SkipCommand
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
@@ -35,7 +35,7 @@ internal class SkipCommandTest : MusicCommandTest {
     @Test
     fun test_skipCommand_withValidQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         every { event.getOption("skip") } returns mockk<OptionMapping> {
@@ -76,7 +76,7 @@ internal class SkipCommandTest : MusicCommandTest {
     @Test
     fun test_skipCommandForMultipleTracks_withValidQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val hook = event.hook
         every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns true
@@ -120,7 +120,7 @@ internal class SkipCommandTest : MusicCommandTest {
     @Test
     fun test_skipCommandWithInvalidAmountOfTracksToSkip_withValidQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()
@@ -161,7 +161,7 @@ internal class SkipCommandTest : MusicCommandTest {
     @Test
     fun test_skipCommandWithValidNumberOfTracksToSkip_withNoQueueAndSetup() {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         every { MusicCommandTest.mockAudioPlayer.isPaused } returns false
         every { MusicCommandTest.playerManager.isCurrentlyStoppable } returns false
         val optionMapping = mockk<OptionMapping>()

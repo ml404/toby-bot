@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
+import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.player.ResumeCommand
 import io.mockk.*
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -30,7 +30,7 @@ internal class ResumeCommandTest : MusicCommandTest {
     fun test_resumeMethod_withCorrectChannels_andPausableTrack() {
         // Arrange
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = CommandContextImpl(event)
+        val commandContext = DefaultCommandContext(event)
         val audioPlayer = MusicCommandTest.mockAudioPlayer
         val playerManager = MusicCommandTest.Companion.playerManager
         val hook = event.hook

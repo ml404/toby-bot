@@ -1,9 +1,9 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandContextImpl
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
+import bot.toby.command.DefaultCommandContext
 import database.dto.ExcuseDto
 import database.service.ExcuseService
 import io.mockk.*
@@ -33,7 +33,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun aRandomApprovedExcuse_WhenNoOptionsUsed() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
@@ -63,7 +63,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun listAllApprovedExcuses_WithValidApprovedOnes() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
@@ -89,7 +89,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun listAllApprovedExcuses_WithNoValidApprovedOnes() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
@@ -110,7 +110,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun createNewExcuse() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
@@ -141,7 +141,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun createNewExcuse_thatExists_throwsError() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
@@ -174,7 +174,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun approvePendingExcuse_asSuperUser() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
@@ -205,7 +205,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun approvePendingExcuse_asNonAuthorisedUser() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val deleteDelay = 0
         val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
         val excuseMapping = mockk<OptionMapping>()
@@ -233,7 +233,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun listAllPendingExcuses_WithValidPendingOnes() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
@@ -259,7 +259,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun listAllPendingExcuses_WithNoValidPendingOnes() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
 
@@ -280,7 +280,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun deleteExcuse_asValidUser() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
@@ -307,7 +307,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun deleteExcuse_asInvalidUser() {
         // Arrange
-        val ctx = CommandContextImpl(event)
+        val ctx = DefaultCommandContext(event)
         val userDto = mockk<database.dto.UserDto>()
         val deleteDelay = 0
         val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
