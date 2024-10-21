@@ -44,7 +44,8 @@ open class BotConfig {
             .disableCache(
                 EnumSet.of(
                     CacheFlag.CLIENT_STATUS,
-                    CacheFlag.ACTIVITY
+                    CacheFlag.ACTIVITY,
+                    CacheFlag.SCHEDULED_EVENTS
                 )
             )
             .enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI)
