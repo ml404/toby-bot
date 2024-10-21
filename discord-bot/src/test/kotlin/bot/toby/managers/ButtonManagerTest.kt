@@ -1,6 +1,6 @@
 package bot.toby.managers
 
-import bot.Application
+import bot.DiscordBotApplication
 import bot.configuration.*
 import bot.toby.button.buttons.*
 import bot.toby.helpers.*
@@ -31,7 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 @SpringBootTest(
     classes = [
-        Application::class,
+        DiscordBotApplication::class,
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,

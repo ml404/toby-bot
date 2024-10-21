@@ -8,11 +8,11 @@ import org.springframework.context.annotation.ComponentScan
 @SpringBootApplication
 @ComponentScan("database", "common", "core-api", "bot", "web")
 @EnableCaching
-open class Application {
+open class DiscordBotApplication {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            SpringApplication.run(Application::class.java, *args)
+            SpringApplication.run(DiscordBotApplication::class.java, *args)
         }
     }
 }

@@ -1,6 +1,6 @@
 package bot.toby.managers
 
-import bot.Application
+import bot.DiscordBotApplication
 import bot.configuration.*
 import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
@@ -37,7 +37,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest(
     classes = [
-        Application::class,
+        DiscordBotApplication::class,
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,

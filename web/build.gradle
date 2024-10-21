@@ -30,9 +30,9 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(":database")
     implementation project(":common")
     implementation project(':core-api')
+    implementation project(":database")
     implementation "net.dv8tion:JDA:$jdaVersion"
     compileOnly 'org.jetbrains:annotations:24.0.0'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
@@ -42,8 +42,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
     implementation 'org.springdoc:springdoc-openapi-kotlin:1.7.0'
+    testImplementation project(path: ':common', configuration: 'testArtifacts')
+    testImplementation project(path: ':core-api', configuration: 'testArtifacts')
     testImplementation project(path: ':database', configuration: 'testArtifacts')
-    testImplementation project(configuration: 'testArtifacts', path: ':common')
     testImplementation "io.mockk:mockk:$mockk_version"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+test {
+    useJUnitPlatform() // Ensure you are using the right testing framework
 }

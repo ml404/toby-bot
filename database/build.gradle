@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot'
+    id 'org.springframework.boot' apply false
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id 'org.jetbrains.kotlin.jvm'
 }
@@ -73,4 +73,3 @@ artifacts {
 artifacts {
     testArtifacts testJar
 }
-

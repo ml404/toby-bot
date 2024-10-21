@@ -28,6 +28,7 @@ dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     implementation 'org.springframework:spring-context'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation "io.mockk:mockk:$mockk_version"
 
 }
 
