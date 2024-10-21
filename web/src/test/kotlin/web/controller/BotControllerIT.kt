@@ -1,6 +1,7 @@
 package web.controller
 
 import common.configuration.TestCachingConfig
+import core.configuration.TestManagerConfig
 import database.configuration.TestDatabaseConfig
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.BeforeEach
@@ -20,6 +21,7 @@ import web.WebApplication
         WebApplication::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
+        TestManagerConfig::class
     ]
 )
 @AutoConfigureMockMvc
