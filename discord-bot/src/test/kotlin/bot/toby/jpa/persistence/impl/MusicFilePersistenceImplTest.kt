@@ -1,6 +1,6 @@
 package bot.toby.jpa.persistence.impl
 
-import bot.Application
+import bot.DiscordBotApplication
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest(
     classes = [
-        Application::class,
+        DiscordBotApplication::class,
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,

@@ -16,3 +16,5 @@ include 'core-api'
 include 'database'
 include 'discord-bot'
 include 'web'
+include 'application'
+
