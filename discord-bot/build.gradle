@@ -4,7 +4,7 @@ plugins {
     id 'java'
     id 'application'
     id 'org.springframework.boot' apply false
-    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
     id 'org.jetbrains.kotlin.jvm'
     id "org.jetbrains.kotlin.plugin.serialization" version "$kotlin_version"
 }
@@ -56,7 +56,7 @@ tasks.register('deleteExtras', Delete) {
         tmpDir.eachFile { file -> file.delete() }
         distributions.eachFile { file -> file.delete() }
         libsDir.eachFile { file ->
-            if (file.name.endsWith("SNAPSHOT.jar") || file.name.endsWith("SNAPSHOT-test.jar")) {
+            if (file.name.endsWith("SNAPSHOT.jar") || file.name.endsWith("SNAPSHOT-tests.jar")) {
                 println "Keeping ${file.name}"
             } else {
                 file.delete()

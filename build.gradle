@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 buildscript {
     ext {
         springBootVersion = '3.3.4'
+        springDependencyManagementVersion = '1.0.15.RELEASE'
         jdaVersion = '5.0.2'
         kotlin_version = '2.0.0-RC3'
         kotlinx_version = '1.9.0-RC'
@@ -19,7 +20,7 @@ buildscript {
 }
 
 plugins {
-    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
     id 'com.autonomousapps.dependency-analysis' version '1.25.0'
 }
 
