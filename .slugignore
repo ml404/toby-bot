@@ -28,6 +28,9 @@ tests/
 **/tests/
 **/*Test.kt
 
+# Ignore unneeded jars
+*/build/libs/*-tests.jar
+
 # Ignore documentation and unused resources
 docs/
 README.md

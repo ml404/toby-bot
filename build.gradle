@@ -47,7 +47,7 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
 
     configurations {
-        all {
+        configureEach {
             exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
         }
     }

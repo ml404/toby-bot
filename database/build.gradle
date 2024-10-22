@@ -5,15 +5,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
 }
 
-group = 'com.github.ml404'
-version = '6.0-SNAPSHOT'
-
-repositories {
-    mavenCentral()
-    maven { url 'https://repo.spring.io/libs-snapshot' }
-    maven { url 'https://repo.spring.io/milestone' }
-}
-
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:$springBootVersion"
@@ -64,10 +55,6 @@ configurations {
 tasks.register('testJar', Jar) {
     archiveClassifier = 'tests'
     from sourceSets.test.output
-}
-
-artifacts {
-    testArtifacts testJar
 }
 
 artifacts {
