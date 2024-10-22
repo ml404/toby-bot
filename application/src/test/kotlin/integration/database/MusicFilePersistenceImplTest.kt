@@ -1,9 +1,5 @@
-package bot.toby.jpa.persistence.impl
+package integration.database
 
-import bot.DiscordBotApplication
-import bot.configuration.TestAppConfig
-import bot.configuration.TestBotConfig
-import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.MusicDto
@@ -20,12 +16,9 @@ import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest(
     classes = [
-        DiscordBotApplication::class,
-        TestAppConfig::class,
-        TestBotConfig::class,
+        Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
-        TestManagerConfig::class
     ]
 )
 @ActiveProfiles("test")

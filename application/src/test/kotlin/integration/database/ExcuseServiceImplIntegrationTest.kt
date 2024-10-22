@@ -1,4 +1,4 @@
-package database
+package integration.database
 
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
@@ -15,7 +15,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest(
     classes = [
-        DatabaseApplication::class,
+        Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
     ]

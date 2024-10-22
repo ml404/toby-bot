@@ -1,45 +1,52 @@
-# Ignore log files
-*.log
-
-# macOS specific files
-.DS_Store
-
-# IntelliJ IDEA files
+# Ignore IDE config and metadata
 .idea/
+*.iml
+*.ipr
+*.iws
 
-# Gradle specific files
+# Ignore build system directories
 .gradle/
 build/
-out/
 **/build/
+out/
 **/out/
 
-# Maven specific files (if applicable)
-.m2/
-
-# Ignore target directories (for Maven projects)
-target/
-
-# Ignore logs directories
+# Ignore logs and temporary files
 logs/
 logs/*
+tmp/
+**/tmp/
 
-# Ignore test directories
+# Ignore Maven/Gradle cache directories (if applicable)
+.m2/
+.gradle/
+
+# Ignore test-related files
 test/
 tests/
+**/test/
+**/tests/
+**/*Test.kt
 
-# Ignore documentation
+# Ignore unneeded jars
+*/build/libs/*-tests.jar
+
+# Ignore documentation and unused resources
 docs/
-
-# Backup and temporary files
+README.md
+*.md
+**/*.md
 *.bak
 *.tmp
 
-# SQL files (if they are used for local development)
+# Ignore SQL and backup files
 *.sql
+*.bak
 
-# Media files (optional, if you want to ignore audio files)
+# Ignore media files like mp3s, images, etc.
 *.mp3
-
-# Ignore all module-specific temporary files if needed
-**/tmp/
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.gif

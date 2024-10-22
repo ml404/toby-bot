@@ -22,6 +22,7 @@ plugins {
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id 'com.autonomousapps.dependency-analysis' version '1.25.0'
 }
+
 apply plugin: 'kotlin'
 
 allprojects {
@@ -47,7 +48,7 @@ subprojects {
     apply plugin: 'io.spring.dependency-management'
 
     configurations {
-        all {
+        configureEach {
             exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
         }
     }
@@ -71,9 +72,7 @@ tasks.withType(KotlinCompile).configureEach {
 repositories {
     mavenCentral()
 }
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-}
+
 kotlin {
     jvmToolchain(8)
 }

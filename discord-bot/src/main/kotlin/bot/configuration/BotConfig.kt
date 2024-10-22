@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
-import org.yaml.snakeyaml.error.MissingEnvironmentVariableException
 import java.util.*
 
 @Profile("prod")
@@ -52,3 +51,6 @@ open class BotConfig {
             .build()
     }
 }
+
+class MissingEnvironmentVariableException(variableName: String) :
+    RuntimeException("Missing required environment variable: $variableName")
