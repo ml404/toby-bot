@@ -1,9 +1,9 @@
-package bot.toby.managers
+package integration.bot
 
-import bot.DiscordBotApplication
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
+import bot.toby.managers.DefaultMenuManager
 import bot.toby.menu.menus.EditIntroMenu
 import bot.toby.menu.menus.SetIntroMenu
 import bot.toby.menu.menus.dnd.DndMenu
@@ -23,7 +23,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest(
     classes = [
-        DiscordBotApplication::class,
+        Application::class,
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,

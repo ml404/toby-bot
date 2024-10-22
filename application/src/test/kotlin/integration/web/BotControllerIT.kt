@@ -1,7 +1,7 @@
-package web.controller
+package integration.web
 
+import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
-import core.configuration.TestManagerConfig
 import database.configuration.TestDatabaseConfig
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.BeforeEach
@@ -14,11 +14,10 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import web.WebApplication
 
 @SpringBootTest(
     classes = [
-        WebApplication::class,
+        Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
         TestManagerConfig::class

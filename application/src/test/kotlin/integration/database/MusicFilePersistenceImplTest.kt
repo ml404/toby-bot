@@ -1,4 +1,4 @@
-package database
+package integration.database
 
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest(
     classes = [
-        DatabaseApplication::class,
+        Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
     ]

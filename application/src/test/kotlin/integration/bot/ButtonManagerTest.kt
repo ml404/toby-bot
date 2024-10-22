@@ -1,12 +1,12 @@
-package bot.toby.managers
+package integration.bot
 
-import bot.DiscordBotApplication
 import bot.configuration.*
 import bot.toby.button.buttons.*
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
+import bot.toby.managers.DefaultButtonManager
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import common.configuration.TestCachingConfig
@@ -31,7 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 @SpringBootTest(
     classes = [
-        DiscordBotApplication::class,
+        Application::class,
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,

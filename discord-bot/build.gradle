@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id 'java'
     id 'application'
-    id 'org.springframework.boot'
+    id 'org.springframework.boot' apply false
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id 'org.jetbrains.kotlin.jvm'
     id "org.jetbrains.kotlin.plugin.serialization" version "$kotlin_version"
@@ -34,11 +34,9 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation "io.ktor:ktor-client-mock:$ktor_version"
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework:spring-context'
     implementation 'org.jsoup:jsoup:1.15.3'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.10"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation 'dev.lavalink.youtube:common:1.7.2'
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
@@ -58,7 +56,7 @@ tasks.register('deleteExtras', Delete) {
         tmpDir.eachFile { file -> file.delete() }
         distributions.eachFile { file -> file.delete() }
         libsDir.eachFile { file ->
-            if (file.name.endsWith("SNAPSHOT.jar")) {
+            if (file.name.endsWith("SNAPSHOT.jar") || file.name.endsWith("SNAPSHOT-test.jar")) {
                 println "Keeping ${file.name}"
             } else {
                 file.delete()

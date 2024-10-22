@@ -1,6 +1,5 @@
-package bot.toby.managers
+package integration.bot
 
-import bot.DiscordBotApplication
 import bot.configuration.*
 import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
@@ -17,6 +16,7 @@ import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.command.commands.music.player.*
 import bot.toby.helpers.*
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.managers.DefaultCommandManager
 import common.configuration.TestCachingConfig
 import core.command.Command
 import database.configuration.TestDatabaseConfig
@@ -37,7 +37,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest(
     classes = [
-        DiscordBotApplication::class,
+        Application::class,
         TestAppConfig::class,
         TestBotConfig::class,
         TestCachingConfig::class,
