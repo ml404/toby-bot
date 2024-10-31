@@ -1,7 +1,8 @@
 package bot.toby.command.commands.misc
 
+import bot.toby.helpers.UserDtoHelper
+import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import core.command.CommandContext
-import database.service.UserService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -10,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class UserInfoCommand @Autowired constructor(private val userService: UserService) : MiscCommand {
+class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoHelper) : MiscCommand {
     private val USERS = "users"
     override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
         val event = ctx.event
@@ -43,29 +44,16 @@ class UserInfoCommand @Autowired constructor(private val userService: UserServic
         deleteDelay: Int?
     ) {
         logger.info { " Doing lookup on user for guildId '${this.guild.idLong}' and discordId '${this.idLong}' " }
-        val userSearched = userService.getUserById(this.idLong, this.guild.idLong)
-        val userInfoMessage = userSearched?.let {
+        val userSearched = userDtoHelper.calculateUserDto(this.idLong, this.guild.idLong)
+        val userInfoMessage = userSearched.let {
             logger.info { " Found user '${it}' from lookup " }
-            val introMessage = calculateMusicFileData(event.member!!, userSearched)
+            val introMessage = produceMusicFileDataStringForPrinting(event.member!!, userSearched)
             "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $introMessage"
-        } ?: "I was unable to retrieve information for '${this.effectiveName}'."
+        }
         event.hook
             .sendMessage(userInfoMessage)
             .setEphemeral(true)
             .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
-    }
-
-    private fun calculateMusicFileData(member: Member, requestingUserDto: database.dto.UserDto): String {
-        val musicFiles = requestingUserDto.musicDtos.filter { !it.fileName.isNullOrBlank() }.sortedBy { it.index }
-        return if (musicFiles.isEmpty()) {
-            "There is no valid intro music file associated with user ${member.effectiveName}."
-        } else {
-            val fileDescriptions = musicFiles.mapIndexed { index, musicDto ->
-                "${index + 1}. '${musicDto.fileName}' (Volume: ${musicDto.introVolume})"
-            }.joinToString(separator = "\n")
-
-            "Your intro songs are currently set as:\n$fileDescriptions"
-        }
     }
 
     override val name: String = "userinfo"

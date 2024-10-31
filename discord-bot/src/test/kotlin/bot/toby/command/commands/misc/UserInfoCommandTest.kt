@@ -5,8 +5,8 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
+import bot.toby.helpers.UserDtoHelper
 import database.dto.MusicDto
-import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class UserInfoCommandTest : CommandTest {
-    lateinit var userService: UserService
+    lateinit var userDtoHelper: UserDtoHelper
     lateinit var userInfoCommand: UserInfoCommand
 
     @BeforeEach
@@ -25,8 +25,8 @@ class UserInfoCommandTest : CommandTest {
         setUpCommonMocks() // Call the common setup defined in the interface
 
         // Additional setup specific to UserInfoCommandTest
-        userService = mockk()
-        userInfoCommand = UserInfoCommand(userService)
+        userDtoHelper = mockk()
+        userInfoCommand = UserInfoCommand(userDtoHelper)
     }
 
     @AfterEach
@@ -50,7 +50,7 @@ class UserInfoCommandTest : CommandTest {
             initiativeModifier = 0,
             musicDtos = emptyList<MusicDto>().toMutableList()
         )
-        every { userService.getUserById(any(), any()) } returns userDto
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns userDto
         requestingUserDto.apply {
             every { musicDtos } returns listOf(MusicDto()).toMutableList()
         }
@@ -64,7 +64,7 @@ class UserInfoCommandTest : CommandTest {
                     " There is no valid intro music file associated with user Effective Name.")
         }
         verify(exactly = 1) {
-            userService.getUserById(any(), any())
+            userDtoHelper.calculateUserDto(any(), any())
         }
     }
 
@@ -87,7 +87,7 @@ class UserInfoCommandTest : CommandTest {
 
         // Mock a mentioned user's DTO
         val mentionedUserDto = database.dto.UserDto(6L, 1L)
-        every { userService.getUserById(any(), any()) } returns userDto
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns userDto
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
                 database.dto.UserDto(1, 1),
@@ -103,7 +103,7 @@ class UserInfoCommandTest : CommandTest {
         every { event.getOption(any())?.mentions } returns mentions
         val memberList = listOf(member)
         every { mentions.members } returns memberList
-        every { userService.getUserById(any(), any()) } returns mentionedUserDto
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns mentionedUserDto
 
         // Test handle method
         userInfoCommand.handle(DefaultCommandContext(event), requestingUserDto, 0)
@@ -111,7 +111,7 @@ class UserInfoCommandTest : CommandTest {
         // Verify interactions
         verify(exactly = 1)
         {
-            userService.getUserById(any(), any())
+            userDtoHelper.calculateUserDto(any(), any())
             event.hook.sendMessage(any<String>())
         }
     }
@@ -119,7 +119,7 @@ class UserInfoCommandTest : CommandTest {
     @Test
     fun testHandleCommandNoPermission() {
         // Mock user interaction without permission
-        every { userService.getUserById(any(), any()) } returns requestingUserDto
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns requestingUserDto
         every { requestingUserDto.superUser } returns false
 
         // Mock the event's options to include mentions

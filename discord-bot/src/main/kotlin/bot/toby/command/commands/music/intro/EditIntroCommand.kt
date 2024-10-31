@@ -2,22 +2,24 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
+import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import org.springframework.stereotype.Component
 
 @Component
 class EditIntroCommand : MusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
+        requestingUserDto: UserDto,
         deleteDelay: Int?
     ) {
         val event = ctx.event
@@ -36,9 +38,11 @@ class EditIntroCommand : MusicCommand {
         introList.forEach { intro -> builder.addOption(intro.fileName ?: "Unknown", intro.id.toString()) }
 
         val stringSelectMenu = builder.build()
+        val introMessage = produceMusicFileDataStringForPrinting(event.member!!, requestingUserDto)
 
         // Send the select menu to the user
-        event.hook.sendMessage("Select an intro to edit:").addActionRow(stringSelectMenu).setEphemeral(true).queue()
+        event.hook.sendMessage("$introMessage \nPlease select an intro to edit.").addActionRow(stringSelectMenu)
+            .setEphemeral(true).queue()
     }
 
     override val name: String

@@ -37,5 +37,21 @@ class UserDtoHelper(private val userService: UserService) {
             val guildId = this.guild.idLong
             return userDtoHelper.calculateUserDto(discordId, guildId, this.isOwner)
         }
+
+        fun produceMusicFileDataStringForPrinting(member: Member, requestingUserDto: UserDto): String {
+            val musicFiles = requestingUserDto.musicDtos.filter { !it.fileName.isNullOrBlank() }.sortedBy { it.index }
+            return if (musicFiles.isEmpty()) {
+                "There is no valid intro music file associated with user ${member.effectiveName}."
+            } else {
+                val fileDescriptions = musicFiles.mapIndexed { index, musicDto ->
+                    "${index + 1}. '${musicDto.fileName}' (Volume: ${musicDto.introVolume})"
+                }.joinToString(separator = "\n")
+
+                """
+        Your intro songs are currently set as:
+        $fileDescriptions
+        """.trimIndent()
+            }
+        }
     }
 }
