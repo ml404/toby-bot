@@ -4,9 +4,9 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.helpers.URLHelper
+import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
-import database.dto.MusicDto
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -121,8 +121,8 @@ class SetIntroCommand @Autowired constructor(
         when {
             checkForOverIntroLimit(
                 event.hook,
-                requestingUserDto.discordId,
-                requestingUserDto.musicDtos,
+                event.member!!,
+                requestingUserDto,
                 linkOption,
                 attachmentOption,
                 introVolume
@@ -163,20 +163,23 @@ class SetIntroCommand @Autowired constructor(
 
     private fun checkForOverIntroLimit(
         hook: InteractionHook,
-        discordId: Long,
-        introList: MutableList<MusicDto>,
+        member: Member,
+        requestingUserDto: UserDto,
         linkOption: String? = null,
         attachmentOption: OptionMapping? = null,
         introVolume: Int
     ): Boolean {
+        val introList = requestingUserDto.musicDtos
         if (introList.size >= LIMIT) {
-            introHelper.pendingIntros[discordId] = Triple(attachmentOption?.asAttachment, linkOption, introVolume)
+            introHelper.pendingIntros[requestingUserDto.discordId] =
+                Triple(attachmentOption?.asAttachment, linkOption, introVolume)
             val builder = StringSelectMenu.create(SET_INTRO).setPlaceholder(null)
             introList
                 .sortedBy { it.index }
                 .forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
             val stringSelectMenu = builder.build()
-            hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
+            val musicFileDataStringForPrinting = produceMusicFileDataStringForPrinting(member, requestingUserDto)
+            hook.sendMessage("$musicFileDataStringForPrinting\n Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
                 .setActionRow(stringSelectMenu)
                 .setEphemeral(true)
                 .queue()
