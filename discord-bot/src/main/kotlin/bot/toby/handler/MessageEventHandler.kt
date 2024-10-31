@@ -88,8 +88,8 @@ class MessageEventHandler @Autowired constructor(
             val suggestions = suggestCommands(input) // Get matching commands
             val optionChoices = suggestions.map { Command.Choice(it, it) } // Convert suggestions to choices
 
-            // Reply with the suggestions
-            event.replyChoices(optionChoices).queue()
+            // Reply with the suggestions, of which there has to be 25 or less according to JDA
+            event.replyChoices(optionChoices.take(25)).queue()
         }
     }
 
