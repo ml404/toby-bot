@@ -439,7 +439,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             // Assert
             verify(exactly = 0) { musicFileService.createNewMusicFile(ofType<MusicDto>()) }
             verify {
-                event.hook.sendMessage("Select the intro you'd like to replace with your new upload as we only allow 3 intros")
+                event.hook.sendMessage(match<String> { it.contains("Select the intro you'd like to replace with your new upload as we only allow 3 intros") })
             }
         }
 

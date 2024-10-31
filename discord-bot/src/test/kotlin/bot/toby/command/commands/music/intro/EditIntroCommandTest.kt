@@ -44,19 +44,16 @@ class EditIntroCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun `test handle with intros`() {
-
+    fun testHandleWithIntros() {
         every { ctx.event } returns event
 
-        val intro1 = MusicDto(requestingUserDto, 1, "Intro1")
-        val intro2 = MusicDto(requestingUserDto, 2, "Intro2")
+        val intro1 = MusicDto(requestingUserDto, 1, "Intro1", introVolume = 20)
+        val intro2 = MusicDto(requestingUserDto, 2, "Intro2", introVolume = 20)
 
         every { requestingUserDto.musicDtos } returns mutableListOf(intro1, intro2)
 
-        // Call handle
         editIntroCommand.handle(ctx, requestingUserDto, null)
 
-        // Verify that the correct intros are presented in the select menu
-        verify { event.hook.sendMessage("Select an intro to edit:") }
+        verify { event.hook.sendMessage(match<String> { it.contains("Your intro songs are currently set as:") }) }
     }
 }
