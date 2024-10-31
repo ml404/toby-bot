@@ -1,7 +1,7 @@
 package bot.toby.managers
 
 import bot.toby.command.DefaultCommandContext
-import bot.toby.command.commands.dnd.DnDSearchCommand
+import bot.toby.command.commands.dnd.DnDCommand
 import bot.toby.command.commands.fetch.FetchCommand
 import bot.toby.command.commands.misc.MiscCommand
 import bot.toby.command.commands.moderation.ModerationCommand
@@ -49,7 +49,7 @@ class DefaultCommandManager @Autowired constructor(
     val allSlashCommands: List<CommandData?> get() = slashCommands
     val allCommands: List<Command> get() = commands
     override val musicCommands: List<Command> get() = commands.filterIsInstance<MusicCommand>().toList()
-    override val dndCommands: List<Command> get() = commands.filterIsInstance<DnDSearchCommand>().toList()
+    override val dndCommands: List<Command> get() = commands.filterIsInstance<DnDCommand>().toList()
     override val moderationCommands: List<Command> get() = commands.filterIsInstance<ModerationCommand>().toList()
     override val miscCommands: List<Command> get() = commands.filterIsInstance<MiscCommand>().toList()
     override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>().toList()
