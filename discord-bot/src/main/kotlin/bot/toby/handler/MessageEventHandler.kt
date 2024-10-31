@@ -77,7 +77,7 @@ class MessageEventHandler @Autowired constructor(
         }.onFailure {
             // Handle DM context, log the case
             logger.setGuildContext(null)
-            logger.warn("Received a message from '${author.name}' in a DM context.")
+            logger.warn("A message was sent by '${author.name}' in a DM context.")
         }
     }
 
@@ -94,7 +94,7 @@ class MessageEventHandler @Autowired constructor(
     }
 
     private fun suggestCommands(input: String): List<String> {
-        return commandManager.commands.filter { it.name.startsWith(input, ignoreCase = true) }.map { it.name }
+        return commandManager.commands.filter { it.name.contains(input, ignoreCase = true) }.map { it.name }
     }
 
 
