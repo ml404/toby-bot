@@ -31,6 +31,12 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(22)
+    }
+}
+
 test {
     useJUnitPlatform() // Ensure you are using the right testing framework
 }

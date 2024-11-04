@@ -43,3 +43,9 @@ tasks.register('testJar', Jar) {
 artifacts {
     testArtifacts testJar
 }
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(22)
+    }
+}
