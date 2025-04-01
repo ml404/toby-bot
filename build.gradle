@@ -41,7 +41,8 @@ allprojects {
             name 'm2-duncte123'
             url 'https://m2.duncte123.dev/releases'
         }
-        maven { url = "https://maven.lavalink.dev/releases" }
+//        maven { url = "https://maven.lavalink.dev/releases" }
+        maven { url = "https://maven.lavalink.dev/snapshots" }
     }
 }
 
