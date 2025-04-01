@@ -22,7 +22,7 @@ dependencies {
     implementation project(":web")
     compileOnly 'org.jetbrains:annotations:24.0.0'
     implementation "net.dv8tion:JDA:$jdaVersion"
-    implementation 'dev.arbjerg:lavaplayer:2.2.1'
+    implementation 'dev.arbjerg:lavaplayer:2.2.3'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     implementation 'me.duncte123:botCommons:3.1.18'
     implementation 'com.google.code.gson:gson:2.10.1'
@@ -39,7 +39,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation 'dev.lavalink.youtube:common:1.12.0'
-    runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.1'
+    runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.3'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
     testImplementation project(path: ':common', configuration: 'testArtifacts')
     testImplementation project(path: ':database', configuration: 'testArtifacts')
