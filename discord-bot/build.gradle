@@ -24,7 +24,6 @@ dependencies {
     implementation "net.dv8tion:JDA:$jdaVersion"
     implementation 'dev.arbjerg:lavaplayer:2.2.3'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
-    implementation 'me.duncte123:botCommons:3.1.18'
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation "io.ktor:ktor-client-core:$ktor_version"
     implementation "io.ktor:ktor-client-cio:$ktor_version"
