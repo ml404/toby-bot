@@ -466,7 +466,7 @@ class IntroHelperTest {
     fun `checkForOverlyLongIntroDuration returns false when duration is equal to intro limit`() = runTest {
         // Arrange
         val url = "https://www.youtube.com/watch?v=validVideoId"
-        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 20.seconds
+        coEvery { httpHelper.getYouTubeVideoDuration(url) } returns 15.seconds
 
         // Act
         val result = introHelper.checkForOverlyLongIntroDuration(url)

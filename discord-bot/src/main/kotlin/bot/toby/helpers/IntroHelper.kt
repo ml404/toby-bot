@@ -37,7 +37,7 @@ class IntroHelper(
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val supervisorJob = SupervisorJob()
     private val coroutineScope = CoroutineScope(supervisorJob + dispatcher)
-    private val introLimit = 20.seconds
+    private val introLimit = 15.seconds
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()

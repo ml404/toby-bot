@@ -115,10 +115,10 @@ internal class HttpHelperTest {
 
     @Test
     fun testParseOnlySeconds() {
-        val duration = "PT20S"
+        val duration = "PT15S"
         val httpClient = createMockHttpClient()
         val result = httpClient.parseIso8601Duration(duration)
-        assertEquals(20.seconds, result)
+        assertEquals(15.seconds, result)
     }
 
     @Test
