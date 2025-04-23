@@ -1,5 +1,9 @@
 package bot.configuration
 
+import bot.toby.handler.EventWaiter
+import bot.toby.handler.MessageEventHandler
+import bot.toby.handler.StartUpHandler
+import bot.toby.handler.VoiceEventHandler
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.requests.GatewayIntent
@@ -15,7 +19,12 @@ import java.util.*
 open class BotConfig {
 
     @Bean
-    open fun jda(): JDA {
+    open fun jda(
+        startUpHandler: StartUpHandler,
+        voiceEventHandler: VoiceEventHandler,
+        messageEventHandler: MessageEventHandler,
+        eventWaiter: EventWaiter
+    ): JDA {
         val discordToken = System.getenv("TOKEN") ?: throw MissingEnvironmentVariableException("TOKEN environment variable is not set.")
 
         return JDABuilder.createDefault(
@@ -31,6 +40,7 @@ open class BotConfig {
             GatewayIntent.GUILD_VOICE_STATES,
             GatewayIntent.GUILD_EMOJIS_AND_STICKERS
         )
+            .addEventListeners(startUpHandler, voiceEventHandler, messageEventHandler, eventWaiter)
             .setMemberCachePolicy(MemberCachePolicy.ALL)
             .disableCache(
                 EnumSet.of(
