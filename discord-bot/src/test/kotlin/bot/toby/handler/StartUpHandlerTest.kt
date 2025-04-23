@@ -21,7 +21,6 @@ class StartUpHandlerTest {
     private val commandManager: DefaultCommandManager = DefaultCommandManager(configService, userDtoHelper, emptyList())
     private val handler = spyk(
         StartUpHandler(
-            jda,
             commandManager
         )
     )

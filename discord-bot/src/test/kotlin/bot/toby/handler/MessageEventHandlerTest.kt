@@ -8,7 +8,6 @@ import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Message
@@ -22,13 +21,11 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(MockKExtension::class)
 class MessageEventHandlerTest {
 
-    private val jda: JDA = mockk()
     private val commandManager: DefaultCommandManager = mockk()
     private val buttonManager: DefaultButtonManager = mockk()
     private val menuManager: DefaultMenuManager = mockk()
     private val handler = spyk(
         MessageEventHandler(
-            jda,
             commandManager,
             buttonManager,
             menuManager

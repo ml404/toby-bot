@@ -29,13 +29,13 @@ import org.junit.jupiter.api.extension.ExtendWith
 class VoiceEventHandlerTest {
 
     private val jda: JDA = mockk()
+    private val selfUser = mockk<SelfUser>()
     private val configService: ConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
     private val introHelper: IntroHelper = mockk()
 
     private val handler = spyk(
         VoiceEventHandler(
-            jda,
             configService,
             userDtoHelper,
             introHelper
@@ -44,7 +44,6 @@ class VoiceEventHandlerTest {
 
     @BeforeEach
     fun setup() {
-        val selfUser = mockk<SelfUser>()
         every { jda.selfUser } returns selfUser
         every { selfUser.name } returns "TestBot"
         every { selfUser.idLong } returns 12345L
@@ -72,8 +71,9 @@ class VoiceEventHandlerTest {
 
         // Mocking the chain
         every { readyEvent.jda } returns jda
-        every { jda.updateCommands() } returns commandListUpdateAction
-        every { jda.guildCache } returns guildCache
+        every { readyEvent.jda.selfUser } returns selfUser
+        every { readyEvent.jda.updateCommands() } returns commandListUpdateAction
+        every { readyEvent.jda.guildCache } returns guildCache
         every { commandListUpdateAction.addCommands(any<List<CommandData>>()) } returns commandListUpdateAction
         every { commandListUpdateAction.queue() } just Runs
 
@@ -108,7 +108,6 @@ class VoiceEventHandlerTest {
         every { audioManager2.openAudioConnection(any()) } just Runs
 
         val handler = VoiceEventHandler(
-            jda = jda,
             configService = mockk(),
             userDtoHelper = mockk(),
             introHelper = mockk()
@@ -132,6 +131,7 @@ class VoiceEventHandlerTest {
         val audioPlayerManager = mockk<PlayerManager>()
 
         every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
         every { guild.audioManager } returns audioManager
         every { event.member } returns member
         every { event.channelJoined } returns channel
@@ -193,6 +193,7 @@ class VoiceEventHandlerTest {
         val audioPlayerManager = mockk<PlayerManager>()
 
         every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
         every { guild.audioManager } returns audioManager
         every { event.member } returns member
         every { event.channelJoined } returns channel
@@ -254,6 +255,7 @@ class VoiceEventHandlerTest {
         val channel = mockk<AudioChannelUnion>()
 
         every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
         every { guild.audioManager } returns audioManager
         every { event.channelJoined } returns null
         every { event.channelLeft } returns channel
@@ -302,6 +304,7 @@ class VoiceEventHandlerTest {
         every { member.idLong } returns 1234L
         every { member.id } returns "1234"
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
+        every { event.jda.selfUser.name } returns "TobyBot"  // Simulate the bot's self ID
         every { event.channelJoined } returns newChannel
         every { event.channelLeft } returns mockk()
 
@@ -335,6 +338,7 @@ class VoiceEventHandlerTest {
         every { member.idLong } returns 12345L  // Simulate the bot's ID
         every { member.id } returns "12345"  // Simulate the bot's ID
         every { event.jda.selfUser.idLong } returns 12345L  // Simulate the bot's self ID
+        every { event.jda.selfUser.name } returns "TobyBot"  // Simulate the bot's self ID
         every { guild.idLong } returns 1L
         every { guild.id } returns "1"
         every { event.channelJoined } returns mockk {
@@ -367,6 +371,7 @@ class VoiceEventHandlerTest {
         val newChannel = mockk<AudioChannelUnion>(relaxed = true)
 
         every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
         every { event.member } returns member
         every { event.channelJoined } returns newChannel
         every { event.channelLeft } returns mockk()

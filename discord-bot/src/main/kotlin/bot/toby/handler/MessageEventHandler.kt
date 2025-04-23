@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -23,7 +22,6 @@ import kotlin.coroutines.CoroutineContext
 
 @Service
 class MessageEventHandler @Autowired constructor(
-    private val jda: JDA,
     private val commandManager: CommandManager,
     private val buttonManager: ButtonManager,
     private val menuManager: MenuManager
@@ -70,7 +68,7 @@ class MessageEventHandler @Autowired constructor(
                     channel.sendMessage("YEAH????").queue()
                 }
 
-                jda.selfUser.let { message.mentions.isMentioned(it) } -> {
+                event.jda.selfUser.let { message.mentions.isMentioned(it) } -> {
                     channel.sendMessage("Don't talk to me").queue()
                 }
             }

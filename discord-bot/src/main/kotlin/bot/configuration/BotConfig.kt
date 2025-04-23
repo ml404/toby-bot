@@ -40,7 +40,6 @@ open class BotConfig {
             GatewayIntent.GUILD_VOICE_STATES,
             GatewayIntent.GUILD_EMOJIS_AND_STICKERS
         )
-            .addEventListeners(startUpHandler, voiceEventHandler, messageEventHandler, eventWaiter)
             .setMemberCachePolicy(MemberCachePolicy.ALL)
             .disableCache(
                 EnumSet.of(

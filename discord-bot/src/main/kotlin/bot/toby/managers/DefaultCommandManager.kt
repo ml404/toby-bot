@@ -28,7 +28,7 @@ class DefaultCommandManager @Autowired constructor(
     override val commands: List<Command>
 ) : CommandManager {
     override val slashCommands: MutableList<CommandData?> = ArrayList()
-    val lastCommands: MutableMap<Guild, Pair<Command, CommandContext>> = HashMap()
+    override val lastCommands: MutableMap<Guild, Pair<Command, CommandContext>> = HashMap()
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     init {

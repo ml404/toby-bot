@@ -8,7 +8,6 @@ import bot.toby.lavaplayer.PlayerManager
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.service.ConfigService
-import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -24,7 +23,6 @@ private const val teamRegex = "(?i)team\\s[0-9]+"
 
 @Service
 class VoiceEventHandler @Autowired constructor(
-    private val jda: JDA,
     private val configService: ConfigService,
     private val userDtoHelper: UserDtoHelper,
     private val introHelper: IntroHelper
@@ -90,7 +88,7 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     private fun onGuildVoiceMove(event: GuildVoiceUpdateEvent) {
-        val tobyBot = jda.selfUser
+        val tobyBot = event.jda.selfUser
         val member = event.member
         val guild = event.guild
         val audioManager = guild.audioManager
@@ -137,7 +135,7 @@ class VoiceEventHandler @Autowired constructor(
             logger.info { "AudioManager channel and event joined channel are the same" }
             setupAndPlayUserIntro(event, guild, deleteDelayConfig, requestingUserDto)
         }
-        if (requestingUserDto.musicDtos.isEmpty() && event.member.user.idLong != jda.selfUser.idLong) {
+        if (requestingUserDto.musicDtos.isEmpty() && event.member.user.idLong != event.jda.selfUser.idLong) {
             logger.info { "Prompting user to set an intro ..." }
             introHelper.promptUserForMusicInfo(event.member.user, guild)
         }
@@ -150,7 +148,7 @@ class VoiceEventHandler @Autowired constructor(
         defaultVolume: Int
     ) {
         //Ignore the bot joining voice event
-        if (event.member.user.idLong != jda.selfUser.idLong) {
+        if (event.member.user.idLong != event.jda.selfUser.idLong) {
             val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
             if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
                 logger.info { "Joining new channel '${event.channelJoined?.name}'." }
