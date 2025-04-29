@@ -11,9 +11,6 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import dev.lavalink.youtube.YoutubeAudioSourceManager
-import dev.lavalink.youtube.clients.Music
-import dev.lavalink.youtube.clients.Tv
-import dev.lavalink.youtube.clients.TvHtml5Embedded
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 
@@ -25,7 +22,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     constructor() : this(DefaultAudioPlayerManager())
 
     init {
-        val youtubeAudioSourceManager = YoutubeAudioSourceManager(Tv(), TvHtml5Embedded(), Music())
+        val youtubeAudioSourceManager = YoutubeAudioSourceManager(true, true, true)
         youtubeAudioSourceManager.useOauth2(System.getenv("GOOGLE_REFRESH_TOKEN"), true)
 
         audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
