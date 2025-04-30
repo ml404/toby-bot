@@ -37,7 +37,7 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
-    implementation 'dev.lavalink.youtube:common:1.13.0'
+    implementation "dev.lavalink.youtube:common:0e5cfca4e88c32db430ce76e6866b13035c85d22-SNAPSHOT"
     runtimeOnly 'dev.arbjerg:lavaplayer-natives:2.2.3'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
     testImplementation project(path: ':common', configuration: 'testArtifacts')
