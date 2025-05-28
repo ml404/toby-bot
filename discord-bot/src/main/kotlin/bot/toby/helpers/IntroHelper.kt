@@ -187,7 +187,7 @@ class IntroHelper(
 
     fun updateIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
 
-    fun deleteIntro(musicDto: MusicDto) = musicFileService.deleteMusicFile(musicDto)
+    fun deleteIntro(musicDto: MusicDto) = musicFileService.deleteMusicFileById(musicDto.id)
 
     private fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
 

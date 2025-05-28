@@ -10,5 +10,4 @@ interface MusicFileService {
     fun deleteMusicFileById(id: String?)
     fun clearCache()
     fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto?
-
 }

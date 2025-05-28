@@ -88,6 +88,7 @@ open class DefaultMusicFilePersistence : MusicFilePersistence {
     }
 
     override fun deleteMusicFileById(id: String?) {
+        logger.info { "Deleting music file ..." }
         val q = entityManager.createNamedQuery("MusicDto.deleteById")
         q.setParameter("id", id)
         q.executeUpdate()
