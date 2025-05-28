@@ -4,6 +4,7 @@ import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import bot.toby.managers.DefaultMenuManager
+import bot.toby.menu.menus.DeleteIntroMenu
 import bot.toby.menu.menus.EditIntroMenu
 import bot.toby.menu.menus.SetIntroMenu
 import bot.toby.menu.menus.dnd.DndMenu
@@ -54,8 +55,8 @@ internal class MenuManagerTest {
     @Test
     fun testAllMenus() {
         val availableMenus: List<Class<out Menu>> =
-            listOf(DndMenu::class.java, SetIntroMenu::class.java, EditIntroMenu::class.java)
-        assertEquals(3, menuManager.menus.size)
+            listOf(DndMenu::class.java, SetIntroMenu::class.java, EditIntroMenu::class.java, DeleteIntroMenu::class.java)
+        assertEquals(4, menuManager.menus.size)
         assertTrue(availableMenus.containsAll(menuManager.menus.map { it.javaClass }.toList()))
     }
 

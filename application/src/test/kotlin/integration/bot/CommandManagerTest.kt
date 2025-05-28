@@ -11,6 +11,7 @@ import bot.toby.command.commands.misc.*
 import bot.toby.command.commands.moderation.*
 import bot.toby.command.commands.music.channel.JoinCommand
 import bot.toby.command.commands.music.channel.LeaveCommand
+import bot.toby.command.commands.music.intro.DeleteIntroCommand
 import bot.toby.command.commands.music.intro.EditIntroCommand
 import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.command.commands.music.player.*
@@ -103,6 +104,7 @@ class CommandManagerTest {
             AdjustUserCommand::class.java,
             SetIntroCommand::class.java,
             EditIntroCommand::class.java,
+            DeleteIntroCommand::class.java,
             UserInfoCommand::class.java,
             RandomCommand::class.java,
             Kf2RandomMapCommand::class.java,
@@ -114,8 +116,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(38, commandManager.allCommands.size)
-        Assertions.assertEquals(38, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(39, commandManager.allCommands.size)
+        Assertions.assertEquals(39, commandManager.allSlashCommands.size)
     }
 
     @Test
