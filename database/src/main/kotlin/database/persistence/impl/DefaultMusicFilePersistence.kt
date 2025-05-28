@@ -82,6 +82,7 @@ open class DefaultMusicFilePersistence : MusicFilePersistence {
     }
 
     override fun deleteMusicFile(musicDto: MusicDto) {
+        logger.info { "Deleting music file ${musicDto.userDto} " }
         entityManager.remove(musicDto)
         entityManager.flush()
     }

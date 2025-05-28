@@ -192,7 +192,7 @@ class IntroHelperTest {
         )
 
         verify {
-            hook.sendMessage("Please keep the file size under 400kb").queue(any())
+            hook.sendMessage("Please keep the file size under 300kb").queue(any())
         }
     }
 
