@@ -3,6 +3,7 @@ package bot.toby.helpers
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.MusicPlayerHelper.isUrl
 import common.logging.DiscordLogger
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.dto.MusicDto.Companion.computeHash
@@ -67,7 +68,7 @@ class IntroHelper(
                 // Validate the attachment before proceeding
                 if (!isValidAttachment(input.attachment)) {
                     event.hook.sendMessage("Please provide a valid mp3 file under 400kb.")
-                        .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                     return
                 }
                 handleAttachment(
@@ -85,7 +86,7 @@ class IntroHelper(
                 val uriString = input.uri
                 if (!URLHelper.isValidURL(uriString)) {
                     event.hook.sendMessage("Please provide a valid URL.")
-                        .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                     return
                 }
                 val uri = URI.create(uriString)
@@ -102,7 +103,7 @@ class IntroHelper(
 
             else -> {
                 event.hook.sendMessage("Please provide a valid link or attachment.")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
         }
     }
@@ -123,17 +124,19 @@ class IntroHelper(
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling attachment inside intro helper..." }
+        val attachmentLimitKb = 300
+        val attachmentLimit = attachmentLimitKb * 1024
         when {
             attachment.fileExtension != "mp3" -> {
                 logger.info { "Invalid file extension used" }
                 event.hook.sendMessage("Please use mp3 files only")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
 
-            attachment.size > 400000 -> {
+            attachment.size > attachmentLimit -> {
                 logger.info { "File size was too large" }
-                event.hook.sendMessage("Please keep the file size under 400kb")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                event.hook.sendMessage("Please keep the file size under ${attachmentLimitKb}kb")
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
 
             else -> {
@@ -210,7 +213,7 @@ class IntroHelper(
         val fileContents = getFileContents(inputStream)
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
                 .setEphemeral(true)
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
 
         val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
             targetDto.discordId,
@@ -292,7 +295,7 @@ class IntroHelper(
         event.hook
             .sendMessage("Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
 
     private fun sendUpdateMessage(
@@ -306,7 +309,7 @@ class IntroHelper(
         event.hook
             .sendMessage("Successfully updated $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
 
     private fun rejectIntroForDuplication(
@@ -320,7 +323,7 @@ class IntroHelper(
         event.hook
             .sendMessage("$memberName's intro song '$filename' was rejected as it already exists as one of their intros for this server")
             .setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
     }
 
     fun promptUserForMusicInfo(user: User, guild: Guild) {
@@ -328,7 +331,7 @@ class IntroHelper(
         logger.info { "Prompting user to set an intro for the server that they don't have one on" }
         user.openPrivateChannel().queue { channel ->
             channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'")
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
+                .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
 
             // Wait for a response in the user's DM
             setupWaiterForIntroMessage(user, channel, guild)
@@ -347,7 +350,7 @@ class IntroHelper(
             {
                 logger.info { "User did not set intro for the server that they don't have one on within the timeout period" }
                 channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
+                    .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
             }
         )
     }
@@ -462,7 +465,7 @@ class IntroHelper(
         logger.info { "User successfully uploaded intro as a result of the prompt!" }
         user.openPrivateChannel().queue { channel ->
             channel.sendMessage("Successfully set your intro on server '${guild.name}'")
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(1.minutes.toInt(DurationUnit.SECONDS)))
+                .queue(invokeDeleteOnMessageResponse(1.minutes.toInt(DurationUnit.SECONDS)))
         }
     }
 
