@@ -1,7 +1,7 @@
 package bot.toby.menu.menus
 
 import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.MenuHelper.EDIT_INTRO
+import bot.toby.helpers.MenuHelper.DELETE_INTRO
 import core.command.Command.Companion.deleteAfter
 import core.menu.Menu
 import core.menu.MenuContext
@@ -38,5 +38,5 @@ class DeleteIntroMenu @Autowired constructor(
     }
 
 
-    override val name: String get() = EDIT_INTRO
+    override val name: String get() = DELETE_INTRO
 }
