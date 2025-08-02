@@ -4,7 +4,7 @@ buildscript {
     ext {
         springBootVersion = '3.3.4'
         springDependencyManagementVersion = '1.0.15.RELEASE'
-        jdaVersion = '5.5.1'
+        jdaVersion = '5.6.1'
         kotlin_version = '2.0.0-RC3'
         kotlinx_version = '1.9.0-RC'
         ktor_version = '2.3.12'
