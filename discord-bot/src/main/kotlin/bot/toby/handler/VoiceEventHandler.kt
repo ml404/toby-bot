@@ -153,7 +153,7 @@ class VoiceEventHandler @Autowired constructor(
             if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
                 logger.info { "Joining new channel '${event.channelJoined?.name}'." }
                 PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-                audioManager.openAudioConnection(event.channelJoined)
+                event.channelJoined?.let { audioManager.openAudioConnection(it) }
                 lastConnectedChannel[guild.idLong] = event.channelJoined!!.asVoiceChannel()
             }
         }

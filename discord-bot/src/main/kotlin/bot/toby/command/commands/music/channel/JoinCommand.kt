@@ -43,7 +43,7 @@ class JoinCommand @Autowired constructor(private val configService: ConfigServic
             return
         }
 
-        audioManager.openAudioConnection(memberChannel)
+        memberChannel?.let { audioManager.openAudioConnection(it) }
         lastConnectedChannel[event.guild!!.idLong] = memberChannel!!
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val databaseConfig = configService.getConfigByName(volumePropertyName, event.guild?.id)
