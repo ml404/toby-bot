@@ -168,7 +168,7 @@ class IntroHelper(
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling URL inside intro helper..." }
-        val urlString = uri.toString()
+        val urlString = uri.toString().convertShortsUrls()
         persistMusicUrl(
             event,
             requestingUserDto,
@@ -180,6 +180,8 @@ class IntroHelper(
             selectedMusicDto
         )
     }
+
+    fun String.convertShortsUrls() = this.replace("/shorts/", "/watch?v=" )
 
     fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(guildId, discordId)
 
