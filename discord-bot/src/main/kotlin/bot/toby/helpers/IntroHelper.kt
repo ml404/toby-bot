@@ -19,14 +19,14 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
+import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
-const val MAX_FILE_SIZE = 550 * 1024
-const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
+@Service
 class IntroHelper(
     private val userDtoHelper: UserDtoHelper,
     private val musicFileService: MusicFileService,
@@ -505,6 +505,8 @@ class IntroHelper(
 
     companion object {
         private const val VOLUME = "volume"
+        const val MAX_FILE_SIZE = 550 * 1024
+        const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
     }
 }
 

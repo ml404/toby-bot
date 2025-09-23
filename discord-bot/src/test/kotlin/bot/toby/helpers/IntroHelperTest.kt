@@ -2,6 +2,7 @@ package bot.toby.helpers
 
 import bot.coroutines.MainCoroutineExtension
 import bot.toby.handler.EventWaiter
+import bot.toby.helpers.IntroHelper.Companion.MAX_FILE_SIZE_KB
 import database.dto.MusicDto
 import database.service.ConfigService
 import io.mockk.*
