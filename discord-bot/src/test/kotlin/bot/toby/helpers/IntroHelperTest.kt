@@ -133,6 +133,29 @@ class IntroHelperTest {
     }
 
     @Test
+    fun `handleMedia should replace youtube shorts URL with correct longform type`() {
+        every { URLHelper.isValidURL(any()) } returns true
+
+        // Spy on introHelper to allow partial mocking
+        val spykIntroHelper = spyk(introHelper)
+
+        // Mock the event details
+        every { event.user.effectiveName } returns "TestUser"
+
+        // Call handleMedia
+        spykIntroHelper.handleMedia(
+            event, userDto, 10, InputData.Url("http://youtube.com"), 70, musicDto
+        )
+
+        // Verify that handleUrl was called
+        verify {
+            spykIntroHelper.handleUrl(
+                event, userDto, "TestUser", 10, URI.create("http://youtube.com"), 70, musicDto
+            )
+        }
+    }
+
+    @Test
     fun `handleMedia should handle valid attachment`() {
         // Create a spyk instance of the actual introHelper
         val spykIntroHelper = spyk(introHelper)
@@ -185,14 +208,14 @@ class IntroHelperTest {
     @Test
     fun `handleAttachment should reject large files`() {
         every { attachment.fileExtension } returns "mp3"
-        every { attachment.size } returns 500_000
+        every { attachment.size } returns 600_000
 
         introHelper.handleAttachment(
             event, userDto, "TestUser", 10, attachment, 70, musicDto
         )
 
         verify {
-            hook.sendMessage("Please keep the file size under 300kb").queue(any())
+            hook.sendMessage("Please keep the file size under ${MAX_FILE_SIZE_KB}kb").queue(any())
         }
     }
 

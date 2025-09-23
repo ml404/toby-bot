@@ -19,14 +19,14 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
-import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
-@Service
+const val MAX_FILE_SIZE = 550 * 1024
+const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
 class IntroHelper(
     private val userDtoHelper: UserDtoHelper,
     private val musicFileService: MusicFileService,
@@ -67,7 +67,7 @@ class IntroHelper(
             is InputData.Attachment -> {
                 // Validate the attachment before proceeding
                 if (!isValidAttachment(input.attachment)) {
-                    event.hook.sendMessage("Please provide a valid mp3 file under 400kb.")
+                    event.hook.sendMessage("Please provide a valid mp3 file under ${MAX_FILE_SIZE_KB}kb.")
                         .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
                     return
                 }
@@ -109,7 +109,7 @@ class IntroHelper(
     }
 
     private fun isValidAttachment(attachment: Attachment): Boolean {
-        return attachment.fileExtension == "mp3" && attachment.size <= 400000 // Max size in bytes
+        return attachment.fileExtension == "mp3" && attachment.size <= MAX_FILE_SIZE
     }
 
 
@@ -124,8 +124,6 @@ class IntroHelper(
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling attachment inside intro helper..." }
-        val attachmentLimitKb = 300
-        val attachmentLimit = attachmentLimitKb * 1024
         when {
             attachment.fileExtension != "mp3" -> {
                 logger.info { "Invalid file extension used" }
@@ -133,9 +131,9 @@ class IntroHelper(
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
 
-            attachment.size > attachmentLimit -> {
+            attachment.size > MAX_FILE_SIZE -> {
                 logger.info { "File size was too large" }
-                event.hook.sendMessage("Please keep the file size under ${attachmentLimitKb}kb")
+                event.hook.sendMessage("Please keep the file size under ${MAX_FILE_SIZE_KB}kb")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
             }
 
