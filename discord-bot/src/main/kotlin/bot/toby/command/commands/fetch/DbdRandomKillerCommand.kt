@@ -2,6 +2,7 @@ package bot.toby.command.commands.fetch
 
 import bot.toby.helpers.WikiFetcher
 import common.helpers.Cache
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -16,14 +17,14 @@ class DbdRandomKillerCommand @Autowired constructor(private val cache: Cache) : 
             val wikiFetcher = WikiFetcher(cache)
             val dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery)
             event.hook.sendMessageFormat(dbdKillers.random()).queue(
-                core.command.Command.Companion.invokeDeleteOnMessageResponse(
+                invokeDeleteOnMessageResponse(
                     deleteDelay!!
                 )
             )
         } catch (_: IOException) {
             event.hook.sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.")
                 .queue(
-                    core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!)
+                    invokeDeleteOnMessageResponse(deleteDelay!!)
                 )
         }
     }

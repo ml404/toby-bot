@@ -31,11 +31,17 @@ class WikiFetcher(private val cache: Cache) {
     }
 
     private fun getDbdKillerStrings(mapElement: Element): List<String> {
-        return mapElement.select("div")[6]
-            .allElements
-            .eachText()
-            .filter { name ->
-                name.split("-").size == 2
+        return mapElement.select("div")[3]
+            .select("> div") // select only the direct killer container divs
+            .map { div ->
+                val realName = div.selectFirst("a")?.text()?.trim()
+                // ownText() gets only the text directly inside the div (not nested <div>s)
+                val alias = div.ownText().trim()
+                if (!realName.isNullOrBlank() && alias.isNotBlank()) {
+                    "$realName — $alias"
+                } else {
+                    realName ?: alias // fallback if one is missing
+                }
             }
     }
 

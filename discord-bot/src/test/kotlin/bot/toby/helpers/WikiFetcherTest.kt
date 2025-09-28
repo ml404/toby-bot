@@ -1,6 +1,5 @@
 package bot.toby.helpers
 
-import bot.toby.helpers.*
 import common.helpers.Cache
 import org.junit.jupiter.api.*
 
@@ -52,6 +51,6 @@ class WikiFetcherTest {
         val mapStrings = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery)
 
         Assertions.assertNotNull(mapStrings)
-        Assertions.assertEquals(mapStrings.size, 26)
+        Assertions.assertEquals(40,mapStrings.size)
     }
 }
