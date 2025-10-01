@@ -10,7 +10,7 @@ buildscript {
         ktor_version = '2.3.12'
         mockk_version = '1.13.13'
         lavaplayer_version = '2.2.4'
-        youtube_common_version = '1.13.4'
+        youtube_common_version = '1.13.5'
     }
     repositories {
         mavenCentral()
