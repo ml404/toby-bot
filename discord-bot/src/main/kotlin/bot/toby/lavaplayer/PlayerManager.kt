@@ -10,11 +10,17 @@ import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceMan
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import dev.lavalink.youtube.YoutubeAudioSourceManager
+import dev.lavalink.youtube.YoutubeSourceOptions
 import dev.lavalink.youtube.clients.Tv
 import dev.lavalink.youtube.clients.TvHtml5Embedded
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+
+private const val CIPHER_API_URL = "https://cipher.kikkia.dev/api"
+
+private const val GOOGLE_REFRESH_TOKEN = "GOOGLE_REFRESH_TOKEN"
 
 class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     private val musicManagers: MutableMap<Long, GuildMusicManager> = HashMap()
@@ -24,8 +30,9 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     constructor() : this(DefaultAudioPlayerManager())
 
     init {
-        val youtubeAudioSourceManager = YoutubeAudioSourceManager(Tv(), TvHtml5Embedded())
-        youtubeAudioSourceManager.useOauth2(System.getenv("GOOGLE_REFRESH_TOKEN"), true)
+        val youtubeSourceOptions = YoutubeSourceOptions().setRemoteCipherUrl(CIPHER_API_URL, "")
+        val youtubeAudioSourceManager = YoutubeAudioSourceManager(youtubeSourceOptions, Tv(), TvHtml5Embedded())
+        youtubeAudioSourceManager.useOauth2(System.getenv(GOOGLE_REFRESH_TOKEN), true)
 
         audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
         audioPlayerManager.registerSourceManager(TwitchStreamAudioSourceManager())
@@ -86,14 +93,12 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             }
 
             override fun noMatches() {
-                event?.hook?.sendMessageFormat("Nothing found for the link '%s'", trackUrl)?.queue(
-                    core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay)
+                event?.hook?.sendMessageFormat("Nothing found for the link '%s'", trackUrl)?.queue(invokeDeleteOnMessageResponse(deleteDelay)
                 )
             }
 
             override fun loadFailed(exception: FriendlyException) {
-                event?.hook?.sendMessageFormat("Could not play: %s", exception.message)?.queue(
-                    core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay)
+                event?.hook?.sendMessageFormat("Could not play: %s", exception.message)?.queue(invokeDeleteOnMessageResponse(deleteDelay)
                 )
             }
         }
