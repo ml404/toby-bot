@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 @Component
 class DeleteIntroCommand : MusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
@@ -20,7 +20,7 @@ class DeleteIntroCommand : MusicCommand {
         ctx: CommandContext,
         instance: PlayerManager,
         requestingUserDto: UserDto,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply(true).queue()

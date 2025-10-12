@@ -8,14 +8,15 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.build.Commands
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
 interface Command {
-    fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?)
+    fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int)
     val name: String
     val description: String
-    val logger: DiscordLogger get() = DiscordLogger.Companion.createLogger(this::class.java)
+    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
 
     fun getErrorMessage(serverOwner: String?): String {
         return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to $serverOwner"
@@ -30,6 +31,8 @@ interface Command {
     val slashCommand: SlashCommandData get() = Commands.slash(name, description)
 
     val optionData: List<OptionData> get() = emptyList()
+
+    val subCommands: List<SubcommandData> get() = emptyList()
 
     companion object {
         @JvmStatic

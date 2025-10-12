@@ -2,6 +2,7 @@ package bot.toby.command.commands.misc
 
 import bot.toby.emote.Emotes
 import core.command.CommandContext
+import database.dto.UserDto
 import database.service.BrotherService
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
@@ -17,11 +18,11 @@ class BrotherCommand @Autowired constructor(private val brotherService: BrotherS
     MiscCommand {
     override val name = "brother"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
         val tobyEmote: RichCustomEmoji? = event.guild?.jda?.getEmojiById(Emotes.TOBY)
-        determineBrother(event, tobyEmote, deleteDelay ?: 0)
+        determineBrother(event, tobyEmote, deleteDelay)
     }
 
     private fun determineBrother(event: SlashCommandInteractionEvent, tobyEmote: Emoji?, deleteDelay: Int) {
@@ -37,7 +38,7 @@ class BrotherCommand @Autowired constructor(private val brotherService: BrotherS
                 mentions.joinToString("\n") { lookupBrotherMessage(it.idLong, it.effectiveName, tobyEmote) }
             }
         }
-        hook.sendMessage(message).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+        hook.sendMessage(message).queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun lookupBrotherMessage(memberId: Long, memberName: String, tobyEmote: Emoji?): String {

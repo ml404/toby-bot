@@ -2,7 +2,9 @@ package bot.toby.command.commands.misc
 
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -13,7 +15,7 @@ import org.springframework.stereotype.Component
 @Component
 class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoHelper) : MiscCommand {
     private val USERS = "users"
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply(true).queue()
         printUserInfo(event, requestingUserDto, deleteDelay)
@@ -21,8 +23,8 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
 
     private fun printUserInfo(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
         if (event.options.isEmpty()) {
             event.member?.listUserInfoForMember(event, deleteDelay)
@@ -32,16 +34,14 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
                 memberList.forEach { member -> member.listUserInfoForMember(event, deleteDelay) }
             } else {
                 event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
-                    .setEphemeral(true).queue(
-                        core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!)
-                    )
+                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }
 
     private fun Member.listUserInfoForMember(
         event: SlashCommandInteractionEvent,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         logger.info { " Doing lookup on user for guildId '${this.guild.idLong}' and discordId '${this.idLong}' " }
         val userSearched = userDtoHelper.calculateUserDto(this.idLong, this.guild.idLong)
@@ -53,7 +53,7 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
         event.hook
             .sendMessage(userInfoMessage)
             .setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val name: String = "userinfo"

@@ -1,6 +1,7 @@
 package bot.toby.command.commands.misc
 
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
@@ -12,7 +13,7 @@ class ChCommand : MiscCommand {
     override val description: String = "Allow me to 'ch' whatever you type."
     private val MESSAGE = "message"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
 
@@ -25,11 +26,7 @@ class ChCommand : MiscCommand {
             }
         }
 
-        event.hook.sendMessage("Oh! I think you mean: '$newMessage'").queue(
-            core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                deleteDelay ?: 0
-            )
-        )
+        event.hook.sendMessage("Oh! I think you mean: '$newMessage'").queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val optionData: List<OptionData>

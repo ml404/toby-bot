@@ -25,7 +25,7 @@ class GuildMusicManagerTest {
 
 
         // Create GuildMusicManager instance using mocked AudioPlayerManager
-        val guildMusicManager = GuildMusicManager(mockAudioPlayerManager)
+        val guildMusicManager = GuildMusicManager(mockAudioPlayerManager,0)
 
         // Assert that audioPlayer and scheduler are initialized
         assertNotNull(guildMusicManager.audioPlayer)

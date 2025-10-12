@@ -11,7 +11,7 @@ open class Cache(
 
     private val cacheMap: LRUMap<String, CachedObject> = LRUMap(maxItems)
 
-    protected inner class CachedObject(var value: List<String>) {
+    protected class CachedObject(var value: List<String>) {
         var lastAccessed: Long = System.currentTimeMillis()
     }
 

@@ -59,7 +59,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         return (0 until diceToRoll).sumOf { Random.nextInt(1, diceValue + 1) }
     }
 
-    fun incrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int?) {
+    fun incrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int) {
         incrementIndex()
         val embedBuilder = initiativeEmbedBuilder
         sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay)
@@ -72,7 +72,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         }
     }
 
-    fun decrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int?) {
+    fun decrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int) {
         decrementIndex()
         val embedBuilder = initiativeEmbedBuilder
         sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay)
@@ -95,7 +95,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         hook: InteractionHook,
         embedBuilder: EmbedBuilder,
         event: ButtonInteractionEvent?,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val initButtons = initButtons
         val messageEmbed = embedBuilder.build()
@@ -110,7 +110,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
                 .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
                 .queue()
             hook.setEphemeral(true).sendMessage("Next turn: ${sortedEntries[initiativeIndex.get()].key}").queue(
-                core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0)
+                core.command.Command.invokeDeleteOnMessageResponse(deleteDelay)
             )
         }
     }

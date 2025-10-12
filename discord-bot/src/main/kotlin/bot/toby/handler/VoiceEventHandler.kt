@@ -6,7 +6,8 @@ import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import bot.toby.lavaplayer.PlayerManager
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
+import database.dto.ConfigDto.Configurations.DELETE_DELAY
+import database.dto.ConfigDto.Configurations.VOLUME
 import database.service.ConfigService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
@@ -106,7 +107,7 @@ class VoiceEventHandler @Autowired constructor(
         } else {
             logger.info { "User '${member.effectiveName}' has moved, checking if AudioConnection should close..." }
             audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
-            val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
+            val defaultVolume = getConfigValue(VOLUME.configValue, guild.id)
             checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
         }
     }
@@ -124,16 +125,16 @@ class VoiceEventHandler @Autowired constructor(
     private fun onGuildVoiceJoin(event: GuildVoiceUpdateEvent) {
         val guild = event.guild
         val audioManager = guild.audioManager
-        val defaultVolume = getConfigValue(ConfigDto.Configurations.VOLUME.configValue, guild.id)
-        val deleteDelayConfig =
-            configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, guild.id)
+        val defaultVolume = getConfigValue(VOLUME.configValue, guild.id)
+        val deleteDelay =
+            getConfigValue(DELETE_DELAY.configValue, guild.id, 5)
 
         checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
         val requestingUserDto = event.member.getRequestingUserDto(userDtoHelper)
         if (audioManager.connectedChannel == event.channelJoined) {
             logger.info { "AudioManager channel and event joined channel are the same" }
-            setupAndPlayUserIntro(event, guild, deleteDelayConfig, requestingUserDto)
+            setupAndPlayUserIntro(event, guild, deleteDelay, requestingUserDto)
         }
         if (requestingUserDto.musicDtos.isEmpty() && event.member.user.idLong != event.jda.selfUser.idLong) {
             logger.info { "Prompting user to set an intro ..." }
@@ -162,7 +163,7 @@ class VoiceEventHandler @Autowired constructor(
     private fun setupAndPlayUserIntro(
         event: GuildVoiceUpdateEvent,
         guild: Guild,
-        deleteDelayConfig: ConfigDto?,
+        deleteDelay: Int,
         requestingUserDto: database.dto.UserDto
     ) {
         val member = event.member
@@ -171,7 +172,7 @@ class VoiceEventHandler @Autowired constructor(
             playUserIntro(
                 requestingUserDto,
                 guild,
-                deleteDelay = deleteDelayConfig?.value?.toInt() ?: 0,
+                deleteDelay = deleteDelay,
                 member = member
             )
         } else {

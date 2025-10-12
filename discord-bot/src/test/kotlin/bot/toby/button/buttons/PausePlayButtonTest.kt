@@ -13,6 +13,7 @@ import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import database.dto.ConfigDto
+import database.dto.UserDto
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -49,7 +50,7 @@ class PausePlayButtonTest : ButtonTest {
 
         every { mockAudioPlayerManager.createPlayer() } returns mockAudioPlayer
 
-        val guildMusicManagerSpy = spyk(GuildMusicManager(mockAudioPlayerManager)) {
+        val guildMusicManagerSpy = spyk(GuildMusicManager(mockAudioPlayerManager, 0)) {
             every { scheduler } returns mockScheduler
         }
 
@@ -60,7 +61,7 @@ class PausePlayButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        PausePlayButton().handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
+        PausePlayButton().handle(DefaultButtonContext(event), UserDto(6L, 1L), 5)
 
         verify { MusicPlayerHelper.changePauseStatusOnTrack(any(), any(), any()) }
     }

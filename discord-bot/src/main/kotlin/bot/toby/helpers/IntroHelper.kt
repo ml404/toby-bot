@@ -54,7 +54,7 @@ class IntroHelper(
     fun handleMedia(
         event: IReplyCallback,
         requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?,
+        deleteDelay: Int,
         input: InputData?,
         introVolume: Int,
         selectedMusicDto: MusicDto?,
@@ -68,7 +68,7 @@ class IntroHelper(
                 // Validate the attachment before proceeding
                 if (!isValidAttachment(input.attachment)) {
                     event.hook.sendMessage("Please provide a valid mp3 file under ${MAX_FILE_SIZE_KB}kb.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
                     return
                 }
                 handleAttachment(
@@ -86,7 +86,7 @@ class IntroHelper(
                 val uriString = input.uri
                 if (!URLHelper.isValidURL(uriString)) {
                     event.hook.sendMessage("Please provide a valid URL.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
                     return
                 }
                 val uri = URI.create(uriString)
@@ -103,7 +103,7 @@ class IntroHelper(
 
             else -> {
                 event.hook.sendMessage("Please provide a valid link or attachment.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }
@@ -117,7 +117,7 @@ class IntroHelper(
         event: IReplyCallback,
         requestingUserDto: database.dto.UserDto,
         userName: String,
-        deleteDelay: Int?,
+        deleteDelay: Int,
         attachment: Attachment,
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
@@ -128,13 +128,13 @@ class IntroHelper(
             attachment.fileExtension != "mp3" -> {
                 logger.info { "Invalid file extension used" }
                 event.hook.sendMessage("Please use mp3 files only")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
 
             attachment.size > MAX_FILE_SIZE -> {
                 logger.info { "File size was too large" }
                 event.hook.sendMessage("Please keep the file size under ${MAX_FILE_SIZE_KB}kb")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
 
             else -> {
@@ -159,7 +159,7 @@ class IntroHelper(
         event: IReplyCallback,
         requestingUserDto: database.dto.UserDto,
         userName: String,
-        deleteDelay: Int?,
+        deleteDelay: Int,
         uri: URI?,
         introVolume: Int,
         selectedMusicDto: MusicDto? = null
@@ -204,7 +204,7 @@ class IntroHelper(
         event: IReplyCallback,
         targetDto: database.dto.UserDto,
         userName: String = event.user.effectiveName,
-        deleteDelay: Int?,
+        deleteDelay: Int,
         filename: String,
         introVolume: Int,
         inputStream: InputStream,
@@ -215,7 +215,7 @@ class IntroHelper(
         val fileContents = getFileContents(inputStream)
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
                 .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
 
         val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
             targetDto.discordId,
@@ -248,7 +248,7 @@ class IntroHelper(
     fun persistMusicUrl(
         event: IReplyCallback,
         targetDto: database.dto.UserDto,
-        deleteDelay: Int?,
+        deleteDelay: Int,
         filename: String,
         url: String,
         memberName: String,
@@ -290,14 +290,14 @@ class IntroHelper(
         filename: String,
         introVolume: Int,
         index: Int,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'" }
         event.hook
             .sendMessage("Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun sendUpdateMessage(
@@ -306,26 +306,26 @@ class IntroHelper(
         filename: String,
         introVolume: Int,
         index: Int,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         event.hook
             .sendMessage("Successfully updated $memberName's intro song #${index} to '$filename' with volume '$introVolume'")
             .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun rejectIntroForDuplication(
         event: IReplyCallback,
         memberName: String,
         filename: String,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "$memberName's intro song '$filename' was rejected for duplication" }
         event.hook
             .sendMessage("$memberName's intro song '$filename' was rejected as it already exists as one of their intros for this server")
             .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     fun promptUserForMusicInfo(user: User, guild: Guild) {

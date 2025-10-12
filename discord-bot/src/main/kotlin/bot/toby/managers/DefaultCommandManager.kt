@@ -59,7 +59,7 @@ class DefaultCommandManager @Autowired constructor(
         val deleteDelay = configService.getConfigByName(
             ConfigDto.Configurations.DELETE_DELAY.configValue,
             guildId
-        )?.value?.toIntOrNull() ?: 0
+        )?.value?.toIntOrNull() ?: 5
 
         val requestingUserDto = event.member?.let {
             userDtoHelper.calculateUserDto(

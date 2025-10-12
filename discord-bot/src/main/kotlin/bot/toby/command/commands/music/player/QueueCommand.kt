@@ -5,32 +5,33 @@ import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import core.command.CommandContext
+import database.dto.UserDto
 import org.springframework.stereotype.Component
 import kotlin.math.min
 
 @Component
 class QueueCommand : MusicCommand {
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply(true).queue()
         val queue = instance.getMusicManager(ctx.guild).scheduler.queue
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay)
             return
         }
         if (queue.isEmpty()) {
             event.hook.sendMessage("The queue is currently empty").setEphemeral(true).queue(
-                core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                    deleteDelay!!
+                core.command.Command.invokeDeleteOnMessageResponse(
+                    deleteDelay
                 )
             )
             return
@@ -57,7 +58,7 @@ class QueueCommand : MusicCommand {
                     .addContent("` more...")
         }
         messageAction.setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val name: String

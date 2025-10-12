@@ -1,6 +1,8 @@
 package bot.toby.command.commands.moderation
 
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import database.service.UserService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -15,7 +17,7 @@ class SocialCreditCommand @Autowired constructor(private val userService: UserSe
     private val USERS = "users"
     private val SOCIAL_CREDIT = "credit"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply(true).queue()
         val member = ctx.member
@@ -31,9 +33,9 @@ class SocialCreditCommand @Autowired constructor(private val userService: UserSe
 
     private fun calculateAndUpdateSocialCredit(
         event: SlashCommandInteractionEvent,
-        requestingUserDto: database.dto.UserDto?,
+        requestingUserDto: UserDto?,
         requestingMember: Member?,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val user = event.getOption(USERS)?.asUser
         if (user == null) {
@@ -48,17 +50,17 @@ class SocialCreditCommand @Autowired constructor(private val userService: UserSe
             event.getOption(SOCIAL_CREDIT)?.asLong?.takeIf { it != Long.MIN_VALUE }?.let { socialCreditScore ->                val updatedUser = updateUserSocialCredit(targetUserDto, socialCreditScore)
                 event.hook.sendMessage("Updated user ${user.effectiveName}'s social credit by $socialCreditScore. New score is: ${updatedUser.socialCredit}")
                     .setEphemeral(true)
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
             } ?: listSocialCreditScore(event, targetUserDto, user.effectiveName, deleteDelay)
         } else {
             event.hook
                 .sendMessage("User '${requestingMember?.effectiveName ?: "Unknown"}' is not allowed to adjust the social credit of user '${user.effectiveName}'.")
                 .setEphemeral(true)
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 
-    private fun createAndPrintLeaderboard(event: SlashCommandInteractionEvent, deleteDelay: Int?) {
+    private fun createAndPrintLeaderboard(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val guild = event.guild ?: return
         val socialCreditMap = userService.listGuildUsers(guild.idLong).associate { it?.discordId to it?.socialCredit }
 
@@ -77,25 +79,25 @@ class SocialCreditCommand @Autowired constructor(private val userService: UserSe
 
         event.hook.sendMessage(message)
             .setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun listSocialCreditScore(
         event: SlashCommandInteractionEvent,
-        userDto: database.dto.UserDto?,
+        userDto: UserDto?,
         mentionedName: String,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val socialCredit = userDto?.socialCredit ?: 0L
         event.hook.sendMessage("${mentionedName}'s social credit is: $socialCredit")
             .setEphemeral(true)
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun updateUserSocialCredit(
-        targetUserDto: database.dto.UserDto,
+        targetUserDto: UserDto,
         socialCreditScore: Long
-    ): database.dto.UserDto {
+    ): UserDto {
         targetUserDto.socialCredit = targetUserDto.socialCredit?.plus(socialCreditScore)
         userService.updateUser(targetUserDto)
         return targetUserDto

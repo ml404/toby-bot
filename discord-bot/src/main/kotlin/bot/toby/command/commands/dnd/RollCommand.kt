@@ -1,7 +1,9 @@
 package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -20,7 +22,7 @@ class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnD
     private val DICE_NUMBER = "number"
     private val DICE_TO_ROLL = "amount"
     private val MODIFIER = "modifier"
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val diceValueOptional =
             Optional.ofNullable(event.getOption(DICE_NUMBER)).map { obj: OptionMapping -> obj.asInt }
@@ -32,10 +34,7 @@ class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnD
         val diceToRollInput = diceToRollOptional.orElse(1)
         val diceToRoll = if (diceToRollInput < 1) 1 else diceToRollInput
         val modifier = diceModifierOptional.orElse(0)
-        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(
-            core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                deleteDelay!!
-            )
+        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(invokeDeleteOnMessageResponse(deleteDelay)
         )
     }
 

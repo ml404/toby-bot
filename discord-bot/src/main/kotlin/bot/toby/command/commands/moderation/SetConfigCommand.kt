@@ -1,7 +1,9 @@
 package bot.toby.command.commands.moderation
 
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
+import database.dto.UserDto
 import database.service.ConfigService
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -14,30 +16,22 @@ import java.util.*
 @Component
 class SetConfigCommand @Autowired constructor(private val configService: ConfigService) : ModerationCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply(true).queue()
         val member = ctx.member
         if (member?.isOwner != true) {
             event.hook.sendMessage("This is currently reserved for the owner of the server only, this may change in future")
-                .setEphemeral(true).queue(
-                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                        deleteDelay ?: 0
-                    )
-                )
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
-        validateArgumentsAndUpdateConfigs(event, deleteDelay ?: 0)
+        validateArgumentsAndUpdateConfigs(event, deleteDelay)
     }
 
     private fun validateArgumentsAndUpdateConfigs(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val options = event.options
         if (options.isEmpty()) {
-            event.hook.sendMessage(description).queue(
-                core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                    deleteDelay
-                )
-            )
+            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
         options.forEach { optionMapping ->
@@ -70,7 +64,7 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
         val newValue = optionMapping.asInt.takeIf { it >= 0 }
         if (newValue == null) {
             event.hook.sendMessage("Value given invalid (a whole number representing percent)")
-                .setEphemeral(true).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
 
@@ -86,11 +80,7 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
         } else {
             configService.createNewConfig(newConfigDto)
         }
-        event.hook.sendMessage(messageToSend).queue(
-            core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                deleteDelay
-            )
-        )
+        event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -109,10 +99,10 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
                 configService.createNewConfig(newConfigDto)
             }
             event.hook.sendMessage("Set default move channel to '${newDefaultMoveChannel.name}'")
-                .setEphemeral(true).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         } else {
             event.hook.sendMessage("No valid channel was mentioned, so config was not updated")
-                .setEphemeral(true).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 

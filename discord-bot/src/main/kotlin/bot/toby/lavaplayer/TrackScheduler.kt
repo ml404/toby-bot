@@ -9,15 +9,15 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import common.logging.DiscordLogger
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
-class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : AudioEventAdapter() {
-    var queue: BlockingQueue<AudioTrack?> = LinkedBlockingQueue()
+class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var deleteDelay: Int = 5) : AudioEventAdapter() {
+    var queue: BlockingQueue<AudioTrack> = LinkedBlockingQueue()
     var isLooping: Boolean = false
     var event: SlashCommandInteractionEvent? = null
-    var deleteDelay: Int? = null
     private var previousVolume: Int? = null
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -25,7 +25,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
-            ?.queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
         track.position = startPosition
         track.userData = volume
         synchronized(queue) {
@@ -39,7 +39,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
         logger.info { "Adding ${playList.name} to the queue for guild $guildId" }
         event?.hook
             ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
-            ?.queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
         playList.tracks.forEach { track ->
             track.userData = volume
             if (!player.startTrack(track, true)) {
@@ -90,7 +90,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
                 this.volume = previousVol
                 event?.channel
                     ?.sendMessageFormat("Setting volume back to '$previousVol' \uD83D\uDD0A")
-                    ?.queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                    ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }
@@ -99,7 +99,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long) : Audio
         if (track.position == 0L) {
             event?.channel
                 ?.sendMessage("Track ${track.info.title} got stuck, skipping.")
-                ?.queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
             nextTrack()
         }
     }

@@ -48,7 +48,7 @@ internal class LeaveCommandTest : MusicCommandTest {
         every { playerManager.isCurrentlyStoppable } returns false
         every { memberVoiceState.channel } returns audioChannelUnion
         every { audioChannelUnion.name } returns "Channel Name"
-        val queue: LinkedBlockingQueue<AudioTrack?> = mockk(relaxed = true)
+        val queue: LinkedBlockingQueue<AudioTrack> = mockk(relaxed = true)
         every { trackScheduler.queue } returns queue
         every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns mockk(relaxed = true) {
             every { value } returns "20"
