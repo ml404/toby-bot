@@ -7,6 +7,7 @@ import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
+import database.dto.UserDto
 import database.service.ConfigService
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -17,21 +18,21 @@ import org.springframework.stereotype.Component
 @Component
 class LeaveCommand @Autowired constructor(private val configService: ConfigService) : MusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply().queue()
 
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay)
             return
         }
 
@@ -55,7 +56,7 @@ class LeaveCommand @Autowired constructor(private val configService: ConfigServi
         guild: net.dv8tion.jda.api.entities.Guild,
         musicManager: GuildMusicManager,
         audioManager: AudioManager,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val defaultVolume = configService.getConfigByName(volumePropertyName, guild.id)?.value?.toInt() ?: 100
@@ -73,7 +74,7 @@ class LeaveCommand @Autowired constructor(private val configService: ConfigServi
 
         event.hook
             .sendMessage("Disconnecting from `\uD83D\uDD0A ${selfVoiceState?.channel?.name}`")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val name: String
@@ -84,13 +85,13 @@ class LeaveCommand @Autowired constructor(private val configService: ConfigServi
 
     companion object {
         private fun isInvalidChannelStateForCommand(
-            deleteDelay: Int?,
+            deleteDelay: Int,
             event: SlashCommandInteractionEvent,
             selfVoiceState: GuildVoiceState?
         ): Boolean {
             return if (!selfVoiceState?.inAudioChannel()!!) {
                 event.hook.sendMessage("I'm not in a voice channel, somebody shoot this guy")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
                 true
             } else {
                 false

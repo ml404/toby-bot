@@ -37,7 +37,7 @@ class EditIntroCommandTest : MusicCommandTest {
         every { requestingUserDto.musicDtos } returns mutableListOf()
 
         // Call handle
-        editIntroCommand.handle(mockCtx, requestingUserDto, null)
+        editIntroCommand.handle(mockCtx, requestingUserDto, 5)
 
         // Verify the reply indicating no intros
         verify { event.hook.sendMessage("You have no intros to edit.") }
@@ -52,7 +52,7 @@ class EditIntroCommandTest : MusicCommandTest {
 
         every { requestingUserDto.musicDtos } returns mutableListOf(intro1, intro2)
 
-        editIntroCommand.handle(ctx, requestingUserDto, null)
+        editIntroCommand.handle(ctx, requestingUserDto, 5)
 
         verify { event.hook.sendMessage(match<String> { it.contains("Your intro songs are currently set as:") }) }
     }

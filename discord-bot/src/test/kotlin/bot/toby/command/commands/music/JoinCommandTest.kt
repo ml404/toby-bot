@@ -74,7 +74,7 @@ internal class JoinCommandTest : MusicCommandTest {
             commandContext,
             playerManager,
             requestingUserDto,
-            0
+            5
         )
 
         // Assert

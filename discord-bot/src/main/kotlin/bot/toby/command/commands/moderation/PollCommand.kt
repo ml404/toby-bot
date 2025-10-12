@@ -3,6 +3,7 @@ package bot.toby.command.commands.moderation
 import bot.toby.emote.Emotes
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class PollCommand : ModerationCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
         val hook = event.hook
@@ -24,7 +25,7 @@ class PollCommand : ModerationCommand {
 
             if (pollArgs.size > 10) {
                 hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.guild!!.jda.getEmojiById(Emotes.TOBY))
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
                 return
             }
 
@@ -44,7 +45,7 @@ class PollCommand : ModerationCommand {
                 }
             }
         } else {
-            hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 

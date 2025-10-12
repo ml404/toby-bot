@@ -2,26 +2,28 @@ package bot.toby.command.commands.music.player
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.lavaplayer.PlayerManager
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import org.springframework.stereotype.Component
 
 @Component
 class LoopCommand : MusicCommand {
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply().queue()
 
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay ?: 0)
+            sendErrorMessage(event, deleteDelay)
             return
         }
 
@@ -34,7 +36,7 @@ class LoopCommand : MusicCommand {
         val loopStatusMessage = if (newIsRepeating) "looping" else "not looping"
         event.hook
             .sendMessage("The Player has been set to **$loopStatusMessage**")
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
     override val name: String
         get() = "loop"

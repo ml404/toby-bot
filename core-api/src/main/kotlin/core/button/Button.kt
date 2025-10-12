@@ -8,5 +8,5 @@ interface Button {
     val description: String
     val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
 
-    fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int?)
+    fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int)
 }

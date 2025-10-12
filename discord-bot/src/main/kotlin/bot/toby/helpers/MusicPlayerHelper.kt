@@ -7,6 +7,7 @@ import bot.toby.managers.NowPlayingManager
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.logging.DiscordLogger
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.MusicDto
 import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -53,7 +54,7 @@ object MusicPlayerHelper {
         }
     }
 
-    fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int?) {
+    fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
@@ -86,7 +87,7 @@ object MusicPlayerHelper {
         nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L)
     }
 
-    private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int?): Boolean {
+    private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int): Boolean {
         return if (track == null) {
             logger.warn { "No track is currently playing on guild ${hook.interaction.guild?.idLong}.." }
             val embed = EmbedBuilder()
@@ -96,8 +97,8 @@ object MusicPlayerHelper {
                 .build()
 
             hook.sendMessageEmbeds(embed).setEphemeral(true).queue(
-                core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                    deleteDelay ?: 0
+                invokeDeleteOnMessageResponse(
+                    deleteDelay
                 )
             )
             true
@@ -106,7 +107,7 @@ object MusicPlayerHelper {
         }
     }
 
-    fun stopSong(event: IReplyCallback, musicManager: GuildMusicManager, canOverrideSkips: Boolean, deleteDelay: Int?) {
+    fun stopSong(event: IReplyCallback, musicManager: GuildMusicManager, canOverrideSkips: Boolean, deleteDelay: Int) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         val hook = event.hook
         if (PlayerManager.instance.isCurrentlyStoppable || canOverrideSkips) {
@@ -125,7 +126,7 @@ object MusicPlayerHelper {
                 .build()
 
             hook.sendMessageEmbeds(embed)
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
             resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
@@ -156,7 +157,7 @@ object MusicPlayerHelper {
             .setColor(Color.CYAN)
             .build()
 
-        hook.sendMessageEmbeds(embed).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+        hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
         audioPlayer.isPaused = paused
     }
 
@@ -165,7 +166,7 @@ object MusicPlayerHelper {
         playerManager: PlayerManager,
         tracksToSkip: Int,
         canOverrideSkips: Boolean,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val hook = event.hook
         val musicManager = playerManager.getMusicManager(event.guild!!)
@@ -180,11 +181,7 @@ object MusicPlayerHelper {
                     .setColor(Color.RED)
                     .build()
 
-                hook.sendMessageEmbeds(embed).queue(
-                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                        deleteDelay ?: 0
-                    )
-                )
+                hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
                 return
             }
 
@@ -196,11 +193,7 @@ object MusicPlayerHelper {
                     .setColor(Color.RED)
                     .build()
 
-                hook.sendMessageEmbeds(embed).setEphemeral(true).queue(
-                    core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                        deleteDelay ?: 0
-                    )
-                )
+                hook.sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
                 return
             }
         }
@@ -219,11 +212,7 @@ object MusicPlayerHelper {
                 .setColor(Color.CYAN)
                 .build()
 
-            hook.sendMessageEmbeds(embed).queue(
-                core.command.Command.Companion.invokeDeleteOnMessageResponse(
-                    deleteDelay ?: 0
-                )
-            )
+            hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }

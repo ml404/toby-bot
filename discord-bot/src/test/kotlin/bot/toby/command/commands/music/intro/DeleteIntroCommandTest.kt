@@ -36,7 +36,7 @@ class DeleteIntroCommandTest : MusicCommandTest {
         every { requestingUserDto.musicDtos } returns mutableListOf()
 
         // Call handle
-        deleteIntroCommand.handle(mockCtx, requestingUserDto, null)
+        deleteIntroCommand.handle(mockCtx, requestingUserDto, 5)
 
         // Verify the reply indicating no intros
         verify { event.hook.sendMessage("You have no intros to delete.") }
@@ -51,7 +51,7 @@ class DeleteIntroCommandTest : MusicCommandTest {
 
         every { requestingUserDto.musicDtos } returns mutableListOf(intro1, intro2)
 
-        deleteIntroCommand.handle(ctx, requestingUserDto, null)
+        deleteIntroCommand.handle(ctx, requestingUserDto, 5)
 
         verify { event.hook.sendMessage(match<String> { it.contains("Please select an intro to delete") }) }
     }
