@@ -28,7 +28,12 @@ interface Command {
         event.hook.sendMessageFormat(getErrorMessage(ownerName)).queue { it.deleteAfter(deleteDelay) }
     }
 
-    val slashCommand: SlashCommandData get() = Commands.slash(name, description)
+    val slashCommand: SlashCommandData
+        get() = Commands.slash(name, description)
+            .apply {
+                if (optionData.isNotEmpty()) addOptions(optionData)
+                if (subCommands.isNotEmpty()) addSubcommands(subCommands)
+            }
 
     val optionData: List<OptionData> get() = emptyList()
 
