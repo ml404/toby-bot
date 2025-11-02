@@ -42,7 +42,16 @@ class DefaultCommandManager @Autowired constructor(
 
         // Accessing 'slashCommand' and 'optionData' from the Command instance
         val slashCommand = cmd.slashCommand
-        slashCommand.addOptions(cmd.optionData)
+
+        when {
+            cmd.subCommands.isNotEmpty() -> {
+                slashCommand.addSubcommands(cmd.subCommands)
+            }
+            cmd.optionData.isNotEmpty() -> {
+                slashCommand.addOptions(cmd.optionData)
+            }
+        }
+
         slashCommands.add(slashCommand)
     }
 
