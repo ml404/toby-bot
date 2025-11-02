@@ -19,13 +19,13 @@ class DnDSearchCommand @Autowired constructor(
     private val dndHelper: DnDHelper
 ) : DnDCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val typeOptionMapping = event.getOption(TYPE)
         val typeName = getName(typeOptionMapping)
         val typeValue = typeOptionMapping!!.asString
         val query = event.getOption(QUERY)!!.asString
-        val deleteDelay = deleteDelay ?: 0
+        val deleteDelay = deleteDelay
 
         event.deferReply(true).queue()
         val hook = event.hook

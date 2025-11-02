@@ -5,29 +5,30 @@ import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.deleteAfter
 import core.command.CommandContext
+import database.dto.UserDto
 import org.springframework.stereotype.Component
 
 @Component
 class ResumeCommand : MusicCommand {
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
-        ctx.event.hook.deleteAfter(deleteDelay ?: 0)
+        ctx.event.hook.deleteAfter(deleteDelay)
         val event = ctx.event
         event.deferReply().queue()
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay ?: 0)
+            sendErrorMessage(event, deleteDelay)
             return
         }
         if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
-        MusicPlayerHelper.changePauseStatusOnTrack(event, instance.getMusicManager(ctx.guild), deleteDelay ?: 0)
+        MusicPlayerHelper.changePauseStatusOnTrack(event, instance.getMusicManager(ctx.guild), deleteDelay)
     }
 
     override val name: String

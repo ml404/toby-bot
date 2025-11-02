@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonParser
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -26,7 +27,7 @@ class MemeCommand : FetchCommand {
     private val TIME_PERIOD = "timeperiod"
     private val LIMIT = "limit"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         try {
             logger.setGuildAndMemberContext(ctx.guild, ctx.member)
             handle(ctx, HttpClients.createDefault(), requestingUserDto, deleteDelay)
@@ -40,8 +41,8 @@ class MemeCommand : FetchCommand {
     fun handle(
         ctx: CommandContext,
         httpClient: HttpClient,
-        requestingUserDto: database.dto.UserDto?,
-        deleteDelay: Int?
+        requestingUserDto: UserDto?,
+        deleteDelay: Int
     ) {
         val event = ctx.event
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
@@ -49,7 +50,7 @@ class MemeCommand : FetchCommand {
 
         if (requestingUserDto?.memePermission != true) {
             logger.info("User ${event.member?.effectiveName} does not have meme permission")
-            sendErrorMessage(event, deleteDelay ?: 0)
+            sendErrorMessage(event, deleteDelay)
             return
         }
 
@@ -60,18 +61,18 @@ class MemeCommand : FetchCommand {
             logger.info("Requested subreddit 'sneakybackgroundfeet'")
             event.hook.sendMessageFormat("Don't talk to me.").queue(
                 invokeDeleteOnMessageResponse(
-                    deleteDelay ?: 0
+                    deleteDelay
                 )
             )
         } else {
-            val embed = fetchRedditPost(result, event, deleteDelay ?: 0, httpClient)
+            val embed = fetchRedditPost(result, event, deleteDelay, httpClient)
             if (embed != null) {
                 logger.info("Successfully fetched meme from subreddit: $subredditArg")
                 event.hook.sendMessageEmbeds(embed).queue()
             } else {
                 logger.warn("Failed to fetch meme from subreddit: $subredditArg")
                 event.hook.sendMessage("Failed to fetch meme. Please try again later.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }

@@ -56,7 +56,7 @@ internal class SkipCommandTest : MusicCommandTest {
             commandContext,
             MusicCommandTest.playerManager,
             CommandTest.requestingUserDto,
-            0
+            5
         )
 
         // Assert

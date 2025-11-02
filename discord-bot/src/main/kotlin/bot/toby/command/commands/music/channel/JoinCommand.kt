@@ -6,6 +6,7 @@ import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
+import database.dto.UserDto
 import database.service.ConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -15,15 +16,15 @@ import org.springframework.stereotype.Component
 @Component
 class JoinCommand @Autowired constructor(private val configService: ConfigService) : MusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply().queue()
@@ -34,12 +35,12 @@ class JoinCommand @Autowired constructor(private val configService: ConfigServic
         val memberChannel = memberVoiceState.channel?.asVoiceChannel()
 
         if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay)
             return
         }
 
         if (!self.hasPermission(Permission.VOICE_CONNECT)) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay)
             return
         }
 
@@ -50,16 +51,16 @@ class JoinCommand @Autowired constructor(private val configService: ConfigServic
         val defaultVolume = databaseConfig?.value?.toInt() ?: 100
         instance.getMusicManager(event.guild!!).audioPlayer.volume = defaultVolume
 
-        event.hook.sendMessage("Connecting to `\uD83D\uDD0A ${memberChannel.name}` with volume '$defaultVolume'").queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+        event.hook.sendMessage("Connecting to `\uD83D\uDD0A ${memberChannel.name}` with volume '$defaultVolume'").queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
-    private fun doJoinChannelValidation(ctx: CommandContext, deleteDelay: Int?): GuildVoiceState? {
+    private fun doJoinChannelValidation(ctx: CommandContext, deleteDelay: Int): GuildVoiceState? {
         val self = ctx.selfMember ?: return null
         val selfVoiceState = self.voiceState
         val event = ctx.event
 
         if (selfVoiceState?.inAudioChannel() == true) {
-            event.hook.sendMessage("I'm already in a voice channel").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage("I'm already in a voice channel").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return null
         }
 
@@ -67,7 +68,7 @@ class JoinCommand @Autowired constructor(private val configService: ConfigServic
         val memberVoiceState = member.voiceState
 
         if (memberVoiceState?.inAudioChannel() != true) {
-            event.hook.sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay!!))
+            event.hook.sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return null
         }
 

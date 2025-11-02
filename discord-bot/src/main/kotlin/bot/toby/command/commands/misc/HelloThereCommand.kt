@@ -1,6 +1,7 @@
 package bot.toby.command.commands.misc
 
 import core.command.CommandContext
+import database.dto.UserDto
 import database.service.ConfigService
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -15,7 +16,7 @@ class HelloThereCommand @Autowired constructor(private val configService: Config
     private val DEFAULT_DATE_FORMAT = "yyyy/MM/dd"
     private val REFERENCE_DATE = LocalDate.of(2005, 5, 19)
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
 
@@ -27,7 +28,7 @@ class HelloThereCommand @Autowired constructor(private val configService: Config
 
         if (dateArgument == null) {
             event.hook.sendMessage(description)
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
 
@@ -36,15 +37,15 @@ class HelloThereCommand @Autowired constructor(private val configService: Config
         }.onSuccess { dateGiven ->
             val responseMessage = if (dateGiven.isBefore(REFERENCE_DATE)) "Hello." else "General Kenobi."
             event.hook.sendMessage(responseMessage)
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
         }.onFailure { e ->
             if (e is DateTimeParseException) {
                 event.hook.sendMessage(
                     "I don't recognise the format of the date you gave me, please use this format $dateFormat"
-                ).queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                ).queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
             } else {
                 event.hook.sendMessage("An unexpected error occurred.")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                    .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }

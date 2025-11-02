@@ -16,7 +16,7 @@ class RollButton @Autowired constructor(private val commandManager: DefaultComma
     override val description: String
         get() = "Button used to roll dice"
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int) {
         val event = ctx.event
         val componentId = event.componentId
 
@@ -33,7 +33,7 @@ class RollButton @Autowired constructor(private val commandManager: DefaultComma
                     optionArray[0],
                     optionArray[1],
                     optionArray[2]
-                ).queue { invokeDeleteOnMessageResponse(deleteDelay ?: 0) }
+                ).queue { invokeDeleteOnMessageResponse(deleteDelay) }
             }
         }
     }

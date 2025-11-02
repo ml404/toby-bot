@@ -13,7 +13,7 @@ class ResendLastRequestButton @Autowired constructor(private val commandManager:
     override val description: String
         get() = "Resend the last send request"
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int) {
         val event = ctx.event
         val (cmd, cmdCtx) = commandManager.lastCommands[event.guild] ?: return
         cmd.handle(cmdCtx, requestingUserDto, deleteDelay)

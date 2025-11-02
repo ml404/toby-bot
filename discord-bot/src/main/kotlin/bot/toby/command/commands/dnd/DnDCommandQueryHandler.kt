@@ -52,14 +52,14 @@ class DnDCommandQueryHandler(
             }.onFailure {
                 logger.error { "An error occurred while handling the DnD query: $it" }
                 hook.sendMessage("An error occurred while processing your request. Please try again later.")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+                    .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
                 hasReplied = true
             }
 
             if (!hasReplied) {
                 logger.info("No matches found for query: $query")
                 hook.sendMessage("Sorry, nothing was returned for $typeName '$query'")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay))
+                    .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }

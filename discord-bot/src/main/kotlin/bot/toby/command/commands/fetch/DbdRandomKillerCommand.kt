@@ -4,13 +4,14 @@ import bot.toby.helpers.WikiFetcher
 import common.helpers.Cache
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.io.IOException
 
 @Component
 class DbdRandomKillerCommand @Autowired constructor(private val cache: Cache) : FetchCommand {
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
         try {
@@ -18,13 +19,13 @@ class DbdRandomKillerCommand @Autowired constructor(private val cache: Cache) : 
             val dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery)
             event.hook.sendMessageFormat(dbdKillers.random()).queue(
                 invokeDeleteOnMessageResponse(
-                    deleteDelay!!
+                    deleteDelay
                 )
             )
         } catch (_: IOException) {
             event.hook.sendMessageFormat("Huh, the website I pull data from must have returned something unexpected.")
                 .queue(
-                    invokeDeleteOnMessageResponse(deleteDelay!!)
+                    invokeDeleteOnMessageResponse(deleteDelay)
                 )
         }
     }

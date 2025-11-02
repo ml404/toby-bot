@@ -32,7 +32,7 @@ internal class ResumeCommandTest : MusicCommandTest {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
         val commandContext = DefaultCommandContext(event)
         val audioPlayer = MusicCommandTest.mockAudioPlayer
-        val playerManager = MusicCommandTest.Companion.playerManager
+        val playerManager = MusicCommandTest.playerManager
         val hook = event.hook
         every { audioPlayer.isPaused } returns true
         every { playerManager.isCurrentlyStoppable } returns true

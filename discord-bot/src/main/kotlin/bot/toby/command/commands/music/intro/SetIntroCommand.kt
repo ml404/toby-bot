@@ -24,7 +24,7 @@ class SetIntroCommand @Autowired constructor(
     private val introHelper: IntroHelper
 ) : MusicCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
@@ -32,7 +32,7 @@ class SetIntroCommand @Autowired constructor(
         ctx: CommandContext,
         instance: PlayerManager,
         requestingUserDto: UserDto,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply(true).queue()
@@ -43,7 +43,7 @@ class SetIntroCommand @Autowired constructor(
 
         logger.info { "Inside handleMusicCommand" }
         if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {
-            sendErrorMessage(event, deleteDelay!!)
+            sendErrorMessage(event, deleteDelay)
             return
         }
 
@@ -83,7 +83,7 @@ class SetIntroCommand @Autowired constructor(
         requestingUserDto: UserDto,
         linkOption: String,
         userName: String,
-        deleteDelay: Int?,
+        deleteDelay: Int,
         introVolume: Int,
         attachmentOption: OptionMapping?
     ) {
@@ -93,7 +93,7 @@ class SetIntroCommand @Autowired constructor(
                 logger.info { "Intro was rejected for being over the specified intro limit length of 20 seconds" }
                 event.hook
                     .sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
                 return@validateIntroLength
             } else {
                 validateAndSetIntro(
@@ -116,7 +116,7 @@ class SetIntroCommand @Autowired constructor(
         attachmentOption: OptionMapping?,
         introVolume: Int,
         userName: String,
-        deleteDelay: Int?
+        deleteDelay: Int
     ) {
         when {
             checkForOverIntroLimit(
@@ -156,7 +156,7 @@ class SetIntroCommand @Autowired constructor(
 
             else -> {
                 event.hook.sendMessage("Please provide a valid link or attachment")
-                    .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay!!))
+                    .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }

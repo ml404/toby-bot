@@ -13,11 +13,11 @@ class PausePlayButton : Button {
     override val description: String
         get() = "Button used to play or pause on the nowplaying message"
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int) {
         val event = ctx.event
         val guild = ctx.guild
         val musicManager = PlayerManager.instance.getMusicManager(guild)
 
-        MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay ?: 0)
+        MusicPlayerHelper.changePauseStatusOnTrack(event, musicManager, deleteDelay)
     }
 }

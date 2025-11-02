@@ -1,7 +1,9 @@
 package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
+import core.command.Command.Companion.invokeDeleteOnHookResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -15,7 +17,7 @@ import org.springframework.stereotype.Component
 @Component
 class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnDCommand {
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
         val member = ctx.member
@@ -53,7 +55,7 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
     )
 
     private fun invalidArguments(
-        deleteDelay: Int?,
+        deleteDelay: Int,
         event: SlashCommandInteractionEvent,
         memberList: List<Member>,
         nameList: List<String>
@@ -61,17 +63,17 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         if (memberList.isEmpty() && nameList.isEmpty()) {
             event.reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.")
                 .setEphemeral(true)
-                .queue(core.command.Command.Companion.invokeDeleteOnHookResponse(deleteDelay ?: 0))
+                .queue(invokeDeleteOnHookResponse(deleteDelay))
             return true
         }
         return false
     }
 
-    private fun checkForNonDmMembersInVoiceChannel(deleteDelay: Int?, event: SlashCommandInteractionEvent): Boolean {
+    private fun checkForNonDmMembersInVoiceChannel(deleteDelay: Int, event: SlashCommandInteractionEvent): Boolean {
         if (dndHelper.sortedEntries.isEmpty()) {
             event.reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
                 .setEphemeral(true)
-                .queue(core.command.Command.Companion.invokeDeleteOnHookResponse(deleteDelay ?: 0))
+                .queue(invokeDeleteOnHookResponse(deleteDelay))
             return true
         }
         return false
@@ -87,9 +89,9 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         return names?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
     }
 
-    private fun displayAllValues(hook: InteractionHook?, deleteDelay: Int?) {
+    private fun displayAllValues(hook: InteractionHook?, deleteDelay: Int) {
         val embedBuilder = dndHelper.initiativeEmbedBuilder
-        dndHelper.sendOrEditInitiativeMessage(hook ?: return, embedBuilder, null, deleteDelay ?: 0)
+        dndHelper.sendOrEditInitiativeMessage(hook ?: return, embedBuilder, null, deleteDelay)
     }
 
 }

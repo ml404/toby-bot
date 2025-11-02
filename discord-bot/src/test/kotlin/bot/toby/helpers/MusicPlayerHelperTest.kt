@@ -87,7 +87,7 @@ class MusicPlayerHelperTest {
 
 
         // Perform nowPlaying action
-        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
         // Verify interaction hook behavior
         verify {
@@ -111,7 +111,7 @@ class MusicPlayerHelperTest {
         createWebhookMocking(webhookCreateAction, message)
 
         // Perform nowPlaying action
-        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
         // Verify interaction hook behavior for sending a new message
         verify {
@@ -141,7 +141,7 @@ class MusicPlayerHelperTest {
         MusicPlayerHelper.nowPlayingManager.clear()
 
         // Perform nowPlaying action
-        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
         // Verify that a new message was sent and stored
         assertNotNull(MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId)) {
@@ -149,7 +149,7 @@ class MusicPlayerHelperTest {
         }
 
         // Perform nowPlaying action again to edit the existing message
-        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, null)
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
         // Verify message behavior
         verify {

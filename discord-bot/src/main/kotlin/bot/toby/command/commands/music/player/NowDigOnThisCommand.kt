@@ -4,7 +4,9 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.URLHelper
 import bot.toby.lavaplayer.PlayerManager
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.UserDto
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -16,15 +18,15 @@ class NowDigOnThisCommand : MusicCommand {
     private val START_POSITION = "start"
     private val VOLUME = "volume"
 
-    override fun handle(ctx: CommandContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int?) {
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
 
     override fun handleMusicCommand(
         ctx: CommandContext,
         instance: PlayerManager,
-        requestingUserDto: database.dto.UserDto,
-        deleteDelay: Int?
+        requestingUserDto: UserDto,
+        deleteDelay: Int
     ) {
         val event = ctx.event
         event.deferReply().queue()
@@ -38,7 +40,7 @@ class NowDigOnThisCommand : MusicCommand {
         if (linkOption.isNullOrBlank()) {
             event.hook
                 .sendMessage("Correct usage is `/nowdigonthis <youtube link>`")
-                .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
 
@@ -57,7 +59,7 @@ class NowDigOnThisCommand : MusicCommand {
             musicManager.audioPlayer.volume = volume
         }
 
-        instance.loadAndPlay(ctx.guild, event, link, false, deleteDelay ?: 0, startPosition, volume)
+        instance.loadAndPlay(ctx.guild, event, link, false, deleteDelay, startPosition, volume)
     }
 
     override val name: String get() = "nowdigonthis"
@@ -65,9 +67,9 @@ class NowDigOnThisCommand : MusicCommand {
 
     override fun getErrorMessage(name: String?): String = "I'm gonna put some dirt in your eye $name"
 
-    private fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int?) {
+    override fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         event.hook.sendMessage(getErrorMessage(event.member!!.effectiveName))
-            .queue(core.command.Command.Companion.invokeDeleteOnMessageResponse(deleteDelay ?: 0))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val optionData: List<OptionData>
