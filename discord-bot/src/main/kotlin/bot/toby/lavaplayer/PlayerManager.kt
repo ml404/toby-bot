@@ -30,7 +30,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     constructor() : this(DefaultAudioPlayerManager())
 
     init {
-        val youtubeSourceOptions = YoutubeSourceOptions().setRemoteCipherUrl(CIPHER_API_URL, "")
+        val youtubeSourceOptions = YoutubeSourceOptions().setRemoteCipher(CIPHER_API_URL, "", "")
         val youtubeAudioSourceManager = YoutubeAudioSourceManager(youtubeSourceOptions, Tv(), TvHtml5Embedded())
         youtubeAudioSourceManager.useOauth2(System.getenv(GOOGLE_REFRESH_TOKEN), true)
 
