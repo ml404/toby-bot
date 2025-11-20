@@ -38,7 +38,6 @@ class IntroHelper(
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val supervisorJob = SupervisorJob()
     private val coroutineScope = CoroutineScope(supervisorJob + dispatcher)
-    private val introLimit = 15.seconds
 
     // Store the pending intro in a cache (as either an attachment or a URL string)
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
@@ -420,9 +419,9 @@ class IntroHelper(
     }
 
     private fun handleOverLimitIntro(channel: PrivateChannel, author: User, guild: Guild) {
-        logger.info { "Intro was rejected for being over the specified intro limit length of ${introLimit.inWholeSeconds} seconds, trying again..." }
+        logger.info { "Intro was rejected for being over the specified intro limit length of ${INTRO_LIMIT.inWholeSeconds} seconds, trying again..." }
         channel
-            .sendMessage("Intro provided was over ${introLimit.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
+            .sendMessage("Intro provided was over ${INTRO_LIMIT.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
             .queue()
         setupWaiterForIntroMessage(author, channel, guild)
     }
@@ -443,8 +442,8 @@ class IntroHelper(
     suspend fun checkForOverlyLongIntroDuration(url: String): Boolean {
         val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
         if (duration != null) {
-            logger.info { "Duration of intro is '$duration' vs limit of '$introLimit'" }
-            return duration > introLimit
+            logger.info { "Duration of intro is '$duration' vs limit of '$INTRO_LIMIT'" }
+            return duration > INTRO_LIMIT
         }
         return false
     }
@@ -507,6 +506,8 @@ class IntroHelper(
         private const val VOLUME = "volume"
         const val MAX_FILE_SIZE = 550 * 1024
         const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
+        val INTRO_LIMIT = 15.seconds
+
     }
 }
 

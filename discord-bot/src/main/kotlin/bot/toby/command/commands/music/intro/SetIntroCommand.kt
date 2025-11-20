@@ -2,6 +2,7 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.IntroHelper
+import bot.toby.helpers.IntroHelper.Companion.INTRO_LIMIT
 import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.helpers.URLHelper
 import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
@@ -13,7 +14,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
-import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
 import org.springframework.beans.factory.annotation.Autowired
@@ -37,22 +38,20 @@ class SetIntroCommand @Autowired constructor(
         val event = ctx.event
         event.deferReply(true).queue()
         val introVolume = introHelper.calculateIntroVolume(event)
-        val mentionedMembers = event.getOptionMentionedMembers()
+        val attachmentOption = event.getOption(ATTACHMENT)
+        val linkOption = event.getOption(LINK)?.asString.orEmpty()
+
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
 
-
-        logger.info { "Inside handleMusicCommand" }
-        if (!requestingUserDto.superUser && mentionedMembers.isNotEmpty()) {
+        if (!requestingUserDto.superUser && event.getOption(USERS)?.mentions?.members.orEmpty().isNotEmpty()) {
             sendErrorMessage(event, deleteDelay)
             return
         }
 
-        val attachmentOption = event.getOption(ATTACHMENT)
-        val linkOption = event.getOption(LINK)?.asString.orEmpty()
+        val mentionedMembers = event.getOptionMentionedMembers()
 
-        val mentionedUserDtoList = mentionedMembers.map { introHelper.findUserById(it.idLong, it.guild.idLong) }
-
-        if (mentionedUserDtoList.isEmpty()) {
+        if (mentionedMembers.isEmpty()) {
+            // No mentions: use requesting user
             checkAndSetIntro(
                 event,
                 requestingUserDto,
@@ -63,19 +62,12 @@ class SetIntroCommand @Autowired constructor(
                 attachmentOption
             )
         } else {
-            mentionedMembers.forEach {
-                checkAndSetIntro(
-                    event,
-                    introHelper.findUserById(it.idLong, it.guild.idLong),
-                    linkOption,
-                    it.effectiveName,
-                    deleteDelay,
-                    introVolume,
-                    attachmentOption
-                )
+            // Mentions: map each member to their DTO inside the loop
+            mentionedMembers.forEach { member ->
+                val memberDto = introHelper.findUserById(member.idLong, member.guild.idLong)
+                checkAndSetIntro(event, memberDto, linkOption, member.effectiveName, deleteDelay, introVolume, attachmentOption)
             }
         }
-
     }
 
     private fun checkAndSetIntro(
@@ -88,23 +80,14 @@ class SetIntroCommand @Autowired constructor(
         attachmentOption: OptionMapping?
     ) {
         introHelper.validateIntroLength(linkOption) { isOverLimit ->
-            // Handle overly long intro case
             if (isOverLimit) {
-                logger.info { "Intro was rejected for being over the specified intro limit length of 20 seconds" }
+                logger.info { "Intro was rejected for being over the specified intro limit length of $INTRO_LIMIT" }
                 event.hook
-                    .sendMessage("Intro provided was over 20 seconds long, out of courtesy please pick a shorter intro.")
+                    .sendMessage("Intro provided was over $INTRO_LIMIT long, out of courtesy please pick a shorter intro.")
                     .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
                 return@validateIntroLength
             } else {
-                validateAndSetIntro(
-                    event,
-                    requestingUserDto,
-                    linkOption,
-                    attachmentOption,
-                    introVolume,
-                    userName,
-                    deleteDelay
-                )
+                validateAndSetIntro(event, requestingUserDto, linkOption, attachmentOption, introVolume, userName, deleteDelay)
             }
         }
     }
@@ -119,45 +102,11 @@ class SetIntroCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         when {
-            checkForOverIntroLimit(
-                event.hook,
-                event.member!!,
-                requestingUserDto,
-                linkOption,
-                attachmentOption,
-                introVolume
-            )
-                -> {
-                return
-            }
-
-            linkOption.isNotEmpty() -> {
-                val optionalURI = URLHelper.fromUrlString(linkOption)
-                introHelper.handleUrl(
-                    event,
-                    requestingUserDto,
-                    userName = userName,
-                    deleteDelay,
-                    optionalURI,
-                    introVolume
-                )
-            }
-
-            attachmentOption != null -> {
-                introHelper.handleAttachment(
-                    event,
-                    requestingUserDto,
-                    userName,
-                    deleteDelay,
-                    attachmentOption.asAttachment,
-                    introVolume
-                )
-            }
-
-            else -> {
-                event.hook.sendMessage("Please provide a valid link or attachment")
-                    .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
-            }
+            checkForOverIntroLimit(event.hook, event.member!!, requestingUserDto, linkOption, attachmentOption, introVolume) -> return
+            linkOption.isNotEmpty() -> introHelper.handleUrl(event, requestingUserDto, userName, deleteDelay, URLHelper.fromUrlString(linkOption), introVolume)
+            attachmentOption != null -> introHelper.handleAttachment(event, requestingUserDto, userName, deleteDelay, attachmentOption.asAttachment, introVolume)
+            else -> event.hook.sendMessage("Please provide a valid link or attachment")
+                .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 
@@ -174,9 +123,7 @@ class SetIntroCommand @Autowired constructor(
             introHelper.pendingIntros[requestingUserDto.discordId] =
                 Triple(attachmentOption?.asAttachment, linkOption, introVolume)
             val builder = StringSelectMenu.create(SET_INTRO).setPlaceholder(null)
-            introList
-                .sortedBy { it.index }
-                .forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
+            introList.sortedBy { it.index }.forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
             val stringSelectMenu = builder.build()
             val musicFileDataStringForPrinting = produceMusicFileDataStringForPrinting(member, requestingUserDto)
             hook.sendMessage("$musicFileDataStringForPrinting\n Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
@@ -188,26 +135,23 @@ class SetIntroCommand @Autowired constructor(
         return false
     }
 
-    private fun SlashCommandInteractionEvent.getOptionMentionedMembers(): List<Member> {
-        return this.getOption(USERS)?.mentions?.members.orEmpty()
-    }
+    private fun SlashCommandInteractionEvent.getOptionMentionedMembers(): List<Member> =
+        this.getOption(USERS)?.mentions?.members.orEmpty()
 
+    override val name: String get() = "setintro"
+    override val description: String get() = "Upload an **MP3** file or link to play when you join a voice channel."
 
-    override val name: String
-        get() = "setintro"
-
-    override val description: String
-        get() = "Upload an **MP3** file to play when you join a voice channel. Can use YouTube links instead."
-
-    override val optionData: List<OptionData>
-        get() {
-            return listOf(
-                OptionData(OptionType.MENTIONABLE, USERS, "User whose intro to change"),
-                OptionData(OptionType.STRING, LINK, "Link to set as your discord intro"),
-                OptionData(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro"),
-                OptionData(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
-            )
-        }
+    override val subCommands: List<SubcommandData>
+        get() = listOf(
+            SubcommandData(LINK, "Set intro via YouTube link")
+                .addOption(OptionType.STRING, LINK, "Link to set as your discord intro", true)
+                .addOption(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                .addOption(OptionType.MENTIONABLE, USERS, "User whose intro to change"),
+            SubcommandData(ATTACHMENT, "Set intro via file upload")
+                .addOption(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro", true)
+                .addOption(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                .addOption(OptionType.MENTIONABLE, USERS, "User whose intro to change")
+        )
 
     companion object {
         private const val VOLUME = "volume"
