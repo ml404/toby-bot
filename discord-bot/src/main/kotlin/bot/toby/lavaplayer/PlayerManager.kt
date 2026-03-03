@@ -14,7 +14,7 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import dev.lavalink.youtube.YoutubeAudioSourceManager
 import dev.lavalink.youtube.YoutubeSourceOptions
 import dev.lavalink.youtube.clients.Tv
-import dev.lavalink.youtube.clients.TvHtml5Embedded
+import dev.lavalink.youtube.clients.TvHtml5Simply
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 
@@ -31,7 +31,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
 
     init {
         val youtubeSourceOptions = YoutubeSourceOptions().setRemoteCipher(CIPHER_API_URL, "", "")
-        val youtubeAudioSourceManager = YoutubeAudioSourceManager(youtubeSourceOptions, Tv(), TvHtml5Embedded())
+        val youtubeAudioSourceManager = YoutubeAudioSourceManager(youtubeSourceOptions, Tv(), TvHtml5Simply())
         youtubeAudioSourceManager.useOauth2(System.getenv(GOOGLE_REFRESH_TOKEN), true)
 
         audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
