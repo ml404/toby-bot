@@ -1,0 +1,11 @@
+services:
+  bot:
+    build: .
+    environment:
+      - TOKEN
+      - DATABASE_URL
+      - YOUTUBE_API_KEY
+      - GOOGLE_REFRESH_TOKEN
+    ports:
+      - "${PORT:-8080}:8080"
+    restart: unless-stopped

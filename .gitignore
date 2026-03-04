@@ -1,4 +1,5 @@
 # Project exclude paths
+.env
 /.gradle/
 /out/
 /.idea/gradle.xml

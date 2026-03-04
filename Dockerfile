@@ -1,12 +1,10 @@
-FROM gradle:7.4.1-jdk17 AS build
-COPY --chown=gradle:gradle . /home/gradle/src
+FROM eclipse-temurin:22-jdk AS build
 WORKDIR /home/gradle/src
-RUN gradle build --no-daemon
+COPY --chown=root:root . .
+RUN chmod +x gradlew && ./gradlew :application:bootJar --no-daemon
 
-FROM openjdk:15
-EXPOSE 8080
+FROM eclipse-temurin:22-jre
 RUN mkdir /app
-
-COPY --from=build /home/gradle/src/build/libs/*.jar /app/spring-boot-application.jar
-
-ENTRYPOINT ["java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-Djava.security.egd=file:/dev/./urandom","-jar","/app/spring-boot-application.jar"]
+COPY --from=build /home/gradle/src/application/build/libs/*.jar /app/toby-bot.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/toby-bot.jar"]
