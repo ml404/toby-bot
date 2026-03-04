@@ -49,6 +49,35 @@ Ensure you have the following prerequisites set up before getting started:
    java -jar application/build/libs/application-6.1-SNAPSHOT.jar -Dspring.profiles.active=prod
    ```
 
+## Running with Docker
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+1. Provide the required environment variables — either via a `.env` file or your system environment:
+
+   | Variable | Required | Description |
+   |---|---|---|
+   | `TOKEN` | Yes | Discord bot token |
+   | `DATABASE_URL` | Yes | PostgreSQL URL (`postgresql://user:pass@host:5432/db`) |
+   | `YOUTUBE_API_KEY` | No | YouTube Data API key |
+   | `GOOGLE_REFRESH_TOKEN` | No | OAuth2 refresh token for YouTube playback |
+
+   **Option A — `.env` file** (copy the example and fill in your values):
+
+   ```shell
+   cp .env.example .env
+   ```
+
+   **Option B — host environment variables** (e.g. set in Windows user variables or Heroku config vars): Docker Compose will pass them through automatically.
+
+2. Build and start the bot:
+
+   ```shell
+   docker compose up --build
+   ```
+
+   To run in the background: `docker compose up --build -d`
+
 ## Usage
 
 - Invite your Toby Bot to your Discord server and grant the required permissions.
