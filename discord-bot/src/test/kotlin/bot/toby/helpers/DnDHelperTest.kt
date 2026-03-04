@@ -13,6 +13,7 @@ import database.service.impl.DefaultUserService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -101,7 +102,7 @@ internal class DnDHelperTest {
         every { event.message } returns message
 
         every { message.editMessageEmbeds(any<MessageEmbed>()) } returns messageEditAction
-        every { messageEditAction.setActionRow(any(), any(), any()) } returns messageEditAction
+        every { messageEditAction.setComponents(any<ActionRow>()) } returns messageEditAction
         every { messageEditAction.queue() } just Runs
         every { message.delete() } returns auditableRestAction
 
@@ -127,8 +128,9 @@ internal class DnDHelperTest {
         every { userDtoHelper.calculateUserDto(1L, 3L) } returns userDto3
         every { hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue(any()) } just Runs
-        every { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() } just Runs
-        every { webhookMessageEditAction.setActionRow(any(), any(), any()).queue() } just Runs
+        every { webhookMessageCreateAction.setComponents(any<ActionRow>()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.queue() } just Runs
+        every { webhookMessageEditAction.setComponents(any<ActionRow>()) } returns webhookMessageEditAction
         every { webhookMessageEditAction.queue() } just Runs
     }
 
@@ -230,7 +232,8 @@ internal class DnDHelperTest {
         dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
 
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 1) { webhookMessageCreateAction.setActionRow(any(), any(), any()).queue() }
+        verify(exactly = 1) { webhookMessageCreateAction.setComponents(any<ActionRow>()) }
+        verify(exactly = 1) { webhookMessageCreateAction.queue() }
     }
 
     @Test
@@ -240,7 +243,7 @@ internal class DnDHelperTest {
         dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, event, 0)
 
         verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 1) { messageEditAction.setActionRow(any(), any(), any()) }
+        verify(exactly = 1) { messageEditAction.setComponents(any<ActionRow>()) }
         verify(exactly = 1) { messageEditAction.queue() }
         verify(exactly = 1) { hook.setEphemeral(true) }
         verify(exactly = 1) { hook.sendMessage(any<String>()) }
@@ -360,21 +363,12 @@ internal class DnDHelperTest {
         webhookMessageCreateAction: WebhookMessageCreateAction<*>,
         messageEditAction: MessageEditAction
     ) {
-        val initButtons = dndHelper.initButtons
         verify(exactly = 1) {
-            webhookMessageCreateAction.setActionRow(
-                eq(initButtons.prev),
-                eq(initButtons.clear),
-                eq(initButtons.next)
-            )
+            webhookMessageCreateAction.setComponents(any<ActionRow>())
         }
 
         verify(exactly = 1) {
-            messageEditAction.setActionRow(
-                eq(initButtons.prev),
-                eq(initButtons.clear),
-                eq(initButtons.next)
-            )
+            messageEditAction.setComponents(any<ActionRow>())
         }
     }
 }

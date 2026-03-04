@@ -6,7 +6,8 @@ import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPri
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
 import database.dto.UserDto
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import org.springframework.stereotype.Component
 
 @Component
@@ -41,7 +42,7 @@ class DeleteIntroCommand : MusicCommand {
         val introMessage = produceMusicFileDataStringForPrinting(event.member!!, requestingUserDto)
 
         // Send the select menu to the user
-        event.hook.sendMessage("$introMessage \nPlease select an intro to delete.").addActionRow(stringSelectMenu)
+        event.hook.sendMessage("$introMessage \nPlease select an intro to delete.").addComponents(ActionRow.of(stringSelectMenu))
             .setEphemeral(true).queue()
     }
 

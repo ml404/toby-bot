@@ -11,7 +11,8 @@ import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
-import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -61,7 +62,7 @@ class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnD
         val rollD4 = Button.primary("$name:4, 1, 0", "Roll D4")
         return event.hook
             .sendMessageEmbeds(embedBuilder.build())
-            .addActionRow(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4)
+            .addComponents(ActionRow.of(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4))
     }
 
     private fun buildStringForDiceRoll(diceValue: Int, diceToRoll: Int, modifier: Int): StringBuilder {

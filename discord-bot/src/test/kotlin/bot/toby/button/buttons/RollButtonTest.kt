@@ -8,6 +8,7 @@ import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.managers.DefaultCommandManager
 import io.mockk.*
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
@@ -52,7 +53,7 @@ class RollButtonTest : ButtonTest {
         every { event.componentId } returns "roll:1,2,3"
         every { event.message.delete().queue() } just Runs
 
-        every { event.hook.sendMessageEmbeds(any<MessageEmbed>()).addActionRow(any(), any(), any(), any(), any()) } returns mockk<WebhookMessageCreateAction<Message>> {
+        every { event.hook.sendMessageEmbeds(any<MessageEmbed>()).addComponents(any<ActionRow>()) } returns mockk<WebhookMessageCreateAction<Message>> {
             every { queue(any()) } just Runs
         }
 

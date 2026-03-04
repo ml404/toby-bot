@@ -4,8 +4,11 @@ import bot.toby.handler.EventWaiter
 import bot.toby.handler.MessageEventHandler
 import bot.toby.handler.StartUpHandler
 import bot.toby.handler.VoiceEventHandler
+import moe.kyokobot.libdave.NativeDaveFactory
+import moe.kyokobot.libdave.jda.LDJDADaveSessionFactory
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
+import net.dv8tion.jda.api.audio.AudioModuleConfig
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
@@ -38,7 +41,7 @@ open class BotConfig {
             GatewayIntent.GUILD_MESSAGES,
             GatewayIntent.GUILD_MESSAGE_REACTIONS,
             GatewayIntent.GUILD_VOICE_STATES,
-            GatewayIntent.GUILD_EMOJIS_AND_STICKERS
+            GatewayIntent.GUILD_EXPRESSIONS
         )
             .setMemberCachePolicy(MemberCachePolicy.ALL)
             .disableCache(
@@ -49,6 +52,7 @@ open class BotConfig {
                 )
             )
             .enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI)
+            .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(LDJDADaveSessionFactory(NativeDaveFactory())))
             .build()
     }
 }

@@ -39,6 +39,9 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation "dev.lavalink.youtube:common:$youtube_common_version"
     runtimeOnly "dev.arbjerg:lavaplayer-natives:$lavaplayer_version"
+    implementation "moe.kyokobot.libdave:adapter-jda:0.1.0"
+    implementation "moe.kyokobot.libdave:impl-jni:0.1.0"
+    runtimeOnly "moe.kyokobot.libdave:natives-linux-x86-64:0.1.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_version"
     testImplementation project(path: ':common', configuration: 'testArtifacts')
     testImplementation project(path: ':database', configuration: 'testArtifacts')

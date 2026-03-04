@@ -9,8 +9,8 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.Channel
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
-import net.dv8tion.jda.api.interactions.components.ItemComponent
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
@@ -79,10 +79,7 @@ class MusicPlayerHelperTest {
         every { webhookCreateAction.setEphemeral(true) } returns webhookCreateAction
         every { webhookCreateAction.queue(any()) } just Runs
         every {
-            webhookCreateAction.setActionRow(
-                any<ItemComponent>(),
-                any<ItemComponent>()
-            )
+            webhookCreateAction.setComponents(any<ActionRow>())
         } returns webhookCreateAction
 
 
@@ -156,7 +153,7 @@ class MusicPlayerHelperTest {
             message.editMessageEmbeds(match<MessageEmbed> {
                 it.description?.contains("Title") == true && it.description?.contains("Author") == true
             })
-            messageEditAction.setActionRow(any(), any()).queue()
+            messageEditAction.setComponents(any<ActionRow>()).queue()
         }
     }
 
@@ -170,10 +167,7 @@ class MusicPlayerHelperTest {
             )
         } returns messageEditAction
         every {
-            messageEditAction.setActionRow(
-                any(),
-                any()
-            ).queue()
+            messageEditAction.setComponents(any<ActionRow>()).queue()
         } just Runs
 
     }
@@ -184,10 +178,7 @@ class MusicPlayerHelperTest {
     ) {
         every { replyCallback.hook.sendMessageEmbeds(any<MessageEmbed>()) } returns webhookCreateAction
         every {
-            webhookCreateAction.setActionRow(
-                any(),
-                any()
-            )
+            webhookCreateAction.setComponents(any<ActionRow>())
         } returns webhookCreateAction
         every { webhookCreateAction.queue(any()) } answers {
             MusicPlayerHelper.nowPlayingManager.setNowPlayingMessage(guildId, message)

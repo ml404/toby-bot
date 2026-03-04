@@ -46,7 +46,7 @@ Ensure you have the following prerequisites set up before getting started:
 4. Start the bot:
 
    ```shell
-   java -jar application/build/libs/application-6.0-SNAPSHOT.jar -Dspring.profiles.active=prod
+   java -jar application/build/libs/application-6.1-0.jar -Dspring.profiles.active=prod
    ```
 
 ## Usage

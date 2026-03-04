@@ -3,12 +3,12 @@ package bot.toby.command
 import database.dto.MusicDto
 import io.mockk.*
 import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.interactions.components.ItemComponent
 import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
@@ -46,10 +46,10 @@ interface CommandTest {
         every { interactionHook.sendMessageEmbeds(any(), any<MessageEmbed>()) } returns webhookMessageCreateAction
         every { replyCallbackAction.setEphemeral(any()) } returns replyCallbackAction
         every { replyCallbackAction.queue() } just runs
-        every { webhookMessageCreateAction.addActionRow(any<ItemComponent>()) } just Awaits
+        every { webhookMessageCreateAction.addComponents(any<ActionRow>()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.addContent(any()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.setEphemeral(any()) } returns webhookMessageCreateAction
-        every { webhookMessageCreateAction.setActionRow(*anyVararg()).queue() } just Runs
+        every { webhookMessageCreateAction.setComponents(any<ActionRow>()).queue() } just Runs
         every { webhookMessageCreateAction.setEphemeral(any()).queue(any()) } just Runs
         every { webhookMessageCreateAction.queue(any()) } just Runs
         every { messageChannelUnion.sendMessage(any<String>()) } returns messageCreateAction
@@ -101,7 +101,7 @@ interface CommandTest {
         val jda: JDA = mockk(relaxed = true)
         val member: Member = mockk(relaxed = true)
         val targetMember: Member = mockk(relaxed = true)
-        val botMember: Member = mockk(relaxed = true)
+        val botMember: SelfMember = mockk(relaxed = true)
         val messageChannelUnion: MessageChannelUnion = mockk(relaxed = true)
         val requestingUserDto: database.dto.UserDto = mockk(relaxed = true)
         val webhookMessageCreateAction: WebhookMessageCreateActionImpl<Message> = mockk(relaxed = true)

@@ -15,7 +15,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -70,7 +70,7 @@ class DnDCommandQueryHandlerTest {
     fun `should handle no initial results but successful followup scenario`() = runTest {
         // Mock initial and follow-up query responses
         coEvery { httpHelper.fetchFromGet(any()) } returns ERROR_NOT_FOUND_RESPONSE andThen BLIND_QUERY_RESPONSE
-        every { hook.sendMessage(any<String>()).setActionRow(any<StringSelectMenu>()).queue() } returns Unit
+        every { hook.sendMessage(any<String>()).setComponents(any<ActionRow>()).queue() } returns Unit
 
         val dispatcher = StandardTestDispatcher(testScheduler)
         queryHandler = DnDCommandQueryHandler(dispatcher, httpHelper, dndHelper, hook, deleteDelay)
@@ -81,7 +81,7 @@ class DnDCommandQueryHandlerTest {
 
         // Verify interaction with the hook for follow-up
         coVerify {
-            hook.sendMessage(any<String>()).setActionRow(any<StringSelectMenu>()).queue()
+            hook.sendMessage(any<String>()).setComponents(any<ActionRow>()).queue()
         }
     }
 
