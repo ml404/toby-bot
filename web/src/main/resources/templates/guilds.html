@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TobyBot - Select a Server</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        nav {
+            background: #16213e;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        nav .brand { font-weight: 700; font-size: 1.1rem; color: #fff; }
+        nav .user-area { display: flex; align-items: center; gap: 16px; color: #a0a0b0; font-size: 0.9rem; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #555;
+            color: #a0a0b0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
+        h1 { font-size: 1.6rem; margin-bottom: 8px; color: #fff; }
+        .subtitle { color: #a0a0b0; margin-bottom: 32px; }
+        .error {
+            background: #4a1a1a;
+            border: 1px solid #c0392b;
+            color: #e74c3c;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .guild-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .guild-card {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #e0e0e0;
+            transition: border-color 0.2s, transform 0.1s;
+            display: block;
+        }
+        .guild-card:hover { border-color: #5865F2; transform: translateY(-2px); }
+        .guild-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: block;
+        }
+        .guild-icon-placeholder {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #5865F2;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+        .guild-name { font-weight: 600; font-size: 0.95rem; }
+        .empty { color: #a0a0b0; text-align: center; padding: 48px 0; }
+    </style>
+</head>
+<body>
+<nav>
+    <span class="brand">TobyBot</span>
+    <div class="user-area">
+        <span>Logged in as <strong th:text="${username}">User</strong></span>
+        <form th:action="@{/logout}" method="post" style="margin:0">
+            <button type="submit" class="btn-logout">Logout</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>Select a Server</h1>
+    <p class="subtitle">Servers where both you and TobyBot are present.</p>
+
+    <div th:if="${error}" class="error" th:text="${error}"></div>
+
+    <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <a class="guild-card"
+           th:each="guild : ${guilds}"
+           th:href="@{/intro/{id}(id=${guild.id})}">
+            <img th:if="${guild.iconUrl != null}"
+                 th:src="${guild.iconUrl}"
+                 th:alt="${guild.name}"
+                 class="guild-icon">
+            <div th:unless="${guild.iconUrl != null}"
+                 class="guild-icon-placeholder"
+                 th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
+            <div class="guild-name" th:text="${guild.name}">Guild Name</div>
+        </a>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(guilds)}">
+        <p>You are not in any servers where TobyBot is active.</p>
+    </div>
+</div>
+</body>
+</html>

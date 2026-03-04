@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="'TobyBot - ' + ${guildName}">TobyBot - Intros</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        nav {
+            background: #16213e;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        nav .nav-left { display: flex; align-items: center; gap: 20px; }
+        nav .brand { font-weight: 700; font-size: 1.1rem; color: #fff; }
+        nav a.back { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; }
+        nav a.back:hover { color: #fff; }
+        nav .user-area { display: flex; align-items: center; gap: 16px; color: #a0a0b0; font-size: 0.9rem; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #555;
+            color: #a0a0b0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
+        h1 { font-size: 1.6rem; margin-bottom: 32px; color: #fff; }
+        h2 { font-size: 1.1rem; margin-bottom: 16px; color: #c0c0d0; }
+        section { margin-bottom: 40px; }
+        .alert {
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .alert-error { background: #4a1a1a; border: 1px solid #c0392b; color: #e74c3c; }
+        .alert-success { background: #1a4a2a; border: 1px solid #27ae60; color: #2ecc71; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #2a2a4a; }
+        th { color: #a0a0b0; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { font-size: 0.95rem; }
+        .btn-delete {
+            background: transparent;
+            border: 1px solid #c0392b;
+            color: #e74c3c;
+            padding: 5px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover { background: #c0392b; color: #fff; }
+        .form-card {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 24px;
+        }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #a0a0b0; }
+        input[type=url], input[type=file], input[type=number], select {
+            width: 100%;
+            background: #1a1a2e;
+            border: 1px solid #3a3a5a;
+            color: #e0e0e0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        input[type=url]:focus, input[type=number]:focus, select:focus {
+            outline: none;
+            border-color: #5865F2;
+        }
+        .radio-group { display: flex; gap: 24px; }
+        .radio-group label { display: flex; align-items: center; gap: 8px; color: #e0e0e0; cursor: pointer; margin: 0; }
+        .btn-submit {
+            background: #5865F2;
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover { background: #4752c4; }
+        .empty { color: #a0a0b0; font-style: italic; }
+        .hint { font-size: 0.8rem; color: #666; margin-top: 4px; }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="nav-left">
+        <span class="brand">TobyBot</span>
+        <a class="back" th:href="@{/intro/guilds}">← Back to Servers</a>
+    </div>
+    <div class="user-area">
+        <span th:text="${username}">User</span>
+        <form th:action="@{/logout}" method="post" style="margin:0">
+            <button type="submit" class="btn-logout">Logout</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>Intro Songs — <span th:text="${guildName}">Server</span></h1>
+
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <!-- Current intros -->
+    <section>
+        <h2>Current Intros (<span th:text="${intros.size()}">0</span> / <span th:text="${maxIntros}">3</span>)</h2>
+
+        <p class="empty" th:if="${#lists.isEmpty(intros)}">No intro songs set for this server.</p>
+
+        <table th:unless="${#lists.isEmpty(intros)}">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name / URL</th>
+                    <th>Volume</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="intro : ${intros}">
+                    <td th:text="${intro.index}">1</td>
+                    <td th:text="${intro.fileName}">intro.mp3</td>
+                    <td th:text="${intro.introVolume} + '%'">90%</td>
+                    <td>
+                        <form th:action="@{/intro/{guildId}/delete/{introId}(guildId=${guildId},introId=${intro.id})}"
+                              method="post"
+                              onsubmit="return confirm('Delete this intro?')">
+                            <button type="submit" class="btn-delete">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Add / replace form -->
+    <section>
+        <h2 th:text="${atLimit} ? 'Replace an Intro' : 'Add a New Intro'">Add Intro</h2>
+
+        <div class="form-card">
+            <form th:action="@{/intro/{guildId}/set(guildId=${guildId})}"
+                  method="post"
+                  enctype="multipart/form-data">
+
+                <!-- Replace selector (shown only when at limit) -->
+                <div class="form-group" th:if="${atLimit}">
+                    <label for="replaceIndex">Select intro to replace</label>
+                    <select id="replaceIndex" name="replaceIndex" required>
+                        <option value="">-- Select --</option>
+                        <option th:each="intro : ${intros}"
+                                th:value="${intro.index}"
+                                th:text="'#' + ${intro.index} + ' — ' + ${intro.fileName}">
+                            #1 — intro.mp3
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Input type toggle -->
+                <div class="form-group">
+                    <label>Source</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="inputType" value="url" checked
+                                   onchange="toggleInput('url')"> URL
+                        </label>
+                        <label>
+                            <input type="radio" name="inputType" value="file"
+                                   onchange="toggleInput('file')"> File Upload
+                        </label>
+                    </div>
+                </div>
+
+                <!-- URL input -->
+                <div class="form-group" id="urlSection">
+                    <label for="url">YouTube / audio URL</label>
+                    <input type="url" id="url" name="url"
+                           placeholder="https://www.youtube.com/watch?v=...">
+                    <p class="hint">Max intro duration: 15 seconds.</p>
+                </div>
+
+                <!-- File upload input -->
+                <div class="form-group" id="fileSection" style="display:none">
+                    <label for="file">MP3 file</label>
+                    <input type="file" id="file" name="file" accept=".mp3">
+                    <p class="hint">Maximum size: 550KB.</p>
+                </div>
+
+                <!-- Volume -->
+                <div class="form-group">
+                    <label for="volume">Volume (1–100)</label>
+                    <input type="number" id="volume" name="volume"
+                           min="1" max="100" value="90" style="max-width:120px">
+                </div>
+
+                <button type="submit" class="btn-submit"
+                        th:text="${atLimit} ? 'Replace Intro' : 'Add Intro'">
+                    Add Intro
+                </button>
+            </form>
+        </div>
+    </section>
+</div>
+
+<script>
+    function toggleInput(type) {
+        document.getElementById('urlSection').style.display = (type === 'url') ? 'block' : 'none';
+        document.getElementById('fileSection').style.display = (type === 'file') ? 'block' : 'none';
+    }
+</script>
+</body>
+</html>

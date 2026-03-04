@@ -5,6 +5,9 @@ import database.service.BrotherService
 import database.service.ConfigService
 import database.service.MusicFileService
 import database.service.UserService
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -16,11 +19,10 @@ class BotController(
     var brotherService: BrotherService
 ) {
     @GetMapping("/")
-    fun index(): String =
-         """
-            Welcome to TobyBot 
-            To find out more, please visit https://github.com/ml404/toby-bot#readme
-            """.trimIndent()
+    fun index(): ResponseEntity<Void> =
+        ResponseEntity.status(HttpStatus.FOUND)
+            .header(HttpHeaders.LOCATION, "/login")
+            .build()
 
     @GetMapping("/brother")
     @ResponseBody

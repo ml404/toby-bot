@@ -6,6 +6,8 @@ services:
       - DATABASE_URL
       - YOUTUBE_API_KEY
       - GOOGLE_REFRESH_TOKEN
+      - DISCORD_CLIENT_ID
+      - DISCORD_CLIENT_SECRET
     ports:
       - "${PORT:-8080}:8080"
     restart: unless-stopped
