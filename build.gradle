@@ -1,9 +1,10 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     ext {
         springBootVersion = '3.3.4'
-        springDependencyManagementVersion = '1.0.15.RELEASE'
+        springDependencyManagementVersion = '1.1.7'
         jdaVersion = '6.3.1'
         kotlin_version = '2.3.0'
         kotlinx_version = '1.10.2'
@@ -24,7 +25,7 @@ buildscript {
 
 plugins {
     id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
-    id 'com.autonomousapps.dependency-analysis' version '1.25.0'
+    id 'com.autonomousapps.dependency-analysis' version '3.6.1'
 }
 
 apply plugin: 'kotlin'
@@ -37,14 +38,14 @@ allprojects {
 
     repositories {
         mavenCentral()
-        maven { url 'https://jitpack.io' }
-        maven { url "https://repo.spring.io/libs-snapshot" }
-        maven { url 'https://repo.spring.io/milestone' }
-        maven { url 'https://repo.spring.io/snapshot' }
-        maven { name 'm2-dv8tion'; url 'https://m2.dv8tion.net/releases' }
+        maven { url = 'https://jitpack.io' }
+        maven { url = "https://repo.spring.io/libs-snapshot" }
+        maven { url = 'https://repo.spring.io/milestone' }
+        maven { url = 'https://repo.spring.io/snapshot' }
+        maven { name = 'm2-dv8tion'; url = 'https://m2.dv8tion.net/releases' }
         maven {
-            name 'm2-duncte123'
-            url 'https://m2.duncte123.dev/releases'
+            name = 'm2-duncte123'
+            url = 'https://m2.duncte123.dev/releases'
         }
         maven { url = "https://maven.lavalink.dev/releases" }
         maven { url = "https://maven.lavalink.dev/snapshots" }
@@ -61,8 +62,18 @@ subprojects {
     }
 
     tasks.withType(KotlinCompile).configureEach {
-        kotlinOptions {
-            jvmTarget = "22"  // Ensure compatibility with your project's JVM version
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_22)
+        }
+    }
+
+    plugins.withId('java') {
+        dependencies {
+            testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        }
+
+        tasks.withType(Test).configureEach {
+            failOnNoDiscoveredTests = false
         }
     }
 }
@@ -72,8 +83,8 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        jvmTarget = "22"
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_22)
     }
 }
 repositories {
@@ -81,5 +92,5 @@ repositories {
 }
 
 kotlin {
-    jvmToolchain(8)
+    jvmToolchain(22)
 }
