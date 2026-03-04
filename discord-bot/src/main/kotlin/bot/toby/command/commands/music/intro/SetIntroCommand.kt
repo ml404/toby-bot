@@ -15,8 +15,9 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
-import net.dv8tion.jda.api.interactions.components.selections.SelectOption
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.selections.SelectOption
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -127,7 +128,7 @@ class SetIntroCommand @Autowired constructor(
             val stringSelectMenu = builder.build()
             val musicFileDataStringForPrinting = produceMusicFileDataStringForPrinting(member, requestingUserDto)
             hook.sendMessage("$musicFileDataStringForPrinting\n Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
-                .setActionRow(stringSelectMenu)
+                .setComponents(ActionRow.of(stringSelectMenu))
                 .setEphemeral(true)
                 .queue()
             return true

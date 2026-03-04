@@ -9,6 +9,7 @@ import bot.toby.helpers.UserDtoHelper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -49,7 +50,7 @@ class RollCommandTest : CommandTest {
         every { number.asInt } returns 6
         every { amount.asInt } returns 1
         every { modifier.asInt } returns 0
-        every { webhookMessageCreateAction.addActionRow(any(), any(), any(), any(), any()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.addComponents(any<ActionRow>()) } returns webhookMessageCreateAction
 
 
         // Act
@@ -59,19 +60,13 @@ class RollCommandTest : CommandTest {
         verify(exactly = 1) { event.deferReply() }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
         verify(exactly = 1) {
-            webhookMessageCreateAction.addActionRow(
-                any(),
-                any(),
-                any(),
-                any(),
-                any()
-            )
+            webhookMessageCreateAction.addComponents(any<ActionRow>())
         }
     }
 
     @Test
     fun testHandleDiceRoll() {
-        every { webhookMessageCreateAction.addActionRow(any(), any(), any(), any(), any()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.addComponents(any<ActionRow>()) } returns webhookMessageCreateAction
 
         // Call the handleDiceRoll method
         rollCommand.handleDiceRoll(event, 6, 1, 0)
@@ -80,13 +75,7 @@ class RollCommandTest : CommandTest {
         verify(exactly = 1) { event.deferReply() }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
         verify(exactly = 1) {
-            webhookMessageCreateAction.addActionRow(
-                any(),
-                any(),
-                any(),
-                any(),
-                any()
-            )
+            webhookMessageCreateAction.addComponents(any<ActionRow>())
         }
     }
 }

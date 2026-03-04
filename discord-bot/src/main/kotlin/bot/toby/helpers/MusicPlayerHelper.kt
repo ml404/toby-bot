@@ -16,7 +16,8 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
-import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import java.awt.Color
 import java.util.concurrent.TimeUnit
 
@@ -72,13 +73,13 @@ object MusicPlayerHelper {
             logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
             // Update existing message
             nowPlayingInfo.editMessageEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
+                .setComponents(ActionRow.of(pausePlayButton, stopButton))
                 .queue()
             hook.deleteOriginal().queue()
         } else {
             // Send a new message and store it in the map
             hook.sendMessageEmbeds(embed)
-                .setActionRow(pausePlayButton, stopButton)
+                .setComponents(ActionRow.of(pausePlayButton, stopButton))
                 .queue {
                     logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
                     nowPlayingManager.setNowPlayingMessage(guildId, it)

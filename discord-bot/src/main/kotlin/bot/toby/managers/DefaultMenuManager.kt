@@ -6,6 +6,7 @@ import core.managers.MenuManager
 import core.menu.Menu
 import database.dto.ConfigDto
 import database.service.ConfigService
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable
@@ -33,7 +34,7 @@ class DefaultMenuManager @Autowired constructor(
                 event.guild!!.id)
             event.channel.sendTyping().queue()
             val ctx = DefaultMenuContext(event)
-            val disabledActionRows = event.message.actionRows.map { it.asDisabled() }
+            val disabledActionRows = event.message.components.filterIsInstance<ActionRow>().map { it.asDisabled() }
             event.message.editMessageComponents(disabledActionRows).queue()
 
             menu.handle(ctx, deleteDelayConfig?.value!!.toInt())

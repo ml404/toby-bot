@@ -13,6 +13,7 @@ import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
 import database.service.UserService
 import io.mockk.*
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -77,11 +78,7 @@ internal class InitiativeCommandTest : CommandTest {
         verify(exactly = 1) { event.deferReply() }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) {
-            webhookMessageCreateAction.setActionRow(
-                initButtons.prev,
-                initButtons.clear,
-                initButtons.next
-            )
+            webhookMessageCreateAction.setComponents(any<ActionRow>())
         }
     }
 
@@ -116,11 +113,7 @@ internal class InitiativeCommandTest : CommandTest {
         verify(exactly = 1) { event.deferReply() }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) {
-            webhookMessageCreateAction.setActionRow(
-                initButtons.prev,
-                initButtons.clear,
-                initButtons.next
-            )
+            webhookMessageCreateAction.setComponents(any<ActionRow>())
         }
     }
 
@@ -156,11 +149,7 @@ internal class InitiativeCommandTest : CommandTest {
         // Assert
         verify(exactly = 1) { event.deferReply() }
         verify(exactly = 0) { event.hook.sendMessageEmbeds(any(), *anyVararg<MessageEmbed>()) }
-        verify(exactly = 0) {  webhookMessageCreateAction.setActionRow(
-                initButtons.prev,
-                initButtons.clear,
-                initButtons.next
-            ) }
+        verify(exactly = 0) { webhookMessageCreateAction.setComponents(any<ActionRow>()) }
         verify(exactly = 1) {
             event.reply("You must either be in a voice channel when using this command, or tag a voice channel in the channel option with people in it, or give a list of names to roll for.")
         }
@@ -204,11 +193,7 @@ internal class InitiativeCommandTest : CommandTest {
         // Assert
         verify(exactly = 1) { event.deferReply() }
         verify(exactly = 0) { event.hook.sendMessageEmbeds(any(), *anyVararg<MessageEmbed>()) }
-        verify(exactly = 0) {  webhookMessageCreateAction.setActionRow(
-                initButtons.prev,
-                initButtons.clear,
-                initButtons.next
-            ) }
+        verify(exactly = 0) { webhookMessageCreateAction.setComponents(any<ActionRow>()) }
         verify(exactly = 1) {
             event.reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
         }

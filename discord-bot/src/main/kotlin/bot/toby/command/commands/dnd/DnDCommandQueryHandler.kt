@@ -12,8 +12,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.interactions.components.selections.SelectOption
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.selections.SelectOption
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 
 class DnDCommandQueryHandler(
     private val dispatcher: CoroutineDispatcher,
@@ -81,7 +82,7 @@ class DnDCommandQueryHandler(
             this.results.forEach { info: ApiInfo -> builder.addOptions(SelectOption.of(info.index, info.index)) }
             val stringSelectMenu = builder.build()
             hook.sendMessage("Your query '$query' didn't return a value, but these close matches were found, please select one as appropriate")
-                .setActionRow(stringSelectMenu)
+                .setComponents(ActionRow.of(stringSelectMenu))
                 .queue()
             return true
         }

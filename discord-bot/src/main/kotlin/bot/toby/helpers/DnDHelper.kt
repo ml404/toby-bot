@@ -11,7 +11,8 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import org.springframework.stereotype.Service
 import java.awt.Color
 import java.util.*
@@ -101,13 +102,13 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         val messageEmbed = embedBuilder.build()
         if (event == null) {
             hook.sendMessageEmbeds(messageEmbed)
-                .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
+                .setComponents(ActionRow.of(initButtons.prev, initButtons.clear, initButtons.next))
                 .queue()
         } else {
             // if we're here we came via a button press, so edit the embed rather than make a new one
             event.message
                 .editMessageEmbeds(messageEmbed)
-                .setActionRow(initButtons.prev, initButtons.clear, initButtons.next)
+                .setComponents(ActionRow.of(initButtons.prev, initButtons.clear, initButtons.next))
                 .queue()
             hook.setEphemeral(true).sendMessage("Next turn: ${sortedEntries[initiativeIndex.get()].key}").queue(
                 core.command.Command.invokeDeleteOnMessageResponse(deleteDelay)
