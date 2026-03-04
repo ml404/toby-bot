@@ -1,18 +1,18 @@
 package integration.web
 
+import Application
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import org.hamcrest.Matchers.containsString
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @SpringBootTest(
@@ -25,20 +25,21 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 )
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestPropertySource(
+    properties = [
+        "spring.security.oauth2.client.registration.discord.client-id=test-client-id",
+        "spring.security.oauth2.client.registration.discord.client-secret=test-client-secret"
+    ]
+)
 class BotControllerIT {
 
     @Autowired
     lateinit var mockMvc: MockMvc
 
-    @BeforeEach
-    fun setUp() {
-        // Setup code if needed
-    }
-
     @Test
-    fun `index endpoint returns welcome message`() {
+    fun `index endpoint redirects to login`() {
         mockMvc.perform(get("/"))
-            .andExpect(status().isOk)
-            .andExpect(content().string(containsString("Welcome to TobyBot \nTo find out more, please visit https://github.com/ml404/toby-bot#readme")))
+            .andExpect(status().isFound)
+            .andExpect(header().string("Location", "/login"))
     }
 }

@@ -17,3 +17,5 @@ web/build/
 
 # Ignore test resources
 common/src/test/resources/
+/build/libs/toby-bot-6.1-SNAPSHOT.jar
+/.idea/AndroidProjectSystem.xml
