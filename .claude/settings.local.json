@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm test)",
+      "Bash(Test-Path \"C:\\\\Users\\\\matt_\\\\IdeaProjects\\\\toby-bot\\\\web\\\\package-lock.json\")",
+      "Bash(xargs grep -l \"class MusicFile\")",
+      "Bash(xargs grep -l \"IntroCommand\\\\|setIntroByUrl\")",
+      "Bash(gh run list --branch play-intro-in-ui --limit 5)",
+      "WebFetch(domain:api.github.com)"
+    ]
+  }
+}

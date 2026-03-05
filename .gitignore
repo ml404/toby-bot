@@ -15,6 +15,10 @@ database/build/
 discord-bot/build/
 web/build/
 
+# Node / JS tooling
+node_modules/
+web/node_modules/
+
 # Ignore test resources
 common/src/test/resources/
 /build/libs/toby-bot-6.1-SNAPSHOT.jar
