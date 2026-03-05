@@ -7,6 +7,7 @@ import database.service.MusicFileService
 import database.service.UserService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -35,8 +36,13 @@ class BotController(
 
 
     @GetMapping("/music")
-    @ResponseBody
-    fun getMusicBlob(@RequestParam("id") id: String): ByteArray? = musicFileService.getMusicFileById(id)?.musicBlob
+    fun getMusicBlob(@RequestParam("id") id: String): ResponseEntity<ByteArray> {
+        val blob = musicFileService.getMusicFileById(id)?.musicBlob
+            ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("audio/mpeg"))
+            .body(blob)
+    }
 
 
     @GetMapping("/user")

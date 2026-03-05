@@ -18,6 +18,18 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.22
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Install JS dependencies
+        working-directory: web
+        run: npm ci
+      - name: Run JS tests
+        working-directory: web
+        run: npm test
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build with Gradle

@@ -52,6 +52,22 @@
         th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #2a2a4a; }
         th { color: #a0a0b0; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
         td { font-size: 0.95rem; }
+        .btn-play {
+            background: transparent;
+            border: 1px solid #5865F2;
+            color: #5865F2;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .btn-play:hover { background: #5865F2; color: #fff; }
+        .btn-play.playing { border-color: #e74c3c; color: #e74c3c; }
+        .btn-play.playing:hover { background: #e74c3c; color: #fff; }
+        .btn-link { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; }
+        .btn-link:hover { color: #fff; }
         .btn-delete {
             background: transparent;
             border: 1px solid #c0392b;
@@ -135,6 +151,7 @@
                     <th>Name / URL</th>
                     <th>Volume</th>
                     <th></th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -142,6 +159,23 @@
                     <td th:text="${intro.index}">1</td>
                     <td th:text="${intro.fileName}">intro.mp3</td>
                     <td th:text="${intro.introVolume} + '%'">90%</td>
+                    <td>
+                        <!-- URL-based intro: open link -->
+                        <a th:if="${#strings.startsWith(intro.fileName, 'http')}"
+                           th:href="${intro.fileName}"
+                           target="_blank"
+                           class="btn-link"
+                           title="Open URL">↗</a>
+                        <!-- File-based intro: play button -->
+                        <span th:unless="${#strings.startsWith(intro.fileName, 'http')}">
+                            <audio th:id="'audio-' + ${intro.id}"
+                                   th:src="@{/music(id=${intro.id})}"
+                                   preload="none"></audio>
+                            <button type="button" class="btn-play"
+                                    th:data-audio-id="${'audio-' + intro.id}"
+                                    onclick="togglePlay(this)">▶</button>
+                        </span>
+                    </td>
                     <td>
                         <form th:action="@{/intro/{guildId}/delete/{introId}(guildId=${guildId},introId=${intro.id})}"
                               method="post"
@@ -222,11 +256,6 @@
     </section>
 </div>
 
-<script>
-    function toggleInput(type) {
-        document.getElementById('urlSection').style.display = (type === 'url') ? 'block' : 'none';
-        document.getElementById('fileSection').style.display = (type === 'file') ? 'block' : 'none';
-    }
-</script>
+<script th:src="@{/js/intros.js}"></script>
 </body>
 </html>
