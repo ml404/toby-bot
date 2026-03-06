@@ -55,72 +55,107 @@ class CommandController(private val commandManager: CommandManager) {
     @Operation(summary = "Get command wiki", description = "Fetch an HTML representation of all available commands.")
     @GetMapping("/wiki", produces = ["text/html"])
     fun getCommandsWiki(): String {
-        val htmlBuilder = StringBuilder()
+        val html = StringBuilder()
 
-        // Add the basic structure
-        htmlBuilder.append("<h1>Command Documentation</h1>")
+        html.append("""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>TobyBot &mdash; Commands</title>
+                <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
+                    nav { background: #16213e; padding: 14px 24px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid #2a2a4a; }
+                    .brand { font-weight: 700; font-size: 1.1rem; color: #fff; text-decoration: none; }
+                    .back { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; }
+                    .back:hover { color: #fff; }
+                    .container { max-width: 960px; margin: 40px auto; padding: 0 24px 80px; }
+                    h1 { font-size: 1.8rem; color: #fff; margin-bottom: 8px; }
+                    .subtitle { color: #a0a0b0; margin-bottom: 40px; }
+                    .category { margin-bottom: 48px; }
+                    h2 { font-size: 0.8rem; color: #a0a0b0; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #2a2a4a; }
+                    .table-wrap { background: #16213e; border: 1px solid #2a2a4a; border-radius: 10px; overflow: hidden; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { text-align: left; padding: 10px 16px; color: #a0a0b0; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #2a2a4a; }
+                    td { padding: 12px 16px; border-bottom: 1px solid #2a2a4a; font-size: 0.9rem; vertical-align: top; }
+                    tr:last-child td { border-bottom: none; }
+                    tr:hover td { background: rgba(88,101,242,0.05); }
+                    .cmd { font-family: monospace; color: #7289fa; font-size: 0.95rem; white-space: nowrap; }
+                    .desc { color: #c0c0d0; }
+                    .opts { list-style: none; }
+                    .opt { margin-bottom: 8px; }
+                    .opt:last-child { margin-bottom: 0; }
+                    .opt-name { font-family: monospace; color: #e0e0e0; font-size: 0.85rem; }
+                    .badge { font-size: 0.7rem; color: #888; background: #2a2a4a; padding: 1px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+                    .opt-desc { color: #a0a0b0; font-size: 0.82rem; margin-top: 2px; }
+                    .choices { list-style: none; margin-top: 4px; padding-left: 10px; }
+                    .choice { font-size: 0.78rem; color: #888; font-family: monospace; }
+                    .choice::before { content: "• "; color: #5865F2; }
+                    .none { color: #555; font-style: italic; font-size: 0.85rem; }
+                </style>
+            </head>
+            <body>
+            <nav>
+                <a class="brand" href="/">TobyBot</a>
+                <a class="back" href="/">&larr; Back to Home</a>
+            </nav>
+            <div class="container">
+                <h1>Commands</h1>
+                <p class="subtitle">All available slash commands for TobyBot.</p>
+        """.trimIndent())
 
-        // Function to append a category of commands
         fun appendCommandCategory(title: String, commands: List<Command>) {
-            htmlBuilder.append("<h2>$title</h2>")
-            htmlBuilder.append("<table border='1'><thead><tr><th>Command</th><th>Description</th><th>Options</th></tr></thead><tbody>")
+            if (commands.isEmpty()) return
+            html.append("""<div class="category"><h2>$title</h2><div class="table-wrap"><table>""")
+            html.append("""<thead><tr><th>Command</th><th>Description</th><th>Options</th></tr></thead><tbody>""")
             for (command in commands.sortedBy { it.name }) {
-                htmlBuilder.append("<tr>")
-                htmlBuilder.append("<td><strong>/${command.name}</strong></td>")
-                htmlBuilder.append("<td>${command.description}</td>")
-
-                // Add options
-                if (command.optionData.isNotEmpty()) {
-                    htmlBuilder.append("<td><ul>")
-                    for (option in command.optionData) {
-                        htmlBuilder.append("<li><strong>${option.name}</strong>: ${option.description} (Type: ${option.type.name})</li>")
-                        if (option.choices.isNotEmpty()) {
-                            htmlBuilder.append("<ul>")
-                            for (choice in option.choices) {
-                                htmlBuilder.append("<li>${choice.name}: ${choice.asString}</li>")
+                html.append("<tr>")
+                html.append("""<td><span class="cmd">/${command.name}</span></td>""")
+                html.append("""<td class="desc">${command.description}</td>""")
+                when {
+                    command.optionData.isNotEmpty() -> {
+                        html.append("""<td><ul class="opts">""")
+                        for (option in command.optionData) {
+                            html.append("""<li class="opt"><span class="opt-name">${option.name}</span><span class="badge">${option.type.name}</span><div class="opt-desc">${option.description}</div>""")
+                            if (option.choices.isNotEmpty()) {
+                                html.append("""<ul class="choices">""")
+                                for (choice in option.choices) html.append("""<li class="choice">${choice.name}</li>""")
+                                html.append("</ul>")
                             }
-                            htmlBuilder.append("</ul>")
+                            html.append("</li>")
                         }
+                        html.append("</ul></td>")
                     }
-                    htmlBuilder.append("</ul></td>")
-                }
-                else if (command.subCommands.isNotEmpty()) {
-                    htmlBuilder.append("<td><ul>")
-                    for (sub in command.subCommands) {
-                        htmlBuilder.append("<li><strong>${sub.name}</strong>: ${sub.description}</li>")
-                        if (sub.options.isNotEmpty()) {
-                            htmlBuilder.append("<ul>")
-                            for (option in sub.options) {
-                                htmlBuilder.append("<li><strong>${option.name}</strong>: ${option.description} (Type: ${option.type.name})</li>")
-                                if (option.choices.isNotEmpty()) {
-                                    htmlBuilder.append("<ul>")
-                                    for (choice in option.choices) {
-                                        htmlBuilder.append("<li>${choice.name}: ${choice.asString}</li>")
-                                    }
-                                    htmlBuilder.append("</ul>")
-                                }
+                    command.subCommands.isNotEmpty() -> {
+                        html.append("""<td><ul class="opts">""")
+                        for (sub in command.subCommands) {
+                            html.append("""<li class="opt"><span class="opt-name">${sub.name}</span><div class="opt-desc">${sub.description}</div>""")
+                            if (sub.options.isNotEmpty()) {
+                                html.append("""<ul class="choices">""")
+                                for (option in sub.options) html.append("""<li class="choice">${option.name}: ${option.description}</li>""")
+                                html.append("</ul>")
                             }
-                            htmlBuilder.append("</ul>")
+                            html.append("</li>")
                         }
+                        html.append("</ul></td>")
                     }
-                    htmlBuilder.append("</ul></td>")
-                }else {
-                    htmlBuilder.append("<td>No options</td>")
+                    else -> html.append("""<td><span class="none">&mdash;</span></td>""")
                 }
-                htmlBuilder.append("</tr>")
+                html.append("</tr>")
             }
-            htmlBuilder.append("</tbody></table>")
+            html.append("</tbody></table></div></div>")
         }
 
-        // Append each subcategory of commands
-        appendCommandCategory("Music Commands", commandManager.musicCommands)
-        appendCommandCategory("DnD Commands", commandManager.dndCommands)
-        appendCommandCategory("Moderation Commands", commandManager.moderationCommands)
-        appendCommandCategory("Miscellaneous Commands", commandManager.miscCommands)
-        appendCommandCategory("Fetch Commands", commandManager.fetchCommands)
+        appendCommandCategory("Music", commandManager.musicCommands)
+        appendCommandCategory("DnD", commandManager.dndCommands)
+        appendCommandCategory("Moderation", commandManager.moderationCommands)
+        appendCommandCategory("Miscellaneous", commandManager.miscCommands)
+        appendCommandCategory("Fetch", commandManager.fetchCommands)
 
-        htmlBuilder.append("</body></html>")
-        return htmlBuilder.toString()
+        html.append("</div></body></html>")
+        return html.toString()
     }
 
     data class CommandDocumentation(

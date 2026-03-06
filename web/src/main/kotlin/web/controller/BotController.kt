@@ -5,8 +5,6 @@ import database.service.BrotherService
 import database.service.ConfigService
 import database.service.MusicFileService
 import database.service.UserService
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -19,12 +17,6 @@ class BotController(
     var configService: ConfigService,
     var brotherService: BrotherService
 ) {
-    @GetMapping("/")
-    fun index(): ResponseEntity<Void> =
-        ResponseEntity.status(HttpStatus.FOUND)
-            .header(HttpHeaders.LOCATION, "/login")
-            .build()
-
     @GetMapping("/brother")
     @ResponseBody
     fun getBrother(@RequestParam("discordId") discordId: String): database.dto.BrotherDto? =

@@ -12,7 +12,6 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @SpringBootTest(
@@ -37,9 +36,8 @@ class BotControllerIT {
     lateinit var mockMvc: MockMvc
 
     @Test
-    fun `index endpoint redirects to login`() {
+    fun `home endpoint returns 200 OK`() {
         mockMvc.perform(get("/"))
-            .andExpect(status().isFound)
-            .andExpect(header().string("Location", "/login"))
+            .andExpect(status().isOk)
     }
 }
