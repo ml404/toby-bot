@@ -28,4 +28,10 @@ class HomeController(
         model.addAttribute("username", user?.getAttribute<String>("username"))
         return "terms"
     }
+
+    @GetMapping("/privacy")
+    fun privacy(@AuthenticationPrincipal user: OAuth2User?, model: Model): String {
+        model.addAttribute("username", user?.getAttribute<String>("username"))
+        return "privacy"
+    }
 }

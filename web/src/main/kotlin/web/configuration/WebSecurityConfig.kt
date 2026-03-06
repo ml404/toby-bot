@@ -15,7 +15,7 @@ class WebSecurityConfig {
         http
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/", "/terms", "/brother", "/config", "/music", "/user",
+                    "/", "/terms", "/privacy", "/brother", "/config", "/music", "/user",
                     "/commands", "/commands/**", "/actuator/**",
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error"
                 ).permitAll()
