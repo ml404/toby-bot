@@ -7,7 +7,9 @@
       "Bash(xargs grep -l \"class MusicFile\")",
       "Bash(xargs grep -l \"IntroCommand\\\\|setIntroByUrl\")",
       "Bash(gh run list --branch play-intro-in-ui --limit 5)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(jar -tf build/libs/toby-bot-6.1-SNAPSHOT.jar)",
+      "Bash(chmod +x \"C:\\\\Users\\\\matt_\\\\IdeaProjects\\\\toby-bot\\\\rebuild.sh\")"
     ]
   }
 }

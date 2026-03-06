@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TobyBot — Your Discord Companion</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* NAV */
+        nav {
+            background: #16213e;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a4a;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; }
+        .nav-links { display: flex; align-items: center; gap: 20px; }
+        .nav-links a { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+        .nav-links a:hover { color: #fff; }
+        .nav-user { color: #a0a0b0; font-size: 0.9rem; }
+        .btn-discord {
+            display: inline-block;
+            background: #5865F2;
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-discord:hover { background: #4752c4; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #555;
+            color: #a0a0b0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+        .nav-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid #555;
+            color: #a0a0b0;
+            font-size: 1.2rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* HERO */
+        .hero {
+            text-align: center;
+            padding: 80px 24px 64px;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(88, 101, 242, 0.15);
+            color: #7289fa;
+            border: 1px solid rgba(88, 101, 242, 0.3);
+            border-radius: 999px;
+            padding: 4px 16px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            color: #fff;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+        .hero h1 span { color: #5865F2; }
+        .hero p {
+            font-size: 1.1rem;
+            color: #a0a0b0;
+            max-width: 540px;
+            margin: 0 auto 36px;
+            line-height: 1.6;
+        }
+        .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .btn-primary {
+            display: inline-block;
+            background: #5865F2;
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover { background: #4752c4; }
+        .btn-secondary {
+            display: inline-block;
+            background: transparent;
+            color: #e0e0e0;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            border: 1px solid #3a3a5a;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-secondary:hover { border-color: #5865F2; color: #fff; }
+
+        /* DIVIDER */
+        .divider {
+            height: 1px;
+            background: #2a2a4a;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* FEATURES */
+        .features {
+            padding: 64px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 12px;
+            padding: 28px 20px;
+            text-align: center;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .feature-card:hover { border-color: #5865F2; transform: translateY(-3px); }
+        .feature-icon { font-size: 2.2rem; margin-bottom: 14px; }
+        .feature-card h3 { font-size: 1rem; color: #fff; margin-bottom: 8px; }
+        .feature-card p { font-size: 0.88rem; color: #a0a0b0; line-height: 1.5; }
+        .commands-link {
+            text-align: center;
+            margin-top: 32px;
+        }
+        .commands-link a {
+            color: #7289fa;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .commands-link a:hover { text-decoration: underline; }
+
+        /* INTRO CTA */
+        .intro-cta {
+            padding: 20px 24px 80px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .cta-card {
+            background: linear-gradient(135deg, #16213e 0%, #1a1a3e 100%);
+            border: 1px solid #3a3a6a;
+            border-radius: 16px;
+            padding: 48px 40px;
+            text-align: center;
+        }
+        .cta-card h2 { font-size: 1.6rem; color: #fff; margin-bottom: 12px; }
+        .cta-card p {
+            color: #a0a0b0;
+            margin-bottom: 28px;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .nav-toggle { display: block; }
+            .nav-links { display: none; flex-direction: column; align-items: flex-start; gap: 12px; width: 100%; padding: 8px 0; }
+            .nav-links.open { display: flex; }
+            .cta-card { padding: 32px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a class="brand" href="/">TobyBot</a>
+    <div class="nav-links" id="nav-menu">
+        <a href="/commands/wiki">Commands</a>
+        <a href="/intro/guilds">Intro Songs</a>
+        <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
+            <span class="nav-user" th:text="${username}">User</span>
+            <form th:action="@{/logout}" method="post" style="margin:0">
+                <button type="submit" class="btn-logout">Logout</button>
+            </form>
+        </span>
+        <a th:if="${username == null}" href="/oauth2/authorization/discord" class="btn-discord">Login</a>
+    </div>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">&#9776;</button>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-badge">Discord Bot</div>
+    <h1>Your server's <span>best companion</span></h1>
+    <p>Music, moderation, DnD tools, and more — all in one bot for your Discord server.</p>
+    <div class="hero-actions">
+        <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
+        <a href="/intro/guilds" class="btn-secondary">Manage Intro Songs</a>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Features -->
+<section class="features">
+    <h2>What can TobyBot do?</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">&#127925;</div>
+            <h3>Music</h3>
+            <p>Play audio and set personal intro songs that play when you join a voice channel.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">&#127922;</div>
+            <h3>DnD Tools</h3>
+            <p>Roll dice, look up spells and monsters, and streamline your tabletop sessions.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">&#128737;</div>
+            <h3>Moderation</h3>
+            <p>Kick, ban, and mute members to keep your community safe and well-managed.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">&#10024;</div>
+            <h3>Miscellaneous</h3>
+            <p>Fun and utility commands for everyday use on your server.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">&#128269;</div>
+            <h3>Fetch</h3>
+            <p>Retrieve information and look things up in an instant.</p>
+        </div>
+    </div>
+    <div class="commands-link">
+        <a href="/commands/wiki">Browse all commands &#8594;</a>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Intro Songs CTA -->
+<section class="intro-cta">
+    <div class="cta-card">
+        <h2>&#127925; Personalise Your Entrance</h2>
+        <p>Set a custom intro song that plays whenever you join a voice channel. Supports YouTube links and MP3 uploads.</p>
+        <a href="/intro/guilds" class="btn-primary">Manage Your Intros &#8594;</a>
+    </div>
+</section>
+
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>
