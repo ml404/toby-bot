@@ -98,4 +98,38 @@ class HomeControllerTest {
 
         verify { model.addAttribute("username", null) }
     }
+
+    @Test
+    fun `privacy returns privacy view`() {
+        val view = controller.privacy(null, model)
+
+        assertEquals("privacy", view)
+    }
+
+    @Test
+    fun `privacy adds null username when user is not authenticated`() {
+        controller.privacy(null, model)
+
+        verify { model.addAttribute("username", null) }
+    }
+
+    @Test
+    fun `privacy adds username when user is authenticated`() {
+        val user = mockk<OAuth2User>(relaxed = true)
+        every { user.getAttribute<String>("username") } returns "TestUser"
+
+        controller.privacy(user, model)
+
+        verify { model.addAttribute("username", "TestUser") }
+    }
+
+    @Test
+    fun `privacy adds null username when authenticated user has no username attribute`() {
+        val user = mockk<OAuth2User>(relaxed = true)
+        every { user.getAttribute<String>("username") } returns null
+
+        controller.privacy(user, model)
+
+        verify { model.addAttribute("username", null) }
+    }
 }

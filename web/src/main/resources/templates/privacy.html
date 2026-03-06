@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TobyBot — Privacy Policy</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        nav {
+            background: #16213e;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a4a;
+            gap: 12px;
+        }
+        .brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; }
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-right a { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+        .nav-right a:hover { color: #fff; }
+        .nav-user { color: #a0a0b0; font-size: 0.9rem; }
+        .btn-discord {
+            display: inline-block;
+            background: #5865F2;
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-discord:hover { background: #4752c4; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #555;
+            color: #a0a0b0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+
+        .container {
+            max-width: 760px;
+            margin: 48px auto;
+            padding: 0 24px 80px;
+        }
+        .page-header { margin-bottom: 40px; }
+        .page-header h1 { font-size: 2rem; color: #fff; margin-bottom: 8px; }
+        .page-header .updated { color: #666; font-size: 0.85rem; }
+
+        .section { margin-bottom: 36px; }
+        .section h2 {
+            font-size: 1rem;
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .section p, .section li {
+            color: #a0a0b0;
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+        .section p + p { margin-top: 10px; }
+        .section ul {
+            list-style: disc;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        footer {
+            border-top: 1px solid #2a2a4a;
+            padding: 24px;
+            text-align: center;
+            color: #555;
+            font-size: 0.82rem;
+        }
+        footer a { color: #7289fa; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a class="brand" href="/">TobyBot</a>
+    <div class="nav-right">
+        <a href="/">Home</a>
+        <a href="/commands/wiki">Commands</a>
+        <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
+            <span class="nav-user" th:text="${username}">User</span>
+            <form th:action="@{/logout}" method="post" style="margin:0">
+                <button type="submit" class="btn-logout">Logout</button>
+            </form>
+        </span>
+        <a th:if="${username == null}" href="/oauth2/authorization/discord" class="btn-discord">Login</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: March 2026</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Introduction</h2>
+        <p>This Privacy Policy explains how TobyBot ("the bot", "we", "us") collects, uses, and stores information when you use the TobyBot Discord bot or this website. By adding TobyBot to your server or using its features, you agree to the practices described here.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Data We Collect</h2>
+        <p>TobyBot collects only the minimum data needed to operate its features:</p>
+        <ul>
+            <li><strong>Discord user ID and guild ID</strong> — used to identify users and servers across all features.</li>
+            <li><strong>Username</strong> — stored where attribution is needed (e.g. excuses, intro song ownership).</li>
+            <li><strong>Intro audio files</strong> — audio clips you upload for the intro song feature, stored as binary data.</li>
+            <li><strong>User preferences and permissions</strong> — music, meme, and dig permissions; social credit scores; superuser status.</li>
+            <li><strong>Server configuration</strong> — per-guild settings such as delete delay and volume level.</li>
+            <li><strong>Excuse entries</strong> — text excuses submitted by users for use within a guild.</li>
+        </ul>
+        <p>We do not collect passwords, email addresses, payment card numbers, or any data beyond what Discord makes available through its API.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. How We Use Your Data</h2>
+        <p>All collected data is used solely to provide and improve TobyBot's functionality:</p>
+        <ul>
+            <li>Serving intro songs when you join a voice channel.</li>
+            <li>Enforcing per-user permissions for commands.</li>
+            <li>Persisting guild configuration between bot restarts.</li>
+            <li>Displaying usernames on excuse and social credit features.</li>
+        </ul>
+        <p>We do not sell, rent, or share your data with third parties for marketing or advertising purposes.</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Data Retention</h2>
+        <p>Your data is retained for as long as TobyBot is active in your server. If you remove the bot from your server, or upon your request, we will delete all data associated with your guild. Individual user data (such as intro songs or social credit) can also be deleted on request by a server owner or the user themselves via the appropriate bot commands.</p>
+    </div>
+
+    <div class="section">
+        <h2>5. Third-Party Services</h2>
+        <p>TobyBot interacts with the following external services to deliver its features:</p>
+        <ul>
+            <li><strong>Discord API</strong> — all bot interactions are mediated through Discord. Discord's own <a href="https://discord.com/privacy" style="color:#7289fa;">Privacy Policy</a> applies to data held on their platform.</li>
+            <li><strong>YouTube</strong> — used to search and stream music. No user data is sent to YouTube beyond the search queries you issue.</li>
+            <li><strong>Reddit API</strong> — used to fetch meme images. No personally identifiable information is sent.</li>
+            <li><strong>D&amp;D 5e API</strong> — used for Dungeons &amp; Dragons lookup commands. No user data is transmitted.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+            <li>Request a summary of data stored about you or your guild.</li>
+            <li>Request deletion of your personal data or your guild's data.</li>
+            <li>Withdraw consent by removing TobyBot from your server at any time.</li>
+        </ul>
+        <p>To exercise these rights, please open an issue on the <a href="https://github.com/ml404/toby-bot" style="color:#7289fa;">GitHub repository</a> or contact us via Discord.</p>
+    </div>
+
+    <div class="section">
+        <h2>7. Children's Privacy</h2>
+        <p>TobyBot is not directed at children under the age of 13. In accordance with Discord's Terms of Service, users must be at least 13 years old. We do not knowingly collect data from anyone under this age. If you believe a minor has provided us with personal data, please contact us so we can remove it.</p>
+    </div>
+
+    <div class="section">
+        <h2>8. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time to reflect changes in the bot's features or legal requirements. We will update the "Last updated" date at the top of this page when changes are made. Continued use of TobyBot after updates are posted constitutes acceptance of the revised policy.</p>
+    </div>
+
+    <div class="section">
+        <h2>9. Contact</h2>
+        <p>If you have any questions or concerns about this Privacy Policy, please open an issue on the <a href="https://github.com/ml404/toby-bot" style="color:#7289fa;">GitHub repository</a> or reach out via Discord.</p>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 TobyBot &mdash; <a href="/terms">Terms of Service</a> &mdash; <a href="/privacy">Privacy Policy</a></p>
+</footer>
+
+</body>
+</html>
