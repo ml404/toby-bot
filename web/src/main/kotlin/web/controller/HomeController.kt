@@ -22,4 +22,10 @@ class HomeController(
         model.addAttribute("username", user?.getAttribute<String>("username"))
         return "home"
     }
+
+    @GetMapping("/terms")
+    fun terms(@AuthenticationPrincipal user: OAuth2User?, model: Model): String {
+        model.addAttribute("username", user?.getAttribute<String>("username"))
+        return "terms"
+    }
 }
