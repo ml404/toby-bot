@@ -1,10 +1,8 @@
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.cache.annotation.EnableCaching
-import org.springframework.context.annotation.ComponentScan
 
-@SpringBootApplication
-@ComponentScan("bot", "common", "core", "database", "web")
+@SpringBootApplication(scanBasePackages = ["bot", "common", "core", "database", "web"])
 @EnableCaching
 class Application {
     companion object {
