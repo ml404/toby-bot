@@ -2,9 +2,7 @@
 .env
 /.gradle/
 /out/
-/.idea/gradle.xml
-/.idea/libraries
-/.idea/modules
+/.idea/
 /.kotlin/
 
 # Ignore build directories
@@ -23,4 +21,3 @@ web/node_modules/
 # Ignore test resources
 common/src/test/resources/
 /build/libs/toby-bot-6.1-SNAPSHOT.jar
-/.idea/AndroidProjectSystem.xml
