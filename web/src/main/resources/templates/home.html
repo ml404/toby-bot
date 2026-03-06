@@ -193,6 +193,17 @@
             line-height: 1.6;
         }
 
+        /* FOOTER */
+        footer {
+            border-top: 1px solid #2a2a4a;
+            padding: 24px;
+            text-align: center;
+            color: #555;
+            font-size: 0.82rem;
+        }
+        footer a { color: #7289fa; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
         /* RESPONSIVE */
         @media (max-width: 600px) {
             .nav-toggle { display: block; }
@@ -278,6 +289,10 @@
         <a href="/intro/guilds" class="btn-primary">Manage Your Intros &#8594;</a>
     </div>
 </section>
+
+<footer>
+    <p>&copy; 2026 TobyBot &mdash; <a href="/terms">Terms of Service</a></p>
+</footer>
 
 <script th:src="@{/js/home.js}"></script>
 </body>

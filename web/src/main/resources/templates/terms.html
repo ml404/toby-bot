@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TobyBot — Terms of Service</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        nav {
+            background: #16213e;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a4a;
+            gap: 12px;
+        }
+        .brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; }
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-right a { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+        .nav-right a:hover { color: #fff; }
+        .nav-user { color: #a0a0b0; font-size: 0.9rem; }
+        .btn-discord {
+            display: inline-block;
+            background: #5865F2;
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-discord:hover { background: #4752c4; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #555;
+            color: #a0a0b0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+
+        .container {
+            max-width: 760px;
+            margin: 48px auto;
+            padding: 0 24px 80px;
+        }
+        .page-header { margin-bottom: 40px; }
+        .page-header h1 { font-size: 2rem; color: #fff; margin-bottom: 8px; }
+        .page-header .updated { color: #666; font-size: 0.85rem; }
+
+        .section { margin-bottom: 36px; }
+        .section h2 {
+            font-size: 1rem;
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .section p, .section li {
+            color: #a0a0b0;
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+        .section p + p { margin-top: 10px; }
+        .section ul {
+            list-style: disc;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        footer {
+            border-top: 1px solid #2a2a4a;
+            padding: 24px;
+            text-align: center;
+            color: #555;
+            font-size: 0.82rem;
+        }
+        footer a { color: #7289fa; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a class="brand" href="/">TobyBot</a>
+    <div class="nav-right">
+        <a href="/">Home</a>
+        <a href="/commands/wiki">Commands</a>
+        <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
+            <span class="nav-user" th:text="${username}">User</span>
+            <form th:action="@{/logout}" method="post" style="margin:0">
+                <button type="submit" class="btn-logout">Logout</button>
+            </form>
+        </span>
+        <a th:if="${username == null}" href="/oauth2/authorization/discord" class="btn-discord">Login</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Terms of Service</h1>
+        <p class="updated">Last updated: March 2026</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Acceptance of Terms</h2>
+        <p>By adding TobyBot to your Discord server or using any of its features, you agree to be bound by these Terms of Service. If you do not agree to these terms, please remove the bot from your server and discontinue use.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Description of Service</h2>
+        <p>TobyBot is a Discord bot providing music playback, intro song management, Dungeons &amp; Dragons utilities, server moderation tools, and miscellaneous commands. Features are provided as-is and may change or be discontinued at any time.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. Eligibility</h2>
+        <p>You must be at least 13 years of age to use TobyBot, in accordance with Discord's own Terms of Service. By using TobyBot you confirm that you meet this requirement and that your use complies with all applicable laws in your jurisdiction.</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Acceptable Use</h2>
+        <p>You agree to use TobyBot only for lawful purposes and in a way that does not infringe the rights of others. You must not use TobyBot to:</p>
+        <ul>
+            <li>Harass, abuse, or harm other users.</li>
+            <li>Distribute unlawful, defamatory, or otherwise harmful content.</li>
+            <li>Attempt to reverse-engineer, exploit, or disrupt the bot or its infrastructure.</li>
+            <li>Circumvent any rate limits or abuse automated features.</li>
+            <li>Violate Discord's Terms of Service or Community Guidelines.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. Premium Features &amp; Payments</h2>
+        <p>Certain features of TobyBot may be offered under a paid tier. Where applicable:</p>
+        <ul>
+            <li>Payments are processed securely through our designated payment provider.</li>
+            <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
+            <li>Refunds are handled on a case-by-case basis; please contact us within 7 days of a charge if you believe an error has occurred.</li>
+            <li>We reserve the right to modify pricing with reasonable advance notice.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. Data &amp; Privacy</h2>
+        <p>TobyBot stores the minimum data necessary to provide its features, including Discord user IDs, guild IDs, and user-uploaded audio files for intro songs. We do not sell your data to third parties. Audio files you upload may be deleted upon request or when you remove your intro configuration.</p>
+        <p>By using this service you consent to this data being stored and processed as described.</p>
+    </div>
+
+    <div class="section">
+        <h2>7. Intellectual Property</h2>
+        <p>All code, design, and content associated with TobyBot remain the intellectual property of the TobyBot developers. You retain ownership of any content you upload (such as audio files), but grant us a limited licence to store and serve that content as part of the service.</p>
+    </div>
+
+    <div class="section">
+        <h2>8. Disclaimers</h2>
+        <p>TobyBot is provided "as is" without warranties of any kind, either express or implied. We do not guarantee uninterrupted availability, and the service may be subject to outages or maintenance periods.</p>
+    </div>
+
+    <div class="section">
+        <h2>9. Limitation of Liability</h2>
+        <p>To the fullest extent permitted by law, the TobyBot developers shall not be liable for any indirect, incidental, or consequential damages arising from your use of the service, including but not limited to loss of data or server disruption.</p>
+    </div>
+
+    <div class="section">
+        <h2>10. Termination</h2>
+        <p>We reserve the right to restrict or terminate access to TobyBot at our discretion, including in cases of abuse or violation of these terms. You may stop using the service at any time by removing the bot from your server.</p>
+    </div>
+
+    <div class="section">
+        <h2>11. Changes to These Terms</h2>
+        <p>We may update these Terms of Service from time to time. Continued use of TobyBot after changes are posted constitutes acceptance of the revised terms. We will update the "Last updated" date at the top of this page when changes are made.</p>
+    </div>
+
+    <div class="section">
+        <h2>12. Contact</h2>
+        <p>If you have any questions about these terms, please open an issue on the <a href="https://github.com/ml404/toby-bot" style="color:#7289fa;">GitHub repository</a> or reach out via Discord.</p>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 TobyBot &mdash; <a href="/terms">Terms of Service</a></p>
+</footer>
+
+</body>
+</html>

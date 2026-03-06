@@ -64,4 +64,38 @@ class HomeControllerTest {
 
         verify { model.addAttribute("username", null) }
     }
+
+    @Test
+    fun `terms returns terms view`() {
+        val view = controller.terms(null, model)
+
+        assertEquals("terms", view)
+    }
+
+    @Test
+    fun `terms adds null username when user is not authenticated`() {
+        controller.terms(null, model)
+
+        verify { model.addAttribute("username", null) }
+    }
+
+    @Test
+    fun `terms adds username when user is authenticated`() {
+        val user = mockk<OAuth2User>(relaxed = true)
+        every { user.getAttribute<String>("username") } returns "TestUser"
+
+        controller.terms(user, model)
+
+        verify { model.addAttribute("username", "TestUser") }
+    }
+
+    @Test
+    fun `terms adds null username when authenticated user has no username attribute`() {
+        val user = mockk<OAuth2User>(relaxed = true)
+        every { user.getAttribute<String>("username") } returns null
+
+        controller.terms(user, model)
+
+        verify { model.addAttribute("username", null) }
+    }
 }
