@@ -15,7 +15,7 @@ import java.io.Serializable
 @Entity
 @Table(name = "excuse", schema = "public")
 @Transactional
-data class ExcuseDto(
+class ExcuseDto(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

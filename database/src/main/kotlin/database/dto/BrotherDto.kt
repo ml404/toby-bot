@@ -13,7 +13,7 @@ import java.io.Serializable
 @Entity
 @Table(name = "brothers", schema = "public")
 @Transactional
-data class BrotherDto(
+class BrotherDto(
     @Id
     @Column(name = "discord_id")
     var discordId: Long? = null,

@@ -21,7 +21,7 @@ import java.io.Serializable
 @Entity
 @Table(name = "\"user\"", schema = "public")
 @Transactional
-data class UserDto(
+class UserDto(
     @Id
     @Column(name = "discord_id")
     var discordId: Long = 0,

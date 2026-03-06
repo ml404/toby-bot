@@ -2,7 +2,6 @@ package database.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
-import org.apache.commons.lang3.EnumUtils
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 import java.security.MessageDigest
@@ -18,7 +17,7 @@ import java.security.MessageDigest
 @Entity
 @Table(name = "music_files", schema = "public")
 @Transactional
-data class MusicDto(
+class MusicDto(
     @Id
     @Column(name = "id")
     @JsonIgnore
@@ -67,11 +66,6 @@ data class MusicDto(
         START("start"),
         END("end");
 
-        companion object {
-            fun isValidEnum(enumName: String?): Boolean {
-                return EnumUtils.isValidEnum(Adjustment::class.java, enumName)
-            }
-        }
     }
 
     override fun toString(): String {
