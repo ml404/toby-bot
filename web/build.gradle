@@ -3,8 +3,9 @@ plugins {
     id 'org.springframework.boot' apply false
     id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
     id 'org.jetbrains.kotlin.jvm'
-    id 'org.jetbrains.kotlin.plugin.spring'
 }
+
+apply plugin: 'kotlin-spring'
 
 dependencyManagement {
     imports {
