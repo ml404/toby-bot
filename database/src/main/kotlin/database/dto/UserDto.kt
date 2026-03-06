@@ -1,7 +1,6 @@
 package database.dto
 
 import jakarta.persistence.*
-import org.apache.commons.lang3.EnumUtils
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 
@@ -22,7 +21,7 @@ import java.io.Serializable
 @Entity
 @Table(name = "\"user\"", schema = "public")
 @Transactional
-data class UserDto(
+class UserDto(
     @Id
     @Column(name = "discord_id")
     var discordId: Long = 0,
@@ -59,11 +58,6 @@ data class UserDto(
         DIG("dig"),
         SUPERUSER("superuser");
 
-        companion object {
-            fun isValidEnum(enumName: String?): Boolean {
-                return EnumUtils.isValidEnum(Permissions::class.java, enumName)
-            }
-        }
     }
 
     override fun toString(): String {

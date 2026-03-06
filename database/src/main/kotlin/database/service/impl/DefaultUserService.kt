@@ -10,7 +10,7 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultUserService : UserService {
+class DefaultUserService : UserService {
     @Autowired
     private lateinit var userService: UserPersistence
 

@@ -11,7 +11,10 @@ import java.util.*
 class ChCommand : MiscCommand {
     override val name: String = "ch"
     override val description: String = "Allow me to 'ch' whatever you type."
-    private val MESSAGE = "message"
+
+    companion object {
+        private const val MESSAGE = "message"
+    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event

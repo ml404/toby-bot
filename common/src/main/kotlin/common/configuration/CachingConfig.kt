@@ -12,9 +12,9 @@ import org.springframework.context.annotation.Profile
 @Profile("prod")
 @Configuration
 @EnableCaching
-open class CachingConfig {
+class CachingConfig {
     @Bean
-    open fun cacheManager(): CacheManager {
+    fun cacheManager(): CacheManager {
         val cacheManager = SimpleCacheManager()
         cacheManager.setCaches(
             listOf(
@@ -29,7 +29,7 @@ open class CachingConfig {
     }
 
     @Bean
-    open fun cache(): Cache {
+    fun cache(): Cache {
         return Cache(86400, 3600, 2)
     }
 }

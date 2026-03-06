@@ -10,9 +10,9 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultConfigService : ConfigService {
+class DefaultConfigService : ConfigService {
     @Autowired
-    lateinit var configService: ConfigPersistence
+    private lateinit var configService: ConfigPersistence
 
     @Cacheable(value = ["configs"])
     override fun listAllConfig(): List<ConfigDto?> {
@@ -44,7 +44,7 @@ open class DefaultConfigService : ConfigService {
         configService.deleteAll(guildId)
     }
 
-    @CacheEvict(value = ["configs"], key = "#configDto.name+#configDto.guildId")
+    @CacheEvict(value = ["configs"], key = "#name+#guildId")
     override fun deleteConfig(guildId: String?, name: String?) {
         configService.deleteConfig(guildId, name)
     }

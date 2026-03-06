@@ -9,9 +9,9 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultExcuseService : ExcuseService {
+class DefaultExcuseService : ExcuseService {
     @Autowired
-    lateinit var excuseService: database.persistence.ExcusePersistence
+    private lateinit var excuseService: database.persistence.ExcusePersistence
 
     @Cacheable(value = ["excuses"])
     override fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?> {

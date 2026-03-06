@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Profile
 
 @Profile("prod")
 @Configuration
-open class AppConfig {
+class AppConfig {
 
     @Bean
-    open fun httpClient(): HttpClient {
+    fun httpClient(): HttpClient {
         return HttpClient(CIO) {
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true })
@@ -25,12 +25,12 @@ open class AppConfig {
     }
 
     @Bean
-    open fun httpHelper(client: HttpClient): HttpHelper {
+    fun httpHelper(client: HttpClient): HttpHelper {
         return HttpHelper(client)
     }
 
     @Bean
-    open fun eventWaiter(): EventWaiter {
+    fun eventWaiter(): EventWaiter {
         return EventWaiter()
     }
 }

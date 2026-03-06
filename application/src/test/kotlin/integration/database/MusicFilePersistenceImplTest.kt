@@ -1,5 +1,8 @@
 package integration.database
 
+import bot.configuration.TestAppConfig
+import bot.configuration.TestBotConfig
+import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.MusicDto
@@ -19,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional
         Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
+        TestManagerConfig::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
     ]
 )
 @ActiveProfiles("test")

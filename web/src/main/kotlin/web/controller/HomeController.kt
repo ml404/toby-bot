@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping
 
 @Controller
 class HomeController(
-    @param:Value("\${spring.security.oauth2.client.registration.discord.client-id}")
+    @param:Value($$"${spring.security.oauth2.client.registration.discord.client-id}")
     private val discordClientId: String
 ) {
 

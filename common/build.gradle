@@ -5,6 +5,8 @@ plugins {
     id 'org.jetbrains.kotlin.jvm'
 }
 
+apply plugin: 'kotlin-spring'
+
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:$springBootVersion"

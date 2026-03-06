@@ -10,10 +10,10 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultConfigPersistence : ConfigPersistence {
+class DefaultConfigPersistence : ConfigPersistence {
 
     @PersistenceContext
-    lateinit var entityManager: EntityManager
+    private lateinit var entityManager: EntityManager
 
     override fun getConfigByName(name: String?, guildId: String?): ConfigDto? {
         val q: TypedQuery<ConfigDto> = entityManager.createNamedQuery("ConfigDto.getValue", ConfigDto::class.java)

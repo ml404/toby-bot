@@ -9,7 +9,7 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultBrotherService : database.service.BrotherService {
+class DefaultBrotherService : database.service.BrotherService {
     @Autowired
     private lateinit var brotherService: BrotherPersistence
 

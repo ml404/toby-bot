@@ -19,10 +19,10 @@ import java.util.*
 
 @Profile("prod")
 @Configuration
-open class BotConfig {
+class BotConfig {
 
     @Bean
-    open fun jda(
+    fun jda(
         startUpHandler: StartUpHandler,
         voiceEventHandler: VoiceEventHandler,
         messageEventHandler: MessageEventHandler,

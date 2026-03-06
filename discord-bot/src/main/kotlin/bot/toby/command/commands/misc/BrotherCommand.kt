@@ -28,7 +28,7 @@ class BrotherCommand @Autowired constructor(private val brotherService: BrotherS
     private fun determineBrother(event: SlashCommandInteractionEvent, tobyEmote: Emoji?, deleteDelay: Int) {
         val hook = event.hook
         val memberId = event.user.idLong
-        val message = if (tobyId == memberId) {
+        val message = if (TOBY_ID == memberId) {
             "You're not my fucking brother Toby, you're me $tobyEmote"
         } else {
             val mentions = Optional.ofNullable(event.getOption(name)).map { it.mentions }.map { it.members }.orElse(emptyList())
@@ -54,7 +54,6 @@ class BrotherCommand @Autowired constructor(private val brotherService: BrotherS
         get() = listOf(OptionData(OptionType.USER, name, "Tag the person who you want to check the brother status of."))
 
     companion object {
-        @JvmField
-        var tobyId = 320919876883447808L
+        const val TOBY_ID = 320919876883447808L
     }
 }

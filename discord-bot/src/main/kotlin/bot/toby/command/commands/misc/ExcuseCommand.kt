@@ -13,11 +13,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseService) : MiscCommand {
-    private val EXCUSE = "excuse"
-    private val EXCUSE_ID = "id"
-    private val AUTHOR = "author"
-    private val ACTION = "action"
-
     override val name = "excuse"
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -172,6 +167,10 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
         )
 
     companion object {
+        private const val EXCUSE = "excuse"
+        private const val EXCUSE_ID = "id"
+        private const val AUTHOR = "author"
+        private const val ACTION = "action"
         const val PENDING = "pending"
         const val ALL = "all"
         const val APPROVE = "approve"

@@ -16,7 +16,9 @@ import java.util.*
 
 @Component
 class SetVolumeCommand : MusicCommand {
-    private val VOLUME = "volume"
+    companion object {
+        private const val VOLUME = "volume"
+    }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }

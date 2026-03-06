@@ -8,3 +8,7 @@ profile:
   name: qodana.recommended
 include:
   - name: CheckDependencyLicenses
+exclude:
+  - name: HardcodedCredentials
+    paths:
+      - application/src/test/resources/application-test.properties

@@ -3,7 +3,7 @@ package common.helpers
 import org.apache.commons.collections4.MapIterator
 import org.apache.commons.collections4.map.LRUMap
 
-open class Cache(
+class Cache(
     timeToLiveInSeconds: Long, timerIntervalInSeconds: Long,
     maxItems: Int
 ) {
@@ -11,7 +11,7 @@ open class Cache(
 
     private val cacheMap: LRUMap<String, CachedObject> = LRUMap(maxItems)
 
-    protected class CachedObject(var value: List<String>) {
+    private class CachedObject(var value: List<String>) {
         var lastAccessed: Long = System.currentTimeMillis()
     }
 

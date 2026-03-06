@@ -11,9 +11,6 @@ import org.springframework.stereotype.Component
 
 @Component
 class TeamCommand : MiscCommand {
-    private val TEAM_MEMBERS = "members"
-    private val TEAM_SIZE = "size"
-    private val CLEANUP = "cleanup"
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -60,6 +57,10 @@ class TeamCommand : MiscCommand {
     )
 
     companion object {
+        private const val TEAM_MEMBERS = "members"
+        private const val TEAM_SIZE = "size"
+        private const val CLEANUP = "cleanup"
+
         fun split(list: List<Member?>, splitSize: Int): List<List<Member?>> {
             val shuffledList = list.shuffled()
             val result = mutableListOf<List<Member?>>()

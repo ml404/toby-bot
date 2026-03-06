@@ -13,9 +13,11 @@ import org.springframework.stereotype.Component
 
 @Component
 class SocialCreditCommand @Autowired constructor(private val userService: UserService) : ModerationCommand {
-    private val LEADERBOARD = "leaderboard"
-    private val USERS = "users"
-    private val SOCIAL_CREDIT = "credit"
+    companion object {
+        private const val LEADERBOARD = "leaderboard"
+        private const val USERS = "users"
+        private const val SOCIAL_CREDIT = "credit"
+    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event

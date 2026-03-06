@@ -37,7 +37,6 @@ class DnDCommandQueryHandler(
                 // Handle initial query result
                 initialQueryDeferred.await()?.let {
                     if (it.isValidInitialQueryReturn()) {
-                        hasReplied = true
                         return@launch
                     }
                 }
@@ -45,7 +44,6 @@ class DnDCommandQueryHandler(
                 // Handle non-match query result
                 nonMatchQueryResultDeferred.await()?.let {
                     if (it.isValidNonMatchQueryReturn(typeName, query)) {
-                        hasReplied = true
                         return@launch
                     }
                 }

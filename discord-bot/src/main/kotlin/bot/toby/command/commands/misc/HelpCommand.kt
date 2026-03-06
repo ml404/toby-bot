@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class HelpCommand @Autowired constructor(private val commands: List<core.command.Command>) : MiscCommand {
-    private val COMMAND = "command"
+    companion object {
+        private const val COMMAND = "command"
+    }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val args = ctx.event.options
         val event = ctx.event

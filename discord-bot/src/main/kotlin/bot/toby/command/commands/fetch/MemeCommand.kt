@@ -23,9 +23,11 @@ import kotlin.random.Random
 
 @Component
 class MemeCommand : FetchCommand {
-    private val SUBREDDIT = "subreddit"
-    private val TIME_PERIOD = "timeperiod"
-    private val LIMIT = "limit"
+    companion object {
+        private const val SUBREDDIT = "subreddit"
+        private const val TIME_PERIOD = "timeperiod"
+        private const val LIMIT = "limit"
+    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         try {
@@ -37,7 +39,6 @@ class MemeCommand : FetchCommand {
         }
     }
 
-    @Throws(IOException::class)
     fun handle(
         ctx: CommandContext,
         httpClient: HttpClient,
@@ -85,7 +86,6 @@ class MemeCommand : FetchCommand {
         return RedditApiArgs(subredditArg, timePeriod, limit)
     }
 
-    @Throws(IOException::class)
     private fun fetchRedditPost(
         result: RedditApiArgs,
         event: SlashCommandInteractionEvent,
@@ -94,7 +94,7 @@ class MemeCommand : FetchCommand {
     ): MessageEmbed? {
         val gson = Gson()
         val redditApiUrl =
-            String.format(RedditAPIDto.redditPrefix, result.subredditArg, result.limit, result.timePeriod)
+            String.format(RedditAPIDto.REDDIT_PREFIX, result.subredditArg, result.limit, result.timePeriod)
         val request = HttpGet(redditApiUrl)
         logger.info("Fetching Reddit post from URL: $redditApiUrl")
         val response = httpClient.execute(request)

@@ -14,9 +14,11 @@ import org.springframework.stereotype.Component
 
 @Component
 class NowDigOnThisCommand : MusicCommand {
-    private val LINK = "link"
-    private val START_POSITION = "start"
-    private val VOLUME = "volume"
+    companion object {
+        private const val LINK = "link"
+        private const val START_POSITION = "start"
+        private const val VOLUME = "volume"
+    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)

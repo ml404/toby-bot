@@ -16,7 +16,7 @@ class DbdRandomKillerCommand @Autowired constructor(private val cache: Cache) : 
         event.deferReply().queue()
         try {
             val wikiFetcher = WikiFetcher(cache)
-            val dbdKillers = wikiFetcher.fetchFromWiki(cacheName, dbdWebUrl, className, cssQuery)
+            val dbdKillers = wikiFetcher.fetchFromWiki(CACHE_NAME, DBD_WEB_URL, CLASS_NAME, CSS_QUERY)
             event.hook.sendMessageFormat(dbdKillers.random()).queue(
                 invokeDeleteOnMessageResponse(
                     deleteDelay
@@ -36,9 +36,9 @@ class DbdRandomKillerCommand @Autowired constructor(private val cache: Cache) : 
         get() = "return a random dead by daylight killer"
 
     companion object {
-        private const val dbdWebUrl = "https://deadbydaylight.fandom.com/wiki/Killers"
-        const val cacheName = "dbdKillers"
-        const val className = "mw-content-ltr"
-        const val cssQuery = "div"
+        private const val DBD_WEB_URL = "https://deadbydaylight.fandom.com/wiki/Killers"
+        const val CACHE_NAME = "dbdKillers"
+        const val CLASS_NAME = "mw-content-ltr"
+        const val CSS_QUERY = "div"
     }
 }

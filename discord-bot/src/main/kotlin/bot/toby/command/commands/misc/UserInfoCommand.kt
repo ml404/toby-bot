@@ -14,7 +14,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoHelper) : MiscCommand {
-    private val USERS = "users"
+    companion object {
+        private const val USERS = "users"
+    }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply(true).queue()

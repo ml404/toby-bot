@@ -11,9 +11,9 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultUserPersistence : UserPersistence {
+class DefaultUserPersistence : UserPersistence {
     @PersistenceContext
-    lateinit var entityManager: EntityManager
+    private lateinit var entityManager: EntityManager
 
 
     override fun listGuildUsers(guildId: Long?): List<UserDto?> {
@@ -24,7 +24,7 @@ open class DefaultUserPersistence : UserPersistence {
 
     override fun createNewUser(userDto: UserDto): UserDto {
         val databaseUser = entityManager.find(UserDto::class.java, userDto)
-        return if ((databaseUser == null)) persistUserDto(userDto) else databaseUser
+        return databaseUser ?: persistUserDto(userDto)
     }
 
     override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {

@@ -11,6 +11,8 @@ plugins {
     id "org.jetbrains.kotlin.plugin.serialization" version "$kotlin_version"
 }
 
+apply plugin: 'kotlin-spring'
+
 dependencyManagement {
     imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:$springBootVersion"

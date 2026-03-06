@@ -77,9 +77,9 @@ class PlayCommand : MusicCommand {
         }
 
     companion object {
-        private val INTRO = "intro"
-        private val LINK = "link"
-        private val VOLUME = "volume"
-        private val START_POSITION = "start"
+        private const val INTRO = "intro"
+        private const val LINK = "link"
+        private const val VOLUME = "volume"
+        private const val START_POSITION = "start"
     }
 }

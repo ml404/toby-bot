@@ -9,9 +9,9 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultExcusePersistence internal constructor() : database.persistence.ExcusePersistence {
+class DefaultExcusePersistence internal constructor() : database.persistence.ExcusePersistence {
     @PersistenceContext
-    lateinit var entityManager: EntityManager
+    private lateinit var entityManager: EntityManager
 
 
     override fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?> {

@@ -16,7 +16,6 @@ class KickCommand : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        val deleteDelaySafe = deleteDelay
         event.deferReply().queue()
 
         val guild = event.guild!!
@@ -28,7 +27,9 @@ class KickCommand : ModerationCommand {
             ?.members
 
         if (mentionedMembers.isNullOrEmpty()) {
-            event.hook.sendMessage("You must mention 1 or more Users to kick.").queue(invokeDeleteOnMessageResponse(deleteDelaySafe))
+            event.hook.sendMessage("You must mention 1 or more Users to kick.").queue(invokeDeleteOnMessageResponse(
+                deleteDelay
+            ))
             return
         }
 
@@ -37,23 +38,23 @@ class KickCommand : ModerationCommand {
                 !member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS) -> {
                     event.hook
                         .sendMessage("You can't kick ${target.effectiveName}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelaySafe))
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
                 }
                 !botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS) -> {
                     event.hook
                         .sendMessage("I'm not allowed to kick ${target.effectiveName}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelaySafe))
+                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
                 }
                 else -> {
                     guild.kick(target).reason("because you told me to.").queue(
                         {
                             event.hook.sendMessage("Shot hit the mark... something about fortnite?").queue(
-                                invokeDeleteOnMessageResponse(deleteDelaySafe)
+                                invokeDeleteOnMessageResponse(deleteDelay)
                             )
                         },
                         { error ->
                             event.hook.sendMessage("Could not kick: ${error.message}").queue(
-                                invokeDeleteOnMessageResponse(deleteDelaySafe)
+                                invokeDeleteOnMessageResponse(deleteDelay)
                             )
                         }
                     )
