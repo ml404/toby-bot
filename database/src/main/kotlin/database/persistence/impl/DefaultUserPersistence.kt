@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultUserPersistence : UserPersistence {
+class DefaultUserPersistence : UserPersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
 

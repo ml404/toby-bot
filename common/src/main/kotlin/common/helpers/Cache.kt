@@ -3,7 +3,7 @@ package common.helpers
 import org.apache.commons.collections4.MapIterator
 import org.apache.commons.collections4.map.LRUMap
 
-open class Cache(
+class Cache(
     timeToLiveInSeconds: Long, timerIntervalInSeconds: Long,
     maxItems: Int
 ) {

@@ -9,7 +9,7 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultExcuseService : ExcuseService {
+class DefaultExcuseService : ExcuseService {
     @Autowired
     lateinit var excuseService: database.persistence.ExcusePersistence
 

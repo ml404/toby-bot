@@ -7,13 +7,11 @@ import java.io.IOException
 
 class WikiFetcher(private val cache: Cache) {
 
-    @Throws(IOException::class)
     fun fetchFromWiki(cacheToRetrieve: String, webUrl: String, className: String, cssQuery: String): List<String> {
         val cachedStrings = cache.get(key = cacheToRetrieve)
         return cachedStrings ?: getMapStrings(cacheToRetrieve, webUrl, className, cssQuery)
     }
 
-    @Throws(IOException::class)
     private fun getMapStrings(
         cacheToRetrieve: String,
         webUrl: String,
@@ -45,7 +43,6 @@ class WikiFetcher(private val cache: Cache) {
             }
     }
 
-    @Throws(IOException::class)
     private fun getElementFromWiki(webUrl: String, className: String): Element {
         val doc = Jsoup.connect(webUrl).get()
         return doc.getElementsByClass(className).first()

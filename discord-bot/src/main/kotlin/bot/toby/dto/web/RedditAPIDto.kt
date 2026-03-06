@@ -46,6 +46,6 @@ class RedditAPIDto {
     }
 
     companion object {
-        var redditPrefix: String = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s"
+        val redditPrefix: String = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s"
     }
 }

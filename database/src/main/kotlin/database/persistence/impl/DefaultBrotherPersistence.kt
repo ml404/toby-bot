@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultBrotherPersistence : BrotherPersistence {
+class DefaultBrotherPersistence : BrotherPersistence {
     @PersistenceContext
     lateinit var entityManager: EntityManager
 

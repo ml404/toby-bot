@@ -214,6 +214,6 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     companion object {
-        var lastConnectedChannel = ConcurrentHashMap<Long, VoiceChannel>()
+        val lastConnectedChannel = ConcurrentHashMap<Long, VoiceChannel>()
     }
 }

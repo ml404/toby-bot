@@ -54,7 +54,6 @@ class BrotherCommand @Autowired constructor(private val brotherService: BrotherS
         get() = listOf(OptionData(OptionType.USER, name, "Tag the person who you want to check the brother status of."))
 
     companion object {
-        @JvmField
-        var tobyId = 320919876883447808L
+        val tobyId = 320919876883447808L
     }
 }

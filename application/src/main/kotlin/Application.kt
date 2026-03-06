@@ -6,7 +6,7 @@ import org.springframework.context.annotation.ComponentScan
 @SpringBootApplication
 @ComponentScan("bot", "common", "core-api", "database", "web")
 @EnableCaching
-open class Application {
+class Application {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {

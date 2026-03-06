@@ -12,17 +12,15 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter
 import org.springframework.transaction.PlatformTransactionManager
 import java.net.URI
-import java.net.URISyntaxException
 import java.util.*
 import javax.sql.DataSource
 
 @Profile("prod")
 @Configuration
-open class DatabaseConfig(private val env: Environment) {
+class DatabaseConfig(private val env: Environment) {
 
     @Bean
-    @Throws(URISyntaxException::class)
-    open fun dataSource(): DataSource {
+    fun dataSource(): DataSource {
         val dbUri = URI(env.getRequiredProperty("DATABASE_URL"))
         val (username, password) = dbUri.userInfo.split(":")
         val dbUrl = "jdbc:postgresql://${dbUri.host}:${dbUri.port}${dbUri.path}?sslmode=require"
@@ -38,7 +36,7 @@ open class DatabaseConfig(private val env: Environment) {
     }
 
     @Bean
-    open fun entityManagerFactory(dataSource: DataSource): LocalContainerEntityManagerFactoryBean {
+    fun entityManagerFactory(dataSource: DataSource): LocalContainerEntityManagerFactoryBean {
         val entityManagerFactory = LocalContainerEntityManagerFactoryBean()
         entityManagerFactory.dataSource = dataSource
         entityManagerFactory.setPackagesToScan("database.dto")
@@ -54,7 +52,7 @@ open class DatabaseConfig(private val env: Environment) {
     }
 
     @Bean
-    open fun transactionManager(entityManagerFactory: LocalContainerEntityManagerFactoryBean): PlatformTransactionManager {
+    fun transactionManager(entityManagerFactory: LocalContainerEntityManagerFactoryBean): PlatformTransactionManager {
         val transactionManager = JpaTransactionManager()
         transactionManager.entityManagerFactory = entityManagerFactory.getObject()
         return transactionManager

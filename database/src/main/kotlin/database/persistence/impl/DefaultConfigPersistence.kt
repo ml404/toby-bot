@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultConfigPersistence : ConfigPersistence {
+class DefaultConfigPersistence : ConfigPersistence {
 
     @PersistenceContext
     lateinit var entityManager: EntityManager

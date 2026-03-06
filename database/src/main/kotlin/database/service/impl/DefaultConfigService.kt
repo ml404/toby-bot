@@ -10,7 +10,7 @@ import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultConfigService : ConfigService {
+class DefaultConfigService : ConfigService {
     @Autowired
     lateinit var configService: ConfigPersistence
 

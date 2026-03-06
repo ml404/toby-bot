@@ -4,11 +4,9 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.ExecutionException
 
 object FileUtils {
     @JvmStatic
-    @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
     fun readInputStreamToByteArray(inputStream: InputStream?): ByteArray? {
         return inputStream?.readAllBytes()
     }
@@ -19,7 +17,6 @@ object FileUtils {
     }
 
     @JvmStatic
-    @Throws(IOException::class)
     fun streamsAreEqual(input1: InputStream, input2: InputStream): Boolean {
         var error = false
         try {
@@ -63,7 +60,6 @@ object FileUtils {
         return ByteArrayInputStream(fileContents.contentToString().toByteArray(StandardCharsets.UTF_8))
     }
 
-    @Throws(IOException::class)
     fun readInputStreamToUTF8ByteArray(inputStream: InputStream): ByteArray {
         return inputStream.readAllBytes().contentToString().toByteArray(StandardCharsets.UTF_8)
     }

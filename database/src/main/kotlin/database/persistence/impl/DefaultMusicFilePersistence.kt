@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Repository
 @Transactional
-open class DefaultMusicFilePersistence : MusicFilePersistence {
+class DefaultMusicFilePersistence : MusicFilePersistence {
     @PersistenceContext
     private lateinit var entityManager: EntityManager
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)

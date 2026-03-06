@@ -37,7 +37,6 @@ class MemeCommand : FetchCommand {
         }
     }
 
-    @Throws(IOException::class)
     fun handle(
         ctx: CommandContext,
         httpClient: HttpClient,
@@ -85,7 +84,6 @@ class MemeCommand : FetchCommand {
         return RedditApiArgs(subredditArg, timePeriod, limit)
     }
 
-    @Throws(IOException::class)
     private fun fetchRedditPost(
         result: RedditApiArgs,
         event: SlashCommandInteractionEvent,

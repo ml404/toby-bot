@@ -16,10 +16,10 @@ import org.springframework.context.annotation.Profile
 
 @Profile("prod")
 @Configuration
-open class ManagerConfig {
+class ManagerConfig {
 
     @Bean
-    open fun commandManager(
+    fun commandManager(
         configService: ConfigService,
         userDtoHelper: UserDtoHelper,
         commandList: List<core.command.Command>
@@ -32,7 +32,7 @@ open class ManagerConfig {
     }
 
     @Bean
-    open fun menuManager(
+    fun menuManager(
         configService: ConfigService,
         menus: List<Menu>
     ): MenuManager {
@@ -40,7 +40,7 @@ open class ManagerConfig {
     }
 
     @Bean
-    open fun buttonManager(
+    fun buttonManager(
         configService: ConfigService,
         userDtoHelper: UserDtoHelper,
         buttons: List<Button>

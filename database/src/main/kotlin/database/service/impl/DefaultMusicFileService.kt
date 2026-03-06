@@ -8,7 +8,7 @@ import org.springframework.cache.annotation.CachePut
 import org.springframework.stereotype.Service
 
 @Service
-open class DefaultMusicFileService : database.service.MusicFileService {
+class DefaultMusicFileService : database.service.MusicFileService {
     @Autowired
     lateinit var musicFileService: MusicFilePersistence
 
