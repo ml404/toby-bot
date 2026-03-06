@@ -1,5 +1,9 @@
 # Project exclude paths
 .env
+
+# Qodana scan output (should not be committed)
+qodana.sarif.json
+.qodana/
 /.gradle/
 /out/
 /.idea/gradle.xml
