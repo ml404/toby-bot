@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service
 @Service
 open class DefaultUserService : UserService {
     @Autowired
-    lateinit var userService: UserPersistence
+    private lateinit var userService: UserPersistence
 
     @Cacheable(value = ["users"])
     override fun listGuildUsers(guildId: Long?): List<UserDto?> {
@@ -34,7 +34,7 @@ open class DefaultUserService : UserService {
         return userService.updateUser(userDto)
     }
 
-    @CacheEvict(value = ["users"], key = "#userDto.discordId+#user.guildId")
+    @CacheEvict(value = ["users"], key = "#userDto.discordId+#userDto.guildId")
     override fun deleteUser(userDto: UserDto) {
         userService.deleteUser(userDto)
     }

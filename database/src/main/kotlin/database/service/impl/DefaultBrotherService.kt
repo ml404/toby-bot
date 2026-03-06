@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service
 @Service
 open class DefaultBrotherService : database.service.BrotherService {
     @Autowired
-    lateinit var brotherService: BrotherPersistence
+    private lateinit var brotherService: BrotherPersistence
 
     @Cacheable(value = ["brothers"])
     override fun listBrothers(): List<BrotherDto?> {

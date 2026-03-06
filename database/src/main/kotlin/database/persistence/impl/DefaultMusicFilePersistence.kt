@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 open class DefaultMusicFilePersistence : MusicFilePersistence {
     @PersistenceContext
-    lateinit var entityManager: EntityManager
+    private lateinit var entityManager: EntityManager
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     private fun persistMusicDto(musicDto: MusicDto): MusicDto {
@@ -64,7 +64,7 @@ open class DefaultMusicFilePersistence : MusicFilePersistence {
 
             // Handle the result (assuming it's a Long)
             if (result is Long) {
-                println("Data size in bytes: $result")
+                logger.info { "Data size in bytes: $result" }
             }
 
             val q: Query = entityManager.createNamedQuery("MusicDto.getById", MusicDto::class.java)
