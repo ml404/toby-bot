@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/")
 class BotController(
-    var userService: UserService,
-    var musicFileService: MusicFileService,
-    var configService: ConfigService,
-    var brotherService: BrotherService
+    private val userService: UserService,
+    private val musicFileService: MusicFileService,
+    private val configService: ConfigService,
+    private val brotherService: BrotherService
 ) {
     @GetMapping("/brother")
     @ResponseBody
