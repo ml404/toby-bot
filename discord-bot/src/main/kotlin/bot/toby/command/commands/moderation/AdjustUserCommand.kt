@@ -17,8 +17,6 @@ class AdjustUserCommand @Autowired constructor(
     private val userService: UserService,
     private val userDtoHelper: UserDtoHelper
 ) : ModerationCommand {
-    private val PERMISSION_NAME = "name"
-    private val USERS = "users"
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -166,6 +164,8 @@ class AdjustUserCommand @Autowired constructor(
         }
 
     companion object {
+        private const val PERMISSION_NAME = "name"
+        private const val USERS = "users"
         const val MODIFIER = "modifier"
     }
 }

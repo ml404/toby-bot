@@ -1,7 +1,6 @@
 package database.dto
 
 import jakarta.persistence.*
-import org.apache.commons.lang3.EnumUtils
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 
@@ -59,11 +58,6 @@ data class UserDto(
         DIG("dig"),
         SUPERUSER("superuser");
 
-        companion object {
-            fun isValidEnum(enumName: String?): Boolean {
-                return EnumUtils.isValidEnum(Permissions::class.java, enumName)
-            }
-        }
     }
 
     override fun toString(): String {

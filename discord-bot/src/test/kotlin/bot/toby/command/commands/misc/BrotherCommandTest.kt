@@ -101,7 +101,7 @@ internal class BrotherCommandTest : CommandTest {
         val optionMapping = mockk<OptionMapping>()
 
         every { event.getOption("brother") } returns optionMapping
-        every { user.idLong } returns BrotherCommand.tobyId
+        every { user.idLong } returns BrotherCommand.TOBY_ID
         every { brotherService.getBrotherById(1) } returns null
         every { event.guild } returns CommandTest.guild
         every { CommandTest.guild.jda } returns jda

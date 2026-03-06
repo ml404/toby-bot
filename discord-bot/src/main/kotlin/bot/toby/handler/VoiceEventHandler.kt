@@ -20,7 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
 
-private const val teamRegex = "(?i)team\\s[0-9]+"
+private const val TEAM_REGEX = "(?i)team\\s[0-9]+"
 
 @Service
 class VoiceEventHandler @Autowired constructor(
@@ -184,10 +184,7 @@ class VoiceEventHandler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
-        val channelLeft = event.channelLeft
-        if (channelLeft != null) {
-            deleteTemporaryChannelIfEmpty(channelLeft.members.none { !it.user.isBot }, channelLeft)
-        }
+        event.channelLeft?.let { deleteTemporaryChannelIfEmpty(it.members.none { m -> !m.user.isBot }, it) }
     }
 
     private fun AudioManager.checkAudioManagerToCloseConnectionOnEmptyChannel() {
@@ -202,7 +199,7 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel) {
-        if (channelLeft.name.matches(teamRegex.toRegex()) && nonBotConnectedMembersEmpty) {
+        if (channelLeft.name.matches(TEAM_REGEX.toRegex()) && nonBotConnectedMembersEmpty) {
             logger.info { "Deleting temporary channel: '${channelLeft.name}'" }
             channelLeft.delete().queue()
         }

@@ -23,9 +23,11 @@ import kotlin.random.Random
 
 @Component
 class MemeCommand : FetchCommand {
-    private val SUBREDDIT = "subreddit"
-    private val TIME_PERIOD = "timeperiod"
-    private val LIMIT = "limit"
+    companion object {
+        private const val SUBREDDIT = "subreddit"
+        private const val TIME_PERIOD = "timeperiod"
+        private const val LIMIT = "limit"
+    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         try {

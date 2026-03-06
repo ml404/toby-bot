@@ -13,7 +13,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class HttpHelper(private val client: HttpClient, private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
-    private val YOUTUBE_API_KEY = System.getenv("YOUTUBE_API_KEY")
+    private val youtubeApiKey = System.getenv("YOUTUBE_API_KEY")
 
     suspend fun fetchFromGet(url: String?): String = withContext(dispatcher) {
         if (url.isNullOrBlank()) return@withContext ""
@@ -36,7 +36,7 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
 
     suspend fun getYouTubeVideoDuration(youtubeUrl: String): Duration? = withContext(dispatcher) {
         val videoId = extractVideoIdFromUrl(youtubeUrl) ?: return@withContext null
-        val apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=contentDetails&key=$YOUTUBE_API_KEY"
+        val apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=contentDetails&key=$youtubeApiKey"
         val response: HttpResponse = client.get(apiUrl)
         val videoResponse: YouTubeVideoResponse = response.body()
 

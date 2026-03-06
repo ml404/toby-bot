@@ -17,7 +17,7 @@ class Kf2RandomMapCommand @Autowired constructor(private val cache: Cache) : Fet
         event.deferReply(true).queue()
         try {
             val wikiFetcher = WikiFetcher(cache)
-            val kf2Maps = wikiFetcher.fetchFromWiki(cacheName, kf2WebUrl, className, "b")
+            val kf2Maps = wikiFetcher.fetchFromWiki(CACHE_NAME, KF2_WEB_URL, CLASS_NAME, "b")
             event.hook.sendMessage(kf2Maps.random()).queue { it?.deleteAfter(deleteDelay) }
         } catch (_: IOException) {
             event.hook.sendMessage("Huh, the website I pull data from must have returned something unexpected.").setEphemeral(true).queue { it?.deleteAfter(
@@ -32,8 +32,8 @@ class Kf2RandomMapCommand @Autowired constructor(private val cache: Cache) : Fet
         get() = "return a random kf2 map"
 
     companion object {
-        private const val kf2WebUrl = "https://wiki.killingfloor2.com/index.php?title=Maps_(Killing_Floor_2)"
-        private const val cacheName = "kf2Maps"
-        private const val className = "mw-parser-output"
+        private const val KF2_WEB_URL = "https://wiki.killingfloor2.com/index.php?title=Maps_(Killing_Floor_2)"
+        private const val CACHE_NAME = "kf2Maps"
+        private const val CLASS_NAME = "mw-parser-output"
     }
 }

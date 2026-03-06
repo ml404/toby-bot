@@ -62,8 +62,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
 
     fun incrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int) {
         incrementIndex()
-        val embedBuilder = initiativeEmbedBuilder
-        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay)
+        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, event, deleteDelay)
     }
 
     private fun incrementIndex() {
@@ -75,8 +74,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
 
     fun decrementTurnTable(hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int) {
         decrementIndex()
-        val embedBuilder = initiativeEmbedBuilder
-        sendOrEditInitiativeMessage(hook, embedBuilder, event, deleteDelay)
+        sendOrEditInitiativeMessage(hook, initiativeEmbedBuilder, event, deleteDelay)
     }
 
     private fun decrementIndex() {
@@ -98,7 +96,6 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         event: ButtonInteractionEvent?,
         deleteDelay: Int
     ) {
-        val initButtons = initButtons
         val messageEmbed = embedBuilder.build()
         if (event == null) {
             hook.sendMessageEmbeds(messageEmbed)

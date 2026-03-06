@@ -18,11 +18,10 @@ object FileUtils {
 
     @JvmStatic
     fun streamsAreEqual(input1: InputStream, input2: InputStream): Boolean {
-        var error = false
-        try {
-            val buffer1 = ByteArray(1024)
-            val buffer2 = ByteArray(1024)
-            try {
+        val buffer1 = ByteArray(1024)
+        val buffer2 = ByteArray(1024)
+        return input2.use {
+            input1.use {
                 var numRead1: Int
                 var numRead2: Int
                 while (true) {
@@ -38,20 +37,8 @@ object FileUtils {
                         return numRead2 < 0
                     }
                 }
-            } finally {
-                input1.close()
-            }
-        } catch (e: IOException) {
-            error = true // this error should be thrown, even if there is an error closing stream 2
-            throw e
-        } catch (e: RuntimeException) {
-            error = true
-            throw e
-        } finally {
-            try {
-                input2.close()
-            } catch (e: IOException) {
-                if (!error) throw e
+                @Suppress("UNREACHABLE_CODE")
+                false
             }
         }
     }

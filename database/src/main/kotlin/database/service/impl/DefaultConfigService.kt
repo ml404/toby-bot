@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service
 @Service
 class DefaultConfigService : ConfigService {
     @Autowired
-    lateinit var configService: ConfigPersistence
+    private lateinit var configService: ConfigPersistence
 
     @Cacheable(value = ["configs"])
     override fun listAllConfig(): List<ConfigDto?> {
@@ -44,7 +44,7 @@ class DefaultConfigService : ConfigService {
         configService.deleteAll(guildId)
     }
 
-    @CacheEvict(value = ["configs"], key = "#configDto.name+#configDto.guildId")
+    @CacheEvict(value = ["configs"], key = "#name+#guildId")
     override fun deleteConfig(guildId: String?, name: String?) {
         configService.deleteConfig(guildId, name)
     }

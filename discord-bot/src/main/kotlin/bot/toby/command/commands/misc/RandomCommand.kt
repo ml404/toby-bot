@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class RandomCommand : MiscCommand {
-    private val LIST = "list"
+    companion object {
+        private const val LIST = "list"
+    }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()

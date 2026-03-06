@@ -13,8 +13,11 @@ import java.time.format.DateTimeParseException
 
 @Component
 class HelloThereCommand @Autowired constructor(private val configService: ConfigService) : MiscCommand {
-    private val DEFAULT_DATE_FORMAT = "yyyy/MM/dd"
-    private val REFERENCE_DATE = LocalDate.of(2005, 5, 19)
+    private val referenceDate = LocalDate.of(2005, 5, 19)
+
+    companion object {
+        private const val DEFAULT_DATE_FORMAT = "yyyy/MM/dd"
+    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -35,7 +38,7 @@ class HelloThereCommand @Autowired constructor(private val configService: Config
         runCatching {
             LocalDate.parse(dateArgument, dateTimeFormatter)
         }.onSuccess { dateGiven ->
-            val responseMessage = if (dateGiven.isBefore(REFERENCE_DATE)) "Hello." else "General Kenobi."
+            val responseMessage = if (dateGiven.isBefore(referenceDate)) "Hello." else "General Kenobi."
             event.hook.sendMessage(responseMessage)
                 .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
         }.onFailure { e ->

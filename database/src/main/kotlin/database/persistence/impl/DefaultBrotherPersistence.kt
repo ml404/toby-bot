@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class DefaultBrotherPersistence : BrotherPersistence {
     @PersistenceContext
-    lateinit var entityManager: EntityManager
+    private lateinit var entityManager: EntityManager
 
 
     override fun getBrotherById(discordId: Long?): BrotherDto {

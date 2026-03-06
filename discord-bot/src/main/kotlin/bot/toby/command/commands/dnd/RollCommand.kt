@@ -20,9 +20,11 @@ import java.util.*
 
 @Component
 class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnDCommand {
-    private val DICE_NUMBER = "number"
-    private val DICE_TO_ROLL = "amount"
-    private val MODIFIER = "modifier"
+    companion object {
+        private const val DICE_NUMBER = "number"
+        private const val DICE_TO_ROLL = "amount"
+        private const val MODIFIER = "modifier"
+    }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val diceValueOptional =

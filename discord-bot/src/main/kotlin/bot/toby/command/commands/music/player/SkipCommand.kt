@@ -11,7 +11,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class SkipCommand : MusicCommand {
-    private val SKIP = "skip"
+    companion object {
+        private const val SKIP = "skip"
+    }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }

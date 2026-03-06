@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
 @Service
 class DefaultMusicFileService : database.service.MusicFileService {
     @Autowired
-    lateinit var musicFileService: MusicFilePersistence
+    private lateinit var musicFileService: MusicFilePersistence
 
 
     @CachePut(value = ["music"], key = "#musicDto.id")
