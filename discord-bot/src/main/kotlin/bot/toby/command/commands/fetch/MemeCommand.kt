@@ -94,7 +94,7 @@ class MemeCommand : FetchCommand {
     ): MessageEmbed? {
         val gson = Gson()
         val redditApiUrl =
-            String.format(RedditAPIDto.redditPrefix, result.subredditArg, result.limit, result.timePeriod)
+            String.format(RedditAPIDto.REDDIT_PREFIX, result.subredditArg, result.limit, result.timePeriod)
         val request = HttpGet(redditApiUrl)
         logger.info("Fetching Reddit post from URL: $redditApiUrl")
         val response = httpClient.execute(request)

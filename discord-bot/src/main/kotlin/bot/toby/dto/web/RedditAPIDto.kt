@@ -46,6 +46,6 @@ class RedditAPIDto {
     }
 
     companion object {
-        const val redditPrefix: String = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s"
+        const val REDDIT_PREFIX: String = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s"
     }
 }

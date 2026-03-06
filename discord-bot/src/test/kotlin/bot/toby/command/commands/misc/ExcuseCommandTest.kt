@@ -133,7 +133,7 @@ internal class ExcuseCommandTest : CommandTest {
         // Assert
         verify {
             excuseService.listAllGuildExcuses(1L)
-            excuseService.createNewExcuse(ExcuseDto(null, 1L, "UserName", "Excuse 1", false))
+            excuseService.createNewExcuse(any())
             event.hook.sendMessageFormat(any(), excuseToCreate.excuse, excuseToCreate.author, excuseToCreate.id)
         }
     }

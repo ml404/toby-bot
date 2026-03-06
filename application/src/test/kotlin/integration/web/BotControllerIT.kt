@@ -1,6 +1,8 @@
 package integration.web
 
 import Application
+import bot.configuration.TestAppConfig
+import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
@@ -19,7 +21,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
         Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
-        TestManagerConfig::class
+        TestManagerConfig::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
     ]
 )
 @AutoConfigureMockMvc

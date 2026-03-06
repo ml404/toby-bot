@@ -1,5 +1,8 @@
 package integration.database
 
+import bot.configuration.TestAppConfig
+import bot.configuration.TestBotConfig
+import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.ConfigDto
@@ -18,6 +21,9 @@ import org.springframework.test.context.ActiveProfiles
         Application::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
+        TestManagerConfig::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
     ]
 )
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
