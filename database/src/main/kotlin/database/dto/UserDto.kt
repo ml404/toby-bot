@@ -48,6 +48,9 @@ class UserDto(
     @Column(name = "initiative")
     var initiativeModifier: Int? = 0,
 
+    @Column(name = "dnd_beyond_character_id")
+    var dndBeyondCharacterId: Long? = null,
+
     @OneToMany(mappedBy = "userDto", fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
     var musicDtos: MutableList<MusicDto> = mutableListOf()
 ) : Serializable {

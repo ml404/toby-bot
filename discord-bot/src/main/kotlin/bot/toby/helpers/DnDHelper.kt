@@ -4,6 +4,7 @@ import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.CONDITION_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.FEATURE_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.RULE_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SPELL_NAME
+import bot.toby.dto.web.dnd.CharacterSheet
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
 import common.logging.DiscordLogger
@@ -164,6 +165,13 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         logger.info("Fetching data from '$queryUrl'")
         val queryResponseData = httpHelper.fetchFromGet(queryUrl)
         return JsonParser.parseJsonToQueryResult(queryResponseData)
+    }
+
+    suspend fun fetchCharacter(characterId: Long, httpHelper: HttpHelper): CharacterSheet? {
+        val url = "https://character-service.dndbeyond.com/character/v5/character/$characterId"
+        logger.info("Fetching character from '$url'")
+        val json = httpHelper.fetchFromGet(url)
+        return JsonParser.parseCharacterResponse(json)?.data
     }
 
     private fun String.replaceSpaceWithDash(): String {

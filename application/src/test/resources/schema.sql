@@ -42,5 +42,6 @@ CREATE TABLE public."user" (
     dig_permission boolean DEFAULT true NOT NULL,
     meme_permission boolean DEFAULT true NOT NULL,
     social_credit bigint,
-    initiative smallint default 0
+    initiative smallint default 0,
+    dnd_beyond_character_id bigint default null
 );

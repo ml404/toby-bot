@@ -7,6 +7,13 @@ import com.google.gson.GsonBuilder
 
 object JsonParser {
     @JvmStatic
+    fun parseCharacterResponse(jsonData: String?): DnDBeyondCharacterResponse? {
+        val gson = Gson()
+        return gson.fromJson(jsonData, DnDBeyondCharacterResponse::class.java)
+    }
+
+
+    @JvmStatic
     fun parseJSONToSpell(jsonData: String?): Spell? {
         val gson = createGsonWithSnakeCaseFields()
         return gson.fromJson(jsonData, Spell::class.java)

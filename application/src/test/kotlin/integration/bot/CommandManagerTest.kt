@@ -1,8 +1,10 @@
 package integration.bot
 
 import bot.configuration.*
+import bot.toby.command.commands.dnd.CharacterCommand
 import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
+import bot.toby.command.commands.dnd.LinkCharacterCommand
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.command.commands.fetch.DbdRandomKillerCommand
 import bot.toby.command.commands.fetch.Kf2RandomMapCommand
@@ -112,12 +114,14 @@ class CommandManagerTest {
             ExcuseCommand::class.java,
             SocialCreditCommand::class.java,
             TeamCommand::class.java,
-            EightBallCommand::class.java
+            EightBallCommand::class.java,
+            LinkCharacterCommand::class.java,
+            CharacterCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(39, commandManager.allCommands.size)
-        Assertions.assertEquals(39, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(41, commandManager.allCommands.size)
+        Assertions.assertEquals(41, commandManager.allSlashCommands.size)
     }
 
     @Test
