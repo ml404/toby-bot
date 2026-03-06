@@ -1,8 +1,8 @@
 package bot.configuration
 
-import bot.toby.managers.DefaultButtonManager
-import bot.toby.managers.DefaultCommandManager
-import bot.toby.managers.DefaultMenuManager
+import core.managers.ButtonManager
+import core.managers.CommandManager
+import core.managers.MenuManager
 import io.mockk.mockk
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -13,17 +13,17 @@ import org.springframework.context.annotation.Profile
 open class TestManagerConfig {
 
     @Bean
-    open fun commandManager(): DefaultCommandManager {
+    open fun commandManager(): CommandManager {
         return mockk(relaxed = true)
     }
 
     @Bean
-    open fun menuManager(): DefaultMenuManager {
+    open fun menuManager(): MenuManager {
         return mockk(relaxed = true)
     }
 
     @Bean
-    open fun buttonManager(): DefaultButtonManager {
+    open fun buttonManager(): ButtonManager {
         return mockk(relaxed = true)
     }
 }
