@@ -1,16 +1,12 @@
+package bot.toby.handler
+
 import bot.toby.emote.Emotes
-import bot.toby.handler.MessageEventHandler
-import bot.toby.managers.DefaultButtonManager
-import bot.toby.managers.DefaultCommandManager
-import bot.toby.managers.DefaultMenuManager
 import core.managers.AutocompleteManager
-import io.mockk.every
+import core.managers.ButtonManager
+import core.managers.CommandManager
+import core.managers.MenuManager
+import io.mockk.*
 import io.mockk.junit5.MockKExtension
-import io.mockk.just
-import io.mockk.mockk
-import io.mockk.Runs
-import io.mockk.spyk
-import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Message
@@ -25,9 +21,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(MockKExtension::class)
 class MessageEventHandlerTest {
 
-    private val commandManager: DefaultCommandManager = mockk()
-    private val buttonManager: DefaultButtonManager = mockk()
-    private val menuManager: DefaultMenuManager = mockk()
+    private val commandManager: CommandManager = mockk()
+    private val buttonManager: ButtonManager = mockk()
+    private val menuManager: MenuManager = mockk()
     private val autocompleteManager: AutocompleteManager = mockk()
     private val handler = spyk(
         MessageEventHandler(

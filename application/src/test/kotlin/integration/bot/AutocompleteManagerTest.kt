@@ -1,5 +1,6 @@
 package integration.bot
 
+import Application
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
@@ -8,11 +9,10 @@ import bot.toby.managers.DefaultAutoCompleteManager
 import common.configuration.TestCachingConfig
 import core.autocomplete.AutocompleteHandler
 import database.configuration.TestDatabaseConfig
-import io.mockk.unmockkAll
+import io.mockk.*
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -59,5 +59,19 @@ internal class AutocompleteManagerTest {
         val handler = autocompleteManager.getHandler("help")
         assertNotNull(handler)
         assertEquals("help", handler?.name)
+    }
+
+    @Test
+    fun testHandle() {
+        val event = mockk<CommandAutoCompleteInteractionEvent> {
+            every { name } returns "help"
+        }
+        val handler = mockk<AutocompleteHandler> {
+            every { name } returns "help"
+            every { handle(event) } just Runs
+        }
+        val manager = DefaultAutoCompleteManager(listOf(handler))
+        manager.handle(event)
+        verify(exactly = 1) { handler.handle(event) }
     }
 }

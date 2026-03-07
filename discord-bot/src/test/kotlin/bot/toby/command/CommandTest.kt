@@ -30,8 +30,7 @@ interface CommandTest {
         every { event.hook.deleteOriginal() } returns restAction as RestAction<Void>
         every { event.hook.sendMessage(any<String>()) } returns webhookMessageCreateAction
         every { event.hook.sendMessageFormat(any(), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.hook.sendMessageEmbeds(any(), any<MessageEmbed>()) } returns webhookMessageCreateAction
-        every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) } returns webhookMessageCreateAction
         every { event.options } returns emptyList()
         every { user.effectiveName } returns "UserName"
         every { user.idLong } returns 1L
@@ -40,10 +39,9 @@ interface CommandTest {
         every { user.isBot } returns false
         every { interactionHook.deleteOriginal() } returns restAction
         every { interactionHook.sendMessage(any<String>()) } returns webhookMessageCreateAction
-        every { interactionHook.sendMessage(any<String>()).queue(any()) } just Runs
         every { interactionHook.sendMessageFormat(any(), *anyVararg()) } returns webhookMessageCreateAction
         every { interactionHook.retrieveOriginal() } returns restAction as RestAction<Message>
-        every { interactionHook.sendMessageEmbeds(any(), any<MessageEmbed>()) } returns webhookMessageCreateAction
+        every { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) } returns webhookMessageCreateAction
         every { replyCallbackAction.setEphemeral(any()) } returns replyCallbackAction
         every { replyCallbackAction.queue() } just runs
         every { webhookMessageCreateAction.addComponents(any<ActionRow>()) } returns webhookMessageCreateAction

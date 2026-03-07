@@ -12,7 +12,6 @@ import java.io.IOException
 @Component
 class Kf2RandomMapCommand @Autowired constructor(private val cache: Cache) : FetchCommand {
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
-        ctx.event.hook.deleteAfter(deleteDelay)
         val event = ctx.event
         event.deferReply(true).queue()
         try {
