@@ -1,5 +1,6 @@
 package bot.configuration
 
+import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
@@ -24,6 +25,11 @@ open class TestManagerConfig {
 
     @Bean
     open fun buttonManager(): ButtonManager {
+        return mockk(relaxed = true)
+    }
+
+    @Bean
+    open fun autocompleteManager(): AutocompleteManager {
         return mockk(relaxed = true)
     }
 }

@@ -2,6 +2,7 @@ package bot.toby.handler
 
 import bot.toby.emote.Emotes
 import common.logging.DiscordLogger
+import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
@@ -15,7 +16,6 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
-import net.dv8tion.jda.api.interactions.commands.Command
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import kotlin.coroutines.CoroutineContext
@@ -24,7 +24,8 @@ import kotlin.coroutines.CoroutineContext
 class MessageEventHandler @Autowired constructor(
     private val commandManager: CommandManager,
     private val buttonManager: ButtonManager,
-    private val menuManager: MenuManager
+    private val menuManager: MenuManager,
+    private val autocompleteManager: AutocompleteManager
 ) : ListenerAdapter(), CoroutineScope {
 
     private val job = SupervisorJob()
@@ -81,20 +82,8 @@ class MessageEventHandler @Autowired constructor(
 
 
     override fun onCommandAutoCompleteInteraction(event: CommandAutoCompleteInteractionEvent) {
-        if (event.name == "help" && event.focusedOption.name == "command") {
-            val input = event.focusedOption.value // Get the current user input
-            val suggestions = suggestCommands(input) // Get matching commands
-            val optionChoices = suggestions.map { Command.Choice(it, it) } // Convert suggestions to choices
-
-            // Reply with the suggestions, of which there has to be 25 or less according to JDA
-            event.replyChoices(optionChoices.take(25)).queue()
-        }
+        autocompleteManager.handle(event)
     }
-
-    private fun suggestCommands(input: String): List<String> {
-        return commandManager.commands.filter { it.name.contains(input, ignoreCase = true) }.map { it.name }
-    }
-
 
     override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
         logger.setGuildAndMemberContext(event.guild, event.member)

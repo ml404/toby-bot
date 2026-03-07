@@ -1,10 +1,13 @@
 package bot.configuration
 
 import bot.toby.helpers.UserDtoHelper
+import bot.toby.managers.DefaultAutoCompleteManager
 import bot.toby.managers.DefaultButtonManager
 import bot.toby.managers.DefaultCommandManager
 import bot.toby.managers.DefaultMenuManager
+import core.autocomplete.AutocompleteHandler
 import core.button.Button
+import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
@@ -46,5 +49,10 @@ class ManagerConfig {
         buttons: List<Button>
     ): ButtonManager {
         return DefaultButtonManager(configService, userDtoHelper, buttons)
+    }
+
+    @Bean
+    fun autocompleteManager(handlers: List<AutocompleteHandler>): AutocompleteManager {
+        return DefaultAutoCompleteManager(handlers)
     }
 }

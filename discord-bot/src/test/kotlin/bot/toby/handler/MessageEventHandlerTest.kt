@@ -3,9 +3,12 @@ import bot.toby.handler.MessageEventHandler
 import bot.toby.managers.DefaultButtonManager
 import bot.toby.managers.DefaultCommandManager
 import bot.toby.managers.DefaultMenuManager
+import core.managers.AutocompleteManager
 import io.mockk.every
 import io.mockk.junit5.MockKExtension
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.Runs
 import io.mockk.spyk
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
@@ -14,6 +17,7 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -24,11 +28,13 @@ class MessageEventHandlerTest {
     private val commandManager: DefaultCommandManager = mockk()
     private val buttonManager: DefaultButtonManager = mockk()
     private val menuManager: DefaultMenuManager = mockk()
+    private val autocompleteManager: AutocompleteManager = mockk()
     private val handler = spyk(
         MessageEventHandler(
             commandManager,
             buttonManager,
-            menuManager
+            menuManager,
+            autocompleteManager
         )
     )
 
@@ -125,5 +131,15 @@ class MessageEventHandlerTest {
         verify {
             channel.sendMessage("YEAH????")
         }
+    }
+
+    @Test
+    fun `onCommandAutoCompleteInteraction delegates to autocompleteManager`() {
+        val event = mockk<CommandAutoCompleteInteractionEvent>()
+        every { autocompleteManager.handle(event) } just Runs
+
+        handler.onCommandAutoCompleteInteraction(event)
+
+        verify { autocompleteManager.handle(event) }
     }
 }
