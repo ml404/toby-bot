@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#1a1a2e"/>
+
+  <!-- Left accent bar -->
+  <rect x="0" y="0" width="8" height="630" fill="#5865F2"/>
+
+  <!-- Subtle grid pattern -->
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#2a2a4a" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)" opacity="0.5"/>
+
+  <!-- Glow blob behind icon -->
+  <circle cx="600" cy="240" r="160" fill="#5865F2" opacity="0.08"/>
+
+  <!-- Robot icon (centred, above text) -->
+  <!-- Head -->
+  <rect x="548" y="148" width="104" height="88" rx="16" fill="none" stroke="#5865F2" stroke-width="5"/>
+  <!-- Antenna -->
+  <line x1="600" y1="148" x2="600" y2="124" stroke="#5865F2" stroke-width="4"/>
+  <circle cx="600" cy="118" r="8" fill="#5865F2"/>
+  <!-- Eyes -->
+  <circle cx="576" cy="183" r="10" fill="#5865F2"/>
+  <circle cx="624" cy="183" r="10" fill="#5865F2"/>
+  <!-- Mouth -->
+  <rect x="572" y="210" width="56" height="8" rx="4" fill="#5865F2" opacity="0.7"/>
+  <!-- Body -->
+  <rect x="556" y="244" width="88" height="56" rx="10" fill="none" stroke="#5865F2" stroke-width="4" opacity="0.6"/>
+  <!-- Arms -->
+  <line x1="556" y1="262" x2="524" y2="274" stroke="#5865F2" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <line x1="644" y1="262" x2="676" y2="274" stroke="#5865F2" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- TobyBot wordmark -->
+  <text x="600" y="378" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="88" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="-2">TobyBot</text>
+
+  <!-- Tagline -->
+  <text x="600" y="434" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="30" font-weight="400" fill="#a0a0b0" text-anchor="middle">Your Discord Companion</text>
+
+  <!-- Bottom divider + URL -->
+  <rect x="80" y="520" width="1040" height="1" fill="#2a2a4a"/>
+  <text x="600" y="558" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="22" fill="#555570" text-anchor="middle">www.toby-bot.co.uk</text>
+</svg>
