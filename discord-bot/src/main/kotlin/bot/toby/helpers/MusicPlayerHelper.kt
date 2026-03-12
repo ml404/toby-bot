@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
-    private const val WEB_URL = "https://toby-bot-21b2d9da7e3a.herokuapp.com"
+    private const val WEB_URL = "https://toby-bot.co.uk"
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
 
