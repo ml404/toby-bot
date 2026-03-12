@@ -11,19 +11,19 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.MusicDto
 import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.buttons.Button
 import java.awt.Color
 import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
-    private const val WEB_URL = "https://gibe-toby-bot.herokuapp.com"
+    private const val WEB_URL = "https://toby-bot.herokuapp.com"
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
 
