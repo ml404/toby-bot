@@ -10,9 +10,8 @@ import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.DefaultCommandContext
 import bot.toby.dto.web.dnd.AbilityStat
 import bot.toby.dto.web.dnd.CharacterSheet
-import bot.toby.helpers.DnDHelper
-import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.UserDtoHelper
+import bot.toby.helpers.charactersheet.CharacterSheetProvider
 import database.dto.UserDto
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,8 +29,7 @@ class CharacterCommandTest : CommandTest {
 
     private lateinit var command: CharacterCommand
     private val dispatcher = UnconfinedTestDispatcher()
-    private lateinit var httpHelper: HttpHelper
-    private lateinit var dndHelper: DnDHelper
+    private lateinit var characterSheetProvider: CharacterSheetProvider
     private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var linkedUserDto: UserDto
     private lateinit var unlinkedUserDto: UserDto
@@ -55,8 +53,7 @@ class CharacterCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        httpHelper = mockk(relaxed = true)
-        dndHelper = mockk(relaxed = true)
+        characterSheetProvider = mockk(relaxed = true)
         userDtoHelper = mockk(relaxed = true)
 
         linkedUserDto = mockk(relaxed = true)
@@ -72,7 +69,7 @@ class CharacterCommandTest : CommandTest {
         every { targetMember.guild } returns CommandTest.guild
         every { targetMember.effectiveName } returns "Target Name"
 
-        command = CharacterCommand(dispatcher, httpHelper, dndHelper, userDtoHelper)
+        command = CharacterCommand(dispatcher, characterSheetProvider, userDtoHelper)
     }
 
     @AfterEach
@@ -84,11 +81,11 @@ class CharacterCommandTest : CommandTest {
     fun `no user option shows calling member character`() = runTest {
         every { event.getOption(CharacterCommand.USER) } returns null
         every { userDtoHelper.calculateUserDto(1L, 1L, false) } returns linkedUserDto
-        coEvery { dndHelper.fetchCharacter(48690485L, httpHelper) } returns mockCharacter
+        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { dndHelper.fetchCharacter(48690485L, httpHelper) }
+        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
         verify { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
@@ -98,11 +95,11 @@ class CharacterCommandTest : CommandTest {
         every { event.getOption(CharacterCommand.USER) } returns userOptionMapping
         every { userOptionMapping.asMember } returns targetMember
         every { userDtoHelper.calculateUserDto(2L, 1L, false) } returns linkedUserDto
-        coEvery { dndHelper.fetchCharacter(48690485L, httpHelper) } returns mockCharacter
+        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { dndHelper.fetchCharacter(48690485L, httpHelper) }
+        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
         verify { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
     }
 
@@ -113,7 +110,7 @@ class CharacterCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify(exactly = 0) { dndHelper.fetchCharacter(any(), any()) }
+        coVerify(exactly = 0) { characterSheetProvider.getCharacterSheet(any()) }
         verify { event.hook.sendMessage(any<String>()) }
     }
 
@@ -126,7 +123,7 @@ class CharacterCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify(exactly = 0) { dndHelper.fetchCharacter(any(), any()) }
+        coVerify(exactly = 0) { characterSheetProvider.getCharacterSheet(any()) }
         verify { event.hook.sendMessage(any<String>()) }
     }
 
@@ -134,7 +131,7 @@ class CharacterCommandTest : CommandTest {
     fun `character fetch returns null replies with error`() = runTest {
         every { event.getOption(CharacterCommand.USER) } returns null
         every { userDtoHelper.calculateUserDto(1L, 1L, false) } returns linkedUserDto
-        coEvery { dndHelper.fetchCharacter(48690485L, httpHelper) } returns null
+        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns null
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
