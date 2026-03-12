@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="'TobyBot - ' + ${guildName} + ' Campaign'">TobyBot - Campaign</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container { max-width: 860px; margin: 40px auto; padding: 0 24px; }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #a0a0b0;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+        .back-link:hover { color: #e0e0e0; }
+        h1 { font-size: 1.6rem; margin-bottom: 4px; color: #fff; }
+        .subtitle { color: #a0a0b0; margin-bottom: 32px; font-size: 0.95rem; }
+        .error {
+            background: #4a1a1a;
+            border: 1px solid #c0392b;
+            color: #e74c3c;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .no-campaign {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 40px 32px;
+            text-align: center;
+            color: #a0a0b0;
+        }
+        .no-campaign code {
+            background: rgba(88,101,242,0.15);
+            color: #8892f5;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .campaign-card {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+        }
+        .campaign-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .campaign-title { font-size: 1.3rem; font-weight: 700; color: #fff; }
+        .active-badge {
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: rgba(88,101,242,0.2);
+            color: #8892f5;
+            border: 1px solid rgba(88,101,242,0.4);
+            font-weight: 600;
+        }
+        .meta-row {
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+        .meta-item { font-size: 0.9rem; color: #a0a0b0; }
+        .meta-item strong { color: #e0e0e0; }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+            margin-top: 28px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .player-list { display: flex; flex-direction: column; gap: 10px; }
+        .player-card {
+            background: #1e2d50;
+            border: 1px solid #2a3a60;
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #5865F2;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .player-info { flex: 1; }
+        .player-name { font-weight: 600; font-size: 0.95rem; }
+        .player-sub { font-size: 0.8rem; color: #a0a0b0; margin-top: 2px; }
+        .player-status {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .player-status.alive {
+            background: rgba(40,167,69,0.15);
+            color: #5cb85c;
+            border: 1px solid rgba(40,167,69,0.3);
+        }
+        .player-status.dead {
+            background: rgba(192,57,43,0.15);
+            color: #e74c3c;
+            border: 1px solid rgba(192,57,43,0.3);
+        }
+        .dm-tag {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(88,101,242,0.2);
+            color: #8892f5;
+            border: 1px solid rgba(88,101,242,0.4);
+            font-weight: 600;
+        }
+        .empty-players { color: #a0a0b0; font-size: 0.9rem; padding: 16px 0; }
+        .hint {
+            background: rgba(88,101,242,0.05);
+            border: 1px solid rgba(88,101,242,0.2);
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 0.85rem;
+            color: #a0a0b0;
+            margin-top: 20px;
+        }
+        .hint code {
+            background: rgba(88,101,242,0.15);
+            color: #8892f5;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container">
+    <a class="back-link" href="/dnd/campaign">← Back to servers</a>
+
+    <h1 th:text="${guildName}">Guild Name</h1>
+    <p class="subtitle">D&amp;D Campaign</p>
+
+    <div th:if="${error}" class="error" th:text="${error}"></div>
+
+    <!-- No active campaign -->
+    <div class="no-campaign" th:unless="${campaign != null}">
+        <p style="font-size:1.1rem; margin-bottom:12px;">No active campaign in this server.</p>
+        <p>Start one in Discord with <code>/campaign create name:YourCampaignName</code></p>
+    </div>
+
+    <!-- Active campaign -->
+    <div th:if="${campaign != null}">
+        <div class="campaign-card">
+            <div class="campaign-header">
+                <span class="campaign-title" th:text="${campaign.name}">Campaign Name</span>
+                <span class="active-badge">Active</span>
+                <span th:if="${isUserDm}" class="dm-tag">You are the DM</span>
+            </div>
+            <div class="meta-row">
+                <div class="meta-item">
+                    <strong>Dungeon Master</strong><br>
+                    <span th:text="${dmName}">DM Name</span>
+                </div>
+                <div class="meta-item">
+                    <strong>Players</strong><br>
+                    <span th:text="${#lists.size(players)}">0</span> joined
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">Players</div>
+
+        <div class="player-list" th:if="${not #lists.isEmpty(players)}">
+            <div class="player-card" th:each="player : ${players}">
+                <div class="player-avatar"
+                     th:text="${#strings.substring(player.displayName, 0, 1).toUpperCase()}">P</div>
+                <div class="player-info">
+                    <div class="player-name" th:text="${player.displayName}">Player Name</div>
+                    <div class="player-sub"
+                         th:text="${player.characterId != null ? 'Character ID: ' + player.characterId : 'No character linked'}">
+                        Character info
+                    </div>
+                </div>
+                <span th:if="${player.alive}" class="player-status alive">Alive</span>
+                <span th:unless="${player.alive}" class="player-status dead">☠️ Dead</span>
+            </div>
+        </div>
+
+        <div class="empty-players" th:if="${#lists.isEmpty(players)}">
+            No players have joined yet.
+        </div>
+
+        <div class="hint">
+            Players join with <code>/campaign join</code> · Leave with <code>/campaign leave</code>
+            <span th:if="${isUserDm}"> · End the campaign with <code>/campaign end</code></span>
+        </div>
+    </div>
+</div>
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TobyBot - D&amp;D Campaigns</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
+        h1 { font-size: 1.6rem; margin-bottom: 8px; color: #fff; }
+        .subtitle { color: #a0a0b0; margin-bottom: 32px; }
+        .error {
+            background: #4a1a1a;
+            border: 1px solid #c0392b;
+            color: #e74c3c;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .guild-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .guild-card {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #e0e0e0;
+            transition: border-color 0.2s, transform 0.1s;
+            display: block;
+            position: relative;
+        }
+        .guild-card:hover { border-color: #5865F2; transform: translateY(-2px); }
+        .guild-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: block;
+        }
+        .guild-icon-placeholder {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #5865F2;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+        .guild-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; }
+        .campaign-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        .campaign-badge.active {
+            background: rgba(88,101,242,0.2);
+            color: #8892f5;
+            border: 1px solid rgba(88,101,242,0.4);
+        }
+        .campaign-badge.none {
+            background: rgba(160,160,176,0.1);
+            color: #a0a0b0;
+            border: 1px solid rgba(160,160,176,0.2);
+        }
+        .empty { color: #a0a0b0; text-align: center; padding: 48px 0; }
+        .hint {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 28px;
+            color: #a0a0b0;
+            font-size: 0.9rem;
+        }
+        .hint code {
+            background: rgba(88,101,242,0.15);
+            color: #8892f5;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container">
+    <h1>⚔️ D&amp;D Campaigns</h1>
+    <p class="subtitle">Servers where both you and TobyBot are present.</p>
+
+    <div class="hint">
+        Start a campaign in Discord with <code>/campaign create</code> — then manage it here.
+    </div>
+
+    <div th:if="${error}" class="error" th:text="${error}"></div>
+
+    <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <a class="guild-card"
+           th:each="guild : ${guilds}"
+           th:href="@{/dnd/campaign/{id}(id=${guild.id})}">
+            <img th:if="${guild.iconUrl != null}"
+                 th:src="${guild.iconUrl}"
+                 th:alt="${guild.name}"
+                 class="guild-icon">
+            <div th:unless="${guild.iconUrl != null}"
+                 class="guild-icon-placeholder"
+                 th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
+            <div class="guild-name" th:text="${guild.name}">Guild Name</div>
+            <span th:if="${guild.activeCampaign != null}"
+                  class="campaign-badge active"
+                  th:text="'⚔️ ' + ${guild.activeCampaign.name}">Active Campaign</span>
+            <span th:unless="${guild.activeCampaign != null}"
+                  class="campaign-badge none">No active campaign</span>
+        </a>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(guilds)}">
+        <p>You are not in any servers where TobyBot is active.</p>
+    </div>
+</div>
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>
