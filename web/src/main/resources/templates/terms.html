@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TobyBot — Terms of Service</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -12,43 +14,6 @@
             color: #e0e0e0;
             min-height: 100vh;
         }
-        nav {
-            background: #16213e;
-            padding: 14px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #2a2a4a;
-            gap: 12px;
-        }
-        .brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; }
-        .nav-right { display: flex; align-items: center; gap: 20px; }
-        .nav-right a { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
-        .nav-right a:hover { color: #fff; }
-        .nav-user { color: #a0a0b0; font-size: 0.9rem; }
-        .btn-discord {
-            display: inline-block;
-            background: #5865F2;
-            color: #fff;
-            text-decoration: none;
-            padding: 8px 18px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        .btn-discord:hover { background: #4752c4; }
-        .btn-logout {
-            background: transparent;
-            border: 1px solid #555;
-            color: #a0a0b0;
-            padding: 6px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: border-color 0.2s, color 0.2s;
-        }
-        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
 
         .container {
             max-width: 760px;
@@ -95,20 +60,7 @@
 </head>
 <body>
 
-<nav>
-    <a class="brand" href="/">TobyBot</a>
-    <div class="nav-right">
-        <a href="/">Home</a>
-        <a href="/commands/wiki">Commands</a>
-        <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
-            <span class="nav-user" th:text="${username}">User</span>
-            <form th:action="@{/logout}" method="post" style="margin:0">
-                <button type="submit" class="btn-logout">Logout</button>
-            </form>
-        </span>
-        <a th:if="${username == null}" href="/oauth2/authorization/discord" class="btn-discord">Login</a>
-    </div>
-</nav>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <div class="container">
     <div class="page-header">
@@ -195,5 +147,6 @@
     <p>&copy; 2026 TobyBot &mdash; <a href="/terms">Terms of Service</a> &mdash; <a href="/privacy">Privacy Policy</a></p>
 </footer>
 
+<script th:src="@{/js/home.js}"></script>
 </body>
 </html>

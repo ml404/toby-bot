@@ -17,7 +17,8 @@ class WebSecurityConfig {
                 auth.requestMatchers(
                     "/", "/terms", "/privacy", "/brother", "/config", "/music", "/user",
                     "/commands", "/commands/**", "/actuator/**",
-                    "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error"
+                    "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
+                    "/images/**", "/js/**", "/css/**"
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.anyRequest().authenticated()

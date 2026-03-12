@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TobyBot - Select a Server</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -12,27 +14,6 @@
             color: #e0e0e0;
             min-height: 100vh;
         }
-        nav {
-            background: #16213e;
-            padding: 14px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #2a2a4a;
-        }
-        nav .brand { font-weight: 700; font-size: 1.1rem; color: #fff; }
-        nav .user-area { display: flex; align-items: center; gap: 16px; color: #a0a0b0; font-size: 0.9rem; }
-        .btn-logout {
-            background: transparent;
-            border: 1px solid #555;
-            color: #a0a0b0;
-            padding: 6px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: border-color 0.2s, color 0.2s;
-        }
-        .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
         .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
         h1 { font-size: 1.6rem; margin-bottom: 8px; color: #fff; }
         .subtitle { color: #a0a0b0; margin-bottom: 32px; }
@@ -86,15 +67,7 @@
     </style>
 </head>
 <body>
-<nav>
-    <span class="brand">TobyBot</span>
-    <div class="user-area">
-        <span>Logged in as <strong th:text="${username}">User</strong></span>
-        <form th:action="@{/logout}" method="post" style="margin:0">
-            <button type="submit" class="btn-logout">Logout</button>
-        </form>
-    </div>
-</nav>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <div class="container">
     <h1>Select a Server</h1>
@@ -121,5 +94,6 @@
         <p>You are not in any servers where TobyBot is active.</p>
     </div>
 </div>
+<script th:src="@{/js/home.js}"></script>
 </body>
 </html>
