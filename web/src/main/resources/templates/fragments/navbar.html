@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="navbar">
+    <a class="brand" href="/">TobyBot</a>
+    <div class="nav-links" id="nav-menu">
+        <a href="/commands/wiki">Commands</a>
+        <a href="/intro/guilds">Intro Songs</a>
+        <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
+            <span class="nav-user" th:text="${username}">User</span>
+            <form th:action="@{/logout}" method="post" style="margin:0">
+                <button type="submit" class="btn-logout">Logout</button>
+            </form>
+        </span>
+        <a th:if="${username == null}" href="/oauth2/authorization/discord" class="btn-discord">Login</a>
+    </div>
+    <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">&#9776;</button>
+</nav>
+</body>
+</html>
