@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import kotlin.collections.emptyList
 
 class CommandControllerTest {
     private lateinit var commandManager: CommandManager
@@ -100,12 +99,13 @@ class CommandControllerTest {
     }
 
     @Test
-    fun `getCommandsWiki contains nav with brand and back link`() {
+    fun `getCommandsWiki contains full navbar with brand and nav links`() {
         val html = wikiWithMusicCommand()
 
         assertTrue(html.contains("""class="brand""""))
-        assertTrue(html.contains("""class="back""""))
-        assertTrue(html.contains("""href="/""""))
+        assertTrue(html.contains("""href="/commands/wiki""""))
+        assertTrue(html.contains("""href="/intro/guilds""""))
+        assertTrue(html.contains("""class="btn-discord""""))
     }
 
     @Test

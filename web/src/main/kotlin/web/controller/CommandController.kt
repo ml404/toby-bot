@@ -64,13 +64,11 @@ class CommandController(private val commandManager: CommandManager) {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <title>TobyBot &mdash; Commands</title>
+                <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+                <link rel="stylesheet" href="/css/nav.css">
                 <style>
                     * { box-sizing: border-box; margin: 0; padding: 0; }
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
-                    nav { background: #16213e; padding: 14px 24px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid #2a2a4a; }
-                    .brand { font-weight: 700; font-size: 1.1rem; color: #fff; text-decoration: none; }
-                    .back { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; }
-                    .back:hover { color: #fff; }
                     .container { max-width: 960px; margin: 40px auto; padding: 0 24px 80px; }
                     h1 { font-size: 1.8rem; color: #fff; margin-bottom: 8px; }
                     .subtitle { color: #a0a0b0; margin-bottom: 40px; }
@@ -99,7 +97,12 @@ class CommandController(private val commandManager: CommandManager) {
             <body>
             <nav>
                 <a class="brand" href="/">TobyBot</a>
-                <a class="back" href="/">&larr; Back to Home</a>
+                <div class="nav-links" id="nav-menu">
+                    <a href="/commands/wiki">Commands</a>
+                    <a href="/intro/guilds">Intro Songs</a>
+                    <a href="/oauth2/authorization/discord" class="btn-discord">Login</a>
+                </div>
+                <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">&#9776;</button>
             </nav>
             <div class="container">
                 <h1>Commands</h1>
@@ -154,7 +157,7 @@ class CommandController(private val commandManager: CommandManager) {
         appendCommandCategory("Miscellaneous", commandManager.miscCommands)
         appendCommandCategory("Fetch", commandManager.fetchCommands)
 
-        html.append("</div></body></html>")
+        html.append("""</div><script src="/js/home.js"></script></body></html>""")
         return html.toString()
     }
 
