@@ -1,7 +1,10 @@
 package web.controller
 
 import database.dto.CampaignDto
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -117,5 +120,48 @@ class CampaignControllerTest {
         assertEquals("campaignDetail", view)
         verify { mockModel.addAttribute("campaign", null) }
         verify { mockModel.addAttribute("isUserDm", false) }
+    }
+
+    // createCampaign
+
+    @Test
+    fun `createCampaign redirects to detail page on success`() {
+        every { campaignWebService.getGuildName(guildId) } returns "MyGuild"
+        every { campaignWebService.createCampaign(guildId, 1L, "New Campaign") } returns makeCampaign()
+
+        val view = controller.createCampaign(guildId, "New Campaign", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `createCampaign sets error flash when campaign already exists`() {
+        every { campaignWebService.getGuildName(guildId) } returns "MyGuild"
+        every { campaignWebService.createCampaign(guildId, 1L, "Dup") } returns null
+
+        val view = controller.createCampaign(guildId, "Dup", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify { mockRa.addFlashAttribute("error", "A campaign is already active in this server.") }
+    }
+
+    @Test
+    fun `createCampaign redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.createCampaign(guildId, "Test", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    @Test
+    fun `createCampaign redirects with error when bot not in guild`() {
+        every { campaignWebService.getGuildName(guildId) } returns null
+
+        val view = controller.createCampaign(guildId, "Test", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+        verify { mockRa.addFlashAttribute("error", "Bot is not in that server.") }
     }
 }

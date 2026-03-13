@@ -1,17 +1,12 @@
 package web.controller
 
-import database.service.CampaignPlayerService
-import database.service.CampaignService
-import net.dv8tion.jda.api.JDA
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.CampaignWebService
 
@@ -62,5 +57,26 @@ class CampaignController(
         model.addAttribute("username", user.getAttribute<String>("username") ?: "User")
 
         return "campaignDetail"
+    }
+
+    @PostMapping("/campaign/{guildId}/create")
+    fun createCampaign(
+        @PathVariable guildId: Long,
+        @RequestParam name: String,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.getAttribute<String>("id")?.toLongOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        campaignWebService.getGuildName(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return "redirect:/dnd/campaign"
+        }
+
+        if (campaignWebService.createCampaign(guildId, discordId, name) == null) {
+            ra.addFlashAttribute("error", "A campaign is already active in this server.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
     }
 }

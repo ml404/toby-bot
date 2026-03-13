@@ -27,7 +27,7 @@ class WebSecurityConfig {
             .oauth2Login { oauth2 ->
                 oauth2
                     .loginPage("/login")
-                    .defaultSuccessUrl("/intro/guilds", true)
+                    .defaultSuccessUrl("/intro/guilds", false)
                     .failureUrl("/login?error=true")
             }
             .logout { logout ->

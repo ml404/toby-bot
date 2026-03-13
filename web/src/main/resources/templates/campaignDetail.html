@@ -172,8 +172,17 @@
 
     <!-- No active campaign -->
     <div class="no-campaign" th:unless="${campaign != null}">
-        <p style="font-size:1.1rem; margin-bottom:12px;">No active campaign in this server.</p>
-        <p>Start one in Discord with <code>/campaign create name:YourCampaignName</code></p>
+        <p style="font-size:1.1rem;margin-bottom:20px;">No active campaign in this server.</p>
+        <form th:action="@{/dnd/campaign/{id}/create(id=${guildId})}" method="post"
+              style="display:flex;flex-direction:column;align-items:center;gap:12px;max-width:340px;margin:0 auto;">
+            <input type="text" name="name" placeholder="Campaign name" required maxlength="100"
+                   style="width:100%;padding:10px 14px;border-radius:6px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.95rem;">
+            <button type="submit"
+                    style="width:100%;padding:10px 0;border-radius:6px;background:#5865F2;color:#fff;font-size:0.95rem;font-weight:600;border:none;cursor:pointer;">
+                ⚔️ Create Campaign
+            </button>
+        </form>
+        <p style="margin-top:16px;font-size:0.85rem;">Or use <code>/campaign create name:YourCampaignName</code> in Discord.</p>
     </div>
 
     <!-- Active campaign -->

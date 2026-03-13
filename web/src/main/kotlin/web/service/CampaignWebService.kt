@@ -1,7 +1,6 @@
 package web.service
 
 import database.dto.CampaignDto
-import database.dto.CampaignPlayerDto
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import net.dv8tion.jda.api.JDA
@@ -75,5 +74,12 @@ class CampaignWebService(
         }
 
         return CampaignDetail(campaign, players, dmName)
+    }
+
+    fun createCampaign(guildId: Long, dmDiscordId: Long, name: String): CampaignDto? {
+        if (campaignService.getActiveCampaignForGuild(guildId) != null) return null
+        return campaignService.createCampaign(
+            CampaignDto(guildId = guildId, channelId = 0L, dmDiscordId = dmDiscordId, name = name)
+        )
     }
 }

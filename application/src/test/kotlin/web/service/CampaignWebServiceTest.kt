@@ -5,7 +5,10 @@ import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
 import database.service.CampaignPlayerService
 import database.service.CampaignService
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -149,5 +152,34 @@ class CampaignWebServiceTest {
         val detail = service.getCampaignDetail(guildId, dmDiscordId)
 
         assertTrue(detail!!.players.isEmpty())
+    }
+
+    // createCampaign
+
+    @Test
+    fun `createCampaign creates and returns campaign when none active`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        val saved = makeCampaign()
+        every { campaignService.createCampaign(any()) } returns saved
+
+        val result = service.createCampaign(guildId, dmDiscordId, "Test Campaign")
+
+        assertNotNull(result)
+        assertEquals(saved, result)
+        verify {
+            campaignService.createCampaign(match {
+                it.guildId == guildId && it.dmDiscordId == dmDiscordId && it.name == "Test Campaign"
+            })
+        }
+    }
+
+    @Test
+    fun `createCampaign returns null when campaign already active`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+
+        val result = service.createCampaign(guildId, dmDiscordId, "Another Campaign")
+
+        assertNull(result)
+        verify(exactly = 0) { campaignService.createCampaign(any()) }
     }
 }
