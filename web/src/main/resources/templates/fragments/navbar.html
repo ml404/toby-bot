@@ -6,6 +6,7 @@
     <div class="nav-links" id="nav-menu">
         <a href="/commands/wiki">Commands</a>
         <a href="/intro/guilds">Intro Songs</a>
+        <a href="/dnd/campaign">Campaigns</a>
         <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
             <span class="nav-user" th:text="${username}">User</span>
             <form th:action="@{/logout}" method="post" style="margin:0">

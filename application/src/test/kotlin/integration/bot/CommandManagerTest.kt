@@ -1,6 +1,7 @@
 package integration.bot
 
 import bot.configuration.*
+import bot.toby.command.commands.dnd.CampaignCommand
 import bot.toby.command.commands.dnd.CharacterCommand
 import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
@@ -116,12 +117,13 @@ class CommandManagerTest {
             TeamCommand::class.java,
             EightBallCommand::class.java,
             LinkCharacterCommand::class.java,
-            CharacterCommand::class.java
+            CharacterCommand::class.java,
+            CampaignCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(41, commandManager.allCommands.size)
-        Assertions.assertEquals(41, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(42, commandManager.allCommands.size)
+        Assertions.assertEquals(42, commandManager.allSlashCommands.size)
     }
 
     @Test

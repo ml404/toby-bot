@@ -21,12 +21,13 @@ class WebSecurityConfig {
                     "/images/**", "/js/**", "/css/**"
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
+                auth.requestMatchers("/dnd/**").authenticated()
                 auth.anyRequest().authenticated()
             }
             .oauth2Login { oauth2 ->
                 oauth2
                     .loginPage("/login")
-                    .defaultSuccessUrl("/intro/guilds", true)
+                    .defaultSuccessUrl("/intro/guilds", false)
                     .failureUrl("/login?error=true")
             }
             .logout { logout ->
