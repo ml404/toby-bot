@@ -45,3 +45,31 @@ CREATE TABLE public."user" (
     initiative smallint default 0,
     dnd_beyond_character_id bigint default null
 );
+
+DROP TABLE IF EXISTS public.dnd_campaign_player;
+DROP TABLE IF EXISTS public.dnd_campaign;
+CREATE TABLE public.dnd_campaign (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    dm_discord_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    state TEXT
+);
+
+CREATE TABLE public.dnd_campaign_player (
+    campaign_id BIGINT NOT NULL REFERENCES public.dnd_campaign(id),
+    player_discord_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    character_id BIGINT,
+    alive BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (campaign_id, player_discord_id)
+);
+
+DROP TABLE IF EXISTS public.dnd_character_sheet;
+CREATE TABLE public.dnd_character_sheet (
+    character_id BIGINT PRIMARY KEY,
+    sheet_json TEXT NOT NULL,
+    last_updated TIMESTAMP NOT NULL DEFAULT NOW()
+);

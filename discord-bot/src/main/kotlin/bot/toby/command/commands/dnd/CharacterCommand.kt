@@ -1,8 +1,7 @@
 package bot.toby.command.commands.dnd
 
-import bot.toby.helpers.DnDHelper
-import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.UserDtoHelper
+import bot.toby.helpers.charactersheet.CharacterSheetProvider
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
@@ -18,8 +17,7 @@ import org.springframework.stereotype.Component
 @Component
 class CharacterCommand @Autowired constructor(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val httpHelper: HttpHelper,
-    private val dndHelper: DnDHelper,
+    private val characterSheetProvider: CharacterSheetProvider,
     private val userDtoHelper: UserDtoHelper
 ) : DnDCommand {
 
@@ -59,7 +57,7 @@ class CharacterCommand @Autowired constructor(
 
         CoroutineScope(dispatcher).launch {
             runCatching {
-                val character = dndHelper.fetchCharacter(characterId, httpHelper)
+                val character = characterSheetProvider.getCharacterSheet(characterId)
                 if (character != null) {
                     hook.sendMessageEmbeds(character.toEmbed()).queue()
                 } else {

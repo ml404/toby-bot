@@ -8,9 +8,8 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
 import bot.toby.dto.web.dnd.AbilityStat
 import bot.toby.dto.web.dnd.CharacterSheet
-import bot.toby.helpers.DnDHelper
-import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.UserDtoHelper
+import bot.toby.helpers.charactersheet.CharacterSheetProvider
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -29,8 +28,7 @@ class LinkCharacterCommandTest : CommandTest {
 
     private lateinit var command: LinkCharacterCommand
     private val dispatcher = UnconfinedTestDispatcher()
-    private lateinit var httpHelper: HttpHelper
-    private lateinit var dndHelper: DnDHelper
+    private lateinit var characterSheetProvider: CharacterSheetProvider
     private lateinit var userDtoHelper: UserDtoHelper
     private val deleteDelay = 0
 
@@ -52,13 +50,12 @@ class LinkCharacterCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        httpHelper = mockk(relaxed = true)
-        dndHelper = mockk(relaxed = true)
+        characterSheetProvider = mockk(relaxed = true)
         userDtoHelper = mockk(relaxed = true)
         every { event.deferReply(true) } returns replyCallbackAction
         every { requestingUserDto.dndBeyondCharacterId = any() } just Runs
         every { requestingUserDto.initiativeModifier = any() } just Runs
-        command = LinkCharacterCommand(dispatcher, httpHelper, dndHelper, userDtoHelper)
+        command = LinkCharacterCommand(dispatcher, characterSheetProvider, userDtoHelper)
     }
 
     @AfterEach
@@ -71,11 +68,11 @@ class LinkCharacterCommandTest : CommandTest {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
         every { optionMapping.asString } returns "https://www.dndbeyond.com/characters/48690485"
-        coEvery { dndHelper.fetchCharacter(48690485L, httpHelper) } returns mockCharacter
+        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { dndHelper.fetchCharacter(48690485L, httpHelper) }
+        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
         verify { requestingUserDto.initiativeModifier = 2 } // DEX 14 -> +2
         verify { userDtoHelper.updateUser(requestingUserDto) }
@@ -87,11 +84,11 @@ class LinkCharacterCommandTest : CommandTest {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
         every { optionMapping.asString } returns "48690485"
-        coEvery { dndHelper.fetchCharacter(48690485L, httpHelper) } returns mockCharacter
+        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { dndHelper.fetchCharacter(48690485L, httpHelper) }
+        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
     }
 
@@ -100,11 +97,11 @@ class LinkCharacterCommandTest : CommandTest {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
         every { optionMapping.asString } returns "https://character-service.dndbeyond.com/character/v5/character/48690485"
-        coEvery { dndHelper.fetchCharacter(48690485L, httpHelper) } returns mockCharacter
+        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { dndHelper.fetchCharacter(48690485L, httpHelper) }
+        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
     }
 
@@ -118,7 +115,7 @@ class LinkCharacterCommandTest : CommandTest {
 
         verify { event.hook.sendMessage(any<String>()) }
         verify(exactly = 0) { userDtoHelper.updateUser(any()) }
-        coVerify(exactly = 0) { dndHelper.fetchCharacter(any(), any()) }
+        coVerify(exactly = 0) { characterSheetProvider.getCharacterSheet(any()) }
     }
 
     @Test
@@ -126,7 +123,7 @@ class LinkCharacterCommandTest : CommandTest {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
         every { optionMapping.asString } returns "99999999"
-        coEvery { dndHelper.fetchCharacter(99999999L, httpHelper) } returns null
+        coEvery { characterSheetProvider.getCharacterSheet(99999999L) } returns null
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
