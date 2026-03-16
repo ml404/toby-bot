@@ -1,7 +1,9 @@
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
+import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.managers.NowPlayingManager
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.service.ConfigService
@@ -14,6 +16,7 @@ import net.dv8tion.jda.api.entities.SelfUser
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion
+import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
@@ -400,5 +403,35 @@ class VoiceEventHandlerTest {
         // Verify that the bot checked to close connection and joined the new channel
         verify(exactly = 1) { audioManager.closeAudioConnection() }
         verify(exactly = 1) { audioManager.openAudioConnection(newChannel) }
+    }
+
+    @Test
+    fun `onGuildLeave cleans up PlayerManager, NowPlayingManager, and lastConnectedChannel`() {
+        val guild = mockk<Guild>()
+        val event = mockk<GuildLeaveEvent>()
+        val playerManager = mockk<PlayerManager>(relaxed = true)
+        val nowPlayingManager = mockk<NowPlayingManager>(relaxed = true)
+        val voiceChannel = mockk<VoiceChannel>()
+
+        every { event.guild } returns guild
+        every { guild.idLong } returns 42L
+        every { guild.name } returns "LeavingGuild"
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns playerManager
+
+        mockkObject(MusicPlayerHelper)
+        every { MusicPlayerHelper.nowPlayingManager } returns nowPlayingManager
+
+        VoiceEventHandler.lastConnectedChannel[42L] = voiceChannel
+
+        handler.onGuildLeave(event)
+
+        verify(exactly = 1) { playerManager.destroyMusicManager(42L) }
+        verify(exactly = 1) { nowPlayingManager.resetNowPlayingMessage(42L) }
+        assert(VoiceEventHandler.lastConnectedChannel.containsKey(42L)) { "lastConnectedChannel should be preserved for potential reconnection" }
+
+        unmockkObject(PlayerManager)
+        unmockkObject(MusicPlayerHelper)
     }
 }

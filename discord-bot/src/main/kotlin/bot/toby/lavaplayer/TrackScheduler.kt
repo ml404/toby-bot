@@ -15,7 +15,7 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var deleteDelay: Int = 5) : AudioEventAdapter() {
-    var queue: BlockingQueue<AudioTrack> = LinkedBlockingQueue()
+    var queue: BlockingQueue<AudioTrack> = LinkedBlockingQueue(100)
     var isLooping: Boolean = false
     var event: SlashCommandInteractionEvent? = null
     private var previousVolume: Int? = null

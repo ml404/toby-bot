@@ -203,4 +203,14 @@ class TrackSchedulerTest {
         assertTrue(scheduler.stopTrack(true))
         verify(exactly = 1) { player.stopTrack() }
     }
+
+    @Test
+    fun `queue is bounded at 100 tracks`() {
+        every { player.startTrack(any(), true) } returns false
+        repeat(105) {
+            val track = mockTrack("Track $it")
+            scheduler.queue(track, 0L, 50)
+        }
+        assertEquals(100, scheduler.queue.size)
+    }
 }

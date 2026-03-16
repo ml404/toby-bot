@@ -108,6 +108,13 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         }
     }
 
+    fun destroyMusicManager(guildId: Long) {
+        musicManagers.remove(guildId)?.let { mgr ->
+            mgr.audioPlayer.destroy()
+            mgr.scheduler.queue.clear()
+        }
+    }
+
     fun setPreviousVolume(previousVolume: Int?) {
         this.previousVolume = previousVolume
     }
