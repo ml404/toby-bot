@@ -45,7 +45,6 @@ class VoiceEventHandler @Autowired constructor(
         logger.info { "Guild $guildId left — cleaning up audio resources" }
         PlayerManager.instance.destroyMusicManager(guildId)
         MusicPlayerHelper.nowPlayingManager.resetNowPlayingMessage(guildId)
-        lastConnectedChannel.remove(guildId)
     }
 
     private fun Guild.connectToMostPopulatedVoiceChannel() {

@@ -429,7 +429,7 @@ class VoiceEventHandlerTest {
 
         verify(exactly = 1) { playerManager.destroyMusicManager(42L) }
         verify(exactly = 1) { nowPlayingManager.resetNowPlayingMessage(42L) }
-        assert(!VoiceEventHandler.lastConnectedChannel.containsKey(42L))
+        assert(VoiceEventHandler.lastConnectedChannel.containsKey(42L)) { "lastConnectedChannel should be preserved for potential reconnection" }
 
         unmockkObject(PlayerManager)
         unmockkObject(MusicPlayerHelper)
