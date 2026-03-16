@@ -1,13 +1,14 @@
 package common.configuration
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import common.helpers.Cache
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching
-import org.springframework.cache.concurrent.ConcurrentMapCache
-import org.springframework.cache.support.SimpleCacheManager
+import org.springframework.cache.caffeine.CaffeineCacheManager
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import java.util.concurrent.TimeUnit
 
 @Profile("prod")
 @Configuration
@@ -15,17 +16,13 @@ import org.springframework.context.annotation.Profile
 class CachingConfig {
     @Bean
     fun cacheManager(): CacheManager {
-        val cacheManager = SimpleCacheManager()
-        cacheManager.setCaches(
-            listOf(
-                ConcurrentMapCache("configs"),
-                ConcurrentMapCache("brothers"),
-                ConcurrentMapCache("users"),
-                ConcurrentMapCache("music"),
-                ConcurrentMapCache("excuses")
-            )
+        val manager = CaffeineCacheManager("configs", "brothers", "users", "music", "excuses")
+        manager.setCaffeine(
+            Caffeine.newBuilder()
+                .maximumSize(500)
+                .expireAfterWrite(30, TimeUnit.MINUTES)
         )
-        return cacheManager
+        return manager
     }
 
     @Bean

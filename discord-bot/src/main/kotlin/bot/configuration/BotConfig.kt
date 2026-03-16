@@ -43,7 +43,7 @@ class BotConfig {
             GatewayIntent.GUILD_VOICE_STATES,
             GatewayIntent.GUILD_EXPRESSIONS
         )
-            .setMemberCachePolicy(MemberCachePolicy.ALL)
+            .setMemberCachePolicy(MemberCachePolicy.VOICE)
             .disableCache(
                 EnumSet.of(
                     CacheFlag.CLIENT_STATUS,

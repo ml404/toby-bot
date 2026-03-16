@@ -9,9 +9,11 @@ import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations.DELETE_DELAY
 import database.dto.ConfigDto.Configurations.VOLUME
 import database.service.ConfigService
+import bot.toby.helpers.MusicPlayerHelper
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
+import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -36,6 +38,14 @@ class VoiceEventHandler @Autowired constructor(
             logger.setGuildContext(it)
             it.connectToMostPopulatedVoiceChannel()
         }
+    }
+
+    override fun onGuildLeave(event: GuildLeaveEvent) {
+        val guildId = event.guild.idLong
+        logger.info { "Guild $guildId left — cleaning up audio resources" }
+        PlayerManager.instance.destroyMusicManager(guildId)
+        MusicPlayerHelper.nowPlayingManager.resetNowPlayingMessage(guildId)
+        lastConnectedChannel.remove(guildId)
     }
 
     private fun Guild.connectToMostPopulatedVoiceChannel() {
