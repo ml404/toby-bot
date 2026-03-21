@@ -128,13 +128,13 @@
                     <td th:text="${intro.introVolume} + '%'">90%</td>
                     <td>
                         <!-- URL-based intro: open link -->
-                        <a th:if="${#strings.startsWith(intro.fileName, 'http')}"
-                           th:href="${intro.fileName}"
+                        <a th:if="${intro.url != null}"
+                           th:href="${intro.url}"
                            target="_blank"
                            class="btn-link"
                            title="Open URL">↗</a>
                         <!-- File-based intro: play button -->
-                        <span th:unless="${#strings.startsWith(intro.fileName, 'http')}">
+                        <span th:unless="${intro.url != null}">
                             <audio th:id="'audio-' + ${intro.id}"
                                    th:src="@{/music(id=${intro.id})}"
                                    preload="none"></audio>

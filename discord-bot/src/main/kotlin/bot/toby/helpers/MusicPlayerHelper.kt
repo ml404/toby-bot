@@ -219,14 +219,15 @@ object MusicPlayerHelper {
         }
     }
 
-    private fun determineUrlFromMusicDto(it: MusicDto): String =
-        if (isUrl(it.fileName!!).isNotEmpty()) {
-            // It's a URL, return it directly
-            it.fileName!!
-        } else {
-            // It's an MP3 file, return the local URL serving the binary data
-            "$WEB_URL/music?id=${it.id}"
-        }
+    private fun determineUrlFromMusicDto(it: MusicDto): String {
+        // If fileName is a URL, use it directly (backward compatibility)
+        if (isUrl(it.fileName!!).isNotEmpty()) return it.fileName!!
+        // If musicBlob contains a URL (e.g. fileName stores the video title), use that
+        val blobString = it.musicBlob?.let { bytes -> String(bytes) } ?: ""
+        if (isUrl(blobString).isNotEmpty()) return blobString
+        // Otherwise, serve the binary data via the web endpoint
+        return "$WEB_URL/music?id=${it.id}"
+    }
 
     fun formatTime(timeInMillis: Long): String {
         val hours = TimeUnit.MILLISECONDS.toHours(timeInMillis)

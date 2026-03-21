@@ -7,6 +7,7 @@ import database.dto.MusicDto
 import database.service.ConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.entities.Guild
@@ -18,7 +19,9 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -536,5 +539,85 @@ class IntroHelperTest {
 
         // Assert
         assertTrue(result) // As the duration equals the limit
+    }
+
+    // handleUrl — title stored as fileName
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `handleUrl fetches video title and passes it as filename to persistMusicUrl`() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+        val testIntroHelper = spyk(IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, testDispatcher))
+        val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+        coEvery { httpHelper.getYouTubeVideoTitle(url) } returns "Never Gonna Give You Up"
+
+        testIntroHelper.handleUrl(event, userDto, "TestUser", 10, URI.create(url), 70, null)
+        advanceUntilIdle()
+
+        verify {
+            testIntroHelper.persistMusicUrl(
+                event, userDto, 10, "Never Gonna Give You Up", url, "TestUser", 70, null
+            )
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `handleUrl falls back to URL as filename when title fetch fails`() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+        val testIntroHelper = spyk(IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, testDispatcher))
+        val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+        coEvery { httpHelper.getYouTubeVideoTitle(url) } throws RuntimeException("API error")
+
+        testIntroHelper.handleUrl(event, userDto, "TestUser", 10, URI.create(url), 70, null)
+        advanceUntilIdle()
+
+        verify {
+            testIntroHelper.persistMusicUrl(
+                event, userDto, 10, url, url, "TestUser", 70, null
+            )
+        }
+    }
+
+    // saveUserMusicDto — displayName sets fileName
+
+    @Test
+    fun `saveUserMusicDto uses displayName as fileName when provided`() {
+        val user = mockk<User>(relaxed = true)
+        val guild = mockk<Guild>(relaxed = true)
+        val inputData = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        val slot = slot<MusicDto>()
+
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns mockk {
+            every { guildId } returns guild.idLong
+            every { discordId } returns 1234L
+        }
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+
+        introHelper.saveUserMusicDto(user, guild, inputData, 70, "Never Gonna Give You Up")
+
+        assertEquals("Never Gonna Give You Up", slot.captured.fileName)
+    }
+
+    @Test
+    fun `saveUserMusicDto uses URL as fileName when displayName not provided`() {
+        val user = mockk<User>(relaxed = true)
+        val guild = mockk<Guild>(relaxed = true)
+        val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val inputData = InputData.Url(url)
+        val slot = slot<MusicDto>()
+
+        every { userDtoHelper.calculateUserDto(any(), any()) } returns mockk {
+            every { guildId } returns guild.idLong
+            every { discordId } returns 1234L
+        }
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+
+        introHelper.saveUserMusicDto(user, guild, inputData, 70)
+
+        assertEquals(url, slot.captured.fileName)
+        assertNull(slot.captured.musicBlob?.let { String(it) }?.takeIf { it != url })
     }
 }

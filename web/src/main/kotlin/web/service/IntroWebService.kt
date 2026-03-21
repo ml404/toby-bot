@@ -53,9 +53,25 @@ class IntroWebService(
             ?: UserDto(discordId = discordId, guildId = guildId).also { userService.createNewUser(it) }
     }
 
-    fun getUserIntros(discordId: Long, guildId: Long): List<MusicDto> {
+    fun getUserIntros(discordId: Long, guildId: Long): List<IntroViewModel> {
         val user = userService.getUserById(discordId, guildId) ?: return emptyList()
-        return user.musicDtos.sortedBy { it.index }
+        return user.musicDtos.sortedBy { it.index }.map { dto ->
+            val blobAsString = dto.musicBlob?.let { String(it) }.orEmpty()
+            val url = blobAsString.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+            val displayName = if (url != null && dto.fileName?.startsWith("http") == true) {
+                // Legacy record: fileName was stored as the raw URL instead of a title.
+                // Look up the video title and lazily migrate the record.
+                val title = getYouTubeVideoTitle(url)
+                if (title != null) {
+                    dto.fileName = title
+                    musicFileService.updateMusicFile(dto)
+                }
+                title ?: dto.fileName
+            } else {
+                dto.fileName
+            }
+            IntroViewModel(dto.id.orEmpty(), dto.index, displayName, dto.introVolume, url)
+        }
     }
 
     fun setIntroByUrl(discordId: Long, guildId: Long, url: String, volume: Int, replaceIndex: Int?): String? {
@@ -68,17 +84,20 @@ class IntroWebService(
             return "You already have $MAX_INTRO_COUNT intros. Please select one to replace."
         }
 
+        val title = getYouTubeVideoTitle(url)
+        val displayName = title ?: url
+        val urlBytes = url.toByteArray()
         val selectedDto = replaceIndex?.let { idx -> existingIntros.find { it.index == idx } }
 
         if (selectedDto != null) {
-            selectedDto.fileName = url
-            selectedDto.musicBlob = null
-            selectedDto.musicBlobHash = null
+            selectedDto.fileName = displayName
+            selectedDto.musicBlob = urlBytes
+            selectedDto.musicBlobHash = MusicDto.computeHash(urlBytes)
             selectedDto.introVolume = volume
             musicFileService.updateMusicFile(selectedDto)
         } else {
             val newIndex = existingIntros.size + 1
-            val newDto = MusicDto(user, newIndex, url, volume, null)
+            val newDto = MusicDto(user, newIndex, displayName, volume, urlBytes)
             musicFileService.createNewMusicFile(newDto)
         }
 
@@ -130,6 +149,26 @@ class IntroWebService(
         return null
     }
 
+    fun getYouTubeVideoTitle(url: String): String? {
+        val videoId = extractVideoId(url) ?: return null
+        val apiKey = System.getenv("YOUTUBE_API_KEY") ?: return null
+        return try {
+            val apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=snippet&key=$apiKey"
+            val connection = URL(apiUrl).openConnection() as HttpURLConnection
+            if (connection.responseCode != 200) return null
+            val body = connection.inputStream.bufferedReader().readText()
+            objectMapper.readTree(body).path("items").firstOrNull()?.path("snippet")?.path("title")?.asText()
+                ?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun extractVideoId(url: String): String? {
+        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/)([^#&?\\n]+)")
+        return regex.find(url)?.value
+    }
+
     private fun isValidUrl(url: String): Boolean {
         return try {
             URI(url).toURL()
@@ -139,6 +178,14 @@ class IntroWebService(
         }
     }
 }
+
+data class IntroViewModel(
+    val id: String,
+    val index: Int?,
+    val fileName: String?,
+    val introVolume: Int?,
+    val url: String?
+)
 
 data class GuildInfo(
     val id: String,

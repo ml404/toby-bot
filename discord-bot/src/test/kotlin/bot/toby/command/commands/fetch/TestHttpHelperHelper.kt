@@ -3,9 +3,12 @@ package bot.toby.command.commands.fetch
 import bot.toby.helpers.HttpHelper
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.Json
 
 object TestHttpHelperHelper {
     //GET requests
@@ -28,6 +31,18 @@ object TestHttpHelperHelper {
         """{"count":1,"results":[{"index":"blinded","name":"Blinded","url":"/api/conditions/blinded"}]}"""
     const val ERROR_NOT_FOUND_RESPONSE = """{"error":"Not found"}"""
     const val EMPTY_QUERY_RESPONSE = """{"count":0,"results":[]}"""
+
+    // YouTube snippet API constants
+    const val YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    const val YOUTUBE_SNIPPET_API_URL = "https://www.googleapis.com/youtube/v3/videos?id=dQw4w9WgXcQ&part=snippet&key=null"
+    const val YOUTUBE_SNIPPET_RESPONSE = """{"items":[{"snippet":{"title":"Never Gonna Give You Up"}}]}"""
+    const val YOUTUBE_SNIPPET_EMPTY_RESPONSE = """{"items":[]}"""
+    const val YOUTUBE_SNIPPET_NULL_ITEMS_RESPONSE = """{"items":null}"""
+
+    // Persona vibes video
+    const val PERSONA_VIDEO_URL = "https://www.youtube.com/watch?v=_cPeDB-EQ8U"
+    const val PERSONA_SNIPPET_API_URL = "https://www.googleapis.com/youtube/v3/videos?id=_cPeDB-EQ8U&part=snippet&key=null"
+    const val PERSONA_SNIPPET_RESPONSE = """{"items":[{"snippet":{"title":"WOW. THIS IS GIVING ME MAJOR PERSONA VIBES."}}]}"""
 
 
 
@@ -70,6 +85,33 @@ object TestHttpHelperHelper {
         val client = HttpClient(mockEngine)
 
         // Create an instance of HttpHelper
+        return HttpHelper(client, dispatcher)
+    }
+
+    fun createYouTubeMockHttpClient(
+        snippetUrl: String = YOUTUBE_SNIPPET_API_URL,
+        snippetResponse: String = YOUTUBE_SNIPPET_RESPONSE,
+        responseStatus: HttpStatusCode = HttpStatusCode.OK,
+        dispatcher: CoroutineDispatcher = Dispatchers.IO
+    ): HttpHelper {
+        val mockEngine = MockEngine { request ->
+            when (request.url.toString()) {
+                snippetUrl -> respond(
+                    content = snippetResponse,
+                    status = responseStatus,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                )
+                else -> respond(
+                    content = ERROR_NOT_FOUND_RESPONSE,
+                    status = HttpStatusCode.NotFound
+                )
+            }
+        }
+        val client = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
         return HttpHelper(client, dispatcher)
     }
 }

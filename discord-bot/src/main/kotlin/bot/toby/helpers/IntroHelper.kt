@@ -166,16 +166,19 @@ class IntroHelper(
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling URL inside intro helper..." }
         val urlString = uri.toString().convertShortsUrls()
-        persistMusicUrl(
-            event,
-            requestingUserDto,
-            deleteDelay,
-            urlString,
-            urlString,
-            userName,
-            introVolume,
-            selectedMusicDto
-        )
+        coroutineScope.launch {
+            val title = runCatching { httpHelper.getYouTubeVideoTitle(urlString) }.getOrNull()
+            persistMusicUrl(
+                event,
+                requestingUserDto,
+                deleteDelay,
+                title ?: urlString,
+                urlString,
+                userName,
+                introVolume,
+                selectedMusicDto
+            )
+        }
     }
 
     fun String.convertShortsUrls() = this.replace("/shorts/", "/watch?v=" )
@@ -400,12 +403,19 @@ class IntroHelper(
         logger.info("User provided a URL: $content")
 
         // Validate the intro length asynchronously
-        validateIntroLength(content) { isOverLimit ->
-            if (isOverLimit) {
+        coroutineScope.launch {
+            try {
+                val isOverLimit = checkForOverlyLongIntroDuration(content)
+                if (isOverLimit) {
+                    handleOverLimitIntro(channel, event.author, guild)
+                } else {
+                    val title = runCatching { httpHelper.getYouTubeVideoTitle(content) }.getOrNull()
+                    val inputData = InputData.Url(isUrl(content))
+                    saveUserMusicDto(event.author, guild, inputData, parseVolume(content), title)
+                }
+            } catch (_: Exception) {
+                logger.error { "Error checking intro length for '$content'" }
                 handleOverLimitIntro(channel, event.author, guild)
-            } else {
-                val inputData = InputData.Url(isUrl(content))
-                saveUserMusicDto(event.author, guild, inputData, parseVolume(content))
             }
         }
     }
@@ -456,12 +466,13 @@ class IntroHelper(
     }
 
     @VisibleForTesting
-    fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?) {
+    fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?, displayName: String? = null) {
         // Save the musicDto for the user with the provided URL and volume
         logger.info("Constructing musicDto from input ...")
         val requestingUserDto = userDtoHelper.calculateUserDto(user.idLong, guild.idLong)
+        val fileName = displayName ?: determineFileName(inputData)
         // Logic to save the musicDto in the database
-        val musicDto = MusicDto(requestingUserDto, 1, determineFileName(inputData), volume ?: 90, determineMusicBlob(inputData))
+        val musicDto = MusicDto(requestingUserDto, 1, fileName, volume ?: 90, determineMusicBlob(inputData))
         createIntro(musicDto)
         logger.info { "User successfully uploaded intro as a result of the prompt!" }
         user.openPrivateChannel().queue { channel ->

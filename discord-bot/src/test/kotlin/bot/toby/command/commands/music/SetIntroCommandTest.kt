@@ -57,6 +57,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         every { event.getOption("link") } returns mockk { every { asString } returns "https://www.youtube.com/" }
         every { event.getOption("users")?.mentions } returns mockk { every { members } returns emptyList() }
         coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 15.seconds
+        coEvery { httpHelper.getYouTubeVideoTitle(any()) } returns null
     }
 
     @AfterEach

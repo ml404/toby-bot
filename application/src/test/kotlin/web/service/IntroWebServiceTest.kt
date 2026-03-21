@@ -8,6 +8,8 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.Runs
+import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.unmockkAll
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
@@ -94,7 +96,82 @@ class IntroWebServiceTest {
         }
         every { userService.getUserById(discordId, guildId) } returns user
 
-        assertEquals(listOf(intro1, intro2), service.getUserIntros(discordId, guildId))
+        val result = service.getUserIntros(discordId, guildId)
+        assertEquals(2, result.size)
+        assertEquals(intro1.id, result[0].id)
+        assertEquals(intro1.fileName, result[0].fileName)
+        assertEquals(intro2.id, result[1].id)
+        assertEquals(intro2.fileName, result[1].fileName)
+        assertTrue(result.all { it.url == null }) // file-based intros have no URL
+    }
+
+    @Test
+    fun `getUserIntros migrates legacy record where fileName is raw URL by looking up title`() {
+        val youtubeUrl = "https://www.youtube.com/watch?v=_cPeDB-EQ8U"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = youtubeUrl,
+            musicBlob = youtubeUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+        every { musicFileService.updateMusicFile(any()) } returns mockk()
+        val spyService = spyk(service)
+        every { spyService.getYouTubeVideoTitle(youtubeUrl) } returns "My Video Title"
+
+        val result = spyService.getUserIntros(discordId, guildId)
+
+        assertEquals(1, result.size)
+        assertEquals("My Video Title", result[0].fileName)
+        assertEquals(youtubeUrl, result[0].url)
+        verify { musicFileService.updateMusicFile(match { it.fileName == "My Video Title" }) }
+    }
+
+    @Test
+    fun `getUserIntros falls back to URL as display name when title lookup fails for legacy record`() {
+        val youtubeUrl = "https://www.youtube.com/watch?v=_cPeDB-EQ8U"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = youtubeUrl,
+            musicBlob = youtubeUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+        val spyService = spyk(service)
+        every { spyService.getYouTubeVideoTitle(youtubeUrl) } returns null
+
+        val result = spyService.getUserIntros(discordId, guildId)
+
+        assertEquals(1, result.size)
+        assertEquals(youtubeUrl, result[0].fileName)
+        assertEquals(youtubeUrl, result[0].url)
+        verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
+    }
+
+    @Test
+    fun `getUserIntros exposes url field for URL-based intros`() {
+        val youtubeUrl = "https://www.youtube.com/watch?v=_cPeDB-EQ8U"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "WOW. THIS IS GIVING ME MAJOR PERSONA VIBES.",
+            musicBlob = youtubeUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val result = service.getUserIntros(discordId, guildId)
+        assertEquals(1, result.size)
+        assertEquals("WOW. THIS IS GIVING ME MAJOR PERSONA VIBES.", result[0].fileName)
+        assertEquals(youtubeUrl, result[0].url)
     }
 
     // setIntroByUrl
@@ -199,5 +276,61 @@ class IntroWebServiceTest {
 
         assertNull(service.deleteIntro(discordId, guildId, "${guildId}_${discordId}_1"))
         verify { musicFileService.deleteMusicFileById("${guildId}_${discordId}_1") }
+    }
+
+    // getYouTubeVideoTitle
+
+    @Test
+    fun `getYouTubeVideoTitle returns null when no YouTube video ID found`() {
+        assertNull(service.getYouTubeVideoTitle("not-a-url"))
+        assertNull(service.getYouTubeVideoTitle("https://example.com/audio.mp3"))
+    }
+
+    // setIntroByUrl — title stored as fileName
+
+    @Test
+    fun `setIntroByUrl stores title as fileName when available`() {
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+        val spyService = spyk(service)
+        every { spyService.getYouTubeVideoTitle(any()) } returns "My Video Title"
+
+        val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null)
+
+        assertNull(error)
+        assertEquals("My Video Title", slot.captured.fileName)
+    }
+
+    @Test
+    fun `setIntroByUrl falls back to URL as fileName when title lookup returns null`() {
+        val url = "https://example.com/audio.mp3"
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+        val spyService = spyk(service)
+        every { spyService.getYouTubeVideoTitle(any()) } returns null
+
+        val error = spyService.setIntroByUrl(discordId, guildId, url, 90, null)
+
+        assertNull(error)
+        assertEquals(url, slot.captured.fileName)
+    }
+
+    @Test
+    fun `setIntroByUrl stores URL in musicBlob for playback`() {
+        val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+        val spyService = spyk(service)
+        every { spyService.getYouTubeVideoTitle(any()) } returns "Never Gonna Give You Up"
+
+        spyService.setIntroByUrl(discordId, guildId, url, 90, null)
+
+        assertEquals(url, slot.captured.musicBlob?.let { String(it) })
     }
 }
