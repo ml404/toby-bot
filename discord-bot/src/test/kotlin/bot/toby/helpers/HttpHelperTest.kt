@@ -12,7 +12,14 @@ import bot.toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RES
 import bot.toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_URL
 import bot.toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_RESPONSE
 import bot.toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_URL
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.PERSONA_SNIPPET_API_URL
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.PERSONA_SNIPPET_RESPONSE
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.PERSONA_VIDEO_URL
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.YOUTUBE_SNIPPET_EMPTY_RESPONSE
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.YOUTUBE_SNIPPET_NULL_ITEMS_RESPONSE
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.YOUTUBE_VIDEO_URL
 import bot.toby.command.commands.fetch.TestHttpHelperHelper.createMockHttpClient
+import bot.toby.command.commands.fetch.TestHttpHelperHelper.createYouTubeMockHttpClient
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -175,5 +182,43 @@ internal class HttpHelperTest {
         val httpClient = createMockHttpClient()
         val result = httpClient.parseIso8601Duration(duration)
         assertEquals(0.seconds, result)
+    }
+
+    @Test
+    fun `getYouTubeVideoTitle returns title for valid YouTube URL`() = runBlocking {
+        val httpClient = createYouTubeMockHttpClient()
+        val result = httpClient.getYouTubeVideoTitle(YOUTUBE_VIDEO_URL)
+        assertEquals("Never Gonna Give You Up", result)
+    }
+
+    @Test
+    fun `getYouTubeVideoTitle returns null for non-YouTube URL`() = runBlocking {
+        val httpClient = createYouTubeMockHttpClient()
+        val result = httpClient.getYouTubeVideoTitle("https://example.com/audio.mp3")
+        assertNull(result)
+    }
+
+    @Test
+    fun `getYouTubeVideoTitle returns null when items list is empty`() = runBlocking {
+        val httpClient = createYouTubeMockHttpClient(snippetResponse = YOUTUBE_SNIPPET_EMPTY_RESPONSE)
+        val result = httpClient.getYouTubeVideoTitle(YOUTUBE_VIDEO_URL)
+        assertNull(result)
+    }
+
+    @Test
+    fun `getYouTubeVideoTitle returns null when items is null`() = runBlocking {
+        val httpClient = createYouTubeMockHttpClient(snippetResponse = YOUTUBE_SNIPPET_NULL_ITEMS_RESPONSE)
+        val result = httpClient.getYouTubeVideoTitle(YOUTUBE_VIDEO_URL)
+        assertNull(result)
+    }
+
+    @Test
+    fun `getYouTubeVideoTitle returns title for Persona vibes video URL`() = runBlocking {
+        val httpClient = createYouTubeMockHttpClient(
+            snippetUrl = PERSONA_SNIPPET_API_URL,
+            snippetResponse = PERSONA_SNIPPET_RESPONSE
+        )
+        val result = httpClient.getYouTubeVideoTitle(PERSONA_VIDEO_URL)
+        assertEquals("WOW. THIS IS GIVING ME MAJOR PERSONA VIBES.", result)
     }
 }

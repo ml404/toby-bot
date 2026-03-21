@@ -44,6 +44,14 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
         return@withContext parseIso8601Duration(durationIso) // Return Duration
     }
 
+    suspend fun getYouTubeVideoTitle(youtubeUrl: String): String? = withContext(dispatcher) {
+        val videoId = extractVideoIdFromUrl(youtubeUrl) ?: return@withContext null
+        val apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=$videoId&part=snippet&key=$youtubeApiKey"
+        val response: HttpResponse = client.get(apiUrl)
+        val videoResponse: YouTubeVideoSnippetResponse = response.body()
+        videoResponse.items?.firstOrNull()?.snippet?.title
+    }
+
     // Function to parse ISO 8601 duration and return a Kotlin `Duration`
     fun parseIso8601Duration(duration: String): Duration? {
         // Regex to match ISO 8601 duration
@@ -76,5 +84,14 @@ class HttpHelper(private val client: HttpClient, private val dispatcher: Corouti
 
     @Serializable
     data class ContentDetails(val duration: String?)
+
+    @Serializable
+    data class YouTubeVideoSnippetResponse(val items: List<SnippetItem>?)
+
+    @Serializable
+    data class SnippetItem(val snippet: Snippet?)
+
+    @Serializable
+    data class Snippet(val title: String?)
 
 }

@@ -6,6 +6,7 @@
 /.kotlin/
 
 # Ignore build directories
+build/
 application/build/
 common/build/
 core-api/build/

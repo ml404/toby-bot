@@ -1,6 +1,5 @@
 package web.controller
 
-import database.dto.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -83,7 +82,7 @@ class IntroWebControllerTest {
 
     @Test
     fun `introPage returns intros view with model attributes`() {
-        val intros = listOf(MusicDto(index = 1, fileName = "a.mp3"))
+        val intros = listOf(web.service.IntroViewModel(id = "1_2_1", index = 1, fileName = "a.mp3", introVolume = 90, url = null))
         every { introWebService.getGuildName(guildId) } returns "Test Guild"
         every { introWebService.getUserIntros(discordId.toLong(), guildId) } returns intros
 
