@@ -33,13 +33,14 @@ class BotController(
     @GetMapping("/music")
     fun getMusicBlob(
         @RequestParam("id") id: String,
-        @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) ifNoneMatch: String?
+        @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) ifNoneMatch: String? = null
     ): ResponseEntity<ByteArray> {
         val dto = musicFileService.getMusicFileById(id) ?: return ResponseEntity.notFound().build()
         val blob = dto.musicBlob ?: return ResponseEntity.notFound().build()
 
         // Use hash as ETag when available; fall back to id.
-        val etag = "\"${dto.musicBlobHash ?: id}\""
+        val hash = runCatching { dto.musicBlobHash }.getOrNull()
+        val etag = "\"${hash ?: id}\""
         val cache = CacheControl.maxAge(1, TimeUnit.HOURS).cachePrivate().mustRevalidate()
 
         if (ifNoneMatch != null && ifNoneMatch == etag) {

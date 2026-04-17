@@ -120,7 +120,12 @@ class IntroWebServiceTest {
         every { userService.getUserById(discordId, guildId) } returns user
         every { musicFileService.updateMusicFile(any()) } returns mockk()
         val spyService = spyk(service)
-        every { spyService.getYouTubeVideoTitle(youtubeUrl) } returns "My Video Title"
+        every { spyService.fetchYouTubePreview(youtubeUrl) } returns web.service.YouTubePreview(
+            videoId = "_cPeDB-EQ8U",
+            title = "My Video Title",
+            thumbnailUrl = null,
+            durationSeconds = null
+        )
 
         val result = spyService.getUserIntros(discordId, guildId)
 
@@ -144,7 +149,7 @@ class IntroWebServiceTest {
         }
         every { userService.getUserById(discordId, guildId) } returns user
         val spyService = spyk(service)
-        every { spyService.getYouTubeVideoTitle(youtubeUrl) } returns null
+        every { spyService.fetchYouTubePreview(youtubeUrl) } returns null
 
         val result = spyService.getUserIntros(discordId, guildId)
 
@@ -278,7 +283,7 @@ class IntroWebServiceTest {
         verify { musicFileService.deleteMusicFileById("${guildId}_${discordId}_1") }
     }
 
-    // getYouTubeVideoTitle
+    // getYouTubeVideoTitle (back-compat)
 
     @Test
     fun `getYouTubeVideoTitle returns null when no YouTube video ID found`() {
@@ -286,7 +291,7 @@ class IntroWebServiceTest {
         assertNull(service.getYouTubeVideoTitle("https://example.com/audio.mp3"))
     }
 
-    // setIntroByUrl — title stored as fileName
+    // setIntroByUrl — title stored as fileName via fetchYouTubePreview
 
     @Test
     fun `setIntroByUrl stores title as fileName when available`() {
@@ -295,7 +300,12 @@ class IntroWebServiceTest {
         val slot = slot<MusicDto>()
         every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
         val spyService = spyk(service)
-        every { spyService.getYouTubeVideoTitle(any()) } returns "My Video Title"
+        every { spyService.fetchYouTubePreview(any()) } returns web.service.YouTubePreview(
+            videoId = "dQw4w9WgXcQ",
+            title = "My Video Title",
+            thumbnailUrl = null,
+            durationSeconds = null
+        )
 
         val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null)
 
@@ -304,14 +314,14 @@ class IntroWebServiceTest {
     }
 
     @Test
-    fun `setIntroByUrl falls back to URL as fileName when title lookup returns null`() {
+    fun `setIntroByUrl falls back to URL as fileName when preview returns null`() {
         val url = "https://example.com/audio.mp3"
         val user = UserDto(discordId = discordId, guildId = guildId)
         every { userService.getUserById(discordId, guildId) } returns user
         val slot = slot<MusicDto>()
         every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
         val spyService = spyk(service)
-        every { spyService.getYouTubeVideoTitle(any()) } returns null
+        every { spyService.fetchYouTubePreview(any()) } returns null
 
         val error = spyService.setIntroByUrl(discordId, guildId, url, 90, null)
 
@@ -327,10 +337,101 @@ class IntroWebServiceTest {
         val slot = slot<MusicDto>()
         every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
         val spyService = spyk(service)
-        every { spyService.getYouTubeVideoTitle(any()) } returns "Never Gonna Give You Up"
+        every { spyService.fetchYouTubePreview(any()) } returns web.service.YouTubePreview(
+            videoId = "dQw4w9WgXcQ",
+            title = "Never Gonna Give You Up",
+            thumbnailUrl = null,
+            durationSeconds = null
+        )
 
         spyService.setIntroByUrl(discordId, guildId, url, 90, null)
 
         assertEquals(url, slot.captured.musicBlob?.let { String(it) })
     }
+
+    @Test
+    fun `setIntroByUrl returns error when YouTube video exceeds duration limit`() {
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        val spyService = spyk(service)
+        every { spyService.fetchYouTubePreview(any()) } returns web.service.YouTubePreview(
+            videoId = "dQw4w9WgXcQ",
+            title = "Long video",
+            thumbnailUrl = null,
+            durationSeconds = 30
+        )
+
+        val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null)
+
+        assertNotNull(error)
+        assertTrue(error!!.contains("too long"))
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+    }
+
+    // updateIntroVolume
+
+    @Test
+    fun `updateIntroVolume returns error when introId does not match prefix`() {
+        assertEquals("Intro does not belong to you.", service.updateIntroVolume(discordId, guildId, "999_000_1", 50))
+    }
+
+    @Test
+    fun `updateIntroVolume returns error when intro not found`() {
+        every { musicFileService.getMusicFileById(any()) } returns null
+        assertEquals("Intro not found.", service.updateIntroVolume(discordId, guildId, "${guildId}_${discordId}_1", 50))
+    }
+
+    @Test
+    fun `updateIntroVolume clamps and persists`() {
+        val dto = MusicDto(id = "${guildId}_${discordId}_1", index = 1, fileName = "a.mp3", introVolume = 50)
+        every { musicFileService.getMusicFileById(any()) } returns dto
+        every { musicFileService.updateMusicFile(any()) } returns dto
+
+        assertNull(service.updateIntroVolume(discordId, guildId, "${guildId}_${discordId}_1", 150))
+        assertEquals(100, dto.introVolume)
+    }
+
+    // updateIntroName
+
+    @Test
+    fun `updateIntroName rejects empty name`() {
+        assertEquals("Name cannot be empty.", service.updateIntroName(discordId, guildId, "${guildId}_${discordId}_1", "  "))
+    }
+
+    @Test
+    fun `updateIntroName rejects ownership mismatch`() {
+        assertEquals("Intro does not belong to you.", service.updateIntroName(discordId, guildId, "999_000_1", "Ok"))
+    }
+
+    @Test
+    fun `updateIntroName persists trimmed name`() {
+        val dto = MusicDto(id = "${guildId}_${discordId}_1", index = 1, fileName = "old.mp3")
+        every { musicFileService.getMusicFileById(any()) } returns dto
+        every { musicFileService.updateMusicFile(any()) } returns dto
+
+        assertNull(service.updateIntroName(discordId, guildId, "${guildId}_${discordId}_1", "  New Name  "))
+        assertEquals("New Name", dto.fileName)
+    }
+
+    // reorderIntros
+
+    @Test
+    fun `reorderIntros rejects ids from another user`() {
+        assertEquals(
+            "One or more intros do not belong to you.",
+            service.reorderIntros(discordId, guildId, listOf("999_000_1"))
+        )
+    }
+
+    @Test
+    fun `reorderIntros rejects mismatched id set`() {
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(MusicDto(id = "${guildId}_${discordId}_1", index = 1))
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val error = service.reorderIntros(discordId, guildId, listOf("${guildId}_${discordId}_2"))
+        assertNotNull(error)
+    }
 }
+

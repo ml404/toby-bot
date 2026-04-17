@@ -83,7 +83,18 @@ class IntroWebService(
         return user.musicDtos.sortedBy { it.index }.map { dto ->
             val blobAsString = dto.musicBlob?.let { String(it) }.orEmpty()
             val url = blobAsString.takeIf { it.startsWith("http://") || it.startsWith("https://") }
-            val displayName = dto.fileName
+            val displayName = if (url != null && dto.fileName?.startsWith("http") == true) {
+                // Legacy record: fileName was stored as the raw URL instead of a title.
+                // Look up the video title and lazily migrate the record.
+                val title = getYouTubeVideoTitle(url)
+                if (title != null) {
+                    dto.fileName = title
+                    musicFileService.updateMusicFile(dto)
+                }
+                title ?: dto.fileName
+            } else {
+                dto.fileName
+            }
             val thumbnailUrl = url?.let { extractVideoId(it) }?.let { "https://img.youtube.com/vi/$it/mqdefault.jpg" }
             IntroViewModel(dto.id.orEmpty(), dto.index, displayName, dto.introVolume, url, thumbnailUrl)
         }
@@ -261,6 +272,12 @@ class IntroWebService(
             )
         }
     }
+
+    /**
+     * Back-compat helper used by legacy tests. Returns the YouTube video title or null.
+     * New code should prefer [fetchYouTubePreview] which also returns thumbnail + duration.
+     */
+    fun getYouTubeVideoTitle(url: String): String? = fetchYouTubePreview(url)?.title
 
     private fun extractVideoId(url: String): String? {
         val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/)([^#&?\\n]+)")
