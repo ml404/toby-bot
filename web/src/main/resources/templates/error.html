@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Error', null)}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <div class="card" style="text-align:center;">
+        <h1 style="margin-bottom: 12px;">Something went wrong</h1>
+        <p class="muted mb-5">
+            <span th:if="${status != null}" th:text="'Error ' + ${status}">Error</span>
+            <span th:if="${error != null}" th:text="' — ' + ${error}"></span>
+        </p>
+        <p th:if="${message != null and !#strings.isEmpty(message)}" class="mb-5" th:text="${message}"></p>
+        <div class="flex-gap-3" style="justify-content:center;">
+            <a href="/" class="btn btn-secondary">Home</a>
+            <a href="/intro/guilds" class="btn">Intro Songs</a>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>
