@@ -1,99 +1,139 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TobyBot - Select a Server</title>
-    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
-    <link rel="stylesheet" th:href="@{/css/nav.css}">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-        .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
-        h1 { font-size: 1.6rem; margin-bottom: 8px; color: #fff; }
-        .subtitle { color: #a0a0b0; margin-bottom: 32px; }
-        .error {
-            background: #4a1a1a;
-            border: 1px solid #c0392b;
-            color: #e74c3c;
-            padding: 10px 16px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .guild-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        .guild-card {
-            background: #16213e;
-            border: 1px solid #2a2a4a;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            text-decoration: none;
-            color: #e0e0e0;
-            transition: border-color 0.2s, transform 0.1s;
-            display: block;
-        }
-        .guild-card:hover { border-color: #5865F2; transform: translateY(-2px); }
-        .guild-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            margin: 0 auto 12px;
-            display: block;
-        }
-        .guild-icon-placeholder {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: #5865F2;
-            color: #fff;
-            font-size: 1.5rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 12px;
-        }
-        .guild-name { font-weight: 600; font-size: 0.95rem; }
-        .empty { color: #a0a0b0; text-align: center; padding: 48px 0; }
-    </style>
-</head>
+<head th:replace="~{fragments/head :: head('TobyBot - Select a Server', null)}"></head>
 <body>
+<a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-<div class="container">
-    <h1>Select a Server</h1>
-    <p class="subtitle">Servers where both you and TobyBot are present.</p>
+<style>
+    .guild-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: var(--space-4);
+    }
+    .guild-card {
+        position: relative;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        text-align: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: border-color 0.15s, transform 0.1s;
+        display: block;
+    }
+    .guild-card:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--text); }
+    .guild-icon, .guild-icon-placeholder {
+        width: 64px; height: 64px; border-radius: 50%;
+        margin: 0 auto 12px; display: block;
+    }
+    .guild-icon-placeholder {
+        background: var(--accent);
+        color: #fff;
+        font-size: 1.5rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .guild-name {
+        font-weight: 600; font-size: 0.95rem;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .guild-count {
+        position: absolute;
+        top: 10px; right: 10px;
+        background: var(--border);
+        color: var(--text-muted);
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+    .guild-count.has-intros { background: var(--accent-soft); color: var(--accent); }
+    .guild-count.full { background: rgba(231, 76, 60, 0.12); color: var(--danger); }
 
-    <div th:if="${error}" class="error" th:text="${error}"></div>
+    .search-row {
+        display: flex;
+        gap: var(--space-3);
+        margin-bottom: var(--space-5);
+        align-items: center;
+    }
+    .search-row input { flex: 1; max-width: 420px; }
+    .empty-hero {
+        background: var(--bg-elevated);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-lg);
+        padding: 48px 24px;
+        text-align: center;
+        color: var(--text-muted);
+    }
+    .empty-hero h2 { color: var(--text); margin-bottom: 10px; }
+    .empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
+    .no-results { color: var(--text-muted); padding: 24px; text-align: center; display: none; }
+</style>
 
-    <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+<main id="main" class="container">
+    <h1 class="mb-3">Select a Server</h1>
+    <p class="muted mb-5">Servers where both you and TobyBot are present.</p>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="search-row" th:if="${not #lists.isEmpty(guilds)}">
+        <input type="search" id="guildSearch" placeholder="Search servers…"
+               aria-label="Search servers" autocomplete="off">
+        <span class="muted" th:text="${#lists.size(guilds)} + ' server' + (${#lists.size(guilds)} == 1 ? '' : 's')">0 servers</span>
+    </div>
+
+    <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}" id="guildGrid">
         <a class="guild-card"
            th:each="guild : ${guilds}"
-           th:href="@{/intro/{id}(id=${guild.id})}">
+           th:href="@{/intro/{id}(id=${guild.id})}"
+           th:attr="data-guild-name=${#strings.toLowerCase(guild.name)}">
+            <span class="guild-count"
+                  th:with="count=${introCounts[guild.id] ?: 0}"
+                  th:classappend="${count >= maxIntros ? ' full' : (count > 0 ? ' has-intros' : '')}"
+                  th:text="${count} + ' / ' + ${maxIntros}">0 / 3</span>
             <img th:if="${guild.iconUrl != null}"
                  th:src="${guild.iconUrl}"
-                 th:alt="${guild.name}"
-                 class="guild-icon">
+                 th:alt="${guild.name} + ' icon'"
+                 class="guild-icon"
+                 onerror="this.style.display='none'">
             <div th:unless="${guild.iconUrl != null}"
                  class="guild-icon-placeholder"
+                 aria-hidden="true"
                  th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
-            <div class="guild-name" th:text="${guild.name}">Guild Name</div>
+            <div class="guild-name" th:text="${guild.name}" th:title="${guild.name}">Guild Name</div>
         </a>
     </div>
 
-    <div class="empty" th:if="${#lists.isEmpty(guilds)}">
-        <p>You are not in any servers where TobyBot is active.</p>
+    <p id="noResults" class="no-results">No servers match your search.</p>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">🤖</span>
+        <h2>TobyBot isn't in any of your servers yet</h2>
+        <p class="mb-5">Invite the bot to get started with intros, music, and more.</p>
+        <a th:href="${inviteUrl}" class="btn" target="_blank" rel="noopener">Invite TobyBot</a>
     </div>
-</div>
+</main>
+
+<script>
+    (function () {
+        const search = document.getElementById('guildSearch');
+        const grid = document.getElementById('guildGrid');
+        const noResults = document.getElementById('noResults');
+        if (!search || !grid) return;
+        search.addEventListener('input', function () {
+            const q = search.value.trim().toLowerCase();
+            let visible = 0;
+            grid.querySelectorAll('.guild-card').forEach(card => {
+                const name = card.dataset.guildName || '';
+                const match = !q || name.indexOf(q) !== -1;
+                card.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = visible === 0 ? 'block' : 'none';
+        });
+    })();
+</script>
 <script th:src="@{/js/home.js}"></script>
 </body>
 </html>

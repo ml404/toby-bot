@@ -1,228 +1,236 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="'TobyBot - ' + ${guildName}">TobyBot - Intros</title>
-    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
-    <link rel="stylesheet" th:href="@{/css/nav.css}">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-        .container { max-width: 800px; margin: 40px auto; padding: 0 24px; }
-        h1 { font-size: 1.6rem; margin-bottom: 32px; color: #fff; }
-        h2 { font-size: 1.1rem; margin-bottom: 16px; color: #c0c0d0; }
-        section { margin-bottom: 40px; }
-        .alert {
-            padding: 10px 16px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-        .alert-error { background: #4a1a1a; border: 1px solid #c0392b; color: #e74c3c; }
-        .alert-success { background: #1a4a2a; border: 1px solid #27ae60; color: #2ecc71; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #2a2a4a; }
-        th { color: #a0a0b0; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-        td { font-size: 0.95rem; }
-        .btn-play {
-            background: transparent;
-            border: 1px solid #5865F2;
-            color: #5865F2;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: background 0.2s, color 0.2s;
-        }
-        .btn-play:hover { background: #5865F2; color: #fff; }
-        .btn-play.playing { border-color: #e74c3c; color: #e74c3c; }
-        .btn-play.playing:hover { background: #e74c3c; color: #fff; }
-        .btn-link { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; }
-        .btn-link:hover { color: #fff; }
-        .btn-delete {
-            background: transparent;
-            border: 1px solid #c0392b;
-            color: #e74c3c;
-            padding: 5px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: background 0.2s;
-        }
-        .btn-delete:hover { background: #c0392b; color: #fff; }
-        .form-card {
-            background: #16213e;
-            border: 1px solid #2a2a4a;
-            border-radius: 10px;
-            padding: 24px;
-        }
-        .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: #a0a0b0; }
-        input[type=url], input[type=file], input[type=number], select {
-            width: 100%;
-            background: #1a1a2e;
-            border: 1px solid #3a3a5a;
-            color: #e0e0e0;
-            padding: 10px 12px;
-            border-radius: 6px;
-            font-size: 0.95rem;
-        }
-        input[type=url]:focus, input[type=number]:focus, select:focus {
-            outline: none;
-            border-color: #5865F2;
-        }
-        .radio-group { display: flex; gap: 24px; }
-        .radio-group label { display: flex; align-items: center; gap: 8px; color: #e0e0e0; cursor: pointer; margin: 0; }
-        .btn-submit {
-            background: #5865F2;
-            color: #fff;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-submit:hover { background: #4752c4; }
-        .empty { color: #a0a0b0; font-style: italic; }
-        .hint { font-size: 0.8rem; color: #666; margin-top: 4px; }
-    </style>
-</head>
-<body>
+<head th:replace="~{fragments/head :: head('TobyBot - ' + ${guildName}, '/css/intros.css')}"></head>
+<body th:attr="
+        data-intro-page='1',
+        data-guild-id=${guildId},
+        data-target-discord-id=${targetDiscordId != null ? targetDiscordId : ''},
+        data-max-file-kb=${maxFileKb},
+        data-max-duration-seconds=${maxDurationSeconds}">
+
+<a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-<div class="container">
-    <h1>Intro Songs — <span th:text="${guildName}">Server</span></h1>
+<!-- Flash messages rendered invisibly; intros.js picks them up as toasts on load -->
+<div th:if="${success}" data-flash="success" th:attr="data-undo=${undoDelete != null ? 'true' : 'false'}"
+     class="sr-only" th:text="${success}"></div>
+<div th:if="${error}" data-flash="error" class="sr-only" th:text="${error}"></div>
 
-    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+<!-- Undo form used by the toast "Undo" action button (no JS, keeps CSRF flow) -->
+<form id="undo-form" style="display:none" method="post"
+      th:if="${undoDelete}"
+      th:action="@{/intro/{gid}/undo-delete(gid=${guildId})}">
+    <input type="hidden" name="targetDiscordId" th:value="${targetDiscordId}" th:if="${targetDiscordId != null}">
+</form>
+
+<main id="main" class="container">
+
+    <div class="intro-header">
+        <h1>Intro Songs — <span th:text="${guildName}">Server</span></h1>
+        <span class="slot-count"
+              th:classappend="${atLimit} ? ' full'"
+              th:text="${intros.size()} + ' / ' + ${maxIntros} + ' slots'">0 / 3 slots</span>
+    </div>
+
+    <p class="random-note">
+        When you join a voice channel, TobyBot randomly picks one of your intros.
+        Keep duration short (≤ <span th:text="${maxDurationSeconds}">15</span>s) for a clean join sound.
+    </p>
+
+    <!-- Super-user: manage another member -->
+    <section th:if="${isSuperUser}" class="member-picker-card" aria-labelledby="manage-for">
+        <div class="picker-row">
+            <label id="manage-for" for="memberSelect" style="margin:0;">Manage intros for</label>
+            <select id="memberSelect" name="memberSelect">
+                <option value="">(Yourself)</option>
+                <option th:each="m : ${members}"
+                        th:value="${m.id}"
+                        th:text="${m.name}"
+                        th:selected="${targetDiscordId != null and m.id == targetDiscordId.toString()}"></option>
+            </select>
+            <span th:if="${targetDiscordId != null}" class="target-badge">Super-user mode</span>
+        </div>
+    </section>
 
     <!-- Current intros -->
-    <section>
-        <h2>Current Intros (<span th:text="${intros.size()}">0</span> / <span th:text="${maxIntros}">3</span>)</h2>
+    <section aria-labelledby="current-h" class="mb-8">
+        <h2 id="current-h" class="mb-4">Your intros</h2>
 
-        <p class="empty" th:if="${#lists.isEmpty(intros)}">No intro songs set for this server.</p>
+        <div th:if="${#lists.isEmpty(intros)}" class="empty-hero">
+            <span class="emoji" aria-hidden="true">🎵</span>
+            <p>No intros set yet. Add one below to get started.</p>
+        </div>
 
-        <table th:unless="${#lists.isEmpty(intros)}">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Name / URL</th>
-                    <th>Volume</th>
-                    <th></th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="intro : ${intros}">
-                    <td th:text="${intro.index}">1</td>
-                    <td th:text="${intro.fileName}">intro.mp3</td>
-                    <td th:text="${intro.introVolume} + '%'">90%</td>
-                    <td>
-                        <!-- URL-based intro: open link -->
-                        <a th:if="${intro.url != null}"
-                           th:href="${intro.url}"
-                           target="_blank"
-                           class="btn-link"
-                           title="Open URL">↗</a>
-                        <!-- File-based intro: play button -->
-                        <span th:unless="${intro.url != null}">
-                            <audio th:id="'audio-' + ${intro.id}"
-                                   th:src="@{/music(id=${intro.id})}"
-                                   preload="none"></audio>
-                            <button type="button" class="btn-play"
-                                    th:data-audio-id="${'audio-' + intro.id}"
-                                    onclick="togglePlay(this)">▶</button>
-                        </span>
-                    </td>
-                    <td>
-                        <form th:action="@{/intro/{guildId}/delete/{introId}(guildId=${guildId},introId=${intro.id})}"
-                              method="post"
-                              onsubmit="return confirm('Delete this intro?')">
-                            <button type="submit" class="btn-delete">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div th:unless="${#lists.isEmpty(intros)}" class="intros-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col"><span class="sr-only">Slot</span>#</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Volume</th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody id="introsTbody">
+                    <tr th:each="intro : ${intros}" th:attr="data-intro-id=${intro.id}">
+                        <td data-label="Slot">
+                            <span class="drag-handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
+                            <span class="slot-index" th:text="${intro.index}">1</span>
+                        </td>
+                        <td data-label="Name" class="name-cell" th:attr="data-editable-name=true,data-intro-id=${intro.id}">
+                            <span th:if="${intro.thumbnailUrl != null}"
+                                  class="thumb"
+                                  th:style="'background-image:url(' + ${intro.thumbnailUrl} + ')'"
+                                  aria-hidden="true"></span>
+                            <span class="name-label" th:text="${intro.fileName}">intro.mp3</span>
+                        </td>
+                        <td data-label="Volume">
+                            <div class="volume-inline">
+                                <input type="range" min="1" max="100"
+                                       th:value="${intro.introVolume}"
+                                       th:attr="data-row-volume=true,data-intro-id=${intro.id},id='volrange-' + ${intro.id}"
+                                       th:aria-label="'Volume for ' + ${intro.fileName}">
+                                <span class="vol-value" th:text="${intro.introVolume} + '%'">90%</span>
+                            </div>
+                        </td>
+                        <td data-label="Actions" class="actions">
+                            <!-- Play or open-link -->
+                            <a th:if="${intro.url != null}"
+                               th:href="${intro.url}"
+                               target="_blank" rel="noopener"
+                               class="btn-link-icon"
+                               th:aria-label="'Open ' + ${intro.fileName} + ' in new tab'"
+                               title="Open link">↗</a>
+                            <span th:unless="${intro.url != null}">
+                                <audio th:id="'audio-' + ${intro.id}"
+                                       th:src="@{/music(id=${intro.id})}"
+                                       preload="none"></audio>
+                                <button type="button" class="btn-play"
+                                        th:attr="data-audio-id='audio-' + ${intro.id},
+                                                 data-volume=${intro.introVolume},
+                                                 aria-label='Play ' + ${intro.fileName}"
+                                        onclick="togglePlay(this)">▶</button>
+                            </span>
+
+                            <!-- Delete -->
+                            <form th:action="@{/intro/{gid}/delete/{iid}(gid=${guildId},iid=${intro.id})}"
+                                  method="post"
+                                  style="display:inline-block; margin-left:8px;">
+                                <input type="hidden" name="targetDiscordId" th:value="${targetDiscordId}" th:if="${targetDiscordId != null}">
+                                <button type="button" class="btn btn-danger btn-sm"
+                                        th:attr="data-delete-intro=true,data-intro-name=${intro.fileName}"
+                                        th:aria-label="'Delete ' + ${intro.fileName}">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 
     <!-- Add / replace form -->
-    <section>
-        <h2 th:text="${atLimit} ? 'Replace an Intro' : 'Add a New Intro'">Add Intro</h2>
+    <section class="intro-form" aria-labelledby="form-h">
+        <h2 id="form-h" class="mb-4">Add or replace an intro</h2>
 
-        <div class="form-card">
-            <form th:action="@{/intro/{guildId}/set(guildId=${guildId})}"
+        <div class="card">
+            <form id="introForm"
+                  th:action="@{/intro/{gid}/set(gid=${guildId})}"
                   method="post"
                   enctype="multipart/form-data">
 
-                <!-- Replace selector (shown only when at limit) -->
-                <div class="form-group" th:if="${atLimit}">
-                    <label for="replaceIndex">Select intro to replace</label>
-                    <select id="replaceIndex" name="replaceIndex" required>
-                        <option value="">-- Select --</option>
-                        <option th:each="intro : ${intros}"
-                                th:value="${intro.index}"
-                                th:text="'#' + ${intro.index} + ' — ' + ${intro.fileName}">
-                            #1 — intro.mp3
-                        </option>
-                    </select>
+                <input type="hidden" id="inputType" name="inputType" value="url">
+                <input type="hidden" name="targetDiscordId" th:value="${targetDiscordId}" th:if="${targetDiscordId != null}">
+
+                <!-- Slot selector: always visible, never hidden -->
+                <div class="form-group">
+                    <label for="replaceIndex">Slot</label>
+                    <div class="slot-select-row">
+                        <select id="replaceIndex" name="replaceIndex">
+                            <option value="" th:text="${atLimit} ? 'Pick a slot to replace' : '➕ New slot'"></option>
+                            <option th:each="intro : ${intros}"
+                                    th:value="${intro.index}"
+                                    th:text="'Replace slot #' + ${intro.index} + ' — ' + ${intro.fileName}"></option>
+                        </select>
+                        <span class="hint" th:if="${atLimit}">
+                            You're at <span th:text="${maxIntros}">3</span> intros — pick one to replace.
+                        </span>
+                    </div>
                 </div>
 
-                <!-- Input type toggle -->
+                <!-- Source tabs -->
                 <div class="form-group">
-                    <label>Source</label>
-                    <div class="radio-group">
-                        <label>
-                            <input type="radio" name="inputType" value="url" checked
-                                   onchange="toggleInput('url')"> URL
-                        </label>
-                        <label>
-                            <input type="radio" name="inputType" value="file"
-                                   onchange="toggleInput('file')"> File Upload
-                        </label>
+                    <label id="source-label">Source</label>
+                    <div class="segmented" role="tablist" aria-labelledby="source-label">
+                        <button type="button" class="source-tab" role="tab"
+                                data-source="url" aria-pressed="true">🔗 URL</button>
+                        <button type="button" class="source-tab" role="tab"
+                                data-source="file" aria-pressed="false">📁 File</button>
                     </div>
                 </div>
 
                 <!-- URL input -->
                 <div class="form-group" id="urlSection">
-                    <label for="url">YouTube / audio URL</label>
-                    <input type="url" id="url" name="url"
-                           placeholder="https://www.youtube.com/watch?v=...">
-                    <p class="hint">Max intro duration: 15 seconds.</p>
+                    <label for="url">YouTube or audio URL</label>
+                    <input type="url" id="url" name="url" autocomplete="off"
+                           placeholder="https://www.youtube.com/watch?v=…"
+                           aria-describedby="urlHint urlError">
+                    <p id="urlHint" class="hint">
+                        Max duration: <span th:text="${maxDurationSeconds}">15</span>s. YouTube URLs get a thumbnail preview.
+                    </p>
+                    <span id="urlError" class="field-error" role="alert"></span>
+                    <div id="urlPreview" class="url-preview" aria-live="polite"></div>
                 </div>
 
-                <!-- File upload input -->
+                <!-- File input -->
                 <div class="form-group" id="fileSection" style="display:none">
                     <label for="file">MP3 file</label>
-                    <input type="file" id="file" name="file" accept=".mp3">
-                    <p class="hint">Maximum size: 550KB.</p>
+                    <div id="dropZone" class="drop-zone" tabindex="0" role="button"
+                         aria-label="Drop MP3 file here or click to browse">
+                        <span class="drop-icon" aria-hidden="true">⬇</span>
+                        <div>Drop an MP3 here, or <strong>click to browse</strong></div>
+                        <div class="drop-hint">Max <span th:text="${maxFileKb}">550</span> KB · .mp3 only</div>
+                        <input type="file" id="file" name="file" accept=".mp3,audio/mpeg">
+                    </div>
+                    <span id="fileError" class="field-error" role="alert"></span>
+                    <div id="fileSummary" class="file-summary" style="display:none"></div>
                 </div>
+                <script>
+                    // Hide the file-summary container when empty so the border doesn't render
+                    (function(){
+                        const obs = new MutationObserver(()=>{
+                            const el = document.getElementById('fileSummary');
+                            if (!el) return;
+                            el.style.display = el.children.length ? 'flex' : 'none';
+                        });
+                        document.addEventListener('DOMContentLoaded', function(){
+                            const el = document.getElementById('fileSummary');
+                            if (el) obs.observe(el, { childList: true });
+                        });
+                    })();
+                </script>
 
                 <!-- Volume -->
                 <div class="form-group">
-                    <label for="volume">Volume (1–100)</label>
-                    <input type="number" id="volume" name="volume"
-                           min="1" max="100" value="90" style="max-width:120px">
+                    <label for="volume">Volume</label>
+                    <div class="volume-control">
+                        <input type="range" id="volume" name="volume" min="1" max="100" value="90"
+                               data-volume-slider aria-describedby="volHint">
+                        <span class="vol-value" data-volume-value-for="volume">90%</span>
+                    </div>
+                    <p id="volHint" class="hint">Live preview uses this volume. The bot will too.</p>
                 </div>
 
-                <button type="submit" class="btn-submit"
-                        th:text="${atLimit} ? 'Replace Intro' : 'Add Intro'">
-                    Add Intro
-                </button>
+                <div class="flex-gap-3" style="margin-top: 24px;">
+                    <button type="submit" id="submitBtn" class="btn"
+                            th:text="${atLimit} ? 'Replace intro' : 'Add intro'">Add intro</button>
+                </div>
             </form>
         </div>
     </section>
-</div>
+</main>
 
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/modal.js}"></script>
 <script th:src="@{/js/intros.js}"></script>
 <script th:src="@{/js/home.js}"></script>
 </body>
