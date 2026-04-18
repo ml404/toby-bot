@@ -31,7 +31,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         dm: Member,
         initiativeMap: MutableMap<String, Int>
     ) {
-        val nonDmMembers = memberList.nonBots().filter { it != dm }
+        val nonDmMembers = memberList.filter { it != dm }.nonBots()
         nonDmMembers.forEach { target ->
             val userDto = userDtoHelper.calculateUserDto(target.idLong, target.guild.idLong, target.isOwner)
             rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto.initiativeModifier ?: 0)
