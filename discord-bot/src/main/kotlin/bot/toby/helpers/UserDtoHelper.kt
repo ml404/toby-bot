@@ -1,7 +1,6 @@
 package bot.toby.helpers
 
 import common.logging.DiscordLogger
-import database.dto.MusicDto
 import database.dto.UserDto
 import database.service.UserService
 import net.dv8tion.jda.api.entities.Member
@@ -18,7 +17,7 @@ class UserDtoHelper(private val userService: UserService) {
         logger.info("Processing lookup for user: $discordId, guild: $guildId")
         return userService.getUserById(discordId, guildId) ?: UserDto(discordId, guildId).apply {
             this.superUser = isSuperUser
-            this.musicDtos = emptyList<MusicDto>().toMutableList()
+            this.musicDtos = mutableListOf()
             userService.createNewUser(this)
         }
     }

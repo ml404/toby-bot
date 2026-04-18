@@ -303,25 +303,21 @@ function initIntroPage() {
         });
         slider.addEventListener('change', function () {
             const value = parseInt(slider.value, 10);
-            apiPostJson(buildUrl('/update-volume'), { introId: introId, volume: value })
-                .then(r => {
-                    if (r.ok) {
-                        lastSaved = String(value);
-                        window.TobyToast.show('Volume updated.', { type: 'success', duration: 2000 });
-                        // Keep row-level play button in sync for volume-aware preview
-                        const playBtn = document.querySelector('button.btn-play[data-audio-id="audio-' + introId + '"]');
-                        if (playBtn) playBtn.dataset.volume = String(value);
-                    } else {
-                        slider.value = lastSaved;
-                        if (valueEl) valueEl.textContent = lastSaved + '%';
-                        window.TobyToast.show(r.error || 'Failed to update volume.', { type: 'error' });
-                    }
-                })
-                .catch(() => {
+            apiCall(buildUrl('/update-volume'), { introId: introId, volume: value }, {
+                onSuccess: () => {
+                    lastSaved = String(value);
+                    window.TobyToast.show('Volume updated.', { type: 'success', duration: 2000 });
+                    // Keep row-level play button in sync for volume-aware preview
+                    const playBtn = document.querySelector('button.btn-play[data-audio-id="audio-' + introId + '"]');
+                    if (playBtn) playBtn.dataset.volume = String(value);
+                },
+                onError: (r) => {
                     slider.value = lastSaved;
                     if (valueEl) valueEl.textContent = lastSaved + '%';
-                    window.TobyToast.show('Network error.', { type: 'error' });
-                });
+                    const msg = r ? (r.error || 'Failed to update volume.') : 'Network error.';
+                    window.TobyToast.show(msg, { type: 'error' });
+                }
+            });
         });
     });
 
@@ -362,17 +358,17 @@ function initIntroPage() {
             function commit() {
                 const value = input.value.trim();
                 if (!value || value === current) { finish(current); return; }
-                apiPostJson(buildUrl('/update-name'), { introId: introId, name: value })
-                    .then(r => {
-                        if (r.ok) {
-                            finish(value);
-                            window.TobyToast.show('Renamed.', { type: 'success', duration: 2000 });
-                        } else {
-                            finish(current);
-                            window.TobyToast.show(r.error || 'Rename failed.', { type: 'error' });
-                        }
-                    })
-                    .catch(() => { finish(current); window.TobyToast.show('Network error.', { type: 'error' }); });
+                apiCall(buildUrl('/update-name'), { introId: introId, name: value }, {
+                    onSuccess: () => {
+                        finish(value);
+                        window.TobyToast.show('Renamed.', { type: 'success', duration: 2000 });
+                    },
+                    onError: (r) => {
+                        finish(current);
+                        const msg = r ? (r.error || 'Rename failed.') : 'Network error.';
+                        window.TobyToast.show(msg, { type: 'error' });
+                    }
+                });
             }
 
             input.addEventListener('blur', commit);
@@ -424,24 +420,21 @@ function initIntroPage() {
         function saveOrder() {
             const orderedIds = Array.from(tbody.querySelectorAll('tr[data-intro-id]'))
                 .map(r => r.dataset.introId);
-            apiPostJson(buildUrl('/reorder'), { orderedIds: orderedIds })
-                .then(r => {
-                    if (r.ok) {
-                        window.TobyToast.show('Order saved.', { type: 'success', duration: 2000 });
-                        // Update slot numbers in first column
-                        tbody.querySelectorAll('tr[data-intro-id]').forEach((r, i) => {
-                            const idx = r.querySelector('.slot-index');
-                            if (idx) idx.textContent = String(i + 1);
-                        });
-                    } else {
-                        window.TobyToast.show(r.error || 'Reorder failed. Reloading.', { type: 'error' });
-                        setTimeout(() => location.reload(), 800);
-                    }
-                })
-                .catch(() => {
-                    window.TobyToast.show('Network error. Reloading.', { type: 'error' });
+            apiCall(buildUrl('/reorder'), { orderedIds: orderedIds }, {
+                onSuccess: () => {
+                    window.TobyToast.show('Order saved.', { type: 'success', duration: 2000 });
+                    // Update slot numbers in first column
+                    tbody.querySelectorAll('tr[data-intro-id]').forEach((r, i) => {
+                        const idx = r.querySelector('.slot-index');
+                        if (idx) idx.textContent = String(i + 1);
+                    });
+                },
+                onError: (r) => {
+                    const msg = r ? (r.error || 'Reorder failed. Reloading.') : 'Network error. Reloading.';
+                    window.TobyToast.show(msg, { type: 'error' });
                     setTimeout(() => location.reload(), 800);
-                });
+                }
+            });
         }
     }
 
@@ -465,6 +458,14 @@ function initIntroPage() {
             headers: headers,
             body: JSON.stringify(body)
         }).then(r => r.json().catch(() => ({ ok: r.ok, error: r.ok ? null : 'Request failed.' })));
+    }
+
+    // Wraps apiPostJson so callers only supply success/error branches. Network
+    // failures go through onError with r = null so the same handler can cover both.
+    function apiCall(url, body, { onSuccess, onError }) {
+        return apiPostJson(url, body)
+            .then(r => { if (r.ok) onSuccess(r); else onError(r); })
+            .catch(() => onError(null));
     }
 
     function buildUrl(suffix) {

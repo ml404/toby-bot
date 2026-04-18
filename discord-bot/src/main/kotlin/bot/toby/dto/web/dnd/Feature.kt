@@ -25,16 +25,12 @@ data class Feature(
 
     override fun toEmbed(): MessageEmbed {
         val embedBuilder = EmbedBuilder()
-        if (name != null) {
-            embedBuilder.setTitle(name)
-        }
+        name?.let { embedBuilder.setTitle(it) }
         if (!desc.isNullOrEmpty()) {
             embedBuilder.setDescription(desc.transformListToString())
         }
-        if (classInfo != null) {
-            embedBuilder.addField("Class", classInfo.name, true)
-        }
-        level?.let { embedBuilder.addField("Level", level.toString(), true) }
+        classInfo?.let { embedBuilder.addField("Class", it.name, true) }
+        level?.let { embedBuilder.addField("Level", it.toString(), true) }
         if (prerequisites.isNotEmpty()) {
             embedBuilder.addField("Prerequisites", prerequisites.transformListToString(), false)
         }

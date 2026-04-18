@@ -56,11 +56,11 @@ data class Spell(
         if (higherLevel.isNotEmpty()) {
             embedBuilder.addField("Higher Level", higherLevel.transformListToString(), false)
         }
-        if (range != null) {
-            val meterValue = if (range == "Touch") "Touch" else buildString {
+        range?.let {
+            val meterValue = if (it == "Touch") "Touch" else buildString {
                 append(
                     transformToMeters(
-                        range.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].toInt()
+                        it.split(" ".toRegex()).dropLastWhile { s -> s.isEmpty() }.toTypedArray()[0].toInt()
                     )
                 )
                 append("m")
@@ -89,23 +89,18 @@ data class Spell(
             }
             embedBuilder.addField("Damage Info", damageInfo.toString(), true)
         }
-        val dc = dc
-        if (dc != null) {
-            embedBuilder.addField("DC Type", dc.dcType.name, true)
-            if (dc.dcSuccess != null) {
-                embedBuilder.addField("DC Success", dc.dcSuccess, true)
-            }
+        dc?.let {
+            embedBuilder.addField("DC Type", it.dcType.name, true)
+            it.dcSuccess?.let { success -> embedBuilder.addField("DC Success", success, true) }
         }
-        if (areaOfEffect != null) {
+        areaOfEffect?.let {
             embedBuilder.addField(
                 "Area of Effect",
-                "Type: ${areaOfEffect.type}, Size: ${transformToMeters(areaOfEffect.size)}m",
+                "Type: ${it.type}, Size: ${transformToMeters(it.size)}m",
                 true
             )
         }
-        if (school != null) {
-            embedBuilder.addField("School", school.name, true)
-        }
+        school?.let { embedBuilder.addField("School", it.name, true) }
         val spellClasses = classes
         if (!spellClasses.isNullOrEmpty()) {
             val classesInfo = StringBuilder()
@@ -122,9 +117,7 @@ data class Spell(
             }
             embedBuilder.addField("Subclasses", subclassesInfo.toString(), true)
         }
-        if (url != null) {
-            embedBuilder.setUrl("https://www.dndbeyond.com/" + url.replace("/api/", ""))
-        }
+        url?.let { embedBuilder.setUrl("https://www.dndbeyond.com/" + it.replace("/api/", "")) }
         embedBuilder.setColor(0x42f5a7)
         return embedBuilder.build()
     }

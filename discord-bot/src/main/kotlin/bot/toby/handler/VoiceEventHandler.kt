@@ -4,6 +4,7 @@ import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MusicPlayerHelper.playUserIntro
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
+import bot.toby.helpers.nonBots
 import bot.toby.lavaplayer.PlayerManager
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations.DELETE_DELAY
@@ -49,8 +50,8 @@ class VoiceEventHandler @Autowired constructor(
 
     private fun Guild.connectToMostPopulatedVoiceChannel() {
         val mostPopulatedChannel = this.voiceChannels
-            .filter { channel -> channel.members.any { !it.user.isBot } }
-            .maxByOrNull { channel -> channel.members.count { !it.user.isBot } }
+            .filter { channel -> channel.members.nonBots().isNotEmpty() }
+            .maxByOrNull { channel -> channel.members.nonBots().size }
 
         mostPopulatedChannel?.checkStateAndConnectToVoiceChannel()
             ?: logger.info("No occupied voice channel to join found")
@@ -159,7 +160,7 @@ class VoiceEventHandler @Autowired constructor(
     ) {
         //Ignore the bot joining voice event
         if (event.member.user.idLong != event.jda.selfUser.idLong) {
-            val joinedChannelConnectedMembers = event.channelJoined?.members?.filter { !it.user.isBot } ?: emptyList()
+            val joinedChannelConnectedMembers = event.channelJoined?.members?.nonBots() ?: emptyList()
             if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
                 logger.info { "Joining new channel '${event.channelJoined?.name}'." }
                 PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
@@ -193,13 +194,13 @@ class VoiceEventHandler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
         audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
-        event.channelLeft?.let { deleteTemporaryChannelIfEmpty(it.members.none { m -> !m.user.isBot }, it) }
+        event.channelLeft?.let { deleteTemporaryChannelIfEmpty(it.members.nonBots().isEmpty(), it) }
     }
 
     private fun AudioManager.checkAudioManagerToCloseConnectionOnEmptyChannel() {
         val connectedChannel = this.connectedChannel
         if (connectedChannel != null) {
-            if (connectedChannel.members.none { !it.user.isBot }) {
+            if (connectedChannel.members.nonBots().isEmpty()) {
                 this.closeAudioConnection()
                 logger.info("Audio connection closed due to empty channel.")
                 lastConnectedChannel.remove(this.guild.idLong)
