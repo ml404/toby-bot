@@ -9,6 +9,8 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.CampaignWebService
+import web.util.discordIdOrNull
+import web.util.displayName
 
 @Controller
 @RequestMapping("/dnd")
@@ -26,7 +28,7 @@ class CampaignController(
         val guilds = campaignWebService.getMutualGuildsWithCampaigns(accessToken)
 
         model.addAttribute("guilds", guilds)
-        model.addAttribute("username", user.getAttribute<String>("username") ?: "User")
+        model.addAttribute("username", user.displayName())
 
         return "campaign"
     }
@@ -38,7 +40,7 @@ class CampaignController(
         model: Model,
         ra: RedirectAttributes
     ): String {
-        val discordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val discordId = user.discordIdOrNull()
             ?: return "redirect:/dnd/campaign"
 
         val guildName = campaignWebService.getGuildName(guildId) ?: run {
@@ -54,7 +56,7 @@ class CampaignController(
         model.addAttribute("players", campaignDetail?.players ?: emptyList<Any>())
         model.addAttribute("dmName", campaignDetail?.dmName)
         model.addAttribute("isUserDm", campaignDetail?.isDm(discordId) ?: false)
-        model.addAttribute("username", user.getAttribute<String>("username") ?: "User")
+        model.addAttribute("username", user.displayName())
 
         return "campaignDetail"
     }
@@ -66,7 +68,7 @@ class CampaignController(
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
     ): String {
-        val discordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val discordId = user.discordIdOrNull()
             ?: return "redirect:/dnd/campaign"
 
         campaignWebService.getGuildName(guildId) ?: run {

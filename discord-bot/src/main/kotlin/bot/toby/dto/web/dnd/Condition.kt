@@ -17,11 +17,9 @@ data class Condition(
 
     override fun toEmbed(): MessageEmbed {
         val embedBuilder = EmbedBuilder()
-        if (name != null) {
-            embedBuilder.setTitle(name)
-        }
+        name?.let { embedBuilder.setTitle(it) }
         if (!desc.isNullOrEmpty()) {
-            embedBuilder.setDescription((desc.transformListToString()))
+            embedBuilder.setDescription(desc.transformListToString())
         }
         embedBuilder.setColor(0x42f5a7)
         return embedBuilder.build()

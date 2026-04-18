@@ -1,5 +1,6 @@
 package bot.toby.helpers
 
+import bot.toby.BOT_WEB_URL
 import bot.toby.command.commands.music.MusicCommand.Companion.sendDeniedStoppableMessage
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
@@ -23,7 +24,6 @@ import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
-    private const val WEB_URL = "https://www.toby-bot.co.uk"
     private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
 
@@ -226,7 +226,7 @@ object MusicPlayerHelper {
         val blobString = it.musicBlob?.let { bytes -> String(bytes) } ?: ""
         if (isUrl(blobString).isNotEmpty()) return blobString
         // Otherwise, serve the binary data via the web endpoint
-        return "$WEB_URL/music?id=${it.id}"
+        return "$BOT_WEB_URL/music?id=${it.id}"
     }
 
     fun formatTime(timeInMillis: Long): String {

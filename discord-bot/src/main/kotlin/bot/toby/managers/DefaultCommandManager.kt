@@ -57,11 +57,11 @@ class DefaultCommandManager @Autowired constructor(
 
     val allSlashCommands: List<CommandData?> get() = slashCommands
     val allCommands: List<Command> get() = commands
-    override val musicCommands: List<Command> get() = commands.filterIsInstance<MusicCommand>().toList()
-    override val dndCommands: List<Command> get() = commands.filterIsInstance<DnDCommand>().toList()
-    override val moderationCommands: List<Command> get() = commands.filterIsInstance<ModerationCommand>().toList()
-    override val miscCommands: List<Command> get() = commands.filterIsInstance<MiscCommand>().toList()
-    override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>().toList()
+    override val musicCommands: List<Command> get() = commands.filterIsInstance<MusicCommand>()
+    override val dndCommands: List<Command> get() = commands.filterIsInstance<DnDCommand>()
+    override val moderationCommands: List<Command> get() = commands.filterIsInstance<ModerationCommand>()
+    override val miscCommands: List<Command> get() = commands.filterIsInstance<MiscCommand>()
+    override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>()
 
     override fun handle(event: SlashCommandInteractionEvent) {
         val guildId = event.guild?.id ?: return

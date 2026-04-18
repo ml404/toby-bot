@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.IntroWebService
+import web.util.discordIdOrNull
+import web.util.discordIdString
+import web.util.displayName
 
 @Controller
 @RequestMapping("/intro")
@@ -34,7 +37,7 @@ class IntroWebController(
         model: Model
     ): String {
         val accessToken = client.accessToken.tokenValue
-        val discordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val discordId = user.discordIdOrNull()
         val guilds = introWebService.getMutualGuilds(accessToken)
 
         val counts: Map<String, Int> = if (discordId != null) {
@@ -45,8 +48,8 @@ class IntroWebController(
         model.addAttribute("guilds", guilds)
         model.addAttribute("introCounts", counts)
         model.addAttribute("maxIntros", IntroWebService.MAX_INTRO_COUNT)
-        model.addAttribute("username", user.getAttribute<String>("username") ?: "User")
-        model.addAttribute("discordId", user.getAttribute<String>("id") ?: "")
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("discordId", user.discordIdString())
         model.addAttribute("inviteUrl", inviteUrl)
 
         return "guilds"
@@ -60,7 +63,7 @@ class IntroWebController(
         model: Model,
         ra: RedirectAttributes
     ): String {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return "redirect:/intro/guilds"
 
         val guildName = introWebService.getGuildName(guildId) ?: run {
@@ -77,7 +80,7 @@ class IntroWebController(
         model.addAttribute("guildId", guildId)
         model.addAttribute("guildName", guildName)
         model.addAttribute("intros", intros)
-        model.addAttribute("username", user.getAttribute<String>("username") ?: "User")
+        model.addAttribute("username", user.displayName())
         model.addAttribute("atLimit", intros.size >= IntroWebService.MAX_INTRO_COUNT)
         model.addAttribute("maxIntros", IntroWebService.MAX_INTRO_COUNT)
         model.addAttribute("maxFileKb", IntroWebService.MAX_FILE_SIZE / 1024)
@@ -102,7 +105,7 @@ class IntroWebController(
         @RequestParam(required = false) targetDiscordId: Long?,
         ra: RedirectAttributes
     ): String {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return "redirect:/intro/guilds"
         val effectiveDiscordId = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
 
@@ -135,7 +138,7 @@ class IntroWebController(
         session: HttpSession,
         ra: RedirectAttributes
     ): String {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return "redirect:/intro/guilds"
         val effectiveDiscordId = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
 
@@ -173,7 +176,7 @@ class IntroWebController(
         session: HttpSession,
         ra: RedirectAttributes
     ): String {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return "redirect:/intro/guilds"
         val effectiveDiscordId = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
 
@@ -218,7 +221,7 @@ class IntroWebController(
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
     ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.updateIntroVolume(effective, guildId, body.introId, body.volume)
@@ -234,7 +237,7 @@ class IntroWebController(
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
     ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.updateIntroName(effective, guildId, body.introId, body.name)
@@ -250,7 +253,7 @@ class IntroWebController(
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
     ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.getAttribute<String>("id")?.toLongOrNull()
+        val authDiscordId = user.discordIdOrNull()
             ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.reorderIntros(effective, guildId, body.orderedIds)

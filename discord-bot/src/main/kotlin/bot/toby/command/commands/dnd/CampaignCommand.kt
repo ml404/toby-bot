@@ -1,5 +1,6 @@
 package bot.toby.command.commands.dnd
 
+import bot.toby.BOT_WEB_URL
 import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
@@ -38,10 +39,6 @@ class CampaignCommand(
         SubcommandData("status", "Show the active campaign and its players"),
         SubcommandData("end", "End the active campaign (DM only)")
     )
-
-    companion object {
-        private const val WEB_URL = "https://www.toby-bot.co.uk"
-    }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -101,7 +98,7 @@ class CampaignCommand(
             .addField("Dungeon Master", ctx.member?.effectiveName ?: "Unknown", true)
             .addField("Guild", guild.name, true)
             .addField("Players", "None yet — use `/campaign join` to join!", false)
-            .addField("Web UI", "$WEB_URL/dnd/campaign/${guild.idLong}", false)
+            .addField("Web UI", "$BOT_WEB_URL/dnd/campaign/${guild.idLong}", false)
             .build()
 
         event.hook.sendMessageEmbeds(embed).queue()
@@ -146,7 +143,7 @@ class CampaignCommand(
             .setColor(Color(88, 101, 242))
             .addField("Player", ctx.member?.effectiveName ?: "Unknown", true)
             .addField("Character", characterNote, false)
-            .addField("Web UI", "$WEB_URL/dnd/campaign/${guild.idLong}", false)
+            .addField("Web UI", "$BOT_WEB_URL/dnd/campaign/${guild.idLong}", false)
             .build()
 
         event.hook.sendMessageEmbeds(embed).queue()
@@ -202,7 +199,7 @@ class CampaignCommand(
             .addField("Dungeon Master", dmName, true)
             .addField("Guild", guild.name, true)
             .addField("Players (${players.size})", playerList, false)
-            .addField("Web UI", "$WEB_URL/dnd/campaign/${guild.idLong}", false)
+            .addField("Web UI", "$BOT_WEB_URL/dnd/campaign/${guild.idLong}", false)
             .build()
 
         event.hook.sendMessageEmbeds(embed).queue()

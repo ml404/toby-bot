@@ -170,9 +170,12 @@ class IntroWebService(
         return null
     }
 
+    private fun requireOwnedIntro(discordId: Long, guildId: Long, introId: String): String? =
+        if (introId.startsWith("${guildId}_${discordId}_")) null
+        else "Intro does not belong to you."
+
     fun deleteIntro(discordId: Long, guildId: Long, introId: String): String? {
-        val expectedPrefix = "${guildId}_${discordId}_"
-        if (!introId.startsWith(expectedPrefix)) return "Intro does not belong to you."
+        requireOwnedIntro(discordId, guildId, introId)?.let { return it }
 
         musicFileService.getMusicFileById(introId) ?: return "Intro not found."
         musicFileService.deleteMusicFileById(introId)
@@ -180,8 +183,7 @@ class IntroWebService(
     }
 
     fun updateIntroVolume(discordId: Long, guildId: Long, introId: String, volume: Int): String? {
-        val expectedPrefix = "${guildId}_${discordId}_"
-        if (!introId.startsWith(expectedPrefix)) return "Intro does not belong to you."
+        requireOwnedIntro(discordId, guildId, introId)?.let { return it }
 
         val dto = musicFileService.getMusicFileById(introId) ?: return "Intro not found."
         dto.introVolume = volume.coerceIn(1, 100)
@@ -190,8 +192,7 @@ class IntroWebService(
     }
 
     fun updateIntroName(discordId: Long, guildId: Long, introId: String, name: String): String? {
-        val expectedPrefix = "${guildId}_${discordId}_"
-        if (!introId.startsWith(expectedPrefix)) return "Intro does not belong to you."
+        requireOwnedIntro(discordId, guildId, introId)?.let { return it }
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return "Name cannot be empty."
         if (trimmed.length > 200) return "Name is too long (max 200 characters)."
