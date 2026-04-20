@@ -396,3 +396,23 @@ td { font-size: 0.95rem; }
         margin-bottom: 2px;
     }
 }
+
+/* Phones (iPhone SE 320 up to large phones) — tighter spacing + smaller headings */
+@media (max-width: 480px) {
+    .container, .container-wide { margin: 16px auto; padding: 0 var(--space-3); }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 1rem; }
+    .card { padding: var(--space-4); }
+    .modal { padding: var(--space-4); max-width: 100%; }
+    .modal-actions { flex-wrap: wrap; }
+    .toast-stack { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+}
+
+/* Grow tap targets on any touch device without ballooning desktop buttons */
+@media (hover: none) and (pointer: coarse) {
+    .btn-sm { padding: 8px 14px; min-height: 40px; }
+    .btn-icon { width: 40px; height: 40px; }
+    .btn { min-height: 44px; }
+    input[type=text], input[type=url], input[type=number], input[type=search],
+    input[type=email], input[type=password], select { min-height: 40px; }
+}

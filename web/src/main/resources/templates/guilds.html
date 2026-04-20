@@ -69,6 +69,13 @@
     .empty-hero h2 { color: var(--text); margin-bottom: 10px; }
     .empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
     .no-results { color: var(--text-muted); padding: 24px; text-align: center; display: none; }
+    @media (max-width: 480px) {
+        .guild-grid { grid-template-columns: 1fr; gap: 12px; }
+        .guild-card { padding: 14px 16px; }
+        .search-row { flex-direction: column; align-items: stretch; }
+        .search-row input { max-width: 100%; }
+        .empty-hero { padding: 32px 16px; }
+    }
 </style>
 
 <main id="main" class="container">
