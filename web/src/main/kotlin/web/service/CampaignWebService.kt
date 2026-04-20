@@ -2,6 +2,7 @@ package web.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import common.helpers.parseDndBeyondCharacterId
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
@@ -161,7 +162,7 @@ class CampaignWebService(
             return SetCharacterResult.CLEARED
         }
 
-        val id = extractCharacterId(trimmed) ?: return SetCharacterResult.INVALID
+        val id = parseDndBeyondCharacterId(trimmed) ?: return SetCharacterResult.INVALID
         user.dndBeyondCharacterId = id
         userService.updateUser(user)
         return SetCharacterResult.UPDATED
@@ -198,11 +199,4 @@ class CampaignWebService(
         val classesString: String?,
         val totalLevel: Int?
     )
-
-    companion object {
-        private val CHARACTER_ID_REGEX = Regex("(\\d+)")
-
-        internal fun extractCharacterId(input: String): Long? =
-            CHARACTER_ID_REGEX.findAll(input).lastOrNull()?.value?.toLongOrNull()
-    }
 }
