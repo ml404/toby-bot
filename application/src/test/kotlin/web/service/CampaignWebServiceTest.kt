@@ -4,6 +4,7 @@ import database.dto.CampaignDto
 import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.MonsterTemplateDto
 import database.dto.SessionNoteDto
 import database.dto.UserDto
 import database.service.CampaignEventService
