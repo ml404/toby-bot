@@ -326,6 +326,84 @@
         row.classList.add('defeated');
     }
 
+    // ---- Combat cinematic ----------------------------------------------
+    function getCombatStage() {
+        let stage = document.getElementById('combat-stage');
+        if (stage) return stage;
+        stage = document.createElement('div');
+        stage.id = 'combat-stage';
+        document.body.appendChild(stage);
+        return stage;
+    }
+
+    function rowCenter(name) {
+        const row = findRow(name);
+        if (!row) return null;
+        const r = row.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+
+    function spawnAttackDie(payload) {
+        const start = rowCenter(payload.attacker);
+        const end = rowCenter(payload.target);
+        if (!start || !end) return;
+        const stage = getCombatStage();
+        const die = document.createElement('div');
+        die.className = 'attack-die';
+        const isHit = (payload.result === 'HIT') || (payload.eventType === 'ATTACK_HIT');
+        const isCrit = payload.roll === 20;
+        const isFumble = payload.roll === 1;
+        if (isCrit) die.classList.add('crit');
+        else if (isFumble) die.classList.add('fumble');
+        if (isHit) die.classList.add('hit');
+        else die.classList.add('miss');
+        die.style.setProperty('--start-x', start.x + 'px');
+        die.style.setProperty('--start-y', start.y + 'px');
+        die.style.setProperty('--end-x', end.x + 'px');
+        die.style.setProperty('--end-y', end.y + 'px');
+        const face = document.createElement('span');
+        face.className = 'attack-die__face';
+        face.textContent = String(payload.total != null ? payload.total : '?');
+        die.appendChild(face);
+        stage.appendChild(die);
+
+        die.addEventListener('animationend', function onFlight(ev) {
+            if (ev.animationName !== 'attack-die-flight') return;
+            die.removeEventListener('animationend', onFlight);
+            die.classList.add('settling');
+            setTimeout(function () {
+                die.classList.add('fading');
+                setTimeout(function () { die.remove(); }, 350);
+            }, 700);
+        });
+    }
+
+    function spawnDamageFloater(payload) {
+        const center = rowCenter(payload.target);
+        if (!center) return;
+        const stage = getCombatStage();
+        const el = document.createElement('div');
+        el.className = 'damage-floater';
+        el.style.setProperty('--start-x', center.x + 'px');
+        el.style.setProperty('--start-y', (center.y - 8) + 'px');
+        el.textContent = '-' + (payload.amount != null ? payload.amount : '?');
+        stage.appendChild(el);
+        setTimeout(function () { el.remove(); }, 1000);
+    }
+
+    function spawnDefeatSkull(payload) {
+        const center = rowCenter(payload.target);
+        if (!center) return;
+        const stage = getCombatStage();
+        const el = document.createElement('div');
+        el.className = 'defeat-skull';
+        el.style.setProperty('--start-x', center.x + 'px');
+        el.style.setProperty('--start-y', center.y + 'px');
+        el.textContent = '☠️';
+        stage.appendChild(el);
+        setTimeout(function () { el.remove(); }, 1200);
+    }
+
     function handleInitiativeEvent(event) {
         if (!turnTable) return;
         const p = event.payload || {};
@@ -346,15 +424,19 @@
                 break;
             }
             case 'ATTACK_HIT':
-                flashRow(p.target, 'just-hit');
+                spawnAttackDie({ ...p, eventType: 'ATTACK_HIT' });
+                setTimeout(function () { flashRow(p.target, 'just-hit'); }, 600);
                 break;
             case 'ATTACK_MISS':
-                flashRow(p.target, 'just-missed');
+                spawnAttackDie({ ...p, eventType: 'ATTACK_MISS' });
+                setTimeout(function () { flashRow(p.target, 'just-missed'); }, 600);
                 break;
             case 'DAMAGE_DEALT':
+                spawnDamageFloater(p);
                 applyDamageToRow(p.target, p.remainingHp);
                 break;
             case 'PARTICIPANT_DEFEATED':
+                spawnDefeatSkull(p);
                 markDefeatedRow(p.target);
                 break;
         }
