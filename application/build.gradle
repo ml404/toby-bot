@@ -101,15 +101,24 @@ tasks.register('verifyMigrationsInBootJar') {
     inputs.dir migrationsDir
     inputs.file bootJarFileProvider
     doLast {
+        if (!migrationsDir.exists()) {
+            throw new GradleException(
+                "verifyMigrationsInBootJar: migrations directory does not exist at ${migrationsDir}. " +
+                    "The repo checkout is incomplete — the fat jar will ship without any schema migrations."
+            )
+        }
         def expected = new TreeSet<String>()
-        if (migrationsDir.exists()) {
-            migrationsDir.eachFile { f ->
-                if (f.name.startsWith('V') && f.name.endsWith('.sql')) expected << f.name
-            }
+        def otherFiles = new ArrayList<String>()
+        migrationsDir.eachFile { f ->
+            if (f.name.startsWith('V') && f.name.endsWith('.sql')) expected << f.name
+            else otherFiles << f.name
         }
         if (expected.isEmpty()) {
-            println "verifyMigrationsInBootJar: no migrations found at ${migrationsDir}, skipping."
-            return
+            throw new GradleException(
+                "verifyMigrationsInBootJar: ${migrationsDir} exists but contains no V*.sql files. " +
+                    "Directory contents: ${otherFiles.isEmpty() ? '[empty]' : otherFiles}. " +
+                    "Something in the build checkout is stripping Flyway migrations."
+            )
         }
 
         def jar = bootJarFileProvider.get().asFile
