@@ -47,30 +47,31 @@ class LinkCharacterCommand @Autowired constructor(
             return
         }
 
-        CoroutineScope(dispatcher).launch {
-            runCatching {
-                val character = characterSheetProvider.getCharacterSheet(characterId)
-                if (character != null) {
-                    val dexMod = character.modifier(CharacterSheet.DEX)
-                    requestingUserDto.dndBeyondCharacterId = characterId
-                    requestingUserDto.initiativeModifier = dexMod
-                    userDtoHelper.updateUser(requestingUserDto)
+        requestingUserDto.dndBeyondCharacterId = characterId
 
-                    val embed = EmbedBuilder()
-                        .setTitle("✅ Character Linked: ${character.name}")
-                        .addField("Race", character.raceName(), true)
-                        .addField("Class", character.classesString(), true)
-                        .addField("Initiative Modifier", "${formatModifier(dexMod)} (from DEX)", true)
-                        .setColor(0x42f5a7)
-                        .build()
-                    hook.sendMessageEmbeds(embed).queue()
-                } else {
-                    hook.sendMessage("Could not find a character with ID `$characterId`. Make sure your character is set to public on D&D Beyond.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
-                }
-            }.onFailure {
-                hook.sendMessage("An error occurred while fetching your character. Please try again later.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        CoroutineScope(dispatcher).launch {
+            val cachedSheet = runCatching { characterSheetProvider.getCharacterSheet(characterId) }.getOrNull()
+
+            if (cachedSheet != null) {
+                val dexMod = cachedSheet.modifier(CharacterSheet.DEX)
+                requestingUserDto.initiativeModifier = dexMod
+                userDtoHelper.updateUser(requestingUserDto)
+
+                val embed = EmbedBuilder()
+                    .setTitle("✅ Character Linked: ${cachedSheet.name}")
+                    .addField("Race", cachedSheet.raceName(), true)
+                    .addField("Class", cachedSheet.classesString(), true)
+                    .addField("Initiative Modifier", "${formatModifier(dexMod)} (from DEX)", true)
+                    .setColor(0x42f5a7)
+                    .build()
+                hook.sendMessageEmbeds(embed).queue()
+            } else {
+                userDtoHelper.updateUser(requestingUserDto)
+                hook.sendMessage(
+                    "✅ Linked character ID `$characterId`. " +
+                    "No cached sheet yet — stats will populate the next time D&D Beyond is reachable. " +
+                    "View sheet: https://www.dndbeyond.com/characters/$characterId"
+                ).queue()
             }
         }
     }

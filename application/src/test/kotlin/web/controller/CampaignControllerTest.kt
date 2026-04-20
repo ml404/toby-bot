@@ -17,6 +17,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.CampaignDetail
 import web.service.CampaignWebService
 import web.service.GuildCampaignInfo
+import web.service.JoinResult
+import web.service.LeaveResult
+import web.service.SetCharacterResult
 
 class CampaignControllerTest {
 
@@ -80,7 +83,13 @@ class CampaignControllerTest {
     fun `campaignDetail returns campaignDetail view for known guild`() {
         every { campaignWebService.getGuildName(guildId) } returns "MyGuild"
         val campaign = makeCampaign()
-        val detail = CampaignDetail(campaign, emptyList(), "DungeonMaster")
+        val detail = CampaignDetail(
+            campaign = campaign,
+            players = emptyList(),
+            dmName = "DungeonMaster",
+            isCurrentUserPlayer = false,
+            currentUserCharacterId = 42L
+        )
         every { campaignWebService.getCampaignDetail(guildId, 1L) } returns detail
 
         val view = controller.campaignDetail(guildId, mockUser, mockModel, mockRa)
@@ -89,6 +98,8 @@ class CampaignControllerTest {
         verify { mockModel.addAttribute("campaign", campaign) }
         verify { mockModel.addAttribute("dmName", "DungeonMaster") }
         verify { mockModel.addAttribute("isUserDm", true) }
+        verify { mockModel.addAttribute("isUserPlayer", false) }
+        verify { mockModel.addAttribute("currentUserCharacterId", 42L) }
     }
 
     @Test
@@ -120,6 +131,7 @@ class CampaignControllerTest {
         assertEquals("campaignDetail", view)
         verify { mockModel.addAttribute("campaign", null) }
         verify { mockModel.addAttribute("isUserDm", false) }
+        verify { mockModel.addAttribute("isUserPlayer", false) }
     }
 
     // createCampaign
@@ -163,5 +175,128 @@ class CampaignControllerTest {
 
         assertEquals("redirect:/dnd/campaign", view)
         verify { mockRa.addFlashAttribute("error", "Bot is not in that server.") }
+    }
+
+    // joinCampaign
+
+    @Test
+    fun `joinCampaign redirects on success with no flash`() {
+        every { campaignWebService.joinCampaign(guildId, 1L) } returns JoinResult.JOINED
+
+        val view = controller.joinCampaign(guildId, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `joinCampaign sets error when no active campaign`() {
+        every { campaignWebService.joinCampaign(guildId, 1L) } returns JoinResult.NO_ACTIVE_CAMPAIGN
+
+        controller.joinCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "No active campaign in this server.") }
+    }
+
+    @Test
+    fun `joinCampaign sets error when DM tries to join`() {
+        every { campaignWebService.joinCampaign(guildId, 1L) } returns JoinResult.IS_DM
+
+        controller.joinCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You are the DM and cannot join as a player.") }
+    }
+
+    @Test
+    fun `joinCampaign sets error when already joined`() {
+        every { campaignWebService.joinCampaign(guildId, 1L) } returns JoinResult.ALREADY_JOINED
+
+        controller.joinCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You are already in this campaign.") }
+    }
+
+    @Test
+    fun `joinCampaign redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.joinCampaign(guildId, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    // leaveCampaign
+
+    @Test
+    fun `leaveCampaign redirects on success`() {
+        every { campaignWebService.leaveCampaign(guildId, 1L) } returns LeaveResult.LEFT
+
+        val view = controller.leaveCampaign(guildId, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `leaveCampaign sets error when no active campaign`() {
+        every { campaignWebService.leaveCampaign(guildId, 1L) } returns LeaveResult.NO_ACTIVE_CAMPAIGN
+
+        controller.leaveCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "No active campaign in this server.") }
+    }
+
+    @Test
+    fun `leaveCampaign sets error when not a player`() {
+        every { campaignWebService.leaveCampaign(guildId, 1L) } returns LeaveResult.NOT_A_PLAYER
+
+        controller.leaveCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You are not in this campaign.") }
+    }
+
+    // setLinkedCharacter
+
+    @Test
+    fun `setLinkedCharacter redirects on update success`() {
+        every { campaignWebService.setLinkedCharacter(guildId, 1L, "12345") } returns SetCharacterResult.UPDATED
+
+        val view = controller.setLinkedCharacter(guildId, "12345", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `setLinkedCharacter redirects on clear`() {
+        every { campaignWebService.setLinkedCharacter(guildId, 1L, "") } returns SetCharacterResult.CLEARED
+
+        val view = controller.setLinkedCharacter(guildId, "", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `setLinkedCharacter sets error on invalid input`() {
+        every { campaignWebService.setLinkedCharacter(guildId, 1L, "bad") } returns SetCharacterResult.INVALID
+
+        controller.setLinkedCharacter(guildId, "bad", mockUser, mockRa)
+
+        verify {
+            mockRa.addFlashAttribute(
+                "error",
+                "Could not extract a valid character ID. Paste a D&D Beyond URL or numeric ID."
+            )
+        }
+    }
+
+    @Test
+    fun `setLinkedCharacter redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.setLinkedCharacter(guildId, "12345", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
     }
 }

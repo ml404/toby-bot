@@ -3,8 +3,11 @@ package web.service
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.UserDto
 import database.service.CampaignPlayerService
 import database.service.CampaignService
+import database.service.CharacterSheetService
+import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -22,6 +25,8 @@ class CampaignWebServiceTest {
     private lateinit var campaignService: CampaignService
     private lateinit var campaignPlayerService: CampaignPlayerService
     private lateinit var introWebService: IntroWebService
+    private lateinit var userService: UserService
+    private lateinit var characterSheetService: CharacterSheetService
     private lateinit var jda: JDA
     private lateinit var service: CampaignWebService
 
@@ -42,8 +47,17 @@ class CampaignWebServiceTest {
         campaignService = mockk(relaxed = true)
         campaignPlayerService = mockk(relaxed = true)
         introWebService = mockk(relaxed = true)
+        userService = mockk(relaxed = true)
+        characterSheetService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
-        service = CampaignWebService(campaignService, campaignPlayerService, introWebService, jda)
+        service = CampaignWebService(
+            campaignService,
+            campaignPlayerService,
+            introWebService,
+            userService,
+            characterSheetService,
+            jda
+        )
     }
 
     @AfterEach
@@ -118,6 +132,8 @@ class CampaignWebServiceTest {
             alive = true
         )
         every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns listOf(player)
+        every { characterSheetService.getSheet(42L) } returns null
+        every { userService.getUserById(dmDiscordId, guildId) } returns UserDto(dmDiscordId, guildId)
 
         val detail = service.getCampaignDetail(guildId, dmDiscordId)
 
@@ -127,6 +143,65 @@ class CampaignWebServiceTest {
         assertEquals("HeroPlayer", detail.players[0].displayName)
         assertEquals(42L, detail.players[0].characterId)
         assertTrue(detail.players[0].alive)
+        assertFalse(detail.isCurrentUserPlayer)
+    }
+
+    @Test
+    fun `getCampaignDetail hydrates cached character summary when available`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+
+        val jdaGuild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns jdaGuild
+
+        val player = CampaignPlayerDto(
+            id = CampaignPlayerId(campaign.id, playerDiscordId),
+            guildId = guildId,
+            characterId = 42L,
+            alive = true
+        )
+        every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns listOf(player)
+        every { characterSheetService.getSheet(42L) } returns """
+            {
+              "name": "Eeyore",
+              "race": { "fullName": "Hill Dwarf", "baseName": "Dwarf" },
+              "classes": [
+                { "level": 3, "definition": { "name": "Fighter" } },
+                { "level": 2, "definition": { "name": "Rogue" }, "subclassDefinition": { "name": "Assassin" } }
+              ]
+            }
+        """.trimIndent()
+        every { userService.getUserById(dmDiscordId, guildId) } returns null
+
+        val detail = service.getCampaignDetail(guildId, dmDiscordId)!!
+        val info = detail.players.single()
+
+        assertEquals("Eeyore", info.characterName)
+        assertEquals("Hill Dwarf", info.characterRace)
+        assertEquals("Fighter, Rogue (Assassin)", info.characterClasses)
+        assertEquals(5, info.characterLevel)
+    }
+
+    @Test
+    fun `getCampaignDetail flags current user as player when present`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { jda.getGuildById(guildId) } returns mockk(relaxed = true)
+        val player = CampaignPlayerDto(
+            id = CampaignPlayerId(campaign.id, playerDiscordId),
+            guildId = guildId,
+            characterId = null,
+            alive = true
+        )
+        every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns listOf(player)
+        every { userService.getUserById(playerDiscordId, guildId) } returns UserDto(playerDiscordId, guildId).apply {
+            dndBeyondCharacterId = 77L
+        }
+
+        val detail = service.getCampaignDetail(guildId, playerDiscordId)!!
+
+        assertTrue(detail.isCurrentUserPlayer)
+        assertEquals(77L, detail.currentUserCharacterId)
     }
 
     @Test
@@ -181,5 +256,137 @@ class CampaignWebServiceTest {
 
         assertNull(result)
         verify(exactly = 0) { campaignService.createCampaign(any()) }
+    }
+
+    // joinCampaign
+
+    @Test
+    fun `joinCampaign returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(JoinResult.NO_ACTIVE_CAMPAIGN, service.joinCampaign(guildId, playerDiscordId))
+    }
+
+    @Test
+    fun `joinCampaign returns IS_DM when caller is DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(JoinResult.IS_DM, service.joinCampaign(guildId, dmDiscordId))
+    }
+
+    @Test
+    fun `joinCampaign returns ALREADY_JOINED when player exists`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, playerDiscordId)) } returns
+            CampaignPlayerDto(id = CampaignPlayerId(campaign.id, playerDiscordId), guildId = guildId)
+
+        assertEquals(JoinResult.ALREADY_JOINED, service.joinCampaign(guildId, playerDiscordId))
+        verify(exactly = 0) { campaignPlayerService.addPlayer(any()) }
+    }
+
+    @Test
+    fun `joinCampaign adds player with user's linked character when available`() {
+        val campaign = makeCampaign()
+        val playerId = CampaignPlayerId(campaign.id, playerDiscordId)
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(playerId) } returns null
+        every { userService.getUserById(playerDiscordId, guildId) } returns
+            UserDto(playerDiscordId, guildId).apply { dndBeyondCharacterId = 55L }
+
+        assertEquals(JoinResult.JOINED, service.joinCampaign(guildId, playerDiscordId))
+        verify {
+            campaignPlayerService.addPlayer(match {
+                it.id == playerId && it.characterId == 55L && it.guildId == guildId
+            })
+        }
+    }
+
+    @Test
+    fun `joinCampaign adds player with null character when user has no link`() {
+        val campaign = makeCampaign()
+        val playerId = CampaignPlayerId(campaign.id, playerDiscordId)
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(playerId) } returns null
+        every { userService.getUserById(playerDiscordId, guildId) } returns null
+
+        assertEquals(JoinResult.JOINED, service.joinCampaign(guildId, playerDiscordId))
+        verify { campaignPlayerService.addPlayer(match { it.characterId == null }) }
+    }
+
+    // leaveCampaign
+
+    @Test
+    fun `leaveCampaign returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(LeaveResult.NO_ACTIVE_CAMPAIGN, service.leaveCampaign(guildId, playerDiscordId))
+    }
+
+    @Test
+    fun `leaveCampaign returns NOT_A_PLAYER when user not in campaign`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, playerDiscordId)) } returns null
+
+        assertEquals(LeaveResult.NOT_A_PLAYER, service.leaveCampaign(guildId, playerDiscordId))
+        verify(exactly = 0) { campaignPlayerService.removePlayer(any()) }
+    }
+
+    @Test
+    fun `leaveCampaign removes player and returns LEFT`() {
+        val campaign = makeCampaign()
+        val playerId = CampaignPlayerId(campaign.id, playerDiscordId)
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(playerId) } returns
+            CampaignPlayerDto(id = playerId, guildId = guildId)
+
+        assertEquals(LeaveResult.LEFT, service.leaveCampaign(guildId, playerDiscordId))
+        verify { campaignPlayerService.removePlayer(playerId) }
+    }
+
+    // setLinkedCharacter
+
+    @Test
+    fun `setLinkedCharacter clears link when input is blank`() {
+        val user = UserDto(playerDiscordId, guildId).apply { dndBeyondCharacterId = 123L }
+        every { userService.getUserById(playerDiscordId, guildId) } returns user
+
+        assertEquals(SetCharacterResult.CLEARED, service.setLinkedCharacter(guildId, playerDiscordId, "   "))
+        assertNull(user.dndBeyondCharacterId)
+        verify { userService.updateUser(user) }
+    }
+
+    @Test
+    fun `setLinkedCharacter returns INVALID for non-numeric input`() {
+        val user = UserDto(playerDiscordId, guildId)
+        every { userService.getUserById(playerDiscordId, guildId) } returns user
+
+        assertEquals(SetCharacterResult.INVALID, service.setLinkedCharacter(guildId, playerDiscordId, "not-a-url"))
+        verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `setLinkedCharacter extracts id from URL and updates user`() {
+        val user = UserDto(playerDiscordId, guildId)
+        every { userService.getUserById(playerDiscordId, guildId) } returns user
+
+        assertEquals(
+            SetCharacterResult.UPDATED,
+            service.setLinkedCharacter(guildId, playerDiscordId, "https://www.dndbeyond.com/characters/48690485")
+        )
+        assertEquals(48690485L, user.dndBeyondCharacterId)
+        verify { userService.updateUser(user) }
+    }
+
+    @Test
+    fun `setLinkedCharacter creates user when none exists`() {
+        every { userService.getUserById(playerDiscordId, guildId) } returns null
+        val created = UserDto(playerDiscordId, guildId)
+        every { userService.createNewUser(any()) } returns created
+
+        assertEquals(
+            SetCharacterResult.UPDATED,
+            service.setLinkedCharacter(guildId, playerDiscordId, "12345")
+        )
+        verify { userService.createNewUser(any()) }
+        verify { userService.updateUser(match { it.dndBeyondCharacterId == 12345L }) }
     }
 }
