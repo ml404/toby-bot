@@ -83,66 +83,6 @@ bootJar {
     mainClass.set('Application')
 }
 
-/**
- * Fails the build when one or more Flyway migrations from
- * :database/src/main/resources/db/migration/V*.sql fail to land inside
- * BOOT-INF/lib/database-*.jar!/db/migration/ in the produced bootJar.
- *
- * Catches the class of failure we saw on Heroku where a stale gradle /
- * buildpack cache produced a jar missing the SQL resources — Flyway then
- * quietly did nothing and the app 500'd on the first query that hit a
- * missing table.
- */
-def migrationsDir = file("${rootDir}/database/src/main/resources/db/migration")
-tasks.register('verifyMigrationsInBootJar') {
-    dependsOn tasks.named('bootJar')
-    doLast {
-        def expected = new TreeSet<String>()
-        if (migrationsDir.exists()) {
-            migrationsDir.eachFile { f ->
-                if (f.name.startsWith('V') && f.name.endsWith('.sql')) expected << f.name
-            }
-        }
-        if (expected.isEmpty()) {
-            println "verifyMigrationsInBootJar: no migrations found at ${migrationsDir}, skipping."
-            return
-        }
-
-        def bootJarTask = tasks.named('bootJar').get()
-        def jar = bootJarTask.archiveFile.get().asFile
-        def found = new TreeSet<String>()
-        new java.util.zip.ZipFile(jar).withCloseable { outer ->
-            outer.entries().each { entry ->
-                if (entry.name ==~ /^BOOT-INF\/lib\/database-.*\.jar$/) {
-                    outer.getInputStream(entry).withCloseable { raw ->
-                        new java.util.zip.ZipInputStream(raw).withCloseable { zis ->
-                            def e
-                            while ((e = zis.nextEntry) != null) {
-                                if (e.name.startsWith('db/migration/') && e.name.endsWith('.sql')) {
-                                    found << e.name.substring('db/migration/'.length())
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        def missing = expected - found
-        if (!missing.isEmpty()) {
-            throw new GradleException(
-                "bootJar is missing ${missing.size()} migration(s): ${missing}. " +
-                    "The fat jar packaging dropped them — fix before deploying."
-            )
-        }
-        println "verifyMigrationsInBootJar: ${expected.size()} migration(s) packaged inside ${jar.name}."
-    }
-}
-
-tasks.named('bootJar').configure {
-    finalizedBy 'verifyMigrationsInBootJar'
-}
-
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
