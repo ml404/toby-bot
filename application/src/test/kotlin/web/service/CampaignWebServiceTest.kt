@@ -1364,10 +1364,11 @@ class CampaignWebServiceTest {
             InitiativeEntryData(name = "Goblin", roll = 18, kind = "MONSTER")
         every { initiativeStore.currentEntries(guildId) } returns listOf(
             InitiativeEntryData("Goblin", 18, "MONSTER"),
-            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 10)
+            // AC 1 + mod 0 → any d20 roll meets or beats it. Deterministic.
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 1)
         )
 
-        val outcome = service.attack(guildId, dmDiscordId, "Alice", 5)
+        val outcome = service.attack(guildId, dmDiscordId, "Alice", 0)
         assertEquals(AttackResult.HIT, outcome.result)
         verify {
             sessionLog.publish(
@@ -1377,8 +1378,34 @@ class CampaignWebServiceTest {
                 actorName = any(),
                 payload = match {
                     it["attacker"] == "Goblin" && it["target"] == "Alice" &&
-                        it["modifier"] == 5 && it["targetAc"] == 10
+                        it["modifier"] == 0 && it["targetAc"] == 1
                 }
+            )
+        }
+    }
+
+    @Test
+    fun `attack misses when roll + mod is below AC and publishes ATTACK_MISS`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData(name = "Goblin", roll = 18, kind = "MONSTER")
+        every { initiativeStore.currentEntries(guildId) } returns listOf(
+            InitiativeEntryData("Goblin", 18, "MONSTER"),
+            // AC 30 + mod 0 → max d20 roll (20) is below 30. Always miss.
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 30)
+        )
+
+        val outcome = service.attack(guildId, dmDiscordId, "Alice", 0)
+        assertEquals(AttackResult.MISS, outcome.result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ATTACK_MISS,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["targetAc"] == 30 }
             )
         }
     }
