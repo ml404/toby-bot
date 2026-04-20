@@ -242,6 +242,54 @@
         .btn-xs:hover { color: #e0e0e0; border-color: #3a4a70; }
         .btn-xs.kick { color: #e74c3c; border-color: rgba(192,57,43,0.4); }
         .btn-xs.kick:hover { background: rgba(192,57,43,0.15); }
+        .notes-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .note-card {
+            background: #1e2d50;
+            border: 1px solid #2a3a60;
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+        .note-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: #a0a0b0;
+            margin-bottom: 6px;
+        }
+        .note-author { font-weight: 600; color: #e0e0e0; }
+        .note-body {
+            font-size: 0.92rem;
+            color: #e0e0e0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .note-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .note-form textarea {
+            width: 100%;
+            min-height: 78px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .note-form .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #a0a0b0;
+        }
+        .empty-notes { color: #a0a0b0; font-size: 0.9rem; padding: 10px 0; }
     </style>
 </head>
 <body>
@@ -384,6 +432,40 @@
         <div class="empty-players" th:if="${#lists.isEmpty(players)}">
             No players have joined yet.
         </div>
+
+        <div class="section-title">Session notes</div>
+
+        <div class="notes-list" th:if="${not #lists.isEmpty(notes)}">
+            <div class="note-card" th:each="note : ${notes}">
+                <div class="note-head">
+                    <span>
+                        <span class="note-author" th:text="${note.authorName}">Author</span>
+                        · <span th:text="${#temporals.format(note.createdAt, 'yyyy-MM-dd HH:mm')}">timestamp</span>
+                    </span>
+                    <form th:if="${note.canDelete}"
+                          th:action="@{/dnd/campaign/{id}/notes/{nid}/delete(id=${guildId},nid=${note.id})}"
+                          method="post"
+                          th:onsubmit="|return confirm('Delete this note?');|"
+                          style="margin:0;">
+                        <button type="submit" class="btn-xs kick" title="Delete note">Delete</button>
+                    </form>
+                </div>
+                <div class="note-body" th:text="${note.body}">Note body</div>
+            </div>
+        </div>
+
+        <div class="empty-notes" th:if="${#lists.isEmpty(notes)}">
+            No notes yet.
+        </div>
+
+        <form class="note-form" th:if="${isUserDm or isUserPlayer}"
+              th:action="@{/dnd/campaign/{id}/notes(id=${guildId})}" method="post">
+            <textarea name="body" placeholder="Write a session note…" maxlength="2000" required></textarea>
+            <div class="row">
+                <span>Visible to everyone on this page. Max 2000 characters.</span>
+                <button type="submit" class="btn btn-primary">Add note</button>
+            </div>
+        </form>
 
         <div class="hint">
             Also available in Discord:

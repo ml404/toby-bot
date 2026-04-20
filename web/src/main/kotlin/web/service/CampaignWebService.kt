@@ -6,23 +6,36 @@ import common.helpers.parseDndBeyondCharacterId
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.SessionNoteDto
 import database.dto.UserDto
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.service.SessionNoteService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 
 data class CampaignDetail(
     val campaign: CampaignDto,
     val players: List<PlayerInfo>,
     val dmName: String,
     val isCurrentUserPlayer: Boolean = false,
-    val currentUserCharacterId: Long? = null
+    val currentUserCharacterId: Long? = null,
+    val notes: List<SessionNoteView> = emptyList()
 ) {
     fun isDm(discordId: Long): Boolean = campaign.dmDiscordId == discordId
 }
+
+data class SessionNoteView(
+    val id: Long,
+    val authorDiscordId: Long,
+    val authorName: String,
+    val body: String,
+    val createdAt: LocalDateTime,
+    val canDelete: Boolean
+)
 
 data class PlayerInfo(
     val discordId: Long,
@@ -54,6 +67,8 @@ enum class SetCharacterResult { UPDATED, CLEARED, INVALID }
 enum class EndResult { ENDED, NO_ACTIVE_CAMPAIGN, NOT_DM }
 enum class KickResult { KICKED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_A_PLAYER, CANNOT_KICK_DM }
 enum class SetAliveResult { UPDATED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_A_PLAYER }
+enum class AddNoteResult { ADDED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, EMPTY_BODY, BODY_TOO_LONG }
+enum class DeleteNoteResult { DELETED, NO_ACTIVE_CAMPAIGN, NOT_FOUND, NOT_ALLOWED }
 
 @Service
 class CampaignWebService(
@@ -62,10 +77,15 @@ class CampaignWebService(
     private val introWebService: IntroWebService,
     private val userService: UserService,
     private val characterSheetService: CharacterSheetService,
+    private val sessionNoteService: SessionNoteService,
     private val jda: JDA
 ) {
 
     private val objectMapper = ObjectMapper()
+
+    companion object {
+        const val MAX_NOTE_BODY_LENGTH = 2000
+    }
 
     fun getMutualGuildsWithCampaigns(accessToken: String): List<GuildCampaignInfo> {
         val mutualGuilds = introWebService.getMutualGuilds(accessToken)
@@ -108,13 +128,28 @@ class CampaignWebService(
 
         val isCurrentUserPlayer = players.any { it.discordId == requestingDiscordId }
         val currentUserCharacterId = userService.getUserById(requestingDiscordId, guildId)?.dndBeyondCharacterId
+        val isDm = campaign.dmDiscordId == requestingDiscordId
+
+        val notes = sessionNoteService.getNotesForCampaign(campaign.id).map { note ->
+            val authorName = guild?.getMemberById(note.authorDiscordId)?.effectiveName
+                ?: "Unknown (ID: ${note.authorDiscordId})"
+            SessionNoteView(
+                id = note.id,
+                authorDiscordId = note.authorDiscordId,
+                authorName = authorName,
+                body = note.body,
+                createdAt = note.createdAt,
+                canDelete = isDm || note.authorDiscordId == requestingDiscordId
+            )
+        }
 
         return CampaignDetail(
             campaign = campaign,
             players = players,
             dmName = dmName,
             isCurrentUserPlayer = isCurrentUserPlayer,
-            currentUserCharacterId = currentUserCharacterId
+            currentUserCharacterId = currentUserCharacterId,
+            notes = notes
         )
     }
 
@@ -206,6 +241,48 @@ class CampaignWebService(
         player.alive = alive
         campaignPlayerService.updatePlayer(player)
         return SetAliveResult.UPDATED
+    }
+
+    fun addNote(guildId: Long, authorDiscordId: Long, body: String): AddNoteResult {
+        val trimmed = body.trim()
+        if (trimmed.isEmpty()) return AddNoteResult.EMPTY_BODY
+        if (trimmed.length > MAX_NOTE_BODY_LENGTH) return AddNoteResult.BODY_TOO_LONG
+
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return AddNoteResult.NO_ACTIVE_CAMPAIGN
+
+        if (!isCampaignParticipant(campaign, authorDiscordId)) return AddNoteResult.NOT_PARTICIPANT
+
+        sessionNoteService.createNote(
+            SessionNoteDto(
+                campaignId = campaign.id,
+                authorDiscordId = authorDiscordId,
+                body = trimmed,
+                createdAt = LocalDateTime.now()
+            )
+        )
+        return AddNoteResult.ADDED
+    }
+
+    fun deleteNote(guildId: Long, requestingDiscordId: Long, noteId: Long): DeleteNoteResult {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return DeleteNoteResult.NO_ACTIVE_CAMPAIGN
+
+        val note = sessionNoteService.getNoteById(noteId) ?: return DeleteNoteResult.NOT_FOUND
+        if (note.campaignId != campaign.id) return DeleteNoteResult.NOT_FOUND
+
+        val isDm = campaign.dmDiscordId == requestingDiscordId
+        val isAuthor = note.authorDiscordId == requestingDiscordId
+        if (!isDm && !isAuthor) return DeleteNoteResult.NOT_ALLOWED
+
+        sessionNoteService.deleteNoteById(noteId)
+        return DeleteNoteResult.DELETED
+    }
+
+    private fun isCampaignParticipant(campaign: CampaignDto, discordId: Long): Boolean {
+        if (campaign.dmDiscordId == discordId) return true
+        val playerId = CampaignPlayerId(campaign.id, discordId)
+        return campaignPlayerService.getPlayer(playerId) != null
     }
 
     private fun loadCharacterSummary(characterId: Long): CharacterSummary? {

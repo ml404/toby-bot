@@ -3,11 +3,14 @@ package web.service
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.SessionNoteDto
 import database.dto.UserDto
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.service.SessionNoteService
 import database.service.UserService
+import java.time.LocalDateTime
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -27,6 +30,7 @@ class CampaignWebServiceTest {
     private lateinit var introWebService: IntroWebService
     private lateinit var userService: UserService
     private lateinit var characterSheetService: CharacterSheetService
+    private lateinit var sessionNoteService: SessionNoteService
     private lateinit var jda: JDA
     private lateinit var service: CampaignWebService
 
@@ -49,6 +53,7 @@ class CampaignWebServiceTest {
         introWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         characterSheetService = mockk(relaxed = true)
+        sessionNoteService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         service = CampaignWebService(
             campaignService,
@@ -56,6 +61,7 @@ class CampaignWebServiceTest {
             introWebService,
             userService,
             characterSheetService,
+            sessionNoteService,
             jda
         )
     }
@@ -505,5 +511,172 @@ class CampaignWebServiceTest {
         )
         assertFalse(existing.alive)
         verify { campaignPlayerService.updatePlayer(existing) }
+    }
+
+    // addNote
+
+    @Test
+    fun `addNote rejects empty body`() {
+        assertEquals(AddNoteResult.EMPTY_BODY, service.addNote(guildId, dmDiscordId, "   "))
+        verify(exactly = 0) { sessionNoteService.createNote(any()) }
+    }
+
+    @Test
+    fun `addNote rejects body longer than max`() {
+        val body = "x".repeat(CampaignWebService.MAX_NOTE_BODY_LENGTH + 1)
+        assertEquals(AddNoteResult.BODY_TOO_LONG, service.addNote(guildId, dmDiscordId, body))
+        verify(exactly = 0) { sessionNoteService.createNote(any()) }
+    }
+
+    @Test
+    fun `addNote returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(AddNoteResult.NO_ACTIVE_CAMPAIGN, service.addNote(guildId, dmDiscordId, "hello"))
+    }
+
+    @Test
+    fun `addNote rejects non-participant`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, 99L)) } returns null
+
+        assertEquals(AddNoteResult.NOT_PARTICIPANT, service.addNote(guildId, 99L, "hi"))
+        verify(exactly = 0) { sessionNoteService.createNote(any()) }
+    }
+
+    @Test
+    fun `addNote allows DM and persists trimmed body`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+
+        assertEquals(AddNoteResult.ADDED, service.addNote(guildId, dmDiscordId, "  party reached the tavern  "))
+        verify {
+            sessionNoteService.createNote(match {
+                it.campaignId == campaign.id &&
+                    it.authorDiscordId == dmDiscordId &&
+                    it.body == "party reached the tavern"
+            })
+        }
+    }
+
+    @Test
+    fun `addNote allows existing player`() {
+        val campaign = makeCampaign()
+        val playerId = CampaignPlayerId(campaign.id, playerDiscordId)
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(playerId) } returns
+            CampaignPlayerDto(id = playerId, guildId = guildId)
+
+        assertEquals(AddNoteResult.ADDED, service.addNote(guildId, playerDiscordId, "loot!"))
+        verify { sessionNoteService.createNote(any()) }
+    }
+
+    // deleteNote
+
+    @Test
+    fun `deleteNote returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(DeleteNoteResult.NO_ACTIVE_CAMPAIGN, service.deleteNote(guildId, dmDiscordId, 1L))
+    }
+
+    @Test
+    fun `deleteNote returns NOT_FOUND when note missing`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { sessionNoteService.getNoteById(42L) } returns null
+
+        assertEquals(DeleteNoteResult.NOT_FOUND, service.deleteNote(guildId, dmDiscordId, 42L))
+    }
+
+    @Test
+    fun `deleteNote returns NOT_FOUND when note belongs to another campaign`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { sessionNoteService.getNoteById(42L) } returns SessionNoteDto(
+            id = 42L,
+            campaignId = campaign.id + 1,
+            authorDiscordId = dmDiscordId,
+            body = "stale"
+        )
+
+        assertEquals(DeleteNoteResult.NOT_FOUND, service.deleteNote(guildId, dmDiscordId, 42L))
+        verify(exactly = 0) { sessionNoteService.deleteNoteById(any()) }
+    }
+
+    @Test
+    fun `deleteNote rejects non-author non-DM`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { sessionNoteService.getNoteById(42L) } returns SessionNoteDto(
+            id = 42L,
+            campaignId = campaign.id,
+            authorDiscordId = playerDiscordId,
+            body = "by player"
+        )
+
+        assertEquals(DeleteNoteResult.NOT_ALLOWED, service.deleteNote(guildId, 999L, 42L))
+        verify(exactly = 0) { sessionNoteService.deleteNoteById(any()) }
+    }
+
+    @Test
+    fun `deleteNote allows author`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { sessionNoteService.getNoteById(42L) } returns SessionNoteDto(
+            id = 42L,
+            campaignId = campaign.id,
+            authorDiscordId = playerDiscordId,
+            body = "mine"
+        )
+
+        assertEquals(DeleteNoteResult.DELETED, service.deleteNote(guildId, playerDiscordId, 42L))
+        verify { sessionNoteService.deleteNoteById(42L) }
+    }
+
+    @Test
+    fun `deleteNote allows DM to delete any note`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { sessionNoteService.getNoteById(42L) } returns SessionNoteDto(
+            id = 42L,
+            campaignId = campaign.id,
+            authorDiscordId = playerDiscordId,
+            body = "player's note"
+        )
+
+        assertEquals(DeleteNoteResult.DELETED, service.deleteNote(guildId, dmDiscordId, 42L))
+        verify { sessionNoteService.deleteNoteById(42L) }
+    }
+
+    // getCampaignDetail notes hydration
+
+    @Test
+    fun `getCampaignDetail hydrates notes with author names and delete permissions`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+
+        val dmMember = mockk<Member> { every { effectiveName } returns "DM" }
+        val playerMember = mockk<Member> { every { effectiveName } returns "Player" }
+        val jdaGuild = mockk<Guild> {
+            every { getMemberById(dmDiscordId) } returns dmMember
+            every { getMemberById(playerDiscordId) } returns playerMember
+        }
+        every { jda.getGuildById(guildId) } returns jdaGuild
+        every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns emptyList()
+
+        val now = LocalDateTime.now()
+        every { sessionNoteService.getNotesForCampaign(campaign.id) } returns listOf(
+            SessionNoteDto(id = 1, campaignId = campaign.id, authorDiscordId = dmDiscordId, body = "dm", createdAt = now),
+            SessionNoteDto(id = 2, campaignId = campaign.id, authorDiscordId = playerDiscordId, body = "pl", createdAt = now)
+        )
+
+        val asDm = service.getCampaignDetail(guildId, dmDiscordId)!!
+        assertEquals(2, asDm.notes.size)
+        assertTrue(asDm.notes.all { it.canDelete }, "DM should be able to delete every note")
+        assertEquals("DM", asDm.notes[0].authorName)
+        assertEquals("Player", asDm.notes[1].authorName)
+
+        val asPlayer = service.getCampaignDetail(guildId, playerDiscordId)!!
+        assertFalse(asPlayer.notes[0].canDelete, "Player can't delete DM's note")
+        assertTrue(asPlayer.notes[1].canDelete, "Player can delete their own note")
     }
 }

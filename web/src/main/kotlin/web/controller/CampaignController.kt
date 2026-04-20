@@ -8,7 +8,9 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.AddNoteResult
 import web.service.CampaignWebService
+import web.service.DeleteNoteResult
 import web.service.EndResult
 import web.service.JoinResult
 import web.service.KickResult
@@ -64,6 +66,7 @@ class CampaignController(
         model.addAttribute("isUserDm", campaignDetail?.isDm(discordId) ?: false)
         model.addAttribute("isUserPlayer", campaignDetail?.isCurrentUserPlayer ?: false)
         model.addAttribute("currentUserCharacterId", campaignDetail?.currentUserCharacterId)
+        model.addAttribute("notes", campaignDetail?.notes ?: emptyList<Any>())
         model.addAttribute("username", user.displayName())
 
         return "campaignDetail"
@@ -198,6 +201,54 @@ class CampaignController(
             SetAliveResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
             SetAliveResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can change player status.")
             SetAliveResult.NOT_A_PLAYER -> ra.addFlashAttribute("error", "That user isn't in the campaign.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/notes")
+    fun addNote(
+        @PathVariable guildId: Long,
+        @RequestParam body: String,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.addNote(guildId, discordId, body)) {
+            AddNoteResult.ADDED -> {}
+            AddNoteResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            AddNoteResult.NOT_PARTICIPANT -> ra.addFlashAttribute(
+                "error",
+                "Only the DM and campaign players can add notes."
+            )
+            AddNoteResult.EMPTY_BODY -> ra.addFlashAttribute("error", "Note body can't be empty.")
+            AddNoteResult.BODY_TOO_LONG -> ra.addFlashAttribute(
+                "error",
+                "Note is too long (max 2000 characters)."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/notes/{noteId}/delete")
+    fun deleteNote(
+        @PathVariable guildId: Long,
+        @PathVariable noteId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.deleteNote(guildId, discordId, noteId)) {
+            DeleteNoteResult.DELETED -> {}
+            DeleteNoteResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            DeleteNoteResult.NOT_FOUND -> ra.addFlashAttribute("error", "That note doesn't exist.")
+            DeleteNoteResult.NOT_ALLOWED -> ra.addFlashAttribute(
+                "error",
+                "You can only delete your own notes (or any note if you're the DM)."
+            )
         }
         return "redirect:/dnd/campaign/$guildId"
     }
