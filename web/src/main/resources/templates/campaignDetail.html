@@ -222,6 +222,26 @@
             font-size: 0.9rem;
         }
         .clear-form { display: inline; }
+        .dm-player-actions {
+            display: flex;
+            gap: 6px;
+            margin-left: 10px;
+        }
+        .dm-player-actions form { display: inline; }
+        .btn-xs {
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            border-radius: 5px;
+            border: 1px solid #2a3a60;
+            background: transparent;
+            color: #a0a0b0;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-xs:hover { color: #e0e0e0; border-color: #3a4a70; }
+        .btn-xs.kick { color: #e74c3c; border-color: rgba(192,57,43,0.4); }
+        .btn-xs.kick:hover { background: rgba(192,57,43,0.15); }
     </style>
 </head>
 <body>
@@ -277,6 +297,11 @@
                 <form th:if="${isUserPlayer}"
                       th:action="@{/dnd/campaign/{id}/leave(id=${guildId})}" method="post">
                     <button type="submit" class="btn btn-secondary">Leave campaign</button>
+                </form>
+                <form th:if="${isUserDm}"
+                      th:action="@{/dnd/campaign/{id}/end(id=${guildId})}" method="post"
+                      onsubmit="return confirm('End this campaign? Players will be removed and the campaign marked inactive.');">
+                    <button type="submit" class="btn btn-danger">End campaign</button>
                 </form>
             </div>
         </div>
@@ -334,6 +359,25 @@
                 </div>
                 <span th:if="${player.alive}" class="player-status alive">Alive</span>
                 <span th:unless="${player.alive}" class="player-status dead">☠️ Dead</span>
+                <div th:if="${isUserDm}" class="dm-player-actions">
+                    <form th:if="${player.alive}"
+                          th:action="@{/dnd/campaign/{id}/players/{pid}/alive(id=${guildId},pid=${player.discordId})}"
+                          method="post">
+                        <input type="hidden" name="alive" value="false">
+                        <button type="submit" class="btn-xs" title="Mark as dead">☠️ Mark dead</button>
+                    </form>
+                    <form th:unless="${player.alive}"
+                          th:action="@{/dnd/campaign/{id}/players/{pid}/alive(id=${guildId},pid=${player.discordId})}"
+                          method="post">
+                        <input type="hidden" name="alive" value="true">
+                        <button type="submit" class="btn-xs" title="Mark as alive">Revive</button>
+                    </form>
+                    <form th:action="@{/dnd/campaign/{id}/players/{pid}/kick(id=${guildId},pid=${player.discordId})}"
+                          method="post"
+                          th:onsubmit="|return confirm('Kick ${player.displayName} from the campaign?');|">
+                        <button type="submit" class="btn-xs kick" title="Kick from campaign">Kick</button>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -344,7 +388,7 @@
         <div class="hint">
             Also available in Discord:
             <code>/campaign join</code> · <code>/campaign leave</code> · <code>/linkcharacter</code>
-            <span th:if="${isUserDm}"> · End the campaign with <code>/campaign end</code></span>
+            <span th:if="${isUserDm}"> · <code>/campaign end</code></span>
         </div>
     </div>
 </div>

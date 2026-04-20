@@ -51,6 +51,9 @@ data class GuildCampaignInfo(
 enum class JoinResult { JOINED, NO_ACTIVE_CAMPAIGN, ALREADY_JOINED, IS_DM }
 enum class LeaveResult { LEFT, NO_ACTIVE_CAMPAIGN, NOT_A_PLAYER }
 enum class SetCharacterResult { UPDATED, CLEARED, INVALID }
+enum class EndResult { ENDED, NO_ACTIVE_CAMPAIGN, NOT_DM }
+enum class KickResult { KICKED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_A_PLAYER, CANNOT_KICK_DM }
+enum class SetAliveResult { UPDATED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_A_PLAYER }
 
 @Service
 class CampaignWebService(
@@ -166,6 +169,43 @@ class CampaignWebService(
         user.dndBeyondCharacterId = id
         userService.updateUser(user)
         return SetCharacterResult.UPDATED
+    }
+
+    fun endCampaign(guildId: Long, requestingDiscordId: Long): EndResult {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return EndResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return EndResult.NOT_DM
+        campaignService.deactivateCampaignForGuild(guildId)
+        return EndResult.ENDED
+    }
+
+    fun kickPlayer(guildId: Long, requestingDiscordId: Long, targetDiscordId: Long): KickResult {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return KickResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return KickResult.NOT_DM
+        if (campaign.dmDiscordId == targetDiscordId) return KickResult.CANNOT_KICK_DM
+
+        val playerId = CampaignPlayerId(campaign.id, targetDiscordId)
+        if (campaignPlayerService.getPlayer(playerId) == null) return KickResult.NOT_A_PLAYER
+        campaignPlayerService.removePlayer(playerId)
+        return KickResult.KICKED
+    }
+
+    fun setPlayerAlive(
+        guildId: Long,
+        requestingDiscordId: Long,
+        targetDiscordId: Long,
+        alive: Boolean
+    ): SetAliveResult {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return SetAliveResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return SetAliveResult.NOT_DM
+
+        val playerId = CampaignPlayerId(campaign.id, targetDiscordId)
+        val player = campaignPlayerService.getPlayer(playerId) ?: return SetAliveResult.NOT_A_PLAYER
+        player.alive = alive
+        campaignPlayerService.updatePlayer(player)
+        return SetAliveResult.UPDATED
     }
 
     private fun loadCharacterSummary(characterId: Long): CharacterSummary? {

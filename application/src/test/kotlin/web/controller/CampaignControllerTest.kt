@@ -16,9 +16,12 @@ import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.CampaignDetail
 import web.service.CampaignWebService
+import web.service.EndResult
 import web.service.GuildCampaignInfo
 import web.service.JoinResult
+import web.service.KickResult
 import web.service.LeaveResult
+import web.service.SetAliveResult
 import web.service.SetCharacterResult
 
 class CampaignControllerTest {
@@ -296,6 +299,114 @@ class CampaignControllerTest {
         every { mockUser.getAttribute<String>("id") } returns null
 
         val view = controller.setLinkedCharacter(guildId, "12345", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    // endCampaign
+
+    @Test
+    fun `endCampaign redirects with no flash on success`() {
+        every { campaignWebService.endCampaign(guildId, 1L) } returns EndResult.ENDED
+
+        val view = controller.endCampaign(guildId, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `endCampaign sets error when no active campaign`() {
+        every { campaignWebService.endCampaign(guildId, 1L) } returns EndResult.NO_ACTIVE_CAMPAIGN
+
+        controller.endCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "No active campaign in this server.") }
+    }
+
+    @Test
+    fun `endCampaign sets error when not DM`() {
+        every { campaignWebService.endCampaign(guildId, 1L) } returns EndResult.NOT_DM
+
+        controller.endCampaign(guildId, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can end the campaign.") }
+    }
+
+    // kickPlayer
+
+    @Test
+    fun `kickPlayer redirects with no flash on success`() {
+        every { campaignWebService.kickPlayer(guildId, 1L, 99L) } returns KickResult.KICKED
+
+        val view = controller.kickPlayer(guildId, 99L, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `kickPlayer sets error when not DM`() {
+        every { campaignWebService.kickPlayer(guildId, 1L, 99L) } returns KickResult.NOT_DM
+
+        controller.kickPlayer(guildId, 99L, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can kick players.") }
+    }
+
+    @Test
+    fun `kickPlayer sets error when target is DM`() {
+        every { campaignWebService.kickPlayer(guildId, 1L, 1L) } returns KickResult.CANNOT_KICK_DM
+
+        controller.kickPlayer(guildId, 1L, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "The DM can't be kicked.") }
+    }
+
+    @Test
+    fun `kickPlayer sets error when target is not a player`() {
+        every { campaignWebService.kickPlayer(guildId, 1L, 99L) } returns KickResult.NOT_A_PLAYER
+
+        controller.kickPlayer(guildId, 99L, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "That user isn't in the campaign.") }
+    }
+
+    // setPlayerAlive
+
+    @Test
+    fun `setPlayerAlive redirects with no flash on success`() {
+        every { campaignWebService.setPlayerAlive(guildId, 1L, 99L, false) } returns SetAliveResult.UPDATED
+
+        val view = controller.setPlayerAlive(guildId, 99L, false, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `setPlayerAlive sets error when not DM`() {
+        every { campaignWebService.setPlayerAlive(guildId, 1L, 99L, true) } returns SetAliveResult.NOT_DM
+
+        controller.setPlayerAlive(guildId, 99L, true, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can change player status.") }
+    }
+
+    @Test
+    fun `setPlayerAlive sets error when target is not a player`() {
+        every { campaignWebService.setPlayerAlive(guildId, 1L, 99L, false) } returns SetAliveResult.NOT_A_PLAYER
+
+        controller.setPlayerAlive(guildId, 99L, false, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "That user isn't in the campaign.") }
+    }
+
+    @Test
+    fun `setPlayerAlive redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.setPlayerAlive(guildId, 99L, false, mockUser, mockRa)
 
         assertEquals("redirect:/dnd/campaign", view)
     }
