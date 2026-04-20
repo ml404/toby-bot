@@ -2,6 +2,7 @@ package bot.toby.command.commands.dnd
 
 import bot.toby.BOT_WEB_URL
 import bot.toby.helpers.UserDtoHelper
+import common.events.CampaignEventType
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.CampaignDto
@@ -16,13 +17,15 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.springframework.stereotype.Component
+import web.service.SessionLogPublisher
 import java.awt.Color
 
 @Component
 class CampaignCommand(
     private val campaignService: CampaignService,
     private val campaignPlayerService: CampaignPlayerService,
-    private val userDtoHelper: UserDtoHelper
+    private val userDtoHelper: UserDtoHelper,
+    private val sessionLog: SessionLogPublisher
 ) : DnDCommand {
 
     override val name = "campaign"
@@ -133,6 +136,13 @@ class CampaignCommand(
         )
         campaignPlayerService.addPlayer(player)
 
+        sessionLog.publish(
+            guildId = guild.idLong,
+            type = CampaignEventType.PLAYER_JOINED,
+            actorDiscordId = callerDto.discordId,
+            actorName = ctx.member?.effectiveName
+        )
+
         val characterNote = if (callerDto.dndBeyondCharacterId != null)
             "Character linked (ID: ${callerDto.dndBeyondCharacterId})"
         else
@@ -165,6 +175,14 @@ class CampaignCommand(
         }
 
         campaignPlayerService.removePlayer(playerId)
+
+        sessionLog.publish(
+            guildId = guild.idLong,
+            type = CampaignEventType.PLAYER_LEFT,
+            actorDiscordId = callerDto.discordId,
+            actorName = ctx.member?.effectiveName
+        )
+
         event.hook.sendMessage("You have left the campaign **${campaign.name}**.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -219,6 +237,14 @@ class CampaignCommand(
             return
         }
 
+        // Publish before deactivation so the listener can still resolve the active campaign.
+        sessionLog.publish(
+            guildId = guild.idLong,
+            type = CampaignEventType.CAMPAIGN_ENDED,
+            actorDiscordId = callerDto.discordId,
+            actorName = ctx.member?.effectiveName,
+            payload = mapOf("campaignName" to campaign.name)
+        )
         campaignService.deactivateCampaignForGuild(guild.idLong)
         event.hook.sendMessage("The campaign **${campaign.name}** has ended. Thanks for playing!")
             .queue()

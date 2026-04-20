@@ -2,6 +2,7 @@ package web.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import common.events.CampaignEventType
 import common.helpers.parseDndBeyondCharacterId
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
@@ -91,6 +92,7 @@ class CampaignWebService(
     private val characterSheetService: CharacterSheetService,
     private val sessionNoteService: SessionNoteService,
     private val campaignEventService: CampaignEventService,
+    private val sessionLog: SessionLogPublisher,
     private val jda: JDA
 ) {
 
@@ -121,6 +123,9 @@ class CampaignWebService(
 
     fun getActiveCampaignId(guildId: Long): Long? =
         campaignService.getActiveCampaignForGuild(guildId)?.id
+
+    private fun resolveMemberName(guildId: Long, discordId: Long): String? =
+        jda.getGuildById(guildId)?.getMemberById(discordId)?.effectiveName
 
     fun getCampaignDetail(guildId: Long, requestingDiscordId: Long): CampaignDetail? {
         val campaign = campaignService.getActiveCampaignForGuild(guildId) ?: return null
@@ -226,6 +231,12 @@ class CampaignWebService(
                 alive = true
             )
         )
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.PLAYER_JOINED,
+            actorDiscordId = discordId,
+            actorName = resolveMemberName(guildId, discordId)
+        )
         return JoinResult.JOINED
     }
 
@@ -235,6 +246,12 @@ class CampaignWebService(
         val playerId = CampaignPlayerId(campaign.id, discordId)
         if (campaignPlayerService.getPlayer(playerId) == null) return LeaveResult.NOT_A_PLAYER
         campaignPlayerService.removePlayer(playerId)
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.PLAYER_LEFT,
+            actorDiscordId = discordId,
+            actorName = resolveMemberName(guildId, discordId)
+        )
         return LeaveResult.LEFT
     }
 
@@ -259,6 +276,14 @@ class CampaignWebService(
         val campaign = campaignService.getActiveCampaignForGuild(guildId)
             ?: return EndResult.NO_ACTIVE_CAMPAIGN
         if (campaign.dmDiscordId != requestingDiscordId) return EndResult.NOT_DM
+        // Publish before deactivation so the listener can still resolve the active campaign.
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.CAMPAIGN_ENDED,
+            actorDiscordId = requestingDiscordId,
+            actorName = resolveMemberName(guildId, requestingDiscordId),
+            payload = mapOf("campaignName" to campaign.name)
+        )
         campaignService.deactivateCampaignForGuild(guildId)
         return EndResult.ENDED
     }
@@ -272,6 +297,16 @@ class CampaignWebService(
         val playerId = CampaignPlayerId(campaign.id, targetDiscordId)
         if (campaignPlayerService.getPlayer(playerId) == null) return KickResult.NOT_A_PLAYER
         campaignPlayerService.removePlayer(playerId)
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.PLAYER_KICKED,
+            actorDiscordId = requestingDiscordId,
+            actorName = resolveMemberName(guildId, requestingDiscordId),
+            payload = mapOf(
+                "targetDiscordId" to targetDiscordId,
+                "targetName" to resolveMemberName(guildId, targetDiscordId)
+            )
+        )
         return KickResult.KICKED
     }
 
@@ -287,8 +322,21 @@ class CampaignWebService(
 
         val playerId = CampaignPlayerId(campaign.id, targetDiscordId)
         val player = campaignPlayerService.getPlayer(playerId) ?: return SetAliveResult.NOT_A_PLAYER
+        val previouslyAlive = player.alive
         player.alive = alive
         campaignPlayerService.updatePlayer(player)
+        if (previouslyAlive != alive) {
+            sessionLog.publish(
+                guildId = guildId,
+                type = if (alive) CampaignEventType.PLAYER_REVIVED else CampaignEventType.PLAYER_DIED,
+                actorDiscordId = requestingDiscordId,
+                actorName = resolveMemberName(guildId, requestingDiscordId),
+                payload = mapOf(
+                    "targetDiscordId" to targetDiscordId,
+                    "targetName" to resolveMemberName(guildId, targetDiscordId)
+                )
+            )
+        }
         return SetAliveResult.UPDATED
     }
 

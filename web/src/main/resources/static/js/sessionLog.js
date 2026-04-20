@@ -17,13 +17,48 @@
         return String(v);
     }
 
-    function renderRollBody(p) {
-        const sides = p.sides;
-        const count = p.count;
-        const modifier = p.modifier || 0;
-        const total = p.total;
-        const modSegment = modifier ? ' + ' + modifier : '';
-        return 'rolled ' + count + 'd' + sides + modSegment + ' = ' + total;
+    function renderBody(event) {
+        const p = event.payload || {};
+        switch (event.type) {
+            case 'ROLL': {
+                const mod = p.modifier ? ' + ' + p.modifier : '';
+                return 'rolled ' + p.count + 'd' + p.sides + mod + ' = ' + p.total;
+            }
+            case 'INITIATIVE_ROLLED': {
+                const entries = Array.isArray(p.entries) ? p.entries : [];
+                if (!entries.length) return 'rolled initiative (empty)';
+                const order = entries.map(function (e) { return e.name + ' ' + e.roll; }).join(', ');
+                return 'rolled initiative — ' + order;
+            }
+            case 'INITIATIVE_NEXT':
+                return p.currentName ? 'next turn: ' + p.currentName : 'advanced initiative';
+            case 'INITIATIVE_PREV':
+                return p.currentName ? 'back to: ' + p.currentName : 'rewound initiative';
+            case 'INITIATIVE_CLEARED':
+                return 'cleared initiative';
+            case 'PLAYER_JOINED':
+                return 'joined the campaign';
+            case 'PLAYER_LEFT':
+                return 'left the campaign';
+            case 'PLAYER_KICKED':
+                return 'kicked ' + (p.targetName || 'player ' + p.targetDiscordId);
+            case 'PLAYER_DIED':
+                return '☠️ marked ' + (p.targetName || 'player') + ' as dead';
+            case 'PLAYER_REVIVED':
+                return 'revived ' + (p.targetName || 'player');
+            case 'CAMPAIGN_ENDED':
+                return p.campaignName
+                    ? 'ended campaign “' + p.campaignName + '”'
+                    : 'ended the campaign';
+            case 'DM_NOTE':
+                return p.body ? p.body : '(empty note)';
+            case 'HIT':
+                return 'marked as HIT' + (p.target ? ' on ' + p.target : '');
+            case 'MISS':
+                return 'marked as MISS' + (p.target ? ' on ' + p.target : '');
+            default:
+                return escapeText(JSON.stringify(p));
+        }
     }
 
     function renderEvent(event) {
@@ -45,12 +80,7 @@
 
         const body = document.createElement('span');
         body.className = 'event-body';
-        const payload = event.payload || {};
-        if (event.type === 'ROLL') {
-            body.textContent = renderRollBody(payload);
-        } else {
-            body.textContent = escapeText(JSON.stringify(payload));
-        }
+        body.textContent = renderBody(event);
 
         const time = document.createElement('span');
         time.className = 'event-time';

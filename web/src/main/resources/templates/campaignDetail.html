@@ -518,6 +518,34 @@
                                    + |&nbsp;=&nbsp;${event.payload['total']}|">
                         rolled 1d20 = 15
                     </span>
+                    <span th:case="'INITIATIVE_ROLLED'"
+                          th:text="${event.payload['entries'] != null and !#lists.isEmpty(event.payload['entries'])
+                                    ? 'rolled initiative — ' + #strings.arrayJoin(
+                                          event.payload['entries'].![name + ' ' + roll].toArray(), ', ')
+                                    : 'rolled initiative (empty)'}">
+                        rolled initiative — Alice 18, Bob 12
+                    </span>
+                    <span th:case="'INITIATIVE_NEXT'"
+                          th:text="${event.payload['currentName'] != null
+                                    ? 'next turn: ' + event.payload['currentName']
+                                    : 'advanced initiative'}">next turn: Alice</span>
+                    <span th:case="'INITIATIVE_PREV'"
+                          th:text="${event.payload['currentName'] != null
+                                    ? 'back to: ' + event.payload['currentName']
+                                    : 'rewound initiative'}">back to: Alice</span>
+                    <span th:case="'INITIATIVE_CLEARED'">cleared initiative</span>
+                    <span th:case="'PLAYER_JOINED'">joined the campaign</span>
+                    <span th:case="'PLAYER_LEFT'">left the campaign</span>
+                    <span th:case="'PLAYER_KICKED'"
+                          th:text="${'kicked ' + (event.payload['targetName'] ?: 'a player')}">kicked someone</span>
+                    <span th:case="'PLAYER_DIED'"
+                          th:text="${'☠️ marked ' + (event.payload['targetName'] ?: 'a player') + ' as dead'}">died</span>
+                    <span th:case="'PLAYER_REVIVED'"
+                          th:text="${'revived ' + (event.payload['targetName'] ?: 'a player')}">revived</span>
+                    <span th:case="'CAMPAIGN_ENDED'"
+                          th:text="${event.payload['campaignName'] != null
+                                    ? 'ended campaign “' + event.payload['campaignName'] + '”'
+                                    : 'ended the campaign'}">ended campaign</span>
                     <span th:case="*" th:text="${event.payload}">raw payload</span>
                 </span>
                 <span class="event-time"

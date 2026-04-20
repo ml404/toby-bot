@@ -40,7 +40,7 @@ internal class InitiativeCommandTest : CommandTest {
         setUpCommonMocks()
         userDtoHelper = mockk()
         dndHelper = DnDHelper(userDtoHelper)
-        initiativeCommand = InitiativeCommand(dndHelper)
+        initiativeCommand = InitiativeCommand(dndHelper, mockk(relaxed = true))
         channelOption = mockk<OptionMapping>()
         initButtons = dndHelper.initButtons
         every { event.getOption("channel") } returns channelOption

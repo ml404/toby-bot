@@ -1,6 +1,7 @@
 package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
+import common.events.CampaignEventType
 import core.command.Command.Companion.invokeDeleteOnHookResponse
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
@@ -14,9 +15,13 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import web.service.SessionLogPublisher
 
 @Component
-class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnDCommand {
+class InitiativeCommand @Autowired constructor(
+    private val dndHelper: DnDHelper,
+    private val sessionLog: SessionLogPublisher
+) : DnDCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -47,6 +52,16 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
 
         if (checkForNonDmMembersInVoiceChannel(deleteDelay, event, guildId)) return
         displayAllValues(guildId, event.hook, deleteDelay)
+
+        val entries = dndHelper.stateFor(guildId).sortedEntries
+            .map { mapOf("name" to it.key, "roll" to it.value) }
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.INITIATIVE_ROLLED,
+            actorDiscordId = event.user.idLong,
+            actorName = event.member?.effectiveName ?: event.user.effectiveName,
+            payload = mapOf("entries" to entries)
+        )
     }
 
     override val name: String = "initiative"
