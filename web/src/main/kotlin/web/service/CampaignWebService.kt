@@ -1,6 +1,6 @@
 package web.service
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
@@ -61,9 +61,7 @@ class CampaignWebService(
     private val jda: JDA
 ) {
 
-    private val objectMapper = ObjectMapper().apply {
-        configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    }
+    private val objectMapper = ObjectMapper()
 
     fun getMutualGuildsWithCampaigns(accessToken: String): List<GuildCampaignInfo> {
         val mutualGuilds = introWebService.getMutualGuilds(accessToken)
@@ -98,9 +96,9 @@ class CampaignWebService(
                 characterId = player.characterId,
                 alive = player.alive,
                 characterName = summary?.name,
-                characterRace = summary?.raceName(),
-                characterClasses = summary?.classesString(),
-                characterLevel = summary?.totalLevel()
+                characterRace = summary?.raceName,
+                characterClasses = summary?.classesString,
+                characterLevel = summary?.totalLevel
             )
         }
 
@@ -171,36 +169,35 @@ class CampaignWebService(
 
     private fun loadCharacterSummary(characterId: Long): CharacterSummary? {
         val json = characterSheetService.getSheet(characterId) ?: return null
-        return runCatching { objectMapper.readValue(json, CharacterSummary::class.java) }.getOrNull()
+        return runCatching { buildCharacterSummary(objectMapper.readTree(json)) }.getOrNull()
     }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class CharacterSummary(
-        val name: String? = null,
-        val race: Race? = null,
-        val classes: List<ClassEntry>? = null
-    ) {
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        data class Race(val fullName: String? = null, val baseName: String? = null)
+    private fun buildCharacterSummary(root: JsonNode): CharacterSummary {
+        val name = root.path("name").textOrNull()
 
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        data class ClassEntry(
-            val level: Int? = null,
-            val definition: Definition? = null,
-            val subclassDefinition: Definition? = null
-        )
+        val race = root.path("race")
+        val raceName = race.path("fullName").textOrNull() ?: race.path("baseName").textOrNull()
 
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        data class Definition(val name: String? = null)
-
-        fun raceName(): String? = race?.fullName ?: race?.baseName
-        fun totalLevel(): Int? = classes?.sumOf { it.level ?: 0 }?.takeIf { it > 0 }
-        fun classesString(): String? = classes?.joinToString(", ") { entry ->
-            val sub = entry.subclassDefinition?.name
-            val base = entry.definition?.name ?: "?"
+        val classesNode = root.path("classes").takeIf { it.isArray && it.size() > 0 }
+        val totalLevel = classesNode?.sumOf { it.path("level").asInt(0) }?.takeIf { it > 0 }
+        val classesString = classesNode?.joinToString(", ") { entry ->
+            val base = entry.path("definition").path("name").textOrNull() ?: "?"
+            val sub = entry.path("subclassDefinition").path("name").textOrNull()
             if (sub != null) "$base ($sub)" else base
         }?.takeIf { it.isNotBlank() }
+
+        return CharacterSummary(name, raceName, classesString, totalLevel)
     }
+
+    private fun JsonNode.textOrNull(): String? =
+        if (isTextual) textValue().takeIf { !it.isNullOrBlank() } else null
+
+    data class CharacterSummary(
+        val name: String?,
+        val raceName: String?,
+        val classesString: String?,
+        val totalLevel: Int?
+    )
 
     companion object {
         private val CHARACTER_ID_REGEX = Regex("(\\d+)")
