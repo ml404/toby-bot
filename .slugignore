@@ -40,7 +40,7 @@ README.md
 *.tmp
 
 # Ignore SQL and backup files
-*.sql
+# (SQL migrations MUST stay — Flyway reads V*.sql from the classpath at boot.)
 *.bak
 
 # Ignore media files like mp3s, images, etc.
