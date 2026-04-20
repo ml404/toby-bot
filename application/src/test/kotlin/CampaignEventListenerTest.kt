@@ -11,11 +11,13 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import web.service.CampaignEventBroadcaster
 
 class CampaignEventListenerTest {
 
     private lateinit var campaignService: CampaignService
     private lateinit var campaignEventService: CampaignEventService
+    private lateinit var broadcaster: CampaignEventBroadcaster
     private lateinit var listener: CampaignEventListener
 
     private val guildId = 100L
@@ -32,31 +34,34 @@ class CampaignEventListenerTest {
     fun setUp() {
         campaignService = mockk()
         campaignEventService = mockk(relaxed = true)
-        listener = CampaignEventListener(campaignService, campaignEventService)
+        broadcaster = mockk(relaxed = true)
+        listener = CampaignEventListener(campaignService, campaignEventService, broadcaster)
     }
 
     @Test
-    fun `persists event when active campaign exists`() {
+    fun `persists event and broadcasts when active campaign exists`() {
         val campaign = makeCampaign()
         every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
         val captured = slot<CampaignEventDto>()
-        every { campaignEventService.append(capture(captured)) } answers { captured.captured }
+        every { campaignEventService.append(capture(captured)) } answers {
+            captured.captured.apply { id = 77L }
+        }
 
         val incoming = CampaignEventOccurred(
             guildId = guildId,
             type = CampaignEventType.ROLL,
             actorDiscordId = 42L,
             actorName = "Dave",
-            payloadJson = """{"sides":20,"count":1,"modifier":0,"total":14,"rawTotal":14}"""
+            payloadJson = """{"total":14}"""
         )
         listener.onCampaignEvent(incoming)
 
         val persisted = captured.captured
         assertEquals(campaign.id, persisted.campaignId)
         assertEquals(CampaignEventType.ROLL.name, persisted.eventType)
-        assertEquals(42L, persisted.actorDiscordId)
-        assertEquals("Dave", persisted.actorName)
-        assertEquals(incoming.payloadJson, persisted.payload)
+        verify {
+            broadcaster.publish(campaign.id, match { it.id == 77L && it.eventType == "ROLL" })
+        }
     }
 
     @Test
@@ -68,10 +73,11 @@ class CampaignEventListenerTest {
         )
 
         verify(exactly = 0) { campaignEventService.append(any()) }
+        verify(exactly = 0) { broadcaster.publish(any(), any()) }
     }
 
     @Test
-    fun `swallows persistence failure`() {
+    fun `skips broadcast when persistence fails`() {
         val campaign = makeCampaign()
         every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
         every { campaignEventService.append(any()) } throws RuntimeException("boom")
@@ -79,6 +85,22 @@ class CampaignEventListenerTest {
         listener.onCampaignEvent(
             CampaignEventOccurred(guildId, CampaignEventType.ROLL, payloadJson = "{}")
         )
-        // No exception propagated — listener must not crash the publisher thread.
+
+        verify(exactly = 0) { broadcaster.publish(any(), any()) }
+    }
+
+    @Test
+    fun `swallows broadcast failure`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.append(any()) } answers {
+            firstArg<CampaignEventDto>().apply { id = 1L }
+        }
+        every { broadcaster.publish(any(), any()) } throws RuntimeException("network")
+
+        // Must not escape: publisher thread stays healthy.
+        listener.onCampaignEvent(
+            CampaignEventOccurred(guildId, CampaignEventType.ROLL, payloadJson = "{}")
+        )
     }
 }

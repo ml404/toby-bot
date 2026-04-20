@@ -119,6 +119,9 @@ class CampaignWebService(
 
     fun getGuildName(guildId: Long): String? = jda.getGuildById(guildId)?.name
 
+    fun getActiveCampaignId(guildId: Long): Long? =
+        campaignService.getActiveCampaignForGuild(guildId)?.id
+
     fun getCampaignDetail(guildId: Long, requestingDiscordId: Long): CampaignDetail? {
         val campaign = campaignService.getActiveCampaignForGuild(guildId) ?: return null
         val guild = jda.getGuildById(guildId)

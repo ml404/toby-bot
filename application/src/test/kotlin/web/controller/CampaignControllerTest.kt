@@ -7,6 +7,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -16,6 +17,7 @@ import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
 import web.service.CampaignDetail
+import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteNoteResult
 import web.service.EndResult
@@ -31,6 +33,7 @@ import java.time.LocalDateTime
 class CampaignControllerTest {
 
     private lateinit var campaignWebService: CampaignWebService
+    private lateinit var campaignEventBroadcaster: CampaignEventBroadcaster
     private lateinit var controller: CampaignController
 
     private val mockUser = mockk<OAuth2User>(relaxed = true)
@@ -48,7 +51,8 @@ class CampaignControllerTest {
     @BeforeEach
     fun setup() {
         campaignWebService = mockk(relaxed = true)
-        controller = CampaignController(campaignWebService)
+        campaignEventBroadcaster = mockk(relaxed = true)
+        controller = CampaignController(campaignWebService, campaignEventBroadcaster)
 
         every { mockUser.getAttribute<String>("id") } returns discordId
         every { mockUser.getAttribute<String>("username") } returns "TestUser"
@@ -532,5 +536,39 @@ class CampaignControllerTest {
         controller.listEvents(guildId, 42L, 50, mockUser)
 
         verify { campaignWebService.listRecentEvents(guildId, 42L, 50) }
+    }
+
+    // streamEvents (SSE)
+
+    @Test
+    fun `streamEvents subscribes via broadcaster for active campaign`() {
+        val campaignId = 77L
+        every { campaignWebService.getActiveCampaignId(guildId) } returns campaignId
+        every { campaignEventBroadcaster.subscribe(campaignId) } returns
+            org.springframework.web.servlet.mvc.method.annotation.SseEmitter()
+
+        controller.streamEvents(guildId, mockUser)
+
+        verify { campaignEventBroadcaster.subscribe(campaignId) }
+    }
+
+    @Test
+    fun `streamEvents returns a completed emitter when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val emitter = controller.streamEvents(guildId, mockUser)
+
+        assertNotNull(emitter)
+        verify(exactly = 0) { campaignEventBroadcaster.subscribe(any()) }
+    }
+
+    @Test
+    fun `streamEvents returns a completed emitter when no active campaign`() {
+        every { campaignWebService.getActiveCampaignId(guildId) } returns null
+
+        val emitter = controller.streamEvents(guildId, mockUser)
+
+        assertNotNull(emitter)
+        verify(exactly = 0) { campaignEventBroadcaster.subscribe(any()) }
     }
 }
