@@ -7,8 +7,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
+import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteNoteResult
 import web.service.EndResult
@@ -24,7 +26,8 @@ import web.util.displayName
 @Controller
 @RequestMapping("/dnd")
 class CampaignController(
-    private val campaignWebService: CampaignWebService
+    private val campaignWebService: CampaignWebService,
+    private val campaignEventBroadcaster: CampaignEventBroadcaster
 ) {
 
     @GetMapping("/campaign")
@@ -84,6 +87,25 @@ class CampaignController(
     ): List<SessionEventView> {
         user.discordIdOrNull() ?: return emptyList()
         return campaignWebService.listRecentEvents(guildId, since, limit)
+    }
+
+    @GetMapping("/campaign/{guildId}/events/stream", produces = ["text/event-stream"])
+    @ResponseBody
+    fun streamEvents(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): SseEmitter {
+        val emitter = SseEmitter(CampaignEventBroadcaster.EMITTER_TIMEOUT_MS)
+        if (user.discordIdOrNull() == null) {
+            emitter.complete()
+            return emitter
+        }
+        val campaignId = campaignWebService.getActiveCampaignId(guildId)
+        if (campaignId == null) {
+            emitter.complete()
+            return emitter
+        }
+        return campaignEventBroadcaster.subscribe(campaignId)
     }
 
     @PostMapping("/campaign/{guildId}/create")

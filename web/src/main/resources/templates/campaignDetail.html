@@ -503,7 +503,10 @@
 
         <div class="section-title">Session log</div>
 
-        <div class="event-list" th:if="${not #lists.isEmpty(recentEvents)}">
+        <div id="session-log" class="event-list"
+             th:attr="data-guild-id=${guildId},
+                      data-last-seen-id=${recentEvents != null and not #lists.isEmpty(recentEvents)
+                        ? recentEvents[#lists.size(recentEvents) - 1].id : 0}">
             <div class="event-row" th:each="event : ${recentEvents}">
                 <span class="event-type" th:text="${event.type}">ROLL</span>
                 <span class="event-actor" th:text="${event.actorName ?: 'system'}">actor</span>
@@ -522,7 +525,8 @@
             </div>
         </div>
 
-        <div class="empty-events" th:if="${#lists.isEmpty(recentEvents)}">
+        <div id="session-log-empty" class="empty-events"
+             th:style="${#lists.isEmpty(recentEvents) ? '' : 'display:none;'}">
             No activity yet. Rolls from Discord will appear here.
         </div>
 
@@ -534,5 +538,6 @@
     </div>
 </div>
 <script th:src="@{/js/home.js}"></script>
+<script th:if="${campaign != null}" th:src="@{/js/sessionLog.js}"></script>
 </body>
 </html>
