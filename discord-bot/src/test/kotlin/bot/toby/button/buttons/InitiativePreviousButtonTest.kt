@@ -6,6 +6,7 @@ import bot.toby.button.ButtonTest.Companion.dndHelper
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.userService
 import bot.toby.button.DefaultButtonContext
+import bot.toby.helpers.InitiativeState
 import database.dto.ConfigDto
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
@@ -56,9 +57,10 @@ class InitiativePreviousButtonTest : ButtonTest {
 
 
         every { dndHelper.decrementTurnTable(any(), any(), any(), any()) } just Runs
+        every { dndHelper.stateFor(any()) } returns InitiativeState()
 
         // Invoke the handler
-        InitiativePreviousButton(dndHelper).handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
+        InitiativePreviousButton(dndHelper, io.mockk.mockk(relaxed = true)).handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         // Verify expected interactions
         verify(exactly = 1) { dndHelper.decrementTurnTable(1L, mockHook, event, 0) }

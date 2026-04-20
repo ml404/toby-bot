@@ -1,8 +1,6 @@
 package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
-import com.fasterxml.jackson.databind.ObjectMapper
-import common.events.CampaignEventOccurred
 import common.events.CampaignEventType
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
@@ -18,15 +16,14 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import web.service.SessionLogPublisher
 import java.util.*
 
 @Component
 class RollCommand @Autowired constructor(
     private val dndHelper: DnDHelper,
-    private val applicationEventPublisher: ApplicationEventPublisher,
-    private val objectMapper: ObjectMapper
+    private val sessionLog: SessionLogPublisher
 ) : DnDCommand {
     companion object {
         private const val DICE_NUMBER = "number"
@@ -87,20 +84,17 @@ class RollCommand @Autowired constructor(
         rawTotal: Int
     ) {
         val guild = event.guild ?: return
-        val payload = mapOf(
-            "sides" to diceValue,
-            "count" to diceToRoll,
-            "modifier" to modifier,
-            "rawTotal" to rawTotal,
-            "total" to rawTotal + modifier
-        )
-        applicationEventPublisher.publishEvent(
-            CampaignEventOccurred(
-                guildId = guild.idLong,
-                type = CampaignEventType.ROLL,
-                actorDiscordId = event.user.idLong,
-                actorName = event.member?.effectiveName ?: event.user.effectiveName,
-                payloadJson = objectMapper.writeValueAsString(payload)
+        sessionLog.publish(
+            guildId = guild.idLong,
+            type = CampaignEventType.ROLL,
+            actorDiscordId = event.user.idLong,
+            actorName = event.member?.effectiveName ?: event.user.effectiveName,
+            payload = mapOf(
+                "sides" to diceValue,
+                "count" to diceToRoll,
+                "modifier" to modifier,
+                "rawTotal" to rawTotal,
+                "total" to rawTotal + modifier
             )
         )
     }

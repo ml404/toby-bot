@@ -34,6 +34,7 @@ class CampaignWebServiceTest {
     private lateinit var characterSheetService: CharacterSheetService
     private lateinit var sessionNoteService: SessionNoteService
     private lateinit var campaignEventService: CampaignEventService
+    private lateinit var sessionLog: SessionLogPublisher
     private lateinit var jda: JDA
     private lateinit var service: CampaignWebService
 
@@ -58,6 +59,7 @@ class CampaignWebServiceTest {
         characterSheetService = mockk(relaxed = true)
         sessionNoteService = mockk(relaxed = true)
         campaignEventService = mockk(relaxed = true)
+        sessionLog = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         service = CampaignWebService(
             campaignService,
@@ -67,6 +69,7 @@ class CampaignWebServiceTest {
             characterSheetService,
             sessionNoteService,
             campaignEventService,
+            sessionLog,
             jda
         )
     }

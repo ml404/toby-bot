@@ -25,6 +25,7 @@ internal class CampaignCommandTest : CommandTest {
     private lateinit var campaignService: CampaignService
     private lateinit var campaignPlayerService: CampaignPlayerService
     private lateinit var userDtoHelper: UserDtoHelper
+    private lateinit var sessionLog: web.service.SessionLogPublisher
     private lateinit var command: CampaignCommand
 
     private val guildId = 1L
@@ -45,7 +46,8 @@ internal class CampaignCommandTest : CommandTest {
         campaignService = mockk(relaxed = true)
         campaignPlayerService = mockk(relaxed = true)
         userDtoHelper = mockk(relaxed = true)
-        command = CampaignCommand(campaignService, campaignPlayerService, userDtoHelper)
+        sessionLog = mockk(relaxed = true)
+        command = CampaignCommand(campaignService, campaignPlayerService, userDtoHelper, sessionLog)
 
         every { event.subcommandName } returns "status"
         every { userDtoHelper.calculateUserDto(any(), any(), any()) } returns requestingUserDto
