@@ -157,10 +157,25 @@
         return ol;
     }
 
-    function rebuildTurnTable(entries, currentIndex) {
+    const prefersReducedMotion = window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function buildD20(roll, rolling) {
+        const die = document.createElement('span');
+        die.className = rolling ? 'd20 rolling' : 'd20';
+        die.dataset.roll = String(roll);
+        const face = document.createElement('span');
+        face.className = 'd20__face';
+        face.textContent = rolling ? '?' : String(roll);
+        die.appendChild(face);
+        return die;
+    }
+
+    function rebuildTurnTable(entries, currentIndex, options) {
         if (!turnTable) return;
         const list = ensureList();
         if (!list) return;
+        const animate = !!(options && options.animate) && !prefersReducedMotion;
         list.innerHTML = '';
         if (!entries.length) {
             if (turnEmpty) turnEmpty.style.display = '';
@@ -184,13 +199,29 @@
                 chip.textContent = entry.kind === 'PLAYER' ? 'Player' : 'Monster';
                 li.appendChild(chip);
             }
-            const roll = document.createElement('span');
-            roll.className = 'roll';
-            roll.textContent = entry.roll;
-            li.appendChild(roll);
+            li.appendChild(buildD20(entry.roll, animate));
             list.appendChild(li);
         });
         turnTable.dataset.currentIndex = String(currentIndex);
+        if (animate) scheduleReveal(list, entries);
+    }
+
+    function scheduleReveal(list, entries) {
+        const staggerMs = 280;
+        const popMs = 420;
+        entries.forEach(function (entry, i) {
+            const li = list.children[i];
+            if (!li) return;
+            const die = li.querySelector('.d20');
+            if (!die) return;
+            setTimeout(function () {
+                die.classList.remove('rolling');
+                die.classList.add('settled');
+                const face = die.querySelector('.d20__face');
+                if (face) face.textContent = String(entry.roll);
+                setTimeout(function () { die.classList.remove('settled'); }, popMs);
+            }, (i + 1) * staggerMs);
+        });
     }
 
     function highlightIndex(idx) {
@@ -210,7 +241,7 @@
         switch (event.type) {
             case 'INITIATIVE_ROLLED': {
                 const entries = Array.isArray(p.entries) ? p.entries : [];
-                rebuildTurnTable(entries, 0);
+                rebuildTurnTable(entries, 0, { animate: true });
                 break;
             }
             case 'INITIATIVE_NEXT':
