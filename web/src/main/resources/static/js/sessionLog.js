@@ -91,6 +91,20 @@
                 return 'marked as HIT' + (p.target ? ' on ' + p.target : '');
             case 'MISS':
                 return 'marked as MISS' + (p.target ? ' on ' + p.target : '');
+            case 'ATTACK_HIT': {
+                const ac = (p.targetAc != null) ? ' vs AC ' + p.targetAc : '';
+                return (p.attacker || '?') + ' hits ' + (p.target || '?') + ' — ' + p.total + ac;
+            }
+            case 'ATTACK_MISS': {
+                const ac = (p.targetAc != null) ? ' vs AC ' + p.targetAc : '';
+                return (p.attacker || '?') + ' misses ' + (p.target || '?') + ' — ' + p.total + ac;
+            }
+            case 'DAMAGE_DEALT': {
+                const remaining = (p.remainingHp != null) ? ' (' + p.remainingHp + ' HP left)' : '';
+                return (p.target || '?') + ' takes ' + p.amount + ' damage' + remaining;
+            }
+            case 'PARTICIPANT_DEFEATED':
+                return (p.target || '?') + ' is defeated';
             default:
                 return escapeText(JSON.stringify(p));
         }
@@ -184,7 +198,11 @@
         if (turnEmpty) turnEmpty.style.display = 'none';
         entries.forEach(function (entry, i) {
             const li = document.createElement('li');
-            if (i === currentIndex) li.className = 'active';
+            const classes = [];
+            if (i === currentIndex) classes.push('active');
+            if (entry.defeated) classes.push('defeated');
+            if (classes.length) li.className = classes.join(' ');
+            li.dataset.name = entry.name || '';
             const idx = document.createElement('span');
             idx.className = 'idx';
             idx.textContent = (i + 1);
@@ -198,6 +216,38 @@
                 chip.className = 'chip ' + entry.kind.toLowerCase();
                 chip.textContent = entry.kind === 'PLAYER' ? 'Player' : 'Monster';
                 li.appendChild(chip);
+            }
+            if (entry.ac != null) {
+                const ac = document.createElement('span');
+                ac.className = 'ac-chip';
+                ac.textContent = 'AC ' + entry.ac;
+                li.appendChild(ac);
+            }
+            if (entry.maxHp != null) {
+                const wrap = document.createElement('span');
+                wrap.className = 'hp-wrap';
+                const bar = document.createElement('span');
+                bar.className = 'hp-bar';
+                const fill = document.createElement('span');
+                fill.className = 'hp-fill';
+                const hp = entry.currentHp == null ? entry.maxHp : entry.currentHp;
+                const pct = entry.maxHp > 0 ? Math.max(0, Math.min(100, (hp * 100) / entry.maxHp)) : 0;
+                if (pct < 15) fill.classList.add('low');
+                else if (pct < 40) fill.classList.add('mid');
+                fill.style.width = pct + '%';
+                bar.appendChild(fill);
+                wrap.appendChild(bar);
+                const label = document.createElement('span');
+                label.className = 'hp-label';
+                const cur = document.createElement('span');
+                cur.textContent = String(hp);
+                const max = document.createElement('span');
+                max.textContent = String(entry.maxHp);
+                label.appendChild(cur);
+                label.appendChild(document.createTextNode('/'));
+                label.appendChild(max);
+                wrap.appendChild(label);
+                li.appendChild(wrap);
             }
             li.appendChild(buildD20(entry.roll, animate));
             list.appendChild(li);
@@ -235,6 +285,47 @@
         turnTable.dataset.currentIndex = String(idx);
     }
 
+    function findRow(name) {
+        if (!turnTable || !name) return null;
+        const list = turnTable.querySelector('ol');
+        if (!list) return null;
+        return list.querySelector('li[data-name="' + String(name).replace(/"/g, '\\"') + '"]');
+    }
+
+    function flashRow(name, cls) {
+        const row = findRow(name);
+        if (!row) return;
+        row.classList.remove('just-hit', 'just-missed');
+        // reflow so the animation re-triggers
+        void row.offsetWidth;
+        row.classList.add(cls);
+    }
+
+    function applyDamageToRow(name, remainingHp) {
+        const row = findRow(name);
+        if (!row) return;
+        const fill = row.querySelector('.hp-fill');
+        const label = row.querySelector('.hp-label span:first-child');
+        if (!fill || !row.querySelector('.hp-wrap')) return;
+        const maxSpan = row.querySelectorAll('.hp-label span')[1];
+        const max = maxSpan ? parseInt(maxSpan.textContent, 10) : 0;
+        const hp = Math.max(0, remainingHp == null ? 0 : remainingHp);
+        if (label) label.textContent = String(hp);
+        if (max > 0) {
+            const pct = Math.max(0, Math.min(100, (hp * 100) / max));
+            fill.style.width = pct + '%';
+            fill.classList.remove('low', 'mid');
+            if (pct < 15) fill.classList.add('low');
+            else if (pct < 40) fill.classList.add('mid');
+        }
+    }
+
+    function markDefeatedRow(name) {
+        const row = findRow(name);
+        if (!row) return;
+        row.classList.add('defeated');
+    }
+
     function handleInitiativeEvent(event) {
         if (!turnTable) return;
         const p = event.payload || {};
@@ -254,6 +345,18 @@
                 rebuildTurnTable([], 0);
                 break;
             }
+            case 'ATTACK_HIT':
+                flashRow(p.target, 'just-hit');
+                break;
+            case 'ATTACK_MISS':
+                flashRow(p.target, 'just-missed');
+                break;
+            case 'DAMAGE_DEALT':
+                applyDamageToRow(p.target, p.remainingHp);
+                break;
+            case 'PARTICIPANT_DEFEATED':
+                markDefeatedRow(p.target);
+                break;
         }
     }
 

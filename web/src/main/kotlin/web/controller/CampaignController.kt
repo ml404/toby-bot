@@ -12,6 +12,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
 import web.service.AdhocMonster
 import web.service.AnnotateRollResult
+import web.service.ApplyDamageResult
+import web.service.AttackResult
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteNoteResult
@@ -408,6 +410,8 @@ class CampaignController(
         @RequestParam(name = "templateQty", required = false) templateQtys: List<Int>?,
         @RequestParam(name = "adhocName", required = false) adhocNames: List<String>?,
         @RequestParam(name = "adhocMod", required = false) adhocMods: List<Int>?,
+        @RequestParam(name = "adhocHp", required = false) adhocHps: List<Int>?,
+        @RequestParam(name = "adhocAc", required = false) adhocAcs: List<Int>?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
     ): String {
@@ -423,10 +427,17 @@ class CampaignController(
 
         val names = adhocNames.orEmpty()
         val mods = adhocMods.orEmpty()
+        val hps = adhocHps.orEmpty()
+        val acs = adhocAcs.orEmpty()
         val adhoc = names.mapIndexedNotNull { i, n ->
             val cleaned = n.trim()
             if (cleaned.isBlank()) null
-            else AdhocMonster(cleaned, mods.getOrElse(i) { 0 })
+            else AdhocMonster(
+                name = cleaned,
+                initiativeModifier = mods.getOrElse(i) { 0 },
+                maxHp = hps.getOrNull(i)?.takeIf { it > 0 },
+                ac = acs.getOrNull(i)?.takeIf { it > 0 }
+            )
         }
         val request = InitiativeRollRequest(
             playerDiscordIds = playerDiscordIds.orEmpty(),
@@ -485,6 +496,65 @@ class CampaignController(
             RollDiceResult.INVALID_EXPRESSION -> ra.addFlashAttribute(
                 "error",
                 "Custom expression must look like '2d6+3' or 'd20-1'."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/combat/attack")
+    fun attack(
+        @PathVariable guildId: Long,
+        @RequestParam("targetName") targetName: String,
+        @RequestParam(name = "attackModifier", defaultValue = "0") attackModifier: Int,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        val outcome = campaignWebService.attack(guildId, discordId, targetName.trim(), attackModifier)
+        when (outcome.result) {
+            AttackResult.HIT, AttackResult.MISS -> {}
+            AttackResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            AttackResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "No active combat — roll initiative first.")
+            AttackResult.NOT_MY_TURN -> ra.addFlashAttribute(
+                "error",
+                "You can only attack on your own turn (or as the DM)."
+            )
+            AttackResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
+            AttackResult.TARGET_DEFEATED -> ra.addFlashAttribute("error", "That target is already defeated.")
+            AttackResult.CANT_TARGET_SELF -> ra.addFlashAttribute("error", "You can't attack yourself.")
+            AttackResult.INVALID_MODIFIER -> ra.addFlashAttribute(
+                "error",
+                "Attack modifier must be between -${web.service.CampaignWebService.MAX_ATTACK_MODIFIER} and ${web.service.CampaignWebService.MAX_ATTACK_MODIFIER}."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/combat/damage")
+    fun applyDamage(
+        @PathVariable guildId: Long,
+        @RequestParam("targetName") targetName: String,
+        @RequestParam("amount") amount: Int,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.applyDamage(guildId, discordId, targetName.trim(), amount)) {
+            ApplyDamageResult.APPLIED, ApplyDamageResult.DEFEATED -> {}
+            ApplyDamageResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            ApplyDamageResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "No active combat — roll initiative first.")
+            ApplyDamageResult.NOT_ATTACKER -> ra.addFlashAttribute(
+                "error",
+                "You can only apply damage on your own turn (or as the DM)."
+            )
+            ApplyDamageResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
+            ApplyDamageResult.INVALID_AMOUNT -> ra.addFlashAttribute(
+                "error",
+                "Damage must be between 0 and ${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}."
             )
         }
         return "redirect:/dnd/campaign/$guildId"

@@ -1328,4 +1328,181 @@ class CampaignWebServiceTest {
             )
         }
     }
+
+    // combat: attack
+
+    @Test
+    fun `attack rejects when no active combat`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns false
+
+        val outcome = service.attack(guildId, dmDiscordId, "Goblin", 0)
+        assertEquals(AttackResult.NO_ACTIVE_COMBAT, outcome.result)
+    }
+
+    @Test
+    fun `attack rejects non-DM non-current-turn requester`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData(name = "Goblin", roll = 18, kind = "MONSTER", ac = 15)
+        every { initiativeStore.currentEntries(guildId) } returns
+            listOf(InitiativeEntryData("Goblin", 18, "MONSTER", ac = 15))
+
+        val outcome = service.attack(guildId, playerDiscordId, "Goblin", 0)
+        assertEquals(AttackResult.NOT_MY_TURN, outcome.result)
+    }
+
+    @Test
+    fun `attack hits when roll + mod meets AC and publishes ATTACK_HIT`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData(name = "Goblin", roll = 18, kind = "MONSTER")
+        every { initiativeStore.currentEntries(guildId) } returns listOf(
+            InitiativeEntryData("Goblin", 18, "MONSTER"),
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 10)
+        )
+
+        val outcome = service.attack(guildId, dmDiscordId, "Alice", 5)
+        assertEquals(AttackResult.HIT, outcome.result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ATTACK_HIT,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["attacker"] == "Goblin" && it["target"] == "Alice" &&
+                        it["modifier"] == 5 && it["targetAc"] == 10
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `attack without AC publishes ATTACK_HIT unconditionally`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.currentEntries(guildId) } returns listOf(
+            InitiativeEntryData("Goblin", 18, "MONSTER"),
+            InitiativeEntryData("Alice", 12, "PLAYER")
+        )
+
+        val outcome = service.attack(guildId, dmDiscordId, "Alice", -10)
+        assertEquals(AttackResult.HIT, outcome.result)
+    }
+
+    @Test
+    fun `attack rejects self-targeting`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.currentEntries(guildId) } returns
+            listOf(InitiativeEntryData("Goblin", 18, "MONSTER"))
+
+        val outcome = service.attack(guildId, dmDiscordId, "Goblin", 0)
+        assertEquals(AttackResult.CANT_TARGET_SELF, outcome.result)
+    }
+
+    @Test
+    fun `attack rejects defeated target`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.currentEntries(guildId) } returns listOf(
+            InitiativeEntryData("Goblin", 18, "MONSTER"),
+            InitiativeEntryData("Alice", 12, "PLAYER", defeated = true)
+        )
+
+        val outcome = service.attack(guildId, dmDiscordId, "Alice", 0)
+        assertEquals(AttackResult.TARGET_DEFEATED, outcome.result)
+    }
+
+    @Test
+    fun `attack rejects out-of-range modifier`() {
+        val outcome = service.attack(guildId, dmDiscordId, "Alice", 99)
+        assertEquals(AttackResult.INVALID_MODIFIER, outcome.result)
+    }
+
+    // combat: applyDamage
+
+    @Test
+    fun `applyDamage publishes DAMAGE_DEALT and returns APPLIED`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.applyDamage(guildId, "Alice", 4) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 16)
+
+        val result = service.applyDamage(guildId, dmDiscordId, "Alice", 4)
+        assertEquals(ApplyDamageResult.APPLIED, result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.DAMAGE_DEALT,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["amount"] == 4 && it["remainingHp"] == 16 }
+            )
+        }
+    }
+
+    @Test
+    fun `applyDamage publishes PARTICIPANT_DEFEATED when hp reaches 0`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.applyDamage(guildId, "Alice", 99) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 0, defeated = true)
+
+        val result = service.applyDamage(guildId, dmDiscordId, "Alice", 99)
+        assertEquals(ApplyDamageResult.DEFEATED, result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.PARTICIPANT_DEFEATED,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["target"] == "Alice" }
+            )
+        }
+    }
+
+    @Test
+    fun `applyDamage rejects negative amount`() {
+        assertEquals(
+            ApplyDamageResult.INVALID_AMOUNT,
+            service.applyDamage(guildId, dmDiscordId, "Alice", -1)
+        )
+    }
+
+    @Test
+    fun `applyDamage returns TARGET_NOT_FOUND when store can't find target`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.applyDamage(guildId, "Nobody", 4) } returns null
+
+        assertEquals(
+            ApplyDamageResult.TARGET_NOT_FOUND,
+            service.applyDamage(guildId, dmDiscordId, "Nobody", 4)
+        )
+    }
 }

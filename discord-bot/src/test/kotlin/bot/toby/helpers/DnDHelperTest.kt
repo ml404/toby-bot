@@ -312,6 +312,40 @@ internal class DnDHelperTest {
         Assertions.assertEquals("New", state.sortedEntries[0].name)
     }
 
+    @Test
+    fun testSeedInitiativeCarriesHpAcAndDefeated() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(
+                RolledEntry("Goblin", 15, "MONSTER", maxHp = 7, currentHp = 7, ac = 15),
+                RolledEntry("Alice", 12, "PLAYER")
+            )
+        )
+        val state = dndHelper.stateFor(guildId)
+        Assertions.assertEquals(7, state.sortedEntries[0].maxHp)
+        Assertions.assertEquals(7, state.sortedEntries[0].currentHp)
+        Assertions.assertEquals(15, state.sortedEntries[0].ac)
+        Assertions.assertFalse(state.sortedEntries[0].defeated)
+        Assertions.assertNull(state.sortedEntries[1].maxHp)
+        Assertions.assertNull(state.sortedEntries[1].ac)
+    }
+
+    @Test
+    fun testSnapshotRoundTripsCombatFields() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(RolledEntry("Goblin", 15, "MONSTER", maxHp = 7, currentHp = 3, ac = 15, defeated = false))
+        )
+        val snapshot = dndHelper.activeSnapshots().getValue(guildId)
+        dndHelper.clearInitiative(guildId)
+        dndHelper.restore(guildId, snapshot)
+
+        val restored = dndHelper.stateFor(guildId).sortedEntries[0]
+        Assertions.assertEquals(7, restored.maxHp)
+        Assertions.assertEquals(3, restored.currentHp)
+        Assertions.assertEquals(15, restored.ac)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithSpell() = runTest {

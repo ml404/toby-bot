@@ -19,5 +19,9 @@ enum class CampaignEventType {
     CAMPAIGN_ENDED,
     DM_NOTE,
     HIT,
-    MISS
+    MISS,
+    ATTACK_HIT,
+    ATTACK_MISS,
+    DAMAGE_DEALT,
+    PARTICIPANT_DEFEATED
 }

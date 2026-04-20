@@ -21,6 +21,18 @@ interface InitiativeStore {
     fun currentIndex(guildId: Long): Int
 
     fun isActive(guildId: Long): Boolean
+
+    /** The entry whose turn it currently is, or null if no active tracker. */
+    fun currentEntry(guildId: Long): InitiativeEntryData? =
+        currentEntries(guildId).getOrNull(currentIndex(guildId))
+
+    /**
+     * Apply [damage] HP to the participant named [targetName] in [guildId]'s
+     * tracker. If the target's HP drops to 0 or below, mark them defeated.
+     * Returns the updated entry (with new currentHp / defeated state), or
+     * null when there's no active tracker or no participant with that name.
+     */
+    fun applyDamage(guildId: Long, targetName: String, damage: Int): InitiativeEntryData?
 }
 
 /**
@@ -31,5 +43,9 @@ data class InitiativeEntryData(
     val name: String,
     val roll: Int,
     val kind: String? = null,
-    val modifier: Int = 0
+    val modifier: Int = 0,
+    val maxHp: Int? = null,
+    val currentHp: Int? = null,
+    val ac: Int? = null,
+    val defeated: Boolean = false
 )

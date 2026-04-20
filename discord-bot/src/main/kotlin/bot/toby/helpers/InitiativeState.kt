@@ -72,23 +72,50 @@ class InitiativeState {
 
     fun snapshot(): InitiativeStateSnapshot = InitiativeStateSnapshot(
         initiativeIndex = initiativeIndex.get(),
-        entries = sortedEntries.map { InitiativeEntry(it.name, it.roll, it.kind) }
+        entries = sortedEntries.map {
+            InitiativeEntry(it.name, it.roll, it.kind, it.maxHp, it.currentHp, it.ac, it.defeated)
+        }
     )
 
     fun restoreFrom(snapshot: InitiativeStateSnapshot) {
         initiativeIndex.set(snapshot.initiativeIndex)
-        sortedEntries = LinkedList(snapshot.entries.map { RolledEntry(it.name, it.roll, it.kind) })
+        sortedEntries = LinkedList(snapshot.entries.map {
+            RolledEntry(it.name, it.roll, it.kind, it.maxHp, it.currentHp, it.ac, it.defeated)
+        })
     }
+
+    /**
+     * Mutate a single entry in-place. Used by the web combat endpoints to
+     * apply damage without replacing the whole state. No-op if name isn't
+     * present.
+     */
+    internal fun updateEntry(name: String, transform: (RolledEntry) -> RolledEntry) {
+        val idx = sortedEntries.indexOfFirst { it.name == name }
+        if (idx < 0) return
+        sortedEntries[idx] = transform(sortedEntries[idx])
+    }
+
+    internal fun findByName(name: String): RolledEntry? =
+        sortedEntries.firstOrNull { it.name == name }
+
+    internal val currentEntry: RolledEntry?
+        get() = sortedEntries.getOrNull(initiativeIndex.get())
 }
 
 /**
  * A single rolled initiative entry. [kind] is `"PLAYER"` or `"MONSTER"` when set
  * by the web composer; nullable so legacy Discord-originated rolls still work.
+ * HP + AC + defeated are populated during web combat; nullable for entries that
+ * never entered combat state (e.g. Discord voice-channel rolls).
  */
 data class RolledEntry(
     val name: String = "",
     val roll: Int = 0,
-    val kind: String? = null
+    val kind: String? = null,
+    val maxHp: Int? = null,
+    val currentHp: Int? = null,
+    val ac: Int? = null,
+    val defeated: Boolean = false
 )
 
 /** JSON-friendly snapshot of an [InitiativeState], persisted in CampaignDto.state. */
@@ -100,5 +127,9 @@ data class InitiativeStateSnapshot(
 data class InitiativeEntry(
     val name: String = "",
     val roll: Int = 0,
-    val kind: String? = null
+    val kind: String? = null,
+    val maxHp: Int? = null,
+    val currentHp: Int? = null,
+    val ac: Int? = null,
+    val defeated: Boolean = false
 )
