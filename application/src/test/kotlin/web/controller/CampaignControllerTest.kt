@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
+import web.service.AnnotateRollResult
 import web.service.CampaignDetail
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
@@ -25,6 +26,7 @@ import web.service.GuildCampaignInfo
 import web.service.JoinResult
 import web.service.KickResult
 import web.service.LeaveResult
+import web.service.NarrateResult
 import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
@@ -570,5 +572,106 @@ class CampaignControllerTest {
 
         assertNotNull(emitter)
         verify(exactly = 0) { campaignEventBroadcaster.subscribe(any()) }
+    }
+
+    // annotateRoll
+
+    @Test
+    fun `annotateRoll redirects on success`() {
+        every {
+            campaignWebService.annotateRoll(guildId, 1L, 42L, "HIT", null)
+        } returns AnnotateRollResult.ANNOTATED
+
+        val view = controller.annotateRoll(guildId, 42L, "HIT", null, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `annotateRoll sets error when not DM`() {
+        every {
+            campaignWebService.annotateRoll(guildId, 1L, 42L, "HIT", null)
+        } returns AnnotateRollResult.NOT_DM
+
+        controller.annotateRoll(guildId, 42L, "HIT", null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can annotate rolls.") }
+    }
+
+    @Test
+    fun `annotateRoll sets error when referenced event is not a roll`() {
+        every {
+            campaignWebService.annotateRoll(guildId, 1L, 42L, "HIT", null)
+        } returns AnnotateRollResult.NOT_A_ROLL
+
+        controller.annotateRoll(guildId, 42L, "HIT", null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You can only mark Hit/Miss on a roll.") }
+    }
+
+    @Test
+    fun `annotateRoll sets error when kind is invalid`() {
+        every {
+            campaignWebService.annotateRoll(guildId, 1L, 42L, "FOO", null)
+        } returns AnnotateRollResult.INVALID_KIND
+
+        controller.annotateRoll(guildId, 42L, "FOO", null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Annotation kind must be HIT or MISS.") }
+    }
+
+    @Test
+    fun `annotateRoll redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.annotateRoll(guildId, 42L, "HIT", null, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    // narrate
+
+    @Test
+    fun `narrate redirects on success`() {
+        every {
+            campaignWebService.narrate(guildId, 1L, "beat")
+        } returns NarrateResult.NARRATED
+
+        val view = controller.narrate(guildId, "beat", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `narrate sets error when not DM`() {
+        every {
+            campaignWebService.narrate(guildId, 1L, "beat")
+        } returns NarrateResult.NOT_DM
+
+        controller.narrate(guildId, "beat", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can narrate.") }
+    }
+
+    @Test
+    fun `narrate sets error on empty body`() {
+        every {
+            campaignWebService.narrate(guildId, 1L, "")
+        } returns NarrateResult.EMPTY_BODY
+
+        controller.narrate(guildId, "", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Narration can't be empty.") }
+    }
+
+    @Test
+    fun `narrate redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.narrate(guildId, "beat", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
     }
 }

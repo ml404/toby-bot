@@ -5,8 +5,43 @@
     const guildId = logEl.dataset.guildId;
     if (!guildId) return;
 
+    const isDm = logEl.dataset.isDm === 'true';
     let lastSeenId = parseInt(logEl.dataset.lastSeenId || '0', 10);
     const emptyEl = document.getElementById('session-log-empty');
+
+    function postAnnotation(eventId, kind) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/dnd/campaign/' + guildId + '/events/' + eventId + '/annotate';
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'kind';
+        input.value = kind;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function buildDmActions(event) {
+        if (!isDm || event.type !== 'ROLL') return null;
+        const wrap = document.createElement('span');
+        wrap.className = 'event-dm-actions';
+        const hit = document.createElement('button');
+        hit.type = 'button';
+        hit.className = 'btn-xs';
+        hit.title = 'Mark this roll as a hit';
+        hit.textContent = 'Hit';
+        hit.addEventListener('click', function () { postAnnotation(event.id, 'HIT'); });
+        const miss = document.createElement('button');
+        miss.type = 'button';
+        miss.className = 'btn-xs kick';
+        miss.title = 'Mark this roll as a miss';
+        miss.textContent = 'Miss';
+        miss.addEventListener('click', function () { postAnnotation(event.id, 'MISS'); });
+        wrap.appendChild(hit);
+        wrap.appendChild(miss);
+        return wrap;
+    }
 
     function ensureContainer() {
         if (emptyEl) emptyEl.style.display = 'none';
@@ -93,6 +128,8 @@
         row.appendChild(actor);
         row.appendChild(body);
         row.appendChild(time);
+        const dmActions = buildDmActions(event);
+        if (dmActions) row.appendChild(dmActions);
         logEl.appendChild(row);
     }
 

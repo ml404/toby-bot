@@ -324,6 +324,27 @@
             font-family: monospace;
         }
         .empty-events { color: #a0a0b0; font-size: 0.9rem; padding: 10px 0; }
+
+        .event-dm-actions {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 6px;
+        }
+        .event-dm-actions form { margin: 0; }
+        .narrate-form {
+            display: flex;
+            gap: 8px;
+            margin: 14px 0 20px;
+        }
+        .narrate-form input[type=text] {
+            flex: 1;
+            padding: 9px 12px;
+            border-radius: 6px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -505,9 +526,11 @@
 
         <div id="session-log" class="event-list"
              th:attr="data-guild-id=${guildId},
+                      data-is-dm=${isUserDm},
                       data-last-seen-id=${recentEvents != null and not #lists.isEmpty(recentEvents)
                         ? recentEvents[#lists.size(recentEvents) - 1].id : 0}">
-            <div class="event-row" th:each="event : ${recentEvents}">
+            <div class="event-row" th:each="event : ${recentEvents}"
+                 th:attr="data-event-id=${event.id},data-event-type=${event.type}">
                 <span class="event-type" th:text="${event.type}">ROLL</span>
                 <span class="event-actor" th:text="${event.actorName ?: 'system'}">actor</span>
                 <span th:switch="${event.type}" class="event-body">
@@ -546,10 +569,32 @@
                           th:text="${event.payload['campaignName'] != null
                                     ? 'ended campaign “' + event.payload['campaignName'] + '”'
                                     : 'ended the campaign'}">ended campaign</span>
+                    <span th:case="'DM_NOTE'"
+                          th:text="${event.payload['body'] ?: '(empty note)'}">dm note body</span>
+                    <span th:case="'HIT'"
+                          th:text="${event.payload['target'] != null
+                                    ? 'marked HIT on ' + event.payload['target']
+                                    : 'marked HIT'}">marked HIT</span>
+                    <span th:case="'MISS'"
+                          th:text="${event.payload['target'] != null
+                                    ? 'marked MISS on ' + event.payload['target']
+                                    : 'marked MISS'}">marked MISS</span>
                     <span th:case="*" th:text="${event.payload}">raw payload</span>
                 </span>
                 <span class="event-time"
                       th:text="${#temporals.format(event.createdAt, 'HH:mm:ss')}">12:00:00</span>
+                <span th:if="${isUserDm and event.type == 'ROLL'}" class="event-dm-actions">
+                    <form th:action="@{/dnd/campaign/{id}/events/{eid}/annotate(id=${guildId},eid=${event.id})}"
+                          method="post" style="display:inline;">
+                        <input type="hidden" name="kind" value="HIT">
+                        <button type="submit" class="btn-xs" title="Mark this roll as a hit">Hit</button>
+                    </form>
+                    <form th:action="@{/dnd/campaign/{id}/events/{eid}/annotate(id=${guildId},eid=${event.id})}"
+                          method="post" style="display:inline;">
+                        <input type="hidden" name="kind" value="MISS">
+                        <button type="submit" class="btn-xs kick" title="Mark this roll as a miss">Miss</button>
+                    </form>
+                </span>
             </div>
         </div>
 
@@ -557,6 +602,12 @@
              th:style="${#lists.isEmpty(recentEvents) ? '' : 'display:none;'}">
             No activity yet. Rolls from Discord will appear here.
         </div>
+
+        <form th:if="${isUserDm and campaign != null}" class="narrate-form"
+              th:action="@{/dnd/campaign/{id}/narrate(id=${guildId})}" method="post">
+            <input type="text" name="body" placeholder="Narrate a beat…" maxlength="1000" required>
+            <button type="submit" class="btn btn-primary">Narrate</button>
+        </form>
 
         <div class="hint">
             Also available in Discord:
