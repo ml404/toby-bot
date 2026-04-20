@@ -48,7 +48,9 @@ nav {
 }
 
 @media (max-width: 600px) {
-    .nav-toggle { display: block; }
-    .nav-links { display: none; flex-direction: column; align-items: flex-start; gap: 12px; width: 100%; padding: 8px 0; }
+    .nav-toggle { display: block; min-height: 40px; min-width: 40px; }
+    .nav-links { display: none; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; padding: 8px 0; }
     .nav-links.open { display: flex; }
+    .nav-links a, .nav-user { padding: 10px 4px; min-height: 40px; display: flex; align-items: center; }
+    .nav-links .btn-discord, .nav-links .btn-logout { align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; }
 }

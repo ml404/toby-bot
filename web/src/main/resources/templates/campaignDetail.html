@@ -675,6 +675,69 @@
             gap: 8px;
             margin-top: 12px;
         }
+
+        /* ---- Mobile polish (<= 480px) ---- */
+        @media (max-width: 480px) {
+            /* Dice popover becomes a bottom sheet */
+            .dice-popover {
+                position: fixed;
+                inset: auto 8px 8px 8px;
+                left: 8px;
+                right: 8px;
+                top: auto;
+                min-width: 0;
+                max-width: none;
+                width: auto;
+            }
+
+            /* Session-log rows stack instead of squashing */
+            .event-row {
+                flex-wrap: wrap;
+                column-gap: 10px;
+                row-gap: 4px;
+            }
+            .event-type { min-width: 0; }
+            .event-body {
+                flex-basis: 100%;
+                word-break: break-word;
+            }
+            .event-time { margin-left: auto; }
+            .event-dm-actions {
+                flex-basis: 100%;
+                display: flex;
+                gap: 6px;
+                margin-top: 4px;
+            }
+            .btn-xs, .btn-xs.kick {
+                padding: 8px 12px;
+                min-height: 36px;
+                font-size: 0.8rem;
+            }
+
+            /* Composer inputs shrink instead of overflowing */
+            .initiative-composer .monster-add select { min-width: 0; }
+            .initiative-composer .adhoc-rows input[type=text] { min-width: 0; }
+            .initiative-composer .picker-row { flex-wrap: wrap; }
+            .initiative-composer .players-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+
+            /* Character form input shrinks */
+            .character-form { flex-wrap: wrap; }
+            .character-form input { min-width: 0; flex: 1 1 160px; }
+
+            /* Panel padding loosens */
+            .monster-library,
+            .initiative-composer,
+            .turn-table {
+                padding: 12px 14px;
+                margin-bottom: 16px;
+            }
+
+            /* Turn-table rows wrap long names */
+            .turn-table li { flex-wrap: wrap; row-gap: 4px; }
+            .turn-table .name { min-width: 0; flex: 1 1 auto; }
+        }
     </style>
 </head>
 <body>
