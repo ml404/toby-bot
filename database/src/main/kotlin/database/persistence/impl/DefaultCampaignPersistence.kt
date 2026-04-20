@@ -32,6 +32,9 @@ class DefaultCampaignPersistence : CampaignPersistence {
         return runCatching { q.singleResult }.getOrNull()
     }
 
+    override fun listActiveCampaigns(): List<CampaignDto> =
+        entityManager.createNamedQuery("CampaignDto.listActive", CampaignDto::class.java).resultList
+
     override fun updateCampaign(campaign: CampaignDto): CampaignDto {
         entityManager.merge(campaign)
         entityManager.flush()

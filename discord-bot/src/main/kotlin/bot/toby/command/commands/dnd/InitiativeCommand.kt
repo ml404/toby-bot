@@ -2,6 +2,7 @@ package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
 import core.command.Command.Companion.invokeDeleteOnHookResponse
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -20,6 +21,12 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
+        val guildId = event.guild?.idLong ?: run {
+            event.hook.sendMessage("Initiative can only be rolled inside a server.")
+                .setEphemeral(true)
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
         val member = ctx.member
         val names = event.getOption("names")?.asString
         val dm = event.getOption("dm")?.asMember ?: ctx.member
@@ -31,15 +38,15 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
 
         if (invalidArguments(deleteDelay, event, memberList, nameList)) return
 
-        dndHelper.clearInitiative()
+        dndHelper.clearInitiative(guildId)
         if (nameList.isNotEmpty()) {
-            dndHelper.rollInitiativeForString(nameList, initiativeMap)
+            dndHelper.rollInitiativeForString(guildId, nameList, initiativeMap)
         } else {
-            dndHelper.rollInitiativeForMembers(memberList, dm!!, initiativeMap)
+            dndHelper.rollInitiativeForMembers(guildId, memberList, dm!!, initiativeMap)
         }
 
-        if (checkForNonDmMembersInVoiceChannel(deleteDelay, event)) return
-        displayAllValues(event.hook, deleteDelay)
+        if (checkForNonDmMembersInVoiceChannel(deleteDelay, event, guildId)) return
+        displayAllValues(guildId, event.hook, deleteDelay)
     }
 
     override val name: String = "initiative"
@@ -69,8 +76,12 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         return false
     }
 
-    private fun checkForNonDmMembersInVoiceChannel(deleteDelay: Int, event: SlashCommandInteractionEvent): Boolean {
-        if (dndHelper.sortedEntries.isEmpty()) {
+    private fun checkForNonDmMembersInVoiceChannel(
+        deleteDelay: Int,
+        event: SlashCommandInteractionEvent,
+        guildId: Long
+    ): Boolean {
+        if (!dndHelper.stateFor(guildId).isActive()) {
             event.reply("The amount of non DM members in the voice channel you're in, or the one you mentioned, is empty, so no rolls were done.")
                 .setEphemeral(true)
                 .queue(invokeDeleteOnHookResponse(deleteDelay))
@@ -89,9 +100,9 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         return names?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
     }
 
-    private fun displayAllValues(hook: InteractionHook?, deleteDelay: Int) {
-        val embedBuilder = dndHelper.initiativeEmbedBuilder
-        dndHelper.sendOrEditInitiativeMessage(hook ?: return, embedBuilder, null, deleteDelay)
+    private fun displayAllValues(guildId: Long, hook: InteractionHook?, deleteDelay: Int) {
+        val embedBuilder = dndHelper.stateFor(guildId).initiativeEmbedBuilder
+        dndHelper.sendOrEditInitiativeMessage(guildId, hook ?: return, embedBuilder, null, deleteDelay)
     }
 
 }

@@ -43,6 +43,8 @@ internal class DnDHelperTest {
     lateinit var userDtoHelper: UserDtoHelper
     lateinit var dndHelper: DnDHelper
 
+    private val guildId = 1L
+
     @BeforeEach
     fun setUp() {
         hook = mockk()
@@ -106,7 +108,7 @@ internal class DnDHelperTest {
         every { messageEditAction.queue() } just Runs
         every { message.delete() } returns auditableRestAction
 
-        dndHelper.clearInitiative()
+        dndHelper.clearInitiative(guildId)
 
         every { hook.deleteOriginal() } returns mockk<RestAction<Void>>()
         every { hook.setEphemeral(true) } returns hook
@@ -137,7 +139,7 @@ internal class DnDHelperTest {
     @AfterEach
     fun tearDown() {
         clearAllMocks()
-        dndHelper.clearInitiative()
+        dndHelper.clearInitiative(guildId)
     }
 
     @Test
@@ -154,28 +156,30 @@ internal class DnDHelperTest {
 
     @Test
     fun testIncrementTurnTable() {
-        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
-        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
-        dndHelper.incrementTurnTable(hook, event, 0)
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        val state = dndHelper.stateFor(guildId)
+        dndHelper.sendOrEditInitiativeMessage(guildId, hook, state.initiativeEmbedBuilder, null, 0)
+        dndHelper.incrementTurnTable(guildId, hook, event, 0)
         verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
         verify(exactly = 1) { webhookMessageCreateAction.queue(any()) }
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.queue() }
-        Assertions.assertEquals(1, dndHelper.initiativeIndex.get())
+        Assertions.assertEquals(1, state.initiativeIndex.get())
     }
 
     @Test
     fun testDecrementTurnTable() {
-        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
-        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
-        dndHelper.decrementTurnTable(hook, event, 0)
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        val state = dndHelper.stateFor(guildId)
+        dndHelper.sendOrEditInitiativeMessage(guildId, hook, state.initiativeEmbedBuilder, null, 0)
+        dndHelper.decrementTurnTable(guildId, hook, event, 0)
         verifySetActionRows(webhookMessageCreateAction, messageEditAction)
 
         verify(exactly = 1) { webhookMessageCreateAction.queue(any()) }
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.queue() }
-        Assertions.assertEquals(2, dndHelper.initiativeIndex.get())
+        Assertions.assertEquals(2, state.initiativeIndex.get())
     }
 
     @Test
@@ -190,7 +194,7 @@ internal class DnDHelperTest {
 
     @Test
     fun testGetInitiativeEmbedBuilder() {
-        val embedBuilder = dndHelper.initiativeEmbedBuilder
+        val embedBuilder = dndHelper.stateFor(guildId).initiativeEmbedBuilder
 
         Assertions.assertNotNull(embedBuilder)
         Assertions.assertEquals("Initiative Order", embedBuilder.build().title)
@@ -198,19 +202,20 @@ internal class DnDHelperTest {
 
     @Test
     fun testClearInitiative() {
-        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
-        dndHelper.clearInitiative()
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        dndHelper.clearInitiative(guildId)
 
-        Assertions.assertEquals(0, dndHelper.initiativeIndex.get())
-        Assertions.assertEquals(0, dndHelper.sortedEntries.size)
+        val state = dndHelper.stateFor(guildId)
+        Assertions.assertEquals(0, state.initiativeIndex.get())
+        Assertions.assertEquals(0, state.sortedEntries.size)
     }
 
     @Test
     fun testRollInitiativeForMembersWithEmptyList() {
-        dndHelper.clearInitiative()
-        dndHelper.rollInitiativeForMembers(emptyList(), member, initiativeMap)
+        dndHelper.clearInitiative(guildId)
+        dndHelper.rollInitiativeForMembers(guildId, emptyList(), member, initiativeMap)
         Assertions.assertTrue(
-            dndHelper.sortedEntries.isEmpty(),
+            dndHelper.stateFor(guildId).sortedEntries.isEmpty(),
             "Sorted entries should be empty for an empty member list"
         )
     }
@@ -218,7 +223,7 @@ internal class DnDHelperTest {
     @Test
     fun testRollInitiativeForString() {
         val names = listOf("Alice", "Bob", "Charlie")
-        dndHelper.rollInitiativeForString(names, initiativeMap)
+        dndHelper.rollInitiativeForString(guildId, names, initiativeMap)
         Assertions.assertEquals(3, initiativeMap.size, "There should be an entry for each name")
         names.forEach { name ->
             Assertions.assertTrue(initiativeMap.containsKey(name), "Initiative map should contain entry for $name")
@@ -227,9 +232,11 @@ internal class DnDHelperTest {
 
     @Test
     fun testSendOrEditInitiativeMessageForNewMessage() {
-        dndHelper.clearInitiative()
-        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
-        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, null, 0)
+        dndHelper.clearInitiative(guildId)
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        dndHelper.sendOrEditInitiativeMessage(
+            guildId, hook, dndHelper.stateFor(guildId).initiativeEmbedBuilder, null, 0
+        )
 
         verify(exactly = 1) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { webhookMessageCreateAction.setComponents(any<ActionRow>()) }
@@ -238,15 +245,42 @@ internal class DnDHelperTest {
 
     @Test
     fun testSendOrEditInitiativeMessageForExistingMessage() {
-        dndHelper.clearInitiative()
-        dndHelper.rollInitiativeForMembers(memberList, member, initiativeMap)
-        dndHelper.sendOrEditInitiativeMessage(hook, dndHelper.initiativeEmbedBuilder, event, 0)
+        dndHelper.clearInitiative(guildId)
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        dndHelper.sendOrEditInitiativeMessage(
+            guildId, hook, dndHelper.stateFor(guildId).initiativeEmbedBuilder, event, 0
+        )
 
         verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.setComponents(any<ActionRow>()) }
         verify(exactly = 1) { messageEditAction.queue() }
         verify(exactly = 1) { hook.setEphemeral(true) }
         verify(exactly = 1) { hook.sendMessage(any<String>()) }
+    }
+
+    @Test
+    fun testActiveSnapshotsRoundTrip() {
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        val snapshots = dndHelper.activeSnapshots()
+        Assertions.assertTrue(snapshots.containsKey(guildId))
+
+        dndHelper.clearInitiative(guildId)
+        Assertions.assertTrue(dndHelper.activeSnapshots().isEmpty())
+
+        dndHelper.restore(guildId, snapshots.getValue(guildId))
+        val restored = dndHelper.stateFor(guildId)
+        Assertions.assertTrue(restored.isActive())
+        Assertions.assertEquals(snapshots.getValue(guildId).entries.size, restored.sortedEntries.size)
+    }
+
+    @Test
+    fun testStatesAreIsolatedBetweenGuilds() {
+        val otherGuild = 2L
+        dndHelper.rollInitiativeForMembers(guildId, memberList, member, initiativeMap)
+        dndHelper.clearInitiative(otherGuild)
+        // Roll for guildId must not be affected by clearing otherGuild
+        Assertions.assertTrue(dndHelper.stateFor(guildId).isActive())
+        Assertions.assertFalse(dndHelper.stateFor(otherGuild).isActive())
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

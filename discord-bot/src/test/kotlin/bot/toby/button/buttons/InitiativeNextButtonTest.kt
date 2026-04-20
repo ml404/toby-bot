@@ -56,12 +56,12 @@ class InitiativeNextButtonTest : ButtonTest {
 
         // Mock clearInitiative method to just verify the call
 
-        every { dndHelper.incrementTurnTable(any(), any(), any()) } just Runs
+        every { dndHelper.incrementTurnTable(any(), any(), any(), any()) } just Runs
 
         // Invoke the handler
         InitiativeNextButton(dndHelper).handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
 
         // Verify expected interactions
-        verify(exactly = 1) { dndHelper.incrementTurnTable(mockHook, event, 0) }
+        verify(exactly = 1) { dndHelper.incrementTurnTable(1L, mockHook, event, 0) }
     }
 }
