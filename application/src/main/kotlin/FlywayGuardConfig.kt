@@ -6,9 +6,9 @@ import org.springframework.context.annotation.Configuration
 
 /**
  * Fails application start-up when Flyway can't see any migrations on the
- * classpath — e.g. because `BOOT-INF/lib/database-*.jar` got repackaged
- * without its `db/migration/*.sql` resources. Without this guard Spring Boot
- * would happily start serving, silently skip every migration, and the first
+ * classpath — e.g. because the nested database jar got repackaged without
+ * its db.migration SQL resources. Without this guard Spring Boot would
+ * happily start serving, silently skip every migration, and the first
  * request that touches a missing table returns 500.
  *
  * Can be disabled for specialised builds (ad-hoc test rigs, DB dumps) via the
