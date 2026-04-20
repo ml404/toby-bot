@@ -23,8 +23,10 @@ import web.service.GuildCampaignInfo
 import web.service.JoinResult
 import web.service.KickResult
 import web.service.LeaveResult
+import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
+import java.time.LocalDateTime
 
 class CampaignControllerTest {
 
@@ -494,5 +496,41 @@ class CampaignControllerTest {
         controller.deleteNote(guildId, 42L, mockUser, mockRa)
 
         verify { mockRa.addFlashAttribute("error", "That note doesn't exist.") }
+    }
+
+    // listEvents
+
+    @Test
+    fun `listEvents returns empty list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val result = controller.listEvents(guildId, null, 100, mockUser)
+
+        assertEquals(emptyList<SessionEventView>(), result)
+    }
+
+    @Test
+    fun `listEvents delegates to web service`() {
+        val events = listOf(
+            SessionEventView(
+                id = 1L, type = "ROLL", actorDiscordId = 7L, actorName = "Dave",
+                refEventId = null, payload = mapOf("total" to 14),
+                createdAt = LocalDateTime.now()
+            )
+        )
+        every { campaignWebService.listRecentEvents(guildId, null, 100) } returns events
+
+        val result = controller.listEvents(guildId, null, 100, mockUser)
+
+        assertEquals(events, result)
+    }
+
+    @Test
+    fun `listEvents forwards since cursor`() {
+        every { campaignWebService.listRecentEvents(guildId, 42L, 50) } returns emptyList()
+
+        controller.listEvents(guildId, 42L, 50, mockUser)
+
+        verify { campaignWebService.listRecentEvents(guildId, 42L, 50) }
     }
 }

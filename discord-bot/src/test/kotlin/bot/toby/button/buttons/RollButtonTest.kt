@@ -7,7 +7,9 @@ import bot.toby.button.ButtonTest.Companion.mockChannel
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.managers.DefaultCommandManager
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.mockk.*
+import org.springframework.context.ApplicationEventPublisher
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -27,7 +29,7 @@ class RollButtonTest : ButtonTest {
         super.setup()
 
         // Initialize RollCommand and mock its methods
-        rollCommand = spyk(RollCommand(dndHelper))
+        rollCommand = spyk(RollCommand(dndHelper, mockk<ApplicationEventPublisher>(relaxed = true), ObjectMapper()))
         every { rollCommand.handleDiceRoll(any(), any(), any(), any()) } returns mockk<WebhookMessageCreateAction<Message>> {
             every { queue(any()) } just Runs
         }

@@ -1,10 +1,12 @@
 package web.service
 
 import database.dto.CampaignDto
+import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
 import database.dto.SessionNoteDto
 import database.dto.UserDto
+import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
@@ -31,6 +33,7 @@ class CampaignWebServiceTest {
     private lateinit var userService: UserService
     private lateinit var characterSheetService: CharacterSheetService
     private lateinit var sessionNoteService: SessionNoteService
+    private lateinit var campaignEventService: CampaignEventService
     private lateinit var jda: JDA
     private lateinit var service: CampaignWebService
 
@@ -54,6 +57,7 @@ class CampaignWebServiceTest {
         userService = mockk(relaxed = true)
         characterSheetService = mockk(relaxed = true)
         sessionNoteService = mockk(relaxed = true)
+        campaignEventService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         service = CampaignWebService(
             campaignService,
@@ -62,6 +66,7 @@ class CampaignWebServiceTest {
             userService,
             characterSheetService,
             sessionNoteService,
+            campaignEventService,
             jda
         )
     }
@@ -678,5 +683,85 @@ class CampaignWebServiceTest {
         val asPlayer = service.getCampaignDetail(guildId, playerDiscordId)!!
         assertFalse(asPlayer.notes[0].canDelete, "Player can't delete DM's note")
         assertTrue(asPlayer.notes[1].canDelete, "Player can delete their own note")
+    }
+
+    // listRecentEvents + CampaignDetail.recentEvents
+
+    @Test
+    fun `listRecentEvents returns empty when no active campaign`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertTrue(service.listRecentEvents(guildId, null, 50).isEmpty())
+    }
+
+    @Test
+    fun `listRecentEvents delegates to listRecent when no since cursor`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        val now = LocalDateTime.now()
+        every { campaignEventService.listRecent(campaign.id, 50) } returns listOf(
+            CampaignEventDto(
+                id = 1, campaignId = campaign.id, eventType = "ROLL",
+                actorDiscordId = 7L, actorName = "Dave",
+                payload = """{"sides":20,"count":1,"modifier":0,"total":17,"rawTotal":17}""",
+                createdAt = now
+            )
+        )
+
+        val out = service.listRecentEvents(guildId, null, 50)
+
+        assertEquals(1, out.size)
+        assertEquals(1L, out[0].id)
+        assertEquals("ROLL", out[0].type)
+        assertEquals("Dave", out[0].actorName)
+        assertEquals(20, out[0].payload["sides"])
+        assertEquals(17, out[0].payload["total"])
+    }
+
+    @Test
+    fun `listRecentEvents delegates to listSince when cursor provided`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.listSince(campaign.id, 42L, 30) } returns emptyList()
+
+        service.listRecentEvents(guildId, 42L, 30)
+
+        verify { campaignEventService.listSince(campaign.id, 42L, 30) }
+        verify(exactly = 0) { campaignEventService.listRecent(any(), any()) }
+    }
+
+    @Test
+    fun `listRecentEvents tolerates malformed payload json`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.listRecent(campaign.id, any()) } returns listOf(
+            CampaignEventDto(
+                id = 1, campaignId = campaign.id, eventType = "ROLL",
+                payload = "not-valid-json",
+                createdAt = LocalDateTime.now()
+            )
+        )
+
+        val out = service.listRecentEvents(guildId, null, 100)
+        assertEquals(1, out.size)
+        assertTrue(out[0].payload.isEmpty(), "malformed payload falls back to empty map")
+    }
+
+    @Test
+    fun `getCampaignDetail populates recentEvents`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { jda.getGuildById(guildId) } returns mockk(relaxed = true)
+        every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns emptyList()
+        every { sessionNoteService.getNotesForCampaign(campaign.id) } returns emptyList()
+        every { campaignEventService.listRecent(campaign.id, 100) } returns listOf(
+            CampaignEventDto(
+                id = 9, campaignId = campaign.id, eventType = "ROLL",
+                payload = """{"total":12}""", createdAt = LocalDateTime.now()
+            )
+        )
+
+        val detail = service.getCampaignDetail(guildId, dmDiscordId)!!
+        assertEquals(1, detail.recentEvents.size)
+        assertEquals(9L, detail.recentEvents[0].id)
     }
 }

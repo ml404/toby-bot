@@ -8,6 +8,7 @@ import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
 import database.dto.SessionNoteDto
 import database.dto.UserDto
+import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
@@ -23,7 +24,8 @@ data class CampaignDetail(
     val dmName: String,
     val isCurrentUserPlayer: Boolean = false,
     val currentUserCharacterId: Long? = null,
-    val notes: List<SessionNoteView> = emptyList()
+    val notes: List<SessionNoteView> = emptyList(),
+    val recentEvents: List<SessionEventView> = emptyList()
 ) {
     fun isDm(discordId: Long): Boolean = campaign.dmDiscordId == discordId
 }
@@ -35,6 +37,16 @@ data class SessionNoteView(
     val body: String,
     val createdAt: LocalDateTime,
     val canDelete: Boolean
+)
+
+data class SessionEventView(
+    val id: Long,
+    val type: String,
+    val actorDiscordId: Long?,
+    val actorName: String?,
+    val refEventId: Long?,
+    val payload: Map<String, Any?>,
+    val createdAt: LocalDateTime
 )
 
 data class PlayerInfo(
@@ -78,13 +90,17 @@ class CampaignWebService(
     private val userService: UserService,
     private val characterSheetService: CharacterSheetService,
     private val sessionNoteService: SessionNoteService,
+    private val campaignEventService: CampaignEventService,
     private val jda: JDA
 ) {
 
     private val objectMapper = ObjectMapper()
+    private val payloadTypeRef =
+        object : com.fasterxml.jackson.core.type.TypeReference<Map<String, Any?>>() {}
 
     companion object {
         const val MAX_NOTE_BODY_LENGTH = 2000
+        const val DEFAULT_EVENT_LIMIT = 100
     }
 
     fun getMutualGuildsWithCampaigns(accessToken: String): List<GuildCampaignInfo> {
@@ -143,13 +159,43 @@ class CampaignWebService(
             )
         }
 
+        val recentEvents = campaignEventService
+            .listRecent(campaign.id, DEFAULT_EVENT_LIMIT)
+            .map(::toSessionEventView)
+
         return CampaignDetail(
             campaign = campaign,
             players = players,
             dmName = dmName,
             isCurrentUserPlayer = isCurrentUserPlayer,
             currentUserCharacterId = currentUserCharacterId,
-            notes = notes
+            notes = notes,
+            recentEvents = recentEvents
+        )
+    }
+
+    fun listRecentEvents(guildId: Long, sinceId: Long?, limit: Int): List<SessionEventView> {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId) ?: return emptyList()
+        val bounded = limit.coerceIn(1, DEFAULT_EVENT_LIMIT * 10)
+        val events = if (sinceId != null) {
+            campaignEventService.listSince(campaign.id, sinceId, bounded)
+        } else {
+            campaignEventService.listRecent(campaign.id, bounded)
+        }
+        return events.map(::toSessionEventView)
+    }
+
+    private fun toSessionEventView(dto: database.dto.CampaignEventDto): SessionEventView {
+        val parsed = runCatching { objectMapper.readValue(dto.payload, payloadTypeRef) }
+            .getOrDefault(emptyMap())
+        return SessionEventView(
+            id = dto.id,
+            type = dto.eventType,
+            actorDiscordId = dto.actorDiscordId,
+            actorName = dto.actorName,
+            refEventId = dto.refEventId,
+            payload = parsed,
+            createdAt = dto.createdAt
         )
     }
 
