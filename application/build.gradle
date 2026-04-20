@@ -93,25 +93,27 @@ bootJar {
  * quietly did nothing and the app 500'd on the first query that hit a
  * missing table.
  */
+def migrationsDir = file("${rootDir}/database/src/main/resources/db/migration")
 tasks.register('verifyMigrationsInBootJar') {
     dependsOn tasks.named('bootJar')
-    def migrationsDir = file("${rootDir}/database/src/main/resources/db/migration")
-    def bootJarFile = tasks.named('bootJar').flatMap { it.archiveFile }
-    inputs.dir migrationsDir
-    inputs.file bootJarFile
-
     doLast {
-        def expected = fileTree(migrationsDir) { include 'V*.sql' }.files*.name.toSorted()
+        def expected = new TreeSet<String>()
+        if (migrationsDir.exists()) {
+            migrationsDir.eachFile { f ->
+                if (f.name.startsWith('V') && f.name.endsWith('.sql')) expected << f.name
+            }
+        }
         if (expected.isEmpty()) {
-            println "No Flyway migrations found at ${migrationsDir}; skipping bootJar verification."
+            println "verifyMigrationsInBootJar: no migrations found at ${migrationsDir}, skipping."
             return
         }
 
+        def bootJarTask = tasks.named('bootJar').get()
+        def jar = bootJarTask.archiveFile.get().asFile
         def found = new TreeSet<String>()
-        def jar = bootJarFile.get().asFile
         new java.util.zip.ZipFile(jar).withCloseable { outer ->
             outer.entries().each { entry ->
-                if (entry.name ==~ '^BOOT-INF/lib/database-.*\\.jar$') {
+                if (entry.name ==~ /^BOOT-INF\/lib\/database-.*\.jar$/) {
                     outer.getInputStream(entry).withCloseable { raw ->
                         new java.util.zip.ZipInputStream(raw).withCloseable { zis ->
                             def e
@@ -138,7 +140,7 @@ tasks.register('verifyMigrationsInBootJar') {
 }
 
 tasks.named('bootJar').configure {
-    finalizedBy tasks.named('verifyMigrationsInBootJar')
+    finalizedBy 'verifyMigrationsInBootJar'
 }
 
 tasks.withType(JavaCompile).configureEach {
