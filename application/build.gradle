@@ -94,8 +94,12 @@ bootJar {
  * missing table.
  */
 def migrationsDir = file("${rootDir}/database/src/main/resources/db/migration")
+def bootJarFileProvider = tasks.named('bootJar', org.springframework.boot.gradle.tasks.bundling.BootJar)
+    .flatMap { it.archiveFile }
 tasks.register('verifyMigrationsInBootJar') {
     dependsOn tasks.named('bootJar')
+    inputs.dir migrationsDir
+    inputs.file bootJarFileProvider
     doLast {
         def expected = new TreeSet<String>()
         if (migrationsDir.exists()) {
@@ -108,8 +112,7 @@ tasks.register('verifyMigrationsInBootJar') {
             return
         }
 
-        def bootJarTask = tasks.named('bootJar').get()
-        def jar = bootJarTask.archiveFile.get().asFile
+        def jar = bootJarFileProvider.get().asFile
         def found = new TreeSet<String>()
         new java.util.zip.ZipFile(jar).withCloseable { outer ->
             outer.entries().each { entry ->
