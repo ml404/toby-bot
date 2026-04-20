@@ -389,4 +389,121 @@ class CampaignWebServiceTest {
         verify { userService.createNewUser(any()) }
         verify { userService.updateUser(match { it.dndBeyondCharacterId == 12345L }) }
     }
+
+    // endCampaign
+
+    @Test
+    fun `endCampaign returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(EndResult.NO_ACTIVE_CAMPAIGN, service.endCampaign(guildId, dmDiscordId))
+        verify(exactly = 0) { campaignService.deactivateCampaignForGuild(any()) }
+    }
+
+    @Test
+    fun `endCampaign returns NOT_DM when requester is not the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(EndResult.NOT_DM, service.endCampaign(guildId, playerDiscordId))
+        verify(exactly = 0) { campaignService.deactivateCampaignForGuild(any()) }
+    }
+
+    @Test
+    fun `endCampaign deactivates and returns ENDED for DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(EndResult.ENDED, service.endCampaign(guildId, dmDiscordId))
+        verify { campaignService.deactivateCampaignForGuild(guildId) }
+    }
+
+    // kickPlayer
+
+    @Test
+    fun `kickPlayer returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(KickResult.NO_ACTIVE_CAMPAIGN, service.kickPlayer(guildId, dmDiscordId, playerDiscordId))
+    }
+
+    @Test
+    fun `kickPlayer returns NOT_DM when requester is not the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(KickResult.NOT_DM, service.kickPlayer(guildId, playerDiscordId, playerDiscordId))
+        verify(exactly = 0) { campaignPlayerService.removePlayer(any()) }
+    }
+
+    @Test
+    fun `kickPlayer refuses to kick the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(KickResult.CANNOT_KICK_DM, service.kickPlayer(guildId, dmDiscordId, dmDiscordId))
+        verify(exactly = 0) { campaignPlayerService.removePlayer(any()) }
+    }
+
+    @Test
+    fun `kickPlayer returns NOT_A_PLAYER when target is not in campaign`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, playerDiscordId)) } returns null
+
+        assertEquals(KickResult.NOT_A_PLAYER, service.kickPlayer(guildId, dmDiscordId, playerDiscordId))
+        verify(exactly = 0) { campaignPlayerService.removePlayer(any()) }
+    }
+
+    @Test
+    fun `kickPlayer removes the player and returns KICKED`() {
+        val campaign = makeCampaign()
+        val playerId = CampaignPlayerId(campaign.id, playerDiscordId)
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(playerId) } returns
+            CampaignPlayerDto(id = playerId, guildId = guildId)
+
+        assertEquals(KickResult.KICKED, service.kickPlayer(guildId, dmDiscordId, playerDiscordId))
+        verify { campaignPlayerService.removePlayer(playerId) }
+    }
+
+    // setPlayerAlive
+
+    @Test
+    fun `setPlayerAlive returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(
+            SetAliveResult.NO_ACTIVE_CAMPAIGN,
+            service.setPlayerAlive(guildId, dmDiscordId, playerDiscordId, false)
+        )
+    }
+
+    @Test
+    fun `setPlayerAlive returns NOT_DM when requester is not the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(
+            SetAliveResult.NOT_DM,
+            service.setPlayerAlive(guildId, playerDiscordId, playerDiscordId, false)
+        )
+        verify(exactly = 0) { campaignPlayerService.updatePlayer(any()) }
+    }
+
+    @Test
+    fun `setPlayerAlive returns NOT_A_PLAYER when target is not in campaign`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, playerDiscordId)) } returns null
+
+        assertEquals(
+            SetAliveResult.NOT_A_PLAYER,
+            service.setPlayerAlive(guildId, dmDiscordId, playerDiscordId, false)
+        )
+        verify(exactly = 0) { campaignPlayerService.updatePlayer(any()) }
+    }
+
+    @Test
+    fun `setPlayerAlive toggles alive and returns UPDATED`() {
+        val campaign = makeCampaign()
+        val playerId = CampaignPlayerId(campaign.id, playerDiscordId)
+        val existing = CampaignPlayerDto(id = playerId, guildId = guildId, alive = true)
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(playerId) } returns existing
+
+        assertEquals(
+            SetAliveResult.UPDATED,
+            service.setPlayerAlive(guildId, dmDiscordId, playerDiscordId, false)
+        )
+        assertFalse(existing.alive)
+        verify { campaignPlayerService.updatePlayer(existing) }
+    }
 }

@@ -9,8 +9,11 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.CampaignWebService
+import web.service.EndResult
 import web.service.JoinResult
+import web.service.KickResult
 import web.service.LeaveResult
+import web.service.SetAliveResult
 import web.service.SetCharacterResult
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -138,6 +141,63 @@ class CampaignController(
                 "error",
                 "Could not extract a valid character ID. Paste a D&D Beyond URL or numeric ID."
             )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/end")
+    fun endCampaign(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.endCampaign(guildId, discordId)) {
+            EndResult.ENDED -> {}
+            EndResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            EndResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can end the campaign.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/players/{targetDiscordId}/kick")
+    fun kickPlayer(
+        @PathVariable guildId: Long,
+        @PathVariable targetDiscordId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.kickPlayer(guildId, discordId, targetDiscordId)) {
+            KickResult.KICKED -> {}
+            KickResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            KickResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can kick players.")
+            KickResult.NOT_A_PLAYER -> ra.addFlashAttribute("error", "That user isn't in the campaign.")
+            KickResult.CANNOT_KICK_DM -> ra.addFlashAttribute("error", "The DM can't be kicked.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/players/{targetDiscordId}/alive")
+    fun setPlayerAlive(
+        @PathVariable guildId: Long,
+        @PathVariable targetDiscordId: Long,
+        @RequestParam alive: Boolean,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.setPlayerAlive(guildId, discordId, targetDiscordId, alive)) {
+            SetAliveResult.UPDATED -> {}
+            SetAliveResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            SetAliveResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can change player status.")
+            SetAliveResult.NOT_A_PLAYER -> ra.addFlashAttribute("error", "That user isn't in the campaign.")
         }
         return "redirect:/dnd/campaign/$guildId"
     }
