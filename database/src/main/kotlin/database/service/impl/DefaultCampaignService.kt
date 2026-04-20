@@ -21,6 +21,9 @@ class DefaultCampaignService(
     override fun getActiveCampaignForGuild(guildId: Long): CampaignDto? =
         campaignPersistence.getActiveCampaignForGuild(guildId)
 
+    override fun listActiveCampaigns(): List<CampaignDto> =
+        campaignPersistence.listActiveCampaigns()
+
     override fun updateCampaign(campaign: CampaignDto): CampaignDto =
         campaignPersistence.updateCampaign(campaign)
 

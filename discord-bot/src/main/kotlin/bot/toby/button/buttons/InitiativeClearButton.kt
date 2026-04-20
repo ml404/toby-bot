@@ -16,6 +16,6 @@ class InitiativeClearButton @Autowired constructor(private val dnDHelper: DnDHel
     override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int) {
         val event = ctx.event
         val hook = ctx.event.hook
-        dnDHelper.clearInitiative(hook, event)
+        dnDHelper.clearInitiative(ctx.guild.idLong, hook, event)
     }
 }

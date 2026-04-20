@@ -13,6 +13,10 @@ import java.io.Serializable
         query = "select c from CampaignDto c where c.id = :id"
     ),
     NamedQuery(
+        name = "CampaignDto.listActive",
+        query = "select c from CampaignDto c where c.active = true"
+    ),
+    NamedQuery(
         name = "CampaignDto.deactivateByGuild",
         query = "update CampaignDto c set c.active = false where c.guildId = :guildId and c.active = true"
     )

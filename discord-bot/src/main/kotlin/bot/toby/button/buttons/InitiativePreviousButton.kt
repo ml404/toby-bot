@@ -16,6 +16,6 @@ class InitiativePreviousButton @Autowired constructor(private val dndHelper: DnD
     override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.UserDto, deleteDelay: Int) {
         val event = ctx.event
         val hook = event.hook
-        dndHelper.decrementTurnTable(hook, event, deleteDelay)
+        dndHelper.decrementTurnTable(ctx.guild.idLong, hook, event, deleteDelay)
     }
 }
