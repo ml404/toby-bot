@@ -14,8 +14,10 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.AddNoteResult
 import web.service.CampaignDetail
 import web.service.CampaignWebService
+import web.service.DeleteNoteResult
 import web.service.EndResult
 import web.service.GuildCampaignInfo
 import web.service.JoinResult
@@ -409,5 +411,88 @@ class CampaignControllerTest {
         val view = controller.setPlayerAlive(guildId, 99L, false, mockUser, mockRa)
 
         assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    // addNote
+
+    @Test
+    fun `addNote redirects with no flash on success`() {
+        every { campaignWebService.addNote(guildId, 1L, "hi") } returns AddNoteResult.ADDED
+
+        val view = controller.addNote(guildId, "hi", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `addNote sets error when not a participant`() {
+        every { campaignWebService.addNote(guildId, 1L, "hi") } returns AddNoteResult.NOT_PARTICIPANT
+
+        controller.addNote(guildId, "hi", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the DM and campaign players can add notes.") }
+    }
+
+    @Test
+    fun `addNote sets error on empty body`() {
+        every { campaignWebService.addNote(guildId, 1L, "  ") } returns AddNoteResult.EMPTY_BODY
+
+        controller.addNote(guildId, "  ", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Note body can't be empty.") }
+    }
+
+    @Test
+    fun `addNote sets error on body too long`() {
+        every { campaignWebService.addNote(guildId, 1L, any()) } returns AddNoteResult.BODY_TOO_LONG
+
+        controller.addNote(guildId, "x".repeat(3000), mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Note is too long (max 2000 characters).") }
+    }
+
+    @Test
+    fun `addNote redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.addNote(guildId, "hi", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    // deleteNote
+
+    @Test
+    fun `deleteNote redirects with no flash on success`() {
+        every { campaignWebService.deleteNote(guildId, 1L, 42L) } returns DeleteNoteResult.DELETED
+
+        val view = controller.deleteNote(guildId, 42L, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `deleteNote sets error when not allowed`() {
+        every { campaignWebService.deleteNote(guildId, 1L, 42L) } returns DeleteNoteResult.NOT_ALLOWED
+
+        controller.deleteNote(guildId, 42L, mockUser, mockRa)
+
+        verify {
+            mockRa.addFlashAttribute(
+                "error",
+                "You can only delete your own notes (or any note if you're the DM)."
+            )
+        }
+    }
+
+    @Test
+    fun `deleteNote sets error when note not found`() {
+        every { campaignWebService.deleteNote(guildId, 1L, 42L) } returns DeleteNoteResult.NOT_FOUND
+
+        controller.deleteNote(guildId, 42L, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "That note doesn't exist.") }
     }
 }
