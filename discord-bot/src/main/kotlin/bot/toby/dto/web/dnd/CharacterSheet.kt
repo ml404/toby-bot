@@ -4,13 +4,6 @@ import com.google.gson.annotations.SerializedName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 
-data class DnDBeyondCharacterResponse(
-    val id: Long?,
-    val success: Boolean?,
-    val message: String?,
-    val data: CharacterSheet?
-)
-
 data class CharacterSheet(
     val id: Long?,
     val name: String?,

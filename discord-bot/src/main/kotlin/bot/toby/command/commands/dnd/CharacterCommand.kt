@@ -61,11 +61,14 @@ class CharacterCommand @Autowired constructor(
                 if (character != null) {
                     hook.sendMessageEmbeds(character.toEmbed()).queue()
                 } else {
-                    hook.sendMessage("Could not fetch the character sheet. The character may have been deleted or made private on D&D Beyond.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    hook.sendMessage(
+                        "No cached sheet for character `$characterId`. " +
+                        "Run `/linkcharacter` again while D&D Beyond is reachable to populate the cache. " +
+                        "View on D&D Beyond: https://www.dndbeyond.com/characters/$characterId"
+                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
                 }
             }.onFailure {
-                hook.sendMessage("An error occurred while fetching the character sheet. Please try again later.")
+                hook.sendMessage("An error occurred while loading the cached character sheet. Please try again later.")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }

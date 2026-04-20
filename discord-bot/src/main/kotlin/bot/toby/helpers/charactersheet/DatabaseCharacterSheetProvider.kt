@@ -3,8 +3,10 @@ package bot.toby.helpers.charactersheet
 import bot.toby.dto.web.dnd.CharacterSheet
 import com.google.gson.Gson
 import database.service.CharacterSheetService
+import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Component
 
+@Primary
 @Component
 class DatabaseCharacterSheetProvider(
     private val characterSheetService: CharacterSheetService

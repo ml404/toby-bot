@@ -158,6 +158,70 @@
             border-radius: 4px;
             font-family: monospace;
         }
+        .char-line { font-size: 0.8rem; color: #a0a0b0; margin-top: 2px; }
+        .char-line a { color: #8892f5; text-decoration: none; }
+        .char-line a:hover { text-decoration: underline; }
+        .actions-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+        .btn {
+            padding: 9px 18px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-primary { background: #5865F2; color: #fff; }
+        .btn-primary:hover { background: #4752c4; }
+        .btn-secondary {
+            background: transparent;
+            color: #a0a0b0;
+            border: 1px solid #2a2a4a;
+        }
+        .btn-secondary:hover { color: #e0e0e0; border-color: #3a3a5a; }
+        .btn-danger { background: #7a2a2a; color: #fff; }
+        .btn-danger:hover { background: #9a3535; }
+        .character-panel {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+        .character-panel-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .character-panel .current {
+            font-size: 0.85rem;
+            color: #a0a0b0;
+            margin-bottom: 12px;
+        }
+        .character-panel .current a { color: #8892f5; text-decoration: none; }
+        .character-panel .current a:hover { text-decoration: underline; }
+        .character-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .character-form input[type=text] {
+            flex: 1;
+            min-width: 220px;
+            padding: 9px 12px;
+            border-radius: 6px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+        .clear-form { display: inline; }
     </style>
 </head>
 <body>
@@ -204,6 +268,42 @@
                     <span th:text="${#lists.size(players)}">0</span> joined
                 </div>
             </div>
+
+            <div class="actions-row">
+                <form th:if="${not isUserDm and not isUserPlayer}"
+                      th:action="@{/dnd/campaign/{id}/join(id=${guildId})}" method="post">
+                    <button type="submit" class="btn btn-primary">🎲 Join campaign</button>
+                </form>
+                <form th:if="${isUserPlayer}"
+                      th:action="@{/dnd/campaign/{id}/leave(id=${guildId})}" method="post">
+                    <button type="submit" class="btn btn-secondary">Leave campaign</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="character-panel">
+            <div class="character-panel-title">Your linked character</div>
+            <div class="current" th:if="${currentUserCharacterId != null}">
+                Currently linked:
+                <a th:href="'https://www.dndbeyond.com/characters/' + ${currentUserCharacterId}"
+                   target="_blank" rel="noopener"
+                   th:text="${currentUserCharacterId}">000</a>
+            </div>
+            <div class="current" th:unless="${currentUserCharacterId != null}">
+                No character linked yet.
+            </div>
+            <form class="character-form" th:action="@{/dnd/campaign/{id}/character(id=${guildId})}" method="post">
+                <input type="text" name="characterInput"
+                       placeholder="D&amp;D Beyond URL or numeric ID"
+                       maxlength="300">
+                <button type="submit" class="btn btn-primary">Link character</button>
+            </form>
+            <form th:if="${currentUserCharacterId != null}"
+                  class="clear-form" style="margin-top:8px;"
+                  th:action="@{/dnd/campaign/{id}/character(id=${guildId})}" method="post">
+                <input type="hidden" name="characterInput" value="">
+                <button type="submit" class="btn btn-secondary">Clear link</button>
+            </form>
         </div>
 
         <div class="section-title">Players</div>
@@ -215,8 +315,21 @@
                 <div class="player-info">
                     <div class="player-name" th:text="${player.displayName}">Player Name</div>
                     <div class="player-sub"
-                         th:text="${player.characterId != null ? 'Character ID: ' + player.characterId : 'No character linked'}">
-                        Character info
+                         th:if="${player.characterName != null}"
+                         th:text="${player.characterName
+                            + ' — ' + (player.characterRace ?: 'Unknown race')
+                            + (player.characterClasses != null ? ' · ' + player.characterClasses : '')
+                            + (player.characterLevel != null ? ' · Level ' + player.characterLevel : '')}">
+                        Character name — Race · Class · Level
+                    </div>
+                    <div class="char-line"
+                         th:if="${player.characterId != null}">
+                        <a th:href="${player.characterLink}" target="_blank" rel="noopener"
+                           th:text="'View on D&amp;D Beyond (ID ' + ${player.characterId} + ')'">View on D&D Beyond</a>
+                    </div>
+                    <div class="player-sub"
+                         th:if="${player.characterId == null}">
+                        No character linked
                     </div>
                 </div>
                 <span th:if="${player.alive}" class="player-status alive">Alive</span>
@@ -229,7 +342,8 @@
         </div>
 
         <div class="hint">
-            Players join with <code>/campaign join</code> · Leave with <code>/campaign leave</code>
+            Also available in Discord:
+            <code>/campaign join</code> · <code>/campaign leave</code> · <code>/linkcharacter</code>
             <span th:if="${isUserDm}"> · End the campaign with <code>/campaign end</code></span>
         </div>
     </div>

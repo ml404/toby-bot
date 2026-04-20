@@ -119,7 +119,7 @@ class LinkCharacterCommandTest : CommandTest {
     }
 
     @Test
-    fun `API returns null replies with error`() = runTest {
+    fun `no cached sheet still links id and replies with plain message`() = runTest {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
         every { optionMapping.asString } returns "99999999"
@@ -127,7 +127,8 @@ class LinkCharacterCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        verify(exactly = 0) { userDtoHelper.updateUser(any()) }
+        verify { requestingUserDto.dndBeyondCharacterId = 99999999L }
+        verify { userDtoHelper.updateUser(requestingUserDto) }
         verify { event.hook.sendMessage(any<String>()) }
     }
 
