@@ -345,6 +345,155 @@
             color: #e0e0e0;
             font-size: 0.9rem;
         }
+
+        .monster-library, .initiative-composer, .turn-table {
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .monster-library summary,
+        .initiative-composer .title {
+            font-weight: 600;
+            cursor: pointer;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+        }
+        .monster-library table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .monster-library th, .monster-library td {
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .monster-library th { color: #a0a0b0; font-weight: 500; }
+        .monster-library input[type=text], .monster-library input[type=number] {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            width: 100%;
+        }
+        .monster-library input[type=number] { width: 70px; }
+        .monster-library tr.row-form td { vertical-align: top; }
+        .initiative-composer .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 6px;
+            margin: 10px 0;
+        }
+        .initiative-composer label.player-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #1e2d50;
+            border: 1px solid #2a3a60;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+        .initiative-composer .template-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 10px 0;
+        }
+        .initiative-composer .picker-heading {
+            font-size: 0.75rem;
+            color: #a0a0b0;
+            margin-bottom: 4px;
+        }
+        .initiative-composer .picker-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #1e2d50;
+            border: 1px solid #2a3a60;
+            border-radius: 6px;
+            padding: 4px 10px;
+        }
+        .initiative-composer .picker-row input[type=number] {
+            width: 56px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .initiative-composer .picker-name { flex: 1; font-size: 0.9rem; color: #e0e0e0; font-weight: 600; }
+        .initiative-composer .picker-meta { font-size: 0.75rem; color: #a0a0b0; font-family: monospace; }
+        .initiative-composer .monster-add {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .initiative-composer .monster-add select {
+            flex: 1;
+            min-width: 180px;
+            padding: 6px 8px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            border: 1px solid #2a2a4a;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .initiative-composer .adhoc-rows { display: flex; flex-direction: column; gap: 6px; }
+        .initiative-composer .adhoc-rows .row {
+            display: flex;
+            gap: 6px;
+        }
+        .initiative-composer .adhoc-rows input[type=text] {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .initiative-composer .adhoc-rows input[type=number] {
+            width: 70px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .turn-table ol { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
+        .turn-table li {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #1a2140;
+            border: 1px solid #2a3460;
+            font-size: 0.9rem;
+        }
+        .turn-table li.active {
+            background: rgba(88,101,242,0.2);
+            border-color: rgba(88,101,242,0.6);
+        }
+        .turn-table .idx { color: #6a6a80; font-family: monospace; min-width: 18px; }
+        .turn-table .name { flex: 1; color: #e0e0e0; font-weight: 600; }
+        .turn-table .roll { color: #e0e0e0; font-weight: 700; font-family: monospace; }
+        .turn-table .chip {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 10px;
+            letter-spacing: 0.03em;
+            border: 1px solid transparent;
+        }
+        .turn-table .chip.player { background: rgba(40,167,69,0.15); color: #5cb85c; border-color: rgba(40,167,69,0.3); }
+        .turn-table .chip.monster { background: rgba(192,57,43,0.15); color: #e74c3c; border-color: rgba(192,57,43,0.3); }
+        .turn-table .empty { color: #a0a0b0; font-size: 0.85rem; padding: 8px 0; }
     </style>
 </head>
 <body>
@@ -486,6 +635,116 @@
 
         <div class="empty-players" th:if="${#lists.isEmpty(players)}">
             No players have joined yet.
+        </div>
+
+        <!-- Monster library (DM only) -->
+        <details class="monster-library" th:if="${isUserDm}">
+            <summary>Monster library (<span th:text="${#lists.size(monsterLibrary)}">0</span>)</summary>
+            <table th:if="${not #lists.isEmpty(monsterLibrary)}">
+                <thead>
+                <tr><th>Name</th><th>Init</th><th>HP</th><th>AC</th><th></th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="tpl : ${monsterLibrary}" class="row-form">
+                    <form th:action="@{/dnd/campaign/{id}/monsters/templates(id=${guildId})}" method="post"
+                          style="display:contents;">
+                        <input type="hidden" name="id" th:value="${tpl.id}">
+                        <td><input type="text" name="name" th:value="${tpl.name}" maxlength="100" required></td>
+                        <td><input type="number" name="initiativeModifier" th:value="${tpl.initiativeModifier}"></td>
+                        <td><input type="number" name="maxHp" th:value="${tpl.maxHp}"></td>
+                        <td><input type="number" name="ac" th:value="${tpl.ac}"></td>
+                        <td>
+                            <button type="submit" class="btn-xs" title="Save changes">Save</button>
+                        </td>
+                    </form>
+                    <td style="width:1%;white-space:nowrap;">
+                        <form th:action="@{/dnd/campaign/{id}/monsters/templates/{tid}/delete(id=${guildId},tid=${tpl.id})}"
+                              method="post"
+                              th:onsubmit="|return confirm('Delete ${tpl.name}?');|"
+                              style="display:inline;">
+                            <button type="submit" class="btn-xs kick" title="Delete template">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <p th:if="${#lists.isEmpty(monsterLibrary)}" class="empty">
+                No monster templates yet. Add one below.
+            </p>
+            <form th:action="@{/dnd/campaign/{id}/monsters/templates(id=${guildId})}" method="post"
+                  style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <input type="text" name="name" placeholder="Monster name" maxlength="100" required
+                       style="flex:1;min-width:160px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
+                <input type="number" name="initiativeModifier" placeholder="init" value="0"
+                       style="width:70px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
+                <input type="number" name="maxHp" placeholder="HP"
+                       style="width:70px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
+                <input type="number" name="ac" placeholder="AC"
+                       style="width:70px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
+                <button type="submit" class="btn btn-primary">Add template</button>
+            </form>
+        </details>
+
+        <!-- Initiative composer (DM only) -->
+        <div class="initiative-composer" th:if="${isUserDm}">
+            <div class="title">Roll initiative</div>
+            <form th:action="@{/dnd/campaign/{id}/initiative/roll(id=${guildId})}" method="post"
+                  id="initiative-composer-form">
+                <div class="players-grid" th:if="${not #lists.isEmpty(players)}">
+                    <label th:each="player : ${players}" class="player-pill">
+                        <input type="checkbox" name="playerDiscordIds"
+                               th:value="${player.discordId}"
+                               th:checked="${player.alive}">
+                        <span th:text="${player.displayName}">Player</span>
+                    </label>
+                </div>
+                <div class="template-picker" th:if="${not #lists.isEmpty(monsterLibrary)}">
+                    <div class="picker-heading">From library (qty 0 to skip):</div>
+                    <div class="picker-row" th:each="tpl : ${monsterLibrary}">
+                        <input type="hidden" name="templateId" th:value="${tpl.id}">
+                        <input type="number" name="templateQty" value="0" min="0" max="99"
+                               th:title="${'How many ' + tpl.name + ' to include'}">
+                        <span class="picker-name" th:text="${tpl.name}">Goblin</span>
+                        <span class="picker-meta"
+                              th:text="${'+' + tpl.initiativeModifier
+                                         + (tpl.maxHp != null ? ' · HP ' + tpl.maxHp : '')
+                                         + (tpl.ac != null ? ' · AC ' + tpl.ac : '')}">+2</span>
+                    </div>
+                </div>
+                <div class="adhoc-rows" id="adhoc-rows">
+                    <div class="row">
+                        <input type="text" name="adhocName" placeholder="Ad-hoc monster name (optional)" maxlength="100">
+                        <input type="number" name="adhocMod" placeholder="init" value="0">
+                    </div>
+                    <div class="row">
+                        <input type="text" name="adhocName" placeholder="Ad-hoc monster name (optional)" maxlength="100">
+                        <input type="number" name="adhocMod" placeholder="init" value="0">
+                    </div>
+                </div>
+                <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+                    <button type="submit" class="btn btn-primary">🎲 Roll initiative</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Turn table (everyone) -->
+        <div class="turn-table" id="turn-table"
+             th:attr="data-current-index=${initiativeState != null ? initiativeState.currentIndex : 0}">
+            <div class="title" style="font-weight:600;color:#e0e0e0;">Turn order</div>
+            <ol id="turn-table-list" th:if="${initiativeState != null and not #lists.isEmpty(initiativeState.entries)}">
+                <li th:each="entry, iter : ${initiativeState.entries}"
+                    th:classappend="${iter.index == initiativeState.currentIndex ? 'active' : ''}">
+                    <span class="idx" th:text="${iter.index + 1}">1</span>
+                    <span class="name" th:text="${entry.name}">Name</span>
+                    <span th:if="${entry.kind == 'PLAYER'}" class="chip player">Player</span>
+                    <span th:if="${entry.kind == 'MONSTER'}" class="chip monster">Monster</span>
+                    <span class="roll" th:text="${entry.roll}">15</span>
+                </li>
+            </ol>
+            <div id="turn-table-empty" class="empty"
+                 th:if="${initiativeState == null or #lists.isEmpty(initiativeState.entries)}">
+                No initiative rolled yet. The DM can compose and roll above.
+            </div>
         </div>
 
         <div class="section-title">Session notes</div>

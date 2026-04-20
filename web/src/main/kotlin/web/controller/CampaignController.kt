@@ -10,15 +10,21 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
+import web.service.AdhocMonster
 import web.service.AnnotateRollResult
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteNoteResult
+import web.service.DeleteTemplateResult
 import web.service.EndResult
+import web.service.InitiativeRollRequest
 import web.service.JoinResult
 import web.service.KickResult
 import web.service.LeaveResult
+import web.service.MonsterTemplateView
 import web.service.NarrateResult
+import web.service.RollInitiativeResult
+import web.service.SaveTemplateResult
 import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
@@ -74,6 +80,8 @@ class CampaignController(
         model.addAttribute("currentUserCharacterId", campaignDetail?.currentUserCharacterId)
         model.addAttribute("notes", campaignDetail?.notes ?: emptyList<Any>())
         model.addAttribute("recentEvents", campaignDetail?.recentEvents ?: emptyList<Any>())
+        model.addAttribute("initiativeState", campaignDetail?.initiativeState)
+        model.addAttribute("monsterLibrary", campaignDetail?.monsterLibrary ?: emptyList<Any>())
         model.addAttribute("username", user.displayName())
 
         return "campaignDetail"
@@ -332,6 +340,110 @@ class CampaignController(
             NarrateResult.BODY_TOO_LONG -> ra.addFlashAttribute(
                 "error",
                 "Narration is too long (max ${web.service.CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @GetMapping("/monsters/templates")
+    @ResponseBody
+    fun listMonsterTemplates(
+        @AuthenticationPrincipal user: OAuth2User
+    ): List<MonsterTemplateView> {
+        val discordId = user.discordIdOrNull() ?: return emptyList()
+        return campaignWebService.listTemplatesForDm(discordId)
+    }
+
+    @PostMapping("/campaign/{guildId}/monsters/templates")
+    fun saveMonsterTemplate(
+        @PathVariable guildId: Long,
+        @RequestParam(name = "id", required = false) id: Long?,
+        @RequestParam("name") name: String,
+        @RequestParam("initiativeModifier") initiativeModifier: Int,
+        @RequestParam(name = "maxHp", required = false) maxHp: Int?,
+        @RequestParam(name = "ac", required = false) ac: Int?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.saveTemplate(discordId, id, name, initiativeModifier, maxHp, ac)) {
+            SaveTemplateResult.SAVED -> {}
+            SaveTemplateResult.NAME_BLANK -> ra.addFlashAttribute("error", "Monster name can't be empty.")
+            SaveTemplateResult.NAME_TOO_LONG -> ra.addFlashAttribute(
+                "error",
+                "Monster name is too long (max ${web.service.CampaignWebService.MAX_TEMPLATE_NAME_LENGTH} characters)."
+            )
+            SaveTemplateResult.NOT_FOUND -> ra.addFlashAttribute("error", "That template doesn't exist.")
+            SaveTemplateResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own templates.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/monsters/templates/{templateId}/delete")
+    fun deleteMonsterTemplate(
+        @PathVariable guildId: Long,
+        @PathVariable templateId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.deleteTemplate(discordId, templateId)) {
+            DeleteTemplateResult.DELETED -> {}
+            DeleteTemplateResult.NOT_FOUND -> ra.addFlashAttribute("error", "That template doesn't exist.")
+            DeleteTemplateResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only delete your own templates.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/initiative/roll")
+    fun rollInitiative(
+        @PathVariable guildId: Long,
+        @RequestParam(name = "playerDiscordIds", required = false) playerDiscordIds: List<Long>?,
+        @RequestParam(name = "templateId", required = false) templateIds: List<Long>?,
+        @RequestParam(name = "templateQty", required = false) templateQtys: List<Int>?,
+        @RequestParam(name = "adhocName", required = false) adhocNames: List<String>?,
+        @RequestParam(name = "adhocMod", required = false) adhocMods: List<Int>?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        val tplIds = templateIds.orEmpty()
+        val tplQtys = templateQtys.orEmpty()
+        val expandedTemplateIds = tplIds.flatMapIndexed { i, id ->
+            val qty = tplQtys.getOrElse(i) { 1 }.coerceAtLeast(0)
+            List(qty) { id }
+        }
+
+        val names = adhocNames.orEmpty()
+        val mods = adhocMods.orEmpty()
+        val adhoc = names.mapIndexedNotNull { i, n ->
+            val cleaned = n.trim()
+            if (cleaned.isBlank()) null
+            else AdhocMonster(cleaned, mods.getOrElse(i) { 0 })
+        }
+        val request = InitiativeRollRequest(
+            playerDiscordIds = playerDiscordIds.orEmpty(),
+            templateIds = expandedTemplateIds,
+            adhocMonsters = adhoc
+        )
+
+        when (campaignWebService.rollInitiative(guildId, discordId, request)) {
+            RollInitiativeResult.ROLLED -> {}
+            RollInitiativeResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            RollInitiativeResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can roll initiative here.")
+            RollInitiativeResult.EMPTY_ROSTER -> ra.addFlashAttribute(
+                "error",
+                "Pick at least one player or monster before rolling."
+            )
+            RollInitiativeResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
+                "error",
+                "One of the selected monster templates couldn't be found."
             )
         }
         return "redirect:/dnd/campaign/$guildId"

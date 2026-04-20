@@ -13,13 +13,30 @@ import java.util.concurrent.atomic.AtomicInteger
 class InitiativeState {
 
     val initiativeIndex: AtomicInteger = AtomicInteger(0)
-    var sortedEntries: LinkedList<Map.Entry<String, Int>> = LinkedList()
+    var sortedEntries: LinkedList<RolledEntry> = LinkedList()
         private set
 
     fun isActive(): Boolean = sortedEntries.isNotEmpty()
 
+    /**
+     * Rebuild the sorted list from a `name -> roll` map produced by Discord
+     * name-list / voice-channel rolls. Entries produced here carry no `kind`.
+     */
     internal fun sortMap(initiativeMap: Map<String, Int>) {
-        sortedEntries = LinkedList(initiativeMap.entries.sortedByDescending { it.value })
+        sortedEntries = LinkedList(
+            initiativeMap.entries
+                .sortedByDescending { it.value }
+                .map { RolledEntry(it.key, it.value, kind = null) }
+        )
+    }
+
+    /**
+     * Web-composer entry point: accept an already-sorted list of rolled entries
+     * (players + monsters). Overwrites the current order and resets the pointer.
+     */
+    internal fun seedFromSorted(entries: List<RolledEntry>) {
+        sortedEntries = LinkedList(entries)
+        initiativeIndex.set(0)
     }
 
     fun clear() {
@@ -47,7 +64,7 @@ class InitiativeState {
             embedBuilder.setColor(Color.GREEN)
             embedBuilder.setTitle("Initiative Order")
             val description = sortedEntries.withIndex().joinToString("\n") { (index, entry) ->
-                "${index + initiativeIndex.get() % sortedEntries.size}: ${entry.key}: ${entry.value}"
+                "${index + initiativeIndex.get() % sortedEntries.size}: ${entry.name}: ${entry.roll}"
             }
             embedBuilder.setDescription(description)
             return embedBuilder
@@ -55,14 +72,24 @@ class InitiativeState {
 
     fun snapshot(): InitiativeStateSnapshot = InitiativeStateSnapshot(
         initiativeIndex = initiativeIndex.get(),
-        entries = sortedEntries.map { InitiativeEntry(it.key, it.value) }
+        entries = sortedEntries.map { InitiativeEntry(it.name, it.roll, it.kind) }
     )
 
     fun restoreFrom(snapshot: InitiativeStateSnapshot) {
         initiativeIndex.set(snapshot.initiativeIndex)
-        sortedEntries = LinkedList(snapshot.entries.map { java.util.AbstractMap.SimpleEntry(it.name, it.roll) })
+        sortedEntries = LinkedList(snapshot.entries.map { RolledEntry(it.name, it.roll, it.kind) })
     }
 }
+
+/**
+ * A single rolled initiative entry. [kind] is `"PLAYER"` or `"MONSTER"` when set
+ * by the web composer; nullable so legacy Discord-originated rolls still work.
+ */
+data class RolledEntry(
+    val name: String = "",
+    val roll: Int = 0,
+    val kind: String? = null
+)
 
 /** JSON-friendly snapshot of an [InitiativeState], persisted in CampaignDto.state. */
 data class InitiativeStateSnapshot(
@@ -72,5 +99,6 @@ data class InitiativeStateSnapshot(
 
 data class InitiativeEntry(
     val name: String = "",
-    val roll: Int = 0
+    val roll: Int = 0,
+    val kind: String? = null
 )

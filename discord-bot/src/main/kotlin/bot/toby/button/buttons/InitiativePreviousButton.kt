@@ -32,7 +32,7 @@ class InitiativePreviousButton @Autowired constructor(
             actorDiscordId = event.user.idLong,
             actorName = event.member?.effectiveName ?: event.user.effectiveName,
             payload = mapOf(
-                "currentName" to current?.key,
+                "currentName" to current?.name,
                 "currentIndex" to state.initiativeIndex.get()
             )
         )

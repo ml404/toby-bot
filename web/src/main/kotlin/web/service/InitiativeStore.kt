@@ -1,0 +1,35 @@
+package web.service
+
+/**
+ * Thin abstraction over the per-guild initiative tracker owned by discord-bot's
+ * `DnDHelper`. Lives in the web module because web can't depend on discord-bot
+ * directly; discord-bot provides the concrete implementation that proxies to
+ * `DnDHelper` so both modules read/write the same state.
+ */
+interface InitiativeStore {
+
+    /**
+     * Overwrite the guild's initiative with [entries]. Entries are sorted
+     * descending by roll before being installed; index resets to 0.
+     */
+    fun seed(guildId: Long, entries: List<InitiativeEntryData>)
+
+    /** Current sorted entries for [guildId], or empty if no active tracker. */
+    fun currentEntries(guildId: Long): List<InitiativeEntryData>
+
+    /** 0-based index of whose turn it is, or 0 when the tracker is empty. */
+    fun currentIndex(guildId: Long): Int
+
+    fun isActive(guildId: Long): Boolean
+}
+
+/**
+ * Module-agnostic rolled-entry payload. [kind] is `"PLAYER"` / `"MONSTER"` for
+ * web-composed rolls and `null` for Discord-originated rolls.
+ */
+data class InitiativeEntryData(
+    val name: String,
+    val roll: Int,
+    val kind: String? = null,
+    val modifier: Int = 0
+)

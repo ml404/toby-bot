@@ -7,17 +7,20 @@ import common.helpers.parseDndBeyondCharacterId
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.MonsterTemplateDto
 import database.dto.SessionNoteDto
 import database.dto.UserDto
 import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.service.MonsterTemplateService
 import database.service.SessionNoteService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
+import kotlin.random.Random
 
 data class CampaignDetail(
     val campaign: CampaignDto,
@@ -26,10 +29,39 @@ data class CampaignDetail(
     val isCurrentUserPlayer: Boolean = false,
     val currentUserCharacterId: Long? = null,
     val notes: List<SessionNoteView> = emptyList(),
-    val recentEvents: List<SessionEventView> = emptyList()
+    val recentEvents: List<SessionEventView> = emptyList(),
+    val initiativeState: InitiativeStateView? = null,
+    val monsterLibrary: List<MonsterTemplateView> = emptyList()
 ) {
     fun isDm(discordId: Long): Boolean = campaign.dmDiscordId == discordId
 }
+
+data class InitiativeStateView(
+    val entries: List<RolledEntryView>,
+    val currentIndex: Int
+)
+
+data class RolledEntryView(
+    val name: String,
+    val roll: Int,
+    val kind: String?
+)
+
+data class MonsterTemplateView(
+    val id: Long,
+    val name: String,
+    val initiativeModifier: Int,
+    val maxHp: Int?,
+    val ac: Int?
+)
+
+data class AdhocMonster(val name: String, val initiativeModifier: Int)
+
+data class InitiativeRollRequest(
+    val playerDiscordIds: List<Long> = emptyList(),
+    val templateIds: List<Long> = emptyList(),
+    val adhocMonsters: List<AdhocMonster> = emptyList()
+)
 
 data class SessionNoteView(
     val id: Long,
@@ -84,6 +116,9 @@ enum class AddNoteResult { ADDED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, EMPTY_BOD
 enum class DeleteNoteResult { DELETED, NO_ACTIVE_CAMPAIGN, NOT_FOUND, NOT_ALLOWED }
 enum class AnnotateRollResult { ANNOTATED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_FOUND, NOT_A_ROLL, INVALID_KIND }
 enum class NarrateResult { NARRATED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_BODY, BODY_TOO_LONG }
+enum class SaveTemplateResult { SAVED, NAME_BLANK, NAME_TOO_LONG, NOT_FOUND, NOT_OWNER }
+enum class DeleteTemplateResult { DELETED, NOT_FOUND, NOT_OWNER }
+enum class RollInitiativeResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_ROSTER, TEMPLATE_NOT_FOUND }
 
 @Service
 class CampaignWebService(
@@ -94,6 +129,8 @@ class CampaignWebService(
     private val characterSheetService: CharacterSheetService,
     private val sessionNoteService: SessionNoteService,
     private val campaignEventService: CampaignEventService,
+    private val monsterTemplateService: MonsterTemplateService,
+    private val initiativeStore: InitiativeStore,
     private val sessionLog: SessionLogPublisher,
     private val jda: JDA
 ) {
@@ -106,6 +143,7 @@ class CampaignWebService(
         const val MAX_NOTE_BODY_LENGTH = 2000
         const val MAX_NARRATE_BODY_LENGTH = 1000
         const val DEFAULT_EVENT_LIMIT = 100
+        const val MAX_TEMPLATE_NAME_LENGTH = 100
     }
 
     fun getMutualGuildsWithCampaigns(accessToken: String): List<GuildCampaignInfo> {
@@ -174,6 +212,19 @@ class CampaignWebService(
             .listRecent(campaign.id, DEFAULT_EVENT_LIMIT)
             .map(::toSessionEventView)
 
+        val initiativeState = if (initiativeStore.isActive(guildId)) {
+            InitiativeStateView(
+                entries = initiativeStore.currentEntries(guildId).map {
+                    RolledEntryView(it.name, it.roll, it.kind)
+                },
+                currentIndex = initiativeStore.currentIndex(guildId)
+            )
+        } else null
+
+        val monsterLibrary = if (isDm) {
+            monsterTemplateService.listByDm(requestingDiscordId).map(::toMonsterTemplateView)
+        } else emptyList()
+
         return CampaignDetail(
             campaign = campaign,
             players = players,
@@ -181,9 +232,20 @@ class CampaignWebService(
             isCurrentUserPlayer = isCurrentUserPlayer,
             currentUserCharacterId = currentUserCharacterId,
             notes = notes,
-            recentEvents = recentEvents
+            recentEvents = recentEvents,
+            initiativeState = initiativeState,
+            monsterLibrary = monsterLibrary
         )
     }
+
+    private fun toMonsterTemplateView(dto: MonsterTemplateDto): MonsterTemplateView =
+        MonsterTemplateView(
+            id = dto.id,
+            name = dto.name,
+            initiativeModifier = dto.initiativeModifier,
+            maxHp = dto.maxHp,
+            ac = dto.ac
+        )
 
     fun listRecentEvents(guildId: Long, sinceId: Long?, limit: Int): List<SessionEventView> {
         val campaign = campaignService.getActiveCampaignForGuild(guildId) ?: return emptyList()
@@ -436,6 +498,146 @@ class CampaignWebService(
         )
         return NarrateResult.NARRATED
     }
+
+    fun listTemplatesForDm(dmDiscordId: Long): List<MonsterTemplateView> =
+        monsterTemplateService.listByDm(dmDiscordId).map(::toMonsterTemplateView)
+
+    fun saveTemplate(
+        dmDiscordId: Long,
+        id: Long?,
+        name: String,
+        initiativeModifier: Int,
+        maxHp: Int?,
+        ac: Int?
+    ): SaveTemplateResult {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return SaveTemplateResult.NAME_BLANK
+        if (trimmed.length > MAX_TEMPLATE_NAME_LENGTH) return SaveTemplateResult.NAME_TOO_LONG
+
+        val dto = if (id != null && id > 0) {
+            val existing = monsterTemplateService.getById(id) ?: return SaveTemplateResult.NOT_FOUND
+            if (existing.dmDiscordId != dmDiscordId) return SaveTemplateResult.NOT_OWNER
+            existing.apply {
+                this.name = trimmed
+                this.initiativeModifier = initiativeModifier
+                this.maxHp = maxHp
+                this.ac = ac
+            }
+        } else {
+            MonsterTemplateDto(
+                dmDiscordId = dmDiscordId,
+                name = trimmed,
+                initiativeModifier = initiativeModifier,
+                maxHp = maxHp,
+                ac = ac
+            )
+        }
+        monsterTemplateService.save(dto)
+        return SaveTemplateResult.SAVED
+    }
+
+    fun deleteTemplate(dmDiscordId: Long, id: Long): DeleteTemplateResult {
+        val existing = monsterTemplateService.getById(id) ?: return DeleteTemplateResult.NOT_FOUND
+        if (existing.dmDiscordId != dmDiscordId) return DeleteTemplateResult.NOT_OWNER
+        monsterTemplateService.deleteById(id)
+        return DeleteTemplateResult.DELETED
+    }
+
+    fun rollInitiative(
+        guildId: Long,
+        requestingDiscordId: Long,
+        request: InitiativeRollRequest
+    ): RollInitiativeResult {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return RollInitiativeResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return RollInitiativeResult.NOT_DM
+        if (request.playerDiscordIds.isEmpty() &&
+            request.templateIds.isEmpty() &&
+            request.adhocMonsters.isEmpty()
+        ) {
+            return RollInitiativeResult.EMPTY_ROSTER
+        }
+
+        val entries = mutableListOf<InitiativeEntryData>()
+
+        request.playerDiscordIds.forEach { playerDiscordId ->
+            val modifier = userService.getUserById(playerDiscordId, guildId)?.initiativeModifier ?: 0
+            val displayName = resolveMemberName(guildId, playerDiscordId) ?: "Player $playerDiscordId"
+            entries += InitiativeEntryData(
+                name = displayName,
+                roll = rollD20() + modifier,
+                kind = "PLAYER",
+                modifier = modifier
+            )
+        }
+
+        request.templateIds.forEach { templateId ->
+            val template = monsterTemplateService.getById(templateId)
+                ?: return RollInitiativeResult.TEMPLATE_NOT_FOUND
+            if (template.dmDiscordId != requestingDiscordId) {
+                return RollInitiativeResult.TEMPLATE_NOT_FOUND
+            }
+            entries += InitiativeEntryData(
+                name = template.name,
+                roll = rollD20() + template.initiativeModifier,
+                kind = "MONSTER",
+                modifier = template.initiativeModifier
+            )
+        }
+
+        request.adhocMonsters.forEach { monster ->
+            val cleanName = monster.name.trim().ifEmpty { "Monster" }
+            entries += InitiativeEntryData(
+                name = cleanName,
+                roll = rollD20() + monster.initiativeModifier,
+                kind = "MONSTER",
+                modifier = monster.initiativeModifier
+            )
+        }
+
+        val disambiguated = disambiguateDuplicates(entries)
+        val sorted = disambiguated.sortedByDescending { it.roll }
+        initiativeStore.seed(guildId, sorted)
+
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.INITIATIVE_ROLLED,
+            actorDiscordId = requestingDiscordId,
+            actorName = resolveMemberName(guildId, requestingDiscordId),
+            payload = mapOf(
+                "entries" to sorted.map {
+                    mapOf(
+                        "name" to it.name,
+                        "roll" to it.roll,
+                        "kind" to it.kind,
+                        "modifier" to it.modifier
+                    )
+                }
+            )
+        )
+        return RollInitiativeResult.ROLLED
+    }
+
+    /**
+     * When the same name appears more than once in the roster (e.g. two Goblins
+     * from a template picked with quantity = 2, or two ad-hoc rows named
+     * "Kobold"), suffix each occurrence with a 1-based index so the turn table
+     * can tell them apart. Names that appear only once are left untouched.
+     */
+    private fun disambiguateDuplicates(entries: List<InitiativeEntryData>): List<InitiativeEntryData> {
+        val counts = entries.groupingBy { it.name }.eachCount()
+        val seen = mutableMapOf<String, Int>()
+        return entries.map { entry ->
+            if ((counts[entry.name] ?: 0) <= 1) entry
+            else {
+                val idx = (seen[entry.name] ?: 0) + 1
+                seen[entry.name] = idx
+                entry.copy(name = "${entry.name} #$idx")
+            }
+        }
+    }
+
+    private fun rollD20(): Int = Random.nextInt(1, 21)
 
     private fun loadCharacterSummary(characterId: Long): CharacterSummary? {
         val json = characterSheetService.getSheet(characterId) ?: return null

@@ -4,12 +4,14 @@ import database.dto.CampaignDto
 import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.MonsterTemplateDto
 import database.dto.SessionNoteDto
 import database.dto.UserDto
 import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.service.MonsterTemplateService
 import database.service.SessionNoteService
 import database.service.UserService
 import java.time.LocalDateTime
@@ -34,6 +36,8 @@ class CampaignWebServiceTest {
     private lateinit var characterSheetService: CharacterSheetService
     private lateinit var sessionNoteService: SessionNoteService
     private lateinit var campaignEventService: CampaignEventService
+    private lateinit var monsterTemplateService: MonsterTemplateService
+    private lateinit var initiativeStore: InitiativeStore
     private lateinit var sessionLog: SessionLogPublisher
     private lateinit var jda: JDA
     private lateinit var service: CampaignWebService
@@ -59,6 +63,8 @@ class CampaignWebServiceTest {
         characterSheetService = mockk(relaxed = true)
         sessionNoteService = mockk(relaxed = true)
         campaignEventService = mockk(relaxed = true)
+        monsterTemplateService = mockk(relaxed = true)
+        initiativeStore = mockk(relaxed = true)
         sessionLog = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         service = CampaignWebService(
@@ -69,6 +75,8 @@ class CampaignWebServiceTest {
             characterSheetService,
             sessionNoteService,
             campaignEventService,
+            monsterTemplateService,
+            initiativeStore,
             sessionLog,
             jda
         )
@@ -926,6 +934,224 @@ class CampaignWebServiceTest {
                 actorName = any(),
                 payload = match { it["body"] == "A dragon lands." },
                 refEventId = null
+            )
+        }
+    }
+
+    // saveTemplate / deleteTemplate
+
+    @Test
+    fun `saveTemplate rejects blank name`() {
+        assertEquals(
+            SaveTemplateResult.NAME_BLANK,
+            service.saveTemplate(dmDiscordId, id = null, name = "   ", initiativeModifier = 0, maxHp = null, ac = null)
+        )
+    }
+
+    @Test
+    fun `saveTemplate rejects name past length cap`() {
+        val long = "x".repeat(CampaignWebService.MAX_TEMPLATE_NAME_LENGTH + 1)
+        assertEquals(
+            SaveTemplateResult.NAME_TOO_LONG,
+            service.saveTemplate(dmDiscordId, id = null, name = long, initiativeModifier = 0, maxHp = null, ac = null)
+        )
+    }
+
+    @Test
+    fun `saveTemplate creates when id is null`() {
+        assertEquals(
+            SaveTemplateResult.SAVED,
+            service.saveTemplate(dmDiscordId, id = null, name = "Goblin", initiativeModifier = 2, maxHp = 7, ac = 15)
+        )
+        verify {
+            monsterTemplateService.save(match {
+                it.id == 0L && it.dmDiscordId == dmDiscordId && it.name == "Goblin" &&
+                    it.initiativeModifier == 2 && it.maxHp == 7 && it.ac == 15
+            })
+        }
+    }
+
+    @Test
+    fun `saveTemplate returns NOT_FOUND when id doesn't exist`() {
+        every { monsterTemplateService.getById(99L) } returns null
+        assertEquals(
+            SaveTemplateResult.NOT_FOUND,
+            service.saveTemplate(dmDiscordId, id = 99L, name = "X", initiativeModifier = 0, maxHp = null, ac = null)
+        )
+    }
+
+    @Test
+    fun `saveTemplate returns NOT_OWNER when template belongs to another DM`() {
+        every { monsterTemplateService.getById(99L) } returns MonsterTemplateDto(
+            id = 99L, dmDiscordId = 999L, name = "Stolen"
+        )
+        assertEquals(
+            SaveTemplateResult.NOT_OWNER,
+            service.saveTemplate(dmDiscordId, id = 99L, name = "X", initiativeModifier = 0, maxHp = null, ac = null)
+        )
+    }
+
+    @Test
+    fun `deleteTemplate returns NOT_FOUND when missing`() {
+        every { monsterTemplateService.getById(99L) } returns null
+        assertEquals(DeleteTemplateResult.NOT_FOUND, service.deleteTemplate(dmDiscordId, 99L))
+    }
+
+    @Test
+    fun `deleteTemplate returns NOT_OWNER when template belongs to another DM`() {
+        every { monsterTemplateService.getById(99L) } returns MonsterTemplateDto(
+            id = 99L, dmDiscordId = 999L, name = "Stolen"
+        )
+        assertEquals(DeleteTemplateResult.NOT_OWNER, service.deleteTemplate(dmDiscordId, 99L))
+        verify(exactly = 0) { monsterTemplateService.deleteById(any()) }
+    }
+
+    @Test
+    fun `deleteTemplate removes when caller owns it`() {
+        every { monsterTemplateService.getById(99L) } returns MonsterTemplateDto(
+            id = 99L, dmDiscordId = dmDiscordId, name = "Mine"
+        )
+        assertEquals(DeleteTemplateResult.DELETED, service.deleteTemplate(dmDiscordId, 99L))
+        verify { monsterTemplateService.deleteById(99L) }
+    }
+
+    // rollInitiative
+
+    @Test
+    fun `rollInitiative returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(
+            RollInitiativeResult.NO_ACTIVE_CAMPAIGN,
+            service.rollInitiative(guildId, dmDiscordId, InitiativeRollRequest(playerDiscordIds = listOf(1L)))
+        )
+    }
+
+    @Test
+    fun `rollInitiative returns NOT_DM when caller is not the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(
+            RollInitiativeResult.NOT_DM,
+            service.rollInitiative(guildId, playerDiscordId, InitiativeRollRequest(playerDiscordIds = listOf(1L)))
+        )
+    }
+
+    @Test
+    fun `rollInitiative returns EMPTY_ROSTER when nobody is picked`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(
+            RollInitiativeResult.EMPTY_ROSTER,
+            service.rollInitiative(guildId, dmDiscordId, InitiativeRollRequest())
+        )
+    }
+
+    @Test
+    fun `rollInitiative returns TEMPLATE_NOT_FOUND for missing template`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns null
+        assertEquals(
+            RollInitiativeResult.TEMPLATE_NOT_FOUND,
+            service.rollInitiative(guildId, dmDiscordId, InitiativeRollRequest(templateIds = listOf(77L)))
+        )
+    }
+
+    @Test
+    fun `rollInitiative returns TEMPLATE_NOT_FOUND when template belongs to another DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = 999L, name = "Someone Else's Wolf"
+        )
+        assertEquals(
+            RollInitiativeResult.TEMPLATE_NOT_FOUND,
+            service.rollInitiative(guildId, dmDiscordId, InitiativeRollRequest(templateIds = listOf(77L)))
+        )
+    }
+
+    @Test
+    fun `rollInitiative seeds store and publishes INITIATIVE_ROLLED`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { userService.getUserById(playerDiscordId, guildId) } returns UserDto(playerDiscordId, guildId).apply {
+            initiativeModifier = 3
+        }
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+
+        val result = service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(
+                playerDiscordIds = listOf(playerDiscordId),
+                templateIds = listOf(77L),
+                adhocMonsters = listOf(AdhocMonster("Bugbear", 1))
+            )
+        )
+
+        assertEquals(RollInitiativeResult.ROLLED, result)
+        verify { initiativeStore.seed(eq(guildId), match { it.size == 3 }) }
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.INITIATIVE_ROLLED,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { (it["entries"] as? List<*>)?.size == 3 },
+                refEventId = null
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative suffixes duplicate names with hash-index`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(
+                templateIds = listOf(77L, 77L),
+                adhocMonsters = listOf(
+                    AdhocMonster("Goblin", 2),
+                    AdhocMonster("Kobold", 1)
+                )
+            )
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    val names = seeded.map { it.name }.sorted()
+                    names == listOf("Goblin #1", "Goblin #2", "Goblin #3", "Kobold")
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative leaves unique names untouched`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(
+                templateIds = listOf(77L),
+                adhocMonsters = listOf(AdhocMonster("Bugbear", 1))
+            )
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    seeded.map { it.name }.toSet() == setOf("Goblin", "Bugbear")
+                }
             )
         }
     }
