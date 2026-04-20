@@ -82,6 +82,8 @@ enum class KickResult { KICKED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_A_PLAYER, CANNOT
 enum class SetAliveResult { UPDATED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_A_PLAYER }
 enum class AddNoteResult { ADDED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, EMPTY_BODY, BODY_TOO_LONG }
 enum class DeleteNoteResult { DELETED, NO_ACTIVE_CAMPAIGN, NOT_FOUND, NOT_ALLOWED }
+enum class AnnotateRollResult { ANNOTATED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_FOUND, NOT_A_ROLL, INVALID_KIND }
+enum class NarrateResult { NARRATED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_BODY, BODY_TOO_LONG }
 
 @Service
 class CampaignWebService(
@@ -102,6 +104,7 @@ class CampaignWebService(
 
     companion object {
         const val MAX_NOTE_BODY_LENGTH = 2000
+        const val MAX_NARRATE_BODY_LENGTH = 1000
         const val DEFAULT_EVENT_LIMIT = 100
     }
 
@@ -380,6 +383,58 @@ class CampaignWebService(
         if (campaign.dmDiscordId == discordId) return true
         val playerId = CampaignPlayerId(campaign.id, discordId)
         return campaignPlayerService.getPlayer(playerId) != null
+    }
+
+    fun annotateRoll(
+        guildId: Long,
+        requestingDiscordId: Long,
+        refEventId: Long,
+        kind: String,
+        target: String?
+    ): AnnotateRollResult {
+        val type = when (kind.uppercase()) {
+            "HIT" -> CampaignEventType.HIT
+            "MISS" -> CampaignEventType.MISS
+            else -> return AnnotateRollResult.INVALID_KIND
+        }
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return AnnotateRollResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return AnnotateRollResult.NOT_DM
+
+        val referenced = campaignEventService.getById(refEventId)
+            ?: return AnnotateRollResult.NOT_FOUND
+        if (referenced.campaignId != campaign.id) return AnnotateRollResult.NOT_FOUND
+        if (referenced.eventType != CampaignEventType.ROLL.name) return AnnotateRollResult.NOT_A_ROLL
+
+        val trimmedTarget = target?.trim()?.takeIf { it.isNotEmpty() }
+        sessionLog.publish(
+            guildId = guildId,
+            type = type,
+            actorDiscordId = requestingDiscordId,
+            actorName = resolveMemberName(guildId, requestingDiscordId),
+            payload = if (trimmedTarget != null) mapOf("target" to trimmedTarget) else emptyMap(),
+            refEventId = refEventId
+        )
+        return AnnotateRollResult.ANNOTATED
+    }
+
+    fun narrate(guildId: Long, requestingDiscordId: Long, body: String): NarrateResult {
+        val trimmed = body.trim()
+        if (trimmed.isEmpty()) return NarrateResult.EMPTY_BODY
+        if (trimmed.length > MAX_NARRATE_BODY_LENGTH) return NarrateResult.BODY_TOO_LONG
+
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return NarrateResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return NarrateResult.NOT_DM
+
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.DM_NOTE,
+            actorDiscordId = requestingDiscordId,
+            actorName = resolveMemberName(guildId, requestingDiscordId),
+            payload = mapOf("body" to trimmed)
+        )
+        return NarrateResult.NARRATED
     }
 
     private fun loadCharacterSummary(characterId: Long): CharacterSummary? {

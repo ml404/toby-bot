@@ -767,4 +767,166 @@ class CampaignWebServiceTest {
         assertEquals(1, detail.recentEvents.size)
         assertEquals(9L, detail.recentEvents[0].id)
     }
+
+    // annotateRoll
+
+    @Test
+    fun `annotateRoll rejects unknown kind`() {
+        assertEquals(
+            AnnotateRollResult.INVALID_KIND,
+            service.annotateRoll(guildId, dmDiscordId, 1L, "BOGUS", null)
+        )
+    }
+
+    @Test
+    fun `annotateRoll returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(
+            AnnotateRollResult.NO_ACTIVE_CAMPAIGN,
+            service.annotateRoll(guildId, dmDiscordId, 1L, "HIT", null)
+        )
+    }
+
+    @Test
+    fun `annotateRoll returns NOT_DM when requester is not the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(
+            AnnotateRollResult.NOT_DM,
+            service.annotateRoll(guildId, playerDiscordId, 1L, "HIT", null)
+        )
+    }
+
+    @Test
+    fun `annotateRoll returns NOT_FOUND when event id doesn't exist`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.getById(99L) } returns null
+        assertEquals(
+            AnnotateRollResult.NOT_FOUND,
+            service.annotateRoll(guildId, dmDiscordId, 99L, "HIT", null)
+        )
+    }
+
+    @Test
+    fun `annotateRoll returns NOT_FOUND when event belongs to a different campaign`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.getById(99L) } returns CampaignEventDto(
+            id = 99L, campaignId = 999L, eventType = "ROLL", payload = "{}"
+        )
+        assertEquals(
+            AnnotateRollResult.NOT_FOUND,
+            service.annotateRoll(guildId, dmDiscordId, 99L, "HIT", null)
+        )
+    }
+
+    @Test
+    fun `annotateRoll returns NOT_A_ROLL when referenced event isn't a roll`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.getById(99L) } returns CampaignEventDto(
+            id = 99L, campaignId = campaign.id, eventType = "PLAYER_JOINED", payload = "{}"
+        )
+        assertEquals(
+            AnnotateRollResult.NOT_A_ROLL,
+            service.annotateRoll(guildId, dmDiscordId, 99L, "HIT", null)
+        )
+    }
+
+    @Test
+    fun `annotateRoll publishes HIT referencing the roll`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.getById(99L) } returns CampaignEventDto(
+            id = 99L, campaignId = campaign.id, eventType = "ROLL", payload = "{}"
+        )
+
+        assertEquals(
+            AnnotateRollResult.ANNOTATED,
+            service.annotateRoll(guildId, dmDiscordId, 99L, "hit", "goblin")
+        )
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.HIT,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["target"] == "goblin" },
+                refEventId = 99L
+            )
+        }
+    }
+
+    @Test
+    fun `annotateRoll publishes MISS without target when target is blank`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignEventService.getById(99L) } returns CampaignEventDto(
+            id = 99L, campaignId = campaign.id, eventType = "ROLL", payload = "{}"
+        )
+
+        service.annotateRoll(guildId, dmDiscordId, 99L, "MISS", "  ")
+
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.MISS,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it.isEmpty() },
+                refEventId = 99L
+            )
+        }
+    }
+
+    // narrate
+
+    @Test
+    fun `narrate rejects empty body`() {
+        assertEquals(NarrateResult.EMPTY_BODY, service.narrate(guildId, dmDiscordId, "   "))
+    }
+
+    @Test
+    fun `narrate rejects body over the length cap`() {
+        val long = "x".repeat(CampaignWebService.MAX_NARRATE_BODY_LENGTH + 1)
+        assertEquals(NarrateResult.BODY_TOO_LONG, service.narrate(guildId, dmDiscordId, long))
+    }
+
+    @Test
+    fun `narrate returns NO_ACTIVE_CAMPAIGN when none exists`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(
+            NarrateResult.NO_ACTIVE_CAMPAIGN,
+            service.narrate(guildId, dmDiscordId, "Something happens.")
+        )
+    }
+
+    @Test
+    fun `narrate returns NOT_DM when requester is not the DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        assertEquals(
+            NarrateResult.NOT_DM,
+            service.narrate(guildId, playerDiscordId, "Something happens.")
+        )
+    }
+
+    @Test
+    fun `narrate publishes DM_NOTE for DM`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+
+        assertEquals(
+            NarrateResult.NARRATED,
+            service.narrate(guildId, dmDiscordId, "  A dragon lands.  ")
+        )
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.DM_NOTE,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["body"] == "A dragon lands." },
+                refEventId = null
+            )
+        }
+    }
 }

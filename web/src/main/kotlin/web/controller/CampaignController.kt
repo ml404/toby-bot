@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
+import web.service.AnnotateRollResult
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteNoteResult
@@ -17,6 +18,7 @@ import web.service.EndResult
 import web.service.JoinResult
 import web.service.KickResult
 import web.service.LeaveResult
+import web.service.NarrateResult
 import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
@@ -284,6 +286,52 @@ class CampaignController(
             DeleteNoteResult.NOT_ALLOWED -> ra.addFlashAttribute(
                 "error",
                 "You can only delete your own notes (or any note if you're the DM)."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/events/{eventId}/annotate")
+    fun annotateRoll(
+        @PathVariable guildId: Long,
+        @PathVariable eventId: Long,
+        @RequestParam kind: String,
+        @RequestParam(name = "target", required = false) target: String?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.annotateRoll(guildId, discordId, eventId, kind, target)) {
+            AnnotateRollResult.ANNOTATED -> {}
+            AnnotateRollResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            AnnotateRollResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can annotate rolls.")
+            AnnotateRollResult.NOT_FOUND -> ra.addFlashAttribute("error", "That roll doesn't exist in this campaign.")
+            AnnotateRollResult.NOT_A_ROLL -> ra.addFlashAttribute("error", "You can only mark Hit/Miss on a roll.")
+            AnnotateRollResult.INVALID_KIND -> ra.addFlashAttribute("error", "Annotation kind must be HIT or MISS.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/narrate")
+    fun narrate(
+        @PathVariable guildId: Long,
+        @RequestParam body: String,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.narrate(guildId, discordId, body)) {
+            NarrateResult.NARRATED -> {}
+            NarrateResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            NarrateResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can narrate.")
+            NarrateResult.EMPTY_BODY -> ra.addFlashAttribute("error", "Narration can't be empty.")
+            NarrateResult.BODY_TOO_LONG -> ra.addFlashAttribute(
+                "error",
+                "Narration is too long (max ${web.service.CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
