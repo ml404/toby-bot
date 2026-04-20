@@ -23,6 +23,7 @@ import web.service.KickResult
 import web.service.LeaveResult
 import web.service.MonsterTemplateView
 import web.service.NarrateResult
+import web.service.RollDiceResult
 import web.service.RollInitiativeResult
 import web.service.SaveTemplateResult
 import web.service.SessionEventView
@@ -444,6 +445,46 @@ class CampaignController(
             RollInitiativeResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
                 "error",
                 "One of the selected monster templates couldn't be found."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/roll")
+    fun rollDice(
+        @PathVariable guildId: Long,
+        @RequestParam(name = "count", defaultValue = "1") count: Int,
+        @RequestParam(name = "sides", defaultValue = "20") sides: Int,
+        @RequestParam(name = "modifier", defaultValue = "0") modifier: Int,
+        @RequestParam(name = "expression", required = false) expression: String?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.rollDice(guildId, discordId, count, sides, modifier, expression?.trim())) {
+            RollDiceResult.ROLLED -> {}
+            RollDiceResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            RollDiceResult.NOT_PARTICIPANT -> ra.addFlashAttribute(
+                "error",
+                "Only campaign participants can roll here."
+            )
+            RollDiceResult.INVALID_SIDES -> ra.addFlashAttribute(
+                "error",
+                "Die must be one of d4, d6, d8, d10, d12, d20, or d100."
+            )
+            RollDiceResult.INVALID_COUNT -> ra.addFlashAttribute(
+                "error",
+                "Dice count must be between 1 and ${web.service.CampaignWebService.MAX_DICE_COUNT}."
+            )
+            RollDiceResult.INVALID_MODIFIER -> ra.addFlashAttribute(
+                "error",
+                "Modifier must be between -${web.service.CampaignWebService.MAX_DICE_MODIFIER} and ${web.service.CampaignWebService.MAX_DICE_MODIFIER}."
+            )
+            RollDiceResult.INVALID_EXPRESSION -> ra.addFlashAttribute(
+                "error",
+                "Custom expression must look like '2d6+3' or 'd20-1'."
             )
         }
         return "redirect:/dnd/campaign/$guildId"

@@ -557,6 +557,124 @@
             }
             .turn-table .d20.rolling .d20__face { animation: none; opacity: 1; }
         }
+
+        .dice-roller { position: relative; }
+        .dice-popover {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            z-index: 20;
+            background: #16213e;
+            border: 1px solid #2a3a60;
+            border-radius: 10px;
+            padding: 14px 16px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+            min-width: 340px;
+            max-width: 420px;
+        }
+        .dice-popover.open { display: block; }
+        .dice-popover .pop-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .dice-popover .pop-row-label {
+            width: 54px;
+            font-size: 0.75rem;
+            color: #a0a0b0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .dice-popover .chip-btn {
+            background: #1a2140;
+            border: 1px solid #2a3460;
+            color: #e0e0e0;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: monospace;
+            cursor: pointer;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .dice-popover .chip-btn:hover { background: #233060; border-color: #3a4a70; }
+        .dice-popover .chip-btn.selected {
+            background: rgba(88,101,242,0.25);
+            border-color: #5865F2;
+            color: #fff;
+        }
+        .dice-popover .mod-stepper {
+            display: inline-flex;
+            gap: 0;
+            border: 1px solid #2a3460;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #1a2140;
+        }
+        .dice-popover .mod-stepper button {
+            background: transparent;
+            border: none;
+            color: #e0e0e0;
+            width: 30px;
+            height: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .dice-popover .mod-stepper button:hover:not(:disabled) { background: #233060; }
+        .dice-popover .mod-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .dice-popover .mod-stepper .mod-value {
+            min-width: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-weight: 700;
+            color: #e0e0e0;
+            background: #141a2e;
+        }
+        .dice-popover .formula {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #fff;
+            background: rgba(88,101,242,0.12);
+            border: 1px solid rgba(88,101,242,0.35);
+            border-radius: 6px;
+            padding: 6px 10px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .dice-popover .expression-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            border-top: 1px solid #2a3a60;
+            padding-top: 10px;
+            margin-top: 4px;
+        }
+        .dice-popover .expression-row input {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .dice-popover .expression-row .hint {
+            flex-basis: 100%;
+            font-size: 0.7rem;
+            color: #7a7a8a;
+            margin-top: 2px;
+        }
+        .dice-popover .actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 12px;
+        }
     </style>
 </head>
 <body>
@@ -613,6 +731,55 @@
                       th:action="@{/dnd/campaign/{id}/leave(id=${guildId})}" method="post">
                     <button type="submit" class="btn btn-secondary">Leave campaign</button>
                 </form>
+                <div class="dice-roller" th:if="${isUserDm or isUserPlayer}">
+                    <button type="button" class="btn btn-secondary" id="dice-toggle"
+                            aria-haspopup="true" aria-expanded="false" aria-controls="dice-popover">
+                        🎲 Roll dice
+                    </button>
+                    <form id="dice-popover" class="dice-popover" role="dialog" aria-label="Roll dice"
+                          th:action="@{/dnd/campaign/{id}/roll(id=${guildId})}" method="post">
+                        <div class="pop-row">
+                            <span class="pop-row-label">Die</span>
+                            <button type="button" class="chip-btn" data-die="4">d4</button>
+                            <button type="button" class="chip-btn" data-die="6">d6</button>
+                            <button type="button" class="chip-btn" data-die="8">d8</button>
+                            <button type="button" class="chip-btn" data-die="10">d10</button>
+                            <button type="button" class="chip-btn" data-die="12">d12</button>
+                            <button type="button" class="chip-btn selected" data-die="20">d20</button>
+                            <button type="button" class="chip-btn" data-die="100">d100</button>
+                        </div>
+                        <div class="pop-row">
+                            <span class="pop-row-label">Count</span>
+                            <button type="button" class="chip-btn selected" data-count="1">1</button>
+                            <button type="button" class="chip-btn" data-count="2">2</button>
+                            <button type="button" class="chip-btn" data-count="3">3</button>
+                            <button type="button" class="chip-btn" data-count="4">4</button>
+                            <button type="button" class="chip-btn" data-count="5">5</button>
+                        </div>
+                        <div class="pop-row">
+                            <span class="pop-row-label">Modifier</span>
+                            <span class="mod-stepper">
+                                <button type="button" id="mod-minus" aria-label="Decrement modifier">−</button>
+                                <span class="mod-value" id="mod-value">+0</span>
+                                <button type="button" id="mod-plus" aria-label="Increment modifier">+</button>
+                            </span>
+                        </div>
+                        <div class="formula" id="dice-formula">1d20</div>
+                        <input type="hidden" name="count" id="dice-count" value="1">
+                        <input type="hidden" name="sides" id="dice-sides" value="20">
+                        <input type="hidden" name="modifier" id="dice-mod" value="0">
+                        <div class="actions">
+                            <button type="button" class="btn btn-secondary" id="dice-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Roll it</button>
+                        </div>
+                        <div class="expression-row">
+                            <input type="text" name="expression" id="dice-expression"
+                                   placeholder="Or type a formula like 2d6+3"
+                                   maxlength="20" autocomplete="off">
+                            <span class="hint">Overrides the pickers above.</span>
+                        </div>
+                    </form>
+                </div>
                 <form th:if="${isUserDm}"
                       th:action="@{/dnd/campaign/{id}/end(id=${guildId})}" method="post"
                       onsubmit="return confirm('End this campaign? Players will be removed and the campaign marked inactive.');">
@@ -942,5 +1109,6 @@
 </div>
 <script th:src="@{/js/home.js}"></script>
 <script th:if="${campaign != null}" th:src="@{/js/sessionLog.js}"></script>
+<script th:if="${campaign != null}" th:src="@{/js/diceRoller.js}"></script>
 </body>
 </html>

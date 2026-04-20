@@ -1155,4 +1155,177 @@ class CampaignWebServiceTest {
             )
         }
     }
+
+    // rollDice
+
+    @Test
+    fun `rollDice rejects invalid sides`() {
+        assertEquals(
+            RollDiceResult.INVALID_SIDES,
+            service.rollDice(guildId, playerDiscordId, count = 1, sides = 7, modifier = 0)
+        )
+    }
+
+    @Test
+    fun `rollDice rejects count below one`() {
+        assertEquals(
+            RollDiceResult.INVALID_COUNT,
+            service.rollDice(guildId, playerDiscordId, count = 0, sides = 20, modifier = 0)
+        )
+    }
+
+    @Test
+    fun `rollDice rejects count above ceiling`() {
+        assertEquals(
+            RollDiceResult.INVALID_COUNT,
+            service.rollDice(guildId, playerDiscordId, count = 99, sides = 20, modifier = 0)
+        )
+    }
+
+    @Test
+    fun `rollDice rejects modifier out of range`() {
+        assertEquals(
+            RollDiceResult.INVALID_MODIFIER,
+            service.rollDice(guildId, playerDiscordId, count = 1, sides = 20, modifier = 500)
+        )
+    }
+
+    @Test
+    fun `rollDice rejects unparseable custom expression`() {
+        assertEquals(
+            RollDiceResult.INVALID_EXPRESSION,
+            service.rollDice(guildId, playerDiscordId, 1, 20, 0, expression = "not a roll")
+        )
+    }
+
+    @Test
+    fun `rollDice returns NO_ACTIVE_CAMPAIGN when campaign missing`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(
+            RollDiceResult.NO_ACTIVE_CAMPAIGN,
+            service.rollDice(guildId, playerDiscordId, 1, 20, 0)
+        )
+    }
+
+    @Test
+    fun `rollDice rejects outsider (not DM, not player)`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, 999L)) } returns null
+
+        assertEquals(
+            RollDiceResult.NOT_PARTICIPANT,
+            service.rollDice(guildId, 999L, 1, 20, 0)
+        )
+    }
+
+    @Test
+    fun `rollDice allows the DM and publishes ROLL event`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+
+        assertEquals(
+            RollDiceResult.ROLLED,
+            service.rollDice(guildId, dmDiscordId, count = 2, sides = 6, modifier = 3)
+        )
+
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ROLL,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["count"] == 2 &&
+                        it["sides"] == 6 &&
+                        it["modifier"] == 3 &&
+                        (it["rawTotal"] as Int) in 2..12 &&
+                        (it["total"] as Int) == (it["rawTotal"] as Int) + 3
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollDice allows an active player and publishes ROLL event`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every {
+            campaignPlayerService.getPlayer(CampaignPlayerId(campaign.id, playerDiscordId))
+        } returns CampaignPlayerDto(
+            id = CampaignPlayerId(campaign.id, playerDiscordId),
+            guildId = guildId
+        )
+
+        assertEquals(
+            RollDiceResult.ROLLED,
+            service.rollDice(guildId, playerDiscordId, count = 1, sides = 20, modifier = 0)
+        )
+
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ROLL,
+                actorDiscordId = playerDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["count"] == 1 &&
+                        it["sides"] == 20 &&
+                        it["modifier"] == 0 &&
+                        (it["rawTotal"] as Int) in 1..20 &&
+                        (it["total"] as Int) == it["rawTotal"] as Int
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollDice parses custom expression and overrides pickers`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+
+        assertEquals(
+            RollDiceResult.ROLLED,
+            service.rollDice(
+                guildId, dmDiscordId,
+                count = 1, sides = 20, modifier = 0,
+                expression = "3d6+2"
+            )
+        )
+
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ROLL,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["count"] == 3 && it["sides"] == 6 && it["modifier"] == 2
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollDice custom expression allows implicit count of one`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+
+        assertEquals(
+            RollDiceResult.ROLLED,
+            service.rollDice(guildId, dmDiscordId, 1, 20, 0, expression = "d12-1")
+        )
+
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ROLL,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["count"] == 1 && it["sides"] == 12 && it["modifier"] == -1
+                }
+            )
+        }
+    }
 }
