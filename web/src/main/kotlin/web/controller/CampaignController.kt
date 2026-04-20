@@ -15,6 +15,7 @@ import web.service.EndResult
 import web.service.JoinResult
 import web.service.KickResult
 import web.service.LeaveResult
+import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
 import web.util.discordIdOrNull
@@ -67,9 +68,22 @@ class CampaignController(
         model.addAttribute("isUserPlayer", campaignDetail?.isCurrentUserPlayer ?: false)
         model.addAttribute("currentUserCharacterId", campaignDetail?.currentUserCharacterId)
         model.addAttribute("notes", campaignDetail?.notes ?: emptyList<Any>())
+        model.addAttribute("recentEvents", campaignDetail?.recentEvents ?: emptyList<Any>())
         model.addAttribute("username", user.displayName())
 
         return "campaignDetail"
+    }
+
+    @GetMapping("/campaign/{guildId}/events")
+    @ResponseBody
+    fun listEvents(
+        @PathVariable guildId: Long,
+        @RequestParam(name = "since", required = false) since: Long?,
+        @RequestParam(name = "limit", required = false, defaultValue = "100") limit: Int,
+        @AuthenticationPrincipal user: OAuth2User
+    ): List<SessionEventView> {
+        user.discordIdOrNull() ?: return emptyList()
+        return campaignWebService.listRecentEvents(guildId, since, limit)
     }
 
     @PostMapping("/campaign/{guildId}/create")

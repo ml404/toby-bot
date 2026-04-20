@@ -1,6 +1,9 @@
 package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
+import com.fasterxml.jackson.databind.ObjectMapper
+import common.events.CampaignEventOccurred
+import common.events.CampaignEventType
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
@@ -15,11 +18,16 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnDCommand {
+class RollCommand @Autowired constructor(
+    private val dndHelper: DnDHelper,
+    private val applicationEventPublisher: ApplicationEventPublisher,
+    private val objectMapper: ObjectMapper
+) : DnDCommand {
     companion object {
         private const val DICE_NUMBER = "number"
         private const val DICE_TO_ROLL = "amount"
@@ -48,7 +56,11 @@ class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnD
         modifier: Int
     ): WebhookMessageCreateAction<Message> {
         event.deferReply().queue()
-        val sb = buildStringForDiceRoll(diceValue, diceToRoll, modifier)
+        val rollTotal = dndHelper.rollDice(diceValue, diceToRoll)
+        publishRollEvent(event, diceValue, diceToRoll, modifier, rollTotal)
+        val sb = StringBuilder().append(
+            String.format("Your final roll total was '%d' (%d + %d).", rollTotal + modifier, rollTotal, modifier)
+        )
         val embedBuilder = EmbedBuilder()
             .addField(
                 MessageEmbed.Field(
@@ -67,11 +79,30 @@ class RollCommand @Autowired constructor(private val dndHelper: DnDHelper) : DnD
             .addComponents(ActionRow.of(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4))
     }
 
-    private fun buildStringForDiceRoll(diceValue: Int, diceToRoll: Int, modifier: Int): StringBuilder {
-        val sb = StringBuilder()
-        val rollTotal = dndHelper.rollDice(diceValue, diceToRoll)
-        sb.append(String.format("Your final roll total was '%d' (%d + %d).", rollTotal + modifier, rollTotal, modifier))
-        return sb
+    private fun publishRollEvent(
+        event: IReplyCallback,
+        diceValue: Int,
+        diceToRoll: Int,
+        modifier: Int,
+        rawTotal: Int
+    ) {
+        val guild = event.guild ?: return
+        val payload = mapOf(
+            "sides" to diceValue,
+            "count" to diceToRoll,
+            "modifier" to modifier,
+            "rawTotal" to rawTotal,
+            "total" to rawTotal + modifier
+        )
+        applicationEventPublisher.publishEvent(
+            CampaignEventOccurred(
+                guildId = guild.idLong,
+                type = CampaignEventType.ROLL,
+                actorDiscordId = event.user.idLong,
+                actorName = event.member?.effectiveName ?: event.user.effectiveName,
+                payloadJson = objectMapper.writeValueAsString(payload)
+            )
+        )
     }
 
     override val name: String

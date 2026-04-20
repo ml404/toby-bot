@@ -290,6 +290,40 @@
             color: #a0a0b0;
         }
         .empty-notes { color: #a0a0b0; font-size: 0.9rem; padding: 10px 0; }
+
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        .event-row {
+            background: #1a2140;
+            border: 1px solid #2a3460;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            color: #d0d0e0;
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+        }
+        .event-type {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #8892f5;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            min-width: 70px;
+        }
+        .event-actor { color: #e0e0e0; font-weight: 600; }
+        .event-body { flex: 1; color: #b0b0c0; }
+        .event-time {
+            font-size: 0.7rem;
+            color: #6a6a80;
+            font-family: monospace;
+        }
+        .empty-events { color: #a0a0b0; font-size: 0.9rem; padding: 10px 0; }
     </style>
 </head>
 <body>
@@ -466,6 +500,31 @@
                 <button type="submit" class="btn btn-primary">Add note</button>
             </div>
         </form>
+
+        <div class="section-title">Session log</div>
+
+        <div class="event-list" th:if="${not #lists.isEmpty(recentEvents)}">
+            <div class="event-row" th:each="event : ${recentEvents}">
+                <span class="event-type" th:text="${event.type}">ROLL</span>
+                <span class="event-actor" th:text="${event.actorName ?: 'system'}">actor</span>
+                <span th:switch="${event.type}" class="event-body">
+                    <span th:case="'ROLL'"
+                          th:text="|rolled ${event.payload['count']}d${event.payload['sides']}|
+                                   + (${event.payload['modifier']} != null and ${event.payload['modifier']} != 0
+                                        ? ' + ' + ${event.payload['modifier']} : '')
+                                   + |&nbsp;=&nbsp;${event.payload['total']}|">
+                        rolled 1d20 = 15
+                    </span>
+                    <span th:case="*" th:text="${event.payload}">raw payload</span>
+                </span>
+                <span class="event-time"
+                      th:text="${#temporals.format(event.createdAt, 'HH:mm:ss')}">12:00:00</span>
+            </div>
+        </div>
+
+        <div class="empty-events" th:if="${#lists.isEmpty(recentEvents)}">
+            No activity yet. Rolls from Discord will appear here.
+        </div>
 
         <div class="hint">
             Also available in Discord:
