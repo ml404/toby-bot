@@ -46,7 +46,7 @@ class CampaignEventBroadcaster(private val objectMapper: ObjectMapper) {
                 emitter.send(SseEmitter.event().name("event").data(json))
             }.onFailure { failed += emitter }
         }
-        if (failed.isNotEmpty()) list.removeAll(failed)
+        if (failed.isNotEmpty()) list.removeAll(failed.toSet())
     }
 
     fun subscriberCount(campaignId: Long): Int = emitters[campaignId]?.size ?: 0
