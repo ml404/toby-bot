@@ -120,6 +120,7 @@ enum class NarrateResult { NARRATED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_BODY, BOD
 enum class SaveTemplateResult { SAVED, NAME_BLANK, NAME_TOO_LONG, NOT_FOUND, NOT_OWNER }
 enum class DeleteTemplateResult { DELETED, NOT_FOUND, NOT_OWNER }
 enum class RollInitiativeResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_ROSTER, TEMPLATE_NOT_FOUND }
+enum class RollDiceResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, INVALID_SIDES, INVALID_COUNT, INVALID_MODIFIER, INVALID_EXPRESSION }
 
 @Service
 class CampaignWebService(
@@ -146,6 +147,10 @@ class CampaignWebService(
         const val MAX_NARRATE_BODY_LENGTH = 1000
         const val DEFAULT_EVENT_LIMIT = 100
         const val MAX_TEMPLATE_NAME_LENGTH = 100
+        const val MAX_DICE_COUNT = 20
+        const val MAX_DICE_MODIFIER = 50
+        val ALLOWED_DIE_SIDES = setOf(4, 6, 8, 10, 12, 20, 100)
+        private val DICE_EXPR_REGEX = Regex("^(\\d*)d(\\d+)([+-]\\d+)?$", RegexOption.IGNORE_CASE)
     }
 
     fun getMutualGuildsWithCampaigns(accessToken: String): List<GuildCampaignInfo> {
@@ -515,6 +520,66 @@ class CampaignWebService(
             payload = mapOf("body" to trimmed)
         )
         return NarrateResult.NARRATED
+    }
+
+    /**
+     * Web dice roll: validates inputs, rolls `count`d`sides`+`modifier`, and
+     * publishes a ROLL event so every subscriber (web session log, future
+     * widgets) sees the same result. Players and the DM of the active
+     * campaign may roll; outsiders are rejected.
+     *
+     * When [expression] is non-null, it takes precedence over [count]/[sides]/
+     * [modifier] and is parsed as `NdS[+|-]M` (whitespace ignored).
+     */
+    fun rollDice(
+        guildId: Long,
+        requestingDiscordId: Long,
+        count: Int,
+        sides: Int,
+        modifier: Int,
+        expression: String? = null
+    ): RollDiceResult {
+        val trimmedExpr = expression?.trim()?.takeIf { it.isNotEmpty() }
+        val parsed = trimmedExpr?.let { parseDiceExpression(it) ?: return RollDiceResult.INVALID_EXPRESSION }
+        val finalCount = parsed?.count ?: count
+        val finalSides = parsed?.sides ?: sides
+        val finalMod = parsed?.modifier ?: modifier
+
+        if (finalSides !in ALLOWED_DIE_SIDES) return RollDiceResult.INVALID_SIDES
+        if (finalCount !in 1..MAX_DICE_COUNT) return RollDiceResult.INVALID_COUNT
+        if (finalMod !in -MAX_DICE_MODIFIER..MAX_DICE_MODIFIER) return RollDiceResult.INVALID_MODIFIER
+
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return RollDiceResult.NO_ACTIVE_CAMPAIGN
+        if (!isCampaignParticipant(campaign, requestingDiscordId)) return RollDiceResult.NOT_PARTICIPANT
+
+        val rawTotal = (0 until finalCount).sumOf { Random.nextInt(1, finalSides + 1) }
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.ROLL,
+            actorDiscordId = requestingDiscordId,
+            actorName = resolveMemberName(guildId, requestingDiscordId),
+            payload = mapOf(
+                "sides" to finalSides,
+                "count" to finalCount,
+                "modifier" to finalMod,
+                "rawTotal" to rawTotal,
+                "total" to rawTotal + finalMod
+            )
+        )
+        return RollDiceResult.ROLLED
+    }
+
+    private data class ParsedDice(val count: Int, val sides: Int, val modifier: Int)
+
+    private fun parseDiceExpression(raw: String): ParsedDice? {
+        val cleaned = raw.filterNot { it.isWhitespace() }
+        if (cleaned.isEmpty()) return null
+        val match = DICE_EXPR_REGEX.matchEntire(cleaned) ?: return null
+        val count = match.groupValues[1].ifEmpty { "1" }.toIntOrNull() ?: return null
+        val sides = match.groupValues[2].toIntOrNull() ?: return null
+        val modifier = match.groupValues[3].takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
+        return ParsedDice(count, sides, modifier)
     }
 
     fun listTemplatesForDm(dmDiscordId: Long): List<MonsterTemplateView> =

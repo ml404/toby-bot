@@ -31,6 +31,7 @@ import web.service.KickResult
 import web.service.LeaveResult
 import web.service.MonsterTemplateView
 import web.service.NarrateResult
+import web.service.RollDiceResult
 import web.service.RollInitiativeResult
 import web.service.SaveTemplateResult
 import web.service.SessionEventView
@@ -861,5 +862,62 @@ class CampaignControllerTest {
         verify {
             mockRa.addFlashAttribute("error", "One of the selected monster templates couldn't be found.")
         }
+    }
+
+    // rollDice
+
+    @Test
+    fun `rollDice redirects on success`() {
+        every {
+            campaignWebService.rollDice(guildId, 1L, 2, 6, 3, null)
+        } returns RollDiceResult.ROLLED
+
+        val view = controller.rollDice(guildId, 2, 6, 3, null, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `rollDice trims expression before calling service`() {
+        every {
+            campaignWebService.rollDice(guildId, 1L, 1, 20, 0, "2d6+1")
+        } returns RollDiceResult.ROLLED
+
+        controller.rollDice(guildId, 1, 20, 0, "  2d6+1  ", mockUser, mockRa)
+
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `rollDice sets error when not participant`() {
+        every {
+            campaignWebService.rollDice(guildId, 1L, any(), any(), any(), any())
+        } returns RollDiceResult.NOT_PARTICIPANT
+
+        controller.rollDice(guildId, 1, 20, 0, null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only campaign participants can roll here.") }
+    }
+
+    @Test
+    fun `rollDice sets error when expression is invalid`() {
+        every {
+            campaignWebService.rollDice(guildId, 1L, any(), any(), any(), "garbage")
+        } returns RollDiceResult.INVALID_EXPRESSION
+
+        controller.rollDice(guildId, 1, 20, 0, "garbage", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Custom expression must look like '2d6+3' or 'd20-1'.") }
+    }
+
+    @Test
+    fun `rollDice redirects to list when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val view = controller.rollDice(guildId, 1, 20, 0, null, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign", view)
+        verify(exactly = 0) { campaignWebService.rollDice(any(), any(), any(), any(), any(), any()) }
     }
 }
