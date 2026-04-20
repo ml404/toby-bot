@@ -16,17 +16,23 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
+import web.service.AdhocMonster
 import web.service.AnnotateRollResult
 import web.service.CampaignDetail
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteNoteResult
+import web.service.DeleteTemplateResult
 import web.service.EndResult
 import web.service.GuildCampaignInfo
+import web.service.InitiativeRollRequest
 import web.service.JoinResult
 import web.service.KickResult
 import web.service.LeaveResult
+import web.service.MonsterTemplateView
 import web.service.NarrateResult
+import web.service.RollInitiativeResult
+import web.service.SaveTemplateResult
 import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
@@ -673,5 +679,162 @@ class CampaignControllerTest {
         val view = controller.narrate(guildId, "beat", mockUser, mockRa)
 
         assertEquals("redirect:/dnd/campaign", view)
+    }
+
+    // monster templates
+
+    @Test
+    fun `listMonsterTemplates delegates to service`() {
+        val templates = listOf(MonsterTemplateView(1L, "Goblin", 2, 7, 15))
+        every { campaignWebService.listTemplatesForDm(1L) } returns templates
+
+        val result = controller.listMonsterTemplates(mockUser)
+
+        assertEquals(templates, result)
+    }
+
+    @Test
+    fun `listMonsterTemplates returns empty when user id missing`() {
+        every { mockUser.getAttribute<String>("id") } returns null
+
+        val result = controller.listMonsterTemplates(mockUser)
+
+        assertEquals(emptyList<MonsterTemplateView>(), result)
+    }
+
+    @Test
+    fun `saveMonsterTemplate redirects on success`() {
+        every {
+            campaignWebService.saveTemplate(1L, null, "Goblin", 2, 7, 15)
+        } returns SaveTemplateResult.SAVED
+
+        val view = controller.saveMonsterTemplate(guildId, null, "Goblin", 2, 7, 15, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `saveMonsterTemplate sets error when name blank`() {
+        every {
+            campaignWebService.saveTemplate(1L, null, "", 0, null, null)
+        } returns SaveTemplateResult.NAME_BLANK
+
+        controller.saveMonsterTemplate(guildId, null, "", 0, null, null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Monster name can't be empty.") }
+    }
+
+    @Test
+    fun `saveMonsterTemplate sets error when not owner`() {
+        every {
+            campaignWebService.saveTemplate(1L, 99L, "X", 0, null, null)
+        } returns SaveTemplateResult.NOT_OWNER
+
+        controller.saveMonsterTemplate(guildId, 99L, "X", 0, null, null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You can only edit your own templates.") }
+    }
+
+    @Test
+    fun `deleteMonsterTemplate redirects on success`() {
+        every { campaignWebService.deleteTemplate(1L, 99L) } returns DeleteTemplateResult.DELETED
+
+        val view = controller.deleteMonsterTemplate(guildId, 99L, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+    }
+
+    @Test
+    fun `deleteMonsterTemplate sets error when not owner`() {
+        every { campaignWebService.deleteTemplate(1L, 99L) } returns DeleteTemplateResult.NOT_OWNER
+
+        controller.deleteMonsterTemplate(guildId, 99L, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You can only delete your own templates.") }
+    }
+
+    // rollInitiative
+
+    @Test
+    fun `rollInitiative redirects on success`() {
+        every {
+            campaignWebService.rollInitiative(guildId, 1L, match { it.playerDiscordIds == listOf(7L) })
+        } returns RollInitiativeResult.ROLLED
+
+        val view = controller.rollInitiative(
+            guildId,
+            playerDiscordIds = listOf(7L),
+            templateIds = null,
+            adhocNames = null,
+            adhocMods = null,
+            user = mockUser,
+            ra = mockRa
+        )
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `rollInitiative builds adhoc monsters from parallel arrays`() {
+        every {
+            campaignWebService.rollInitiative(
+                guildId,
+                1L,
+                match<InitiativeRollRequest> { req ->
+                    req.adhocMonsters == listOf(
+                        AdhocMonster("Bugbear", 1),
+                        AdhocMonster("Kobold", 2)
+                    )
+                }
+            )
+        } returns RollInitiativeResult.ROLLED
+
+        controller.rollInitiative(
+            guildId,
+            playerDiscordIds = null,
+            templateIds = null,
+            adhocNames = listOf("Bugbear", "", "Kobold"),
+            adhocMods = listOf(1, 0, 2),
+            user = mockUser,
+            ra = mockRa
+        )
+        // Assertion is implicit in the match{} matcher above.
+    }
+
+    @Test
+    fun `rollInitiative sets error when not DM`() {
+        every {
+            campaignWebService.rollInitiative(guildId, 1L, any())
+        } returns RollInitiativeResult.NOT_DM
+
+        controller.rollInitiative(guildId, listOf(7L), null, null, null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can roll initiative here.") }
+    }
+
+    @Test
+    fun `rollInitiative sets error when roster empty`() {
+        every {
+            campaignWebService.rollInitiative(guildId, 1L, any())
+        } returns RollInitiativeResult.EMPTY_ROSTER
+
+        controller.rollInitiative(guildId, null, null, null, null, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "Pick at least one player or monster before rolling.") }
+    }
+
+    @Test
+    fun `rollInitiative sets error when template missing`() {
+        every {
+            campaignWebService.rollInitiative(guildId, 1L, any())
+        } returns RollInitiativeResult.TEMPLATE_NOT_FOUND
+
+        controller.rollInitiative(guildId, null, listOf(77L), null, null, mockUser, mockRa)
+
+        verify {
+            mockRa.addFlashAttribute("error", "One of the selected monster templates couldn't be found.")
+        }
     }
 }

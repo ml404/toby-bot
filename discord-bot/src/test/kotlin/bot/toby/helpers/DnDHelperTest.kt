@@ -283,6 +283,35 @@ internal class DnDHelperTest {
         Assertions.assertFalse(dndHelper.stateFor(otherGuild).isActive())
     }
 
+    @Test
+    fun testSeedInitiativeInstallsSortedEntries() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(
+                RolledEntry("Alice", 12, "PLAYER"),
+                RolledEntry("Goblin", 19, "MONSTER"),
+                RolledEntry("Bob", 8, "PLAYER")
+            )
+        )
+        val state = dndHelper.stateFor(guildId)
+        Assertions.assertTrue(state.isActive())
+        Assertions.assertEquals(3, state.sortedEntries.size)
+        Assertions.assertEquals("Goblin", state.sortedEntries[0].name)
+        Assertions.assertEquals("MONSTER", state.sortedEntries[0].kind)
+        Assertions.assertEquals("Alice", state.sortedEntries[1].name)
+        Assertions.assertEquals("Bob", state.sortedEntries[2].name)
+        Assertions.assertEquals(0, state.initiativeIndex.get())
+    }
+
+    @Test
+    fun testSeedInitiativeReplacesPriorState() {
+        dndHelper.seedInitiative(guildId, listOf(RolledEntry("Old", 10)))
+        dndHelper.seedInitiative(guildId, listOf(RolledEntry("New", 15)))
+        val state = dndHelper.stateFor(guildId)
+        Assertions.assertEquals(1, state.sortedEntries.size)
+        Assertions.assertEquals("New", state.sortedEntries[0].name)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithSpell() = runTest {

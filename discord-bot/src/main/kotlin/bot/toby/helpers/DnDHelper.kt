@@ -42,6 +42,17 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         stateFor(guildId).restoreFrom(snapshot)
     }
 
+    /**
+     * Seed the per-guild initiative tracker with a pre-rolled, pre-sorted roster
+     * (players + monsters). Used by the web-side initiative composer; Discord's
+     * voice-channel / name-list paths continue through [rollInitiativeForMembers]
+     * and [rollInitiativeForString].
+     */
+    fun seedInitiative(guildId: Long, entries: List<RolledEntry>) {
+        val sorted = entries.sortedByDescending { it.roll }
+        stateFor(guildId).seedFromSorted(sorted)
+    }
+
     fun rollInitiativeForMembers(
         guildId: Long,
         memberList: List<Member>,
@@ -106,7 +117,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
                 .setComponents(ActionRow.of(initButtons.prev, initButtons.clear, initButtons.next))
                 .queue()
             hook.setEphemeral(true)
-                .sendMessage("Next turn: ${state.sortedEntries[state.initiativeIndex.get()].key}")
+                .sendMessage("Next turn: ${state.sortedEntries[state.initiativeIndex.get()].name}")
                 .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
         }
     }

@@ -143,9 +143,96 @@
         })
         .catch(function () { /* non-fatal; SSE will catch up */ });
 
+    // Turn-table widget: listens to the same stream and reflects initiative state.
+    const turnTable = document.getElementById('turn-table');
+    const turnList = document.getElementById('turn-table-list');
+    const turnEmpty = document.getElementById('turn-table-empty');
+
+    function ensureList() {
+        if (turnList) return turnList;
+        if (!turnTable) return null;
+        const ol = document.createElement('ol');
+        ol.id = 'turn-table-list';
+        turnTable.appendChild(ol);
+        return ol;
+    }
+
+    function rebuildTurnTable(entries, currentIndex) {
+        if (!turnTable) return;
+        const list = ensureList();
+        if (!list) return;
+        list.innerHTML = '';
+        if (!entries.length) {
+            if (turnEmpty) turnEmpty.style.display = '';
+            return;
+        }
+        if (turnEmpty) turnEmpty.style.display = 'none';
+        entries.forEach(function (entry, i) {
+            const li = document.createElement('li');
+            if (i === currentIndex) li.className = 'active';
+            const idx = document.createElement('span');
+            idx.className = 'idx';
+            idx.textContent = (i + 1);
+            const name = document.createElement('span');
+            name.className = 'name';
+            name.textContent = entry.name || 'Unknown';
+            li.appendChild(idx);
+            li.appendChild(name);
+            if (entry.kind === 'PLAYER' || entry.kind === 'MONSTER') {
+                const chip = document.createElement('span');
+                chip.className = 'chip ' + entry.kind.toLowerCase();
+                chip.textContent = entry.kind === 'PLAYER' ? 'Player' : 'Monster';
+                li.appendChild(chip);
+            }
+            const roll = document.createElement('span');
+            roll.className = 'roll';
+            roll.textContent = entry.roll;
+            li.appendChild(roll);
+            list.appendChild(li);
+        });
+        turnTable.dataset.currentIndex = String(currentIndex);
+    }
+
+    function highlightIndex(idx) {
+        if (!turnTable) return;
+        const list = turnTable.querySelector('ol');
+        if (!list) return;
+        Array.prototype.forEach.call(list.children, function (node, i) {
+            if (i === idx) node.classList.add('active');
+            else node.classList.remove('active');
+        });
+        turnTable.dataset.currentIndex = String(idx);
+    }
+
+    function handleInitiativeEvent(event) {
+        if (!turnTable) return;
+        const p = event.payload || {};
+        switch (event.type) {
+            case 'INITIATIVE_ROLLED': {
+                const entries = Array.isArray(p.entries) ? p.entries : [];
+                rebuildTurnTable(entries, 0);
+                break;
+            }
+            case 'INITIATIVE_NEXT':
+            case 'INITIATIVE_PREV': {
+                const idx = typeof p.currentIndex === 'number' ? p.currentIndex : 0;
+                highlightIndex(idx);
+                break;
+            }
+            case 'INITIATIVE_CLEARED': {
+                rebuildTurnTable([], 0);
+                break;
+            }
+        }
+    }
+
     const source = new EventSource('/dnd/campaign/' + guildId + '/events/stream');
     source.addEventListener('event', function (e) {
-        try { renderEvent(JSON.parse(e.data)); } catch (_) { /* skip malformed */ }
+        try {
+            const parsed = JSON.parse(e.data);
+            renderEvent(parsed);
+            handleInitiativeEvent(parsed);
+        } catch (_) { /* skip malformed */ }
     });
     source.addEventListener('error', function () {
         // EventSource retries automatically; nothing to do here.
