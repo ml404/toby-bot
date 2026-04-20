@@ -18,6 +18,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AddNoteResult
 import web.service.AdhocMonster
 import web.service.AnnotateRollResult
+import web.service.ApplyDamageResult
+import web.service.AttackOutcome
+import web.service.AttackResult
 import web.service.CampaignDetail
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
@@ -770,6 +773,8 @@ class CampaignControllerTest {
             templateQtys = null,
             adhocNames = null,
             adhocMods = null,
+            adhocHps = null,
+            adhocAcs = null,
             user = mockUser,
             ra = mockRa
         )
@@ -800,6 +805,8 @@ class CampaignControllerTest {
             templateQtys = null,
             adhocNames = listOf("Bugbear", "", "Kobold"),
             adhocMods = listOf(1, 0, 2),
+            adhocHps = null,
+            adhocAcs = null,
             user = mockUser,
             ra = mockRa
         )
@@ -824,6 +831,8 @@ class CampaignControllerTest {
             templateQtys = listOf(2, 1, 0),
             adhocNames = null,
             adhocMods = null,
+            adhocHps = null,
+            adhocAcs = null,
             user = mockUser,
             ra = mockRa
         )
@@ -835,7 +844,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.NOT_DM
 
-        controller.rollInitiative(guildId, listOf(7L), null, null, null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, listOf(7L), null, null, null, null, null, null, mockUser, mockRa)
 
         verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can roll initiative here.") }
     }
@@ -846,7 +855,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.EMPTY_ROSTER
 
-        controller.rollInitiative(guildId, null, null, null, null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, null, null, null, null, null, null, null, mockUser, mockRa)
 
         verify { mockRa.addFlashAttribute("error", "Pick at least one player or monster before rolling.") }
     }
@@ -857,7 +866,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.TEMPLATE_NOT_FOUND
 
-        controller.rollInitiative(guildId, null, listOf(77L), listOf(1), null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, null, listOf(77L), listOf(1), null, null, null, null, mockUser, mockRa)
 
         verify {
             mockRa.addFlashAttribute("error", "One of the selected monster templates couldn't be found.")
@@ -919,5 +928,64 @@ class CampaignControllerTest {
 
         assertEquals("redirect:/dnd/campaign", view)
         verify(exactly = 0) { campaignWebService.rollDice(any(), any(), any(), any(), any(), any()) }
+    }
+
+    // combat
+
+    @Test
+    fun `attack redirects on hit without flash error`() {
+        every {
+            campaignWebService.attack(guildId, 1L, "Goblin", 3)
+        } returns AttackOutcome(result = AttackResult.HIT, attacker = "Alice", target = "Goblin")
+
+        val view = controller.attack(guildId, "Goblin", 3, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `attack sets flash error when not my turn`() {
+        every {
+            campaignWebService.attack(guildId, 1L, any(), any())
+        } returns AttackOutcome(result = AttackResult.NOT_MY_TURN)
+
+        controller.attack(guildId, "Goblin", 0, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "You can only attack on your own turn (or as the DM).") }
+    }
+
+    @Test
+    fun `attack trims target name`() {
+        every {
+            campaignWebService.attack(guildId, 1L, "Goblin", 0)
+        } returns AttackOutcome(result = AttackResult.HIT)
+
+        controller.attack(guildId, "  Goblin  ", 0, mockUser, mockRa)
+
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `applyDamage redirects on applied`() {
+        every {
+            campaignWebService.applyDamage(guildId, 1L, "Goblin", 4)
+        } returns ApplyDamageResult.APPLIED
+
+        val view = controller.applyDamage(guildId, "Goblin", 4, mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `applyDamage sets flash error when target missing`() {
+        every {
+            campaignWebService.applyDamage(guildId, 1L, any(), any())
+        } returns ApplyDamageResult.TARGET_NOT_FOUND
+
+        controller.applyDamage(guildId, "Nobody", 4, mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", "That target isn't in the initiative order.") }
     }
 }

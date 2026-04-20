@@ -558,6 +558,109 @@
             .turn-table .d20.rolling .d20__face { animation: none; opacity: 1; }
         }
 
+        /* ---- Combat HUD ---- */
+        .turn-table .hp-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 120px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #c0c0d0;
+        }
+        .turn-table .hp-bar {
+            position: relative;
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #0f1530;
+            border: 1px solid #2a3460;
+            overflow: hidden;
+            min-width: 60px;
+        }
+        .turn-table .hp-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            background: linear-gradient(90deg, #2ecc71, #1aa85a);
+            transition: width 0.4s ease-out, background 0.2s;
+        }
+        .turn-table .hp-fill.mid { background: linear-gradient(90deg, #f39c12, #c9801f); }
+        .turn-table .hp-fill.low { background: linear-gradient(90deg, #e74c3c, #a5321a); }
+        .turn-table .ac-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: rgba(88,101,242,0.12);
+            border: 1px solid rgba(88,101,242,0.35);
+            color: #8b97ff;
+            font-family: monospace;
+        }
+        .turn-table li.defeated {
+            opacity: 0.5;
+        }
+        .turn-table li.defeated .name {
+            text-decoration: line-through;
+            color: #8a8aa0;
+        }
+        .turn-table li.just-hit { animation: combat-hit-flash 420ms ease-out; }
+        .turn-table li.just-missed { animation: combat-miss-flash 420ms ease-out; }
+        @keyframes combat-hit-flash {
+            0%   { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
+            30%  { box-shadow: 0 0 0 3px rgba(231,76,60,0.45); background: rgba(231,76,60,0.12); }
+            100% { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
+        }
+        @keyframes combat-miss-flash {
+            0%   { box-shadow: 0 0 0 0 rgba(160,160,176,0); }
+            30%  { box-shadow: 0 0 0 3px rgba(160,160,176,0.45); background: rgba(160,160,176,0.08); }
+            100% { box-shadow: 0 0 0 0 rgba(160,160,176,0); }
+        }
+
+        .combat-panel {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: rgba(88,101,242,0.08);
+            border: 1px solid rgba(88,101,242,0.35);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .combat-panel .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .combat-panel label {
+            font-size: 0.75rem;
+            color: #a0a0b0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+        .combat-panel select, .combat-panel input[type=number] {
+            background: #1a1a2e;
+            border: 1px solid #2a3460;
+            color: #e0e0e0;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .combat-panel select { flex: 1; min-width: 160px; }
+        .combat-panel input[type=number] { width: 70px; }
+        .combat-panel .spacer { flex: 1; }
+        .combat-panel form { display: contents; }
+        .combat-panel .title {
+            font-size: 0.75rem;
+            color: #8b97ff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
         .dice-roller { position: relative; }
         .dice-popover {
             display: none;
@@ -737,6 +840,14 @@
             /* Turn-table rows wrap long names */
             .turn-table li { flex-wrap: wrap; row-gap: 4px; }
             .turn-table .name { min-width: 0; flex: 1 1 auto; }
+            .turn-table .hp-wrap { flex-basis: 100%; min-width: 0; }
+
+            /* Combat panel stacks vertically on narrow screens */
+            .combat-panel { padding: 10px; }
+            .combat-panel .row { flex-direction: column; align-items: stretch; gap: 6px; }
+            .combat-panel select { min-width: 0; width: 100%; }
+            .combat-panel input[type=number] { width: 100%; }
+            .combat-panel label { margin-top: 4px; }
         }
     </style>
 </head>
@@ -1008,10 +1119,14 @@
                     <div class="row">
                         <input type="text" name="adhocName" placeholder="Ad-hoc monster name (optional)" maxlength="100">
                         <input type="number" name="adhocMod" placeholder="init" value="0">
+                        <input type="number" name="adhocHp" placeholder="HP" min="0" max="1000">
+                        <input type="number" name="adhocAc" placeholder="AC" min="0" max="50">
                     </div>
                     <div class="row">
                         <input type="text" name="adhocName" placeholder="Ad-hoc monster name (optional)" maxlength="100">
                         <input type="number" name="adhocMod" placeholder="init" value="0">
+                        <input type="number" name="adhocHp" placeholder="HP" min="0" max="1000">
+                        <input type="number" name="adhocAc" placeholder="AC" min="0" max="50">
                     </div>
                 </div>
                 <div style="margin-top:12px;display:flex;justify-content:flex-end;">
@@ -1026,14 +1141,53 @@
             <div class="title" style="font-weight:600;color:#e0e0e0;">Turn order</div>
             <ol id="turn-table-list" th:if="${initiativeState != null and not #lists.isEmpty(initiativeState.entries)}">
                 <li th:each="entry, iter : ${initiativeState.entries}"
-                    th:classappend="${iter.index == initiativeState.currentIndex ? 'active' : ''}">
+                    th:classappend="${(iter.index == initiativeState.currentIndex ? 'active ' : '') + (entry.defeated ? 'defeated' : '')}"
+                    th:attr="data-name=${entry.name}">
                     <span class="idx" th:text="${iter.index + 1}">1</span>
                     <span class="name" th:text="${entry.name}">Name</span>
                     <span th:if="${entry.kind == 'PLAYER'}" class="chip player">Player</span>
                     <span th:if="${entry.kind == 'MONSTER'}" class="chip monster">Monster</span>
+                    <span th:if="${entry.ac != null}" class="ac-chip">AC <span th:text="${entry.ac}">15</span></span>
+                    <span class="hp-wrap" th:if="${entry.maxHp != null}">
+                        <span class="hp-bar">
+                            <span class="hp-fill"
+                                  th:classappend="${entry.maxHp > 0 and entry.currentHp != null and (entry.currentHp * 100 / entry.maxHp) &lt; 15 ? 'low' : (entry.maxHp > 0 and entry.currentHp != null and (entry.currentHp * 100 / entry.maxHp) &lt; 40 ? 'mid' : '')}"
+                                  th:style="${'width:' + (entry.maxHp > 0 and entry.currentHp != null ? ((entry.currentHp * 100) / entry.maxHp) : 0) + '%;'}"></span>
+                        </span>
+                        <span class="hp-label">
+                            <span th:text="${entry.currentHp != null ? entry.currentHp : '?'}">7</span>/<span th:text="${entry.maxHp}">7</span>
+                        </span>
+                    </span>
                     <span class="d20" th:attr="data-roll=${entry.roll}">
                         <span class="d20__face" th:text="${entry.roll}">15</span>
                     </span>
+                    <div th:if="${iter.index == initiativeState.currentIndex and (isUserDm or (entry.kind == 'PLAYER' and isUserPlayer))}"
+                         class="combat-panel" th:attr="data-attacker=${entry.name}">
+                        <span class="title">Attack · <span th:text="${entry.name}">Actor</span></span>
+                        <form th:action="@{/dnd/campaign/{id}/combat/attack(id=${guildId})}" method="post" class="row">
+                            <label>Target</label>
+                            <select name="targetName" required>
+                                <option th:each="t : ${initiativeState.entries}"
+                                        th:if="${t.name != entry.name and not t.defeated}"
+                                        th:value="${t.name}"
+                                        th:text="${t.name + (t.ac != null ? ' (AC ' + t.ac + ')' : '')}">Target</option>
+                            </select>
+                            <label>Mod</label>
+                            <input type="number" name="attackModifier" value="0" min="-30" max="30">
+                            <button type="submit" class="btn btn-primary btn-sm">🎯 Attack</button>
+                        </form>
+                        <form th:action="@{/dnd/campaign/{id}/combat/damage(id=${guildId})}" method="post" class="row">
+                            <label>Damage</label>
+                            <select name="targetName" required>
+                                <option th:each="t : ${initiativeState.entries}"
+                                        th:if="${t.name != entry.name and not t.defeated}"
+                                        th:value="${t.name}"
+                                        th:text="${t.name}">Target</option>
+                            </select>
+                            <input type="number" name="amount" value="1" min="0" max="1000" required>
+                            <button type="submit" class="btn btn-secondary btn-sm">💥 Apply</button>
+                        </form>
+                    </div>
                 </li>
             </ol>
             <div id="turn-table-empty" class="empty"
@@ -1133,6 +1287,25 @@
                           th:text="${event.payload['target'] != null
                                     ? 'marked MISS on ' + event.payload['target']
                                     : 'marked MISS'}">marked MISS</span>
+                    <span th:case="'ATTACK_HIT'"
+                          th:text="${event.payload['attacker'] + ' hits ' + event.payload['target'] +
+                                    ' — ' + event.payload['total'] +
+                                    (event.payload['targetAc'] != null ? ' vs AC ' + event.payload['targetAc'] : '')}">
+                        hits Target — 18 vs AC 15
+                    </span>
+                    <span th:case="'ATTACK_MISS'"
+                          th:text="${event.payload['attacker'] + ' misses ' + event.payload['target'] +
+                                    ' — ' + event.payload['total'] +
+                                    (event.payload['targetAc'] != null ? ' vs AC ' + event.payload['targetAc'] : '')}">
+                        misses Target — 7 vs AC 15
+                    </span>
+                    <span th:case="'DAMAGE_DEALT'"
+                          th:text="${event.payload['target'] + ' takes ' + event.payload['amount'] + ' damage' +
+                                    (event.payload['remainingHp'] != null ? ' (' + event.payload['remainingHp'] + ' HP left)' : '')}">
+                        Target takes 6 damage (1 HP left)
+                    </span>
+                    <span th:case="'PARTICIPANT_DEFEATED'"
+                          th:text="${event.payload['target'] + ' is defeated'}">Target is defeated</span>
                     <span th:case="*" th:text="${event.payload}">raw payload</span>
                 </span>
                 <span class="event-time"

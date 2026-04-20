@@ -45,7 +45,11 @@ data class InitiativeStateView(
 data class RolledEntryView(
     val name: String,
     val roll: Int,
-    val kind: String?
+    val kind: String?,
+    val maxHp: Int? = null,
+    val currentHp: Int? = null,
+    val ac: Int? = null,
+    val defeated: Boolean = false
 )
 
 data class MonsterTemplateView(
@@ -56,7 +60,12 @@ data class MonsterTemplateView(
     val ac: Int?
 )
 
-data class AdhocMonster(val name: String, val initiativeModifier: Int)
+data class AdhocMonster(
+    val name: String,
+    val initiativeModifier: Int,
+    val maxHp: Int? = null,
+    val ac: Int? = null
+)
 
 data class InitiativeRollRequest(
     val playerDiscordIds: List<Long> = emptyList(),
@@ -122,6 +131,30 @@ enum class DeleteTemplateResult { DELETED, NOT_FOUND, NOT_OWNER }
 enum class RollInitiativeResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_ROSTER, TEMPLATE_NOT_FOUND }
 enum class RollDiceResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, INVALID_SIDES, INVALID_COUNT, INVALID_MODIFIER, INVALID_EXPRESSION }
 
+enum class AttackResult {
+    HIT, MISS,
+    NO_ACTIVE_CAMPAIGN, NO_ACTIVE_COMBAT, NOT_MY_TURN,
+    TARGET_NOT_FOUND, TARGET_DEFEATED, CANT_TARGET_SELF,
+    INVALID_MODIFIER
+}
+
+enum class ApplyDamageResult {
+    APPLIED, DEFEATED,
+    NO_ACTIVE_CAMPAIGN, NO_ACTIVE_COMBAT, NOT_ATTACKER,
+    TARGET_NOT_FOUND, INVALID_AMOUNT
+}
+
+data class AttackOutcome(
+    val result: AttackResult,
+    val attacker: String? = null,
+    val target: String? = null,
+    val rawRoll: Int? = null,
+    val modifier: Int? = null,
+    val total: Int? = null,
+    val targetAc: Int? = null,
+    val eventId: Long? = null
+)
+
 @Service
 class CampaignWebService(
     private val campaignService: CampaignService,
@@ -149,6 +182,8 @@ class CampaignWebService(
         const val MAX_TEMPLATE_NAME_LENGTH = 100
         const val MAX_DICE_COUNT = 20
         const val MAX_DICE_MODIFIER = 50
+        const val MAX_ATTACK_MODIFIER = 30
+        const val MAX_DAMAGE_AMOUNT = 1000
         val ALLOWED_DIE_SIDES = setOf(4, 6, 8, 10, 12, 20, 100)
         private val DICE_EXPR_REGEX = Regex("^(\\d*)d(\\d+)([+-]\\d+)?$", RegexOption.IGNORE_CASE)
     }
@@ -224,7 +259,15 @@ class CampaignWebService(
         val initiativeState = if (initiativeStore.isActive(guildId)) {
             InitiativeStateView(
                 entries = initiativeStore.currentEntries(guildId).map {
-                    RolledEntryView(it.name, it.roll, it.kind)
+                    RolledEntryView(
+                        name = it.name,
+                        roll = it.roll,
+                        kind = it.kind,
+                        maxHp = it.maxHp,
+                        currentHp = it.currentHp,
+                        ac = it.ac,
+                        defeated = it.defeated
+                    )
                 },
                 currentIndex = initiativeStore.currentIndex(guildId)
             )
@@ -664,7 +707,10 @@ class CampaignWebService(
                 name = template.name,
                 roll = rollD20() + template.initiativeModifier,
                 kind = "MONSTER",
-                modifier = template.initiativeModifier
+                modifier = template.initiativeModifier,
+                maxHp = template.maxHp,
+                currentHp = template.maxHp,
+                ac = template.ac
             )
         }
 
@@ -674,7 +720,10 @@ class CampaignWebService(
                 name = cleanName,
                 roll = rollD20() + monster.initiativeModifier,
                 kind = "MONSTER",
-                modifier = monster.initiativeModifier
+                modifier = monster.initiativeModifier,
+                maxHp = monster.maxHp,
+                currentHp = monster.maxHp,
+                ac = monster.ac
             )
         }
 
@@ -693,12 +742,139 @@ class CampaignWebService(
                         "name" to it.name,
                         "roll" to it.roll,
                         "kind" to it.kind,
-                        "modifier" to it.modifier
+                        "modifier" to it.modifier,
+                        "maxHp" to it.maxHp,
+                        "currentHp" to it.currentHp,
+                        "ac" to it.ac
                     )
                 }
             )
         )
         return RollInitiativeResult.ROLLED
+    }
+
+    /**
+     * Web combat attack. The requester must be the current-turn participant
+     * (matched by display name), or the DM acting on behalf of the current
+     * participant when the current entry is a MONSTER.
+     *
+     * Rolls 1d20 + [attackModifier] and compares against the target's AC.
+     * When AC is unknown the attack always publishes as HIT (DM adjudicates).
+     * Publishes ATTACK_HIT / ATTACK_MISS on the session log.
+     */
+    fun attack(
+        guildId: Long,
+        requestingDiscordId: Long,
+        targetName: String,
+        attackModifier: Int
+    ): AttackOutcome {
+        if (attackModifier !in -MAX_ATTACK_MODIFIER..MAX_ATTACK_MODIFIER) {
+            return AttackOutcome(result = AttackResult.INVALID_MODIFIER)
+        }
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return AttackOutcome(result = AttackResult.NO_ACTIVE_CAMPAIGN)
+        if (!initiativeStore.isActive(guildId)) {
+            return AttackOutcome(result = AttackResult.NO_ACTIVE_COMBAT)
+        }
+        val current = initiativeStore.currentEntry(guildId)
+            ?: return AttackOutcome(result = AttackResult.NO_ACTIVE_COMBAT)
+
+        val isDm = campaign.dmDiscordId == requestingDiscordId
+        val requesterName = resolveMemberName(guildId, requestingDiscordId)
+        val authorised = isDm || (current.kind == "PLAYER" && current.name == requesterName)
+        if (!authorised) return AttackOutcome(result = AttackResult.NOT_MY_TURN)
+
+        val target = initiativeStore.currentEntries(guildId).firstOrNull { it.name == targetName }
+            ?: return AttackOutcome(result = AttackResult.TARGET_NOT_FOUND)
+        if (target.name == current.name) {
+            return AttackOutcome(result = AttackResult.CANT_TARGET_SELF)
+        }
+        if (target.defeated) return AttackOutcome(result = AttackResult.TARGET_DEFEATED)
+
+        val raw = Random.nextInt(1, 21)
+        val total = raw + attackModifier
+        val hit = target.ac?.let { total >= it } ?: true
+        val type = if (hit) CampaignEventType.ATTACK_HIT else CampaignEventType.ATTACK_MISS
+
+        sessionLog.publish(
+            guildId = guildId,
+            type = type,
+            actorDiscordId = requestingDiscordId,
+            actorName = requesterName,
+            payload = mapOf(
+                "attacker" to current.name,
+                "target" to target.name,
+                "roll" to raw,
+                "modifier" to attackModifier,
+                "total" to total,
+                "targetAc" to target.ac
+            )
+        )
+        return AttackOutcome(
+            result = if (hit) AttackResult.HIT else AttackResult.MISS,
+            attacker = current.name,
+            target = target.name,
+            rawRoll = raw,
+            modifier = attackModifier,
+            total = total,
+            targetAc = target.ac
+        )
+    }
+
+    /**
+     * Applies integer [amount] of damage to the named target in the guild's
+     * combat tracker. Publishes DAMAGE_DEALT, and if the target's HP drops
+     * to 0 or below, also publishes PARTICIPANT_DEFEATED. The current-turn
+     * participant (or DM) may apply damage — we don't re-check target AC
+     * here since that's the role of [attack].
+     */
+    fun applyDamage(
+        guildId: Long,
+        requestingDiscordId: Long,
+        targetName: String,
+        amount: Int
+    ): ApplyDamageResult {
+        if (amount < 0 || amount > MAX_DAMAGE_AMOUNT) return ApplyDamageResult.INVALID_AMOUNT
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return ApplyDamageResult.NO_ACTIVE_CAMPAIGN
+        if (!initiativeStore.isActive(guildId)) return ApplyDamageResult.NO_ACTIVE_COMBAT
+        val current = initiativeStore.currentEntry(guildId)
+            ?: return ApplyDamageResult.NO_ACTIVE_COMBAT
+
+        val isDm = campaign.dmDiscordId == requestingDiscordId
+        val requesterName = resolveMemberName(guildId, requestingDiscordId)
+        val authorised = isDm || (current.kind == "PLAYER" && current.name == requesterName)
+        if (!authorised) return ApplyDamageResult.NOT_ATTACKER
+
+        val updated = initiativeStore.applyDamage(guildId, targetName, amount)
+            ?: return ApplyDamageResult.TARGET_NOT_FOUND
+
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.DAMAGE_DEALT,
+            actorDiscordId = requestingDiscordId,
+            actorName = requesterName,
+            payload = mapOf(
+                "attacker" to current.name,
+                "target" to updated.name,
+                "amount" to amount,
+                "remainingHp" to updated.currentHp,
+                "maxHp" to updated.maxHp
+            )
+        )
+
+        return if (updated.defeated) {
+            sessionLog.publish(
+                guildId = guildId,
+                type = CampaignEventType.PARTICIPANT_DEFEATED,
+                actorDiscordId = requestingDiscordId,
+                actorName = requesterName,
+                payload = mapOf("target" to updated.name)
+            )
+            ApplyDamageResult.DEFEATED
+        } else {
+            ApplyDamageResult.APPLIED
+        }
     }
 
     /**
