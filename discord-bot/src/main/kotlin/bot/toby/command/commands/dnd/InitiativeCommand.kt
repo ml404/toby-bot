@@ -2,6 +2,7 @@ package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
 import core.command.Command.Companion.invokeDeleteOnHookResponse
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -23,7 +24,7 @@ class InitiativeCommand @Autowired constructor(private val dndHelper: DnDHelper)
         val guildId = event.guild?.idLong ?: run {
             event.hook.sendMessage("Initiative can only be rolled inside a server.")
                 .setEphemeral(true)
-                .queue(invokeDeleteOnHookResponse(deleteDelay))
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
         val member = ctx.member
