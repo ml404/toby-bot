@@ -54,7 +54,7 @@ class InitiativeCommand @Autowired constructor(
         displayAllValues(guildId, event.hook, deleteDelay)
 
         val entries = dndHelper.stateFor(guildId).sortedEntries
-            .map { mapOf("name" to it.key, "roll" to it.value) }
+            .map { mapOf("name" to it.name, "roll" to it.roll) }
         sessionLog.publish(
             guildId = guildId,
             type = CampaignEventType.INITIATIVE_ROLLED,
