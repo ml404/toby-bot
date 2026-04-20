@@ -395,6 +395,37 @@
             padding: 6px 10px;
             font-size: 0.85rem;
         }
+        .initiative-composer .template-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin: 10px 0;
+        }
+        .initiative-composer .picker-heading {
+            font-size: 0.75rem;
+            color: #a0a0b0;
+            margin-bottom: 4px;
+        }
+        .initiative-composer .picker-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #1e2d50;
+            border: 1px solid #2a3a60;
+            border-radius: 6px;
+            padding: 4px 10px;
+        }
+        .initiative-composer .picker-row input[type=number] {
+            width: 56px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .initiative-composer .picker-name { flex: 1; font-size: 0.9rem; color: #e0e0e0; font-weight: 600; }
+        .initiative-composer .picker-meta { font-size: 0.75rem; color: #a0a0b0; font-family: monospace; }
         .initiative-composer .monster-add {
             display: flex;
             gap: 8px;
@@ -667,12 +698,18 @@
                         <span th:text="${player.displayName}">Player</span>
                     </label>
                 </div>
-                <div class="monster-add">
-                    <select name="templateIds" multiple size="3">
-                        <option th:each="tpl : ${monsterLibrary}"
-                                th:value="${tpl.id}"
-                                th:text="${tpl.name + ' (+' + tpl.initiativeModifier + ')'}">Goblin (+2)</option>
-                    </select>
+                <div class="template-picker" th:if="${not #lists.isEmpty(monsterLibrary)}">
+                    <div class="picker-heading">From library (qty 0 to skip):</div>
+                    <div class="picker-row" th:each="tpl : ${monsterLibrary}">
+                        <input type="hidden" name="templateId" th:value="${tpl.id}">
+                        <input type="number" name="templateQty" value="0" min="0" max="99"
+                               th:title="${'How many ' + tpl.name + ' to include'}">
+                        <span class="picker-name" th:text="${tpl.name}">Goblin</span>
+                        <span class="picker-meta"
+                              th:text="${'+' + tpl.initiativeModifier
+                                         + (tpl.maxHp != null ? ' · HP ' + tpl.maxHp : '')
+                                         + (tpl.ac != null ? ' · AC ' + tpl.ac : '')}">+2</span>
+                    </div>
                 </div>
                 <div class="adhoc-rows" id="adhoc-rows">
                     <div class="row">

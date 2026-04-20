@@ -766,6 +766,7 @@ class CampaignControllerTest {
             guildId,
             playerDiscordIds = listOf(7L),
             templateIds = null,
+            templateQtys = null,
             adhocNames = null,
             adhocMods = null,
             user = mockUser,
@@ -795,12 +796,36 @@ class CampaignControllerTest {
             guildId,
             playerDiscordIds = null,
             templateIds = null,
+            templateQtys = null,
             adhocNames = listOf("Bugbear", "", "Kobold"),
             adhocMods = listOf(1, 0, 2),
             user = mockUser,
             ra = mockRa
         )
-        // Assertion is implicit in the match{} matcher above.
+    }
+
+    @Test
+    fun `rollInitiative expands templateId and templateQty into repeated template ids`() {
+        every {
+            campaignWebService.rollInitiative(
+                guildId,
+                1L,
+                match<InitiativeRollRequest> { req ->
+                    req.templateIds == listOf(10L, 10L, 20L)
+                }
+            )
+        } returns RollInitiativeResult.ROLLED
+
+        controller.rollInitiative(
+            guildId,
+            playerDiscordIds = null,
+            templateIds = listOf(10L, 20L, 30L),
+            templateQtys = listOf(2, 1, 0),
+            adhocNames = null,
+            adhocMods = null,
+            user = mockUser,
+            ra = mockRa
+        )
     }
 
     @Test
@@ -809,7 +834,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.NOT_DM
 
-        controller.rollInitiative(guildId, listOf(7L), null, null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, listOf(7L), null, null, null, null, mockUser, mockRa)
 
         verify { mockRa.addFlashAttribute("error", "Only the Dungeon Master can roll initiative here.") }
     }
@@ -820,7 +845,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.EMPTY_ROSTER
 
-        controller.rollInitiative(guildId, null, null, null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, null, null, null, null, null, mockUser, mockRa)
 
         verify { mockRa.addFlashAttribute("error", "Pick at least one player or monster before rolling.") }
     }
@@ -831,7 +856,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.TEMPLATE_NOT_FOUND
 
-        controller.rollInitiative(guildId, null, listOf(77L), null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, null, listOf(77L), listOf(1), null, null, mockUser, mockRa)
 
         verify {
             mockRa.addFlashAttribute("error", "One of the selected monster templates couldn't be found.")

@@ -403,7 +403,8 @@ class CampaignController(
     fun rollInitiative(
         @PathVariable guildId: Long,
         @RequestParam(name = "playerDiscordIds", required = false) playerDiscordIds: List<Long>?,
-        @RequestParam(name = "templateIds", required = false) templateIds: List<Long>?,
+        @RequestParam(name = "templateId", required = false) templateIds: List<Long>?,
+        @RequestParam(name = "templateQty", required = false) templateQtys: List<Int>?,
         @RequestParam(name = "adhocName", required = false) adhocNames: List<String>?,
         @RequestParam(name = "adhocMod", required = false) adhocMods: List<Int>?,
         @AuthenticationPrincipal user: OAuth2User,
@@ -411,6 +412,13 @@ class CampaignController(
     ): String {
         val discordId = user.discordIdOrNull()
             ?: return "redirect:/dnd/campaign"
+
+        val tplIds = templateIds.orEmpty()
+        val tplQtys = templateQtys.orEmpty()
+        val expandedTemplateIds = tplIds.flatMapIndexed { i, id ->
+            val qty = tplQtys.getOrElse(i) { 1 }.coerceAtLeast(0)
+            List(qty) { id }
+        }
 
         val names = adhocNames.orEmpty()
         val mods = adhocMods.orEmpty()
@@ -421,7 +429,7 @@ class CampaignController(
         }
         val request = InitiativeRollRequest(
             playerDiscordIds = playerDiscordIds.orEmpty(),
-            templateIds = templateIds.orEmpty(),
+            templateIds = expandedTemplateIds,
             adhocMonsters = adhoc
         )
 

@@ -1099,4 +1099,60 @@ class CampaignWebServiceTest {
             )
         }
     }
+
+    @Test
+    fun `rollInitiative suffixes duplicate names with hash-index`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(
+                templateIds = listOf(77L, 77L),
+                adhocMonsters = listOf(
+                    AdhocMonster("Goblin", 2),
+                    AdhocMonster("Kobold", 1)
+                )
+            )
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    val names = seeded.map { it.name }.sorted()
+                    names == listOf("Goblin #1", "Goblin #2", "Goblin #3", "Kobold")
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative leaves unique names untouched`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(
+                templateIds = listOf(77L),
+                adhocMonsters = listOf(AdhocMonster("Bugbear", 1))
+            )
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    seeded.map { it.name }.toSet() == setOf("Goblin", "Bugbear")
+                }
+            )
+        }
+    }
 }

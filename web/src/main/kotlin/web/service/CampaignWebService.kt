@@ -595,7 +595,8 @@ class CampaignWebService(
             )
         }
 
-        val sorted = entries.sortedByDescending { it.roll }
+        val disambiguated = disambiguateDuplicates(entries)
+        val sorted = disambiguated.sortedByDescending { it.roll }
         initiativeStore.seed(guildId, sorted)
 
         sessionLog.publish(
@@ -615,6 +616,25 @@ class CampaignWebService(
             )
         )
         return RollInitiativeResult.ROLLED
+    }
+
+    /**
+     * When the same name appears more than once in the roster (e.g. two Goblins
+     * from a template picked with quantity = 2, or two ad-hoc rows named
+     * "Kobold"), suffix each occurrence with a 1-based index so the turn table
+     * can tell them apart. Names that appear only once are left untouched.
+     */
+    private fun disambiguateDuplicates(entries: List<InitiativeEntryData>): List<InitiativeEntryData> {
+        val counts = entries.groupingBy { it.name }.eachCount()
+        val seen = mutableMapOf<String, Int>()
+        return entries.map { entry ->
+            if ((counts[entry.name] ?: 0) <= 1) entry
+            else {
+                val idx = (seen[entry.name] ?: 0) + 1
+                seen[entry.name] = idx
+                entry.copy(name = "${entry.name} #$idx")
+            }
+        }
     }
 
     private fun rollD20(): Int = Random.nextInt(1, 21)
