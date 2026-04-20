@@ -39,7 +39,7 @@ class CampaignShutdownHook(
             runCatching {
                 campaign.state = objectMapper.writeValueAsString(snapshot)
                 campaignService.updateCampaign(campaign)
-            }.onFailure { logger.error("Failed to persist state for guild $guildId", it) }
+            }.onFailure { logger.error("Failed to persist state for guild $guildId: ${it.message}") }
         }
     }
 }
