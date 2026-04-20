@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import common.events.CampaignEventType
 import common.helpers.parseDndBeyondCharacterId
+import common.logging.DiscordLogger
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
@@ -138,6 +139,7 @@ class CampaignWebService(
     private val objectMapper = ObjectMapper()
     private val payloadTypeRef =
         object : com.fasterxml.jackson.core.type.TypeReference<Map<String, Any?>>() {}
+    private val logger = DiscordLogger(CampaignWebService::class.java)
 
     companion object {
         const val MAX_NOTE_BODY_LENGTH = 2000
@@ -195,22 +197,24 @@ class CampaignWebService(
         val currentUserCharacterId = userService.getUserById(requestingDiscordId, guildId)?.dndBeyondCharacterId
         val isDm = campaign.dmDiscordId == requestingDiscordId
 
-        val notes = sessionNoteService.getNotesForCampaign(campaign.id).map { note ->
-            val authorName = guild?.getMemberById(note.authorDiscordId)?.effectiveName
-                ?: "Unknown (ID: ${note.authorDiscordId})"
-            SessionNoteView(
-                id = note.id,
-                authorDiscordId = note.authorDiscordId,
-                authorName = authorName,
-                body = note.body,
-                createdAt = note.createdAt,
-                canDelete = isDm || note.authorDiscordId == requestingDiscordId
-            )
+        val notes = safeFetch("session notes", campaign.id) {
+            sessionNoteService.getNotesForCampaign(campaign.id).map { note ->
+                val authorName = guild?.getMemberById(note.authorDiscordId)?.effectiveName
+                    ?: "Unknown (ID: ${note.authorDiscordId})"
+                SessionNoteView(
+                    id = note.id,
+                    authorDiscordId = note.authorDiscordId,
+                    authorName = authorName,
+                    body = note.body,
+                    createdAt = note.createdAt,
+                    canDelete = isDm || note.authorDiscordId == requestingDiscordId
+                )
+            }
         }
 
-        val recentEvents = campaignEventService
-            .listRecent(campaign.id, DEFAULT_EVENT_LIMIT)
-            .map(::toSessionEventView)
+        val recentEvents = safeFetch("recent events", campaign.id) {
+            campaignEventService.listRecent(campaign.id, DEFAULT_EVENT_LIMIT).map(::toSessionEventView)
+        }
 
         val initiativeState = if (initiativeStore.isActive(guildId)) {
             InitiativeStateView(
@@ -222,7 +226,9 @@ class CampaignWebService(
         } else null
 
         val monsterLibrary = if (isDm) {
-            monsterTemplateService.listByDm(requestingDiscordId).map(::toMonsterTemplateView)
+            safeFetch("monster library", requestingDiscordId) {
+                monsterTemplateService.listByDm(requestingDiscordId).map(::toMonsterTemplateView)
+            }
         } else emptyList()
 
         return CampaignDetail(
@@ -237,6 +243,18 @@ class CampaignWebService(
             monsterLibrary = monsterLibrary
         )
     }
+
+    /**
+     * Fetch an optional side-section of the campaign detail page. If the
+     * backing table doesn't exist yet (e.g. a migration hasn't applied on this
+     * environment), return an empty list rather than 500-ing the whole page.
+     * The main [CampaignDto] query still governs hard failures.
+     */
+    private fun <T> safeFetch(label: String, scope: Any, block: () -> List<T>): List<T> =
+        runCatching(block).getOrElse { t ->
+            logger.warn("Dropping $label for $scope: ${t::class.simpleName}: ${t.message}")
+            emptyList()
+        }
 
     private fun toMonsterTemplateView(dto: MonsterTemplateDto): MonsterTemplateView =
         MonsterTemplateView(
