@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_22
+import static org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
 
 plugins {
     id 'java'
@@ -82,13 +82,13 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(22)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
 tasks.withType(KotlinCompile).configureEach {
     compilerOptions {
-        jvmTarget.set(JVM_22)
+        jvmTarget.set(JVM_21)
     }
 }
 
@@ -97,7 +97,7 @@ test {
 }
 
 kotlin {
-    jvmToolchain(22)
+    jvmToolchain(21)
 }
 
 configurations {
