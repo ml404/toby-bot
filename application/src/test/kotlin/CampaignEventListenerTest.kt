@@ -1,5 +1,6 @@
 import common.events.CampaignEventOccurred
 import common.events.CampaignEventType
+import database.configuration.CampaignEventListener
 import database.dto.CampaignDto
 import database.dto.CampaignEventDto
 import database.service.CampaignEventService

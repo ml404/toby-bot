@@ -1,3 +1,5 @@
+package database.configuration
+
 import common.events.CampaignEventOccurred
 import common.logging.DiscordLogger
 import database.dto.CampaignEventDto
