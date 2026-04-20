@@ -3,6 +3,7 @@ package bot.toby.command.commands.dnd
 import bot.toby.dto.web.dnd.CharacterSheet
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.charactersheet.CharacterSheetProvider
+import common.helpers.parseDndBeyondCharacterId
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
@@ -39,7 +40,7 @@ class LinkCharacterCommand @Autowired constructor(
         val hook = event.hook
 
         val input = event.getOption(CHARACTER)?.asString ?: ""
-        val characterId = extractCharacterId(input)
+        val characterId = parseDndBeyondCharacterId(input)
 
         if (characterId == null) {
             hook.sendMessage("Could not extract a valid character ID from: `$input`. Please provide a D&D Beyond character URL or numeric ID.")
@@ -75,9 +76,6 @@ class LinkCharacterCommand @Autowired constructor(
             }
         }
     }
-
-    internal fun extractCharacterId(input: String): Long? =
-        Regex("(\\d+)").findAll(input).lastOrNull()?.value?.toLongOrNull()
 
     private fun formatModifier(mod: Int): String = if (mod >= 0) "+$mod" else "$mod"
 }

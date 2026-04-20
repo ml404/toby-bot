@@ -16,8 +16,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -132,11 +130,4 @@ class LinkCharacterCommandTest : CommandTest {
         verify { event.hook.sendMessage(any<String>()) }
     }
 
-    @Test
-    fun `extractCharacterId correctly parses various URL formats`() {
-        assertEquals(48690485L, command.extractCharacterId("https://www.dndbeyond.com/characters/48690485"))
-        assertEquals(48690485L, command.extractCharacterId("48690485"))
-        assertEquals(48690485L, command.extractCharacterId("https://character-service.dndbeyond.com/character/v5/character/48690485"))
-        assertNull(command.extractCharacterId("not-a-valid-url"))
-    }
 }
