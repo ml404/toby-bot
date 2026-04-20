@@ -1,0 +1,177 @@
+/* ============================================================
+   Combat cinematic — flying d20, damage floaters, defeat glyph
+   Driven from sessionLog.js on ATTACK_HIT / ATTACK_MISS /
+   DAMAGE_DEALT / PARTICIPANT_DEFEATED events. All overlay
+   elements live in #combat-stage which is fixed to the viewport
+   and pointer-events:none so they never eat clicks.
+   ============================================================ */
+
+#combat-stage {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 90;
+}
+
+.attack-die {
+    --duration: 700ms;
+    --start-x: 0px;
+    --start-y: 0px;
+    --end-x: 0px;
+    --end-y: 0px;
+    --face-color: #fff;
+    position: absolute;
+    left: var(--start-x);
+    top: var(--start-y);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #5865F2, #2e3a5c);
+    border: 1px solid #5865F2;
+    color: var(--face-color);
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 1.05rem;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(88, 101, 242, 0.55);
+    transform: translate(0, 0) rotate3d(1, 1, 0.5, 0deg) scale(0.65);
+    opacity: 0;
+    animation: attack-die-flight var(--duration) cubic-bezier(.2, .7, .3, 1) forwards;
+}
+.attack-die__face {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes attack-die-flight {
+    0%   { transform: translate(0, 0) rotate3d(1, 1, 0.5, 0deg) scale(0.7); opacity: 0; }
+    10%  { opacity: 1; }
+    50%  { transform: translate(calc((var(--end-x) - var(--start-x)) * 0.5), calc((var(--end-y) - var(--start-y)) * 0.5 - 60px)) rotate3d(1, 1, 0.5, 540deg) scale(1); }
+    100% { transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) rotate3d(1, 1, 0.5, 1080deg) scale(1.15); opacity: 1; }
+}
+
+.attack-die.settling {
+    animation: attack-die-settle 380ms ease-out forwards;
+}
+@keyframes attack-die-settle {
+    0%   { transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) rotate(0deg) scale(1.4); }
+    60%  { transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) rotate(0deg) scale(0.9); }
+    100% { transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) rotate(0deg) scale(1.05); }
+}
+.attack-die.fading {
+    transition: opacity 320ms ease-out, transform 320ms ease-out;
+    opacity: 0;
+    transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y) - 30px)) scale(0.85);
+}
+
+.attack-die.hit {
+    background: linear-gradient(135deg, #e74c3c, #7a2218);
+    border-color: #e74c3c;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 26px rgba(231, 76, 60, 0.7);
+}
+.attack-die.miss {
+    background: linear-gradient(135deg, #6a6a80, #2a2a3a);
+    border-color: #6a6a80;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(160, 160, 176, 0.45);
+    --face-color: #d0d0d8;
+}
+.attack-die.crit {
+    background: linear-gradient(135deg, #f1c40f, #b8860b);
+    border-color: #f1c40f;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 36px rgba(241, 196, 15, 0.85);
+    animation-name: attack-die-flight, crit-shake;
+    animation-duration: var(--duration), 360ms;
+    animation-delay: 0s, var(--duration);
+    animation-iteration-count: 1, 2;
+}
+.attack-die.fumble {
+    background: linear-gradient(135deg, #c0392b, #5a1a14);
+    border-color: #c0392b;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 36px rgba(192, 57, 43, 0.8);
+}
+.attack-die.fumble.fading {
+    transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) scale(0) rotate(45deg);
+    opacity: 0;
+}
+@keyframes crit-shake {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: -3px 1px; }
+    75%      { translate: 3px -1px; }
+}
+
+.damage-floater {
+    --start-x: 0px;
+    --start-y: 0px;
+    position: absolute;
+    left: var(--start-x);
+    top: var(--start-y);
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: #ff6b5b;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 0 12px rgba(231, 76, 60, 0.55);
+    pointer-events: none;
+    animation: damage-float 900ms cubic-bezier(.2, .8, .2, 1) forwards;
+    transform: translate(-50%, 0);
+}
+@keyframes damage-float {
+    0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.7); }
+    15%  { opacity: 1; transform: translate(-50%, -4px) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -48px) scale(1); }
+}
+
+.defeat-skull {
+    position: absolute;
+    left: var(--start-x);
+    top: var(--start-y);
+    font-size: 2.4rem;
+    pointer-events: none;
+    animation: defeat-skull 1100ms ease-out forwards;
+    transform: translate(-50%, -50%) scale(0.4) rotate(-15deg);
+    opacity: 0;
+    filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.6));
+}
+@keyframes defeat-skull {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-15deg); }
+    25%  { opacity: 1; transform: translate(-50%, -50%) scale(1.4) rotate(0deg); }
+    70%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%, -64px) scale(1) rotate(8deg); }
+}
+
+@media (max-width: 480px) {
+    .attack-die {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+        --duration: 500ms;
+    }
+    /* Mobile: 2D spin only — much cheaper on mid-range Android. */
+    @keyframes attack-die-flight {
+        0%   { transform: translate(0, 0) rotate(0deg) scale(0.7); opacity: 0; }
+        10%  { opacity: 1; }
+        50%  { transform: translate(calc((var(--end-x) - var(--start-x)) * 0.5), calc((var(--end-y) - var(--start-y)) * 0.5 - 36px)) rotate(360deg) scale(1); }
+        100% { transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) rotate(720deg) scale(1.1); opacity: 1; }
+    }
+    .damage-floater { font-size: 1.15rem; }
+    .defeat-skull { font-size: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .attack-die,
+    .attack-die.settling,
+    .attack-die.fading,
+    .damage-floater,
+    .defeat-skull {
+        animation: none;
+        transition: opacity 200ms ease-out;
+    }
+    .attack-die {
+        opacity: 1;
+        transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) scale(1);
+    }
+    .attack-die.crit { animation: none; }
+    .damage-floater { opacity: 1; transform: translate(-50%, -20px); }
+    .defeat-skull { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
