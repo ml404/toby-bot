@@ -1066,13 +1066,16 @@
                 <tr><th>Name</th><th>Init</th><th>HP</th><th>AC</th><th></th></tr>
                 </thead>
                 <tbody>
-                <tr th:each="tpl : ${monsterLibrary}" class="row-form">
+                <tr th:each="tpl,iter : ${monsterLibrary}" class="row-form">
                     <form th:action="@{/dnd/campaign/{id}/monsters/templates(id=${guildId})}" method="post"
                           style="display:contents;">
                         <input type="hidden" name="id" th:value="${tpl.id}">
                         <td><input type="text" name="name" th:value="${tpl.name}" maxlength="100" required></td>
                         <td><input type="number" name="initiativeModifier" th:value="${tpl.initiativeModifier}"></td>
-                        <td><input type="number" name="maxHp" th:value="${tpl.maxHp}"></td>
+                        <td><input type="text" name="hpExpression" th:value="${tpl.hpExpression}"
+                                   maxlength="32" placeholder="HP or 3d20+30"
+                                   pattern="^\s*(\d+|\d*[dD]\d+([+-]\d+)?)\s*$"
+                                   title="Plain integer or dice expression like 3d20+30"></td>
                         <td><input type="number" name="ac" th:value="${tpl.ac}"></td>
                         <td>
                             <button type="submit" class="btn-xs" title="Save changes">Save</button>
@@ -1087,6 +1090,45 @@
                         </form>
                     </td>
                 </tr>
+                <tr class="row-attacks">
+                    <td colspan="6" style="padding:4px 8px 10px;">
+                        <details style="margin-left:8px;">
+                            <summary style="cursor:pointer;color:#a0a0b0;font-size:0.85rem;">
+                                Attacks (<span th:text="${#lists.size(tpl.attacks)}">0</span>)
+                            </summary>
+                            <ul th:if="${not #lists.isEmpty(tpl.attacks)}"
+                                style="list-style:none;padding:6px 0 0 0;margin:0;display:flex;flex-direction:column;gap:4px;">
+                                <li th:each="atk : ${tpl.attacks}"
+                                    style="display:flex;gap:8px;align-items:center;font-size:0.85rem;">
+                                    <span th:text="${atk.name}" style="min-width:120px;">Bite</span>
+                                    <span th:text="${(atk.toHitModifier >= 0 ? '+' : '') + atk.toHitModifier}"
+                                          style="min-width:40px;color:#a0a0b0;">+5</span>
+                                    <span th:text="${atk.damageExpression}" style="min-width:80px;color:#a0a0b0;">2d6+3</span>
+                                    <form th:action="@{/dnd/campaign/{gid}/monsters/templates/{tid}/attacks/{aid}/delete(gid=${guildId},tid=${tpl.id},aid=${atk.id})}"
+                                          method="post"
+                                          th:onsubmit="|return confirm('Delete attack ${atk.name}?');|"
+                                          style="margin:0;">
+                                        <button type="submit" class="btn-xs kick" title="Delete attack">Delete</button>
+                                    </form>
+                                </li>
+                            </ul>
+                            <form th:action="@{/dnd/campaign/{gid}/monsters/templates/{tid}/attacks(gid=${guildId},tid=${tpl.id})}"
+                                  method="post"
+                                  style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                                <input type="text" name="name" placeholder="Attack name" maxlength="60" required
+                                       style="min-width:140px;">
+                                <input type="number" name="toHitModifier" placeholder="+hit" value="0" min="-30" max="30"
+                                       style="width:70px;">
+                                <input type="text" name="damageExpression" placeholder="Damage (e.g. 2d6+3)"
+                                       maxlength="32" required
+                                       pattern="^\s*(\d+|\d*[dD]\d+([+-]\d+)?)\s*$"
+                                       title="Plain integer or dice expression like 2d6+3"
+                                       style="min-width:140px;">
+                                <button type="submit" class="btn-xs" title="Add attack">Add attack</button>
+                            </form>
+                        </details>
+                    </td>
+                </tr>
                 </tbody>
             </table>
             <p th:if="${#lists.isEmpty(monsterLibrary)}" class="empty">
@@ -1098,8 +1140,11 @@
                        style="flex:1;min-width:160px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
                 <input type="number" name="initiativeModifier" placeholder="init" value="0"
                        style="width:70px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
-                <input type="number" name="maxHp" placeholder="HP"
-                       style="width:70px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
+                <input type="text" name="hpExpression" placeholder="HP or 3d20+30"
+                       maxlength="32"
+                       pattern="^\s*(\d+|\d*[dD]\d+([+-]\d+)?)\s*$"
+                       title="Plain integer or dice expression like 3d20+30"
+                       style="width:120px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
                 <input type="number" name="ac" placeholder="AC"
                        style="width:70px;padding:6px 8px;border-radius:4px;border:1px solid #2a2a4a;background:#1a1a2e;color:#e0e0e0;font-size:0.85rem;">
                 <button type="submit" class="btn btn-primary">Add template</button>
@@ -1128,7 +1173,7 @@
                         <span class="picker-name" th:text="${tpl.name}">Goblin</span>
                         <span class="picker-meta"
                               th:text="${'+' + tpl.initiativeModifier
-                                         + (tpl.maxHp != null ? ' · HP ' + tpl.maxHp : '')
+                                         + (tpl.hpExpression != null ? ' · HP ' + tpl.hpExpression : '')
                                          + (tpl.ac != null ? ' · AC ' + tpl.ac : '')}">+2</span>
                     </div>
                 </div>
@@ -1136,13 +1181,19 @@
                     <div class="row">
                         <input type="text" name="adhocName" placeholder="Ad-hoc monster name (optional)" maxlength="100">
                         <input type="number" name="adhocMod" placeholder="init" value="0">
-                        <input type="number" name="adhocHp" placeholder="HP" min="0" max="1000">
+                        <input type="text" name="adhocHpExpr" placeholder="HP or 3d20+30"
+                               maxlength="32"
+                               pattern="^\s*(\d+|\d*[dD]\d+([+-]\d+)?)\s*$"
+                               title="Plain integer or dice expression like 3d20+30">
                         <input type="number" name="adhocAc" placeholder="AC" min="0" max="50">
                     </div>
                     <div class="row">
                         <input type="text" name="adhocName" placeholder="Ad-hoc monster name (optional)" maxlength="100">
                         <input type="number" name="adhocMod" placeholder="init" value="0">
-                        <input type="number" name="adhocHp" placeholder="HP" min="0" max="1000">
+                        <input type="text" name="adhocHpExpr" placeholder="HP or 3d20+30"
+                               maxlength="32"
+                               pattern="^\s*(\d+|\d*[dD]\d+([+-]\d+)?)\s*$"
+                               title="Plain integer or dice expression like 3d20+30">
                         <input type="number" name="adhocAc" placeholder="AC" min="0" max="50">
                     </div>
                 </div>
@@ -1192,6 +1243,25 @@
                             <label>Mod</label>
                             <input type="number" name="attackModifier" value="0" min="-30" max="30">
                             <button type="submit" class="btn btn-primary btn-sm">🎯 Attack</button>
+                        </form>
+                        <form th:if="${entry.kind == 'MONSTER' and entry.templateId != null and not #lists.isEmpty(entry.attacks)}"
+                              th:action="@{/dnd/campaign/{id}/combat/monster-attack(id=${guildId})}" method="post" class="row">
+                            <label>Monster attack</label>
+                            <select name="attackId" required>
+                                <option th:each="atk : ${entry.attacks}"
+                                        th:value="${atk.id}"
+                                        th:text="${atk.name + ' (' + (atk.toHitModifier >= 0 ? '+' : '') + atk.toHitModifier + ', ' + atk.damageExpression + ')'}">
+                                    Bite (+5, 2d6+3)
+                                </option>
+                            </select>
+                            <label>Target</label>
+                            <select name="targetName" required>
+                                <option th:each="t : ${initiativeState.entries}"
+                                        th:if="${t.name != entry.name and not t.defeated}"
+                                        th:value="${t.name}"
+                                        th:text="${t.name + (t.ac != null ? ' (AC ' + t.ac + ')' : '')}">Target</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm">🗡️ Roll attack</button>
                         </form>
                         <form th:action="@{/dnd/campaign/{id}/combat/damage(id=${guildId})}" method="post" class="row">
                             <label>Damage</label>
@@ -1321,23 +1391,26 @@
                                     : 'marked MISS'}">marked MISS</span>
                     <span th:case="'ATTACK_HIT'"
                           th:text="${event.payload['attacker'] + ' hits ' + event.payload['target'] +
+                                    (event.payload['attackName'] != null ? ' with ' + event.payload['attackName'] : '') +
                                     ' — ' + event.payload['total'] +
                                     (event.payload['targetAc'] != null ? ' vs AC ' + event.payload['targetAc'] : '')}">
-                        hits Target — 18 vs AC 15
+                        hits Target with Bite — 18 vs AC 15
                     </span>
                     <span th:case="'ATTACK_MISS'"
                           th:text="${event.payload['attacker'] + ' misses ' + event.payload['target'] +
+                                    (event.payload['attackName'] != null ? ' with ' + event.payload['attackName'] : '') +
                                     ' — ' + event.payload['total'] +
                                     (event.payload['targetAc'] != null ? ' vs AC ' + event.payload['targetAc'] : '')}">
-                        misses Target — 7 vs AC 15
+                        misses Target with Bite — 7 vs AC 15
                     </span>
                     <span th:case="'DAMAGE_DEALT'"
                           th:text="${event.payload['target'] + ' takes ' +
                                     (event.payload['expression'] != null
                                         ? event.payload['expression'] + ' = ' + event.payload['amount']
                                         : event.payload['amount']) + ' damage' +
+                                    (event.payload['attackName'] != null ? ' from ' + event.payload['attackName'] : '') +
                                     (event.payload['remainingHp'] != null ? ' (' + event.payload['remainingHp'] + ' HP left)' : '')}">
-                        Target takes 6 damage (1 HP left)
+                        Target takes 6 damage from Bite (1 HP left)
                     </span>
                     <span th:case="'HEAL_APPLIED'"
                           th:text="${(event.payload['healer'] != null ? event.payload['healer'] + ' heals ' : 'heals ') +

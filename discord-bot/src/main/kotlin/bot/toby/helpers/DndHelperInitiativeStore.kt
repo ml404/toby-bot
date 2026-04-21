@@ -25,7 +25,8 @@ class DndHelperInitiativeStore(
                     maxHp = it.maxHp,
                     currentHp = it.currentHp,
                     ac = it.ac,
-                    defeated = it.defeated
+                    defeated = it.defeated,
+                    templateId = it.templateId
                 )
             }
         )
@@ -66,6 +67,7 @@ class DndHelperInitiativeStore(
         maxHp = entry.maxHp,
         currentHp = entry.currentHp,
         ac = entry.ac,
-        defeated = entry.defeated
+        defeated = entry.defeated,
+        templateId = entry.templateId
     )
 }

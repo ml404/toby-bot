@@ -56,5 +56,11 @@ data class InitiativeEntryData(
     val maxHp: Int? = null,
     val currentHp: Int? = null,
     val ac: Int? = null,
-    val defeated: Boolean = false
+    val defeated: Boolean = false,
+    /**
+     * `MonsterTemplateDto.id` for monsters spawned from a saved template, so
+     * combat code can resolve the monster's attack list. Null for ad-hoc
+     * monsters and players.
+     */
+    val templateId: Long? = null
 )

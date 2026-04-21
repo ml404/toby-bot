@@ -73,14 +73,14 @@ class InitiativeState {
     fun snapshot(): InitiativeStateSnapshot = InitiativeStateSnapshot(
         initiativeIndex = initiativeIndex.get(),
         entries = sortedEntries.map {
-            InitiativeEntry(it.name, it.roll, it.kind, it.maxHp, it.currentHp, it.ac, it.defeated)
+            InitiativeEntry(it.name, it.roll, it.kind, it.maxHp, it.currentHp, it.ac, it.defeated, it.templateId)
         }
     )
 
     fun restoreFrom(snapshot: InitiativeStateSnapshot) {
         initiativeIndex.set(snapshot.initiativeIndex)
         sortedEntries = LinkedList(snapshot.entries.map {
-            RolledEntry(it.name, it.roll, it.kind, it.maxHp, it.currentHp, it.ac, it.defeated)
+            RolledEntry(it.name, it.roll, it.kind, it.maxHp, it.currentHp, it.ac, it.defeated, it.templateId)
         })
     }
 
@@ -134,7 +134,8 @@ data class RolledEntry(
     val maxHp: Int? = null,
     val currentHp: Int? = null,
     val ac: Int? = null,
-    val defeated: Boolean = false
+    val defeated: Boolean = false,
+    val templateId: Long? = null
 )
 
 /** JSON-friendly snapshot of an [InitiativeState], persisted in CampaignDto.state. */
@@ -150,5 +151,6 @@ data class InitiativeEntry(
     val maxHp: Int? = null,
     val currentHp: Int? = null,
     val ac: Int? = null,
-    val defeated: Boolean = false
+    val defeated: Boolean = false,
+    val templateId: Long? = null
 )

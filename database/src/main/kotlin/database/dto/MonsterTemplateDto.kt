@@ -35,8 +35,8 @@ class MonsterTemplateDto(
     @Column(name = "initiative_modifier", nullable = false)
     var initiativeModifier: Int = 0,
 
-    @Column(name = "max_hp")
-    var maxHp: Int? = null,
+    @Column(name = "hp_expression", length = 32)
+    var hpExpression: String? = null,
 
     @Column(name = "ac")
     var ac: Int? = null,

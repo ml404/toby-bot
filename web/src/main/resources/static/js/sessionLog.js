@@ -93,16 +93,19 @@
                 return 'marked as MISS' + (p.target ? ' on ' + p.target : '');
             case 'ATTACK_HIT': {
                 const ac = (p.targetAc != null) ? ' vs AC ' + p.targetAc : '';
-                return (p.attacker || '?') + ' hits ' + (p.target || '?') + ' — ' + p.total + ac;
+                const weapon = p.attackName ? ' with ' + p.attackName : '';
+                return (p.attacker || '?') + ' hits ' + (p.target || '?') + weapon + ' — ' + p.total + ac;
             }
             case 'ATTACK_MISS': {
                 const ac = (p.targetAc != null) ? ' vs AC ' + p.targetAc : '';
-                return (p.attacker || '?') + ' misses ' + (p.target || '?') + ' — ' + p.total + ac;
+                const weapon = p.attackName ? ' with ' + p.attackName : '';
+                return (p.attacker || '?') + ' misses ' + (p.target || '?') + weapon + ' — ' + p.total + ac;
             }
             case 'DAMAGE_DEALT': {
                 const remaining = (p.remainingHp != null) ? ' (' + p.remainingHp + ' HP left)' : '';
                 const amt = p.expression ? (p.expression + ' = ' + p.amount) : p.amount;
-                return (p.target || '?') + ' takes ' + amt + ' damage' + remaining;
+                const weapon = p.attackName ? ' from ' + p.attackName : '';
+                return (p.target || '?') + ' takes ' + amt + ' damage' + weapon + remaining;
             }
             case 'HEAL_APPLIED': {
                 const hp = (p.remainingHp != null && p.maxHp != null)
