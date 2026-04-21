@@ -1,11 +1,13 @@
 package web.service
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import common.events.CampaignEventType
 import common.helpers.parseDndBeyondCharacterId
 import common.logging.DiscordLogger
 import database.dto.CampaignDto
+import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
 import database.dto.MonsterTemplateDto
@@ -179,7 +181,7 @@ class CampaignWebService(
 
     private val objectMapper = ObjectMapper()
     private val payloadTypeRef =
-        object : com.fasterxml.jackson.core.type.TypeReference<Map<String, Any?>>() {}
+        object : TypeReference<Map<String, Any?>>() {}
     private val logger = DiscordLogger(CampaignWebService::class.java)
 
     companion object {
@@ -341,7 +343,7 @@ class CampaignWebService(
         return events.map(::toSessionEventView)
     }
 
-    private fun toSessionEventView(dto: database.dto.CampaignEventDto): SessionEventView {
+    private fun toSessionEventView(dto: CampaignEventDto): SessionEventView {
         val parsed = runCatching { objectMapper.readValue(dto.payload, payloadTypeRef) }
             .getOrDefault(emptyMap())
         return SessionEventView(

@@ -1,5 +1,6 @@
 package web.service
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import database.dto.CampaignEventDto
 import org.springframework.stereotype.Service
@@ -52,7 +53,7 @@ class CampaignEventBroadcaster(private val objectMapper: ObjectMapper) {
     fun subscriberCount(campaignId: Long): Int = emitters[campaignId]?.size ?: 0
 
     private val payloadTypeRef =
-        object : com.fasterxml.jackson.core.type.TypeReference<Map<String, Any?>>() {}
+        object : TypeReference<Map<String, Any?>>() {}
 
     private fun toSessionEventView(dto: CampaignEventDto): SessionEventView {
         val parsed = runCatching { objectMapper.readValue(dto.payload, payloadTypeRef) }

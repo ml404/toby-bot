@@ -344,7 +344,7 @@ class CampaignController(
             NarrateResult.EMPTY_BODY -> ra.addFlashAttribute("error", "Narration can't be empty.")
             NarrateResult.BODY_TOO_LONG -> ra.addFlashAttribute(
                 "error",
-                "Narration is too long (max ${web.service.CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
+                "Narration is too long (max ${CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
@@ -378,7 +378,7 @@ class CampaignController(
             SaveTemplateResult.NAME_BLANK -> ra.addFlashAttribute("error", "Monster name can't be empty.")
             SaveTemplateResult.NAME_TOO_LONG -> ra.addFlashAttribute(
                 "error",
-                "Monster name is too long (max ${web.service.CampaignWebService.MAX_TEMPLATE_NAME_LENGTH} characters)."
+                "Monster name is too long (max ${CampaignWebService.MAX_TEMPLATE_NAME_LENGTH} characters)."
             )
             SaveTemplateResult.NOT_FOUND -> ra.addFlashAttribute("error", "That template doesn't exist.")
             SaveTemplateResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own templates.")
@@ -492,11 +492,11 @@ class CampaignController(
             )
             RollDiceResult.INVALID_COUNT -> ra.addFlashAttribute(
                 "error",
-                "Dice count must be between 1 and ${web.service.CampaignWebService.MAX_DICE_COUNT}."
+                "Dice count must be between 1 and ${CampaignWebService.MAX_DICE_COUNT}."
             )
             RollDiceResult.INVALID_MODIFIER -> ra.addFlashAttribute(
                 "error",
-                "Modifier must be between -${web.service.CampaignWebService.MAX_DICE_MODIFIER} and ${web.service.CampaignWebService.MAX_DICE_MODIFIER}."
+                "Modifier must be between -${CampaignWebService.MAX_DICE_MODIFIER} and ${CampaignWebService.MAX_DICE_MODIFIER}."
             )
             RollDiceResult.INVALID_EXPRESSION -> ra.addFlashAttribute(
                 "error",
@@ -531,7 +531,7 @@ class CampaignController(
             AttackResult.CANT_TARGET_SELF -> ra.addFlashAttribute("error", "You can't attack yourself.")
             AttackResult.INVALID_MODIFIER -> ra.addFlashAttribute(
                 "error",
-                "Attack modifier must be between -${web.service.CampaignWebService.MAX_ATTACK_MODIFIER} and ${web.service.CampaignWebService.MAX_ATTACK_MODIFIER}."
+                "Attack modifier must be between -${CampaignWebService.MAX_ATTACK_MODIFIER} and ${CampaignWebService.MAX_ATTACK_MODIFIER}."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
@@ -559,7 +559,7 @@ class CampaignController(
             ApplyDamageResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
             ApplyDamageResult.INVALID_AMOUNT -> ra.addFlashAttribute(
                 "error",
-                "Damage must be a number (0-${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 2d6+3."
+                "Damage must be a number (0-${CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 2d6+3."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
@@ -591,7 +591,7 @@ class CampaignController(
             )
             ApplyHealResult.INVALID_AMOUNT -> ra.addFlashAttribute(
                 "error",
-                "Heal must be a number (0-${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 1d8+2."
+                "Heal must be a number (0-${CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 1d8+2."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
