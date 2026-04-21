@@ -158,16 +158,7 @@ enum class MonsterAttackResult {
 
 data class MonsterAttackOutcome(
     val result: MonsterAttackResult,
-    val attacker: String? = null,
-    val target: String? = null,
     val attackName: String? = null,
-    val rawRoll: Int? = null,
-    val toHit: Int? = null,
-    val total: Int? = null,
-    val targetAc: Int? = null,
-    val damageTotal: Int? = null,
-    val damageExpression: String? = null,
-    val damageRolls: List<Int>? = null,
     val targetDefeated: Boolean = false
 )
 enum class RollInitiativeResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_ROSTER, TEMPLATE_NOT_FOUND }
@@ -873,21 +864,13 @@ class CampaignWebService(
         if (!hit) {
             return MonsterAttackOutcome(
                 result = MonsterAttackResult.MISS,
-                attacker = current.name,
-                target = target.name,
-                attackName = attack.name,
-                rawRoll = raw,
-                toHit = attack.toHitModifier,
-                total = total,
-                targetAc = target.ac
+                attackName = attack.name
             )
         }
 
         val rolledDamage = DiceExpressionRoller.parseAmount(attack.damageExpression)
             ?: return MonsterAttackOutcome(
                 result = MonsterAttackResult.INVALID_DAMAGE,
-                attacker = current.name,
-                target = target.name,
                 attackName = attack.name
             )
         val updated = initiativeStore.applyDamage(guildId, target.name, rolledDamage.total)
@@ -922,16 +905,7 @@ class CampaignWebService(
 
         return MonsterAttackOutcome(
             result = MonsterAttackResult.HIT,
-            attacker = current.name,
-            target = updated.name,
             attackName = attack.name,
-            rawRoll = raw,
-            toHit = attack.toHitModifier,
-            total = total,
-            targetAc = target.ac,
-            damageTotal = rolledDamage.total,
-            damageExpression = rolledDamage.expression,
-            damageRolls = rolledDamage.rolls,
             targetDefeated = updated.defeated
         )
     }

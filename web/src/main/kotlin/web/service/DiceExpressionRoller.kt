@@ -49,7 +49,7 @@ object DiceExpressionRoller {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return null
         trimmed.toIntOrNull()?.let { literal ->
-            if (literal < 0 || literal > MAX_LITERAL_AMOUNT) return null
+            if (literal !in 0..MAX_LITERAL_AMOUNT) return null
             return RolledAmount(total = literal, expression = null, rolls = null)
         }
         val parsed = parseDiceExpression(trimmed) ?: return null
@@ -65,7 +65,7 @@ object DiceExpressionRoller {
         )
     }
 
-    fun normaliseExpression(parsed: ParsedDice): String {
+    private fun normaliseExpression(parsed: ParsedDice): String {
         val mod = when {
             parsed.modifier > 0 -> "+${parsed.modifier}"
             parsed.modifier < 0 -> parsed.modifier.toString()
