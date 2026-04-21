@@ -690,7 +690,7 @@ class CampaignControllerTest {
 
     @Test
     fun `listMonsterTemplates delegates to service`() {
-        val templates = listOf(MonsterTemplateView(1L, "Goblin", 2, 7, 15))
+        val templates = listOf(MonsterTemplateView(1L, "Goblin", 2, "7", 15))
         every { campaignWebService.listTemplatesForDm(1L) } returns templates
 
         val result = controller.listMonsterTemplates(mockUser)
@@ -710,10 +710,10 @@ class CampaignControllerTest {
     @Test
     fun `saveMonsterTemplate redirects on success`() {
         every {
-            campaignWebService.saveTemplate(1L, null, "Goblin", 2, 7, 15)
+            campaignWebService.saveTemplate(1L, null, "Goblin", 2, "7", 15)
         } returns SaveTemplateResult.SAVED
 
-        val view = controller.saveMonsterTemplate(guildId, null, "Goblin", 2, 7, 15, mockUser, mockRa)
+        val view = controller.saveMonsterTemplate(guildId, null, "Goblin", 2, "7", 15, mockUser, mockRa)
 
         assertEquals("redirect:/dnd/campaign/$guildId", view)
         verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
@@ -774,7 +774,7 @@ class CampaignControllerTest {
             templateQtys = null,
             adhocNames = null,
             adhocMods = null,
-            adhocHps = null,
+            adhocHpExprs = null,
             adhocAcs = null,
             user = mockUser,
             ra = mockRa
@@ -806,7 +806,7 @@ class CampaignControllerTest {
             templateQtys = null,
             adhocNames = listOf("Bugbear", "", "Kobold"),
             adhocMods = listOf("1", "0", "2"),
-            adhocHps = null,
+            adhocHpExprs = null,
             adhocAcs = null,
             user = mockUser,
             ra = mockRa
@@ -832,7 +832,7 @@ class CampaignControllerTest {
             templateQtys = listOf("2", "1", "0"),
             adhocNames = null,
             adhocMods = null,
-            adhocHps = null,
+            adhocHpExprs = null,
             adhocAcs = null,
             user = mockUser,
             ra = mockRa
@@ -847,8 +847,8 @@ class CampaignControllerTest {
                 1L,
                 match<InitiativeRollRequest> { req ->
                     req.adhocMonsters == listOf(
-                        AdhocMonster("Goblin", 0, maxHp = null, ac = null),
-                        AdhocMonster("Kobold", 0, maxHp = null, ac = null)
+                        AdhocMonster("Goblin", 0, hpExpression = null, ac = null),
+                        AdhocMonster("Kobold", 0, hpExpression = null, ac = null)
                     )
                 }
             )
@@ -861,7 +861,7 @@ class CampaignControllerTest {
             templateQtys = null,
             adhocNames = listOf("Goblin", "Kobold"),
             adhocMods = listOf("", ""),
-            adhocHps = listOf("", ""),
+            adhocHpExprs = listOf("", ""),
             adhocAcs = listOf("", ""),
             user = mockUser,
             ra = mockRa

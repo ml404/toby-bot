@@ -17,6 +17,8 @@ import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.dto.MonsterAttackDto
+import database.service.MonsterAttackService
 import database.service.MonsterTemplateService
 import database.service.SessionNoteService
 import database.service.UserService
@@ -52,21 +54,31 @@ data class RolledEntryView(
     val maxHp: Int? = null,
     val currentHp: Int? = null,
     val ac: Int? = null,
-    val defeated: Boolean = false
+    val defeated: Boolean = false,
+    val templateId: Long? = null,
+    val attacks: List<MonsterAttackView> = emptyList()
+)
+
+data class MonsterAttackView(
+    val id: Long,
+    val name: String,
+    val toHitModifier: Int,
+    val damageExpression: String
 )
 
 data class MonsterTemplateView(
     val id: Long,
     val name: String,
     val initiativeModifier: Int,
-    val maxHp: Int?,
-    val ac: Int?
+    val hpExpression: String?,
+    val ac: Int?,
+    val attacks: List<MonsterAttackView> = emptyList()
 )
 
 data class AdhocMonster(
     val name: String,
     val initiativeModifier: Int,
-    val maxHp: Int? = null,
+    val hpExpression: String? = null,
     val ac: Int? = null
 )
 
@@ -129,8 +141,26 @@ enum class AddNoteResult { ADDED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, EMPTY_BOD
 enum class DeleteNoteResult { DELETED, NO_ACTIVE_CAMPAIGN, NOT_FOUND, NOT_ALLOWED }
 enum class AnnotateRollResult { ANNOTATED, NO_ACTIVE_CAMPAIGN, NOT_DM, NOT_FOUND, NOT_A_ROLL, INVALID_KIND }
 enum class NarrateResult { NARRATED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_BODY, BODY_TOO_LONG }
-enum class SaveTemplateResult { SAVED, NAME_BLANK, NAME_TOO_LONG, NOT_FOUND, NOT_OWNER }
+enum class SaveTemplateResult { SAVED, NAME_BLANK, NAME_TOO_LONG, INVALID_HP, NOT_FOUND, NOT_OWNER }
 enum class DeleteTemplateResult { DELETED, NOT_FOUND, NOT_OWNER }
+enum class SaveAttackResult {
+    SAVED, NAME_BLANK, NAME_TOO_LONG, INVALID_MODIFIER, INVALID_DAMAGE,
+    TOO_MANY, TEMPLATE_NOT_FOUND, NOT_OWNER, ATTACK_NOT_FOUND, ATTACK_TEMPLATE_MISMATCH
+}
+enum class DeleteAttackResult { DELETED, ATTACK_NOT_FOUND, NOT_OWNER, ATTACK_TEMPLATE_MISMATCH }
+enum class MonsterAttackResult {
+    HIT, MISS,
+    NO_ACTIVE_CAMPAIGN, NO_ACTIVE_COMBAT, NOT_DM,
+    CURRENT_NOT_MONSTER, NO_TEMPLATE,
+    ATTACK_NOT_FOUND, ATTACK_TEMPLATE_MISMATCH, INVALID_DAMAGE,
+    TARGET_NOT_FOUND, TARGET_DEFEATED, CANT_TARGET_SELF
+}
+
+data class MonsterAttackOutcome(
+    val result: MonsterAttackResult,
+    val attackName: String? = null,
+    val targetDefeated: Boolean = false
+)
 enum class RollInitiativeResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_ROSTER, TEMPLATE_NOT_FOUND }
 enum class RollDiceResult { ROLLED, NO_ACTIVE_CAMPAIGN, NOT_PARTICIPANT, INVALID_SIDES, INVALID_COUNT, INVALID_MODIFIER, INVALID_EXPRESSION }
 
@@ -174,6 +204,7 @@ class CampaignWebService(
     private val sessionNoteService: SessionNoteService,
     private val campaignEventService: CampaignEventService,
     private val monsterTemplateService: MonsterTemplateService,
+    private val monsterAttackService: MonsterAttackService,
     private val initiativeStore: InitiativeStore,
     private val sessionLog: SessionLogPublisher,
     private val jda: JDA
@@ -190,12 +221,13 @@ class CampaignWebService(
         const val DEFAULT_EVENT_LIMIT = 100
         const val FRESH_EVENT_WINDOW_SECONDS = 5L
         const val MAX_TEMPLATE_NAME_LENGTH = 100
-        const val MAX_DICE_COUNT = 20
-        const val MAX_DICE_MODIFIER = 50
+        const val MAX_ATTACK_NAME_LENGTH = 60
+        const val MAX_ATTACKS_PER_TEMPLATE = 12
         const val MAX_ATTACK_MODIFIER = 30
-        const val MAX_DAMAGE_AMOUNT = 1000
-        val ALLOWED_DIE_SIDES = setOf(4, 6, 8, 10, 12, 20, 100)
-        private val DICE_EXPR_REGEX = Regex("^(\\d*)d(\\d+)([+-]\\d+)?$", RegexOption.IGNORE_CASE)
+        const val MAX_DICE_COUNT = DiceExpressionRoller.MAX_DICE_COUNT
+        const val MAX_DICE_MODIFIER = DiceExpressionRoller.MAX_DICE_MODIFIER
+        const val MAX_DAMAGE_AMOUNT = DiceExpressionRoller.MAX_LITERAL_AMOUNT
+        val ALLOWED_DIE_SIDES = DiceExpressionRoller.ALLOWED_DIE_SIDES
     }
 
     fun getMutualGuildsWithCampaigns(accessToken: String): List<GuildCampaignInfo> {
@@ -276,7 +308,11 @@ class CampaignWebService(
                         maxHp = it.maxHp,
                         currentHp = it.currentHp,
                         ac = it.ac,
-                        defeated = it.defeated
+                        defeated = it.defeated,
+                        templateId = it.templateId,
+                        attacks = it.templateId?.let { tid ->
+                            monsterAttackService.listByTemplate(tid).map(::toMonsterAttackView)
+                        } ?: emptyList()
                     )
                 },
                 currentIndex = initiativeStore.currentIndex(guildId)
@@ -328,8 +364,17 @@ class CampaignWebService(
             id = dto.id,
             name = dto.name,
             initiativeModifier = dto.initiativeModifier,
-            maxHp = dto.maxHp,
-            ac = dto.ac
+            hpExpression = dto.hpExpression,
+            ac = dto.ac,
+            attacks = monsterAttackService.listByTemplate(dto.id).map(::toMonsterAttackView)
+        )
+
+    private fun toMonsterAttackView(dto: MonsterAttackDto): MonsterAttackView =
+        MonsterAttackView(
+            id = dto.id,
+            name = dto.name,
+            toHitModifier = dto.toHitModifier,
+            damageExpression = dto.damageExpression
         )
 
     fun listRecentEvents(guildId: Long, sinceId: Long?, limit: Int): List<SessionEventView> {
@@ -602,7 +647,9 @@ class CampaignWebService(
         expression: String? = null
     ): RollDiceResult {
         val trimmedExpr = expression?.trim()?.takeIf { it.isNotEmpty() }
-        val parsed = trimmedExpr?.let { parseDiceExpression(it) ?: return RollDiceResult.INVALID_EXPRESSION }
+        val parsed = trimmedExpr?.let {
+            DiceExpressionRoller.parseDiceExpression(it) ?: return RollDiceResult.INVALID_EXPRESSION
+        }
         val finalCount = parsed?.count ?: count
         val finalSides = parsed?.sides ?: sides
         val finalMod = parsed?.modifier ?: modifier
@@ -632,18 +679,6 @@ class CampaignWebService(
         return RollDiceResult.ROLLED
     }
 
-    private data class ParsedDice(val count: Int, val sides: Int, val modifier: Int)
-
-    private fun parseDiceExpression(raw: String): ParsedDice? {
-        val cleaned = raw.filterNot { it.isWhitespace() }
-        if (cleaned.isEmpty()) return null
-        val match = DICE_EXPR_REGEX.matchEntire(cleaned) ?: return null
-        val count = match.groupValues[1].ifEmpty { "1" }.toIntOrNull() ?: return null
-        val sides = match.groupValues[2].toIntOrNull() ?: return null
-        val modifier = match.groupValues[3].takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
-        return ParsedDice(count, sides, modifier)
-    }
-
     fun listTemplatesForDm(dmDiscordId: Long): List<MonsterTemplateView> =
         monsterTemplateService.listByDm(dmDiscordId).map(::toMonsterTemplateView)
 
@@ -652,12 +687,17 @@ class CampaignWebService(
         id: Long?,
         name: String,
         initiativeModifier: Int,
-        maxHp: Int?,
+        hpExpression: String?,
         ac: Int?
     ): SaveTemplateResult {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return SaveTemplateResult.NAME_BLANK
         if (trimmed.length > MAX_TEMPLATE_NAME_LENGTH) return SaveTemplateResult.NAME_TOO_LONG
+
+        val cleanedHp = hpExpression?.trim()?.takeIf { it.isNotEmpty() }
+        if (cleanedHp != null && DiceExpressionRoller.parseAmount(cleanedHp) == null) {
+            return SaveTemplateResult.INVALID_HP
+        }
 
         val dto = if (id != null && id > 0) {
             val existing = monsterTemplateService.getById(id) ?: return SaveTemplateResult.NOT_FOUND
@@ -665,7 +705,7 @@ class CampaignWebService(
             existing.apply {
                 this.name = trimmed
                 this.initiativeModifier = initiativeModifier
-                this.maxHp = maxHp
+                this.hpExpression = cleanedHp
                 this.ac = ac
             }
         } else {
@@ -673,7 +713,7 @@ class CampaignWebService(
                 dmDiscordId = dmDiscordId,
                 name = trimmed,
                 initiativeModifier = initiativeModifier,
-                maxHp = maxHp,
+                hpExpression = cleanedHp,
                 ac = ac
             )
         }
@@ -686,6 +726,188 @@ class CampaignWebService(
         if (existing.dmDiscordId != dmDiscordId) return DeleteTemplateResult.NOT_OWNER
         monsterTemplateService.deleteById(id)
         return DeleteTemplateResult.DELETED
+    }
+
+    /**
+     * Create or update an attack on a monster template. Validates that the
+     * caller owns the template, the name and damage expression are sane, and
+     * the per-template attack cap isn't exceeded. The attack's
+     * [damageExpression] is stored verbatim and rolled fresh on each use.
+     */
+    fun saveAttack(
+        dmDiscordId: Long,
+        templateId: Long,
+        attackId: Long?,
+        name: String,
+        toHitModifier: Int,
+        damageExpression: String
+    ): SaveAttackResult {
+        val template = monsterTemplateService.getById(templateId)
+            ?: return SaveAttackResult.TEMPLATE_NOT_FOUND
+        if (template.dmDiscordId != dmDiscordId) return SaveAttackResult.NOT_OWNER
+
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) return SaveAttackResult.NAME_BLANK
+        if (trimmedName.length > MAX_ATTACK_NAME_LENGTH) return SaveAttackResult.NAME_TOO_LONG
+        if (toHitModifier !in -MAX_ATTACK_MODIFIER..MAX_ATTACK_MODIFIER) {
+            return SaveAttackResult.INVALID_MODIFIER
+        }
+        val trimmedDamage = damageExpression.trim()
+        if (trimmedDamage.isEmpty() || DiceExpressionRoller.parseAmount(trimmedDamage) == null) {
+            return SaveAttackResult.INVALID_DAMAGE
+        }
+
+        val dto = if (attackId != null && attackId > 0) {
+            val existing = monsterAttackService.getById(attackId)
+                ?: return SaveAttackResult.ATTACK_NOT_FOUND
+            if (existing.monsterTemplateId != templateId) {
+                return SaveAttackResult.ATTACK_TEMPLATE_MISMATCH
+            }
+            existing.apply {
+                this.name = trimmedName
+                this.toHitModifier = toHitModifier
+                this.damageExpression = trimmedDamage
+            }
+        } else {
+            if (monsterAttackService.countByTemplate(templateId) >= MAX_ATTACKS_PER_TEMPLATE) {
+                return SaveAttackResult.TOO_MANY
+            }
+            MonsterAttackDto(
+                monsterTemplateId = templateId,
+                name = trimmedName,
+                toHitModifier = toHitModifier,
+                damageExpression = trimmedDamage
+            )
+        }
+        monsterAttackService.save(dto)
+        return SaveAttackResult.SAVED
+    }
+
+    fun deleteAttack(dmDiscordId: Long, templateId: Long, attackId: Long): DeleteAttackResult {
+        val existing = monsterAttackService.getById(attackId)
+            ?: return DeleteAttackResult.ATTACK_NOT_FOUND
+        if (existing.monsterTemplateId != templateId) {
+            return DeleteAttackResult.ATTACK_TEMPLATE_MISMATCH
+        }
+        val template = monsterTemplateService.getById(existing.monsterTemplateId)
+            ?: return DeleteAttackResult.ATTACK_NOT_FOUND
+        if (template.dmDiscordId != dmDiscordId) return DeleteAttackResult.NOT_OWNER
+        monsterAttackService.deleteById(attackId)
+        return DeleteAttackResult.DELETED
+    }
+
+    /**
+     * Execute one of the current monster's attacks against [targetName]. The
+     * DM drives this on the monster's turn. Rolls 1d20 + the attack's to-hit
+     * modifier vs target AC (auto-hit when target.ac is null), publishes
+     * ATTACK_HIT/MISS, and on hit rolls the attack's damage expression and
+     * applies it via the existing [InitiativeStore.applyDamage] (publishing
+     * DAMAGE_DEALT and PARTICIPANT_DEFEATED as appropriate).
+     */
+    fun monsterAttack(
+        guildId: Long,
+        requestingDiscordId: Long,
+        attackId: Long,
+        targetName: String
+    ): MonsterAttackOutcome {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return MonsterAttackOutcome(MonsterAttackResult.NO_ACTIVE_CAMPAIGN)
+        if (campaign.dmDiscordId != requestingDiscordId) {
+            return MonsterAttackOutcome(MonsterAttackResult.NOT_DM)
+        }
+        if (!initiativeStore.isActive(guildId)) {
+            return MonsterAttackOutcome(MonsterAttackResult.NO_ACTIVE_COMBAT)
+        }
+        val current = initiativeStore.currentEntry(guildId)
+            ?: return MonsterAttackOutcome(MonsterAttackResult.NO_ACTIVE_COMBAT)
+        if (current.kind != "MONSTER") {
+            return MonsterAttackOutcome(MonsterAttackResult.CURRENT_NOT_MONSTER)
+        }
+        val templateId = current.templateId
+            ?: return MonsterAttackOutcome(MonsterAttackResult.NO_TEMPLATE)
+
+        val attack = monsterAttackService.getById(attackId)
+            ?: return MonsterAttackOutcome(MonsterAttackResult.ATTACK_NOT_FOUND)
+        if (attack.monsterTemplateId != templateId) {
+            return MonsterAttackOutcome(MonsterAttackResult.ATTACK_TEMPLATE_MISMATCH)
+        }
+
+        val target = initiativeStore.currentEntries(guildId).firstOrNull { it.name == targetName }
+            ?: return MonsterAttackOutcome(MonsterAttackResult.TARGET_NOT_FOUND)
+        if (target.name == current.name) {
+            return MonsterAttackOutcome(MonsterAttackResult.CANT_TARGET_SELF)
+        }
+        if (target.defeated) return MonsterAttackOutcome(MonsterAttackResult.TARGET_DEFEATED)
+
+        val raw = Random.nextInt(1, 21)
+        val total = raw + attack.toHitModifier
+        val hit = target.ac?.let { total >= it } ?: true
+        val type = if (hit) CampaignEventType.ATTACK_HIT else CampaignEventType.ATTACK_MISS
+        val requesterName = resolveMemberName(guildId, requestingDiscordId)
+
+        sessionLog.publish(
+            guildId = guildId,
+            type = type,
+            actorDiscordId = requestingDiscordId,
+            actorName = requesterName,
+            payload = mapOf(
+                "attacker" to current.name,
+                "target" to target.name,
+                "attackName" to attack.name,
+                "roll" to raw,
+                "modifier" to attack.toHitModifier,
+                "total" to total,
+                "targetAc" to target.ac
+            )
+        )
+
+        if (!hit) {
+            return MonsterAttackOutcome(
+                result = MonsterAttackResult.MISS,
+                attackName = attack.name
+            )
+        }
+
+        val rolledDamage = DiceExpressionRoller.parseAmount(attack.damageExpression)
+            ?: return MonsterAttackOutcome(
+                result = MonsterAttackResult.INVALID_DAMAGE,
+                attackName = attack.name
+            )
+        val updated = initiativeStore.applyDamage(guildId, target.name, rolledDamage.total)
+            ?: return MonsterAttackOutcome(MonsterAttackResult.TARGET_NOT_FOUND)
+
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.DAMAGE_DEALT,
+            actorDiscordId = requestingDiscordId,
+            actorName = requesterName,
+            payload = buildCombatAmountPayload(
+                base = mapOf(
+                    "attacker" to current.name,
+                    "target" to updated.name,
+                    "attackName" to attack.name,
+                    "amount" to rolledDamage.total,
+                    "remainingHp" to updated.currentHp,
+                    "maxHp" to updated.maxHp
+                ),
+                parsed = rolledDamage
+            )
+        )
+        if (updated.defeated) {
+            sessionLog.publish(
+                guildId = guildId,
+                type = CampaignEventType.PARTICIPANT_DEFEATED,
+                actorDiscordId = requestingDiscordId,
+                actorName = requesterName,
+                payload = mapOf("target" to updated.name)
+            )
+        }
+
+        return MonsterAttackOutcome(
+            result = MonsterAttackResult.HIT,
+            attackName = attack.name,
+            targetDefeated = updated.defeated
+        )
     }
 
     fun rollInitiative(
@@ -722,26 +944,29 @@ class CampaignWebService(
             if (template.dmDiscordId != requestingDiscordId) {
                 return RollInitiativeResult.TEMPLATE_NOT_FOUND
             }
+            val rolledHp = rollMonsterHp(template.hpExpression)
             entries += InitiativeEntryData(
                 name = template.name,
                 roll = rollD20() + template.initiativeModifier,
                 kind = "MONSTER",
                 modifier = template.initiativeModifier,
-                maxHp = template.maxHp,
-                currentHp = template.maxHp,
-                ac = template.ac
+                maxHp = rolledHp,
+                currentHp = rolledHp,
+                ac = template.ac,
+                templateId = template.id
             )
         }
 
         request.adhocMonsters.forEach { monster ->
             val cleanName = monster.name.trim().ifEmpty { "Monster" }
+            val rolledHp = rollMonsterHp(monster.hpExpression)
             entries += InitiativeEntryData(
                 name = cleanName,
                 roll = rollD20() + monster.initiativeModifier,
                 kind = "MONSTER",
                 modifier = monster.initiativeModifier,
-                maxHp = monster.maxHp,
-                currentHp = monster.maxHp,
+                maxHp = rolledHp,
+                currentHp = rolledHp,
                 ac = monster.ac
             )
         }
@@ -846,46 +1071,8 @@ class CampaignWebService(
      * typed a dice formula; in that case [rolls] holds the individual rolled
      * faces so the session log can narrate "rolled 2d6+3 = 11".
      */
-    private data class CombatAmount(
-        val total: Int,
-        val expression: String?,
-        val rolls: List<Int>?
-    )
-
-    /**
-     * Accepts either an integer (`"6"`) or a dice expression (`"2d6+3"`, `"d20-1"`)
-     * and returns a parsed [CombatAmount]. Integer totals outside [1, MAX_DAMAGE_AMOUNT]
-     * are rejected; dice expressions inherit the same count/modifier caps used
-     * by the generic dice roller so a single form can't be used to DOS us.
-     */
-    private fun parseCombatAmount(raw: String): CombatAmount? {
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty()) return null
-        trimmed.toIntOrNull()?.let { literal ->
-            if (literal < 0 || literal > MAX_DAMAGE_AMOUNT) return null
-            return CombatAmount(total = literal, expression = null, rolls = null)
-        }
-        val parsed = parseDiceExpression(trimmed) ?: return null
-        if (parsed.sides !in ALLOWED_DIE_SIDES) return null
-        if (parsed.count !in 1..MAX_DICE_COUNT) return null
-        if (parsed.modifier !in -MAX_DICE_MODIFIER..MAX_DICE_MODIFIER) return null
-        val rolled = (0 until parsed.count).map { Random.nextInt(1, parsed.sides + 1) }
-        val total = (rolled.sum() + parsed.modifier).coerceAtLeast(0)
-        return CombatAmount(
-            total = total,
-            expression = normaliseExpression(parsed),
-            rolls = rolled
-        )
-    }
-
-    private fun normaliseExpression(parsed: ParsedDice): String {
-        val mod = when {
-            parsed.modifier > 0 -> "+${parsed.modifier}"
-            parsed.modifier < 0 -> parsed.modifier.toString()
-            else -> ""
-        }
-        return "${parsed.count}d${parsed.sides}$mod"
-    }
+    private fun parseCombatAmount(raw: String): DiceExpressionRoller.RolledAmount? =
+        DiceExpressionRoller.parseAmount(raw)
 
     /**
      * Applies damage to the named target in the guild's combat tracker.
@@ -1005,7 +1192,7 @@ class CampaignWebService(
 
     private fun buildCombatAmountPayload(
         base: Map<String, Any?>,
-        parsed: CombatAmount
+        parsed: DiceExpressionRoller.RolledAmount
     ): Map<String, Any?> {
         if (parsed.expression == null) return base
         return base + mapOf(
@@ -1034,6 +1221,23 @@ class CampaignWebService(
     }
 
     private fun rollD20(): Int = Random.nextInt(1, 21)
+
+    /**
+     * Roll a monster's HP from its template/ad-hoc [hpExpression]. Accepts a
+     * literal integer (`"45"`) or dice expression (`"3d20+30"`); each call
+     * produces an independent roll, so two instances of the same template get
+     * different totals. Returns null when the input is null/blank, or when an
+     * already-stored expression no longer parses (logged + treated as untracked HP).
+     */
+    private fun rollMonsterHp(hpExpression: String?): Int? {
+        val cleaned = hpExpression?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val rolled = DiceExpressionRoller.parseAmount(cleaned)
+        if (rolled == null) {
+            logger.warn("Unparseable monster HP expression: $cleaned")
+            return null
+        }
+        return rolled.total
+    }
 
     private fun loadCharacterSummary(characterId: Long): CharacterSummary? {
         val json = characterSheetService.getSheet(characterId) ?: return null

@@ -5,6 +5,7 @@ import database.dto.CampaignDto
 import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.MonsterAttackDto
 import database.dto.MonsterTemplateDto
 import database.dto.SessionNoteDto
 import database.dto.UserDto
@@ -12,6 +13,7 @@ import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.service.MonsterAttackService
 import database.service.MonsterTemplateService
 import database.service.SessionNoteService
 import database.service.UserService
@@ -38,6 +40,7 @@ class CampaignWebServiceTest {
     private lateinit var sessionNoteService: SessionNoteService
     private lateinit var campaignEventService: CampaignEventService
     private lateinit var monsterTemplateService: MonsterTemplateService
+    private lateinit var monsterAttackService: MonsterAttackService
     private lateinit var initiativeStore: InitiativeStore
     private lateinit var sessionLog: SessionLogPublisher
     private lateinit var jda: JDA
@@ -65,6 +68,7 @@ class CampaignWebServiceTest {
         sessionNoteService = mockk(relaxed = true)
         campaignEventService = mockk(relaxed = true)
         monsterTemplateService = mockk(relaxed = true)
+        monsterAttackService = mockk(relaxed = true)
         initiativeStore = mockk(relaxed = true)
         sessionLog = mockk(relaxed = true)
         jda = mockk(relaxed = true)
@@ -77,6 +81,7 @@ class CampaignWebServiceTest {
             sessionNoteService,
             campaignEventService,
             monsterTemplateService,
+            monsterAttackService,
             initiativeStore,
             sessionLog,
             jda
@@ -988,7 +993,7 @@ class CampaignWebServiceTest {
     fun `saveTemplate rejects blank name`() {
         assertEquals(
             SaveTemplateResult.NAME_BLANK,
-            service.saveTemplate(dmDiscordId, id = null, name = "   ", initiativeModifier = 0, maxHp = null, ac = null)
+            service.saveTemplate(dmDiscordId, id = null, name = "   ", initiativeModifier = 0, hpExpression = null, ac = null)
         )
     }
 
@@ -997,7 +1002,7 @@ class CampaignWebServiceTest {
         val long = "x".repeat(CampaignWebService.MAX_TEMPLATE_NAME_LENGTH + 1)
         assertEquals(
             SaveTemplateResult.NAME_TOO_LONG,
-            service.saveTemplate(dmDiscordId, id = null, name = long, initiativeModifier = 0, maxHp = null, ac = null)
+            service.saveTemplate(dmDiscordId, id = null, name = long, initiativeModifier = 0, hpExpression = null, ac = null)
         )
     }
 
@@ -1005,14 +1010,41 @@ class CampaignWebServiceTest {
     fun `saveTemplate creates when id is null`() {
         assertEquals(
             SaveTemplateResult.SAVED,
-            service.saveTemplate(dmDiscordId, id = null, name = "Goblin", initiativeModifier = 2, maxHp = 7, ac = 15)
+            service.saveTemplate(dmDiscordId, id = null, name = "Goblin", initiativeModifier = 2, hpExpression = "7", ac = 15)
         )
         verify {
             monsterTemplateService.save(match {
                 it.id == 0L && it.dmDiscordId == dmDiscordId && it.name == "Goblin" &&
-                    it.initiativeModifier == 2 && it.maxHp == 7 && it.ac == 15
+                    it.initiativeModifier == 2 && it.hpExpression == "7" && it.ac == 15
             })
         }
+    }
+
+    @Test
+    fun `saveTemplate accepts dice expression for HP`() {
+        assertEquals(
+            SaveTemplateResult.SAVED,
+            service.saveTemplate(dmDiscordId, id = null, name = "Ogre", initiativeModifier = 0, hpExpression = "3d20+30", ac = 11)
+        )
+        verify {
+            monsterTemplateService.save(match { it.hpExpression == "3d20+30" })
+        }
+    }
+
+    @Test
+    fun `saveTemplate rejects unparseable HP expression`() {
+        assertEquals(
+            SaveTemplateResult.INVALID_HP,
+            service.saveTemplate(dmDiscordId, id = null, name = "Bad", initiativeModifier = 0, hpExpression = "garbage", ac = null)
+        )
+    }
+
+    @Test
+    fun `saveTemplate rejects HP dice expression past caps`() {
+        assertEquals(
+            SaveTemplateResult.INVALID_HP,
+            service.saveTemplate(dmDiscordId, id = null, name = "Huge", initiativeModifier = 0, hpExpression = "99d20+30", ac = null)
+        )
     }
 
     @Test
@@ -1020,7 +1052,7 @@ class CampaignWebServiceTest {
         every { monsterTemplateService.getById(99L) } returns null
         assertEquals(
             SaveTemplateResult.NOT_FOUND,
-            service.saveTemplate(dmDiscordId, id = 99L, name = "X", initiativeModifier = 0, maxHp = null, ac = null)
+            service.saveTemplate(dmDiscordId, id = 99L, name = "X", initiativeModifier = 0, hpExpression = null, ac = null)
         )
     }
 
@@ -1031,7 +1063,7 @@ class CampaignWebServiceTest {
         )
         assertEquals(
             SaveTemplateResult.NOT_OWNER,
-            service.saveTemplate(dmDiscordId, id = 99L, name = "X", initiativeModifier = 0, maxHp = null, ac = null)
+            service.saveTemplate(dmDiscordId, id = 99L, name = "X", initiativeModifier = 0, hpExpression = null, ac = null)
         )
     }
 
@@ -1195,6 +1227,113 @@ class CampaignWebServiceTest {
                 eq(guildId),
                 match { seeded ->
                     seeded.map { it.name }.toSet() == setOf("Goblin", "Bugbear")
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative uses literal HP from template hpExpression`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin",
+            initiativeModifier = 2, hpExpression = "45"
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(templateIds = listOf(77L))
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    val goblin = seeded.single()
+                    goblin.maxHp == 45 && goblin.currentHp == 45
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative rolls HP independently per instance from dice expression`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Ogre",
+            initiativeModifier = 0, hpExpression = "3d20+30"
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(templateIds = listOf(77L, 77L))
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    seeded.size == 2 && seeded.all {
+                        val hp = it.maxHp
+                        hp != null && hp in 33..90 && it.currentHp == hp
+                    }
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative threads templateId for template-spawned monsters and leaves it null for ad-hoc and players`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+        every { userService.getUserById(playerDiscordId, guildId) } returns UserDto(playerDiscordId, guildId)
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(
+                playerDiscordIds = listOf(playerDiscordId),
+                templateIds = listOf(77L),
+                adhocMonsters = listOf(AdhocMonster("Bugbear", 1))
+            )
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    val byName = seeded.associateBy { it.name }
+                    byName["Goblin"]?.templateId == 77L &&
+                        byName["Bugbear"]?.templateId == null &&
+                        byName.values.single { it.kind == "PLAYER" }.templateId == null
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `rollInitiative leaves null HP when template has no hpExpression`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
+        )
+
+        service.rollInitiative(
+            guildId,
+            dmDiscordId,
+            InitiativeRollRequest(templateIds = listOf(77L))
+        )
+
+        verify {
+            initiativeStore.seed(
+                eq(guildId),
+                match { seeded ->
+                    val goblin = seeded.single()
+                    goblin.maxHp == null && goblin.currentHp == null
                 }
             )
         }
@@ -1794,5 +1933,311 @@ class CampaignWebServiceTest {
 
         val result = service.applyHeal(guildId, playerDiscordId, "Alice", "5")
         assertEquals(ApplyHealResult.NOT_ATTACKER, result)
+    }
+
+    // saveAttack / deleteAttack
+
+    @Test
+    fun `saveAttack rejects when template missing`() {
+        every { monsterTemplateService.getById(77L) } returns null
+        assertEquals(
+            SaveAttackResult.TEMPLATE_NOT_FOUND,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3")
+        )
+    }
+
+    @Test
+    fun `saveAttack rejects non-owner`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = 999L, name = "Someone Else's"
+        )
+        assertEquals(
+            SaveAttackResult.NOT_OWNER,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3")
+        )
+    }
+
+    @Test
+    fun `saveAttack rejects blank name`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        assertEquals(
+            SaveAttackResult.NAME_BLANK,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "   ", toHitModifier = 5, damageExpression = "1d6")
+        )
+    }
+
+    @Test
+    fun `saveAttack rejects modifier outside caps`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        assertEquals(
+            SaveAttackResult.INVALID_MODIFIER,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "Bite", toHitModifier = 99, damageExpression = "1d6")
+        )
+    }
+
+    @Test
+    fun `saveAttack rejects unparseable damage expression`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        assertEquals(
+            SaveAttackResult.INVALID_DAMAGE,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "Bite", toHitModifier = 0, damageExpression = "garbage")
+        )
+    }
+
+    @Test
+    fun `saveAttack rejects when per-template cap reached`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        every { monsterAttackService.countByTemplate(77L) } returns CampaignWebService.MAX_ATTACKS_PER_TEMPLATE.toLong()
+        assertEquals(
+            SaveAttackResult.TOO_MANY,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3")
+        )
+    }
+
+    @Test
+    fun `saveAttack creates when id is null and persists trimmed values`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        every { monsterAttackService.countByTemplate(77L) } returns 0L
+
+        assertEquals(
+            SaveAttackResult.SAVED,
+            service.saveAttack(dmDiscordId, 77L, attackId = null, name = "  Bite  ", toHitModifier = 5, damageExpression = " 2d6+3 ")
+        )
+        verify {
+            monsterAttackService.save(match {
+                it.monsterTemplateId == 77L && it.name == "Bite" &&
+                    it.toHitModifier == 5 && it.damageExpression == "2d6+3"
+            })
+        }
+    }
+
+    @Test
+    fun `saveAttack updates existing and skips the cap check`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        every { monsterAttackService.getById(42L) } returns MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Old", toHitModifier = 1, damageExpression = "1d4"
+        )
+        every { monsterAttackService.countByTemplate(77L) } returns CampaignWebService.MAX_ATTACKS_PER_TEMPLATE.toLong()
+
+        assertEquals(
+            SaveAttackResult.SAVED,
+            service.saveAttack(dmDiscordId, 77L, attackId = 42L, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3")
+        )
+        verify {
+            monsterAttackService.save(match {
+                it.id == 42L && it.name == "Bite" && it.damageExpression == "2d6+3"
+            })
+        }
+    }
+
+    @Test
+    fun `saveAttack rejects updating across templates`() {
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        every { monsterAttackService.getById(42L) } returns MonsterAttackDto(
+            id = 42L, monsterTemplateId = 999L, name = "Other", toHitModifier = 0, damageExpression = "1d4"
+        )
+        assertEquals(
+            SaveAttackResult.ATTACK_TEMPLATE_MISMATCH,
+            service.saveAttack(dmDiscordId, 77L, attackId = 42L, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3")
+        )
+    }
+
+    @Test
+    fun `deleteAttack rejects missing attack`() {
+        every { monsterAttackService.getById(42L) } returns null
+        assertEquals(DeleteAttackResult.ATTACK_NOT_FOUND, service.deleteAttack(dmDiscordId, 77L, 42L))
+    }
+
+    @Test
+    fun `deleteAttack rejects mismatched template`() {
+        every { monsterAttackService.getById(42L) } returns MonsterAttackDto(
+            id = 42L, monsterTemplateId = 999L, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3"
+        )
+        assertEquals(
+            DeleteAttackResult.ATTACK_TEMPLATE_MISMATCH,
+            service.deleteAttack(dmDiscordId, 77L, 42L)
+        )
+    }
+
+    @Test
+    fun `deleteAttack rejects non-owner`() {
+        every { monsterAttackService.getById(42L) } returns MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3"
+        )
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = 999L, name = "Someone Else's"
+        )
+        assertEquals(DeleteAttackResult.NOT_OWNER, service.deleteAttack(dmDiscordId, 77L, 42L))
+    }
+
+    @Test
+    fun `deleteAttack removes when caller owns the template`() {
+        every { monsterAttackService.getById(42L) } returns MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Bite", toHitModifier = 5, damageExpression = "2d6+3"
+        )
+        every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
+            id = 77L, dmDiscordId = dmDiscordId, name = "Goblin"
+        )
+        assertEquals(DeleteAttackResult.DELETED, service.deleteAttack(dmDiscordId, 77L, 42L))
+        verify { monsterAttackService.deleteById(42L) }
+    }
+
+    // monsterAttack
+
+    private fun stubMonsterCombat(attack: MonsterAttackDto, target: InitiativeEntryData) {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER", templateId = 77L)
+        every { initiativeStore.currentEntries(guildId) } returns listOf(
+            InitiativeEntryData("Goblin", 18, "MONSTER", templateId = 77L),
+            target
+        )
+        every { monsterAttackService.getById(attack.id) } returns attack
+    }
+
+    @Test
+    fun `monsterAttack rejects non-DM requester`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        val outcome = service.monsterAttack(guildId, playerDiscordId, 42L, "Alice")
+        assertEquals(MonsterAttackResult.NOT_DM, outcome.result)
+    }
+
+    @Test
+    fun `monsterAttack rejects when current entry is not a monster`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Alice", 18, "PLAYER")
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Bob")
+        assertEquals(MonsterAttackResult.CURRENT_NOT_MONSTER, outcome.result)
+    }
+
+    @Test
+    fun `monsterAttack rejects when current monster has no templateId`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Adhoc", 18, "MONSTER", templateId = null)
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Alice")
+        assertEquals(MonsterAttackResult.NO_TEMPLATE, outcome.result)
+    }
+
+    @Test
+    fun `monsterAttack rejects attack from different template`() {
+        val attack = MonsterAttackDto(
+            id = 42L, monsterTemplateId = 999L, name = "Bite", toHitModifier = 5, damageExpression = "1d6"
+        )
+        stubMonsterCombat(attack, InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 10))
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Alice")
+        assertEquals(MonsterAttackResult.ATTACK_TEMPLATE_MISMATCH, outcome.result)
+    }
+
+    @Test
+    fun `monsterAttack rejects missing target`() {
+        val attack = MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Bite", toHitModifier = 5, damageExpression = "1d6"
+        )
+        stubMonsterCombat(attack, InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 10))
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Ghost")
+        assertEquals(MonsterAttackResult.TARGET_NOT_FOUND, outcome.result)
+    }
+
+    @Test
+    fun `monsterAttack on hit publishes ATTACK_HIT and DAMAGE_DEALT and applies damage`() {
+        val attack = MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Bite", toHitModifier = 20, damageExpression = "1d4"
+        )
+        // AC 1 + mod 20 guarantees hit regardless of d20 roll.
+        stubMonsterCombat(attack, InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 1))
+        every { initiativeStore.applyDamage(guildId, "Alice", any()) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 15)
+
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Alice")
+        assertEquals(MonsterAttackResult.HIT, outcome.result)
+        assertEquals("Bite", outcome.attackName)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ATTACK_HIT,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["attackName"] == "Bite" && it["attacker"] == "Goblin" && it["target"] == "Alice" },
+                refEventId = null
+            )
+        }
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.DAMAGE_DEALT,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["attackName"] == "Bite" && it["target"] == "Alice" },
+                refEventId = null
+            )
+        }
+        verify { initiativeStore.applyDamage(guildId, "Alice", any()) }
+    }
+
+    @Test
+    fun `monsterAttack on miss publishes only ATTACK_MISS and does not damage`() {
+        val attack = MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Bite", toHitModifier = 0, damageExpression = "1d4"
+        )
+        // AC 30 + any d20 + mod 0 never reaches 30.
+        stubMonsterCombat(attack, InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 20, ac = 30))
+
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Alice")
+        assertEquals(MonsterAttackResult.MISS, outcome.result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.ATTACK_MISS,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["attackName"] == "Bite" && it["targetAc"] == 30 },
+                refEventId = null
+            )
+        }
+        verify(exactly = 0) { initiativeStore.applyDamage(any(), any(), any()) }
+    }
+
+    @Test
+    fun `monsterAttack publishes PARTICIPANT_DEFEATED when damage drops target`() {
+        val attack = MonsterAttackDto(
+            id = 42L, monsterTemplateId = 77L, name = "Bite", toHitModifier = 20, damageExpression = "1d4"
+        )
+        stubMonsterCombat(attack, InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 1, ac = 1))
+        every { initiativeStore.applyDamage(guildId, "Alice", any()) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 0, defeated = true)
+
+        val outcome = service.monsterAttack(guildId, dmDiscordId, 42L, "Alice")
+        assertEquals(MonsterAttackResult.HIT, outcome.result)
+        assertEquals(true, outcome.targetDefeated)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.PARTICIPANT_DEFEATED,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["target"] == "Alice" },
+                refEventId = null
+            )
+        }
     }
 }
