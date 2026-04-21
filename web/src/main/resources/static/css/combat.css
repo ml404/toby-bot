@@ -116,6 +116,10 @@
     animation: damage-float 900ms cubic-bezier(.2, .8, .2, 1) forwards;
     transform: translate(-50%, 0);
 }
+.damage-floater.heal {
+    color: #5bffa4;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), 0 0 14px rgba(46, 204, 113, 0.7);
+}
 @keyframes damage-float {
     0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.7); }
     15%  { opacity: 1; transform: translate(-50%, -4px) scale(1.15); }

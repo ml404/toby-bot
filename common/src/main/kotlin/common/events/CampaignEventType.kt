@@ -23,5 +23,6 @@ enum class CampaignEventType {
     ATTACK_HIT,
     ATTACK_MISS,
     DAMAGE_DEALT,
+    HEAL_APPLIED,
     PARTICIPANT_DEFEATED
 }

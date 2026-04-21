@@ -144,6 +144,12 @@ enum class ApplyDamageResult {
     TARGET_NOT_FOUND, INVALID_AMOUNT
 }
 
+enum class ApplyHealResult {
+    APPLIED, REVIVED,
+    NO_ACTIVE_CAMPAIGN, NO_ACTIVE_COMBAT, NOT_ATTACKER,
+    TARGET_NOT_FOUND, TARGET_HAS_NO_HP, INVALID_AMOUNT
+}
+
 data class AttackOutcome(
     val result: AttackResult,
     val attacker: String? = null,
@@ -822,19 +828,67 @@ class CampaignWebService(
     }
 
     /**
-     * Applies integer [amount] of damage to the named target in the guild's
-     * combat tracker. Publishes DAMAGE_DEALT, and if the target's HP drops
-     * to 0 or below, also publishes PARTICIPANT_DEFEATED. The current-turn
-     * participant (or DM) may apply damage — we don't re-check target AC
-     * here since that's the role of [attack].
+     * Parsed combat amount: a raw integer typed into a form, or a rolled dice
+     * expression like `2d6+3`. [expression] is non-null only when the caller
+     * typed a dice formula; in that case [rolls] holds the individual rolled
+     * faces so the session log can narrate "rolled 2d6+3 = 11".
+     */
+    private data class CombatAmount(
+        val total: Int,
+        val expression: String?,
+        val rolls: List<Int>?
+    )
+
+    /**
+     * Accepts either an integer (`"6"`) or a dice expression (`"2d6+3"`, `"d20-1"`)
+     * and returns a parsed [CombatAmount]. Integer totals outside [1, MAX_DAMAGE_AMOUNT]
+     * are rejected; dice expressions inherit the same count/modifier caps used
+     * by the generic dice roller so a single form can't be used to DOS us.
+     */
+    private fun parseCombatAmount(raw: String): CombatAmount? {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return null
+        trimmed.toIntOrNull()?.let { literal ->
+            if (literal < 0 || literal > MAX_DAMAGE_AMOUNT) return null
+            return CombatAmount(total = literal, expression = null, rolls = null)
+        }
+        val parsed = parseDiceExpression(trimmed) ?: return null
+        if (parsed.sides !in ALLOWED_DIE_SIDES) return null
+        if (parsed.count !in 1..MAX_DICE_COUNT) return null
+        if (parsed.modifier !in -MAX_DICE_MODIFIER..MAX_DICE_MODIFIER) return null
+        val rolled = (0 until parsed.count).map { Random.nextInt(1, parsed.sides + 1) }
+        val total = (rolled.sum() + parsed.modifier).coerceAtLeast(0)
+        return CombatAmount(
+            total = total,
+            expression = normaliseExpression(parsed),
+            rolls = rolled
+        )
+    }
+
+    private fun normaliseExpression(parsed: ParsedDice): String {
+        val mod = when {
+            parsed.modifier > 0 -> "+${parsed.modifier}"
+            parsed.modifier < 0 -> parsed.modifier.toString()
+            else -> ""
+        }
+        return "${parsed.count}d${parsed.sides}$mod"
+    }
+
+    /**
+     * Applies damage to the named target in the guild's combat tracker.
+     * [amountInput] accepts either a plain integer or a dice expression like
+     * `2d6+3`. Publishes DAMAGE_DEALT, and if the target's HP drops to 0 or
+     * below, also publishes PARTICIPANT_DEFEATED. The current-turn participant
+     * (or DM) may apply damage — we don't re-check target AC here since that's
+     * the role of [attack].
      */
     fun applyDamage(
         guildId: Long,
         requestingDiscordId: Long,
         targetName: String,
-        amount: Int
+        amountInput: String
     ): ApplyDamageResult {
-        if (amount < 0 || amount > MAX_DAMAGE_AMOUNT) return ApplyDamageResult.INVALID_AMOUNT
+        val parsed = parseCombatAmount(amountInput) ?: return ApplyDamageResult.INVALID_AMOUNT
         val campaign = campaignService.getActiveCampaignForGuild(guildId)
             ?: return ApplyDamageResult.NO_ACTIVE_CAMPAIGN
         if (!initiativeStore.isActive(guildId)) return ApplyDamageResult.NO_ACTIVE_COMBAT
@@ -846,21 +900,25 @@ class CampaignWebService(
         val authorised = isDm || (current.kind == "PLAYER" && current.name == requesterName)
         if (!authorised) return ApplyDamageResult.NOT_ATTACKER
 
-        val updated = initiativeStore.applyDamage(guildId, targetName, amount)
+        val updated = initiativeStore.applyDamage(guildId, targetName, parsed.total)
             ?: return ApplyDamageResult.TARGET_NOT_FOUND
 
+        val payload = buildCombatAmountPayload(
+            base = mapOf(
+                "attacker" to current.name,
+                "target" to updated.name,
+                "amount" to parsed.total,
+                "remainingHp" to updated.currentHp,
+                "maxHp" to updated.maxHp
+            ),
+            parsed = parsed
+        )
         sessionLog.publish(
             guildId = guildId,
             type = CampaignEventType.DAMAGE_DEALT,
             actorDiscordId = requestingDiscordId,
             actorName = requesterName,
-            payload = mapOf(
-                "attacker" to current.name,
-                "target" to updated.name,
-                "amount" to amount,
-                "remainingHp" to updated.currentHp,
-                "maxHp" to updated.maxHp
-            )
+            payload = payload
         )
 
         return if (updated.defeated) {
@@ -875,6 +933,72 @@ class CampaignWebService(
         } else {
             ApplyDamageResult.APPLIED
         }
+    }
+
+    /**
+     * Restores HP on the named target. Mirrors [applyDamage]: accepts an integer
+     * or a dice expression, requires the caller to be the current-turn
+     * participant or DM, and clamps the result to the target's maxHp.
+     * Publishes HEAL_APPLIED with `revived=true` when the heal brings a
+     * previously-defeated target above 0 HP.
+     */
+    fun applyHeal(
+        guildId: Long,
+        requestingDiscordId: Long,
+        targetName: String,
+        amountInput: String
+    ): ApplyHealResult {
+        val parsed = parseCombatAmount(amountInput) ?: return ApplyHealResult.INVALID_AMOUNT
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return ApplyHealResult.NO_ACTIVE_CAMPAIGN
+        if (!initiativeStore.isActive(guildId)) return ApplyHealResult.NO_ACTIVE_COMBAT
+        val current = initiativeStore.currentEntry(guildId)
+            ?: return ApplyHealResult.NO_ACTIVE_COMBAT
+
+        val isDm = campaign.dmDiscordId == requestingDiscordId
+        val requesterName = resolveMemberName(guildId, requestingDiscordId)
+        val authorised = isDm || (current.kind == "PLAYER" && current.name == requesterName)
+        if (!authorised) return ApplyHealResult.NOT_ATTACKER
+
+        val target = initiativeStore.currentEntries(guildId).firstOrNull { it.name == targetName }
+            ?: return ApplyHealResult.TARGET_NOT_FOUND
+        if (target.maxHp == null) return ApplyHealResult.TARGET_HAS_NO_HP
+        val wasDefeated = target.defeated
+
+        val updated = initiativeStore.applyHeal(guildId, targetName, parsed.total)
+            ?: return ApplyHealResult.TARGET_NOT_FOUND
+
+        val revived = wasDefeated && !updated.defeated
+        val payload = buildCombatAmountPayload(
+            base = mapOf(
+                "healer" to current.name,
+                "target" to updated.name,
+                "amount" to parsed.total,
+                "remainingHp" to updated.currentHp,
+                "maxHp" to updated.maxHp,
+                "revived" to revived
+            ),
+            parsed = parsed
+        )
+        sessionLog.publish(
+            guildId = guildId,
+            type = CampaignEventType.HEAL_APPLIED,
+            actorDiscordId = requestingDiscordId,
+            actorName = requesterName,
+            payload = payload
+        )
+        return if (revived) ApplyHealResult.REVIVED else ApplyHealResult.APPLIED
+    }
+
+    private fun buildCombatAmountPayload(
+        base: Map<String, Any?>,
+        parsed: CombatAmount
+    ): Map<String, Any?> {
+        if (parsed.expression == null) return base
+        return base + mapOf(
+            "expression" to parsed.expression,
+            "rolls" to parsed.rolls
+        )
     }
 
     /**

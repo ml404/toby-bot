@@ -33,6 +33,15 @@ interface InitiativeStore {
      * null when there's no active tracker or no participant with that name.
      */
     fun applyDamage(guildId: Long, targetName: String, damage: Int): InitiativeEntryData?
+
+    /**
+     * Restore [amount] HP to the participant named [targetName] in [guildId]'s
+     * tracker, clamped to their maxHp. If the target was defeated and the heal
+     * brings them above 0 HP, the defeated flag is cleared. Returns the updated
+     * entry, or null when there's no active tracker, no participant with that
+     * name, or the participant has no HP tracked (maxHp is null).
+     */
+    fun applyHeal(guildId: Long, targetName: String, amount: Int): InitiativeEntryData?
 }
 
 /**

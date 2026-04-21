@@ -608,6 +608,7 @@
         }
         .turn-table li.just-hit { animation: combat-hit-flash 420ms ease-out; }
         .turn-table li.just-missed { animation: combat-miss-flash 420ms ease-out; }
+        .turn-table li.just-revived { animation: combat-revive-glow 900ms ease-out; }
         @keyframes combat-hit-flash {
             0%   { box-shadow: 0 0 0 0 rgba(231,76,60,0); }
             30%  { box-shadow: 0 0 0 3px rgba(231,76,60,0.45); background: rgba(231,76,60,0.12); }
@@ -617,6 +618,16 @@
             0%   { box-shadow: 0 0 0 0 rgba(160,160,176,0); }
             30%  { box-shadow: 0 0 0 3px rgba(160,160,176,0.45); background: rgba(160,160,176,0.08); }
             100% { box-shadow: 0 0 0 0 rgba(160,160,176,0); }
+        }
+        @keyframes combat-revive-glow {
+            0%   { box-shadow: 0 0 0 0 rgba(241,196,15,0); }
+            25%  { box-shadow: 0 0 0 4px rgba(241,196,15,0.55); background: rgba(46,204,113,0.15); }
+            100% { box-shadow: 0 0 0 0 rgba(241,196,15,0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .turn-table li.just-hit,
+            .turn-table li.just-missed,
+            .turn-table li.just-revived { animation: none; }
         }
 
         .combat-panel {
@@ -642,16 +653,20 @@
             letter-spacing: 0.05em;
             margin: 0;
         }
-        .combat-panel select, .combat-panel input[type=number] {
+        .combat-panel select,
+        .combat-panel input[type=number],
+        .combat-panel input[type=text] {
             background: #1a1a2e;
             border: 1px solid #2a3460;
             color: #e0e0e0;
             padding: 6px 8px;
             border-radius: 6px;
             font-size: 0.85rem;
+            font-family: inherit;
         }
         .combat-panel select { flex: 1; min-width: 160px; }
         .combat-panel input[type=number] { width: 70px; }
+        .combat-panel input[type=text] { width: 110px; font-family: monospace; }
         .combat-panel .spacer { flex: 1; }
         .combat-panel form { display: contents; }
         .combat-panel .title {
@@ -847,7 +862,8 @@
             .combat-panel { padding: 10px; }
             .combat-panel .row { flex-direction: column; align-items: stretch; gap: 6px; }
             .combat-panel select { min-width: 0; width: 100%; }
-            .combat-panel input[type=number] { width: 100%; }
+            .combat-panel input[type=number],
+            .combat-panel input[type=text] { width: 100%; }
             .combat-panel label { margin-top: 4px; }
         }
     </style>
@@ -1185,8 +1201,23 @@
                                         th:value="${t.name}"
                                         th:text="${t.name}">Target</option>
                             </select>
-                            <input type="number" name="amount" value="1" min="0" max="1000" required>
+                            <input type="text" name="amount" value="1"
+                                   placeholder="6 or 2d6+3" maxlength="20"
+                                   autocomplete="off" required>
                             <button type="submit" class="btn btn-secondary btn-sm">💥 Apply</button>
+                        </form>
+                        <form th:action="@{/dnd/campaign/{id}/combat/heal(id=${guildId})}" method="post" class="row">
+                            <label>Heal</label>
+                            <select name="targetName" required>
+                                <option th:each="t : ${initiativeState.entries}"
+                                        th:if="${t.maxHp != null}"
+                                        th:value="${t.name}"
+                                        th:text="${t.name + ' (' + (t.currentHp != null ? t.currentHp : 0) + '/' + t.maxHp + ')'}">Target</option>
+                            </select>
+                            <input type="text" name="amount" value="1"
+                                   placeholder="1 or 1d8+2" maxlength="20"
+                                   autocomplete="off" required>
+                            <button type="submit" class="btn btn-secondary btn-sm">💚 Heal</button>
                         </form>
                     </div>
                 </li>
@@ -1301,9 +1332,23 @@
                         misses Target — 7 vs AC 15
                     </span>
                     <span th:case="'DAMAGE_DEALT'"
-                          th:text="${event.payload['target'] + ' takes ' + event.payload['amount'] + ' damage' +
+                          th:text="${event.payload['target'] + ' takes ' +
+                                    (event.payload['expression'] != null
+                                        ? event.payload['expression'] + ' = ' + event.payload['amount']
+                                        : event.payload['amount']) + ' damage' +
                                     (event.payload['remainingHp'] != null ? ' (' + event.payload['remainingHp'] + ' HP left)' : '')}">
                         Target takes 6 damage (1 HP left)
+                    </span>
+                    <span th:case="'HEAL_APPLIED'"
+                          th:text="${(event.payload['healer'] != null ? event.payload['healer'] + ' heals ' : 'heals ') +
+                                    event.payload['target'] + ' for ' +
+                                    (event.payload['expression'] != null
+                                        ? event.payload['expression'] + ' = ' + event.payload['amount']
+                                        : event.payload['amount']) +
+                                    (event.payload['remainingHp'] != null and event.payload['maxHp'] != null
+                                        ? ' (' + event.payload['remainingHp'] + '/' + event.payload['maxHp'] + ' HP)' : '') +
+                                    (event.payload['revived'] == true ? ' — revived' : '')}">
+                        Cleric heals Target for 1d8+2 = 6 (6/10 HP)
                     </span>
                     <span th:case="'PARTICIPANT_DEFEATED'"
                           th:text="${event.payload['target'] + ' is defeated'}">Target is defeated</span>

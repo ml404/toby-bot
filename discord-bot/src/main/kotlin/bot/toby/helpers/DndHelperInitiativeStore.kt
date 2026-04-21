@@ -50,6 +50,15 @@ class DndHelperInitiativeStore(
         return toData(state.findByName(targetName) ?: return null)
     }
 
+    override fun applyHeal(guildId: Long, targetName: String, amount: Int): InitiativeEntryData? {
+        val state = dndHelper.stateFor(guildId)
+        if (!state.isActive()) return null
+        val existing = state.findByName(targetName) ?: return null
+        if (existing.maxHp == null) return null
+        state.applyHeal(targetName, amount)
+        return toData(state.findByName(targetName) ?: return null)
+    }
+
     private fun toData(entry: RolledEntry) = InitiativeEntryData(
         name = entry.name,
         roll = entry.roll,
