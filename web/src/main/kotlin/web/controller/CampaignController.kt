@@ -86,6 +86,7 @@ class CampaignController(
         model.addAttribute("recentEvents", campaignDetail?.recentEvents ?: emptyList<Any>())
         model.addAttribute("initiativeState", campaignDetail?.initiativeState)
         model.addAttribute("monsterLibrary", campaignDetail?.monsterLibrary ?: emptyList<Any>())
+        model.addAttribute("freshEventIds", campaignDetail?.freshEventIds ?: emptyList<Long>())
         model.addAttribute("username", user.displayName())
 
         return "campaignDetail"
@@ -343,7 +344,7 @@ class CampaignController(
             NarrateResult.EMPTY_BODY -> ra.addFlashAttribute("error", "Narration can't be empty.")
             NarrateResult.BODY_TOO_LONG -> ra.addFlashAttribute(
                 "error",
-                "Narration is too long (max ${web.service.CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
+                "Narration is too long (max ${CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
@@ -377,7 +378,7 @@ class CampaignController(
             SaveTemplateResult.NAME_BLANK -> ra.addFlashAttribute("error", "Monster name can't be empty.")
             SaveTemplateResult.NAME_TOO_LONG -> ra.addFlashAttribute(
                 "error",
-                "Monster name is too long (max ${web.service.CampaignWebService.MAX_TEMPLATE_NAME_LENGTH} characters)."
+                "Monster name is too long (max ${CampaignWebService.MAX_TEMPLATE_NAME_LENGTH} characters)."
             )
             SaveTemplateResult.NOT_FOUND -> ra.addFlashAttribute("error", "That template doesn't exist.")
             SaveTemplateResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own templates.")
@@ -408,21 +409,24 @@ class CampaignController(
         @PathVariable guildId: Long,
         @RequestParam(name = "playerDiscordIds", required = false) playerDiscordIds: List<Long>?,
         @RequestParam(name = "templateId", required = false) templateIds: List<Long>?,
-        @RequestParam(name = "templateQty", required = false) templateQtys: List<Int>?,
+        @RequestParam(name = "templateQty", required = false) templateQtys: List<String>?,
         @RequestParam(name = "adhocName", required = false) adhocNames: List<String>?,
-        @RequestParam(name = "adhocMod", required = false) adhocMods: List<Int>?,
-        @RequestParam(name = "adhocHp", required = false) adhocHps: List<Int>?,
-        @RequestParam(name = "adhocAc", required = false) adhocAcs: List<Int>?,
+        @RequestParam(name = "adhocMod", required = false) adhocMods: List<String>?,
+        @RequestParam(name = "adhocHp", required = false) adhocHps: List<String>?,
+        @RequestParam(name = "adhocAc", required = false) adhocAcs: List<String>?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
     ): String {
         val discordId = user.discordIdOrNull()
             ?: return "redirect:/dnd/campaign"
 
+        // The ad-hoc monster rows have optional HP/AC inputs with no default,
+        // so empty strings reach us for un-filled rows. Bind as List<String>
+        // and parse leniently so empties become null/0 rather than 400/500.
         val tplIds = templateIds.orEmpty()
         val tplQtys = templateQtys.orEmpty()
         val expandedTemplateIds = tplIds.flatMapIndexed { i, id ->
-            val qty = tplQtys.getOrElse(i) { 1 }.coerceAtLeast(0)
+            val qty = (tplQtys.getOrNull(i)?.toIntOrNull() ?: 1).coerceAtLeast(0)
             List(qty) { id }
         }
 
@@ -435,9 +439,9 @@ class CampaignController(
             if (cleaned.isBlank()) null
             else AdhocMonster(
                 name = cleaned,
-                initiativeModifier = mods.getOrElse(i) { 0 },
-                maxHp = hps.getOrNull(i)?.takeIf { it > 0 },
-                ac = acs.getOrNull(i)?.takeIf { it > 0 }
+                initiativeModifier = mods.getOrNull(i)?.toIntOrNull() ?: 0,
+                maxHp = hps.getOrNull(i)?.toIntOrNull()?.takeIf { it > 0 },
+                ac = acs.getOrNull(i)?.toIntOrNull()?.takeIf { it > 0 }
             )
         }
         val request = InitiativeRollRequest(
@@ -488,11 +492,11 @@ class CampaignController(
             )
             RollDiceResult.INVALID_COUNT -> ra.addFlashAttribute(
                 "error",
-                "Dice count must be between 1 and ${web.service.CampaignWebService.MAX_DICE_COUNT}."
+                "Dice count must be between 1 and ${CampaignWebService.MAX_DICE_COUNT}."
             )
             RollDiceResult.INVALID_MODIFIER -> ra.addFlashAttribute(
                 "error",
-                "Modifier must be between -${web.service.CampaignWebService.MAX_DICE_MODIFIER} and ${web.service.CampaignWebService.MAX_DICE_MODIFIER}."
+                "Modifier must be between -${CampaignWebService.MAX_DICE_MODIFIER} and ${CampaignWebService.MAX_DICE_MODIFIER}."
             )
             RollDiceResult.INVALID_EXPRESSION -> ra.addFlashAttribute(
                 "error",
@@ -527,7 +531,7 @@ class CampaignController(
             AttackResult.CANT_TARGET_SELF -> ra.addFlashAttribute("error", "You can't attack yourself.")
             AttackResult.INVALID_MODIFIER -> ra.addFlashAttribute(
                 "error",
-                "Attack modifier must be between -${web.service.CampaignWebService.MAX_ATTACK_MODIFIER} and ${web.service.CampaignWebService.MAX_ATTACK_MODIFIER}."
+                "Attack modifier must be between -${CampaignWebService.MAX_ATTACK_MODIFIER} and ${CampaignWebService.MAX_ATTACK_MODIFIER}."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
@@ -555,7 +559,7 @@ class CampaignController(
             ApplyDamageResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
             ApplyDamageResult.INVALID_AMOUNT -> ra.addFlashAttribute(
                 "error",
-                "Damage must be a number (0-${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 2d6+3."
+                "Damage must be a number (0-${CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 2d6+3."
             )
         }
         return "redirect:/dnd/campaign/$guildId"
@@ -587,7 +591,7 @@ class CampaignController(
             )
             ApplyHealResult.INVALID_AMOUNT -> ra.addFlashAttribute(
                 "error",
-                "Heal must be a number (0-${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 1d8+2."
+                "Heal must be a number (0-${CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 1d8+2."
             )
         }
         return "redirect:/dnd/campaign/$guildId"

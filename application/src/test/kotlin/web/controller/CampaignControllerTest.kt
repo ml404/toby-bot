@@ -805,7 +805,7 @@ class CampaignControllerTest {
             templateIds = null,
             templateQtys = null,
             adhocNames = listOf("Bugbear", "", "Kobold"),
-            adhocMods = listOf(1, 0, 2),
+            adhocMods = listOf("1", "0", "2"),
             adhocHps = null,
             adhocAcs = null,
             user = mockUser,
@@ -829,7 +829,7 @@ class CampaignControllerTest {
             guildId,
             playerDiscordIds = null,
             templateIds = listOf(10L, 20L, 30L),
-            templateQtys = listOf(2, 1, 0),
+            templateQtys = listOf("2", "1", "0"),
             adhocNames = null,
             adhocMods = null,
             adhocHps = null,
@@ -837,6 +837,38 @@ class CampaignControllerTest {
             user = mockUser,
             ra = mockRa
         )
+    }
+
+    @Test
+    fun `rollInitiative tolerates empty adhoc HP AC and mod strings from form`() {
+        every {
+            campaignWebService.rollInitiative(
+                guildId,
+                1L,
+                match<InitiativeRollRequest> { req ->
+                    req.adhocMonsters == listOf(
+                        AdhocMonster("Goblin", 0, maxHp = null, ac = null),
+                        AdhocMonster("Kobold", 0, maxHp = null, ac = null)
+                    )
+                }
+            )
+        } returns RollInitiativeResult.ROLLED
+
+        val view = controller.rollInitiative(
+            guildId,
+            playerDiscordIds = null,
+            templateIds = null,
+            templateQtys = null,
+            adhocNames = listOf("Goblin", "Kobold"),
+            adhocMods = listOf("", ""),
+            adhocHps = listOf("", ""),
+            adhocAcs = listOf("", ""),
+            user = mockUser,
+            ra = mockRa
+        )
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
     }
 
     @Test
@@ -867,7 +899,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.TEMPLATE_NOT_FOUND
 
-        controller.rollInitiative(guildId, null, listOf(77L), listOf(1), null, null, null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, null, listOf(77L), listOf("1"), null, null, null, null, mockUser, mockRa)
 
         verify {
             mockRa.addFlashAttribute("error", "One of the selected monster templates couldn't be found.")
