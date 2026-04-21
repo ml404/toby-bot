@@ -1474,7 +1474,7 @@ class CampaignWebServiceTest {
         every { initiativeStore.applyDamage(guildId, "Alice", 4) } returns
             InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 16)
 
-        val result = service.applyDamage(guildId, dmDiscordId, "Alice", 4)
+        val result = service.applyDamage(guildId, dmDiscordId, "Alice", "4")
         assertEquals(ApplyDamageResult.APPLIED, result)
         verify {
             sessionLog.publish(
@@ -1482,7 +1482,7 @@ class CampaignWebServiceTest {
                 type = common.events.CampaignEventType.DAMAGE_DEALT,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
-                payload = match { it["amount"] == 4 && it["remainingHp"] == 16 }
+                payload = match { it["amount"] == 4 && it["remainingHp"] == 16 && !it.containsKey("expression") }
             )
         }
     }
@@ -1497,7 +1497,7 @@ class CampaignWebServiceTest {
         every { initiativeStore.applyDamage(guildId, "Alice", 99) } returns
             InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 0, defeated = true)
 
-        val result = service.applyDamage(guildId, dmDiscordId, "Alice", 99)
+        val result = service.applyDamage(guildId, dmDiscordId, "Alice", "99")
         assertEquals(ApplyDamageResult.DEFEATED, result)
         verify {
             sessionLog.publish(
@@ -1514,8 +1514,72 @@ class CampaignWebServiceTest {
     fun `applyDamage rejects negative amount`() {
         assertEquals(
             ApplyDamageResult.INVALID_AMOUNT,
-            service.applyDamage(guildId, dmDiscordId, "Alice", -1)
+            service.applyDamage(guildId, dmDiscordId, "Alice", "-1")
         )
+    }
+
+    @Test
+    fun `applyDamage rejects unparseable amount`() {
+        assertEquals(
+            ApplyDamageResult.INVALID_AMOUNT,
+            service.applyDamage(guildId, dmDiscordId, "Alice", "nonsense")
+        )
+    }
+
+    @Test
+    fun `applyDamage rejects integer above max cap`() {
+        assertEquals(
+            ApplyDamageResult.INVALID_AMOUNT,
+            service.applyDamage(guildId, dmDiscordId, "Alice", (CampaignWebService.MAX_DAMAGE_AMOUNT + 1).toString())
+        )
+    }
+
+    @Test
+    fun `applyDamage rolls dice expression and includes expression + rolls in payload`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+        every { initiativeStore.applyDamage(guildId, "Alice", any()) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 10)
+
+        val result = service.applyDamage(guildId, dmDiscordId, "Alice", "2d6+3")
+        assertEquals(ApplyDamageResult.APPLIED, result)
+        verify {
+            initiativeStore.applyDamage(guildId, "Alice", match {
+                // 2d6+3: min 5, max 15. Server rolled a value in that range.
+                it in 5..15
+            })
+        }
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.DAMAGE_DEALT,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["expression"] == "2d6+3" &&
+                        (it["rolls"] as? List<*>)?.size == 2 &&
+                        (it["amount"] as Int) in 5..15
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `applyDamage rejects dice expression that exceeds caps`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 18, "MONSTER")
+
+        assertEquals(
+            ApplyDamageResult.INVALID_AMOUNT,
+            service.applyDamage(guildId, dmDiscordId, "Alice", "99d6")
+        )
+        verify(exactly = 0) { initiativeStore.applyDamage(any(), any(), any()) }
     }
 
     @Test
@@ -1529,7 +1593,162 @@ class CampaignWebServiceTest {
 
         assertEquals(
             ApplyDamageResult.TARGET_NOT_FOUND,
-            service.applyDamage(guildId, dmDiscordId, "Nobody", 4)
+            service.applyDamage(guildId, dmDiscordId, "Nobody", "4")
         )
+    }
+
+    // combat: applyHeal
+
+    private fun stubHealActive(campaign: CampaignDto, entries: List<InitiativeEntryData>) {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Cleric", 15, "PLAYER")
+        every { initiativeStore.currentEntries(guildId) } returns entries
+    }
+
+    @Test
+    fun `applyHeal publishes HEAL_APPLIED and returns APPLIED for integer amount`() {
+        val campaign = makeCampaign()
+        stubHealActive(campaign, listOf(
+            InitiativeEntryData("Cleric", 15, "PLAYER"),
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 10)
+        ))
+        every { initiativeStore.applyHeal(guildId, "Alice", 5) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 15)
+
+        val result = service.applyHeal(guildId, dmDiscordId, "Alice", "5")
+        assertEquals(ApplyHealResult.APPLIED, result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.HEAL_APPLIED,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["healer"] == "Cleric" && it["target"] == "Alice" &&
+                        it["amount"] == 5 && it["remainingHp"] == 15 &&
+                        it["maxHp"] == 20 && it["revived"] == false
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `applyHeal rolls dice expression and includes expression + rolls in payload`() {
+        val campaign = makeCampaign()
+        stubHealActive(campaign, listOf(
+            InitiativeEntryData("Cleric", 15, "PLAYER"),
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 10)
+        ))
+        every { initiativeStore.applyHeal(guildId, "Alice", any()) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 14)
+
+        val result = service.applyHeal(guildId, dmDiscordId, "Alice", "1d8+2")
+        assertEquals(ApplyHealResult.APPLIED, result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.HEAL_APPLIED,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match {
+                    it["expression"] == "1d8+2" &&
+                        (it["rolls"] as? List<*>)?.size == 1
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `applyHeal marks revived when defeated target HP rises above 0`() {
+        val campaign = makeCampaign()
+        stubHealActive(campaign, listOf(
+            InitiativeEntryData("Cleric", 15, "PLAYER"),
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 0, defeated = true)
+        ))
+        every { initiativeStore.applyHeal(guildId, "Alice", 8) } returns
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 8, defeated = false)
+
+        val result = service.applyHeal(guildId, dmDiscordId, "Alice", "8")
+        assertEquals(ApplyHealResult.REVIVED, result)
+        verify {
+            sessionLog.publish(
+                guildId = guildId,
+                type = common.events.CampaignEventType.HEAL_APPLIED,
+                actorDiscordId = dmDiscordId,
+                actorName = any(),
+                payload = match { it["revived"] == true }
+            )
+        }
+    }
+
+    @Test
+    fun `applyHeal rejects target without HP tracked`() {
+        val campaign = makeCampaign()
+        stubHealActive(campaign, listOf(
+            InitiativeEntryData("Cleric", 15, "PLAYER"),
+            InitiativeEntryData("Alice", 12, "PLAYER")
+        ))
+
+        val result = service.applyHeal(guildId, dmDiscordId, "Alice", "5")
+        assertEquals(ApplyHealResult.TARGET_HAS_NO_HP, result)
+        verify(exactly = 0) { initiativeStore.applyHeal(any(), any(), any()) }
+    }
+
+    @Test
+    fun `applyHeal returns TARGET_NOT_FOUND when target missing from tracker`() {
+        val campaign = makeCampaign()
+        stubHealActive(campaign, listOf(
+            InitiativeEntryData("Cleric", 15, "PLAYER")
+        ))
+
+        val result = service.applyHeal(guildId, dmDiscordId, "Nobody", "5")
+        assertEquals(ApplyHealResult.TARGET_NOT_FOUND, result)
+    }
+
+    @Test
+    fun `applyHeal rejects invalid amount`() {
+        assertEquals(
+            ApplyHealResult.INVALID_AMOUNT,
+            service.applyHeal(guildId, dmDiscordId, "Alice", "not a number")
+        )
+    }
+
+    @Test
+    fun `applyHeal rejects when no active campaign`() {
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns null
+        assertEquals(
+            ApplyHealResult.NO_ACTIVE_CAMPAIGN,
+            service.applyHeal(guildId, dmDiscordId, "Alice", "5")
+        )
+    }
+
+    @Test
+    fun `applyHeal rejects when no active combat`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns false
+
+        assertEquals(
+            ApplyHealResult.NO_ACTIVE_COMBAT,
+            service.applyHeal(guildId, dmDiscordId, "Alice", "5")
+        )
+    }
+
+    @Test
+    fun `applyHeal rejects when requester is not current turn or DM`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { initiativeStore.isActive(guildId) } returns true
+        every { initiativeStore.currentEntry(guildId) } returns
+            InitiativeEntryData("Goblin", 15, "MONSTER")
+        every { initiativeStore.currentEntries(guildId) } returns listOf(
+            InitiativeEntryData("Goblin", 15, "MONSTER"),
+            InitiativeEntryData("Alice", 12, "PLAYER", maxHp = 20, currentHp = 10)
+        )
+
+        val result = service.applyHeal(guildId, playerDiscordId, "Alice", "5")
+        assertEquals(ApplyHealResult.NOT_ATTACKER, result)
     }
 }

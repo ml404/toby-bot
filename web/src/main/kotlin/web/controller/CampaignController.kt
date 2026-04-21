@@ -13,6 +13,7 @@ import web.service.AddNoteResult
 import web.service.AdhocMonster
 import web.service.AnnotateRollResult
 import web.service.ApplyDamageResult
+import web.service.ApplyHealResult
 import web.service.AttackResult
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
@@ -536,7 +537,7 @@ class CampaignController(
     fun applyDamage(
         @PathVariable guildId: Long,
         @RequestParam("targetName") targetName: String,
-        @RequestParam("amount") amount: Int,
+        @RequestParam("amount") amount: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
     ): String {
@@ -554,7 +555,39 @@ class CampaignController(
             ApplyDamageResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
             ApplyDamageResult.INVALID_AMOUNT -> ra.addFlashAttribute(
                 "error",
-                "Damage must be between 0 and ${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}."
+                "Damage must be a number (0-${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 2d6+3."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/combat/heal")
+    fun applyHeal(
+        @PathVariable guildId: Long,
+        @RequestParam("targetName") targetName: String,
+        @RequestParam("amount") amount: String,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.applyHeal(guildId, discordId, targetName.trim(), amount)) {
+            ApplyHealResult.APPLIED, ApplyHealResult.REVIVED -> {}
+            ApplyHealResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
+            ApplyHealResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "No active combat — roll initiative first.")
+            ApplyHealResult.NOT_ATTACKER -> ra.addFlashAttribute(
+                "error",
+                "You can only heal on your own turn (or as the DM)."
+            )
+            ApplyHealResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
+            ApplyHealResult.TARGET_HAS_NO_HP -> ra.addFlashAttribute(
+                "error",
+                "That target has no HP tracked — can't heal them."
+            )
+            ApplyHealResult.INVALID_AMOUNT -> ra.addFlashAttribute(
+                "error",
+                "Heal must be a number (0-${web.service.CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 1d8+2."
             )
         }
         return "redirect:/dnd/campaign/$guildId"

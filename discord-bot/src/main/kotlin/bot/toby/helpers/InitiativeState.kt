@@ -98,6 +98,25 @@ class InitiativeState {
     internal fun findByName(name: String): RolledEntry? =
         sortedEntries.firstOrNull { it.name == name }
 
+    /**
+     * Restore [amount] HP to [name], clamped to maxHp. If the entry was
+     * defeated and the heal brings HP above 0, the defeated flag is cleared.
+     * No-op when the name isn't present or the entry has no HP tracked.
+     */
+    internal fun applyHeal(name: String, amount: Int) {
+        val existing = findByName(name) ?: return
+        val max = existing.maxHp ?: return
+        val base = existing.currentHp ?: 0
+        val newHp = (base + amount).coerceAtMost(max)
+        val revived = existing.defeated && newHp > 0
+        updateEntry(name) {
+            it.copy(
+                currentHp = newHp,
+                defeated = if (revived) false else it.defeated
+            )
+        }
+    }
+
     internal val currentEntry: RolledEntry?
         get() = sortedEntries.getOrNull(initiativeIndex.get())
 }

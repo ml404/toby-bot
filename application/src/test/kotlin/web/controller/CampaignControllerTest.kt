@@ -19,6 +19,7 @@ import web.service.AddNoteResult
 import web.service.AdhocMonster
 import web.service.AnnotateRollResult
 import web.service.ApplyDamageResult
+import web.service.ApplyHealResult
 import web.service.AttackOutcome
 import web.service.AttackResult
 import web.service.CampaignDetail
@@ -969,13 +970,24 @@ class CampaignControllerTest {
     @Test
     fun `applyDamage redirects on applied`() {
         every {
-            campaignWebService.applyDamage(guildId, 1L, "Goblin", 4)
+            campaignWebService.applyDamage(guildId, 1L, "Goblin", "4")
         } returns ApplyDamageResult.APPLIED
 
-        val view = controller.applyDamage(guildId, "Goblin", 4, mockUser, mockRa)
+        val view = controller.applyDamage(guildId, "Goblin", "4", mockUser, mockRa)
 
         assertEquals("redirect:/dnd/campaign/$guildId", view)
         verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `applyDamage passes dice expression through to service`() {
+        every {
+            campaignWebService.applyDamage(guildId, 1L, "Goblin", "2d6+3")
+        } returns ApplyDamageResult.APPLIED
+
+        controller.applyDamage(guildId, "Goblin", "2d6+3", mockUser, mockRa)
+
+        verify { campaignWebService.applyDamage(guildId, 1L, "Goblin", "2d6+3") }
     }
 
     @Test
@@ -984,8 +996,64 @@ class CampaignControllerTest {
             campaignWebService.applyDamage(guildId, 1L, any(), any())
         } returns ApplyDamageResult.TARGET_NOT_FOUND
 
-        controller.applyDamage(guildId, "Nobody", 4, mockUser, mockRa)
+        controller.applyDamage(guildId, "Nobody", "4", mockUser, mockRa)
 
         verify { mockRa.addFlashAttribute("error", "That target isn't in the initiative order.") }
+    }
+
+    @Test
+    fun `applyDamage sets flash error when amount is invalid`() {
+        every {
+            campaignWebService.applyDamage(guildId, 1L, any(), any())
+        } returns ApplyDamageResult.INVALID_AMOUNT
+
+        controller.applyDamage(guildId, "Goblin", "nope", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", match<String> { it.contains("dice expression") }) }
+    }
+
+    @Test
+    fun `applyHeal redirects on applied`() {
+        every {
+            campaignWebService.applyHeal(guildId, 1L, "Alice", "5")
+        } returns ApplyHealResult.APPLIED
+
+        val view = controller.applyHeal(guildId, "Alice", "5", mockUser, mockRa)
+
+        assertEquals("redirect:/dnd/campaign/$guildId", view)
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `applyHeal redirects on revived without flash`() {
+        every {
+            campaignWebService.applyHeal(guildId, 1L, "Alice", "8")
+        } returns ApplyHealResult.REVIVED
+
+        controller.applyHeal(guildId, "Alice", "8", mockUser, mockRa)
+
+        verify(exactly = 0) { mockRa.addFlashAttribute(any<String>(), any()) }
+    }
+
+    @Test
+    fun `applyHeal sets flash error when target has no HP tracked`() {
+        every {
+            campaignWebService.applyHeal(guildId, 1L, any(), any())
+        } returns ApplyHealResult.TARGET_HAS_NO_HP
+
+        controller.applyHeal(guildId, "Alice", "5", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", match<String> { it.contains("HP tracked") }) }
+    }
+
+    @Test
+    fun `applyHeal sets flash error when amount is invalid`() {
+        every {
+            campaignWebService.applyHeal(guildId, 1L, any(), any())
+        } returns ApplyHealResult.INVALID_AMOUNT
+
+        controller.applyHeal(guildId, "Alice", "garbage", mockUser, mockRa)
+
+        verify { mockRa.addFlashAttribute("error", match<String> { it.contains("dice expression") }) }
     }
 }

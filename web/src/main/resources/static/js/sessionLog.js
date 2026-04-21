@@ -101,7 +101,17 @@
             }
             case 'DAMAGE_DEALT': {
                 const remaining = (p.remainingHp != null) ? ' (' + p.remainingHp + ' HP left)' : '';
-                return (p.target || '?') + ' takes ' + p.amount + ' damage' + remaining;
+                const amt = p.expression ? (p.expression + ' = ' + p.amount) : p.amount;
+                return (p.target || '?') + ' takes ' + amt + ' damage' + remaining;
+            }
+            case 'HEAL_APPLIED': {
+                const hp = (p.remainingHp != null && p.maxHp != null)
+                    ? ' (' + p.remainingHp + '/' + p.maxHp + ' HP)'
+                    : '';
+                const amt = p.expression ? (p.expression + ' = ' + p.amount) : p.amount;
+                const who = p.healer ? (p.healer + ' heals ') : 'heals ';
+                const revived = p.revived ? ' — revived' : '';
+                return who + (p.target || '?') + ' for ' + amt + hp + revived;
             }
             case 'PARTICIPANT_DEFEATED':
                 return (p.target || '?') + ' is defeated';
@@ -301,7 +311,7 @@
         row.classList.add(cls);
     }
 
-    function applyDamageToRow(name, remainingHp) {
+    function applyHpToRow(name, currentHp) {
         const row = findRow(name);
         if (!row) return;
         const fill = row.querySelector('.hp-fill');
@@ -309,7 +319,7 @@
         if (!fill || !row.querySelector('.hp-wrap')) return;
         const maxSpan = row.querySelectorAll('.hp-label span')[1];
         const max = maxSpan ? parseInt(maxSpan.textContent, 10) : 0;
-        const hp = Math.max(0, remainingHp == null ? 0 : remainingHp);
+        const hp = Math.max(0, currentHp == null ? 0 : currentHp);
         if (label) label.textContent = String(hp);
         if (max > 0) {
             const pct = Math.max(0, Math.min(100, (hp * 100) / max));
@@ -324,6 +334,15 @@
         const row = findRow(name);
         if (!row) return;
         row.classList.add('defeated');
+    }
+
+    function reviveRow(name) {
+        const row = findRow(name);
+        if (!row) return;
+        row.classList.remove('defeated');
+        row.classList.remove('just-revived');
+        void row.offsetWidth;
+        row.classList.add('just-revived');
     }
 
     // ---- Combat cinematic ----------------------------------------------
@@ -378,15 +397,17 @@
         });
     }
 
-    function spawnDamageFloater(payload) {
+    function spawnCombatFloater(payload, tone) {
         const center = rowCenter(payload.target);
         if (!center) return;
         const stage = getCombatStage();
         const el = document.createElement('div');
-        el.className = 'damage-floater';
+        const toneClass = tone === 'heal' ? 'heal' : 'damage';
+        el.className = 'damage-floater ' + toneClass;
         el.style.setProperty('--start-x', center.x + 'px');
         el.style.setProperty('--start-y', (center.y - 8) + 'px');
-        el.textContent = '-' + (payload.amount != null ? payload.amount : '?');
+        const sign = tone === 'heal' ? '+' : '-';
+        el.textContent = sign + (payload.amount != null ? payload.amount : '?');
         stage.appendChild(el);
         setTimeout(function () { el.remove(); }, 1000);
     }
@@ -432,8 +453,13 @@
                 setTimeout(function () { flashRow(p.target, 'just-missed'); }, 600);
                 break;
             case 'DAMAGE_DEALT':
-                spawnDamageFloater(p);
-                applyDamageToRow(p.target, p.remainingHp);
+                spawnCombatFloater(p, 'damage');
+                applyHpToRow(p.target, p.remainingHp);
+                break;
+            case 'HEAL_APPLIED':
+                spawnCombatFloater(p, 'heal');
+                applyHpToRow(p.target, p.remainingHp);
+                if (p.revived) reviveRow(p.target);
                 break;
             case 'PARTICIPANT_DEFEATED':
                 spawnDefeatSkull(p);

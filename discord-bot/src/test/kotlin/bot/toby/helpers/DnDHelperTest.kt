@@ -346,6 +346,58 @@ internal class DnDHelperTest {
         Assertions.assertEquals(15, restored.ac)
     }
 
+    @Test
+    fun testApplyHealClampsToMaxHp() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(RolledEntry("Alice", 12, "PLAYER", maxHp = 20, currentHp = 15))
+        )
+        val state = dndHelper.stateFor(guildId)
+        state.applyHeal("Alice", 999)
+        Assertions.assertEquals(20, state.findByName("Alice")?.currentHp)
+    }
+
+    @Test
+    fun testApplyHealRevivesDefeatedTarget() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(RolledEntry("Alice", 12, "PLAYER", maxHp = 20, currentHp = 0, defeated = true))
+        )
+        val state = dndHelper.stateFor(guildId)
+        state.applyHeal("Alice", 5)
+        val restored = state.findByName("Alice")
+        Assertions.assertEquals(5, restored?.currentHp)
+        Assertions.assertFalse(restored?.defeated ?: true, "heal above 0 should clear the defeated flag")
+    }
+
+    @Test
+    fun testApplyHealRevivedFlagSurvivesSnapshotRoundTrip() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(RolledEntry("Alice", 12, "PLAYER", maxHp = 20, currentHp = 0, defeated = true))
+        )
+        dndHelper.stateFor(guildId).applyHeal("Alice", 5)
+
+        val snapshot = dndHelper.activeSnapshots().getValue(guildId)
+        dndHelper.clearInitiative(guildId)
+        dndHelper.restore(guildId, snapshot)
+
+        val restored = dndHelper.stateFor(guildId).findByName("Alice")
+        Assertions.assertEquals(5, restored?.currentHp)
+        Assertions.assertFalse(restored?.defeated ?: true)
+    }
+
+    @Test
+    fun testApplyHealIsNoOpWhenMaxHpMissing() {
+        dndHelper.seedInitiative(
+            guildId,
+            listOf(RolledEntry("Alice", 12, "PLAYER"))
+        )
+        val state = dndHelper.stateFor(guildId)
+        state.applyHeal("Alice", 5)
+        Assertions.assertNull(state.findByName("Alice")?.currentHp)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testDoInitialLookupWithSpell() = runTest {
