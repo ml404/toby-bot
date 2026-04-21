@@ -899,7 +899,7 @@ class CampaignControllerTest {
             campaignWebService.rollInitiative(guildId, 1L, any())
         } returns RollInitiativeResult.TEMPLATE_NOT_FOUND
 
-        controller.rollInitiative(guildId, null, listOf(77L), listOf(1), null, null, null, null, mockUser, mockRa)
+        controller.rollInitiative(guildId, null, listOf(77L), listOf("1"), null, null, null, null, mockUser, mockRa)
 
         verify {
             mockRa.addFlashAttribute("error", "One of the selected monster templates couldn't be found.")
