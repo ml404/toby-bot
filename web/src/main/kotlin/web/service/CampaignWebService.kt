@@ -10,6 +10,8 @@ import database.dto.CampaignDto
 import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
 import database.dto.CampaignPlayerId
+import database.dto.EncounterDto
+import database.dto.EncounterEntryDto
 import database.dto.MonsterTemplateDto
 import database.dto.SessionNoteDto
 import database.dto.UserDto
@@ -18,6 +20,8 @@ import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
 import database.dto.MonsterAttackDto
+import database.service.EncounterEntryService
+import database.service.EncounterService
 import database.service.MonsterAttackService
 import database.service.MonsterTemplateService
 import database.service.SessionNoteService
@@ -37,6 +41,7 @@ data class CampaignDetail(
     val recentEvents: List<SessionEventView> = emptyList(),
     val initiativeState: InitiativeStateView? = null,
     val monsterLibrary: List<MonsterTemplateView> = emptyList(),
+    val encounters: List<EncounterView> = emptyList(),
     val freshEventIds: List<Long> = emptyList()
 ) {
     fun isDm(discordId: Long): Boolean = campaign.dmDiscordId == discordId
@@ -74,6 +79,35 @@ data class MonsterTemplateView(
     val ac: Int?,
     val attacks: List<MonsterAttackView> = emptyList()
 )
+
+data class EncounterEntryView(
+    val id: Long,
+    val sortOrder: Int,
+    val quantity: Int,
+    val monsterTemplate: MonsterTemplateView?,
+    val adhocName: String?,
+    val adhocInitiativeModifier: Int,
+    val adhocHpExpression: String?,
+    val adhocAc: Int?
+) {
+    val displayName: String
+        get() = monsterTemplate?.name
+            ?: adhocName?.takeIf { it.isNotBlank() }
+            ?: "(missing)"
+
+    val effectiveQuantity: Int
+        get() = if (monsterTemplate != null) quantity else 1
+}
+
+data class EncounterView(
+    val id: Long,
+    val name: String,
+    val notes: String?,
+    val entries: List<EncounterEntryView> = emptyList()
+) {
+    val totalRosterSize: Int
+        get() = entries.sumOf { it.effectiveQuantity }
+}
 
 data class AdhocMonster(
     val name: String,
@@ -148,6 +182,26 @@ enum class SaveAttackResult {
     TOO_MANY, TEMPLATE_NOT_FOUND, NOT_OWNER, ATTACK_NOT_FOUND, ATTACK_TEMPLATE_MISMATCH
 }
 enum class DeleteAttackResult { DELETED, ATTACK_NOT_FOUND, NOT_OWNER, ATTACK_TEMPLATE_MISMATCH }
+enum class SaveEncounterResult { SAVED, NAME_BLANK, NAME_TOO_LONG, NOTES_TOO_LONG, NOT_FOUND, NOT_OWNER }
+enum class DeleteEncounterResult { DELETED, NOT_FOUND, NOT_OWNER }
+enum class SaveEncounterEntryResult {
+    SAVED,
+    ENCOUNTER_NOT_FOUND, NOT_OWNER,
+    TEMPLATE_NOT_FOUND, TEMPLATE_NOT_OWNED,
+    NAME_TOO_LONG, INVALID_HP, INVALID_QUANTITY,
+    TOO_MANY_ENTRIES, MISSING_SOURCE,
+    ENTRY_NOT_FOUND, ENTRY_ENCOUNTER_MISMATCH
+}
+enum class DeleteEncounterEntryResult {
+    DELETED, ENCOUNTER_NOT_FOUND, NOT_OWNER, ENTRY_NOT_FOUND, ENTRY_ENCOUNTER_MISMATCH
+}
+enum class ReorderEncounterEntriesResult {
+    REORDERED, ENCOUNTER_NOT_FOUND, NOT_OWNER, ENTRY_MISMATCH
+}
+enum class RollEncounterResult {
+    ROLLED, ENCOUNTER_NOT_FOUND, NOT_OWNER,
+    NO_ACTIVE_CAMPAIGN, NOT_DM, EMPTY_ROSTER, TEMPLATE_NOT_FOUND
+}
 enum class MonsterAttackResult {
     HIT, MISS,
     NO_ACTIVE_CAMPAIGN, NO_ACTIVE_COMBAT, NOT_DM,
@@ -205,6 +259,8 @@ class CampaignWebService(
     private val campaignEventService: CampaignEventService,
     private val monsterTemplateService: MonsterTemplateService,
     private val monsterAttackService: MonsterAttackService,
+    private val encounterService: EncounterService,
+    private val encounterEntryService: EncounterEntryService,
     private val initiativeStore: InitiativeStore,
     private val sessionLog: SessionLogPublisher,
     private val jda: JDA
@@ -224,6 +280,10 @@ class CampaignWebService(
         const val MAX_ATTACK_NAME_LENGTH = 60
         const val MAX_ATTACKS_PER_TEMPLATE = 12
         const val MAX_ATTACK_MODIFIER = 30
+        const val MAX_ENCOUNTER_NAME_LENGTH = 100
+        const val MAX_ENCOUNTER_NOTES_LENGTH = 500
+        const val MAX_ENTRIES_PER_ENCOUNTER = 40
+        const val MAX_QUANTITY_PER_ENTRY = 20
         const val MAX_DICE_COUNT = DiceExpressionRoller.MAX_DICE_COUNT
         const val MAX_DICE_MODIFIER = DiceExpressionRoller.MAX_DICE_MODIFIER
         const val MAX_DAMAGE_AMOUNT = DiceExpressionRoller.MAX_LITERAL_AMOUNT
@@ -325,6 +385,15 @@ class CampaignWebService(
             }
         } else emptyList()
 
+        val encounters = if (isDm) {
+            safeFetch("encounters", requestingDiscordId) {
+                val templatesById = monsterLibrary.associateBy { it.id }
+                encounterService.listByDm(requestingDiscordId).map { dto ->
+                    toEncounterView(dto, templatesById)
+                }
+            }
+        } else emptyList()
+
         // Events published in the last few seconds are likely the action the user
         // just submitted. Their own POST→redirect cycle means the new EventSource
         // connects after the publish, so SSE won't replay the event and the
@@ -343,6 +412,7 @@ class CampaignWebService(
             recentEvents = recentEvents,
             initiativeState = initiativeState,
             monsterLibrary = monsterLibrary,
+            encounters = encounters,
             freshEventIds = freshEventIds
         )
     }
@@ -375,6 +445,36 @@ class CampaignWebService(
             name = dto.name,
             toHitModifier = dto.toHitModifier,
             damageExpression = dto.damageExpression
+        )
+
+    private fun toEncounterView(
+        dto: EncounterDto,
+        templatesById: Map<Long, MonsterTemplateView>
+    ): EncounterView {
+        val entries = encounterEntryService.listByEncounter(dto.id).map { entry ->
+            toEncounterEntryView(entry, templatesById)
+        }
+        return EncounterView(
+            id = dto.id,
+            name = dto.name,
+            notes = dto.notes,
+            entries = entries
+        )
+    }
+
+    private fun toEncounterEntryView(
+        dto: EncounterEntryDto,
+        templatesById: Map<Long, MonsterTemplateView>
+    ): EncounterEntryView =
+        EncounterEntryView(
+            id = dto.id,
+            sortOrder = dto.sortOrder,
+            quantity = dto.quantity,
+            monsterTemplate = dto.monsterTemplateId?.let { templatesById[it] },
+            adhocName = dto.adhocName,
+            adhocInitiativeModifier = dto.adhocInitiativeModifier,
+            adhocHpExpression = dto.adhocHpExpression,
+            adhocAc = dto.adhocAc
         )
 
     fun listRecentEvents(guildId: Long, sinceId: Long?, limit: Int): List<SessionEventView> {
@@ -794,6 +894,257 @@ class CampaignWebService(
         if (template.dmDiscordId != dmDiscordId) return DeleteAttackResult.NOT_OWNER
         monsterAttackService.deleteById(attackId)
         return DeleteAttackResult.DELETED
+    }
+
+    // ----------------------------------------------------------------------
+    // Encounter Library: DM-scoped reusable encounter drafts. Each encounter
+    // owns an ordered list of roster entries that either reference a monster
+    // template (with a quantity, expanded at roll time) or define an ad-hoc
+    // monster inline. The DM can load a saved encounter into the initiative
+    // composer for final tweaks, or roll it directly from the card.
+    // ----------------------------------------------------------------------
+
+    fun listEncountersForDm(dmDiscordId: Long): List<EncounterView> {
+        val templatesById = monsterTemplateService.listByDm(dmDiscordId)
+            .map(::toMonsterTemplateView)
+            .associateBy { it.id }
+        return encounterService.listByDm(dmDiscordId).map { toEncounterView(it, templatesById) }
+    }
+
+    fun getEncounterForDm(dmDiscordId: Long, encounterId: Long): EncounterView? {
+        val encounter = encounterService.getById(encounterId) ?: return null
+        if (encounter.dmDiscordId != dmDiscordId) return null
+        val templatesById = monsterTemplateService.listByDm(dmDiscordId)
+            .map(::toMonsterTemplateView)
+            .associateBy { it.id }
+        return toEncounterView(encounter, templatesById)
+    }
+
+    fun saveEncounter(
+        dmDiscordId: Long,
+        id: Long?,
+        name: String,
+        notes: String?
+    ): SaveEncounterResult {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return SaveEncounterResult.NAME_BLANK
+        if (trimmed.length > MAX_ENCOUNTER_NAME_LENGTH) return SaveEncounterResult.NAME_TOO_LONG
+
+        val cleanedNotes = notes?.trim()?.takeIf { it.isNotEmpty() }
+        if (cleanedNotes != null && cleanedNotes.length > MAX_ENCOUNTER_NOTES_LENGTH) {
+            return SaveEncounterResult.NOTES_TOO_LONG
+        }
+
+        val dto = if (id != null && id > 0) {
+            val existing = encounterService.getById(id) ?: return SaveEncounterResult.NOT_FOUND
+            if (existing.dmDiscordId != dmDiscordId) return SaveEncounterResult.NOT_OWNER
+            existing.apply {
+                this.name = trimmed
+                this.notes = cleanedNotes
+            }
+        } else {
+            EncounterDto(
+                dmDiscordId = dmDiscordId,
+                name = trimmed,
+                notes = cleanedNotes
+            )
+        }
+        encounterService.save(dto)
+        return SaveEncounterResult.SAVED
+    }
+
+    fun deleteEncounter(dmDiscordId: Long, encounterId: Long): DeleteEncounterResult {
+        val existing = encounterService.getById(encounterId) ?: return DeleteEncounterResult.NOT_FOUND
+        if (existing.dmDiscordId != dmDiscordId) return DeleteEncounterResult.NOT_OWNER
+        encounterService.deleteById(encounterId)
+        return DeleteEncounterResult.DELETED
+    }
+
+    /**
+     * Create or update a roster entry on an encounter. Exactly one of
+     * [monsterTemplateId] or [adhocName] must resolve to a usable source.
+     * Template entries honor [quantity]; ad-hoc entries are always size one.
+     * On insert, the new row appends to the end of the current ordering.
+     */
+    fun saveEncounterEntry(
+        dmDiscordId: Long,
+        encounterId: Long,
+        entryId: Long?,
+        monsterTemplateId: Long?,
+        quantity: Int,
+        adhocName: String?,
+        adhocInitiativeModifier: Int,
+        adhocHpExpression: String?,
+        adhocAc: Int?
+    ): SaveEncounterEntryResult {
+        val encounter = encounterService.getById(encounterId)
+            ?: return SaveEncounterEntryResult.ENCOUNTER_NOT_FOUND
+        if (encounter.dmDiscordId != dmDiscordId) return SaveEncounterEntryResult.NOT_OWNER
+
+        val cleanedAdhocName = adhocName?.trim()?.takeIf { it.isNotEmpty() }
+        val usesTemplate = monsterTemplateId != null
+        val usesAdhoc = cleanedAdhocName != null
+
+        if (!usesTemplate && !usesAdhoc) return SaveEncounterEntryResult.MISSING_SOURCE
+
+        if (usesTemplate) {
+            val template = monsterTemplateService.getById(monsterTemplateId!!)
+                ?: return SaveEncounterEntryResult.TEMPLATE_NOT_FOUND
+            if (template.dmDiscordId != dmDiscordId) return SaveEncounterEntryResult.TEMPLATE_NOT_OWNED
+            if (quantity < 1 || quantity > MAX_QUANTITY_PER_ENTRY) {
+                return SaveEncounterEntryResult.INVALID_QUANTITY
+            }
+        }
+
+        if (usesAdhoc) {
+            if (cleanedAdhocName!!.length > MAX_ENCOUNTER_NAME_LENGTH) {
+                return SaveEncounterEntryResult.NAME_TOO_LONG
+            }
+            val hp = adhocHpExpression?.trim()?.takeIf { it.isNotEmpty() }
+            if (hp != null && DiceExpressionRoller.parseAmount(hp) == null) {
+                return SaveEncounterEntryResult.INVALID_HP
+            }
+        }
+
+        val cleanedAdhocHp = adhocHpExpression?.trim()?.takeIf { it.isNotEmpty() }
+
+        val dto = if (entryId != null && entryId > 0) {
+            val existing = encounterEntryService.getById(entryId)
+                ?: return SaveEncounterEntryResult.ENTRY_NOT_FOUND
+            if (existing.encounterId != encounterId) {
+                return SaveEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH
+            }
+            existing.apply {
+                this.monsterTemplateId = if (usesTemplate) monsterTemplateId else null
+                this.quantity = if (usesTemplate) quantity else 1
+                this.adhocName = if (usesAdhoc) cleanedAdhocName else null
+                this.adhocInitiativeModifier = if (usesAdhoc) adhocInitiativeModifier else 0
+                this.adhocHpExpression = if (usesAdhoc) cleanedAdhocHp else null
+                this.adhocAc = if (usesAdhoc) adhocAc else null
+            }
+        } else {
+            if (encounterEntryService.countByEncounter(encounterId) >= MAX_ENTRIES_PER_ENCOUNTER) {
+                return SaveEncounterEntryResult.TOO_MANY_ENTRIES
+            }
+            val nextSortOrder = encounterEntryService.maxSortOrder(encounterId) + 1
+            EncounterEntryDto(
+                encounterId = encounterId,
+                sortOrder = nextSortOrder,
+                monsterTemplateId = if (usesTemplate) monsterTemplateId else null,
+                quantity = if (usesTemplate) quantity else 1,
+                adhocName = if (usesAdhoc) cleanedAdhocName else null,
+                adhocInitiativeModifier = if (usesAdhoc) adhocInitiativeModifier else 0,
+                adhocHpExpression = if (usesAdhoc) cleanedAdhocHp else null,
+                adhocAc = if (usesAdhoc) adhocAc else null
+            )
+        }
+        encounterEntryService.save(dto)
+        return SaveEncounterEntryResult.SAVED
+    }
+
+    fun deleteEncounterEntry(
+        dmDiscordId: Long,
+        encounterId: Long,
+        entryId: Long
+    ): DeleteEncounterEntryResult {
+        val encounter = encounterService.getById(encounterId)
+            ?: return DeleteEncounterEntryResult.ENCOUNTER_NOT_FOUND
+        if (encounter.dmDiscordId != dmDiscordId) return DeleteEncounterEntryResult.NOT_OWNER
+        val entry = encounterEntryService.getById(entryId)
+            ?: return DeleteEncounterEntryResult.ENTRY_NOT_FOUND
+        if (entry.encounterId != encounterId) {
+            return DeleteEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH
+        }
+        encounterEntryService.deleteById(entryId)
+        return DeleteEncounterEntryResult.DELETED
+    }
+
+    /**
+     * Rewrites the [sortOrder] of each entry to match the provided id list.
+     * Fails atomically if any id in [orderedIds] doesn't belong to the
+     * encounter, or if the set of ids doesn't match the encounter's entries
+     * (prevents partial reorderings leaving unlisted entries out-of-place).
+     */
+    fun reorderEncounterEntries(
+        dmDiscordId: Long,
+        encounterId: Long,
+        orderedIds: List<Long>
+    ): ReorderEncounterEntriesResult {
+        val encounter = encounterService.getById(encounterId)
+            ?: return ReorderEncounterEntriesResult.ENCOUNTER_NOT_FOUND
+        if (encounter.dmDiscordId != dmDiscordId) return ReorderEncounterEntriesResult.NOT_OWNER
+
+        val existing = encounterEntryService.listByEncounter(encounterId)
+        if (existing.size != orderedIds.size) return ReorderEncounterEntriesResult.ENTRY_MISMATCH
+        val existingIds = existing.map { it.id }.toSet()
+        if (orderedIds.toSet() != existingIds) return ReorderEncounterEntriesResult.ENTRY_MISMATCH
+
+        val byId = existing.associateBy { it.id }
+        val updated = orderedIds.mapIndexed { index, id ->
+            byId.getValue(id).apply { sortOrder = index }
+        }
+        encounterEntryService.saveAll(updated)
+        return ReorderEncounterEntriesResult.REORDERED
+    }
+
+    /**
+     * Expand an encounter's roster into an [InitiativeRollRequest] and
+     * delegate to [rollInitiative], which handles dice rolls, event publish,
+     * and seeding the [InitiativeStore]. Orphaned template references
+     * (monsterTemplateId pointing at a deleted template) are skipped so
+     * rolling still works even after a cleanup.
+     */
+    fun rollEncounter(
+        guildId: Long,
+        requestingDiscordId: Long,
+        encounterId: Long,
+        playerDiscordIds: List<Long> = emptyList()
+    ): RollEncounterResult {
+        val campaign = campaignService.getActiveCampaignForGuild(guildId)
+            ?: return RollEncounterResult.NO_ACTIVE_CAMPAIGN
+        if (campaign.dmDiscordId != requestingDiscordId) return RollEncounterResult.NOT_DM
+
+        val encounter = encounterService.getById(encounterId)
+            ?: return RollEncounterResult.ENCOUNTER_NOT_FOUND
+        if (encounter.dmDiscordId != requestingDiscordId) return RollEncounterResult.NOT_OWNER
+
+        val entries = encounterEntryService.listByEncounter(encounterId)
+        val templateIds = mutableListOf<Long>()
+        val adhocMonsters = mutableListOf<AdhocMonster>()
+
+        entries.forEach { entry ->
+            val templateId = entry.monsterTemplateId
+            if (templateId != null) {
+                val template = monsterTemplateService.getById(templateId) ?: return@forEach
+                if (template.dmDiscordId != requestingDiscordId) return@forEach
+                repeat(entry.quantity.coerceAtLeast(1)) { templateIds += templateId }
+            } else if (!entry.adhocName.isNullOrBlank()) {
+                adhocMonsters += AdhocMonster(
+                    name = entry.adhocName!!,
+                    initiativeModifier = entry.adhocInitiativeModifier,
+                    hpExpression = entry.adhocHpExpression,
+                    ac = entry.adhocAc
+                )
+            }
+        }
+
+        if (templateIds.isEmpty() && adhocMonsters.isEmpty() && playerDiscordIds.isEmpty()) {
+            return RollEncounterResult.EMPTY_ROSTER
+        }
+
+        val request = InitiativeRollRequest(
+            playerDiscordIds = playerDiscordIds,
+            templateIds = templateIds,
+            adhocMonsters = adhocMonsters
+        )
+
+        return when (rollInitiative(guildId, requestingDiscordId, request)) {
+            RollInitiativeResult.ROLLED -> RollEncounterResult.ROLLED
+            RollInitiativeResult.NO_ACTIVE_CAMPAIGN -> RollEncounterResult.NO_ACTIVE_CAMPAIGN
+            RollInitiativeResult.NOT_DM -> RollEncounterResult.NOT_DM
+            RollInitiativeResult.EMPTY_ROSTER -> RollEncounterResult.EMPTY_ROSTER
+            RollInitiativeResult.TEMPLATE_NOT_FOUND -> RollEncounterResult.TEMPLATE_NOT_FOUND
+        }
     }
 
     /**

@@ -18,8 +18,11 @@ import web.service.AttackResult
 import web.service.CampaignEventBroadcaster
 import web.service.CampaignWebService
 import web.service.DeleteAttackResult
+import web.service.DeleteEncounterEntryResult
+import web.service.DeleteEncounterResult
 import web.service.DeleteNoteResult
 import web.service.DeleteTemplateResult
+import web.service.EncounterView
 import web.service.MonsterAttackResult
 import web.service.EndResult
 import web.service.InitiativeRollRequest
@@ -28,9 +31,13 @@ import web.service.KickResult
 import web.service.LeaveResult
 import web.service.MonsterTemplateView
 import web.service.NarrateResult
+import web.service.ReorderEncounterEntriesResult
 import web.service.RollDiceResult
+import web.service.RollEncounterResult
 import web.service.RollInitiativeResult
 import web.service.SaveAttackResult
+import web.service.SaveEncounterEntryResult
+import web.service.SaveEncounterResult
 import web.service.SaveTemplateResult
 import web.service.SessionEventView
 import web.service.SetAliveResult
@@ -89,6 +96,7 @@ class CampaignController(
         model.addAttribute("recentEvents", campaignDetail?.recentEvents ?: emptyList<Any>())
         model.addAttribute("initiativeState", campaignDetail?.initiativeState)
         model.addAttribute("monsterLibrary", campaignDetail?.monsterLibrary ?: emptyList<Any>())
+        model.addAttribute("encounters", campaignDetail?.encounters ?: emptyList<Any>())
         model.addAttribute("freshEventIds", campaignDetail?.freshEventIds ?: emptyList<Long>())
         model.addAttribute("username", user.displayName())
 
@@ -473,6 +481,235 @@ class CampaignController(
             DeleteAttackResult.ATTACK_TEMPLATE_MISMATCH -> ra.addFlashAttribute(
                 "error",
                 "That attack belongs to a different monster."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    // ----------------------------------------------------------------------
+    // Encounter Library endpoints. Form-post + redirect for mutations so the
+    // existing flash-message pattern gives the DM inline feedback; JSON GET
+    // for the list (used by encounters.js when pre-filling the composer)
+    // and a JSON POST for reorder so drag-drop doesn't full-reload the page.
+    // ----------------------------------------------------------------------
+
+    @GetMapping("/encounters")
+    @ResponseBody
+    fun listEncounters(
+        @AuthenticationPrincipal user: OAuth2User
+    ): List<EncounterView> {
+        val discordId = user.discordIdOrNull() ?: return emptyList()
+        return campaignWebService.listEncountersForDm(discordId)
+    }
+
+    @GetMapping("/encounters/{encounterId}")
+    @ResponseBody
+    fun getEncounter(
+        @PathVariable encounterId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): EncounterView? {
+        val discordId = user.discordIdOrNull() ?: return null
+        return campaignWebService.getEncounterForDm(discordId, encounterId)
+    }
+
+    @PostMapping("/campaign/{guildId}/encounters")
+    fun saveEncounter(
+        @PathVariable guildId: Long,
+        @RequestParam(name = "id", required = false) id: Long?,
+        @RequestParam("name") name: String,
+        @RequestParam(name = "notes", required = false) notes: String?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.saveEncounter(discordId, id, name, notes)) {
+            SaveEncounterResult.SAVED -> {}
+            SaveEncounterResult.NAME_BLANK -> ra.addFlashAttribute("error", "Encounter name can't be empty.")
+            SaveEncounterResult.NAME_TOO_LONG -> ra.addFlashAttribute(
+                "error",
+                "Encounter name is too long (max ${CampaignWebService.MAX_ENCOUNTER_NAME_LENGTH} characters)."
+            )
+            SaveEncounterResult.NOTES_TOO_LONG -> ra.addFlashAttribute(
+                "error",
+                "Encounter notes are too long (max ${CampaignWebService.MAX_ENCOUNTER_NOTES_LENGTH} characters)."
+            )
+            SaveEncounterResult.NOT_FOUND -> ra.addFlashAttribute("error", "That encounter doesn't exist.")
+            SaveEncounterResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own encounters.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/encounters/{encounterId}/delete")
+    fun deleteEncounter(
+        @PathVariable guildId: Long,
+        @PathVariable encounterId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.deleteEncounter(discordId, encounterId)) {
+            DeleteEncounterResult.DELETED -> {}
+            DeleteEncounterResult.NOT_FOUND -> ra.addFlashAttribute("error", "That encounter doesn't exist.")
+            DeleteEncounterResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only delete your own encounters.")
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/encounters/{encounterId}/entries")
+    fun saveEncounterEntry(
+        @PathVariable guildId: Long,
+        @PathVariable encounterId: Long,
+        @RequestParam(name = "id", required = false) entryId: Long?,
+        @RequestParam(name = "monsterTemplateId", required = false) monsterTemplateId: Long?,
+        @RequestParam(name = "quantity", defaultValue = "1") quantity: Int,
+        @RequestParam(name = "adhocName", required = false) adhocName: String?,
+        @RequestParam(name = "adhocInitiativeModifier", defaultValue = "0") adhocInitiativeModifier: Int,
+        @RequestParam(name = "adhocHpExpression", required = false) adhocHpExpression: String?,
+        @RequestParam(name = "adhocAc", required = false) adhocAc: Int?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.saveEncounterEntry(
+            discordId, encounterId, entryId,
+            monsterTemplateId, quantity,
+            adhocName, adhocInitiativeModifier, adhocHpExpression, adhocAc
+        )) {
+            SaveEncounterEntryResult.SAVED -> {}
+            SaveEncounterEntryResult.ENCOUNTER_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "That encounter doesn't exist."
+            )
+            SaveEncounterEntryResult.NOT_OWNER -> ra.addFlashAttribute(
+                "error", "You can only edit your own encounters."
+            )
+            SaveEncounterEntryResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "That monster template doesn't exist."
+            )
+            SaveEncounterEntryResult.TEMPLATE_NOT_OWNED -> ra.addFlashAttribute(
+                "error", "You can only use your own monster templates."
+            )
+            SaveEncounterEntryResult.NAME_TOO_LONG -> ra.addFlashAttribute(
+                "error",
+                "Ad-hoc monster name is too long (max ${CampaignWebService.MAX_ENCOUNTER_NAME_LENGTH} characters)."
+            )
+            SaveEncounterEntryResult.INVALID_HP -> ra.addFlashAttribute(
+                "error", "HP must be a number or a dice expression like '3d20+30'."
+            )
+            SaveEncounterEntryResult.INVALID_QUANTITY -> ra.addFlashAttribute(
+                "error",
+                "Quantity must be between 1 and ${CampaignWebService.MAX_QUANTITY_PER_ENTRY}."
+            )
+            SaveEncounterEntryResult.TOO_MANY_ENTRIES -> ra.addFlashAttribute(
+                "error",
+                "This encounter already has the maximum of ${CampaignWebService.MAX_ENTRIES_PER_ENCOUNTER} rows."
+            )
+            SaveEncounterEntryResult.MISSING_SOURCE -> ra.addFlashAttribute(
+                "error", "Pick a monster from the library or fill in an ad-hoc name."
+            )
+            SaveEncounterEntryResult.ENTRY_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "That entry doesn't exist."
+            )
+            SaveEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH -> ra.addFlashAttribute(
+                "error", "That entry belongs to a different encounter."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    @PostMapping("/campaign/{guildId}/encounters/{encounterId}/entries/{entryId}/delete")
+    fun deleteEncounterEntry(
+        @PathVariable guildId: Long,
+        @PathVariable encounterId: Long,
+        @PathVariable entryId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.deleteEncounterEntry(discordId, encounterId, entryId)) {
+            DeleteEncounterEntryResult.DELETED -> {}
+            DeleteEncounterEntryResult.ENCOUNTER_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "That encounter doesn't exist."
+            )
+            DeleteEncounterEntryResult.NOT_OWNER -> ra.addFlashAttribute(
+                "error", "You can only edit your own encounters."
+            )
+            DeleteEncounterEntryResult.ENTRY_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "That entry doesn't exist."
+            )
+            DeleteEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH -> ra.addFlashAttribute(
+                "error", "That entry belongs to a different encounter."
+            )
+        }
+        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    data class ReorderEntriesBody(val orderedIds: List<Long> = emptyList())
+
+    @PostMapping(
+        "/campaign/{guildId}/encounters/{encounterId}/entries/reorder",
+        consumes = ["application/json"]
+    )
+    @ResponseBody
+    fun reorderEncounterEntries(
+        @PathVariable guildId: Long,
+        @PathVariable encounterId: Long,
+        @RequestBody body: ReorderEntriesBody,
+        @AuthenticationPrincipal user: OAuth2User
+    ): Map<String, Any?> {
+        val discordId = user.discordIdOrNull()
+            ?: return mapOf("ok" to false, "error" to "Not authenticated.")
+
+        return when (campaignWebService.reorderEncounterEntries(discordId, encounterId, body.orderedIds)) {
+            ReorderEncounterEntriesResult.REORDERED -> mapOf("ok" to true)
+            ReorderEncounterEntriesResult.ENCOUNTER_NOT_FOUND ->
+                mapOf("ok" to false, "error" to "That encounter doesn't exist.")
+            ReorderEncounterEntriesResult.NOT_OWNER ->
+                mapOf("ok" to false, "error" to "You can only edit your own encounters.")
+            ReorderEncounterEntriesResult.ENTRY_MISMATCH ->
+                mapOf("ok" to false, "error" to "Entry list doesn't match this encounter.")
+        }
+    }
+
+    @PostMapping("/campaign/{guildId}/encounters/{encounterId}/roll")
+    fun rollEncounter(
+        @PathVariable guildId: Long,
+        @PathVariable encounterId: Long,
+        @RequestParam(name = "playerDiscordIds", required = false) playerDiscordIds: List<Long>?,
+        @AuthenticationPrincipal user: OAuth2User,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/dnd/campaign"
+
+        when (campaignWebService.rollEncounter(
+            guildId, discordId, encounterId, playerDiscordIds.orEmpty()
+        )) {
+            RollEncounterResult.ROLLED -> {}
+            RollEncounterResult.ENCOUNTER_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "That encounter doesn't exist."
+            )
+            RollEncounterResult.NOT_OWNER -> ra.addFlashAttribute(
+                "error", "You can only roll your own encounters."
+            )
+            RollEncounterResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute(
+                "error", "No active campaign in this server."
+            )
+            RollEncounterResult.NOT_DM -> ra.addFlashAttribute(
+                "error", "Only the Dungeon Master can roll an encounter."
+            )
+            RollEncounterResult.EMPTY_ROSTER -> ra.addFlashAttribute(
+                "error", "This encounter has no monsters yet."
+            )
+            RollEncounterResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
+                "error", "One of the encounter's monster templates couldn't be found."
             )
         }
         return "redirect:/dnd/campaign/$guildId"

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
     <title th:text="'TobyBot - ' + ${guildName} + ' Campaign'">TobyBot - Campaign</title>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="stylesheet" th:href="@{/css/base.css}">
@@ -347,20 +349,24 @@
             font-size: 0.9rem;
         }
 
-        .monster-library, .initiative-composer, .turn-table {
+        .monster-library, .encounter-library, .initiative-composer, .turn-table {
             background: #16213e;
             border: 1px solid #2a2a4a;
             border-radius: 10px;
             padding: 16px 20px;
             margin-bottom: 20px;
         }
+        .monster-library { border-left: 3px solid #c87bff; }
+        .encounter-library { border-left: 3px solid #6b8afd; }
         .monster-library summary,
+        .encounter-library summary,
         .initiative-composer .title {
             font-weight: 600;
             cursor: pointer;
             color: #e0e0e0;
             margin-bottom: 8px;
         }
+        .encounter-library summary .section-icon { margin-right: 6px; }
         .monster-library table { width: 100%; border-collapse: collapse; margin: 10px 0; }
         .monster-library th, .monster-library td {
             padding: 6px 8px;
@@ -380,6 +386,179 @@
         }
         .monster-library input[type=number] { width: 70px; }
         .monster-library tr.row-form td { vertical-align: top; }
+
+        /* Encounter Library ------------------------------------------------ */
+        .encounter-library .empty-state {
+            text-align: center;
+            color: #a0a0b0;
+            padding: 18px;
+            border: 1px dashed #2a2a4a;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .encounter-library .empty-state .empty-icon {
+            display: block;
+            font-size: 1.6rem;
+            margin-bottom: 6px;
+            opacity: 0.85;
+        }
+        .encounter-card {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin: 12px 0;
+            transition: box-shadow .15s ease, border-color .15s ease;
+        }
+        .encounter-card:hover { border-color: #3a3a66; box-shadow: 0 0 0 1px #6b8afd33; }
+        .encounter-card-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            justify-content: space-between;
+        }
+        .encounter-card-head .encounter-rename {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            flex: 1 1 320px;
+        }
+        .encounter-card-head .encounter-rename input[type=text] {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .encounter-card-head .encounter-rename input[name="name"] { flex: 1 1 160px; min-width: 120px; }
+        .encounter-card-head .encounter-rename input[name="notes"] { flex: 2 1 220px; min-width: 160px; }
+        .encounter-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+        .badge-roster { background: #6b8afd22; color: #a9bcff; border: 1px solid #6b8afd55; }
+        .badge-count { background: #ffffff0a; color: #a0a0b0; border: 1px solid #ffffff1a; }
+        .encounter-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .encounter-entries { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 6px 0; }
+        .encounter-entries th {
+            color: #a0a0b0;
+            font-weight: 500;
+            text-align: left;
+            padding: 4px 6px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .encounter-entries td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #2a2a4a;
+            vertical-align: middle;
+        }
+        .encounter-entry-row { transition: background-color .15s ease; }
+        .encounter-entry-row.dragging { opacity: 0.4; }
+        .encounter-entry-row.drag-over { box-shadow: inset 0 2px 0 #6b8afd; }
+        .encounter-entry-row .drag-handle {
+            cursor: grab;
+            color: #6b8afd;
+            user-select: none;
+            width: 1.8em;
+            text-align: center;
+            border-radius: 3px;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        .encounter-entry-row .drag-handle:active { cursor: grabbing; }
+        .encounter-entry-row .drag-handle:focus {
+            outline: 2px solid #6b8afd;
+            outline-offset: 2px;
+        }
+        .encounter-entry-row .entry-orphan { color: #ff9a9a; font-style: italic; }
+        .add-entry-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-top: 8px;
+            padding: 8px;
+            background: #ffffff05;
+            border-radius: 6px;
+        }
+        .add-entry-form .add-entry-mode {
+            display: flex;
+            gap: 10px;
+            margin-right: 6px;
+            font-size: 0.8rem;
+            color: #a0a0b0;
+        }
+        .add-entry-form .add-entry-mode label { display: inline-flex; gap: 4px; cursor: pointer; }
+        .add-entry-form select,
+        .add-entry-form input[type=text],
+        .add-entry-form input[type=number] {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .add-entry-form input[type=number] { width: 70px; }
+        .add-entry-form select { min-width: 160px; }
+        .new-encounter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #2a2a4a;
+        }
+        .new-encounter-form input[type=text] {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+        .new-encounter-form input[name="name"] { flex: 1 1 180px; min-width: 160px; }
+        .new-encounter-form input[name="notes"] { flex: 2 1 240px; min-width: 160px; }
+        .encounter-loader {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            background: #6b8afd11;
+            border: 1px solid #6b8afd33;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .encounter-loader label { color: #a9bcff; font-weight: 500; }
+        .encounter-loader select {
+            flex: 1;
+            min-width: 160px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #2a2a4a;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 720px) {
+            .encounter-card-head { flex-direction: column; align-items: stretch; }
+            .encounter-actions { justify-content: flex-end; }
+            .add-entry-form { flex-direction: column; align-items: stretch; }
+            .add-entry-form select, .add-entry-form input { width: 100%; }
+        }
+
         .initiative-composer .players-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1151,9 +1330,162 @@
             </form>
         </details>
 
+        <!-- Encounter library (DM only) -->
+        <details class="encounter-library" th:if="${isUserDm}">
+            <summary>
+                <span class="section-icon" aria-hidden="true">&#9876;</span>
+                Encounter library (<span th:text="${#lists.size(encounters)}">0</span>)
+            </summary>
+
+            <p th:if="${#lists.isEmpty(encounters)}" class="empty-state">
+                <span class="empty-icon" aria-hidden="true">&#128220;</span>
+                No saved encounters yet. Create one below, then drag monsters in to build the roster.
+            </p>
+
+            <div class="encounter-card" th:each="enc : ${encounters}"
+                 th:attr="data-encounter-id=${enc.id}">
+
+                <header class="encounter-card-head">
+                    <form th:action="@{/dnd/campaign/{gid}/encounters(gid=${guildId})}" method="post"
+                          class="encounter-rename">
+                        <input type="hidden" name="id" th:value="${enc.id}">
+                        <input type="text" name="name" th:value="${enc.name}" maxlength="100" required>
+                        <input type="text" name="notes" th:value="${enc.notes}" maxlength="500"
+                               placeholder="Notes (optional)">
+                        <button type="submit" class="btn-xs" title="Save name / notes">Save</button>
+                    </form>
+
+                    <div class="encounter-badges">
+                        <span class="badge badge-roster"
+                              th:text="|${enc.totalRosterSize} monster(s)|">0 monsters</span>
+                        <span class="badge badge-count"
+                              th:text="|${#lists.size(enc.entries)} row(s)|">0 rows</span>
+                    </div>
+
+                    <div class="encounter-actions">
+                        <button type="button" class="btn-xs btn-load-encounter"
+                                th:attr="data-encounter-id=${enc.id}"
+                                title="Fill the initiative composer with this encounter's roster">
+                            Load into composer
+                        </button>
+                        <form th:action="@{/dnd/campaign/{gid}/encounters/{eid}/roll(gid=${guildId},eid=${enc.id})}"
+                              method="post" style="display:inline;">
+                            <button type="submit" class="btn-xs" title="Roll initiative with this roster">
+                                &#127922; Roll now
+                            </button>
+                        </form>
+                        <form th:action="@{/dnd/campaign/{gid}/encounters/{eid}/delete(gid=${guildId},eid=${enc.id})}"
+                              method="post"
+                              th:onsubmit="|return confirm('Delete encounter ${enc.name}?');|"
+                              style="display:inline;">
+                            <button type="submit" class="btn-xs kick" title="Delete encounter">Delete</button>
+                        </form>
+                    </div>
+                </header>
+
+                <table th:if="${not #lists.isEmpty(enc.entries)}" class="encounter-entries">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>Source</th>
+                        <th>Qty</th>
+                        <th>Init</th>
+                        <th>HP</th>
+                        <th>AC</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody class="encounter-entry-tbody" th:attr="data-encounter-id=${enc.id}">
+                    <tr th:each="entry : ${enc.entries}"
+                        class="encounter-entry-row"
+                        draggable="true"
+                        th:attr="data-entry-id=${entry.id}">
+                        <td class="drag-handle" tabindex="0" role="button"
+                            aria-label="Drag to reorder (Alt+ArrowUp / Alt+ArrowDown)">&#8942;&#8942;</td>
+                        <td>
+                            <span th:if="${entry.monsterTemplate != null}"
+                                  th:text="${entry.monsterTemplate.name}">Goblin</span>
+                            <span th:if="${entry.monsterTemplate == null and entry.adhocName != null}"
+                                  th:text="|&#9998; ${entry.adhocName}|">&#9998; Ad-hoc</span>
+                            <span th:if="${entry.monsterTemplate == null and entry.adhocName == null}"
+                                  class="entry-orphan">(missing template)</span>
+                        </td>
+                        <td th:text="${entry.monsterTemplate != null ? entry.quantity : 1}">1</td>
+                        <td th:text="${entry.monsterTemplate != null
+                                      ? (entry.monsterTemplate.initiativeModifier &gt;= 0 ? '+' : '') + entry.monsterTemplate.initiativeModifier
+                                      : (entry.adhocInitiativeModifier &gt;= 0 ? '+' : '') + entry.adhocInitiativeModifier}">+2</td>
+                        <td th:text="${entry.monsterTemplate != null
+                                      ? (entry.monsterTemplate.hpExpression != null ? entry.monsterTemplate.hpExpression : '—')
+                                      : (entry.adhocHpExpression != null ? entry.adhocHpExpression : '—')}">—</td>
+                        <td th:text="${entry.monsterTemplate != null
+                                      ? (entry.monsterTemplate.ac != null ? entry.monsterTemplate.ac : '—')
+                                      : (entry.adhocAc != null ? entry.adhocAc : '—')}">—</td>
+                        <td>
+                            <form th:action="@{/dnd/campaign/{gid}/encounters/{eid}/entries/{entryId}/delete
+                                              (gid=${guildId},eid=${enc.id},entryId=${entry.id})}"
+                                  method="post"
+                                  style="display:inline;">
+                                <button type="submit" class="btn-xs kick" title="Remove entry">&#10005;</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <form th:action="@{/dnd/campaign/{gid}/encounters/{eid}/entries(gid=${guildId},eid=${enc.id})}"
+                      method="post" class="add-entry-form"
+                      th:attr="data-encounter-id=${enc.id}">
+                    <div class="add-entry-mode">
+                        <label><input type="radio" name="__mode" value="template" checked> From library</label>
+                        <label><input type="radio" name="__mode" value="adhoc"> Ad-hoc</label>
+                    </div>
+                    <select name="monsterTemplateId" class="entry-template-select">
+                        <option value="" disabled selected>&mdash; pick a monster &mdash;</option>
+                        <option th:each="tpl : ${monsterLibrary}"
+                                th:value="${tpl.id}"
+                                th:text="${tpl.name}">Goblin</option>
+                    </select>
+                    <input type="number" name="quantity" min="1" max="20" value="1"
+                           class="entry-template-input" title="Quantity">
+                    <input type="text" name="adhocName" placeholder="Ad-hoc name" maxlength="100"
+                           class="entry-adhoc-input" style="display:none;">
+                    <input type="number" name="adhocInitiativeModifier" value="0"
+                           min="-30" max="30" placeholder="init"
+                           class="entry-adhoc-input" style="display:none;">
+                    <input type="text" name="adhocHpExpression"
+                           pattern="^\s*(\d+|\d*[dD]\d+([+-]\d+)?)\s*$"
+                           title="Plain integer or dice expression like 3d20+30"
+                           placeholder="HP or 3d20+30" maxlength="32"
+                           class="entry-adhoc-input" style="display:none;">
+                    <input type="number" name="adhocAc" placeholder="AC" min="0" max="50"
+                           class="entry-adhoc-input" style="display:none;">
+                    <button type="submit" class="btn btn-primary btn-sm">Add</button>
+                </form>
+            </div>
+
+            <form th:action="@{/dnd/campaign/{gid}/encounters(gid=${guildId})}" method="post"
+                  class="new-encounter-form">
+                <input type="text" name="name" placeholder="New encounter name" maxlength="100" required>
+                <input type="text" name="notes" placeholder="Notes (optional)" maxlength="500">
+                <button type="submit" class="btn btn-primary">Create encounter</button>
+            </form>
+        </details>
+
         <!-- Initiative composer (DM only) -->
         <div class="initiative-composer" th:if="${isUserDm}">
             <div class="title">Roll initiative</div>
+            <div class="encounter-loader" th:if="${not #lists.isEmpty(encounters)}">
+                <label for="encounterLoader">Load encounter:</label>
+                <select id="encounterLoader">
+                    <option value="">&mdash; none &mdash;</option>
+                    <option th:each="enc : ${encounters}"
+                            th:value="${enc.id}"
+                            th:text="|${enc.name} (${enc.totalRosterSize})|">Goblin ambush (4)</option>
+                </select>
+                <span style="color:#a0a0b0;font-size:0.78rem;">
+                    Pre-fills the roster below &mdash; tweak, then roll.
+                </span>
+            </div>
             <form th:action="@{/dnd/campaign/{id}/initiative/roll(id=${guildId})}" method="post"
                   id="initiative-composer-form">
                 <div class="players-grid" th:if="${not #lists.isEmpty(players)}">
@@ -1467,5 +1799,6 @@
 <script th:src="@{/js/home.js}"></script>
 <script th:if="${campaign != null}" th:src="@{/js/sessionLog.js}"></script>
 <script th:if="${campaign != null}" th:src="@{/js/diceRoller.js}"></script>
+<script th:if="${isUserDm}" th:src="@{/js/encounters.js}"></script>
 </body>
 </html>
