@@ -86,6 +86,7 @@ class CampaignController(
         model.addAttribute("recentEvents", campaignDetail?.recentEvents ?: emptyList<Any>())
         model.addAttribute("initiativeState", campaignDetail?.initiativeState)
         model.addAttribute("monsterLibrary", campaignDetail?.monsterLibrary ?: emptyList<Any>())
+        model.addAttribute("freshEventIds", campaignDetail?.freshEventIds ?: emptyList<Long>())
         model.addAttribute("username", user.displayName())
 
         return "campaignDetail"
@@ -408,21 +409,24 @@ class CampaignController(
         @PathVariable guildId: Long,
         @RequestParam(name = "playerDiscordIds", required = false) playerDiscordIds: List<Long>?,
         @RequestParam(name = "templateId", required = false) templateIds: List<Long>?,
-        @RequestParam(name = "templateQty", required = false) templateQtys: List<Int>?,
+        @RequestParam(name = "templateQty", required = false) templateQtys: List<String>?,
         @RequestParam(name = "adhocName", required = false) adhocNames: List<String>?,
-        @RequestParam(name = "adhocMod", required = false) adhocMods: List<Int>?,
-        @RequestParam(name = "adhocHp", required = false) adhocHps: List<Int>?,
-        @RequestParam(name = "adhocAc", required = false) adhocAcs: List<Int>?,
+        @RequestParam(name = "adhocMod", required = false) adhocMods: List<String>?,
+        @RequestParam(name = "adhocHp", required = false) adhocHps: List<String>?,
+        @RequestParam(name = "adhocAc", required = false) adhocAcs: List<String>?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
     ): String {
         val discordId = user.discordIdOrNull()
             ?: return "redirect:/dnd/campaign"
 
+        // The ad-hoc monster rows have optional HP/AC inputs with no default,
+        // so empty strings reach us for un-filled rows. Bind as List<String>
+        // and parse leniently so empties become null/0 rather than 400/500.
         val tplIds = templateIds.orEmpty()
         val tplQtys = templateQtys.orEmpty()
         val expandedTemplateIds = tplIds.flatMapIndexed { i, id ->
-            val qty = tplQtys.getOrElse(i) { 1 }.coerceAtLeast(0)
+            val qty = (tplQtys.getOrNull(i)?.toIntOrNull() ?: 1).coerceAtLeast(0)
             List(qty) { id }
         }
 
@@ -435,9 +439,9 @@ class CampaignController(
             if (cleaned.isBlank()) null
             else AdhocMonster(
                 name = cleaned,
-                initiativeModifier = mods.getOrElse(i) { 0 },
-                maxHp = hps.getOrNull(i)?.takeIf { it > 0 },
-                ac = acs.getOrNull(i)?.takeIf { it > 0 }
+                initiativeModifier = mods.getOrNull(i)?.toIntOrNull() ?: 0,
+                maxHp = hps.getOrNull(i)?.toIntOrNull()?.takeIf { it > 0 },
+                ac = acs.getOrNull(i)?.toIntOrNull()?.takeIf { it > 0 }
             )
         }
         val request = InitiativeRollRequest(

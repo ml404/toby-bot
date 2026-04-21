@@ -1268,7 +1268,9 @@
              th:attr="data-guild-id=${guildId},
                       data-is-dm=${isUserDm},
                       data-last-seen-id=${recentEvents != null and not #lists.isEmpty(recentEvents)
-                        ? recentEvents[#lists.size(recentEvents) - 1].id : 0}">
+                        ? recentEvents[#lists.size(recentEvents) - 1].id : 0},
+                      data-fresh-event-ids=${freshEventIds != null and not #lists.isEmpty(freshEventIds)
+                        ? #strings.listJoin(freshEventIds, ',') : ''}">
             <div class="event-row" th:each="event : ${recentEvents}"
                  th:attr="data-event-id=${event.id},data-event-type=${event.type}">
                 <span class="event-type" th:text="${event.type}">ROLL</span>

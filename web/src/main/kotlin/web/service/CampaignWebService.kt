@@ -32,7 +32,8 @@ data class CampaignDetail(
     val notes: List<SessionNoteView> = emptyList(),
     val recentEvents: List<SessionEventView> = emptyList(),
     val initiativeState: InitiativeStateView? = null,
-    val monsterLibrary: List<MonsterTemplateView> = emptyList()
+    val monsterLibrary: List<MonsterTemplateView> = emptyList(),
+    val freshEventIds: List<Long> = emptyList()
 ) {
     fun isDm(discordId: Long): Boolean = campaign.dmDiscordId == discordId
 }
@@ -185,6 +186,7 @@ class CampaignWebService(
         const val MAX_NOTE_BODY_LENGTH = 2000
         const val MAX_NARRATE_BODY_LENGTH = 1000
         const val DEFAULT_EVENT_LIMIT = 100
+        const val FRESH_EVENT_WINDOW_SECONDS = 5L
         const val MAX_TEMPLATE_NAME_LENGTH = 100
         const val MAX_DICE_COUNT = 20
         const val MAX_DICE_MODIFIER = 50
@@ -285,6 +287,14 @@ class CampaignWebService(
             }
         } else emptyList()
 
+        // Events published in the last few seconds are likely the action the user
+        // just submitted. Their own POST→redirect cycle means the new EventSource
+        // connects after the publish, so SSE won't replay the event and the
+        // cinematic would never fire. Expose these IDs so sessionLog.js can
+        // animate them on boot.
+        val freshCutoff = LocalDateTime.now().minusSeconds(FRESH_EVENT_WINDOW_SECONDS)
+        val freshEventIds = recentEvents.filter { it.createdAt.isAfter(freshCutoff) }.map { it.id }
+
         return CampaignDetail(
             campaign = campaign,
             players = players,
@@ -294,7 +304,8 @@ class CampaignWebService(
             notes = notes,
             recentEvents = recentEvents,
             initiativeState = initiativeState,
-            monsterLibrary = monsterLibrary
+            monsterLibrary = monsterLibrary,
+            freshEventIds = freshEventIds
         )
     }
 
