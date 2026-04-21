@@ -690,7 +690,7 @@ class CampaignControllerTest {
 
     @Test
     fun `listMonsterTemplates delegates to service`() {
-        val templates = listOf(MonsterTemplateView(1L, "Goblin", 2, 7, 15))
+        val templates = listOf(MonsterTemplateView(1L, "Goblin", 2, "7", 15))
         every { campaignWebService.listTemplatesForDm(1L) } returns templates
 
         val result = controller.listMonsterTemplates(mockUser)
