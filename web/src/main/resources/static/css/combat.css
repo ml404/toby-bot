@@ -95,6 +95,14 @@
     transform: translate(calc(var(--end-x) - var(--start-x)), calc(var(--end-y) - var(--start-y))) scale(0) rotate(45deg);
     opacity: 0;
 }
+/* Generic dice-roller cinematic: neutral gold accent, slightly quicker
+   flight than a combat attack, same settle/fade phases. */
+.attack-die.roll {
+    --duration: 550ms;
+    background: linear-gradient(135deg, #8892f5, #2e3a5c);
+    border-color: #8892f5;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45), 0 0 22px rgba(136, 146, 245, 0.6);
+}
 @keyframes crit-shake {
     0%, 100% { translate: 0 0; }
     25%      { translate: -3px 1px; }

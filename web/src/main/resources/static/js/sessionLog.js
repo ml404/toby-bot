@@ -453,9 +453,62 @@
         setTimeout(function () { el.remove(); }, 1200);
     }
 
+    // Generic dice-roller cinematic — not tied to a combat row. Throws a die
+    // from near the dice-toggle button (or viewport top-right fallback) and
+    // settles it in the viewport centre, revealing the total. Runs whether or
+    // not combat is active, so the popover feels responsive on mobile where
+    // the user's own POST→redirect cycle would otherwise suppress the SSE
+    // catch-up cinematic.
+    function spawnRollDie(payload) {
+        if (prefersReducedMotion) return;
+        const total = (payload && payload.total != null)
+            ? payload.total
+            : (payload && payload.rawTotal != null ? payload.rawTotal : null);
+        if (total == null) return;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const toggle = document.getElementById('dice-toggle');
+        let start;
+        if (toggle) {
+            const r = toggle.getBoundingClientRect();
+            start = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        } else {
+            start = { x: vw - 48, y: 48 };
+        }
+        const end = { x: vw / 2, y: vh / 2 };
+        const stage = getCombatStage();
+        const die = document.createElement('div');
+        die.className = 'attack-die roll';
+        die.style.setProperty('--start-x', start.x + 'px');
+        die.style.setProperty('--start-y', start.y + 'px');
+        die.style.setProperty('--end-x', end.x + 'px');
+        die.style.setProperty('--end-y', end.y + 'px');
+        const face = document.createElement('span');
+        face.className = 'attack-die__face';
+        face.textContent = String(total);
+        die.appendChild(face);
+        stage.appendChild(die);
+
+        die.addEventListener('animationend', function onFlight(ev) {
+            if (ev.animationName !== 'attack-die-flight') return;
+            die.removeEventListener('animationend', onFlight);
+            die.classList.add('settling');
+            setTimeout(function () {
+                die.classList.add('fading');
+                setTimeout(function () { die.remove(); }, 350);
+            }, 700);
+        });
+    }
+
     function handleInitiativeEvent(event) {
-        if (!turnTable) return;
         const p = event.payload || {};
+        // ROLL is campaign-wide and not gated on the turn table, so handle it
+        // before the turnTable guard below.
+        if (event.type === 'ROLL') {
+            spawnRollDie(p);
+            return;
+        }
+        if (!turnTable) return;
         switch (event.type) {
             case 'INITIATIVE_ROLLED': {
                 const entries = Array.isArray(p.entries) ? p.entries : [];
