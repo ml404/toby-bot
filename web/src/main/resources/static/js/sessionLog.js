@@ -7,6 +7,16 @@
 
     const isDm = logEl.dataset.isDm === 'true';
     let lastSeenId = parseInt(logEl.dataset.lastSeenId || '0', 10);
+    // Events the server marked as "just happened" — the user's own
+    // POST→redirect cycle subscribes a new EventSource after the publish, so
+    // SSE won't replay these. We animate them on boot so the actor sees their
+    // own cinematic (matters on mobile where single-window use is the norm).
+    const freshEventIds = new Set(
+        (logEl.dataset.freshEventIds || '')
+            .split(',')
+            .map(function (s) { return parseInt(s, 10); })
+            .filter(function (n) { return !isNaN(n); })
+    );
     const emptyEl = document.getElementById('session-log-empty');
 
     function postAnnotation(eventId, kind) {
@@ -160,13 +170,28 @@
         logEl.appendChild(row);
     }
 
-    // Backfill anything that landed between server render and JS boot, then subscribe.
-    fetch('/dnd/campaign/' + guildId + '/events?since=' + lastSeenId + '&limit=200', {
+    // Backfill anything that landed between server render and JS boot, and hydrate
+    // animations for "fresh" events (the action the current user likely just
+    // submitted). We widen the since-cursor below lastSeenId so fresh events the
+    // server already rendered are returned too; renderEvent's own guard skips
+    // duplicates.
+    const originalLastSeenId = lastSeenId;
+    const minFreshId = freshEventIds.size
+        ? Math.min.apply(null, Array.from(freshEventIds))
+        : lastSeenId + 1;
+    const backfillSince = Math.max(0, Math.min(lastSeenId, minFreshId - 1));
+    fetch('/dnd/campaign/' + guildId + '/events?since=' + backfillSince + '&limit=200', {
         credentials: 'same-origin'
     })
         .then(function (r) { return r.ok ? r.json() : []; })
         .then(function (events) {
-            if (Array.isArray(events)) events.forEach(renderEvent);
+            if (!Array.isArray(events)) return;
+            events.forEach(function (e) {
+                renderEvent(e);
+                if (e && (e.id > originalLastSeenId || freshEventIds.has(e.id))) {
+                    handleInitiativeEvent(e);
+                }
+            });
         })
         .catch(function () { /* non-fatal; SSE will catch up */ });
 

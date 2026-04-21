@@ -1,5 +1,6 @@
 package web.service
 
+import common.events.CampaignEventType
 import database.dto.CampaignDto
 import database.dto.CampaignEventDto
 import database.dto.CampaignPlayerDto
@@ -781,6 +782,49 @@ class CampaignWebServiceTest {
         assertEquals(9L, detail.recentEvents[0].id)
     }
 
+    @Test
+    fun `getCampaignDetail flags recent events as fresh for animation`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { jda.getGuildById(guildId) } returns mockk(relaxed = true)
+        every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns emptyList()
+        every { sessionNoteService.getNotesForCampaign(campaign.id) } returns emptyList()
+        val now = LocalDateTime.now()
+        every { campaignEventService.listRecent(campaign.id, 100) } returns listOf(
+            // Old — outside the fresh window
+            CampaignEventDto(id = 1, campaignId = campaign.id, eventType = "ROLL",
+                payload = "{}", createdAt = now.minusMinutes(5)),
+            // Old — just past the window
+            CampaignEventDto(id = 2, campaignId = campaign.id, eventType = "ATTACK_HIT",
+                payload = "{}", createdAt = now.minusSeconds(30)),
+            // Fresh — within the window
+            CampaignEventDto(id = 3, campaignId = campaign.id, eventType = "DAMAGE_DEALT",
+                payload = "{}", createdAt = now.minusSeconds(2)),
+            CampaignEventDto(id = 4, campaignId = campaign.id, eventType = "PARTICIPANT_DEFEATED",
+                payload = "{}", createdAt = now)
+        )
+
+        val detail = service.getCampaignDetail(guildId, dmDiscordId)!!
+        assertEquals(listOf(3L, 4L), detail.freshEventIds)
+    }
+
+    @Test
+    fun `getCampaignDetail returns empty freshEventIds when all events are old`() {
+        val campaign = makeCampaign()
+        every { campaignService.getActiveCampaignForGuild(guildId) } returns campaign
+        every { jda.getGuildById(guildId) } returns mockk(relaxed = true)
+        every { campaignPlayerService.getPlayersForCampaign(campaign.id) } returns emptyList()
+        every { sessionNoteService.getNotesForCampaign(campaign.id) } returns emptyList()
+        val old = LocalDateTime.now().minusMinutes(10)
+        every { campaignEventService.listRecent(campaign.id, 100) } returns listOf(
+            CampaignEventDto(id = 1, campaignId = campaign.id, eventType = "ROLL",
+                payload = "{}", createdAt = old)
+        )
+
+        val detail = service.getCampaignDetail(guildId, dmDiscordId)!!
+        assertTrue(detail.freshEventIds.isEmpty())
+    }
+
     // annotateRoll
 
     @Test
@@ -861,7 +905,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.HIT,
+                type = CampaignEventType.HIT,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it["target"] == "goblin" },
@@ -883,7 +927,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.MISS,
+                type = CampaignEventType.MISS,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it.isEmpty() },
@@ -934,7 +978,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.DM_NOTE,
+                type = CampaignEventType.DM_NOTE,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it["body"] == "A dragon lands." },
@@ -1123,7 +1167,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.INITIATIVE_ROLLED,
+                type = CampaignEventType.INITIATIVE_ROLLED,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { (it["entries"] as? List<*>)?.size == 3 },
@@ -1371,7 +1415,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.ROLL,
+                type = CampaignEventType.ROLL,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1404,7 +1448,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.ROLL,
+                type = CampaignEventType.ROLL,
                 actorDiscordId = playerDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1435,7 +1479,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.ROLL,
+                type = CampaignEventType.ROLL,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1458,7 +1502,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.ROLL,
+                type = CampaignEventType.ROLL,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1512,7 +1556,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.ATTACK_HIT,
+                type = CampaignEventType.ATTACK_HIT,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1541,7 +1585,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.ATTACK_MISS,
+                type = CampaignEventType.ATTACK_MISS,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it["targetAc"] == 30 }
@@ -1618,7 +1662,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.DAMAGE_DEALT,
+                type = CampaignEventType.DAMAGE_DEALT,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it["amount"] == 4 && it["remainingHp"] == 16 && !it.containsKey("expression") }
@@ -1641,7 +1685,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.PARTICIPANT_DEFEATED,
+                type = CampaignEventType.PARTICIPANT_DEFEATED,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it["target"] == "Alice" }
@@ -1694,7 +1738,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.DAMAGE_DEALT,
+                type = CampaignEventType.DAMAGE_DEALT,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1761,7 +1805,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.HEAL_APPLIED,
+                type = CampaignEventType.HEAL_APPLIED,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1788,7 +1832,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.HEAL_APPLIED,
+                type = CampaignEventType.HEAL_APPLIED,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match {
@@ -1814,7 +1858,7 @@ class CampaignWebServiceTest {
         verify {
             sessionLog.publish(
                 guildId = guildId,
-                type = common.events.CampaignEventType.HEAL_APPLIED,
+                type = CampaignEventType.HEAL_APPLIED,
                 actorDiscordId = dmDiscordId,
                 actorName = any(),
                 payload = match { it["revived"] == true }
