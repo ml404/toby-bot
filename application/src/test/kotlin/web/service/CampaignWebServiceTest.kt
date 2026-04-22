@@ -13,6 +13,8 @@ import database.service.CampaignEventService
 import database.service.CampaignPlayerService
 import database.service.CampaignService
 import database.service.CharacterSheetService
+import database.service.EncounterEntryService
+import database.service.EncounterService
 import database.service.MonsterAttackService
 import database.service.MonsterTemplateService
 import database.service.SessionNoteService
@@ -41,6 +43,8 @@ class CampaignWebServiceTest {
     private lateinit var campaignEventService: CampaignEventService
     private lateinit var monsterTemplateService: MonsterTemplateService
     private lateinit var monsterAttackService: MonsterAttackService
+    private lateinit var encounterService: EncounterService
+    private lateinit var encounterEntryService: EncounterEntryService
     private lateinit var initiativeStore: InitiativeStore
     private lateinit var sessionLog: SessionLogPublisher
     private lateinit var jda: JDA
@@ -69,6 +73,8 @@ class CampaignWebServiceTest {
         campaignEventService = mockk(relaxed = true)
         monsterTemplateService = mockk(relaxed = true)
         monsterAttackService = mockk(relaxed = true)
+        encounterService = mockk(relaxed = true)
+        encounterEntryService = mockk(relaxed = true)
         initiativeStore = mockk(relaxed = true)
         sessionLog = mockk(relaxed = true)
         jda = mockk(relaxed = true)
@@ -82,6 +88,8 @@ class CampaignWebServiceTest {
             campaignEventService,
             monsterTemplateService,
             monsterAttackService,
+            encounterService,
+            encounterEntryService,
             initiativeStore,
             sessionLog,
             jda
