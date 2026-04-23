@@ -305,31 +305,35 @@ function initIntroPage() {
         clipState.valid = !err;
         setClipError(err);
 
-        // Sync the too-long hint on the preview card. Without this the "Video is
-        // too long" red text + duration-badge lingers after the user has entered
-        // a clip that fits under the cap, and the submit button stays disabled.
-        if (typeof previewState !== 'undefined') {
-            previewState.tooLong = !clipState.valid && clipState.sourceDurationMs != null;
-            if (urlPreview) {
-                urlPreview.classList.toggle('error', previewState.tooLong);
-                const badge = urlPreview.querySelector('.duration-badge');
-                if (badge) badge.classList.toggle('too-long', previewState.tooLong);
-            }
-            // Clear the stale "too long" url-level error when the clip now fits.
-            if (clipState.valid && urlError && /too long/i.test(urlError.textContent)) {
-                setUrlError('');
-            }
-        }
-
         if (startMsHidden) startMsHidden.value = startMs == null ? '' : String(startMs);
         if (endMsHidden) endMsHidden.value = endMs == null ? '' : String(endMs);
         renderClipLength();
+    }
+
+    // Sync the preview-card's "too long" state + URL-level error to the clip
+    // validity. Kept out of recomputeClipState() because that runs during init
+    // — before previewState / urlPreview / urlError are declared — and any
+    // reference to those let-bindings from inside it would throw a TDZ error
+    // that aborts the rest of initIntroPage (dropping delete, clip-edit and
+    // iframe-preview wiring). Call this from the input listener instead, so
+    // it only fires after initialization has finished.
+    function syncPreviewTooLongState() {
+        previewState.tooLong = !clipState.valid && clipState.sourceDurationMs != null;
+        if (urlPreview) {
+            urlPreview.classList.toggle('error', previewState.tooLong);
+            const badge = urlPreview.querySelector('.duration-badge');
+            if (badge) badge.classList.toggle('too-long', previewState.tooLong);
+        }
+        if (clipState.valid && urlError && /too long/i.test(urlError.textContent)) {
+            setUrlError('');
+        }
     }
 
     [startTimeInput, endTimeInput].forEach(el => {
         if (!el) return;
         el.addEventListener('input', () => {
             recomputeClipState();
+            syncPreviewTooLongState();
             updateSubmitState();
             if (activeUrlPreview) renderUrlIframe(activeUrlPreview);
             if (activeFileAudio) applyClipBoundsToFilePreview(activeFileAudio);
