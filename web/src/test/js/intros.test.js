@@ -1,4 +1,12 @@
-const { toggleInput, togglePlay, parseTimeInput, formatMs, validateClipMs } = require('../../main/resources/static/js/intros');
+const {
+    toggleInput,
+    togglePlay,
+    togglePlayClip,
+    closeClipPreviewRow,
+    parseTimeInput,
+    formatMs,
+    validateClipMs,
+} = require('../../main/resources/static/js/intros');
 
 // ---------------------------------------------------------------------------
 // toggleInput
@@ -33,12 +41,20 @@ function makeAudio(id) {
     const audio = document.createElement('audio');
     audio.id = id;
     audio.src = `/music?id=${id}`;
-    // JSDOM doesn't implement media APIs; provide stubs
+    // JSDOM doesn't implement media APIs; provide stubs.
     audio.play = jest.fn().mockResolvedValue(undefined);
     audio.pause = jest.fn();
     // Start paused
     Object.defineProperty(audio, 'paused', {
         get: jest.fn().mockReturnValue(true),
+        configurable: true,
+    });
+    // JSDOM's HTMLMediaElement.currentTime setter is a no-op with no media
+    // loaded; swap in a plain getter/setter so tests can drive playback time.
+    let _currentTime = 0;
+    Object.defineProperty(audio, 'currentTime', {
+        get: () => _currentTime,
+        set: (v) => { _currentTime = v; },
         configurable: true,
     });
     return audio;
@@ -247,5 +263,172 @@ describe('validateClipMs', () => {
 
     test('rejects negative start', () => {
         expect(validateClipMs(-1, 1000, 60000, MAX)).toMatch(/negative/i);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// togglePlay — clip-aware playback on saved rows
+// ---------------------------------------------------------------------------
+
+function makeRowWithAudio(id, { startMs, endMs } = {}) {
+    const table = document.createElement('table');
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    tr.dataset.introId = id;
+    if (startMs != null) tr.dataset.startMs = String(startMs);
+    if (endMs != null) tr.dataset.endMs = String(endMs);
+    const td = document.createElement('td');
+    const audio = makeAudio('audio-' + id);
+    const btn = makeButton('audio-' + id);
+    td.appendChild(audio);
+    td.appendChild(btn);
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    table.appendChild(tbody);
+    document.body.appendChild(table);
+    return { tr, audio, btn };
+}
+
+describe('togglePlay — saved-row clip bounds', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    test('seeks to data-start-ms / 1000 before playing', () => {
+        const { audio, btn } = makeRowWithAudio('1', { startMs: 2500, endMs: 9000 });
+        togglePlay(btn);
+        expect(audio.currentTime).toBe(2.5);
+        expect(audio.play).toHaveBeenCalled();
+    });
+
+    test('starts at 0 when no start-ms is set on the row', () => {
+        const { audio, btn } = makeRowWithAudio('1');
+        togglePlay(btn);
+        expect(audio.currentTime).toBe(0);
+    });
+
+    test('pauses and resets to start when timeupdate crosses end-ms', () => {
+        const { audio, btn } = makeRowWithAudio('1', { startMs: 1000, endMs: 4000 });
+        togglePlay(btn);
+        audio.currentTime = 4.25;
+        audio.dispatchEvent(new Event('timeupdate'));
+        expect(audio.pause).toHaveBeenCalled();
+        expect(audio.currentTime).toBe(1);
+        expect(btn.textContent).toBe('▶');
+        expect(btn.classList.contains('playing')).toBe(false);
+    });
+
+    test('does not auto-pause on timeupdate when no end-ms is set', () => {
+        const { audio, btn } = makeRowWithAudio('1', { startMs: 1000 });
+        togglePlay(btn);
+        // togglePlay sweeps every <audio> to pause(); ignore that and verify
+        // no subsequent auto-pause fires from the timeupdate path.
+        audio.pause.mockClear();
+        audio.currentTime = 10;
+        audio.dispatchEvent(new Event('timeupdate'));
+        expect(audio.pause).not.toHaveBeenCalled();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// togglePlayClip — inline YouTube iframe for saved rows
+// ---------------------------------------------------------------------------
+
+function makeClipRow(id, { videoId, startMs, endMs } = {}) {
+    const table = document.createElement('table');
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+    tr.dataset.introId = id;
+    if (videoId != null) tr.dataset.videoId = videoId;
+    if (startMs != null) tr.dataset.startMs = String(startMs);
+    if (endMs != null) tr.dataset.endMs = String(endMs);
+    for (let i = 0; i < 3; i++) tr.appendChild(document.createElement('td'));
+    const actionsTd = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'btn-play';
+    btn.dataset.playClipVideoId = videoId;
+    btn.dataset.introId = id;
+    btn.textContent = '▶';
+    actionsTd.appendChild(btn);
+    tr.appendChild(actionsTd);
+    tbody.appendChild(tr);
+    table.appendChild(tbody);
+    document.body.appendChild(table);
+    return { tr, btn, tbody };
+}
+
+describe('togglePlayClip', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    test('injects a video-preview-row with a clip-configured iframe', () => {
+        const { tr, btn } = makeClipRow('1_2_1', { videoId: 'dQw4w9WgXcQ', startMs: 5000, endMs: 12000 });
+        togglePlayClip(btn);
+
+        const previewRow = tr.nextElementSibling;
+        expect(previewRow).not.toBeNull();
+        expect(previewRow.className).toBe('video-preview-row');
+
+        const iframe = previewRow.querySelector('iframe');
+        expect(iframe).not.toBeNull();
+        const src = iframe.getAttribute('src');
+        expect(src).toContain('/embed/dQw4w9WgXcQ');
+        expect(src).toContain('start=5');
+        expect(src).toContain('end=12');
+        expect(src).toContain('autoplay=1');
+
+        expect(btn.textContent).toBe('⏹');
+        expect(btn.classList.contains('playing')).toBe(true);
+    });
+
+    test('second click tears the preview row back down', () => {
+        const { tr, btn } = makeClipRow('1_2_1', { videoId: 'abc', startMs: 0, endMs: 7000 });
+        togglePlayClip(btn);
+        togglePlayClip(btn);
+
+        expect(tr.nextElementSibling).toBeNull();
+        expect(btn.textContent).toBe('▶');
+        expect(btn.classList.contains('playing')).toBe(false);
+    });
+
+    test('omits start / end params when no clip is set', () => {
+        const { tr, btn } = makeClipRow('1_2_1', { videoId: 'abc' });
+        togglePlayClip(btn);
+
+        const iframe = tr.nextElementSibling.querySelector('iframe');
+        const src = iframe.getAttribute('src');
+        expect(src).not.toContain('start=');
+        expect(src).not.toContain('end=');
+    });
+
+    test('starting a clip preview closes any previously-open preview', () => {
+        const first = makeClipRow('1_2_1', { videoId: 'first' });
+        const second = makeClipRow('1_2_2', { videoId: 'second' });
+        togglePlayClip(first.btn);
+        expect(first.tr.nextElementSibling.className).toBe('video-preview-row');
+
+        togglePlayClip(second.btn);
+
+        // Only one preview row exists at a time; first button reset, second open.
+        expect(document.querySelectorAll('.video-preview-row').length).toBe(1);
+        expect(first.btn.classList.contains('playing')).toBe(false);
+        expect(second.btn.classList.contains('playing')).toBe(true);
+        expect(second.tr.nextElementSibling.className).toBe('video-preview-row');
+    });
+});
+
+describe('closeClipPreviewRow', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    test('removes injected preview rows and resets their buttons', () => {
+        const { tr, btn } = makeClipRow('1_2_1', { videoId: 'abc' });
+        togglePlayClip(btn);
+        closeClipPreviewRow();
+        expect(tr.nextElementSibling).toBeNull();
+        expect(btn.classList.contains('playing')).toBe(false);
+        expect(btn.textContent).toBe('▶');
     });
 });
