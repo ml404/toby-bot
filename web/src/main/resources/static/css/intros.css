@@ -231,11 +231,99 @@
     text-align: right;
 }
 
+/* ---- Clip (start/end) inputs ---- */
+.clip-inputs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+}
+.clip-input-label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+    gap: 4px;
+}
+.clip-input-label input {
+    width: 7ch;
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+}
+.clip-input-label input[aria-invalid="true"] { border-color: var(--danger); }
+.clip-dash { color: var(--text-dim); padding: 0 2px; align-self: end; padding-bottom: 8px; }
+.clip-length {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.clip-length.too-long { color: var(--danger); font-weight: 600; }
+
+/* Clip badge in the intros table */
+.clip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+.clip-badge:hover { border-color: var(--accent); color: var(--accent); }
+.clip-badge-label { font-size: 0.8rem; }
+
+/* Row-level clip editor popover */
+.clip-editor-popover {
+    position: absolute;
+    z-index: 20;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 260px;
+}
+.clip-editor-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* YouTube iframe preview */
+.url-preview-iframe {
+    margin-top: var(--space-3);
+    display: none;
+}
+.url-preview-iframe.visible { display: block; }
+.url-preview-iframe iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: #000;
+}
+
 @media (max-width: 640px) {
     .url-preview { grid-template-columns: 1fr; }
     .url-preview img { width: 100%; height: 140px; }
     .form-row-split { grid-template-columns: 1fr; }
     .intros-table td.actions { text-align: left; }
+    .clip-length { margin-left: 0; width: 100%; }
 }
 
 @media (max-width: 480px) {

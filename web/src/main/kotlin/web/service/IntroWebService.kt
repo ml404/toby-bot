@@ -22,6 +22,7 @@ class IntroWebService(
         const val MAX_FILE_SIZE = 550 * 1024
         const val MAX_INTRO_COUNT = 3
         const val MAX_INTRO_DURATION_SECONDS = 15
+        const val MAX_CLIP_DURATION_MS = MAX_INTRO_DURATION_SECONDS * 1000
         private val objectMapper = ObjectMapper()
     }
 
@@ -95,12 +96,31 @@ class IntroWebService(
             } else {
                 dto.fileName
             }
-            val thumbnailUrl = url?.let { extractVideoId(it) }?.let { "https://img.youtube.com/vi/$it/mqdefault.jpg" }
-            IntroViewModel(dto.id.orEmpty(), dto.index, displayName, dto.introVolume, url, thumbnailUrl)
+            val videoId = url?.let { extractVideoId(it) }
+            val thumbnailUrl = videoId?.let { "https://img.youtube.com/vi/$it/mqdefault.jpg" }
+            IntroViewModel(
+                id = dto.id.orEmpty(),
+                index = dto.index,
+                fileName = displayName,
+                introVolume = dto.introVolume,
+                url = url,
+                thumbnailUrl = thumbnailUrl,
+                videoId = videoId,
+                startMs = dto.startMs,
+                endMs = dto.endMs
+            )
         }
     }
 
-    fun setIntroByUrl(discordId: Long, guildId: Long, url: String, volume: Int, replaceIndex: Int?): String? {
+    fun setIntroByUrl(
+        discordId: Long,
+        guildId: Long,
+        url: String,
+        volume: Int,
+        replaceIndex: Int?,
+        startMs: Int?,
+        endMs: Int?
+    ): String? {
         if (!isValidUrl(url)) return "Invalid URL provided."
 
         val user = getOrCreateUser(discordId, guildId)
@@ -111,9 +131,9 @@ class IntroWebService(
         }
 
         val preview = fetchYouTubePreview(url)
-        if (preview?.durationSeconds != null && preview.durationSeconds > MAX_INTRO_DURATION_SECONDS) {
-            return "Video is too long (${preview.durationSeconds}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s."
-        }
+        val sourceDurationMs = preview?.durationSeconds?.let { it * 1000 }
+
+        validateClip(startMs, endMs, sourceDurationMs)?.let { return it }
 
         val displayName = preview?.title ?: url
         val urlBytes = url.toByteArray()
@@ -124,17 +144,27 @@ class IntroWebService(
             selectedDto.musicBlob = urlBytes
             selectedDto.musicBlobHash = MusicDto.computeHash(urlBytes)
             selectedDto.introVolume = volume
+            selectedDto.startMs = startMs
+            selectedDto.endMs = endMs
             musicFileService.updateMusicFile(selectedDto)
         } else {
             val newIndex = existingIntros.size + 1
-            val newDto = MusicDto(user, newIndex, displayName, volume, urlBytes)
+            val newDto = MusicDto(user, newIndex, displayName, volume, urlBytes, startMs, endMs)
             musicFileService.createNewMusicFile(newDto)
         }
 
         return null
     }
 
-    fun setIntroByFile(discordId: Long, guildId: Long, file: MultipartFile, volume: Int, replaceIndex: Int?): String? {
+    fun setIntroByFile(
+        discordId: Long,
+        guildId: Long,
+        file: MultipartFile,
+        volume: Int,
+        replaceIndex: Int?,
+        startMs: Int?,
+        endMs: Int?
+    ): String? {
         if (file.isEmpty) return "No file provided."
         if (!file.originalFilename.orEmpty().endsWith(".mp3", ignoreCase = true)) {
             return "Only MP3 files are supported."
@@ -142,6 +172,10 @@ class IntroWebService(
         if (file.size > MAX_FILE_SIZE) {
             return "File exceeds maximum size of ${MAX_FILE_SIZE / 1024}KB."
         }
+
+        // Source duration is unknown for uploaded files here — let the client-side
+        // preview enforce bounds against the real audio. Clip-length rule still applies.
+        validateClip(startMs, endMs, sourceDurationMs = null)?.let { return it }
 
         val user = getOrCreateUser(discordId, guildId)
         val existingIntros = user.musicDtos.sortedBy { it.index }
@@ -159,14 +193,52 @@ class IntroWebService(
             selectedDto.musicBlob = fileBytes
             selectedDto.musicBlobHash = MusicDto.computeHash(fileBytes)
             selectedDto.introVolume = volume
+            selectedDto.startMs = startMs
+            selectedDto.endMs = endMs
             musicFileService.updateMusicFile(selectedDto)
         } else {
             val newIndex = existingIntros.size + 1
-            val newDto = MusicDto(user, newIndex, fileName, volume, fileBytes)
+            val newDto = MusicDto(user, newIndex, fileName, volume, fileBytes, startMs, endMs)
             musicFileService.createNewMusicFile(newDto)
                 ?: return "This file already exists as one of your intros."
         }
 
+        return null
+    }
+
+    /**
+     * Validates a clip range against the source duration.
+     *
+     * - Both null: no clipping. Only reject when source is known and longer than the 15s cap.
+     * - start/end present: start must be < end; clip span (end - start) must be <= MAX_CLIP_DURATION_MS.
+     * - When [sourceDurationMs] is known, end must be <= sourceDurationMs.
+     *
+     * Returns an error message or null if the clip is valid.
+     */
+    fun validateClip(startMs: Int?, endMs: Int?, sourceDurationMs: Int?): String? {
+        if (startMs == null && endMs == null) {
+            if (sourceDurationMs != null && sourceDurationMs > MAX_CLIP_DURATION_MS) {
+                val seconds = sourceDurationMs / 1000
+                return "Video is too long (${seconds}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s — set a start/end clip to use a longer source."
+            }
+            return null
+        }
+        val start = startMs ?: 0
+        if (start < 0) return "Start time cannot be negative."
+        if (endMs != null) {
+            if (endMs <= start) return "End time must be greater than start time."
+            if (sourceDurationMs != null && endMs > sourceDurationMs) {
+                return "End time exceeds the source duration."
+            }
+            if (endMs - start > MAX_CLIP_DURATION_MS) {
+                return "Clip is too long (${(endMs - start) / 1000}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s."
+            }
+        } else if (sourceDurationMs != null) {
+            // Only start was provided; the clip runs from start to end of source.
+            if (sourceDurationMs - start > MAX_CLIP_DURATION_MS) {
+                return "Clip is too long (${(sourceDurationMs - start) / 1000}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s."
+            }
+        }
         return null
     }
 
@@ -187,6 +259,30 @@ class IntroWebService(
 
         val dto = musicFileService.getMusicFileById(introId) ?: return "Intro not found."
         dto.introVolume = volume.coerceIn(1, 100)
+        musicFileService.updateMusicFile(dto)
+        return null
+    }
+
+    fun updateIntroTimestamps(
+        discordId: Long,
+        guildId: Long,
+        introId: String,
+        startMs: Int?,
+        endMs: Int?
+    ): String? {
+        requireOwnedIntro(discordId, guildId, introId)?.let { return it }
+
+        val dto = musicFileService.getMusicFileById(introId) ?: return "Intro not found."
+        val sourceDurationMs = run {
+            val blobString = dto.musicBlob?.let { String(it) }.orEmpty()
+            if (blobString.startsWith("http://") || blobString.startsWith("https://")) {
+                fetchYouTubePreview(blobString)?.durationSeconds?.let { it * 1000 }
+            } else null
+        }
+        validateClip(startMs, endMs, sourceDurationMs)?.let { return it }
+
+        dto.startMs = startMs
+        dto.endMs = endMs
         musicFileService.updateMusicFile(dto)
         return null
     }
@@ -312,7 +408,10 @@ data class IntroViewModel(
     val fileName: String?,
     val introVolume: Int?,
     val url: String?,
-    val thumbnailUrl: String? = null
+    val thumbnailUrl: String? = null,
+    val videoId: String? = null,
+    val startMs: Int? = null,
+    val endMs: Int? = null
 )
 
 data class GuildInfo(

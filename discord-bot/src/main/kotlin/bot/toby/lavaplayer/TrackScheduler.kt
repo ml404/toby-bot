@@ -8,6 +8,8 @@ import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
+import com.sedmelluq.discord.lavaplayer.track.TrackMarker
+import com.sedmelluq.discord.lavaplayer.track.TrackMarkerHandler
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -21,19 +23,34 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
     private var previousVolume: Int? = null
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
-    fun queue(track: AudioTrack, startPosition: Long, volume: Int) {
+    fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
+        val endNote = endPosition?.let { " (clipped to ${it} ms)" }.orEmpty()
         event?.hook
-            ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms' with volume '$volume'")
+            ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms'$endNote with volume '$volume'")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
         track.position = startPosition
         track.userData = volume
+        if (endPosition != null && endPosition > startPosition) {
+            track.setMarker(TrackMarker(endPosition, TrackMarkerHandler { state ->
+                // Stop the clipped track on reaching the end marker. onTrackEnd then
+                // advances the queue and restores the previous volume.
+                if (state == TrackMarkerHandler.MarkerState.REACHED) {
+                    logger.info("Clip end marker reached at ${endPosition} ms for ${track.info.title}, stopping track.")
+                    track.stop()
+                }
+            }))
+        }
         synchronized(queue) {
             if (!player.startTrack(track, true)) {
                 queue.offer(track)
             }
         }
     }
+
+    // Back-compat overload for the pre-clip call sites; currently unused but keeps
+    // the older signature compiling if anything else still calls it.
+    fun queue(track: AudioTrack, startPosition: Long, volume: Int) = queue(track, startPosition, null, volume)
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
         logger.info { "Adding ${playList.name} to the queue for guild $guildId" }

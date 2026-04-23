@@ -1,4 +1,4 @@
-const { toggleInput, togglePlay } = require('../../main/resources/static/js/intros');
+const { toggleInput, togglePlay, parseTimeInput, formatMs, validateClipMs } = require('../../main/resources/static/js/intros');
 
 // ---------------------------------------------------------------------------
 // toggleInput
@@ -157,5 +157,95 @@ describe('togglePlay — stops other audio', () => {
     test('plays the clicked audio after stopping others', () => {
         togglePlay(btn1);
         expect(audio1.play).toHaveBeenCalled();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// parseTimeInput
+// ---------------------------------------------------------------------------
+
+describe('parseTimeInput', () => {
+    test('returns null for blank or nullish input', () => {
+        expect(parseTimeInput('')).toBeNull();
+        expect(parseTimeInput('   ')).toBeNull();
+        expect(parseTimeInput(null)).toBeNull();
+        expect(parseTimeInput(undefined)).toBeNull();
+    });
+
+    test('parses mm:ss format', () => {
+        expect(parseTimeInput('0:00')).toBe(0);
+        expect(parseTimeInput('0:07')).toBe(7000);
+        expect(parseTimeInput('1:30')).toBe(90000);
+        expect(parseTimeInput('0:07.5')).toBe(7500);
+    });
+
+    test('parses raw seconds', () => {
+        expect(parseTimeInput('10')).toBe(10000);
+        expect(parseTimeInput('1.5')).toBe(1500);
+    });
+
+    test('returns NaN for malformed input', () => {
+        expect(Number.isNaN(parseTimeInput('abc'))).toBe(true);
+        expect(Number.isNaN(parseTimeInput('1:2:3'))).toBe(true);
+        expect(Number.isNaN(parseTimeInput('1:60'))).toBe(true); // seconds >= 60
+        expect(Number.isNaN(parseTimeInput('-5'))).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// formatMs
+// ---------------------------------------------------------------------------
+
+describe('formatMs', () => {
+    test('formats integer-second values as m:ss', () => {
+        expect(formatMs(0)).toBe('0:00');
+        expect(formatMs(7000)).toBe('0:07');
+        expect(formatMs(90000)).toBe('1:30');
+    });
+
+    test('formats sub-second values with one decimal', () => {
+        expect(formatMs(7500)).toBe('0:07.5');
+    });
+
+    test('returns empty string for invalid input', () => {
+        expect(formatMs(null)).toBe('');
+        expect(formatMs(-1)).toBe('');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// validateClipMs
+// ---------------------------------------------------------------------------
+
+describe('validateClipMs', () => {
+    const MAX = 15 * 1000;
+
+    test('accepts empty clip when source is short enough', () => {
+        expect(validateClipMs(null, null, 10000, MAX)).toBe('');
+    });
+
+    test('rejects empty clip when source is longer than cap', () => {
+        expect(validateClipMs(null, null, 60000, MAX)).toMatch(/too long/i);
+    });
+
+    test('accepts a tight clip on a long source', () => {
+        expect(validateClipMs(10000, 22000, 120000, MAX)).toBe(''); // 12s
+    });
+
+    test('rejects clip longer than cap', () => {
+        expect(validateClipMs(0, 16000, 60000, MAX)).toMatch(/too long/i);
+    });
+
+    test('rejects end <= start', () => {
+        expect(validateClipMs(5000, 5000, 60000, MAX)).toMatch(/greater than start/i);
+        expect(validateClipMs(5000, 3000, 60000, MAX)).toMatch(/greater than start/i);
+    });
+
+    test('rejects end beyond source duration', () => {
+        expect(validateClipMs(0, 20000, 10000, MAX)).toMatch(/exceeds/i);
+    });
+
+    test('rejects negative start', () => {
+        expect(validateClipMs(-1, 1000, 60000, MAX)).toMatch(/negative/i);
     });
 });

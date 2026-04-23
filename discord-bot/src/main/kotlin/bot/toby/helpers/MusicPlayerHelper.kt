@@ -47,8 +47,13 @@ object MusicPlayerHelper {
                 val introVolume = it.introVolume
                 instance.setPreviousVolume(currentVolume)
                 val url = determineUrlFromMusicDto(it)
-                logger.info { "Url to play is: '$url'" }
-                instance.loadAndPlay(guild, event, url, true, deleteDelay, startPosition, introVolume ?: currentVolume)
+                val clipStart = it.startMs?.toLong() ?: startPosition
+                val clipEnd = it.endMs?.toLong()
+                logger.info { "Url to play is: '$url' (clip ${clipStart}ms -> ${clipEnd ?: "end"})" }
+                instance.loadAndPlay(
+                    guild, event, url, true, deleteDelay, clipStart,
+                    introVolume ?: currentVolume, clipEnd
+                )
             }
         }.onFailure {
             logger.warn { "User does not have a musicDto. Cannot play intro." }

@@ -61,22 +61,37 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         isSkippable: Boolean,
         deleteDelay: Int,
         startPosition: Long,
-        volume: Int
+        volume: Int,
+        endPosition: Long?
     ) {
         val musicManager = this.getMusicManager(guild)
         this.isCurrentlyStoppable = isSkippable
         audioPlayerManager.loadItemOrdered(
             musicManager,
             trackUrl,
-            getResultHandler(event, musicManager, trackUrl, startPosition, volume, deleteDelay)
+            getResultHandler(event, musicManager, trackUrl, startPosition, endPosition, volume, deleteDelay)
         )
     }
+
+    // Back-compat overload: previous 7-arg signature delegates to the new one with
+    // no end marker. Keeps existing call sites and MockK stubs binary-compatible.
+    @Synchronized
+    fun loadAndPlay(
+        guild: Guild,
+        event: SlashCommandInteractionEvent?,
+        trackUrl: String,
+        isSkippable: Boolean,
+        deleteDelay: Int,
+        startPosition: Long,
+        volume: Int
+    ) = loadAndPlay(guild, event, trackUrl, isSkippable, deleteDelay, startPosition, volume, null)
 
     private fun getResultHandler(
         event: SlashCommandInteractionEvent?,
         musicManager: GuildMusicManager,
         trackUrl: String,
         startPosition: Long,
+        endPosition: Long?,
         volume: Int,
         deleteDelay: Int
     ): AudioLoadResultHandler {
@@ -86,7 +101,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             override fun trackLoaded(track: AudioTrack) {
                 scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
-                scheduler.queue(track, startPosition, volume)
+                scheduler.queue(track, startPosition, endPosition, volume)
                 scheduler.setPreviousVolume(previousVolume)
             }
 
