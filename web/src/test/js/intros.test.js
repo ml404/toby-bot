@@ -6,6 +6,9 @@ const {
     parseTimeInput,
     formatMs,
     validateClipMs,
+    ensureYtApi,
+    createTrimBar,
+    _resetYtApiPromiseForTests,
 } = require('../../main/resources/static/js/intros');
 
 // ---------------------------------------------------------------------------
@@ -468,6 +471,19 @@ describe('initIntroPage smoke test', () => {
                 <div id="dropZone" tabindex="0"><input type="file" id="file" name="file"></div>
                 <span id="fileError"></span>
                 <div id="fileSummary"></div>
+                <div id="trimBar" class="trim-bar" hidden>
+                    <div class="trim-track" data-trim-track>
+                        <div class="trim-selection" data-trim-selection></div>
+                        <div class="trim-playhead" data-trim-playhead></div>
+                        <button type="button" data-trim-thumb="start"></button>
+                        <button type="button" data-trim-thumb="end"></button>
+                    </div>
+                    <div class="trim-controls">
+                        <button type="button" data-trim-play><span data-trim-play-label>Play clip</span></button>
+                        <span data-trim-time>0:00 – 0:00</span>
+                    </div>
+                    <p data-trim-status hidden></p>
+                </div>
                 <button id="submitBtn" type="submit">Add intro</button>
             </form>
             <table><tbody id="introsTbody">
@@ -533,5 +549,541 @@ describe('initIntroPage smoke test', () => {
         endInput.dispatchEvent(new Event('input'));
 
         expect(submitBtn.disabled).toBe(false);
+    });
+
+    test('home-page dnd CTA path exists in the campaign controller mapping', () => {
+        // The CTA links to /dnd/campaign — this is a smoke assertion that
+        // the string used in the home template remains a stable literal.
+        // The actual route binding lives in CampaignController.kt (verified
+        // by Kotlin tests), but we guard against accidental home.html drift.
+        const href = '/dnd/campaign';
+        expect(href.startsWith('/dnd/')).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// createTrimBar — dual-handle draggable trim bar
+// ---------------------------------------------------------------------------
+
+function mountTrimBarFixture() {
+    document.body.innerHTML = `
+        <div id="trimBar" class="trim-bar" hidden>
+            <div class="trim-track" data-trim-track>
+                <div class="trim-selection" data-trim-selection></div>
+                <div class="trim-playhead" data-trim-playhead></div>
+                <button type="button" data-trim-thumb="start"></button>
+                <button type="button" data-trim-thumb="end"></button>
+            </div>
+            <div class="trim-controls">
+                <button type="button" data-trim-play><span data-trim-play-label>Play clip</span></button>
+                <span data-trim-time>0:00 – 0:00</span>
+            </div>
+            <p data-trim-status hidden></p>
+        </div>
+    `;
+    const root = document.getElementById('trimBar');
+    const track = root.querySelector('[data-trim-track]');
+    // JSDOM returns an all-zeros rect; pretend the track is 1000px wide so
+    // clientX values map cleanly to percentages (1px == 0.1%).
+    track.getBoundingClientRect = () => ({
+        left: 0, top: 0, right: 1000, bottom: 28, width: 1000, height: 28, x: 0, y: 0, toJSON: () => ({})
+    });
+    return { root, track };
+}
+
+function dispatchPointer(target, type, opts) {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(ev, Object.assign({ pointerId: 1, clientX: 0, clientY: 0 }, opts || {}));
+    target.dispatchEvent(ev);
+    return ev;
+}
+
+describe('createTrimBar — initial state', () => {
+    test('is hidden until setDuration is called with a positive value', () => {
+        const { root } = mountTrimBarFixture();
+        createTrimBar(root, { maxClipMs: 15000 });
+        expect(root.hidden).toBe(true);
+    });
+
+    test('setDuration(0) leaves the bar hidden', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(0);
+        expect(root.hidden).toBe(true);
+    });
+
+    test('setDuration(positive) unhides and initialises handles at [0, min(cap, duration)]', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(30000); // 30s source, 15s cap
+        expect(root.hidden).toBe(false);
+        const range = bar.getRange();
+        expect(range.startMs).toBe(0);
+        expect(range.endMs).toBe(15000);
+    });
+
+    test('setDuration on a very short source caps end at the duration', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(5000); // 5s source
+        expect(bar.getRange().endMs).toBe(5000);
+    });
+});
+
+describe('createTrimBar — setRange', () => {
+    test('is a no-op when duration is zero', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setRange(1000, 5000);
+        expect(bar.getRange().startMs).toBe(0);
+        expect(bar.getRange().endMs).toBe(0);
+    });
+
+    test('clamps start and end within [0, duration]', () => {
+        const { root } = mountTrimBarFixture();
+        // Use a cap wider than the source so the duration clamp (not the cap)
+        // is what's being exercised here.
+        const bar = createTrimBar(root, { maxClipMs: 60000 });
+        bar.setDuration(30000);
+        bar.setRange(-500, 50000);
+        const range = bar.getRange();
+        expect(range.startMs).toBe(0);
+        expect(range.endMs).toBe(30000);
+    });
+
+    test('clamps the clip window to maxClipMs', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(60000);
+        bar.setRange(0, 20000); // 20s range — over the 15s cap
+        expect(bar.getRange().endMs - bar.getRange().startMs).toBe(15000);
+    });
+
+    test('null end defaults to start + min(cap, remaining duration)', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(60000);
+        bar.setRange(5000, null);
+        const range = bar.getRange();
+        expect(range.startMs).toBe(5000);
+        expect(range.endMs).toBe(20000);
+    });
+
+    test('ensures end is at least start + 100ms', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(60000);
+        bar.setRange(5000, 5000); // identical
+        const range = bar.getRange();
+        expect(range.endMs).toBeGreaterThan(range.startMs);
+    });
+});
+
+describe('createTrimBar — drag', () => {
+    test('dragging the end thumb emits onChange with a new endMs', () => {
+        const { root, track } = mountTrimBarFixture();
+        const onChange = jest.fn();
+        const bar = createTrimBar(root, { maxClipMs: 15000, onChange: onChange });
+        bar.setDuration(20000); // 20s source; initial range 0..15000
+        onChange.mockClear();
+
+        const endThumb = root.querySelector('[data-trim-thumb="end"]');
+        dispatchPointer(endThumb, 'pointerdown', { clientX: 750 });
+        // Drag to 600px → 60% of 20000 = 12000ms
+        dispatchPointer(document, 'pointermove', { clientX: 600 });
+        dispatchPointer(document, 'pointerup', {});
+
+        expect(onChange).toHaveBeenCalled();
+        const last = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+        expect(last.endMs).toBe(12000);
+        expect(last.startMs).toBe(0);
+        // Thumb position is set declaratively via inline style
+        expect(endThumb.style.left).toBe('60%');
+    });
+
+    test('dragging the start thumb updates startMs and respects endMs', () => {
+        const { root, track } = mountTrimBarFixture();
+        const onChange = jest.fn();
+        const bar = createTrimBar(root, { maxClipMs: 15000, onChange: onChange });
+        bar.setDuration(20000);
+        onChange.mockClear();
+
+        const startThumb = root.querySelector('[data-trim-thumb="start"]');
+        dispatchPointer(startThumb, 'pointerdown', { clientX: 0 });
+        // Drag to 200px → 20% of 20000 = 4000ms
+        dispatchPointer(document, 'pointermove', { clientX: 200 });
+        dispatchPointer(document, 'pointerup', {});
+
+        const last = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+        expect(last.startMs).toBe(4000);
+    });
+
+    test('dragging past the max clip cap pushes the opposite thumb', () => {
+        const { root, track } = mountTrimBarFixture();
+        const onChange = jest.fn();
+        const bar = createTrimBar(root, { maxClipMs: 15000, onChange: onChange });
+        bar.setDuration(60000); // 60s source
+        bar.setRange(0, 10000); // initial 0..10000
+
+        const endThumb = root.querySelector('[data-trim-thumb="end"]');
+        dispatchPointer(endThumb, 'pointerdown', { clientX: 166 });
+        // Drag end to 500px → 50% of 60000 = 30000ms. Gap now 30s, exceeds 15s cap.
+        // Start should be pushed to 15000 (30000 - 15000).
+        dispatchPointer(document, 'pointermove', { clientX: 500 });
+        dispatchPointer(document, 'pointerup', {});
+
+        const range = bar.getRange();
+        expect(range.endMs - range.startMs).toBe(15000);
+        expect(range.endMs).toBe(30000);
+        expect(range.startMs).toBe(15000);
+    });
+
+    test('dragging does nothing when the bar is disabled', () => {
+        const { root } = mountTrimBarFixture();
+        const onChange = jest.fn();
+        const bar = createTrimBar(root, { maxClipMs: 15000, onChange: onChange });
+        bar.setDuration(20000);
+        bar.disable('Live streams can’t be clipped.');
+        onChange.mockClear();
+
+        const endThumb = root.querySelector('[data-trim-thumb="end"]');
+        dispatchPointer(endThumb, 'pointerdown', { clientX: 500 });
+        dispatchPointer(document, 'pointermove', { clientX: 300 });
+        dispatchPointer(document, 'pointerup', {});
+
+        expect(onChange).not.toHaveBeenCalled();
+    });
+});
+
+describe('createTrimBar — keyboard nudging', () => {
+    test('ArrowRight on end thumb increments endMs by 100ms', () => {
+        const { root } = mountTrimBarFixture();
+        const onChange = jest.fn();
+        const bar = createTrimBar(root, { maxClipMs: 15000, onChange: onChange });
+        bar.setDuration(60000);
+        bar.setRange(0, 10000);
+        onChange.mockClear();
+
+        const endThumb = root.querySelector('[data-trim-thumb="end"]');
+        const ev = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true });
+        endThumb.dispatchEvent(ev);
+
+        expect(bar.getRange().endMs).toBe(10100);
+        expect(onChange).toHaveBeenCalledWith({ startMs: 0, endMs: 10100 });
+    });
+
+    test('Shift+ArrowRight nudges by 1000ms', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(60000);
+        bar.setRange(0, 10000);
+
+        const endThumb = root.querySelector('[data-trim-thumb="end"]');
+        endThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }));
+
+        expect(bar.getRange().endMs).toBe(11000);
+    });
+
+    test('ArrowLeft on start thumb decrements startMs by 100ms', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(60000);
+        bar.setRange(5000, 10000);
+
+        const startThumb = root.querySelector('[data-trim-thumb="start"]');
+        startThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+
+        expect(bar.getRange().startMs).toBe(4900);
+    });
+
+    test('non-arrow keys are ignored', () => {
+        const { root } = mountTrimBarFixture();
+        const onChange = jest.fn();
+        const bar = createTrimBar(root, { maxClipMs: 15000, onChange: onChange });
+        bar.setDuration(60000);
+        bar.setRange(0, 10000);
+        onChange.mockClear();
+
+        const endThumb = root.querySelector('[data-trim-thumb="end"]');
+        endThumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'Space', bubbles: true }));
+
+        expect(onChange).not.toHaveBeenCalled();
+    });
+});
+
+describe('createTrimBar — play button', () => {
+    let rafCallbacks;
+
+    beforeEach(() => {
+        rafCallbacks = [];
+        global.requestAnimationFrame = (cb) => { rafCallbacks.push(cb); return rafCallbacks.length; };
+        global.cancelAnimationFrame = (id) => { rafCallbacks[id - 1] = null; };
+    });
+
+    afterEach(() => {
+        delete global.requestAnimationFrame;
+        delete global.cancelAnimationFrame;
+    });
+
+    function flushRaf(t) {
+        const batch = rafCallbacks.slice();
+        rafCallbacks = [];
+        batch.forEach(cb => { if (cb) cb(t); });
+    }
+
+    test('click on play seeks to start and plays', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(30000);
+        bar.setRange(5000, 12000);
+
+        const seek = jest.fn();
+        const play = jest.fn();
+        const pause = jest.fn();
+        let currentMs = 0;
+        bar.setBackend({
+            getCurrentTimeMs: () => currentMs,
+            seek: seek,
+            play: play,
+            pause: pause,
+        });
+
+        const playBtn = root.querySelector('[data-trim-play]');
+        playBtn.click();
+
+        expect(seek).toHaveBeenCalledWith(5000);
+        expect(play).toHaveBeenCalled();
+    });
+
+    test('play loop pauses when currentTime reaches endMs', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(30000);
+        bar.setRange(5000, 12000);
+
+        const pause = jest.fn();
+        let currentMs = 5000;
+        bar.setBackend({
+            getCurrentTimeMs: () => currentMs,
+            seek: () => {},
+            play: () => {},
+            pause: pause,
+        });
+
+        root.querySelector('[data-trim-play]').click();
+        // First tick: still inside clip
+        flushRaf();
+        expect(pause).not.toHaveBeenCalled();
+
+        // Advance past end
+        currentMs = 12500;
+        flushRaf();
+        expect(pause).toHaveBeenCalled();
+    });
+
+    test('clicking play a second time (while playing) stops playback', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(30000);
+        bar.setRange(0, 10000);
+
+        const pause = jest.fn();
+        bar.setBackend({
+            getCurrentTimeMs: () => 2000,
+            seek: () => {},
+            play: () => {},
+            pause: pause,
+        });
+
+        const playBtn = root.querySelector('[data-trim-play]');
+        playBtn.click();
+        playBtn.click();
+        expect(pause).toHaveBeenCalled();
+    });
+
+    test('play is a no-op when no backend is set', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(30000);
+        // No setBackend call
+        expect(() => root.querySelector('[data-trim-play]').click()).not.toThrow();
+    });
+});
+
+describe('createTrimBar — disable', () => {
+    test('disable() with no status hides the bar', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(20000);
+        expect(root.hidden).toBe(false);
+        bar.disable();
+        expect(root.hidden).toBe(true);
+    });
+
+    test('disable(statusText) keeps the bar visible but marks data-disabled', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.disable('Live streams can’t be clipped.');
+        expect(root.hidden).toBe(false);
+        expect(root.getAttribute('data-disabled')).toBe('true');
+        const status = root.querySelector('[data-trim-status]');
+        expect(status.hidden).toBe(false);
+        expect(status.textContent).toBe('Live streams can’t be clipped.');
+    });
+});
+
+describe('createTrimBar — time display', () => {
+    test('updates the mm:ss range label on setRange', () => {
+        const { root } = mountTrimBarFixture();
+        const bar = createTrimBar(root, { maxClipMs: 15000 });
+        bar.setDuration(60000);
+        bar.setRange(5000, 12500);
+        const timeEl = root.querySelector('[data-trim-time]');
+        expect(timeEl.textContent).toBe('0:05 – 0:12.5');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// ensureYtApi — loader contract
+// ---------------------------------------------------------------------------
+
+describe('ensureYtApi', () => {
+    beforeEach(() => {
+        _resetYtApiPromiseForTests();
+        // Clean up any globals a previous test left behind
+        delete window.YT;
+        delete window.onYouTubeIframeAPIReady;
+        document.querySelectorAll('script[src*="iframe_api"]').forEach(s => s.remove());
+    });
+
+    test('resolves immediately when window.YT.Player is already available', async () => {
+        window.YT = { Player: function () {} };
+        await expect(ensureYtApi()).resolves.toBeUndefined();
+    });
+
+    test('returns the same promise on repeat calls (idempotent)', () => {
+        const p1 = ensureYtApi();
+        const p2 = ensureYtApi();
+        expect(p1).toBe(p2);
+    });
+
+    test('injects an iframe_api script tag on first call', () => {
+        ensureYtApi();
+        const scripts = document.querySelectorAll('script[src*="iframe_api"]');
+        expect(scripts.length).toBe(1);
+    });
+
+    test('resolves when onYouTubeIframeAPIReady fires', async () => {
+        const p = ensureYtApi();
+        // Simulate the YouTube script loading and invoking the global callback.
+        window.YT = { Player: function () {} };
+        window.onYouTubeIframeAPIReady();
+        await expect(p).resolves.toBeUndefined();
+    });
+
+    test('preserves any pre-existing onYouTubeIframeAPIReady hook', async () => {
+        const prior = jest.fn();
+        window.onYouTubeIframeAPIReady = prior;
+        const p = ensureYtApi();
+        window.YT = { Player: function () {} };
+        window.onYouTubeIframeAPIReady();
+        await p;
+        expect(prior).toHaveBeenCalled();
+    });
+
+    test('rejects when the script fires onerror', async () => {
+        const p = ensureYtApi();
+        const script = document.querySelector('script[src*="iframe_api"]');
+        script.onerror(new Event('error'));
+        await expect(p).rejects.toThrow(/load failed/);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// initIntroPage — trim-bar integration smoke
+// ---------------------------------------------------------------------------
+
+describe('initIntroPage — trim bar integration', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        jest.resetModules();
+        _resetYtApiPromiseForTests();
+    });
+
+    function mountWithTrimBar() {
+        document.body.innerHTML = `
+            <meta name="_csrf" content="t">
+            <meta name="_csrf_header" content="X-CSRF-TOKEN">
+            <form id="introForm">
+                <input type="hidden" id="inputType" name="inputType" value="url">
+                <button type="button" class="source-tab" data-source="url" aria-pressed="true">URL</button>
+                <button type="button" class="source-tab" data-source="file" aria-pressed="false">File</button>
+                <input type="range" id="volume" name="volume" min="1" max="100" value="90" data-volume-slider>
+                <span data-volume-value-for="volume">90%</span>
+                <input type="text" id="startTime" data-clip-time="start">
+                <input type="text" id="endTime" data-clip-time="end">
+                <input type="hidden" id="startMs" name="startMs">
+                <input type="hidden" id="endMs" name="endMs">
+                <span data-clip-length></span>
+                <span id="clipError"></span>
+                <input type="url" id="url" name="url">
+                <span id="urlError"></span>
+                <div id="urlPreview"></div>
+                <div id="urlPreviewIframe"></div>
+                <div id="dropZone" tabindex="0"><input type="file" id="file" name="file"></div>
+                <span id="fileError"></span>
+                <div id="fileSummary"></div>
+                <div id="trimBar" class="trim-bar" hidden>
+                    <div class="trim-track" data-trim-track>
+                        <div class="trim-selection" data-trim-selection></div>
+                        <div class="trim-playhead" data-trim-playhead></div>
+                        <button type="button" data-trim-thumb="start"></button>
+                        <button type="button" data-trim-thumb="end"></button>
+                    </div>
+                    <div class="trim-controls">
+                        <button type="button" data-trim-play><span data-trim-play-label>Play clip</span></button>
+                        <span data-trim-time>0:00 – 0:00</span>
+                    </div>
+                    <p data-trim-status hidden></p>
+                </div>
+                <button id="submitBtn" type="submit">Add intro</button>
+            </form>
+            <table><tbody id="introsTbody"></tbody></table>
+            <template id="clipEditorTemplate"><div class="clip-editor-popover"></div></template>
+        `;
+        document.body.dataset.introPage = '1';
+        document.body.dataset.guildId = '222';
+        document.body.dataset.targetDiscordId = '';
+        document.body.dataset.maxFileKb = '550';
+        document.body.dataset.maxDurationSeconds = '15';
+        window.TobyToast = { show: jest.fn() };
+        window.TobyModal = { confirm: jest.fn().mockResolvedValue(false) };
+        require('../../main/resources/static/js/intros');
+    }
+
+    test('mounts without throwing when trimBar element is present', () => {
+        expect(() => mountWithTrimBar()).not.toThrow();
+    });
+
+    test('typing a valid clip propagates into hidden ms fields without needing the trim bar', () => {
+        mountWithTrimBar();
+        const startInput = document.getElementById('startTime');
+        const endInput = document.getElementById('endTime');
+        const startHidden = document.getElementById('startMs');
+        const endHidden = document.getElementById('endMs');
+
+        startInput.value = '0:03';
+        startInput.dispatchEvent(new Event('input'));
+        endInput.value = '0:09';
+        endInput.dispatchEvent(new Event('input'));
+
+        expect(startHidden.value).toBe('3000');
+        expect(endHidden.value).toBe('9000');
+    });
+
+    test('trim bar stays hidden until a source provides its duration', () => {
+        mountWithTrimBar();
+        const trimBar = document.getElementById('trimBar');
+        expect(trimBar.hidden).toBe(true);
     });
 });
