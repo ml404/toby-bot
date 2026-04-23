@@ -47,7 +47,7 @@ class EightBallCommand @Autowired constructor(private val userService: UserServi
             userService.updateUser(requestingUserDto)
             return
         }
-        event.hook.sendMessage("MAGIC 8-BALL SAYS: ${response}.").queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.sendMessage("MAGIC 8-BALL SAYS: $response.").queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val name: String

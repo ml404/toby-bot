@@ -1,3 +1,5 @@
+package database.configuration
+
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.InitiativeStateSnapshot
 import com.fasterxml.jackson.databind.ObjectMapper

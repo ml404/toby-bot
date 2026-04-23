@@ -1,3 +1,5 @@
+package database.configuration
+
 import bot.toby.helpers.DnDHelper
 import com.fasterxml.jackson.databind.ObjectMapper
 import common.logging.DiscordLogger
