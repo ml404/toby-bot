@@ -347,7 +347,7 @@ data class PreviewResponse(
     val error: String?
 )
 
-data class DeletedIntroSnapshot(
+class DeletedIntroSnapshot(
     val id: String,
     val index: Int,
     val fileName: String?,

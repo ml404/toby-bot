@@ -48,7 +48,7 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
         logger.info { " Doing lookup on user for guildId '${this.guild.idLong}' and discordId '${this.idLong}' " }
         val userSearched = userDtoHelper.calculateUserDto(this.idLong, this.guild.idLong)
         val userInfoMessage = userSearched.let {
-            logger.info { " Found user '${it}' from lookup " }
+            logger.info { " Found user '$it' from lookup " }
             val introMessage = produceMusicFileDataStringForPrinting(event.member!!, userSearched)
             "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $introMessage"
         }

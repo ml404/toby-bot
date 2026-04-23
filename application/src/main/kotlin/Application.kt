@@ -1,3 +1,5 @@
+import database.configuration.CampaignShutdownHook
+import database.configuration.CampaignStartupHook
 import database.configuration.FlywayGuardConfig
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -6,7 +8,7 @@ import org.springframework.context.annotation.Import
 
 @SpringBootApplication(scanBasePackages = ["bot", "common", "core", "database", "web"])
 @EnableCaching
-@Import(FlywayGuardConfig::class)
+@Import(FlywayGuardConfig::class, CampaignShutdownHook::class, CampaignStartupHook::class)
 class Application {
     companion object {
         @JvmStatic
