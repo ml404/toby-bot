@@ -67,6 +67,67 @@ function validateClipMs(startMs, endMs, sourceDurationMs, maxClipMs) {
     return '';
 }
 
+// Escape helper shared by togglePlayClip. Matches the per-page version in
+// initIntroPage; kept at module scope so the helper is usable outside the
+// page bootstrap (and reachable by Jest tests).
+function escapeAttrSafe(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+}
+
+// Closes any currently-open YouTube clip preview row and resets its launch
+// button. Called both by togglePlayClip (second-click collapse) and
+// togglePlay (another intro is taking over playback).
+function closeClipPreviewRow() {
+    document.querySelectorAll('tr.video-preview-row').forEach(r => r.remove());
+    document.querySelectorAll('[data-play-clip-video-id].playing').forEach(b => {
+        b.textContent = '▶';
+        b.classList.remove('playing');
+    });
+}
+
+// Injects a YouTube iframe clip preview as a new row beneath the clicked
+// button's row, seeding start/end from the row's data-start-ms /
+// data-end-ms attributes. A second click tears the preview back down.
+function togglePlayClip(btn) {
+    const row = btn.closest && btn.closest('tr[data-intro-id]');
+    if (!row) return;
+    const isOpen = btn.classList.contains('playing');
+    closeClipPreviewRow();
+    if (typeof document !== 'undefined') {
+        document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
+        document.querySelectorAll('.btn-play').forEach(b => {
+            b.textContent = '▶';
+            b.classList.remove('playing');
+        });
+    }
+    if (isOpen) return;
+    const videoId = btn.dataset.playClipVideoId;
+    if (!videoId) return;
+    const startMs = row.dataset.startMs ? parseInt(row.dataset.startMs, 10) : NaN;
+    const endMs = row.dataset.endMs ? parseInt(row.dataset.endMs, 10) : NaN;
+    const startSec = Number.isFinite(startMs) ? Math.max(0, Math.floor(startMs / 1000)) : 0;
+    const endSec = Number.isFinite(endMs) && endMs > startMs ? Math.ceil(endMs / 1000) : null;
+    const params = new URLSearchParams();
+    if (startSec > 0) params.set('start', String(startSec));
+    if (endSec != null) params.set('end', String(endSec));
+    params.set('autoplay', '1');
+    params.set('controls', '1');
+    params.set('rel', '0');
+    const src = 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?' + params.toString();
+    const previewRow = document.createElement('tr');
+    previewRow.className = 'video-preview-row';
+    const td = document.createElement('td');
+    td.colSpan = row.children.length;
+    td.innerHTML = '<iframe src="' + escapeAttrSafe(src) + '" ' +
+        'title="Clip preview" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+    previewRow.appendChild(td);
+    row.parentNode.insertBefore(previewRow, row.nextSibling);
+    btn.textContent = '⏹';
+    btn.classList.add('playing');
+}
+
 function togglePlay(btn) {
     const audioId = btn.dataset.audioId;
     const audio = document.getElementById(audioId);
@@ -74,9 +135,37 @@ function togglePlay(btn) {
     if (audio.paused) {
         document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
         document.querySelectorAll('.btn-play').forEach(b => { b.textContent = '▶'; b.classList.remove('playing'); });
+        closeClipPreviewRow();
         // Apply saved volume if present on the button
         const vol = parseInt(btn.dataset.volume || '100', 10);
         if (!isNaN(vol)) audio.volume = Math.max(0, Math.min(1, vol / 100));
+
+        // Honour the row's saved clip (data-start-ms / data-end-ms) if present.
+        // Seek to startSec before playing and pause at endSec via a one-time
+        // timeupdate listener so replay triggers the same seek.
+        const row = btn.closest('tr[data-intro-id]');
+        const startMs = row && row.dataset.startMs ? parseInt(row.dataset.startMs, 10) : NaN;
+        const endMs = row && row.dataset.endMs ? parseInt(row.dataset.endMs, 10) : NaN;
+        const startSec = Number.isFinite(startMs) ? startMs / 1000 : 0;
+        try { audio.currentTime = startSec; } catch (_) {}
+        if (Number.isFinite(endMs) && endMs > startMs) {
+            if (audio._clipTimeupdateHandler) {
+                audio.removeEventListener('timeupdate', audio._clipTimeupdateHandler);
+            }
+            const endSec = endMs / 1000;
+            const handler = function () {
+                if (audio.currentTime >= endSec) {
+                    audio.pause();
+                    try { audio.currentTime = startSec; } catch (_) {}
+                    btn.textContent = '▶';
+                    btn.classList.remove('playing');
+                    audio.removeEventListener('timeupdate', handler);
+                    audio._clipTimeupdateHandler = null;
+                }
+            };
+            audio.addEventListener('timeupdate', handler);
+            audio._clipTimeupdateHandler = handler;
+        }
         audio.play();
         btn.textContent = '⏹';
         btn.classList.add('playing');
@@ -215,6 +304,22 @@ function initIntroPage() {
         const err = validateClipMs(startMs, endMs, clipState.sourceDurationMs, maxClipMs);
         clipState.valid = !err;
         setClipError(err);
+
+        // Sync the too-long hint on the preview card. Without this the "Video is
+        // too long" red text + duration-badge lingers after the user has entered
+        // a clip that fits under the cap, and the submit button stays disabled.
+        if (typeof previewState !== 'undefined') {
+            previewState.tooLong = !clipState.valid && clipState.sourceDurationMs != null;
+            if (urlPreview) {
+                urlPreview.classList.toggle('error', previewState.tooLong);
+                const badge = urlPreview.querySelector('.duration-badge');
+                if (badge) badge.classList.toggle('too-long', previewState.tooLong);
+            }
+            // Clear the stale "too long" url-level error when the clip now fits.
+            if (clipState.valid && urlError && /too long/i.test(urlError.textContent)) {
+                setUrlError('');
+            }
+        }
 
         if (startMsHidden) startMsHidden.value = startMs == null ? '' : String(startMs);
         if (endMsHidden) endMsHidden.value = endMs == null ? '' : String(endMs);
@@ -496,6 +601,11 @@ function initIntroPage() {
         });
     }
     updateSubmitState();
+
+    // --- Clip-aware YouTube preview on saved rows ---
+    document.querySelectorAll('[data-play-clip-video-id]').forEach(btn => {
+        btn.addEventListener('click', function () { togglePlayClip(btn); });
+    });
 
     // --- Delete modal ---
     document.querySelectorAll('[data-delete-intro]').forEach(btn => {
@@ -803,9 +913,18 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
     }
     // Expose ▶ handler to inline onclick bindings that still exist in the template
     window.togglePlay = togglePlay;
+    window.togglePlayClip = togglePlayClip;
     window.toggleInput = toggleInput;
 }
 
 if (typeof module !== 'undefined') {
-    module.exports = { toggleInput, togglePlay, parseTimeInput, formatMs, validateClipMs };
+    module.exports = {
+        toggleInput,
+        togglePlay,
+        togglePlayClip,
+        closeClipPreviewRow,
+        parseTimeInput,
+        formatMs,
+        validateClipMs
+    };
 }

@@ -318,6 +318,22 @@
     background: #000;
 }
 
+/* Inline clip preview row — shown when the user clicks ▶ on a saved YouTube
+   intro in the "Your intros" table. */
+.video-preview-row > td {
+    padding: 0;
+    background: var(--bg-input);
+    border-top: 1px solid var(--border);
+}
+.video-preview-row iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 360px;
+    border: 0;
+    display: block;
+    background: #000;
+}
+
 @media (max-width: 640px) {
     .url-preview { grid-template-columns: 1fr; }
     .url-preview img { width: 100%; height: 140px; }

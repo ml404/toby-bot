@@ -75,7 +75,8 @@
                     <tr th:each="intro : ${intros}"
                         th:attr="data-intro-id=${intro.id},
                                  data-start-ms=${intro.startMs != null ? intro.startMs : ''},
-                                 data-end-ms=${intro.endMs != null ? intro.endMs : ''}">
+                                 data-end-ms=${intro.endMs != null ? intro.endMs : ''},
+                                 data-video-id=${intro.videoId != null ? intro.videoId : ''}">
                         <td data-label="Slot">
                             <span class="drag-handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
                             <span class="slot-index" th:text="${intro.index}">1</span>
@@ -106,13 +107,21 @@
                             </div>
                         </td>
                         <td data-label="Actions" class="actions">
-                            <!-- Play or open-link -->
+                            <!-- Clip-aware preview for YouTube intros -->
+                            <button th:if="${intro.videoId != null}"
+                                    type="button" class="btn-play"
+                                    th:attr="data-play-clip-video-id=${intro.videoId},
+                                             data-intro-id=${intro.id},
+                                             aria-label='Preview clip of ' + ${intro.fileName}"
+                                    title="Preview clip">▶</button>
+                            <!-- External link for every URL intro (YouTube or otherwise) -->
                             <a th:if="${intro.url != null}"
                                th:href="${intro.url}"
                                target="_blank" rel="noopener"
                                class="btn-link-icon"
                                th:aria-label="'Open ' + ${intro.fileName} + ' in new tab'"
                                title="Open link">↗</a>
+                            <!-- Direct play for file intros -->
                             <span th:unless="${intro.url != null}">
                                 <audio th:id="'audio-' + ${intro.id}"
                                        th:src="@{/music(id=${intro.id})}"
