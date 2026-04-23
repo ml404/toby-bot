@@ -221,4 +221,11 @@ internal class HttpHelperTest {
         val result = httpClient.getYouTubeVideoTitle(PERSONA_VIDEO_URL)
         assertEquals("WOW. THIS IS GIVING ME MAJOR PERSONA VIBES.", result)
     }
+
+    @Test
+    fun `getYouTubeVideoTitle returns title for YouTube Shorts URL`() = runBlocking {
+        val httpClient = createYouTubeMockHttpClient()
+        val result = httpClient.getYouTubeVideoTitle("https://www.youtube.com/shorts/dQw4w9WgXcQ")
+        assertEquals("Never Gonna Give You Up", result)
+    }
 }

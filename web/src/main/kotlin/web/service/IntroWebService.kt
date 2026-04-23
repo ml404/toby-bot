@@ -377,7 +377,7 @@ class IntroWebService(
     fun getYouTubeVideoTitle(url: String): String? = fetchYouTubePreview(url)?.title
 
     private fun extractVideoId(url: String): String? {
-        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/)([^#&?\\n]+)")
+        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?\\n]+)")
         return regex.find(url)?.value
     }
 
