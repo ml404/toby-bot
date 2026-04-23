@@ -203,6 +203,27 @@
                     <div id="urlPreviewIframe" class="url-preview-iframe" aria-hidden="true"></div>
                 </div>
 
+                <!-- Granular clip trim bar — draggable handles for start/end, backed by
+                     the YouTube IFrame API (URL source) or the <audio> element (file source).
+                     Hidden until a source is loaded and its duration is known. -->
+                <div id="trimBar" class="trim-bar" hidden aria-label="Clip trim bar">
+                    <div class="trim-track" data-trim-track>
+                        <div class="trim-selection" data-trim-selection></div>
+                        <div class="trim-playhead" data-trim-playhead aria-hidden="true"></div>
+                        <button type="button" class="trim-thumb trim-thumb--start"
+                                data-trim-thumb="start" aria-label="Clip start handle"></button>
+                        <button type="button" class="trim-thumb trim-thumb--end"
+                                data-trim-thumb="end" aria-label="Clip end handle"></button>
+                    </div>
+                    <div class="trim-controls">
+                        <button type="button" class="btn btn-sm btn-secondary" data-trim-play>
+                            <span data-trim-play-label>&#9654; Play clip</span>
+                        </button>
+                        <span class="trim-time" data-trim-time>0:00 – 0:00</span>
+                    </div>
+                    <p class="hint trim-status" data-trim-status hidden></p>
+                </div>
+
                 <!-- File input -->
                 <div class="form-group" id="fileSection" style="display:none">
                     <label for="file">MP3 file</label>

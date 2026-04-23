@@ -12,8 +12,11 @@ import kotlinx.serialization.Serializable
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-class HttpHelper(private val client: HttpClient, private val dispatcher: CoroutineDispatcher = Dispatchers.IO) {
-    private val youtubeApiKey = System.getenv("YOUTUBE_API_KEY")
+class HttpHelper(
+    private val client: HttpClient,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val youtubeApiKey: String? = System.getenv("YOUTUBE_API_KEY"),
+) {
 
     suspend fun fetchFromGet(url: String?): String = withContext(dispatcher) {
         if (url.isNullOrBlank()) return@withContext ""

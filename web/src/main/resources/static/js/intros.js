@@ -76,6 +76,215 @@ function escapeAttrSafe(s) {
     })[c]);
 }
 
+// Idempotent loader for the YouTube IFrame API. Resolves once window.YT.Player
+// is available. Rejects on network failure or after a 7s timeout so callers can
+// fall back gracefully to the existing text-only clip flow.
+let ytApiPromise = null;
+function ensureYtApi() {
+    if (typeof window === 'undefined') return Promise.reject(new Error('no window'));
+    if (ytApiPromise) return ytApiPromise;
+    ytApiPromise = new Promise((resolve, reject) => {
+        if (window.YT && window.YT.Player) { resolve(); return; }
+        const prevHook = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function () {
+            if (typeof prevHook === 'function') { try { prevHook(); } catch (_) {} }
+            resolve();
+        };
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        script.onerror = () => reject(new Error('yt-api load failed'));
+        document.head.appendChild(script);
+        setTimeout(() => {
+            if (!(window.YT && window.YT.Player)) reject(new Error('yt-api timeout'));
+        }, 7000);
+    });
+    return ytApiPromise;
+}
+
+// Draggable dual-handle trim bar. Pure UI — callers pass in callbacks for
+// playback control and get notified of user drags via onChange. Backed by
+// either the YT IFrame API (URL source) or an HTMLAudioElement (file source);
+// the backend is swappable at runtime via setBackend().
+function createTrimBar(rootEl, opts) {
+    const maxClipMs = opts.maxClipMs;
+    const onChange = opts.onChange || function () {};
+    const track = rootEl.querySelector('[data-trim-track]');
+    const selection = rootEl.querySelector('[data-trim-selection]');
+    const thumbStart = rootEl.querySelector('[data-trim-thumb="start"]');
+    const thumbEnd = rootEl.querySelector('[data-trim-thumb="end"]');
+    const playhead = rootEl.querySelector('[data-trim-playhead]');
+    const playBtn = rootEl.querySelector('[data-trim-play]');
+    const playLabel = rootEl.querySelector('[data-trim-play-label]');
+    const timeEl = rootEl.querySelector('[data-trim-time]');
+    const statusEl = rootEl.querySelector('[data-trim-status]');
+
+    let durationMs = 0;
+    let startMs = 0;
+    let endMs = 0;
+    let backend = null;
+    let rafId = null;
+    let playing = false;
+
+    function msToPct(ms) {
+        if (durationMs <= 0) return 0;
+        return Math.max(0, Math.min(100, (ms / durationMs) * 100));
+    }
+    function clientXToMs(clientX) {
+        if (durationMs <= 0) return 0;
+        const rect = track.getBoundingClientRect();
+        const pct = (clientX - rect.left) / Math.max(1, rect.width);
+        return Math.max(0, Math.min(durationMs, Math.round(pct * durationMs / 100) * 100));
+    }
+
+    function render() {
+        const s = msToPct(startMs);
+        const e = msToPct(endMs);
+        thumbStart.style.left = s + '%';
+        thumbEnd.style.left = e + '%';
+        selection.style.left = s + '%';
+        selection.style.right = (100 - e) + '%';
+        if (timeEl) timeEl.textContent = formatMs(startMs) + ' – ' + formatMs(endMs);
+    }
+
+    function stopPlayLoop() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null;
+        playing = false;
+        if (playhead) playhead.style.opacity = '0';
+        if (playLabel) playLabel.innerHTML = '&#9654; Play clip';
+    }
+
+    function startPlayLoop() {
+        if (!backend || !backend.getCurrentTimeMs) return;
+        playing = true;
+        if (playhead) playhead.style.opacity = '1';
+        if (playLabel) playLabel.innerHTML = '&#9632; Stop';
+        const tick = function () {
+            if (!playing || !backend) return;
+            const t = backend.getCurrentTimeMs();
+            if (playhead && isFinite(t)) playhead.style.left = msToPct(t) + '%';
+            if (t >= endMs) {
+                try { backend.pause(); } catch (_) {}
+                stopPlayLoop();
+                return;
+            }
+            rafId = requestAnimationFrame(tick);
+        };
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function onThumbPointerDown(which) {
+        return function (ev) {
+            if (rootEl.getAttribute('data-disabled') === 'true') return;
+            ev.preventDefault();
+            try { ev.target.setPointerCapture(ev.pointerId); } catch (_) {}
+            function move(e) {
+                const ms = clientXToMs(e.clientX);
+                if (which === 'start') {
+                    startMs = Math.max(0, Math.min(ms, endMs - 100));
+                    if (endMs - startMs > maxClipMs) endMs = Math.min(durationMs, startMs + maxClipMs);
+                } else {
+                    endMs = Math.max(startMs + 100, Math.min(ms, durationMs));
+                    if (endMs - startMs > maxClipMs) startMs = Math.max(0, endMs - maxClipMs);
+                }
+                render();
+                onChange({ startMs: startMs, endMs: endMs });
+            }
+            function up() {
+                document.removeEventListener('pointermove', move);
+                document.removeEventListener('pointerup', up);
+                document.removeEventListener('pointercancel', up);
+            }
+            document.addEventListener('pointermove', move);
+            document.addEventListener('pointerup', up);
+            document.addEventListener('pointercancel', up);
+        };
+    }
+    thumbStart.addEventListener('pointerdown', onThumbPointerDown('start'));
+    thumbEnd.addEventListener('pointerdown', onThumbPointerDown('end'));
+
+    // Keyboard nudging: arrow = 100ms, shift+arrow = 1s.
+    function onThumbKey(which) {
+        return function (ev) {
+            if (rootEl.getAttribute('data-disabled') === 'true') return;
+            const step = ev.shiftKey ? 1000 : 100;
+            let delta = 0;
+            if (ev.key === 'ArrowLeft') delta = -step;
+            else if (ev.key === 'ArrowRight') delta = step;
+            else return;
+            ev.preventDefault();
+            if (which === 'start') {
+                startMs = Math.max(0, Math.min(startMs + delta, endMs - 100));
+                if (endMs - startMs > maxClipMs) endMs = Math.min(durationMs, startMs + maxClipMs);
+            } else {
+                endMs = Math.max(startMs + 100, Math.min(endMs + delta, durationMs));
+                if (endMs - startMs > maxClipMs) startMs = Math.max(0, endMs - maxClipMs);
+            }
+            render();
+            onChange({ startMs: startMs, endMs: endMs });
+        };
+    }
+    thumbStart.addEventListener('keydown', onThumbKey('start'));
+    thumbEnd.addEventListener('keydown', onThumbKey('end'));
+
+    if (playBtn) {
+        playBtn.addEventListener('click', function () {
+            if (!backend || rootEl.getAttribute('data-disabled') === 'true') return;
+            if (playing) {
+                try { backend.pause(); } catch (_) {}
+                stopPlayLoop();
+                return;
+            }
+            try { backend.seek(startMs); } catch (_) {}
+            try { backend.play(); } catch (_) {}
+            startPlayLoop();
+        });
+    }
+
+    return {
+        setBackend: function (b) { stopPlayLoop(); backend = b; },
+        setDuration: function (ms) {
+            durationMs = (ms && isFinite(ms) && ms > 0) ? ms : 0;
+            if (durationMs > 0) {
+                rootEl.hidden = false;
+                rootEl.removeAttribute('data-disabled');
+                if (statusEl) statusEl.hidden = true;
+                if (endMs <= 0 || endMs > durationMs) endMs = Math.min(maxClipMs, durationMs);
+                if (startMs < 0 || startMs >= endMs) startMs = 0;
+                render();
+            }
+        },
+        setRange: function (s, e) {
+            if (durationMs <= 0) return;
+            const ns = (s == null || !isFinite(s)) ? 0 : Math.max(0, Math.min(s, durationMs));
+            let ne;
+            if (e == null || !isFinite(e)) {
+                ne = Math.min(durationMs, ns + Math.min(maxClipMs, durationMs - ns));
+            } else {
+                ne = Math.max(ns + 100, Math.min(e, durationMs));
+            }
+            if (ne - ns > maxClipMs) ne = ns + maxClipMs;
+            startMs = ns; endMs = ne;
+            render();
+        },
+        getRange: function () { return { startMs: startMs, endMs: endMs }; },
+        disable: function (statusText) {
+            stopPlayLoop();
+            if (statusText) {
+                rootEl.hidden = false;
+                rootEl.setAttribute('data-disabled', 'true');
+                if (statusEl) { statusEl.hidden = false; statusEl.textContent = statusText; }
+            } else {
+                rootEl.hidden = true;
+                rootEl.removeAttribute('data-disabled');
+                if (statusEl) statusEl.hidden = true;
+            }
+        },
+        stopPlayLoop: stopPlayLoop
+    };
+}
+
 // Closes any currently-open YouTube clip preview row and resets its launch
 // button. Called both by togglePlayClip (second-click collapse) and
 // togglePlay (another intro is taking over playback).
@@ -335,7 +544,13 @@ function initIntroPage() {
             recomputeClipState();
             syncPreviewTooLongState();
             updateSubmitState();
-            if (activeUrlPreview) renderUrlIframe(activeUrlPreview);
+            if (trimBar && clipState.sourceDurationMs) {
+                const s = Number.isInteger(clipState.startMs) ? clipState.startMs : 0;
+                const e = Number.isInteger(clipState.endMs)
+                    ? clipState.endMs
+                    : Math.min(maxClipMs, clipState.sourceDurationMs);
+                trimBar.setRange(s, e);
+            }
             if (activeFileAudio) applyClipBoundsToFilePreview(activeFileAudio);
         });
     });
@@ -347,10 +562,27 @@ function initIntroPage() {
     const urlPreviewIframe = document.getElementById('urlPreviewIframe');
     const urlError = document.getElementById('urlError');
     const submitBtn = document.getElementById('submitBtn');
+    const trimBarEl = document.getElementById('trimBar');
     let previewState = { tooLong: false };
     let debounceTimer = null;
     let activeUrlPreview = null;
     let activeFileAudio = null;
+    let ytPlayer = null;
+    let ytPlayerReady = false;
+
+    // Trim bar: user drag → format mm:ss into text inputs → reuse the same
+    // validation/submit-gating pipeline as direct text editing.
+    const trimBar = trimBarEl ? createTrimBar(trimBarEl, {
+        maxClipMs: maxClipMs,
+        onChange: function (range) {
+            if (startTimeInput) startTimeInput.value = formatMs(range.startMs);
+            if (endTimeInput) endTimeInput.value = formatMs(range.endMs);
+            recomputeClipState();
+            syncPreviewTooLongState();
+            updateSubmitState();
+            if (activeFileAudio) applyClipBoundsToFilePreview(activeFileAudio);
+        }
+    }) : null;
 
     function setUrlError(msg) {
         if (!urlError) return;
@@ -364,7 +596,7 @@ function initIntroPage() {
         if (!data || !data.thumbnailUrl) {
             activeUrlPreview = null;
             clipState.sourceDurationMs = null;
-            renderUrlIframe(null);
+            renderUrlPlayer(null);
             renderClipLength();
             return;
         }
@@ -386,36 +618,89 @@ function initIntroPage() {
         if (previewState.tooLong) urlPreview.classList.add('error');
         urlPreview.classList.add('visible');
         activeUrlPreview = data;
-        renderUrlIframe(data);
+        renderUrlPlayer(data);
         recomputeClipState();
     }
 
-    // Renders a YouTube embed that honours the current start/end clip. When the
-    // source isn't YouTube (or is unknown), the iframe area stays hidden.
-    function renderUrlIframe(data) {
-        if (!urlPreviewIframe) return;
-        if (!data || !data.videoId) {
-            urlPreviewIframe.innerHTML = '';
-            urlPreviewIframe.classList.remove('visible');
-            urlPreviewIframe.setAttribute('aria-hidden', 'true');
-            return;
+    // Destroys any mounted YT player and clears the host. Safe to call repeatedly.
+    function destroyYtPlayer() {
+        if (ytPlayer) {
+            try { ytPlayer.destroy(); } catch (_) {}
         }
-        const startSec = Number.isInteger(clipState.startMs) ? Math.floor(clipState.startMs / 1000) : 0;
-        const endSec = Number.isInteger(clipState.endMs) ? Math.ceil(clipState.endMs / 1000) : null;
-        const params = new URLSearchParams();
-        if (startSec > 0) params.set('start', String(startSec));
-        if (endSec != null && endSec > startSec) params.set('end', String(endSec));
-        params.set('controls', '1');
-        params.set('rel', '0');
-        const qs = params.toString();
-        const src = 'https://www.youtube.com/embed/' + encodeURIComponent(data.videoId) + (qs ? '?' + qs : '');
-        urlPreviewIframe.innerHTML =
-            '<iframe src="' + escapeAttr(src) + '" ' +
-            'title="Clip preview" ' +
-            'allow="autoplay; encrypted-media" ' +
-            'allowfullscreen></iframe>';
+        ytPlayer = null;
+        ytPlayerReady = false;
+        if (urlPreviewIframe) urlPreviewIframe.innerHTML = '';
+    }
+
+    // Loads the YT IFrame API (if needed) and swaps in a fresh player for the
+    // given videoId. On ready, forwards sourceDurationMs into clipState and
+    // wires the trim bar's playback backend. On failure, degrades to a hidden
+    // trim bar with an explanatory status message so the text inputs remain
+    // the fallback path.
+    function mountYtPlayer(videoId) {
+        if (!urlPreviewIframe) return;
+        destroyYtPlayer();
         urlPreviewIframe.classList.add('visible');
         urlPreviewIframe.setAttribute('aria-hidden', 'false');
+        const mount = document.createElement('div');
+        urlPreviewIframe.appendChild(mount);
+        ensureYtApi().then(function () {
+            if (!window.YT || !window.YT.Player) {
+                if (trimBar) trimBar.disable('Couldn’t load the YouTube player — use the text fields instead.');
+                return;
+            }
+            ytPlayer = new window.YT.Player(mount, {
+                videoId: videoId,
+                playerVars: { controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+                events: {
+                    onReady: function () {
+                        ytPlayerReady = true;
+                        const durSec = ytPlayer.getDuration();
+                        const durationMs = (isFinite(durSec) && durSec > 0) ? Math.round(durSec * 1000) : null;
+                        if (durationMs === null) {
+                            if (trimBar) trimBar.disable('Live streams can’t be clipped.');
+                            return;
+                        }
+                        clipState.sourceDurationMs = durationMs;
+                        recomputeClipState();
+                        if (trimBar) {
+                            trimBar.setBackend({
+                                getCurrentTimeMs: function () { return ytPlayer && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() * 1000 : 0; },
+                                seek: function (ms) { if (ytPlayer && ytPlayer.seekTo) ytPlayer.seekTo(ms / 1000, true); },
+                                play: function () { if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); },
+                                pause: function () { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); }
+                            });
+                            trimBar.setDuration(durationMs);
+                            const s = Number.isInteger(clipState.startMs) ? clipState.startMs : 0;
+                            const e = Number.isInteger(clipState.endMs)
+                                ? clipState.endMs
+                                : Math.min(maxClipMs, durationMs);
+                            trimBar.setRange(s, e);
+                        }
+                        updateSubmitState();
+                    },
+                    onError: function () {
+                        if (trimBar) trimBar.disable('Couldn’t load this video — use the text fields instead.');
+                    }
+                }
+            });
+        }).catch(function () {
+            if (trimBar) trimBar.disable('Couldn’t load the YouTube player — use the text fields instead.');
+        });
+    }
+
+    // Renders the URL-source YouTube preview. No videoId (non-YouTube URL or
+    // error) tears the player down and hides the trim bar.
+    function renderUrlPlayer(data) {
+        if (!urlPreviewIframe) return;
+        if (!data || !data.videoId) {
+            destroyYtPlayer();
+            urlPreviewIframe.classList.remove('visible');
+            urlPreviewIframe.setAttribute('aria-hidden', 'true');
+            if (trimBar) trimBar.disable();
+            return;
+        }
+        mountYtPlayer(data.videoId);
     }
 
     // Pauses/seeks an <audio> element to stay within the current clip bounds.
@@ -523,6 +808,23 @@ function initIntroPage() {
                     clipState.sourceDurationMs = Math.floor(audio.duration * 1000);
                     recomputeClipState();
                     updateSubmitState();
+                    // Wire the trim bar to this audio element (file source path).
+                    // Safe even if the URL source also wired the bar earlier —
+                    // setBackend() cancels any in-flight playback loop.
+                    if (trimBar) {
+                        trimBar.setBackend({
+                            getCurrentTimeMs: function () { return audio.currentTime * 1000; },
+                            seek: function (ms) { try { audio.currentTime = ms / 1000; } catch (_) {} },
+                            play: function () { try { audio.play(); } catch (_) {} },
+                            pause: function () { try { audio.pause(); } catch (_) {} }
+                        });
+                        trimBar.setDuration(clipState.sourceDurationMs);
+                        const s = Number.isInteger(clipState.startMs) ? clipState.startMs : 0;
+                        const e = Number.isInteger(clipState.endMs)
+                            ? clipState.endMs
+                            : Math.min(maxClipMs, clipState.sourceDurationMs);
+                        trimBar.setRange(s, e);
+                    }
                 }
             });
             // Enforce clip bounds on the preview audio element.
@@ -929,6 +1231,9 @@ if (typeof module !== 'undefined') {
         closeClipPreviewRow,
         parseTimeInput,
         formatMs,
-        validateClipMs
+        validateClipMs,
+        ensureYtApi,
+        createTrimBar,
+        _resetYtApiPromiseForTests: function () { ytApiPromise = null; }
     };
 }

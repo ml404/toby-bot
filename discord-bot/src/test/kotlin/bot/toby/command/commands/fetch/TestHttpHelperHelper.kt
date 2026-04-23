@@ -53,7 +53,8 @@ object TestHttpHelperHelper {
         queryRematchResponse: String = "",
         initialResponseType: HttpStatusCode = HttpStatusCode.OK,
         queryResponseType: HttpStatusCode = HttpStatusCode.OK,
-        dispatcher: CoroutineDispatcher = Dispatchers.IO
+        dispatcher: CoroutineDispatcher = Dispatchers.IO,
+        youtubeApiKey: String? = null,
     ): HttpHelper {
         val mockEngine = MockEngine { request ->
             // Check the request URL and provide a response
@@ -84,15 +85,18 @@ object TestHttpHelperHelper {
         // Create HttpClient with MockEngine
         val client = HttpClient(mockEngine)
 
-        // Create an instance of HttpHelper
-        return HttpHelper(client, dispatcher)
+        // Create an instance of HttpHelper with a null API key so tests don't
+        // inherit the host machine's YOUTUBE_API_KEY env var (which would
+        // change the outbound URL and miss the MockEngine match).
+        return HttpHelper(client, dispatcher, youtubeApiKey)
     }
 
     fun createYouTubeMockHttpClient(
         snippetUrl: String = YOUTUBE_SNIPPET_API_URL,
         snippetResponse: String = YOUTUBE_SNIPPET_RESPONSE,
         responseStatus: HttpStatusCode = HttpStatusCode.OK,
-        dispatcher: CoroutineDispatcher = Dispatchers.IO
+        dispatcher: CoroutineDispatcher = Dispatchers.IO,
+        youtubeApiKey: String? = null,
     ): HttpHelper {
         val mockEngine = MockEngine { request ->
             when (request.url.toString()) {
@@ -112,6 +116,6 @@ object TestHttpHelperHelper {
                 json(Json { ignoreUnknownKeys = true })
             }
         }
-        return HttpHelper(client, dispatcher)
+        return HttpHelper(client, dispatcher, youtubeApiKey)
     }
 }

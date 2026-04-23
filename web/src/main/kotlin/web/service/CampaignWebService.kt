@@ -6,26 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import common.events.CampaignEventType
 import common.helpers.parseDndBeyondCharacterId
 import common.logging.DiscordLogger
-import database.dto.CampaignDto
-import database.dto.CampaignEventDto
-import database.dto.CampaignPlayerDto
-import database.dto.CampaignPlayerId
-import database.dto.EncounterDto
-import database.dto.EncounterEntryDto
-import database.dto.MonsterTemplateDto
-import database.dto.SessionNoteDto
-import database.dto.UserDto
-import database.service.CampaignEventService
-import database.service.CampaignPlayerService
-import database.service.CampaignService
-import database.service.CharacterSheetService
-import database.dto.MonsterAttackDto
-import database.service.EncounterEntryService
-import database.service.EncounterService
-import database.service.MonsterAttackService
-import database.service.MonsterTemplateService
-import database.service.SessionNoteService
-import database.service.UserService
+import database.dto.*
+import database.service.*
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -988,16 +970,16 @@ class CampaignWebService(
         if (!usesTemplate && !usesAdhoc) return SaveEncounterEntryResult.MISSING_SOURCE
 
         if (usesTemplate) {
-            val template = monsterTemplateService.getById(monsterTemplateId!!)
+            val template = monsterTemplateService.getById(monsterTemplateId)
                 ?: return SaveEncounterEntryResult.TEMPLATE_NOT_FOUND
             if (template.dmDiscordId != dmDiscordId) return SaveEncounterEntryResult.TEMPLATE_NOT_OWNED
-            if (quantity < 1 || quantity > MAX_QUANTITY_PER_ENTRY) {
+            if (quantity !in 1..MAX_QUANTITY_PER_ENTRY) {
                 return SaveEncounterEntryResult.INVALID_QUANTITY
             }
         }
 
         if (usesAdhoc) {
-            if (cleanedAdhocName!!.length > MAX_ENCOUNTER_NAME_LENGTH) {
+            if (cleanedAdhocName.length > MAX_ENCOUNTER_NAME_LENGTH) {
                 return SaveEncounterEntryResult.NAME_TOO_LONG
             }
             val hp = adhocHpExpression?.trim()?.takeIf { it.isNotEmpty() }
