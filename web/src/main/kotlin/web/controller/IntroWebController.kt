@@ -103,6 +103,8 @@ class IntroWebController(
         @RequestParam(defaultValue = "90") volume: Int,
         @RequestParam(required = false) replaceIndex: Int?,
         @RequestParam(required = false) targetDiscordId: Long?,
+        @RequestParam(required = false) startMs: Int?,
+        @RequestParam(required = false) endMs: Int?,
         ra: RedirectAttributes
     ): String {
         val authDiscordId = user.discordIdOrNull()
@@ -111,9 +113,13 @@ class IntroWebController(
 
         val clampedVolume = volume.coerceIn(1, 100)
         val error: String? = when (inputType) {
-            "url" -> introWebService.setIntroByUrl(effectiveDiscordId, guildId, url.orEmpty().trim(), clampedVolume, replaceIndex)
+            "url" -> introWebService.setIntroByUrl(
+                effectiveDiscordId, guildId, url.orEmpty().trim(), clampedVolume, replaceIndex, startMs, endMs
+            )
             "file" -> if (file != null && !file.isEmpty) {
-                introWebService.setIntroByFile(effectiveDiscordId, guildId, file, clampedVolume, replaceIndex)
+                introWebService.setIntroByFile(
+                    effectiveDiscordId, guildId, file, clampedVolume, replaceIndex, startMs, endMs
+                )
             } else {
                 "No file provided."
             }
@@ -150,6 +156,8 @@ class IntroWebController(
                 fileName = it.fileName,
                 introVolume = it.introVolume ?: 90,
                 musicBlob = it.musicBlob?.copyOf(),
+                startMs = it.startMs,
+                endMs = it.endMs,
                 discordId = effectiveDiscordId,
                 guildId = guildId,
                 timestampMs = System.currentTimeMillis()
@@ -206,7 +214,15 @@ class IntroWebController(
         } else {
             (dbUser.musicDtos.map { it.index ?: 0 }.maxOrNull() ?: 0) + 1
         }
-        val restored = MusicDto(dbUser, targetIndex, snapshot.fileName, snapshot.introVolume, snapshot.musicBlob)
+        val restored = MusicDto(
+            dbUser,
+            targetIndex,
+            snapshot.fileName,
+            snapshot.introVolume,
+            snapshot.musicBlob,
+            snapshot.startMs,
+            snapshot.endMs
+        )
         musicFileService.createNewMusicFile(restored)
 
         ra.addFlashAttribute("success", "Intro restored.")
@@ -225,6 +241,22 @@ class IntroWebController(
             ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.updateIntroVolume(effective, guildId, body.introId, body.volume)
+        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/update-timestamps", consumes = ["application/json"])
+    @ResponseBody
+    fun updateTimestamps(
+        @PathVariable guildId: Long,
+        @RequestBody body: UpdateTimestampsRequest,
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) targetDiscordId: Long?
+    ): ResponseEntity<ApiResult> {
+        val authDiscordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+        val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
+        val error = introWebService.updateIntroTimestamps(effective, guildId, body.introId, body.startMs, body.endMs)
         return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
@@ -301,6 +333,7 @@ class IntroWebController(
 
 data class UpdateVolumeRequest(val introId: String = "", val volume: Int = 0)
 data class UpdateNameRequest(val introId: String = "", val name: String = "")
+data class UpdateTimestampsRequest(val introId: String = "", val startMs: Int? = null, val endMs: Int? = null)
 data class ReorderRequest(val orderedIds: List<String> = emptyList())
 
 data class ApiResult(val ok: Boolean, val error: String?)
@@ -320,6 +353,8 @@ data class DeletedIntroSnapshot(
     val fileName: String?,
     val introVolume: Int,
     val musicBlob: ByteArray?,
+    val startMs: Int?,
+    val endMs: Int?,
     val discordId: Long,
     val guildId: Long,
     val timestampMs: Long

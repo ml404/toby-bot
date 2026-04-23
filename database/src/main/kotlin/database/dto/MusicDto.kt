@@ -43,7 +43,13 @@ class MusicDto(
     var musicBlob: ByteArray? = null,
 
     @Column(name = "music_blob_hash")
-    var musicBlobHash: String? = null
+    var musicBlobHash: String? = null,
+
+    @Column(name = "clip_start_ms")
+    var startMs: Int? = null,
+
+    @Column(name = "clip_end_ms")
+    var endMs: Int? = null
 ) : Serializable {
 
     constructor(
@@ -51,7 +57,9 @@ class MusicDto(
         index: Int = 1,
         fileName: String? = null,
         introVolume: Int = 20,
-        musicBlob: ByteArray? = null
+        musicBlob: ByteArray? = null,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) : this(
         id = "${userDto.guildId}_${userDto.discordId}_${index}",
         index = index,
@@ -59,7 +67,9 @@ class MusicDto(
         fileName = fileName,
         introVolume = introVolume,
         musicBlob = musicBlob,
-        musicBlobHash = musicBlob?.let { computeHash(it) }
+        musicBlobHash = musicBlob?.let { computeHash(it) },
+        startMs = startMs,
+        endMs = endMs
     )
 
     enum class Adjustment(val adjustment: String) {

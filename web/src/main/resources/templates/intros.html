@@ -72,7 +72,10 @@
                     </tr>
                 </thead>
                 <tbody id="introsTbody">
-                    <tr th:each="intro : ${intros}" th:attr="data-intro-id=${intro.id}">
+                    <tr th:each="intro : ${intros}"
+                        th:attr="data-intro-id=${intro.id},
+                                 data-start-ms=${intro.startMs != null ? intro.startMs : ''},
+                                 data-end-ms=${intro.endMs != null ? intro.endMs : ''}">
                         <td data-label="Slot">
                             <span class="drag-handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
                             <span class="slot-index" th:text="${intro.index}">1</span>
@@ -83,6 +86,15 @@
                                   th:style="'background-image:url(' + ${intro.thumbnailUrl} + ')'"
                                   aria-hidden="true"></span>
                             <span class="name-label" th:text="${intro.fileName}">intro.mp3</span>
+                            <button type="button"
+                                    class="clip-badge"
+                                    th:attr="data-edit-clip=true,data-intro-id=${intro.id}"
+                                    th:aria-label="'Edit clip for ' + ${intro.fileName}"
+                                    title="Edit clip timestamps">
+                                <span class="clip-badge-label">⏱</span>
+                                <span class="clip-badge-range"
+                                      th:text="${intro.startMs != null or intro.endMs != null} ? 'clip set' : 'full track'">clip</span>
+                            </button>
                         </td>
                         <td data-label="Volume">
                             <div class="volume-inline">
@@ -179,6 +191,7 @@
                     </p>
                     <span id="urlError" class="field-error" role="alert"></span>
                     <div id="urlPreview" class="url-preview" aria-live="polite"></div>
+                    <div id="urlPreviewIframe" class="url-preview-iframe" aria-hidden="true"></div>
                 </div>
 
                 <!-- File input -->
@@ -220,6 +233,40 @@
                     <p id="volHint" class="hint">Live preview uses this volume. The bot will too.</p>
                 </div>
 
+                <!-- Clip (start/end timestamps) -->
+                <div class="form-group" id="clipSection">
+                    <label id="clipLabel">Clip (optional)</label>
+                    <div class="clip-inputs" role="group" aria-labelledby="clipLabel">
+                        <label for="startTime" class="clip-input-label">Start
+                            <input type="text" id="startTime"
+                                   data-clip-time="start"
+                                   placeholder="0:00"
+                                   pattern="^(?:\d+:)?\d+(?:\.\d+)?$"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   aria-describedby="clipHint clipError">
+                        </label>
+                        <span class="clip-dash" aria-hidden="true">–</span>
+                        <label for="endTime" class="clip-input-label">End
+                            <input type="text" id="endTime"
+                                   data-clip-time="end"
+                                   placeholder="0:00"
+                                   pattern="^(?:\d+:)?\d+(?:\.\d+)?$"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   aria-describedby="clipHint clipError">
+                        </label>
+                        <span class="clip-length" aria-live="polite" data-clip-length>—</span>
+                    </div>
+                    <input type="hidden" id="startMs" name="startMs">
+                    <input type="hidden" id="endMs" name="endMs">
+                    <p id="clipHint" class="hint">
+                        Format <code>mm:ss</code> or raw seconds. Leave blank to play the whole track.
+                        Max clip length: <span th:text="${maxDurationSeconds}">15</span>s.
+                    </p>
+                    <span id="clipError" class="field-error" role="alert"></span>
+                </div>
+
                 <div class="flex-gap-3" style="margin-top: 24px;">
                     <button type="submit" id="submitBtn" class="btn"
                             th:text="${atLimit} ? 'Replace intro' : 'Add intro'">Add intro</button>
@@ -228,6 +275,27 @@
         </div>
     </section>
 </main>
+
+<!-- Hidden template for the row-level clip editor popover -->
+<template id="clipEditorTemplate">
+    <div class="clip-editor-popover" role="dialog" aria-label="Edit clip">
+        <div class="clip-inputs">
+            <label class="clip-input-label">Start
+                <input type="text" data-row-clip="start" placeholder="0:00" inputmode="numeric" autocomplete="off">
+            </label>
+            <span class="clip-dash" aria-hidden="true">–</span>
+            <label class="clip-input-label">End
+                <input type="text" data-row-clip="end" placeholder="0:00" inputmode="numeric" autocomplete="off">
+            </label>
+        </div>
+        <span class="field-error" data-row-clip-error role="alert"></span>
+        <div class="clip-editor-actions">
+            <button type="button" class="btn btn-sm" data-row-clip-save>Save</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-row-clip-clear>Clear clip</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-row-clip-cancel>Cancel</button>
+        </div>
+    </div>
+</template>
 
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/modal.js}"></script>

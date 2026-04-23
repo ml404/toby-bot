@@ -104,9 +104,9 @@ class IntroWebControllerTest {
 
     @Test
     fun `setIntro with url adds success flash on success`() {
-        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any()) } returns null
+        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any(), any(), any()) } returns null
 
-        val view = controller.setIntro(guildId, mockUser, "url", "https://example.com", null, 90, null, null, mockRa)
+        val view = controller.setIntro(guildId, mockUser, "url", "https://example.com", null, 90, null, null, null, null, mockRa)
 
         assertEquals("redirect:/intro/$guildId", view)
         verify { mockRa.addFlashAttribute("success", "Intro saved successfully.") }
@@ -114,9 +114,9 @@ class IntroWebControllerTest {
 
     @Test
     fun `setIntro with url adds error flash on failure`() {
-        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any()) } returns "Invalid URL provided."
+        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any(), any(), any()) } returns "Invalid URL provided."
 
-        val view = controller.setIntro(guildId, mockUser, "url", "bad-url", null, 90, null, null, mockRa)
+        val view = controller.setIntro(guildId, mockUser, "url", "bad-url", null, 90, null, null, null, null, mockRa)
 
         assertEquals("redirect:/intro/$guildId", view)
         verify { mockRa.addFlashAttribute("error", "Invalid URL provided.") }
@@ -125,9 +125,9 @@ class IntroWebControllerTest {
     @Test
     fun `setIntro with file adds success flash`() {
         val file = mockk<MultipartFile> { every { isEmpty } returns false }
-        every { introWebService.setIntroByFile(any(), any(), any(), any(), any()) } returns null
+        every { introWebService.setIntroByFile(any(), any(), any(), any(), any(), any(), any()) } returns null
 
-        val view = controller.setIntro(guildId, mockUser, "file", null, file, 90, null, null, mockRa)
+        val view = controller.setIntro(guildId, mockUser, "file", null, file, 90, null, null, null, null, mockRa)
 
         assertEquals("redirect:/intro/$guildId", view)
         verify { mockRa.addFlashAttribute("success", "Intro saved successfully.") }
@@ -135,7 +135,7 @@ class IntroWebControllerTest {
 
     @Test
     fun `setIntro with missing file returns error`() {
-        val view = controller.setIntro(guildId, mockUser, "file", null, null, 90, null, null, mockRa)
+        val view = controller.setIntro(guildId, mockUser, "file", null, null, 90, null, null, null, null, mockRa)
 
         assertEquals("redirect:/intro/$guildId", view)
         verify { mockRa.addFlashAttribute("error", "No file provided.") }
@@ -143,20 +143,20 @@ class IntroWebControllerTest {
 
     @Test
     fun `setIntro clamps volume above 100 to 100`() {
-        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any()) } returns null
+        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any(), any(), any()) } returns null
 
-        controller.setIntro(guildId, mockUser, "url", "https://example.com", null, 200, null, null, mockRa)
+        controller.setIntro(guildId, mockUser, "url", "https://example.com", null, 200, null, null, null, null, mockRa)
 
-        verify { introWebService.setIntroByUrl(any(), any(), any(), 100, any()) }
+        verify { introWebService.setIntroByUrl(any(), any(), any(), 100, any(), any(), any()) }
     }
 
     @Test
     fun `setIntro clamps volume below 1 to 1`() {
-        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any()) } returns null
+        every { introWebService.setIntroByUrl(any(), any(), any(), any(), any(), any(), any()) } returns null
 
-        controller.setIntro(guildId, mockUser, "url", "https://example.com", null, 0, null, null, mockRa)
+        controller.setIntro(guildId, mockUser, "url", "https://example.com", null, 0, null, null, null, null, mockRa)
 
-        verify { introWebService.setIntroByUrl(any(), any(), any(), 1, any()) }
+        verify { introWebService.setIntroByUrl(any(), any(), any(), 1, any(), any(), any()) }
     }
 
     // deleteIntro
@@ -179,5 +179,30 @@ class IntroWebControllerTest {
 
         assertEquals("redirect:/intro/$guildId", view)
         verify { mockRa.addFlashAttribute("error", "Intro not found.") }
+    }
+
+    // updateTimestamps
+
+    @Test
+    fun `updateTimestamps returns ok on success`() {
+        every { introWebService.updateIntroTimestamps(any(), any(), any(), any(), any()) } returns null
+
+        val body = UpdateTimestampsRequest("${guildId}_${discordId}_1", 1000, 8000)
+        val response = controller.updateTimestamps(guildId, body, mockUser, null)
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(true, response.body?.ok)
+    }
+
+    @Test
+    fun `updateTimestamps returns bad request with error`() {
+        every { introWebService.updateIntroTimestamps(any(), any(), any(), any(), any()) } returns "End time must be greater than start time."
+
+        val body = UpdateTimestampsRequest("${guildId}_${discordId}_1", 5000, 5000)
+        val response = controller.updateTimestamps(guildId, body, mockUser, null)
+
+        assertEquals(400, response.statusCode.value())
+        assertEquals(false, response.body?.ok)
+        assertEquals("End time must be greater than start time.", response.body?.error)
     }
 }

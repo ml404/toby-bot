@@ -183,7 +183,7 @@ class IntroWebServiceTest {
 
     @Test
     fun `setIntroByUrl returns error for invalid URL`() {
-        val error = service.setIntroByUrl(discordId, guildId, "not-a-url", 90, null)
+        val error = service.setIntroByUrl(discordId, guildId, "not-a-url", 90, null, null, null)
         assertEquals("Invalid URL provided.", error)
     }
 
@@ -193,7 +193,7 @@ class IntroWebServiceTest {
         every { userService.getUserById(discordId, guildId) } returns user
         every { musicFileService.createNewMusicFile(any()) } returns mockk()
 
-        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/audio.mp3", 90, null)
+        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/audio.mp3", 90, null, null, null)
         assertNull(error)
         verify(exactly = 1) { musicFileService.createNewMusicFile(any()) }
     }
@@ -205,7 +205,7 @@ class IntroWebServiceTest {
         }
         every { userService.getUserById(discordId, guildId) } returns user
 
-        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/audio.mp3", 90, null)
+        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/audio.mp3", 90, null, null, null)
         assertNotNull(error)
         assertTrue(error!!.contains("${IntroWebService.MAX_INTRO_COUNT}"))
     }
@@ -219,7 +219,7 @@ class IntroWebServiceTest {
         every { userService.getUserById(discordId, guildId) } returns user
         every { musicFileService.updateMusicFile(any()) } returns mockk()
 
-        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/new.mp3", 80, 1)
+        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/new.mp3", 80, 1, null, null)
         assertNull(error)
         verify { musicFileService.updateMusicFile(match { it.fileName == "https://example.com/new.mp3" && it.introVolume == 80 }) }
     }
@@ -229,13 +229,13 @@ class IntroWebServiceTest {
     @Test
     fun `setIntroByFile returns error for non-mp3 file`() {
         val file = MockMultipartFile("file", "audio.wav", "audio/wav", ByteArray(100))
-        assertEquals("Only MP3 files are supported.", service.setIntroByFile(discordId, guildId, file, 90, null))
+        assertEquals("Only MP3 files are supported.", service.setIntroByFile(discordId, guildId, file, 90, null, null, null))
     }
 
     @Test
     fun `setIntroByFile returns error when file too large`() {
         val file = MockMultipartFile("file", "audio.mp3", "audio/mpeg", ByteArray(IntroWebService.MAX_FILE_SIZE + 1))
-        val error = service.setIntroByFile(discordId, guildId, file, 90, null)
+        val error = service.setIntroByFile(discordId, guildId, file, 90, null, null, null)
         assertNotNull(error)
         assertTrue(error!!.contains("KB"))
     }
@@ -247,7 +247,7 @@ class IntroWebServiceTest {
         every { musicFileService.createNewMusicFile(any()) } returns mockk()
 
         val file = MockMultipartFile("file", "audio.mp3", "audio/mpeg", ByteArray(1000))
-        assertNull(service.setIntroByFile(discordId, guildId, file, 90, null))
+        assertNull(service.setIntroByFile(discordId, guildId, file, 90, null, null, null))
         verify(exactly = 1) { musicFileService.createNewMusicFile(any()) }
     }
 
@@ -258,7 +258,7 @@ class IntroWebServiceTest {
         every { musicFileService.createNewMusicFile(any()) } returns null
 
         val file = MockMultipartFile("file", "audio.mp3", "audio/mpeg", ByteArray(1000))
-        assertEquals("This file already exists as one of your intros.", service.setIntroByFile(discordId, guildId, file, 90, null))
+        assertEquals("This file already exists as one of your intros.", service.setIntroByFile(discordId, guildId, file, 90, null, null, null))
     }
 
     // deleteIntro
@@ -307,7 +307,7 @@ class IntroWebServiceTest {
             durationSeconds = null
         )
 
-        val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null)
+        val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null, null, null)
 
         assertNull(error)
         assertEquals("My Video Title", slot.captured.fileName)
@@ -323,7 +323,7 @@ class IntroWebServiceTest {
         val spyService = spyk(service)
         every { spyService.fetchYouTubePreview(any()) } returns null
 
-        val error = spyService.setIntroByUrl(discordId, guildId, url, 90, null)
+        val error = spyService.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
 
         assertNull(error)
         assertEquals(url, slot.captured.fileName)
@@ -344,7 +344,7 @@ class IntroWebServiceTest {
             durationSeconds = null
         )
 
-        spyService.setIntroByUrl(discordId, guildId, url, 90, null)
+        spyService.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
 
         assertEquals(url, slot.captured.musicBlob?.let { String(it) })
     }
@@ -361,7 +361,7 @@ class IntroWebServiceTest {
             durationSeconds = 30
         )
 
-        val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null)
+        val error = spyService.setIntroByUrl(discordId, guildId, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 90, null, null, null)
 
         assertNotNull(error)
         assertTrue(error!!.contains("too long"))
@@ -432,6 +432,103 @@ class IntroWebServiceTest {
 
         val error = service.reorderIntros(discordId, guildId, listOf("${guildId}_${discordId}_2"))
         assertNotNull(error)
+    }
+
+    // validateClip
+
+    @Test
+    fun `validateClip accepts null clip when source is short enough`() {
+        assertNull(service.validateClip(null, null, 10_000))
+    }
+
+    @Test
+    fun `validateClip rejects null clip when source longer than cap`() {
+        assertNotNull(service.validateClip(null, null, 60_000))
+    }
+
+    @Test
+    fun `validateClip accepts a tight clip on a long source`() {
+        assertNull(service.validateClip(10_000, 22_000, 120_000))
+    }
+
+    @Test
+    fun `validateClip rejects clip longer than cap`() {
+        assertNotNull(service.validateClip(0, 16_000, 60_000))
+    }
+
+    @Test
+    fun `validateClip rejects end at or before start`() {
+        assertNotNull(service.validateClip(5_000, 5_000, 60_000))
+        assertNotNull(service.validateClip(5_000, 3_000, 60_000))
+    }
+
+    @Test
+    fun `validateClip rejects end beyond source duration`() {
+        assertNotNull(service.validateClip(0, 20_000, 10_000))
+    }
+
+    @Test
+    fun `validateClip rejects negative start`() {
+        assertNotNull(service.validateClip(-1, 1_000, 60_000))
+    }
+
+    // setIntroByUrl persists timestamps
+
+    @Test
+    fun `setIntroByUrl persists startMs and endMs on new intro`() {
+        val user = UserDto(discordId = discordId, guildId = guildId).apply { musicDtos = mutableListOf() }
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } answers { slot.captured }
+
+        val err = service.setIntroByUrl(discordId, guildId, "https://example.com/a.mp3", 80, null, 3_000, 11_000)
+        assertNull(err)
+        assertEquals(3_000, slot.captured.startMs)
+        assertEquals(11_000, slot.captured.endMs)
+    }
+
+    @Test
+    fun `setIntroByFile persists startMs and endMs on new intro`() {
+        val user = UserDto(discordId = discordId, guildId = guildId).apply { musicDtos = mutableListOf() }
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } answers { slot.captured }
+
+        val file = MockMultipartFile("file", "intro.mp3", "audio/mpeg", "bytes".toByteArray())
+        val err = service.setIntroByFile(discordId, guildId, file, 80, null, 500, 6_500)
+
+        assertNull(err)
+        assertEquals(500, slot.captured.startMs)
+        assertEquals(6_500, slot.captured.endMs)
+    }
+
+    // updateIntroTimestamps
+
+    @Test
+    fun `updateIntroTimestamps rejects ownership mismatch`() {
+        val err = service.updateIntroTimestamps(discordId, guildId, "999_000_1", 0, 1000)
+        assertEquals("Intro does not belong to you.", err)
+    }
+
+    @Test
+    fun `updateIntroTimestamps rejects invalid clip`() {
+        val dto = MusicDto(id = "${guildId}_${discordId}_1", index = 1, fileName = "a.mp3")
+        every { musicFileService.getMusicFileById(any()) } returns dto
+
+        val err = service.updateIntroTimestamps(discordId, guildId, "${guildId}_${discordId}_1", 5_000, 3_000)
+        assertNotNull(err)
+    }
+
+    @Test
+    fun `updateIntroTimestamps persists timestamps when valid`() {
+        val dto = MusicDto(id = "${guildId}_${discordId}_1", index = 1, fileName = "a.mp3")
+        every { musicFileService.getMusicFileById(any()) } returns dto
+        every { musicFileService.updateMusicFile(any()) } returns dto
+
+        val err = service.updateIntroTimestamps(discordId, guildId, "${guildId}_${discordId}_1", 1_000, 8_000)
+        assertNull(err)
+        assertEquals(1_000, dto.startMs)
+        assertEquals(8_000, dto.endMs)
     }
 }
 

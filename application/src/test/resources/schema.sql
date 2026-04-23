@@ -30,7 +30,9 @@ CREATE TABLE public.music_files (
     guild_id BIGINT,
     index INT,
     music_blob BYTEA,
-    music_blob_hash VARCHAR(64)
+    music_blob_hash VARCHAR(64),
+    clip_start_ms INT,
+    clip_end_ms INT
 );
 
 DROP TABLE IF EXISTS public."user";

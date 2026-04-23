@@ -2,12 +2,69 @@
    Intro page interactions
    ============================================================ */
 
+// Max clip length mirrors IntroWebService.MAX_INTRO_DURATION_SECONDS.
+const DEFAULT_MAX_CLIP_SECONDS = 15;
+
 // --- Back-compat helpers (kept for existing jest tests) ---
 function toggleInput(type) {
     const urlSection = document.getElementById('urlSection');
     const fileSection = document.getElementById('fileSection');
     if (urlSection) urlSection.style.display = (type === 'url') ? 'block' : 'none';
     if (fileSection) fileSection.style.display = (type === 'file') ? 'block' : 'none';
+}
+
+// --- Pure helpers (exported for tests) ---
+
+// Parses "mm:ss", "mm:ss.S", or raw "ss" / "ss.S" into integer milliseconds.
+// Returns null for blank input; NaN for malformed input.
+function parseTimeInput(raw) {
+    if (raw == null) return null;
+    const s = String(raw).trim();
+    if (s === '') return null;
+    // Raw seconds (possibly decimal)
+    if (!s.includes(':')) {
+        const n = Number(s);
+        if (!isFinite(n) || n < 0) return NaN;
+        return Math.round(n * 1000);
+    }
+    const parts = s.split(':');
+    if (parts.length !== 2) return NaN;
+    const mins = Number(parts[0]);
+    const secs = Number(parts[1]);
+    if (!isFinite(mins) || !isFinite(secs) || mins < 0 || secs < 0 || secs >= 60) return NaN;
+    return Math.round((mins * 60 + secs) * 1000);
+}
+
+function formatMs(ms) {
+    if (ms == null || !isFinite(ms) || ms < 0) return '';
+    const totalSec = ms / 1000;
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec - m * 60;
+    // Show one decimal if non-integer, otherwise two-digit seconds.
+    const secStr = Number.isInteger(s) ? String(s).padStart(2, '0') : s.toFixed(1).padStart(4, '0');
+    return m + ':' + secStr;
+}
+
+// Mirrors IntroWebService.validateClip. Returns an error string, or '' if valid.
+function validateClipMs(startMs, endMs, sourceDurationMs, maxClipMs) {
+    const cap = maxClipMs || DEFAULT_MAX_CLIP_SECONDS * 1000;
+    if (startMs == null && endMs == null) {
+        if (sourceDurationMs != null && sourceDurationMs > cap) {
+            return 'Video is too long (' + Math.floor(sourceDurationMs / 1000) + 's). Max is '
+                + Math.floor(cap / 1000) + 's — set a start/end clip to use a longer source.';
+        }
+        return '';
+    }
+    const start = startMs == null ? 0 : startMs;
+    if (start < 0) return 'Start time cannot be negative.';
+    if (endMs != null) {
+        if (endMs <= start) return 'End time must be greater than start time.';
+        if (sourceDurationMs != null && endMs > sourceDurationMs) return 'End time exceeds the source duration.';
+        if (endMs - start > cap) return 'Clip is too long (' + Math.floor((endMs - start) / 1000) + 's). Max is ' + Math.floor(cap / 1000) + 's.';
+    } else if (sourceDurationMs != null) {
+        if (sourceDurationMs - start > cap) return 'Clip is too long. Max is ' + Math.floor(cap / 1000) + 's.';
+    }
+    return '';
 }
 
 function togglePlay(btn) {
@@ -44,6 +101,10 @@ function initIntroPage() {
         csrfToken: document.querySelector('meta[name="_csrf"]')?.content || '',
         csrfHeader: document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN',
     };
+    const maxClipMs = cfg.maxDurationSeconds * 1000;
+
+    // Current clip state for the add/replace form. null = unset; NaN = malformed input.
+    const clipState = { startMs: null, endMs: null, sourceDurationMs: null, valid: true };
 
     // --- Render any flash messages as toasts ---
     document.querySelectorAll('[data-flash]').forEach(el => {
@@ -94,13 +155,93 @@ function initIntroPage() {
         sync();
     });
 
+    // --- Clip (start/end) inputs ---
+    const startTimeInput = document.getElementById('startTime');
+    const endTimeInput = document.getElementById('endTime');
+    const startMsHidden = document.getElementById('startMs');
+    const endMsHidden = document.getElementById('endMs');
+    const clipErrorEl = document.getElementById('clipError');
+    const clipLengthEl = document.querySelector('[data-clip-length]');
+
+    function setClipError(msg) {
+        if (clipErrorEl) clipErrorEl.textContent = msg || '';
+        [startTimeInput, endTimeInput].forEach(el => {
+            if (el) el.setAttribute('aria-invalid', msg ? 'true' : 'false');
+        });
+    }
+
+    function renderClipLength() {
+        if (!clipLengthEl) return;
+        const { startMs, endMs } = clipState;
+        if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+            clipLengthEl.textContent = '—';
+            clipLengthEl.classList.remove('too-long');
+            return;
+        }
+        if (startMs == null && endMs == null) {
+            clipLengthEl.textContent = 'full track';
+            clipLengthEl.classList.remove('too-long');
+            return;
+        }
+        const effectiveStart = startMs == null ? 0 : startMs;
+        const effectiveEnd = endMs == null ? clipState.sourceDurationMs : endMs;
+        if (effectiveEnd != null && effectiveEnd > effectiveStart) {
+            const span = effectiveEnd - effectiveStart;
+            clipLengthEl.textContent = 'Clip length: ' + formatMs(span);
+            clipLengthEl.classList.toggle('too-long', span > maxClipMs);
+        } else {
+            clipLengthEl.textContent = '—';
+            clipLengthEl.classList.remove('too-long');
+        }
+    }
+
+    function recomputeClipState() {
+        const rawStart = startTimeInput ? startTimeInput.value : '';
+        const rawEnd = endTimeInput ? endTimeInput.value : '';
+        const startMs = parseTimeInput(rawStart);
+        const endMs = parseTimeInput(rawEnd);
+        clipState.startMs = startMs;
+        clipState.endMs = endMs;
+
+        if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+            clipState.valid = false;
+            setClipError('Use format mm:ss or raw seconds.');
+            if (startMsHidden) startMsHidden.value = '';
+            if (endMsHidden) endMsHidden.value = '';
+            renderClipLength();
+            return;
+        }
+
+        const err = validateClipMs(startMs, endMs, clipState.sourceDurationMs, maxClipMs);
+        clipState.valid = !err;
+        setClipError(err);
+
+        if (startMsHidden) startMsHidden.value = startMs == null ? '' : String(startMs);
+        if (endMsHidden) endMsHidden.value = endMs == null ? '' : String(endMs);
+        renderClipLength();
+    }
+
+    [startTimeInput, endTimeInput].forEach(el => {
+        if (!el) return;
+        el.addEventListener('input', () => {
+            recomputeClipState();
+            updateSubmitState();
+            if (activeUrlPreview) renderUrlIframe(activeUrlPreview);
+            if (activeFileAudio) applyClipBoundsToFilePreview(activeFileAudio);
+        });
+    });
+    recomputeClipState();
+
     // --- URL input: live YouTube preview ---
     const urlInput = document.getElementById('url');
     const urlPreview = document.getElementById('urlPreview');
+    const urlPreviewIframe = document.getElementById('urlPreviewIframe');
     const urlError = document.getElementById('urlError');
     const submitBtn = document.getElementById('submitBtn');
     let previewState = { tooLong: false };
     let debounceTimer = null;
+    let activeUrlPreview = null;
+    let activeFileAudio = null;
 
     function setUrlError(msg) {
         if (!urlError) return;
@@ -111,8 +252,17 @@ function initIntroPage() {
     function renderPreview(data) {
         if (!urlPreview) return;
         urlPreview.classList.remove('visible', 'error');
-        if (!data || !data.thumbnailUrl) return;
-        previewState.tooLong = data.durationSeconds != null && data.durationSeconds > cfg.maxDurationSeconds;
+        if (!data || !data.thumbnailUrl) {
+            activeUrlPreview = null;
+            clipState.sourceDurationMs = null;
+            renderUrlIframe(null);
+            renderClipLength();
+            return;
+        }
+        // Clip-length rule supersedes the old hard cap — oversize source is only
+        // rejected when the user hasn't picked a clip that fits.
+        clipState.sourceDurationMs = data.durationSeconds != null ? data.durationSeconds * 1000 : null;
+        previewState.tooLong = !!validateClipMs(clipState.startMs, clipState.endMs, clipState.sourceDurationMs, maxClipMs);
         const dur = data.durationSeconds != null ? formatDuration(data.durationSeconds) : '—';
         const title = data.title || '(Unknown title)';
         urlPreview.innerHTML =
@@ -126,6 +276,49 @@ function initIntroPage() {
             '</div>';
         if (previewState.tooLong) urlPreview.classList.add('error');
         urlPreview.classList.add('visible');
+        activeUrlPreview = data;
+        renderUrlIframe(data);
+        recomputeClipState();
+    }
+
+    // Renders a YouTube embed that honours the current start/end clip. When the
+    // source isn't YouTube (or is unknown), the iframe area stays hidden.
+    function renderUrlIframe(data) {
+        if (!urlPreviewIframe) return;
+        if (!data || !data.videoId) {
+            urlPreviewIframe.innerHTML = '';
+            urlPreviewIframe.classList.remove('visible');
+            urlPreviewIframe.setAttribute('aria-hidden', 'true');
+            return;
+        }
+        const startSec = Number.isInteger(clipState.startMs) ? Math.floor(clipState.startMs / 1000) : 0;
+        const endSec = Number.isInteger(clipState.endMs) ? Math.ceil(clipState.endMs / 1000) : null;
+        const params = new URLSearchParams();
+        if (startSec > 0) params.set('start', String(startSec));
+        if (endSec != null && endSec > startSec) params.set('end', String(endSec));
+        params.set('controls', '1');
+        params.set('rel', '0');
+        const qs = params.toString();
+        const src = 'https://www.youtube.com/embed/' + encodeURIComponent(data.videoId) + (qs ? '?' + qs : '');
+        urlPreviewIframe.innerHTML =
+            '<iframe src="' + escapeAttr(src) + '" ' +
+            'title="Clip preview" ' +
+            'allow="autoplay; encrypted-media" ' +
+            'allowfullscreen></iframe>';
+        urlPreviewIframe.classList.add('visible');
+        urlPreviewIframe.setAttribute('aria-hidden', 'false');
+    }
+
+    // Pauses/seeks an <audio> element to stay within the current clip bounds.
+    function applyClipBoundsToFilePreview(audio) {
+        if (!audio || !audio._clipBoundHandler) return;
+        audio._clipStartMs = Number.isInteger(clipState.startMs) ? clipState.startMs : 0;
+        audio._clipEndMs = Number.isInteger(clipState.endMs) ? clipState.endMs : null;
+        // If the element is currently past the (new) end, rewind it.
+        if (audio._clipEndMs != null && audio.currentTime * 1000 >= audio._clipEndMs) {
+            audio.pause();
+            audio.currentTime = audio._clipStartMs / 1000;
+        }
     }
 
     function fetchPreview(url) {
@@ -215,9 +408,36 @@ function initIntroPage() {
                 apply();
                 volSlider.addEventListener('input', apply);
             }
+            // Pick up source duration so the clip validator can check end <= duration.
+            audio.addEventListener('loadedmetadata', () => {
+                if (isFinite(audio.duration)) {
+                    clipState.sourceDurationMs = Math.floor(audio.duration * 1000);
+                    recomputeClipState();
+                    updateSubmitState();
+                }
+            });
+            // Enforce clip bounds on the preview audio element.
+            audio._clipBoundHandler = true;
+            audio._clipStartMs = Number.isInteger(clipState.startMs) ? clipState.startMs : 0;
+            audio._clipEndMs = Number.isInteger(clipState.endMs) ? clipState.endMs : null;
+            audio.addEventListener('play', () => {
+                const startSec = (audio._clipStartMs || 0) / 1000;
+                if (audio.currentTime < startSec - 0.25 || audio.currentTime > (audio._clipEndMs ?? Infinity) / 1000) {
+                    audio.currentTime = startSec;
+                }
+            });
+            audio.addEventListener('timeupdate', () => {
+                if (audio._clipEndMs != null && audio.currentTime * 1000 >= audio._clipEndMs) {
+                    audio.pause();
+                    audio.currentTime = (audio._clipStartMs || 0) / 1000;
+                }
+            });
+            activeFileAudio = audio;
             row.appendChild(label);
             row.appendChild(audio);
             fileSummary.appendChild(row);
+        } else {
+            activeFileAudio = null;
         }
         updateSubmitState();
     }
@@ -265,6 +485,7 @@ function initIntroPage() {
         } else if (source === 'file') {
             canSubmit = fileValid;
         }
+        if (!clipState.valid) canSubmit = false;
         submitBtn.disabled = !canSubmit;
     }
     if (form) {
@@ -320,6 +541,87 @@ function initIntroPage() {
             });
         });
     });
+
+    // --- Row-level clip editor (⏱ badge) ---
+    document.querySelectorAll('[data-edit-clip]').forEach(btn => {
+        btn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            openRowClipEditor(btn);
+        });
+    });
+
+    function closeOpenRowEditor() {
+        document.querySelectorAll('.clip-editor-popover').forEach(el => el.remove());
+    }
+
+    function openRowClipEditor(badgeBtn) {
+        closeOpenRowEditor();
+        const tr = badgeBtn.closest('tr[data-intro-id]');
+        if (!tr) return;
+        const introId = tr.dataset.introId;
+        const currentStartMs = tr.dataset.startMs ? parseInt(tr.dataset.startMs, 10) : null;
+        const currentEndMs = tr.dataset.endMs ? parseInt(tr.dataset.endMs, 10) : null;
+
+        const tpl = document.getElementById('clipEditorTemplate');
+        if (!tpl || !tpl.content) return;
+        const popover = tpl.content.firstElementChild.cloneNode(true);
+        const startEl = popover.querySelector('[data-row-clip="start"]');
+        const endEl = popover.querySelector('[data-row-clip="end"]');
+        const errEl = popover.querySelector('[data-row-clip-error]');
+        const saveBtn = popover.querySelector('[data-row-clip-save]');
+        const clearBtn = popover.querySelector('[data-row-clip-clear]');
+        const cancelBtn = popover.querySelector('[data-row-clip-cancel]');
+
+        if (startEl && currentStartMs != null) startEl.value = formatMs(currentStartMs);
+        if (endEl && currentEndMs != null) endEl.value = formatMs(currentEndMs);
+
+        // Anchor to the badge.
+        const rect = badgeBtn.getBoundingClientRect();
+        popover.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+        popover.style.left = (window.scrollX + rect.left) + 'px';
+        document.body.appendChild(popover);
+
+        function submit(startMs, endMs) {
+            const err = validateClipMs(startMs, endMs, null, maxClipMs);
+            if (err) { if (errEl) errEl.textContent = err; return; }
+            apiCall(buildUrl('/update-timestamps'), { introId: introId, startMs: startMs, endMs: endMs }, {
+                onSuccess: () => {
+                    tr.dataset.startMs = startMs == null ? '' : String(startMs);
+                    tr.dataset.endMs = endMs == null ? '' : String(endMs);
+                    const rangeLabel = badgeBtn.querySelector('.clip-badge-range');
+                    if (rangeLabel) {
+                        rangeLabel.textContent = (startMs == null && endMs == null) ? 'full track' : 'clip set';
+                    }
+                    window.TobyToast.show('Clip updated.', { type: 'success', duration: 2000 });
+                    closeOpenRowEditor();
+                },
+                onError: (r) => {
+                    if (errEl) errEl.textContent = r ? (r.error || 'Update failed.') : 'Network error.';
+                }
+            });
+        }
+
+        saveBtn.addEventListener('click', () => {
+            const startMs = parseTimeInput(startEl.value);
+            const endMs = parseTimeInput(endEl.value);
+            if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+                errEl.textContent = 'Use format mm:ss or raw seconds.';
+                return;
+            }
+            submit(startMs, endMs);
+        });
+        clearBtn.addEventListener('click', () => submit(null, null));
+        cancelBtn.addEventListener('click', closeOpenRowEditor);
+        // Dismiss on outside click.
+        setTimeout(() => {
+            document.addEventListener('click', function outside(e) {
+                if (!popover.contains(e.target) && e.target !== badgeBtn) {
+                    closeOpenRowEditor();
+                    document.removeEventListener('click', outside);
+                }
+            });
+        }, 0);
+    }
 
     // --- Inline name edit ---
     function bindNameEdit(cell) {
@@ -505,5 +807,5 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
 }
 
 if (typeof module !== 'undefined') {
-    module.exports = { toggleInput, togglePlay };
+    module.exports = { toggleInput, togglePlay, parseTimeInput, formatMs, validateClipMs };
 }
