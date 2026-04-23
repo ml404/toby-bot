@@ -179,6 +179,46 @@ class IntroWebServiceTest {
         assertEquals(youtubeUrl, result[0].url)
     }
 
+    @Test
+    fun `getUserIntros extracts videoId for YouTube Shorts URL so play-clip button renders`() {
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "My Shorts Clip",
+            musicBlob = shortsUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val result = service.getUserIntros(discordId, guildId)
+        assertEquals(1, result.size)
+        assertEquals(shortsUrl, result[0].url)
+        assertEquals("dQw4w9WgXcQ", result[0].videoId)
+        assertEquals("https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg", result[0].thumbnailUrl)
+    }
+
+    @Test
+    fun `getUserIntros extracts videoId for Shorts URL carrying query params`() {
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ?si=abc123"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "Shorts with query",
+            musicBlob = shortsUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val result = service.getUserIntros(discordId, guildId)
+        assertEquals(1, result.size)
+        assertEquals("dQw4w9WgXcQ", result[0].videoId)
+    }
+
     // setIntroByUrl
 
     @Test
