@@ -63,9 +63,7 @@ class ModerationWebService(
                 memePermission = dto?.memePermission ?: true,
                 digPermission = dto?.digPermission ?: true,
                 superUser = dto?.superUser ?: false,
-                socialCredit = dto?.socialCredit ?: 0L,
-                initiativeModifier = dto?.initiativeModifier ?: 0,
-                hasDbRow = dto != null
+                initiativeModifier = dto?.initiativeModifier ?: 0
             )
         }.sortedBy { it.name.lowercase() }
 
@@ -80,7 +78,7 @@ class ModerationWebService(
             .filter { guild.selfMember.hasPermission(it, Permission.MESSAGE_SEND) }
             .map { TextChannelInfo(id = it.id, name = it.name) }
 
-        val configByKey = ConfigDto.Configurations.values().associate { cfg ->
+        val configByKey = ConfigDto.Configurations.entries.associate { cfg ->
             cfg.name to configService.getConfigByName(cfg.configValue, guild.id)?.value
         }
 
@@ -394,9 +392,7 @@ data class ModeratedMember(
     val memePermission: Boolean,
     val digPermission: Boolean,
     val superUser: Boolean,
-    val socialCredit: Long,
-    val initiativeModifier: Int,
-    val hasDbRow: Boolean
+    val initiativeModifier: Int
 )
 
 data class VoiceChannelInfo(
