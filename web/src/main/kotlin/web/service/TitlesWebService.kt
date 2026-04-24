@@ -3,10 +3,15 @@ package web.service
 import common.logging.DiscordLogger
 import database.dto.TitleDto
 import database.dto.UserOwnedTitleDto
+import database.service.EconomyTradeService
+import database.service.EconomyTradeService.TradeOutcome
 import database.service.TitleService
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import kotlin.math.ceil
 
 @Service
 class TitlesWebService(
@@ -14,7 +19,9 @@ class TitlesWebService(
     private val userService: UserService,
     private val titleService: TitleService,
     private val titleRoleService: TitleRoleService,
-    private val introWebService: IntroWebService
+    private val introWebService: IntroWebService,
+    private val marketService: TobyCoinMarketService,
+    private val tradeService: EconomyTradeService
 ) {
     companion object {
         private val logger = DiscordLogger(TitlesWebService::class.java)
@@ -66,11 +73,17 @@ class TitlesWebService(
         val actorDto = userService.getUserById(actorDiscordId, guildId)
         val equippedId = actorDto?.activeTitleId
         val balance = actorDto?.socialCredit ?: 0L
+        val tobyCoins = actorDto?.tobyCoins ?: 0L
+        val marketPrice = safely("market price for $guildId", 0.0) {
+            marketService.getMarket(guildId)?.price ?: 0.0
+        }
         return TitleShopView(
             catalog = catalog,
             ownedTitleIds = ownedIds,
             equippedTitleId = equippedId,
-            balance = balance
+            balance = balance,
+            tobyCoins = tobyCoins,
+            marketPrice = marketPrice
         )
     }
 
@@ -85,6 +98,66 @@ class TitlesWebService(
         userService.updateUser(actor)
         titleService.recordPurchase(actorDiscordId, titleId)
         return null
+    }
+
+    /**
+     * One-click purchase that tops up the credit shortfall by selling TobyCoins
+     * at the live market price. Runs in a single transaction so either the user
+     * both sells TOBY and owns the title, or neither happens.
+     */
+    @Transactional
+    fun buyTitleWithTobyCoin(actorDiscordId: Long, guildId: Long, titleId: Long): BuyWithTobyOutcome {
+        if (jda.getGuildById(guildId) == null) {
+            return BuyWithTobyOutcome.Error("Bot is not in that server.")
+        }
+        val title = titleService.getById(titleId) ?: return BuyWithTobyOutcome.Error("Title not found.")
+        if (titleService.owns(actorDiscordId, titleId)) {
+            return BuyWithTobyOutcome.AlreadyOwns
+        }
+
+        // Lock the user row first — same order as EconomyTradeService to avoid deadlock.
+        val actor = userService.getUserByIdForUpdate(actorDiscordId, guildId)
+            ?: return BuyWithTobyOutcome.Error("You don't have a profile in that server yet.")
+        val currentCredits = actor.socialCredit ?: 0L
+        val shortfall = (title.cost - currentCredits).coerceAtLeast(0L)
+
+        var soldCoins = 0L
+        var priceAfterSell = 0.0
+        if (shortfall > 0L) {
+            val market = marketService.getMarketForUpdate(guildId)
+                ?: return BuyWithTobyOutcome.Error("No market yet for this server — try a Discord trade first.")
+            if (market.price <= 0.0) {
+                return BuyWithTobyOutcome.Error("Market price is not available right now.")
+            }
+            val coinsNeeded = ceil(shortfall.toDouble() / market.price).toLong()
+            if (actor.tobyCoins < coinsNeeded) {
+                return BuyWithTobyOutcome.InsufficientCoins(needed = coinsNeeded, have = actor.tobyCoins)
+            }
+
+            val sellOutcome = tradeService.sell(actorDiscordId, guildId, coinsNeeded)
+            if (sellOutcome !is TradeOutcome.Ok) {
+                return BuyWithTobyOutcome.Error("Sell failed: $sellOutcome")
+            }
+            soldCoins = coinsNeeded
+            priceAfterSell = sellOutcome.newPrice
+        } else {
+            priceAfterSell = marketService.getMarket(guildId)?.price ?: 0.0
+        }
+
+        // Re-read under the same transaction; persistence context returns the
+        // already-mutated managed entity after the nested sell.
+        val refreshed = userService.getUserByIdForUpdate(actorDiscordId, guildId)
+            ?: return BuyWithTobyOutcome.Error("User vanished mid-transaction.")
+        refreshed.socialCredit = (refreshed.socialCredit ?: 0L) - title.cost
+        userService.updateUser(refreshed)
+        titleService.recordPurchase(actorDiscordId, titleId)
+
+        return BuyWithTobyOutcome.Ok(
+            soldTobyCoins = soldCoins,
+            newCoins = refreshed.tobyCoins,
+            newCredits = refreshed.socialCredit ?: 0L,
+            newPrice = priceAfterSell
+        )
     }
 
     fun equipTitle(actorDiscordId: Long, guildId: Long, titleId: Long): String? {
@@ -140,5 +213,20 @@ data class TitleShopView(
     val catalog: List<TitleShopEntry>,
     val ownedTitleIds: Set<Long>,
     val equippedTitleId: Long?,
-    val balance: Long
+    val balance: Long,
+    val tobyCoins: Long = 0L,
+    val marketPrice: Double = 0.0
 )
+
+sealed interface BuyWithTobyOutcome {
+    data class Ok(
+        val soldTobyCoins: Long,
+        val newCoins: Long,
+        val newCredits: Long,
+        val newPrice: Double
+    ) : BuyWithTobyOutcome
+
+    data class InsufficientCoins(val needed: Long, val have: Long) : BuyWithTobyOutcome
+    data object AlreadyOwns : BuyWithTobyOutcome
+    data class Error(val message: String) : BuyWithTobyOutcome
+}
