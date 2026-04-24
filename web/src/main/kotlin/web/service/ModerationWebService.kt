@@ -195,7 +195,7 @@ class ModerationWebService(
                 val name = rawValue.trim()
                 if (name.isEmpty()) return "Channel name is required."
                 if (guild.getVoiceChannelsByName(name, true).isEmpty()) {
-                    return "No voice channel named '$name' exists in this server."
+                    return "No voice channel with that name exists in this server."
                 }
                 name
             }
