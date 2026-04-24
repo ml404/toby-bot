@@ -93,6 +93,7 @@ CREATE TABLE public.monthly_credit_snapshot (
     guild_id BIGINT NOT NULL,
     snapshot_date DATE NOT NULL,
     social_credit BIGINT NOT NULL,
+    toby_coins BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (discord_id, guild_id, snapshot_date)
 );
 

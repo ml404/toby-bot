@@ -214,6 +214,7 @@
                         <th>Member</th>
                         <th>Title</th>
                         <th class="lb-col-value">🪙 TOBY</th>
+                        <th class="lb-col-value">This month</th>
                         <th class="lb-col-value">💰 Portfolio</th>
                     </tr>
                     </thead>
@@ -239,6 +240,15 @@
                         </td>
                         <td data-label="TOBY" class="lb-col-value">
                             <strong class="lb-value lb-value-toby" th:text="${row.coins}">0</strong>
+                        </td>
+                        <td data-label="This month" class="lb-col-value">
+                            <span th:if="${row.coinsThisMonth > 0}"
+                                  class="lb-value-month"
+                                  th:text="'+' + ${row.coinsThisMonth}">+0</span>
+                            <span th:if="${row.coinsThisMonth &lt; 0}"
+                                  class="lb-value-month-down"
+                                  th:text="${row.coinsThisMonth}">-0</span>
+                            <span th:if="${row.coinsThisMonth == 0}" class="muted">—</span>
                         </td>
                         <td data-label="Portfolio" class="lb-col-value">
                             <span class="lb-value-portfolio" th:text="${row.portfolioCredits}">0</span>

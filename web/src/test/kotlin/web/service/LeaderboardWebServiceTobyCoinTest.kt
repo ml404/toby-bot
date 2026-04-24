@@ -1,8 +1,10 @@
 package web.service
 
+import database.dto.MonthlyCreditSnapshotDto
 import database.dto.TitleDto
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
+import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
 import database.service.TobyCoinMarketService
 import database.service.UserService
@@ -26,6 +28,7 @@ class LeaderboardWebServiceTobyCoinTest {
     private lateinit var userService: UserService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var titleService: TitleService
+    private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var service: LeaderboardWebService
 
     @BeforeEach
@@ -35,6 +38,7 @@ class LeaderboardWebServiceTobyCoinTest {
         userService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
+        snapshotService = mockk(relaxed = true)
         every { jda.getGuildById(guildId) } returns guild
         every { guild.name } returns "Test Guild"
 
@@ -46,7 +50,8 @@ class LeaderboardWebServiceTobyCoinTest {
             },
             userService = userService,
             marketService = marketService,
-            titleService = titleService
+            titleService = titleService,
+            snapshotService = snapshotService
         )
     }
 
@@ -168,5 +173,67 @@ class LeaderboardWebServiceTobyCoinTest {
 
         assertEquals(LeaderboardWebService.TOBY_COIN_LEADERBOARD_LIMIT, leaders.size)
         assertEquals("U15", leaders.first().name)
+    }
+
+    // ---- +/- this month ----
+
+    @Test
+    fun `coinsThisMonth equals current minus start-of-month snapshot`() {
+        every { marketService.getMarket(guildId) } returns
+            TobyCoinMarketDto(guildId = guildId, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 120L },  // +20 this month
+            UserDto(discordId = 2L, guildId = guildId).apply { tobyCoins = 50L }   // -30 this month (sold)
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { guild.getMemberById(2L) } returns member(2L, "Bob")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = 1L, guildId = guildId,
+                snapshotDate = java.time.LocalDate.now().withDayOfMonth(1),
+                socialCredit = 0L, tobyCoins = 100L),
+            MonthlyCreditSnapshotDto(discordId = 2L, guildId = guildId,
+                snapshotDate = java.time.LocalDate.now().withDayOfMonth(1),
+                socialCredit = 0L, tobyCoins = 80L)
+        )
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals(20L, leaders.first { it.name == "Alice" }.coinsThisMonth)
+        assertEquals(-30L, leaders.first { it.name == "Bob" }.coinsThisMonth)
+    }
+
+    @Test
+    fun `coinsThisMonth is zero when no snapshot exists for that user`() {
+        every { marketService.getMarket(guildId) } returns
+            TobyCoinMarketDto(guildId = guildId, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 500L }
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals(1, leaders.size)
+        assertEquals(0L, leaders[0].coinsThisMonth,
+            "no snapshot yet -> report 0, not the full balance (otherwise first-month users look like whales)")
+        assertEquals(500L, leaders[0].coins, "current coin balance unaffected")
+    }
+
+    @Test
+    fun `coinsThisMonth falls back to zero when snapshot read throws`() {
+        every { marketService.getMarket(guildId) } returns
+            TobyCoinMarketDto(guildId = guildId, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 100L }
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } throws
+            RuntimeException("column toby_coins does not exist")
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals(1, leaders.size, "page must still render even if the snapshot read fails")
+        assertEquals(0L, leaders[0].coinsThisMonth)
     }
 }

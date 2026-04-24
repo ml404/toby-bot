@@ -34,7 +34,10 @@ class MonthlyCreditSnapshotDto(
     var snapshotDate: LocalDate = LocalDate.now(),
 
     @Column(name = "social_credit", nullable = false)
-    var socialCredit: Long = 0
+    var socialCredit: Long = 0,
+
+    @Column(name = "toby_coins", nullable = false)
+    var tobyCoins: Long = 0
 ) : Serializable
 
 data class MonthlyCreditSnapshotId(

@@ -41,6 +41,7 @@ class DefaultMonthlyCreditSnapshotPersistence : MonthlyCreditSnapshotPersistence
             dto
         } else {
             existing.socialCredit = dto.socialCredit
+            existing.tobyCoins = dto.tobyCoins
             entityManager.merge(existing)
             entityManager.flush()
             existing
