@@ -391,10 +391,13 @@ describe('togglePlayClip', () => {
         const iframe = previewRow.querySelector('iframe');
         expect(iframe).not.toBeNull();
         const src = iframe.getAttribute('src');
-        expect(src).toContain('/embed/dQw4w9WgXcQ');
+        // Use the privacy-enhanced host so Shorts (and strict-anti-bot videos)
+        // render reliably instead of blanking the preview row.
+        expect(src).toContain('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
         expect(src).toContain('start=5');
         expect(src).toContain('end=12');
         expect(src).toContain('autoplay=1');
+        expect(src).toContain('playsinline=1');
 
         expect(btn.textContent).toBe('⏹');
         expect(btn.classList.contains('playing')).toBe(true);
