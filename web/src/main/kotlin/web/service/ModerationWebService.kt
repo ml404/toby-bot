@@ -164,9 +164,9 @@ class ModerationWebService(
                 colorHex = t.colorHex
             )
         }
-        val ownedIds = safely("owned titles", emptyList<database.dto.UserOwnedTitleDto>()) {
+        val ownedIds: Set<Long> = safely("owned titles", emptyList<database.dto.UserOwnedTitleDto>()) {
             titleService.listOwned(actorDiscordId)
-        }.map { it.titleId }.toSet()
+        }.mapTo(HashSet()) { it.titleId }
         val actorDto = userService.getUserById(actorDiscordId, guildId)
         val equippedId = actorDto?.activeTitleId
         val balance = actorDto?.socialCredit ?: 0L
