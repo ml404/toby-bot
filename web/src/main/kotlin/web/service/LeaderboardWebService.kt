@@ -89,13 +89,36 @@ class LeaderboardWebService(
         val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
         // Best-effort: if the snapshot table read fails (schema drift on an old
         // deploy), degrade gracefully and skip the delta rather than 500 the page.
-        val baselineByUser = runCatching {
+        val baselines = runCatching {
             snapshotService.listForGuildDate(guildId, thisMonthStart)
-                .associate { it.discordId to it.tobyCoins }
-        }.getOrDefault(emptyMap())
+                .associateBy { it.discordId }
+        }.getOrDefault(emptyMap()).toMutableMap()
 
-        return userService.listGuildUsers(guildId).asSequence()
-            .filterNotNull()
+        val allUsers = userService.listGuildUsers(guildId).filterNotNull()
+
+        // Lazy-baseline: if the scheduled monthly job hasn't yet snapshotted
+        // this user for this month's 1st, write one now using their current
+        // balance. Mirrors ModerationWebService so both leaderboards share
+        // the same baseline and the delta becomes meaningful from the next
+        // trade onwards. ModerationWebService usually wins this race because
+        // it runs first in getGuildView; this block is a safety net.
+        allUsers.forEach { dto ->
+            if (!baselines.containsKey(dto.discordId)) {
+                runCatching {
+                    snapshotService.upsertIfMissing(
+                        database.dto.MonthlyCreditSnapshotDto(
+                            discordId = dto.discordId,
+                            guildId = guildId,
+                            snapshotDate = thisMonthStart,
+                            socialCredit = dto.socialCredit ?: 0L,
+                            tobyCoins = dto.tobyCoins
+                        )
+                    )
+                }.getOrNull()?.let { baselines[dto.discordId] = it }
+            }
+        }
+
+        return allUsers.asSequence()
             .filter { it.tobyCoins > 0L }
             .sortedByDescending { it.tobyCoins }
             .take(TOBY_COIN_LEADERBOARD_LIMIT)
@@ -104,11 +127,7 @@ class LeaderboardWebService(
                 val title = runCatching {
                     dto.activeTitleId?.let { titleService.getById(it) }?.label
                 }.getOrNull()
-                // If there's no snapshot row for this user yet, report 0 rather
-                // than the full current balance — "all their coins this month"
-                // is misleading for users who held TOBY before we started
-                // tracking the delta.
-                val coinsThisMonth = baselineByUser[dto.discordId]?.let { dto.tobyCoins - it } ?: 0L
+                val coinsThisMonth = baselines[dto.discordId]?.let { dto.tobyCoins - it.tobyCoins } ?: 0L
                 TobyCoinLeaderRow(
                     rank = index + 1,
                     discordId = dto.discordId.toString(),

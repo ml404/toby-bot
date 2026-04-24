@@ -10,6 +10,7 @@ import database.service.TobyCoinMarketService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -211,12 +212,14 @@ class LeaderboardWebServiceTobyCoinTest {
         )
         every { guild.getMemberById(1L) } returns member(1L, "Alice")
         every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        // Lazy-write returns a baseline = current, so the first-visit delta is 0.
+        every { snapshotService.upsertIfMissing(any()) } answers { firstArg() }
 
         val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
 
         assertEquals(1, leaders.size)
         assertEquals(0L, leaders[0].coinsThisMonth,
-            "no snapshot yet -> report 0, not the full balance (otherwise first-month users look like whales)")
+            "no snapshot yet -> lazy-write baseline = current -> delta = 0 (future earns will show positive)")
         assertEquals(500L, leaders[0].coins, "current coin balance unaffected")
     }
 
@@ -230,10 +233,38 @@ class LeaderboardWebServiceTobyCoinTest {
         every { guild.getMemberById(1L) } returns member(1L, "Alice")
         every { snapshotService.listForGuildDate(guildId, any()) } throws
             RuntimeException("column toby_coins does not exist")
+        // If the read threw, the write would throw for the same reason —
+        // simulate that here so the fallback behaviour is honest.
+        every { snapshotService.upsertIfMissing(any()) } throws
+            RuntimeException("column toby_coins does not exist")
 
         val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
 
         assertEquals(1, leaders.size, "page must still render even if the snapshot read fails")
         assertEquals(0L, leaders[0].coinsThisMonth)
+    }
+
+    @Test
+    fun `buildTobyCoinLeaders lazy-writes a baseline when none exists`() {
+        every { marketService.getMarket(guildId) } returns
+            TobyCoinMarketDto(guildId = guildId, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply {
+                socialCredit = 500L
+                tobyCoins = 40L
+            }
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        val captured = slot<MonthlyCreditSnapshotDto>()
+        every { snapshotService.upsertIfMissing(capture(captured)) } answers { firstArg() }
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals(0L, leaders[0].coinsThisMonth, "first visit: baseline = current, delta = 0")
+        assertEquals(1L, captured.captured.discordId)
+        assertEquals(40L, captured.captured.tobyCoins, "baseline must include current TOBY balance")
+        assertEquals(500L, captured.captured.socialCredit,
+            "baseline must also include social credit so the two leaderboards agree")
     }
 }

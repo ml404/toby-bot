@@ -119,4 +119,37 @@ class MonthlyCreditSnapshotServiceIntegrationTest {
         assertEquals(9L, rows[444L]?.tobyCoins)
         assertEquals(80L, rows[444L]?.socialCredit)
     }
+
+    @Test
+    fun `upsertIfMissing inserts when absent and is a no-op when present`() {
+        val date = snapshotDate.plusMonths(2)
+        val discordId = 555L
+
+        // First call: row doesn't exist, should be inserted.
+        val inserted = service.upsertIfMissing(
+            MonthlyCreditSnapshotDto(
+                discordId = discordId, guildId = guildId, snapshotDate = date,
+                socialCredit = 100L, tobyCoins = 20L
+            )
+        )
+        assertEquals(100L, inserted.socialCredit)
+        assertEquals(20L, inserted.tobyCoins)
+
+        // Second call with different values: must NOT clobber the existing row,
+        // because lazy-baseline is meant to snapshot once per month, not
+        // overwrite each page load.
+        val attempted = service.upsertIfMissing(
+            MonthlyCreditSnapshotDto(
+                discordId = discordId, guildId = guildId, snapshotDate = date,
+                socialCredit = 999L, tobyCoins = 999L
+            )
+        )
+        assertEquals(100L, attempted.socialCredit, "must return existing, not the new dto")
+        assertEquals(20L, attempted.tobyCoins)
+
+        // Persisted state matches existing row, not the attempted overwrite.
+        val persisted = service.get(discordId, guildId, date)!!
+        assertEquals(100L, persisted.socialCredit)
+        assertEquals(20L, persisted.tobyCoins)
+    }
 }

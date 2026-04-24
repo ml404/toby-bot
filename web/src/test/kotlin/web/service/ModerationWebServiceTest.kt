@@ -11,6 +11,7 @@ import database.service.UserService
 import database.service.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
@@ -439,9 +440,58 @@ class ModerationWebServiceTest {
         every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
         every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
         every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        // Lazy-write returns a baseline DTO whose socialCredit matches current,
+        // so the delta for a first-time visit is 0 (consistent with the old
+        // behaviour — earnings from 1st-of-month to this visit get absorbed).
+        every { snapshotService.upsertIfMissing(any()) } answers { firstArg() }
 
         val rows = service.getLeaderboard(guildId)
         assertEquals(0L, rows.first().creditsEarnedThisMonth)
+    }
+
+    @Test
+    fun `getLeaderboard lazy-writes a baseline when none exists for this month`() {
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply {
+            socialCredit = 1_000L
+            tobyCoins = 12L
+        }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        val captured = slot<MonthlyCreditSnapshotDto>()
+        every { snapshotService.upsertIfMissing(capture(captured)) } answers { firstArg() }
+
+        service.getLeaderboard(guildId)
+
+        // Baseline must capture BOTH counters so the wallet leaderboard is
+        // consistent with the social-credit leaderboard. Writing only
+        // socialCredit here and leaving tobyCoins = 0 would regress the
+        // wallet delta to "all current coins earned this month".
+        assertEquals(plainUserId, captured.captured.discordId)
+        assertEquals(guildId, captured.captured.guildId)
+        assertEquals(1_000L, captured.captured.socialCredit)
+        assertEquals(12L, captured.captured.tobyCoins)
+    }
+
+    @Test
+    fun `getLeaderboard does NOT lazy-write when baseline already exists`() {
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 1_050L }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = plainUserId, guildId = guildId, socialCredit = 1_000L)
+        )
+
+        val rows = service.getLeaderboard(guildId)
+
+        // Skipping lazy-write is the whole point — scheduled job already
+        // wrote the baseline, the user earned 50 since then.
+        assertEquals(50L, rows.first().creditsEarnedThisMonth)
+        verify(exactly = 0) { snapshotService.upsertIfMissing(any()) }
     }
 
     @Test
@@ -454,6 +504,10 @@ class ModerationWebServiceTest {
         every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } throws
             RuntimeException("relation \"voice_session\" does not exist")
         every { snapshotService.listForGuildDate(guildId, any()) } throws
+            RuntimeException("relation \"monthly_credit_snapshot\" does not exist")
+        // Lazy-write would hit the same missing table; simulate that so the
+        // assertion reflects real-world behaviour.
+        every { snapshotService.upsertIfMissing(any()) } throws
             RuntimeException("relation \"monthly_credit_snapshot\" does not exist")
 
         val rows = service.getLeaderboard(guildId)

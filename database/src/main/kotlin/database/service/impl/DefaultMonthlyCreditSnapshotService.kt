@@ -18,4 +18,7 @@ class DefaultMonthlyCreditSnapshotService @Autowired constructor(
         persistence.listForGuildDate(guildId, snapshotDate)
 
     override fun upsert(dto: MonthlyCreditSnapshotDto): MonthlyCreditSnapshotDto = persistence.upsert(dto)
+
+    override fun upsertIfMissing(dto: MonthlyCreditSnapshotDto): MonthlyCreditSnapshotDto =
+        persistence.upsertIfMissing(dto)
 }
