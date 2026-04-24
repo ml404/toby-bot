@@ -16,8 +16,7 @@ class ModerationWebService(
     private val jda: JDA,
     private val userService: UserService,
     private val configService: ConfigService,
-    private val introWebService: IntroWebService,
-    private val initiativeResolver: InitiativeResolver
+    private val introWebService: IntroWebService
 ) {
     companion object {
         const val MAX_POLL_OPTIONS = 10
@@ -63,8 +62,7 @@ class ModerationWebService(
                 musicPermission = dto?.musicPermission ?: true,
                 memePermission = dto?.memePermission ?: true,
                 digPermission = dto?.digPermission ?: true,
-                superUser = dto?.superUser ?: false,
-                initiativeModifier = dto?.let { initiativeResolver.resolve(it) }
+                superUser = dto?.superUser ?: false
             )
         }.sortedBy { it.name.lowercase() }
 
@@ -377,8 +375,7 @@ data class ModeratedMember(
     val musicPermission: Boolean,
     val memePermission: Boolean,
     val digPermission: Boolean,
-    val superUser: Boolean,
-    val initiativeModifier: Int?
+    val superUser: Boolean
 )
 
 data class VoiceChannelInfo(

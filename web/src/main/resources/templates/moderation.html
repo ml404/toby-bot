@@ -44,7 +44,6 @@
                     <th>Meme</th>
                     <th>Dig</th>
                     <th>Superuser</th>
-                    <th>Initiative</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -98,11 +97,6 @@
                                 th:title="'Superuser: ' + (${m.superUser} ? 'On' : 'Off')"
                                 th:aria-label="'Toggle Superuser permission for ' + ${m.name}"
                                 th:text="${m.superUser} ? 'On' : 'Off'">Off</button>
-                    </td>
-                    <td data-label="Initiative">
-                        <span class="initiative-value"
-                              th:text="${m.initiativeModifier == null ? '—' : (m.initiativeModifier >= 0 ? '+' + m.initiativeModifier : m.initiativeModifier)}"
-                              th:title="${m.initiativeModifier == null ? 'Link a D&amp;D Beyond character with /linkcharacter to populate.' : 'Derived from linked character sheet (DEX modifier).'}">—</span>
                     </td>
                     <td data-label="Actions">
                         <button type="button" class="btn-danger kick-btn"

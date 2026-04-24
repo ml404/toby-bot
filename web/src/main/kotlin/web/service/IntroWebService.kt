@@ -1,6 +1,7 @@
 package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
 import database.service.MusicFileService
@@ -24,6 +25,7 @@ class IntroWebService(
         const val MAX_INTRO_DURATION_SECONDS = 15
         const val MAX_CLIP_DURATION_MS = MAX_INTRO_DURATION_SECONDS * 1000
         private val objectMapper = ObjectMapper()
+        private val logger = DiscordLogger(IntroWebService::class.java)
     }
 
     fun getMutualGuilds(accessToken: String): List<GuildInfo> {
@@ -82,19 +84,67 @@ class IntroWebService(
     fun getUserIntros(discordId: Long, guildId: Long): List<IntroViewModel> {
         val user = userService.getUserById(discordId, guildId) ?: return emptyList()
         return user.musicDtos.sortedBy { it.index }.map { dto ->
-            val blobAsString = dto.musicBlob?.let { String(it) }.orEmpty()
-            val url = blobAsString.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+            val blobBytes = dto.musicBlob
+            val blobAsString = blobBytes?.let { String(it) }.orEmpty()
+            val blobIsUrl = blobAsString.startsWith("http://") || blobAsString.startsWith("https://")
+            val blobIsMissing = blobBytes == null || blobBytes.isEmpty()
+            // Salvage path for a corrupt state seen in production: a row
+            // saved via the web form ended up with `musicBlob = NULL` while
+            // `fileName` held the source URL. When the blob is truly absent
+            // (null/empty) but the fileName parses as a URL, treat that URL
+            // as the source — the write below heals the blob on the way out.
+            // Real file uploads (non-empty blob that doesn't decode to a URL)
+            // are left strictly alone; we never replace an MP3 with a URL
+            // derived from a URL-shaped fileName.
+            val fileNameAsUrl = dto.fileName
+                ?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+            val rawUrl = when {
+                blobIsUrl -> blobAsString
+                blobIsMissing -> fileNameAsUrl
+                else -> null
+            }
+            val url = rawUrl?.let { canonicaliseShortsUrl(it) }
+            var dirty = false
+            // Whenever we can resolve a URL for this row, make sure the stored
+            // blob matches its canonical form. Covers three cases in one
+            // branch: (1) Shorts -> watch?v= canonicalisation, (2) fileName
+            // -> blob rescue, (3) blob bytes drifted from canonical for any
+            // other reason.
+            if (url != null) {
+                val newBytes = url.toByteArray()
+                val blobAlreadyMatches = blobBytes?.contentEquals(newBytes) == true
+                if (!blobAlreadyMatches) {
+                    dto.musicBlob = newBytes
+                    dto.musicBlobHash = MusicDto.computeHash(newBytes)
+                    dirty = true
+                    val reason = when {
+                        blobIsMissing -> "musicBlob was NULL/empty; rescued URL from fileName ('${dto.fileName}')"
+                        rawUrl != url -> "canonicalising Shorts URL '$rawUrl' -> '$url'"
+                        else -> "stored blob drifted from canonical; rewriting to '$url'"
+                    }
+                    logger.info { "Healing intro ${dto.id}: $reason" }
+                }
+            } else if (blobIsMissing) {
+                logger.warn { "Intro ${dto.id} has empty musicBlob and fileName '${dto.fileName}' is not a URL; cannot heal" }
+            }
             val displayName = if (url != null && dto.fileName?.startsWith("http") == true) {
                 // Legacy record: fileName was stored as the raw URL instead of a title.
                 // Look up the video title and lazily migrate the record.
                 val title = getYouTubeVideoTitle(url)
                 if (title != null) {
                     dto.fileName = title
-                    musicFileService.updateMusicFile(dto)
+                    dirty = true
+                    logger.info { "Replacing URL-shaped fileName on intro ${dto.id} with title '$title'" }
+                } else {
+                    logger.info { "No YouTube title available for intro ${dto.id} (url=$url); leaving fileName as URL" }
                 }
                 title ?: dto.fileName
             } else {
                 dto.fileName
+            }
+            if (dirty) {
+                runCatching { musicFileService.updateMusicFile(dto) }
+                    .onFailure { e -> logger.error { "Failed to persist lazy-migrated intro ${dto.id}: ${e.message}" } }
             }
             val videoId = url?.let { extractVideoId(it) }
             val thumbnailUrl = videoId?.let { "https://img.youtube.com/vi/$it/mqdefault.jpg" }
@@ -130,13 +180,17 @@ class IntroWebService(
             return "You already have $MAX_INTRO_COUNT intros. Please select one to replace."
         }
 
-        val preview = fetchYouTubePreview(url)
+        // Normalise Shorts URLs to the canonical watch form before we do
+        // anything with them — YouTube previews and the saved row both embed
+        // more reliably from `watch?v=<id>` than from `/shorts/<id>`.
+        val normalisedUrl = canonicaliseShortsUrl(url)
+        val preview = fetchYouTubePreview(normalisedUrl)
         val sourceDurationMs = preview?.durationSeconds?.let { it * 1000 }
 
         validateClip(startMs, endMs, sourceDurationMs)?.let { return it }
 
-        val displayName = preview?.title ?: url
-        val urlBytes = url.toByteArray()
+        val displayName = preview?.title ?: normalisedUrl
+        val urlBytes = normalisedUrl.toByteArray()
         val selectedDto = replaceIndex?.let { idx -> existingIntros.find { it.index == idx } }
 
         if (selectedDto != null) {
@@ -148,9 +202,25 @@ class IntroWebService(
             selectedDto.endMs = endMs
             musicFileService.updateMusicFile(selectedDto)
         } else {
+            // Pre-empt the hash dedupe in createNewMusicFile so we can tell
+            // the user *which* slot already holds this URL. Normalise both
+            // sides through canonicaliseShortsUrl so a pre-migration
+            // `/shorts/ID` row and a fresh `watch?v=ID` save still collide.
+            val duplicateSlot = existingIntros.firstOrNull { existing ->
+                val existingUrl = existing.musicBlob?.let { String(it) }
+                    ?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+                    ?.let(::canonicaliseShortsUrl)
+                existingUrl == normalisedUrl
+            }
+            if (duplicateSlot != null) {
+                return "You already have this intro in slot ${duplicateSlot.index}. Pick that slot to replace it."
+            }
             val newIndex = existingIntros.size + 1
             val newDto = MusicDto(user, newIndex, displayName, volume, urlBytes, startMs, endMs)
+            // Safety net for any collision the byte compare misses — the
+            // hash check in createNewMusicFile still fires.
             musicFileService.createNewMusicFile(newDto)
+                ?: return "You already have this intro in another slot. Pick that slot to replace it."
         }
 
         return null
@@ -381,6 +451,18 @@ class IntroWebService(
         // doesn't get baked into the videoId and break the iframe embed URL.
         val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?/\\n]+)")
         return regex.find(url)?.value
+    }
+
+    /**
+     * Rewrite a `youtube.com/shorts/<id>` URL to its canonical `watch?v=<id>`
+     * form. Non-shorts URLs are returned unchanged. Built from the extracted
+     * video id rather than a string-level replace so query suffixes (`?si=…`)
+     * don't collide with the inserted `?v=`.
+     */
+    internal fun canonicaliseShortsUrl(url: String): String {
+        if (!url.contains("/shorts/", ignoreCase = true)) return url
+        val videoId = extractVideoId(url) ?: return url
+        return "https://www.youtube.com/watch?v=$videoId"
     }
 
     private fun isValidUrl(url: String): Boolean {

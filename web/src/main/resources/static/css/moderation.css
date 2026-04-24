@@ -104,11 +104,6 @@
     cursor: not-allowed;
 }
 
-.initiative-value {
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-}
-
 .btn-danger {
     background: var(--danger-bg);
     color: #fff;

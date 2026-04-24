@@ -30,7 +30,6 @@ class ModerationWebServiceTest {
     private lateinit var userService: UserService
     private lateinit var configService: ConfigService
     private lateinit var introWebService: IntroWebService
-    private lateinit var initiativeResolver: InitiativeResolver
     private lateinit var service: ModerationWebService
 
     private lateinit var guild: Guild
@@ -47,9 +46,8 @@ class ModerationWebServiceTest {
         userService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         introWebService = mockk(relaxed = true)
-        initiativeResolver = mockk(relaxed = true)
         guild = mockk(relaxed = true)
-        service = ModerationWebService(jda, userService, configService, introWebService, initiativeResolver)
+        service = ModerationWebService(jda, userService, configService, introWebService)
 
         every { jda.getGuildById(guildId) } returns guild
         every { guild.id } returns guildId.toString()

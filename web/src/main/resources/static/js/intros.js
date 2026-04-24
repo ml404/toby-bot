@@ -296,7 +296,7 @@ function closeClipPreviewRow() {
     });
 }
 
-// Injects a YouTube iframe clip preview as a new row beneath the clicked
+// Injects a YouTube player clip preview as a new row beneath the clicked
 // button's row, seeding start/end from the row's data-start-ms /
 // data-end-ms attributes. A second click tears the preview back down.
 function togglePlayClip(btn) {
@@ -318,29 +318,33 @@ function togglePlayClip(btn) {
     const endMs = row.dataset.endMs ? parseInt(row.dataset.endMs, 10) : NaN;
     const startSec = Number.isFinite(startMs) ? Math.max(0, Math.floor(startMs / 1000)) : 0;
     const endSec = Number.isFinite(endMs) && endMs > startMs ? Math.ceil(endMs / 1000) : null;
-    const params = new URLSearchParams();
-    if (startSec > 0) params.set('start', String(startSec));
-    if (endSec != null) params.set('end', String(endSec));
-    params.set('autoplay', '1');
-    params.set('controls', '1');
-    params.set('rel', '0');
-    params.set('playsinline', '1');
-    // youtube-nocookie.com is YouTube's privacy-enhanced embed host. It has
-    // looser anti-bot behaviour (no "sign in to confirm you're not a bot"
-    // interstitial) and embeds Shorts reliably — the default youtube.com host
-    // often refuses to render Shorts in an iframe, which shows up as a blank
-    // preview row.
-    const src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(videoId) + '?' + params.toString();
+
+    // Stand the preview row up immediately so the click feels responsive;
+    // YT.Player swaps the mount div for its own iframe once the API loads.
     const previewRow = document.createElement('tr');
     previewRow.className = 'video-preview-row';
     const td = document.createElement('td');
     td.colSpan = row.children.length;
-    td.innerHTML = '<iframe src="' + escapeAttrSafe(src) + '" ' +
-        'title="Clip preview" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+    const mount = document.createElement('div');
+    td.appendChild(mount);
     previewRow.appendChild(td);
     row.parentNode.insertBefore(previewRow, row.nextSibling);
     btn.textContent = '⏹';
     btn.classList.add('playing');
+
+    // Use YT.Player (same path the URL-preview form already uses) rather
+    // than a raw <iframe src>. A raw iframe without the enablejsapi+origin
+    // handshake YT.Player does for us reliably trips YouTube's "sign in to
+    // confirm you're not a bot" gate on Shorts, which shows up here as a
+    // blank preview row.
+    ensureYtApi().then(function () {
+        if (!window.YT || !window.YT.Player) return;
+        if (!previewRow.isConnected) return;
+        const playerVars = { autoplay: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 };
+        if (startSec > 0) playerVars.start = startSec;
+        if (endSec != null) playerVars.end = endSec;
+        new window.YT.Player(mount, { videoId: videoId, playerVars: playerVars });
+    }).catch(function () {});
 }
 
 function togglePlay(btn) {
