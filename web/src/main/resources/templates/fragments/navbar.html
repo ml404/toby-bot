@@ -3,15 +3,18 @@
 <body>
 <nav th:fragment="navbar">
     <a class="brand" href="/">TobyBot</a>
+    <!-- Order: personal anchor -> daily-driver features (leaderboards, market,
+         titles) -> social features -> utilities/docs -> admin. Keep admin-ish
+         Moderation last so it doesn't sit next to the everyday links. -->
     <div class="nav-links" id="nav-menu">
-        <a href="/commands/wiki">Commands</a>
+        <a href="/profile/guilds">Profile</a>
+        <a href="/leaderboards">Leaderboards</a>
+        <a href="/economy/guilds">Market</a>
+        <a href="/titles/guilds">Titles</a>
         <a href="/intro/guilds">Intro Songs</a>
         <a href="/dnd/campaign">Campaigns</a>
-        <a href="/titles/guilds">Titles</a>
-        <a href="/economy/guilds">Market</a>
-        <a href="/profile/guilds">Profile</a>
         <a href="/utils">Utils</a>
-        <a href="/leaderboards">Leaderboards</a>
+        <a href="/commands/wiki">Commands</a>
         <a href="/moderation/guilds">Moderation</a>
         <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
             <span class="nav-user" th:text="${username}">User</span>
