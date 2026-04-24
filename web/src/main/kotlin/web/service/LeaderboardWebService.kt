@@ -47,21 +47,34 @@ class LeaderboardWebService(
         return guild.getMemberById(discordId) != null
     }
 
-    fun getGuildView(guildId: Long): LeaderboardGuildView? {
+    fun getGuildView(
+        guildId: Long,
+        sort: LeaderboardSort = LeaderboardSort.THIS_MONTH
+    ): LeaderboardGuildView? {
         val guild = jda.getGuildById(guildId) ?: return null
-        val rows = moderationWebService.getLeaderboard(guildId)
-        val totalCreditsThisMonth = rows.sumOf { it.creditsEarnedThisMonth }
-        val totalVoiceThisMonth = rows.sumOf { it.voiceSecondsThisMonth }
-        val mostActiveName = rows.maxByOrNull { it.voiceSecondsThisMonth }?.name
+        val rawRows = moderationWebService.getLeaderboard(guildId)
+
+        // Moderation service emits rows ordered by lifetime socialCredit. Re-sort
+        // + re-rank so rank 1 is always the top of the active view — otherwise
+        // lifetime ranks leak into the this-month display.
+        val resorted = when (sort) {
+            LeaderboardSort.THIS_MONTH -> rawRows.sortedByDescending { it.creditsEarnedThisMonth }
+            LeaderboardSort.LIFETIME -> rawRows
+        }.mapIndexed { i, r -> r.copy(rank = i + 1) }
+
+        val totalCreditsThisMonth = rawRows.sumOf { it.creditsEarnedThisMonth }
+        val totalVoiceThisMonth = rawRows.sumOf { it.voiceSecondsThisMonth }
+        val mostActiveName = rawRows.maxByOrNull { it.voiceSecondsThisMonth }?.name
 
         return LeaderboardGuildView(
             guildName = guild.name,
-            podium = rows.take(3),
-            standings = rows.drop(3),
+            podium = resorted.take(3),
+            standings = resorted.drop(3),
             totalCreditsThisMonth = totalCreditsThisMonth,
             totalVoiceThisMonth = totalVoiceThisMonth,
             mostActiveMember = mostActiveName,
-            totalMembers = rows.size,
+            totalMembers = resorted.size,
+            sort = sort,
             tobyCoinLeaders = buildTobyCoinLeaders(guildId)
         )
     }
@@ -120,6 +133,7 @@ data class LeaderboardGuildView(
     val totalVoiceThisMonth: Long,
     val mostActiveMember: String?,
     val totalMembers: Int,
+    val sort: LeaderboardSort = LeaderboardSort.THIS_MONTH,
     val tobyCoinLeaders: List<TobyCoinLeaderRow> = emptyList()
 ) {
     val totalVoiceThisMonthDisplay: String get() = formatDuration(totalVoiceThisMonth)
@@ -128,6 +142,16 @@ data class LeaderboardGuildView(
         val hours = seconds / 3600
         val minutes = (seconds % 3600) / 60
         return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    }
+}
+
+enum class LeaderboardSort(val queryValue: String) {
+    THIS_MONTH("month"),
+    LIFETIME("lifetime");
+
+    companion object {
+        fun fromQuery(s: String?): LeaderboardSort =
+            entries.firstOrNull { it.queryValue == s } ?: THIS_MONTH
     }
 }
 

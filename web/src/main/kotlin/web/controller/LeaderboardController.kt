@@ -8,7 +8,9 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.LeaderboardSort
 import web.service.LeaderboardWebService
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -37,6 +39,7 @@ class LeaderboardController(
     @GetMapping("/leaderboard/{guildId}")
     fun leaderboardPage(
         @PathVariable guildId: Long,
+        @RequestParam(required = false) sort: String?,
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
@@ -49,7 +52,7 @@ class LeaderboardController(
             return "redirect:/leaderboards"
         }
 
-        val view = leaderboardWebService.getGuildView(guildId) ?: run {
+        val view = leaderboardWebService.getGuildView(guildId, LeaderboardSort.fromQuery(sort)) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return "redirect:/leaderboards"
         }
