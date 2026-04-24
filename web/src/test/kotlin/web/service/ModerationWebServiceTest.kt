@@ -568,4 +568,40 @@ class ModerationWebServiceTest {
         assertNull(err)
         verify(exactly = 1) { configService.createNewConfig(any()) }
     }
+
+    @Test
+    fun `getLeaderboard queries voice for the CURRENT month, not the previous one`() {
+        // Regression: the old code passed [prevMonthStart, thisMonthStart),
+        // which is the just-finished month — copy-paste from
+        // MonthlyLeaderboardJob (which runs on the 1st and reports the
+        // previous month). The live web view should query [thisMonthStart,
+        // nextMonthStart) so today's sessions actually count.
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 100L }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+
+        val fromCaptor = slot<java.time.Instant>()
+        val untilCaptor = slot<java.time.Instant>()
+        every {
+            voiceSessionService.sumCountedSecondsInRangeByUser(
+                guildId,
+                capture(fromCaptor),
+                capture(untilCaptor)
+            )
+        } returns emptyMap()
+
+        service.getLeaderboard(guildId)
+
+        val now = java.time.LocalDate.now(java.time.ZoneOffset.UTC)
+        val expectedFrom = now.withDayOfMonth(1)
+            .atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
+        val expectedUntil = now.withDayOfMonth(1).plusMonths(1)
+            .atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
+        assertEquals(expectedFrom, fromCaptor.captured,
+            "voice range must START at this month's 1st, not last month's 1st")
+        assertEquals(expectedUntil, untilCaptor.captured,
+            "voice range must END at next month's 1st, not this month's 1st")
+    }
 }
