@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.audio.AudioModuleConfig
 import net.dv8tion.jda.api.requests.GatewayIntent
+import net.dv8tion.jda.api.utils.ChunkingFilter
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.dv8tion.jda.api.utils.cache.CacheFlag
 import org.springframework.context.annotation.Bean
@@ -43,7 +44,8 @@ class BotConfig {
             GatewayIntent.GUILD_VOICE_STATES,
             GatewayIntent.GUILD_EXPRESSIONS
         )
-            .setMemberCachePolicy(MemberCachePolicy.VOICE)
+            .setMemberCachePolicy(MemberCachePolicy.ALL)
+            .setChunkingFilter(ChunkingFilter.ALL)
             .disableCache(
                 EnumSet.of(
                     CacheFlag.CLIENT_STATUS,
