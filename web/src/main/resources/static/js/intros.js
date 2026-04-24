@@ -324,7 +324,13 @@ function togglePlayClip(btn) {
     params.set('autoplay', '1');
     params.set('controls', '1');
     params.set('rel', '0');
-    const src = 'https://www.youtube.com/embed/' + encodeURIComponent(videoId) + '?' + params.toString();
+    params.set('playsinline', '1');
+    // youtube-nocookie.com is YouTube's privacy-enhanced embed host. It has
+    // looser anti-bot behaviour (no "sign in to confirm you're not a bot"
+    // interstitial) and embeds Shorts reliably — the default youtube.com host
+    // often refuses to render Shorts in an iframe, which shows up as a blank
+    // preview row.
+    const src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(videoId) + '?' + params.toString();
     const previewRow = document.createElement('tr');
     previewRow.className = 'video-preview-row';
     const td = document.createElement('td');

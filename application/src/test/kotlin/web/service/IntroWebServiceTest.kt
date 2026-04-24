@@ -201,6 +201,25 @@ class IntroWebServiceTest {
     }
 
     @Test
+    fun `getUserIntros extracts videoId for Shorts URL with trailing slash`() {
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ/"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "Shorts with trailing slash",
+            musicBlob = shortsUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val result = service.getUserIntros(discordId, guildId)
+        assertEquals(1, result.size)
+        assertEquals("dQw4w9WgXcQ", result[0].videoId)
+    }
+
+    @Test
     fun `getUserIntros extracts videoId for Shorts URL carrying query params`() {
         val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ?si=abc123"
         val intro = MusicDto(

@@ -377,7 +377,9 @@ class IntroWebService(
     fun getYouTubeVideoTitle(url: String): String? = fetchYouTubePreview(url)?.title
 
     private fun extractVideoId(url: String): String? {
-        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?\\n]+)")
+        // Exclude `/` from the capture so a trailing slash (e.g. `…/shorts/ID/`)
+        // doesn't get baked into the videoId and break the iframe embed URL.
+        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?/\\n]+)")
         return regex.find(url)?.value
     }
 

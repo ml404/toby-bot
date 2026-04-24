@@ -75,7 +75,9 @@ class HttpHelper(
 
     // Helper function to extract video ID from YouTube URL
     private fun extractVideoIdFromUrl(url: String): String? {
-        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?\\n]+)")
+        // Exclude `/` from the capture so a trailing slash (e.g. `…/shorts/ID/`)
+        // doesn't leak into the id.
+        val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?/\\n]+)")
         return regex.find(url)?.value
     }
 
