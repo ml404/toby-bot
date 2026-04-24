@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Titles', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Titles</h1>
+    <p class="muted mb-5">
+        Spend your social credit on vanity titles. Each purchased title also
+        grants a matching Discord role on that server. Pick a server below.
+    </p>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <a class="lb-guild-card"
+           th:each="g : ${guilds}"
+           th:href="@{/titles/{id}(id=${g.id})}">
+            <div class="lb-guild-card-header">
+                <img th:if="${g.iconUrl != null}"
+                     th:src="${g.iconUrl}"
+                     th:alt="${g.name} + ' icon'"
+                     class="lb-guild-icon"
+                     onerror="this.style.display='none'">
+                <div th:unless="${g.iconUrl != null}"
+                     class="lb-guild-icon-placeholder"
+                     aria-hidden="true"
+                     th:text="${#strings.substring(g.name, 0, 1).toUpperCase()}">G</div>
+                <div class="lb-guild-name" th:text="${g.name}" th:title="${g.name}">Guild</div>
+            </div>
+            <div class="lb-guild-top">
+                <span class="muted">Balance:</span>
+                <span th:text="${g.balance} + ' credits'">0 credits</span>
+            </div>
+            <div class="lb-guild-stats" th:if="${g.equippedTitle != null}">
+                <span class="muted">Equipped:</span>
+                <span class="lb-title-pill" th:text="${g.equippedTitle}">Title</span>
+            </div>
+            <div class="lb-guild-stats" th:unless="${g.equippedTitle != null}">
+                <span class="muted">No title equipped</span>
+            </div>
+        </a>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">🏷️</span>
+        <h2>No servers to show</h2>
+        <p class="mb-5">
+            You need to share at least one server with TobyBot to buy titles.
+        </p>
+    </div>
+</main>
+</body>
+</html>

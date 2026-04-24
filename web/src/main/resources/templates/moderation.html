@@ -24,8 +24,6 @@
     <div class="tabs" role="tablist">
         <button class="tab-btn active" data-tab="users" role="tab" aria-selected="true">Users</button>
         <button class="tab-btn" data-tab="config" role="tab" aria-selected="false">Config</button>
-        <button class="tab-btn" data-tab="social" role="tab" aria-selected="false">Social Credit</button>
-        <button class="tab-btn" data-tab="titles" role="tab" aria-selected="false">Titles</button>
         <button class="tab-btn" data-tab="voice" role="tab" aria-selected="false">Voice</button>
         <button class="tab-btn" data-tab="poll" role="tab" aria-selected="false">Poll</button>
     </div>
@@ -34,7 +32,9 @@
     <section class="tab-panel active" data-panel="users">
         <p class="muted mb-4">
             Toggle TobyBot permissions for members of this server. Server owners
-            can also toggle SUPERUSER and kick members.
+            can also toggle SUPERUSER, adjust social credit, and kick members.
+            View the full credit standings on the
+            <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}">leaderboard page</a>.
         </p>
         <div class="mod-table-wrap">
             <table class="mod-table">
@@ -45,6 +45,7 @@
                     <th>Meme</th>
                     <th>Dig</th>
                     <th>Superuser</th>
+                    <th>Credit</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -98,6 +99,14 @@
                                 th:title="'Superuser: ' + (${m.superUser} ? 'On' : 'Off')"
                                 th:aria-label="'Toggle Superuser permission for ' + ${m.name}"
                                 th:text="${m.superUser} ? 'On' : 'Off'">Off</button>
+                    </td>
+                    <td data-label="Credit">
+                        <div class="sc-adjust" th:if="${isOwner}">
+                            <span class="sc-score" th:text="${m.socialCredit}">0</span>
+                            <input type="number" value="0" step="1" aria-label="Delta">
+                            <button type="button" class="btn sc-apply">Apply</button>
+                        </div>
+                        <span th:unless="${isOwner}" class="sc-score" th:text="${m.socialCredit}">0</span>
                     </td>
                     <td data-label="Actions">
                         <button type="button" class="btn-danger kick-btn"
@@ -163,118 +172,6 @@
                 </select>
                 <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
             </div>
-        </div>
-    </section>
-
-    <!-- SOCIAL CREDIT TAB -->
-    <section class="tab-panel" data-panel="social">
-        <p class="muted mb-4" th:if="${!isOwner}">
-            Only the server owner can adjust social credit.
-        </p>
-        <p class="muted mb-4">
-            Score is the lifetime total. "This month" shows credits earned and
-            counted voice time since the 1st. Monthly leaderboard is posted on the
-            1st of each month.
-            <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}" style="margin-left:8px;">View full leaderboard &rarr;</a>
-        </p>
-        <div class="mod-table-wrap">
-            <table class="mod-table">
-                <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Member</th>
-                    <th>Title</th>
-                    <th>Score</th>
-                    <th>Credits this month</th>
-                    <th>Voice (lifetime)</th>
-                    <th>Voice this month</th>
-                    <th th:if="${isOwner}">Adjust</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="row : ${leaderboard}" th:attr="data-member-id=${row.discordId}">
-                    <td th:text="${row.rank}">1</td>
-                    <td>
-                        <div class="member-cell">
-                            <img th:if="${row.avatarUrl != null}"
-                                 th:src="${row.avatarUrl}"
-                                 class="avatar"
-                                 alt="">
-                            <span th:text="${row.name}">Name</span>
-                        </div>
-                    </td>
-                    <td class="sc-title" th:text="${row.title != null ? row.title : '—'}">—</td>
-                    <td class="sc-score" th:text="${row.socialCredit}">0</td>
-                    <td th:text="${row.creditsEarnedThisMonth}">0</td>
-                    <td th:text="${row.voiceLifetimeDisplay}">0m</td>
-                    <td th:text="${row.voiceThisMonthDisplay}">0m</td>
-                    <td th:if="${isOwner}">
-                        <div class="sc-adjust">
-                            <input type="number" value="0" step="1" aria-label="Delta">
-                            <button type="button" class="btn sc-apply">Apply</button>
-                        </div>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(leaderboard)}">
-                    <td colspan="8" class="muted" style="text-align:center;">No users tracked yet.</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- TITLES TAB -->
-    <section class="tab-panel" data-panel="titles">
-        <p class="muted mb-4">
-            Spend your social credit on vanity titles. Each purchased title also
-            grants you a matching Discord role on this server when equipped —
-            visible everywhere you appear in chat, member list and voice.
-            The bot needs the <strong>Manage Roles</strong> permission, and its
-            role must sit above the title roles in the hierarchy.
-        </p>
-        <p class="muted mb-4">
-            Your balance: <strong th:text="${titleShop.balance} + ' credits'">0 credits</strong>
-        </p>
-        <div class="mod-table-wrap">
-            <table class="mod-table">
-                <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Cost</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="t : ${titleShop.catalog}" th:attr="data-title-id=${t.id}">
-                    <td>
-                        <span class="title-label"
-                              th:text="${t.label}"
-                              th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}">Title</span>
-                    </td>
-                    <td th:text="${t.cost}">0</td>
-                    <td th:text="${t.description != null ? t.description : ''}"></td>
-                    <td>
-                        <span th:if="${titleShop.equippedTitleId == t.id}" class="badge owner">equipped</span>
-                        <span th:if="${titleShop.equippedTitleId != t.id && titleShop.ownedTitleIds.contains(t.id)}" class="muted">owned</span>
-                        <span th:if="${!titleShop.ownedTitleIds.contains(t.id)}" class="muted">available</span>
-                    </td>
-                    <td>
-                        <button type="button" class="btn title-buy"
-                                th:if="${!titleShop.ownedTitleIds.contains(t.id)}"
-                                th:disabled="${titleShop.balance < t.cost}">Buy</button>
-                        <button type="button" class="btn title-equip"
-                                th:if="${titleShop.ownedTitleIds.contains(t.id) && titleShop.equippedTitleId != t.id}">Equip</button>
-                        <button type="button" class="btn title-unequip"
-                                th:if="${titleShop.equippedTitleId == t.id}">Unequip</button>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(titleShop.catalog)}">
-                    <td colspan="5" class="muted" style="text-align:center;">No titles configured.</td>
-                </tr>
-                </tbody>
-            </table>
         </div>
     </section>
 

@@ -25,8 +25,7 @@ class ModerationWebService(
     private val introWebService: IntroWebService,
     private val voiceSessionService: VoiceSessionService,
     private val titleService: TitleService,
-    private val snapshotService: MonthlyCreditSnapshotService,
-    private val titleRoleService: TitleRoleService
+    private val snapshotService: MonthlyCreditSnapshotService
 ) {
     companion object {
         const val MAX_POLL_OPTIONS = 10
@@ -78,7 +77,8 @@ class ModerationWebService(
                 musicPermission = dto?.musicPermission ?: true,
                 memePermission = dto?.memePermission ?: true,
                 digPermission = dto?.digPermission ?: true,
-                superUser = dto?.superUser ?: false
+                superUser = dto?.superUser ?: false,
+                socialCredit = dto?.socialCredit ?: 0L
             )
         }.sortedBy { it.name.lowercase() }
 
@@ -150,77 +150,6 @@ class ModerationWebService(
                     creditsEarnedThisMonth = creditsDelta
                 )
             }
-    }
-
-    fun getTitlesForGuild(guildId: Long, actorDiscordId: Long): TitleShopView {
-        val catalog = safely("title catalog", emptyList<database.dto.TitleDto>()) {
-            titleService.listAll()
-        }.map { t ->
-            TitleShopEntry(
-                id = t.id ?: 0,
-                label = t.label,
-                cost = t.cost,
-                description = t.description,
-                colorHex = t.colorHex
-            )
-        }
-        val ownedIds: Set<Long> = safely("owned titles", emptyList<database.dto.UserOwnedTitleDto>()) {
-            titleService.listOwned(actorDiscordId)
-        }.mapTo(HashSet()) { it.titleId }
-        val actorDto = userService.getUserById(actorDiscordId, guildId)
-        val equippedId = actorDto?.activeTitleId
-        val balance = actorDto?.socialCredit ?: 0L
-        return TitleShopView(
-            catalog = catalog,
-            ownedTitleIds = ownedIds,
-            equippedTitleId = equippedId,
-            balance = balance
-        )
-    }
-
-    fun buyTitle(actorDiscordId: Long, guildId: Long, titleId: Long): String? {
-        if (jda.getGuildById(guildId) == null) return "Bot is not in that server."
-        val title = titleService.getById(titleId) ?: return "Title not found."
-        val actor = userService.getUserById(actorDiscordId, guildId) ?: return "You don't have a profile in that server yet."
-        if (titleService.owns(actorDiscordId, titleId)) return "You already own this title."
-        val balance = actor.socialCredit ?: 0L
-        if (balance < title.cost) return "Not enough credits. You need ${title.cost}, you have $balance."
-        actor.socialCredit = balance - title.cost
-        userService.updateUser(actor)
-        titleService.recordPurchase(actorDiscordId, titleId)
-        return null
-    }
-
-    fun equipTitle(actorDiscordId: Long, guildId: Long, titleId: Long): String? {
-        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
-        val member = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
-        val actor = userService.getUserById(actorDiscordId, guildId) ?: return "No profile in that server."
-        val title = titleService.getById(titleId) ?: return "Title not found."
-        if (!titleService.owns(actorDiscordId, titleId)) return "You don't own this title."
-        val ownedIds = titleService.listOwned(actorDiscordId).map { it.titleId }.toSet()
-        return when (val r = titleRoleService.equip(guild, member, title, ownedIds)) {
-            is TitleRoleResult.Ok -> {
-                actor.activeTitleId = titleId
-                userService.updateUser(actor)
-                null
-            }
-            is TitleRoleResult.Error -> r.message
-        }
-    }
-
-    fun unequipTitle(actorDiscordId: Long, guildId: Long): String? {
-        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
-        val member = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
-        val actor = userService.getUserById(actorDiscordId, guildId) ?: return "No profile in that server."
-        val ownedIds = titleService.listOwned(actorDiscordId).map { it.titleId }.toSet()
-        return when (val r = titleRoleService.unequip(guild, member, ownedIds)) {
-            is TitleRoleResult.Ok -> {
-                actor.activeTitleId = null
-                userService.updateUser(actor)
-                null
-            }
-            is TitleRoleResult.Error -> r.message
-        }
     }
 
     fun togglePermission(
@@ -513,7 +442,8 @@ data class ModeratedMember(
     val musicPermission: Boolean,
     val memePermission: Boolean,
     val digPermission: Boolean,
-    val superUser: Boolean
+    val superUser: Boolean,
+    val socialCredit: Long
 )
 
 data class VoiceChannelInfo(
@@ -548,21 +478,6 @@ data class LeaderboardRow(
         return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
     }
 }
-
-data class TitleShopEntry(
-    val id: Long,
-    val label: String,
-    val cost: Long,
-    val description: String?,
-    val colorHex: String?
-)
-
-data class TitleShopView(
-    val catalog: List<TitleShopEntry>,
-    val ownedTitleIds: Set<Long>,
-    val equippedTitleId: Long?,
-    val balance: Long
-)
 
 data class MoveResult(
     val moved: List<String> = emptyList(),

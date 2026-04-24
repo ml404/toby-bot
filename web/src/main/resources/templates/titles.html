@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Titles', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container" th:attr="data-guild-id=${guildId}">
+
+    <div class="mod-header">
+        <div>
+            <a class="back-link" th:href="@{/titles/guilds}">&larr; All servers</a>
+            <h1>Title Shop</h1>
+        </div>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section>
+        <p class="muted mb-4">
+            Spend your social credit on vanity titles. Each purchased title also
+            grants you a matching Discord role on this server when equipped —
+            visible everywhere you appear in chat, member list and voice.
+            The bot needs the <strong>Manage Roles</strong> permission, and its
+            role must sit above the title roles in the hierarchy.
+        </p>
+        <p class="muted mb-4">
+            Your balance: <strong th:text="${titleShop.balance} + ' credits'">0 credits</strong>
+        </p>
+        <div class="mod-table-wrap">
+            <table class="mod-table">
+                <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Cost</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${titleShop.catalog}" th:attr="data-title-id=${t.id}">
+                    <td data-label="Title">
+                        <span class="title-label"
+                              th:text="${t.label}"
+                              th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}">Title</span>
+                    </td>
+                    <td data-label="Cost" th:text="${t.cost}">0</td>
+                    <td data-label="Description" th:text="${t.description != null ? t.description : ''}"></td>
+                    <td data-label="Status">
+                        <span th:if="${titleShop.equippedTitleId == t.id}" class="badge owner">equipped</span>
+                        <span th:if="${titleShop.equippedTitleId != t.id && titleShop.ownedTitleIds.contains(t.id)}" class="muted">owned</span>
+                        <span th:if="${!titleShop.ownedTitleIds.contains(t.id)}" class="muted">available</span>
+                    </td>
+                    <td data-label="Action">
+                        <button type="button" class="btn title-buy"
+                                th:if="${!titleShop.ownedTitleIds.contains(t.id)}"
+                                th:disabled="${titleShop.balance < t.cost}">Buy</button>
+                        <button type="button" class="btn title-equip"
+                                th:if="${titleShop.ownedTitleIds.contains(t.id) && titleShop.equippedTitleId != t.id}">Equip</button>
+                        <button type="button" class="btn title-unequip"
+                                th:if="${titleShop.equippedTitleId == t.id}">Unequip</button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(titleShop.catalog)}">
+                    <td colspan="5" class="muted" style="text-align:center;">No titles configured.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/titles.js}"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Profile', '/css/profile.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <div class="profile-header">
+        <a class="back-link" th:href="@{/profile/guilds}">&larr; All servers</a>
+        <h1 th:text="${profile.guildName}">Guild</h1>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="profile-grid">
+        <section class="profile-card">
+            <h2>Identity</h2>
+            <div class="profile-identity">
+                <img th:if="${profile.avatarUrl != null}"
+                     th:src="${profile.avatarUrl}"
+                     th:alt="${profile.displayName} + ' avatar'"
+                     class="profile-avatar">
+                <div>
+                    <div class="profile-name" th:text="${profile.displayName}">Name</div>
+                    <div class="muted" th:if="${profile.isOwner}">Server owner</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="profile-card">
+            <h2>Economy</h2>
+            <div class="profile-row">
+                <span class="muted">Balance</span>
+                <strong th:text="${profile.balance} + ' credits'">0 credits</strong>
+            </div>
+            <div class="profile-row">
+                <span class="muted">Equipped title</span>
+                <span th:if="${profile.equippedTitleLabel != null}"
+                      class="title-pill"
+                      th:style="${profile.equippedTitleColorHex != null ? 'color: ' + profile.equippedTitleColorHex : ''}"
+                      th:text="${profile.equippedTitleLabel}">Title</span>
+                <span th:unless="${profile.equippedTitleLabel != null}" class="muted">—</span>
+            </div>
+            <a class="btn profile-action" th:href="@{/titles/{id}(id=${profile.guildId})}">Go to title shop &rarr;</a>
+        </section>
+
+        <section class="profile-card">
+            <h2>Permissions</h2>
+            <ul class="profile-perms">
+                <li th:each="p : ${profile.permissions}">
+                    <span th:text="${p.name}">Name</span>
+                    <span class="badge" th:classappend="${p.enabled} ? ' on' : ' off'"
+                          th:text="${p.enabled} ? 'On' : 'Off'">On</span>
+                </li>
+            </ul>
+        </section>
+
+        <section class="profile-card profile-card-wide">
+            <h2>Owned titles</h2>
+            <div th:if="${#lists.isEmpty(profile.ownedTitles)}" class="muted">
+                You don't own any titles yet.
+                <a th:href="@{/titles/{id}(id=${profile.guildId})}">Browse the shop &rarr;</a>
+            </div>
+            <ul class="profile-titles" th:if="${not #lists.isEmpty(profile.ownedTitles)}">
+                <li th:each="t : ${profile.ownedTitles}">
+                    <span class="title-pill"
+                          th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}"
+                          th:text="${t.label}">Title</span>
+                    <span class="badge owner" th:if="${t.equipped}">equipped</span>
+                    <span class="muted" th:if="${t.description != null}" th:text="${t.description}"></span>
+                </li>
+            </ul>
+        </section>
+    </div>
+</main>
+</body>
+</html>
