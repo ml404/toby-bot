@@ -7,6 +7,7 @@ import bot.toby.command.commands.dnd.CharacterCommand
 import bot.toby.command.commands.dnd.DnDSearchCommand
 import bot.toby.command.commands.dnd.InitiativeCommand
 import bot.toby.command.commands.dnd.LinkCharacterCommand
+import bot.toby.command.commands.dnd.RefreshCharacterCommand
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.command.commands.fetch.DbdRandomKillerCommand
 import bot.toby.command.commands.fetch.Kf2RandomMapCommand
@@ -119,12 +120,13 @@ class CommandManagerTest {
             EightBallCommand::class.java,
             LinkCharacterCommand::class.java,
             CharacterCommand::class.java,
+            RefreshCharacterCommand::class.java,
             CampaignCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(42, commandManager.allCommands.size)
-        Assertions.assertEquals(42, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(43, commandManager.allCommands.size)
+        Assertions.assertEquals(43, commandManager.allSlashCommands.size)
     }
 
     @Test

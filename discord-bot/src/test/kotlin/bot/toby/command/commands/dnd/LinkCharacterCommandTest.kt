@@ -10,6 +10,7 @@ import bot.toby.dto.web.dnd.AbilityStat
 import bot.toby.dto.web.dnd.CharacterSheet
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.charactersheet.CharacterSheetProvider
+import bot.toby.helpers.charactersheet.CharacterSheetProvider.FetchResult
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -44,6 +45,7 @@ class LinkCharacterCommandTest : CommandTest {
         race = null,
         classes = null
     )
+    private val mockSheetJson = """{"id":48690485}"""
 
     @BeforeEach
     fun setUp() {
@@ -60,16 +62,21 @@ class LinkCharacterCommandTest : CommandTest {
         tearDownCommonMocks()
     }
 
-    @Test
-    fun `valid dndbeyond URL links character and shows DEX modifier in embed`() = runTest {
+    private fun givenInput(raw: String) {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
-        every { optionMapping.asString } returns "https://www.dndbeyond.com/characters/48690485"
-        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
+        every { optionMapping.asString } returns raw
+    }
+
+    @Test
+    fun `valid dndbeyond URL links character and shows DEX modifier in embed`() = runTest {
+        givenInput("https://www.dndbeyond.com/characters/48690485")
+        coEvery { characterSheetProvider.fetchCharacterSheet(48690485L) } returns
+            FetchResult.Success(mockCharacter, mockSheetJson)
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
+        coVerify { characterSheetProvider.fetchCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
         verify { userDtoHelper.updateUser(requestingUserDto) }
         verify { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
@@ -77,55 +84,72 @@ class LinkCharacterCommandTest : CommandTest {
 
     @Test
     fun `plain numeric ID links character`() = runTest {
-        val optionMapping = mockk<OptionMapping>()
-        every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
-        every { optionMapping.asString } returns "48690485"
-        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
+        givenInput("48690485")
+        coEvery { characterSheetProvider.fetchCharacterSheet(48690485L) } returns
+            FetchResult.Success(mockCharacter, mockSheetJson)
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
+        coVerify { characterSheetProvider.fetchCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
     }
 
     @Test
     fun `API service URL links character`() = runTest {
-        val optionMapping = mockk<OptionMapping>()
-        every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
-        every { optionMapping.asString } returns "https://character-service.dndbeyond.com/character/v5/character/48690485"
-        coEvery { characterSheetProvider.getCharacterSheet(48690485L) } returns mockCharacter
+        givenInput("https://character-service.dndbeyond.com/character/v5/character/48690485")
+        coEvery { characterSheetProvider.fetchCharacterSheet(48690485L) } returns
+            FetchResult.Success(mockCharacter, mockSheetJson)
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
-        coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
+        coVerify { characterSheetProvider.fetchCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
     }
 
     @Test
     fun `invalid input with no digits replies with error`() = runTest {
-        val optionMapping = mockk<OptionMapping>()
-        every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
-        every { optionMapping.asString } returns "not-a-valid-url"
+        givenInput("not-a-valid-url")
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
         verify { event.hook.sendMessage(any<String>()) }
         verify(exactly = 0) { userDtoHelper.updateUser(any()) }
-        coVerify(exactly = 0) { characterSheetProvider.getCharacterSheet(any()) }
+        coVerify(exactly = 0) { characterSheetProvider.fetchCharacterSheet(any()) }
     }
 
     @Test
-    fun `no cached sheet still links id and replies with plain message`() = runTest {
-        val optionMapping = mockk<OptionMapping>()
-        every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
-        every { optionMapping.asString } returns "99999999"
-        coEvery { characterSheetProvider.getCharacterSheet(99999999L) } returns null
+    fun `forbidden response does not save id`() = runTest {
+        givenInput("99999999")
+        coEvery { characterSheetProvider.fetchCharacterSheet(99999999L) } returns FetchResult.Forbidden
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
+
+        verify(exactly = 0) { requestingUserDto.dndBeyondCharacterId = any() }
+        verify(exactly = 0) { userDtoHelper.updateUser(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("private", ignoreCase = true) }) }
+    }
+
+    @Test
+    fun `not found response does not save id`() = runTest {
+        givenInput("99999999")
+        coEvery { characterSheetProvider.fetchCharacterSheet(99999999L) } returns FetchResult.NotFound
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
+
+        verify(exactly = 0) { requestingUserDto.dndBeyondCharacterId = any() }
+        verify(exactly = 0) { userDtoHelper.updateUser(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("No D&D Beyond character") }) }
+    }
+
+    @Test
+    fun `unavailable response saves id with warning`() = runTest {
+        givenInput("99999999")
+        coEvery { characterSheetProvider.fetchCharacterSheet(99999999L) } returns FetchResult.Unavailable()
 
         command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay)
 
         verify { requestingUserDto.dndBeyondCharacterId = 99999999L }
         verify { userDtoHelper.updateUser(requestingUserDto) }
-        verify { event.hook.sendMessage(any<String>()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("unreachable") }) }
     }
-
 }

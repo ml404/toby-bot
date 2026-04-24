@@ -16,4 +16,7 @@ class DefaultCharacterSheetService(
 
     override fun getSheet(characterId: Long): String? =
         characterSheetPersistence.findById(characterId)
+
+    override fun getCachedSheet(characterId: Long): CharacterSheetPersistence.CachedSheet? =
+        characterSheetPersistence.findCached(characterId)
 }
