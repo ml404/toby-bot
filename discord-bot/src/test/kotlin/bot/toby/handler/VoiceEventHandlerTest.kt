@@ -113,6 +113,12 @@ class VoiceEventHandlerTest {
         every { nonBotMember1.user.isBot } returns false
         every { nonBotMember2.user.isBot } returns false
         every { botMember.user.isBot } returns true
+        // Needed for the startup voice-session reconciliation that runs
+        // before connectToMostPopulatedVoiceChannel.
+        every { nonBotMember1.idLong } returns 11L
+        every { nonBotMember2.idLong } returns 22L
+        every { voiceChannel1.idLong } returns 101L
+        every { voiceChannel2.idLong } returns 102L
 
         every { guild1.audioManager } returns audioManager1
         every { guild2.audioManager } returns audioManager2
@@ -136,6 +142,62 @@ class VoiceEventHandlerTest {
 
         verify(exactly = 1) { audioManager1.openAudioConnection(voiceChannel1) }
         verify(exactly = 1) { audioManager2.openAudioConnection(voiceChannel2) }
+    }
+
+    @Test
+    fun `onReady opens a fresh voice session for every currently-connected non-bot member`() {
+        // Reproduces the "deploy in the middle of voice eats the post-deploy
+        // span" bug: without this reconciliation, the user's eventual leave
+        // event has no open session to close, and the time between bot-ready
+        // and leave is silently discarded.
+        val guild = mockk<Guild>(relaxed = true)
+        val readyEvent = mockk<ReadyEvent>(relaxed = true)
+        val voiceChannel = mockk<VoiceChannel>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val human1 = mockk<Member>(relaxed = true)
+        val human2 = mockk<Member>(relaxed = true)
+        val bot = mockk<Member>(relaxed = true)
+        val voiceSessionService = mockk<database.service.VoiceSessionService>(relaxed = true)
+
+        every { readyEvent.jda } returns jda
+        every { jda.guildCache.iterator() } returns mutableListOf(guild).iterator()
+        every { guild.idLong } returns 7L
+        every { guild.voiceChannels } returns listOf(voiceChannel)
+        every { guild.audioManager } returns audioManager
+        every { voiceChannel.idLong } returns 99L
+        every { voiceChannel.guild } returns guild
+        every { voiceChannel.members } returns listOf(human1, human2, bot)
+        every { human1.user.isBot } returns false
+        every { human2.user.isBot } returns false
+        every { bot.user.isBot } returns true
+        every { human1.idLong } returns 100L
+        every { human2.idLong } returns 200L
+
+        // No prior session for either human — fresh insert path.
+        every { voiceSessionService.findOpenSession(any(), any()) } returns null
+
+        val handler = VoiceEventHandler(
+            configService = mockk(relaxed = true),
+            userDtoHelper = mockk(relaxed = true),
+            introHelper = mockk(relaxed = true),
+            voiceSessionService = voiceSessionService,
+            voiceCompanyTracker = mockk(relaxed = true),
+            voiceCreditAwardService = mockk(relaxed = true),
+            awardService = mockk(relaxed = true)
+        )
+
+        handler.onReady(readyEvent)
+
+        // Both humans get a session; the bot does NOT.
+        verify(exactly = 1) {
+            voiceSessionService.openSession(match { it.discordId == 100L && it.guildId == 7L && it.channelId == 99L })
+        }
+        verify(exactly = 1) {
+            voiceSessionService.openSession(match { it.discordId == 200L && it.guildId == 7L && it.channelId == 99L })
+        }
+        verify(exactly = 0) {
+            voiceSessionService.openSession(match { it.discordId == bot.idLong })
+        }
     }
 
 

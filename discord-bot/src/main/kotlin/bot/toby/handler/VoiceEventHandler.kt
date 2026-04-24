@@ -45,9 +45,28 @@ class VoiceEventHandler @Autowired constructor(
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun onReady(event: ReadyEvent) {
-        event.jda.guildCache.forEach {
-            logger.setGuildContext(it)
-            it.connectToMostPopulatedVoiceChannel()
+        val now = Instant.now()
+        event.jda.guildCache.forEach { guild ->
+            logger.setGuildContext(guild)
+            // Reconcile voice state: any non-bot member already in a voice
+            // channel needs an open voice_session row, otherwise their
+            // eventual leave event has nothing to close and the post-restart
+            // span gets silently dropped. The recovery hook just closed any
+            // *pre-restart* sessions; this opens fresh ones from this moment.
+            guild.voiceChannels.forEach { channel ->
+                channel.members
+                    .filter { !it.user.isBot }
+                    .forEach { member ->
+                        runCatching { openSessionForUser(member.idLong, guild.idLong, channel, now) }
+                            .onFailure {
+                                logger.error(
+                                    "Failed to open startup voice session for user ${member.idLong} " +
+                                            "in channel ${channel.idLong}: ${it.message}"
+                                )
+                            }
+                    }
+            }
+            guild.connectToMostPopulatedVoiceChannel()
         }
     }
 
