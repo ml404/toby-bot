@@ -182,6 +182,24 @@
                 </select>
                 <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
             </div>
+            <!-- Saving "true" here kicks an ActivityTrackingEnabled event that
+                 fires the first-enable DM flow, matching the Discord
+                 /setconfig behaviour. Default value is "false" when no row
+                 exists yet — matches ActivityTrackingService's read default. -->
+            <div class="config-row" data-key="ACTIVITY_TRACKING">
+                <label>Game-activity tracking</label>
+                <select th:disabled="${!isOwner}">
+                    <option value="false"
+                            th:selected="${overview.config['ACTIVITY_TRACKING'] == null or overview.config['ACTIVITY_TRACKING'] == 'false'}">
+                        Disabled
+                    </option>
+                    <option value="true"
+                            th:selected="${overview.config['ACTIVITY_TRACKING'] == 'true'}">
+                        Enabled
+                    </option>
+                </select>
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
         </div>
     </section>
 
