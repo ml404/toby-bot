@@ -111,13 +111,19 @@ class TitlesWebService(
             return BuyWithTobyOutcome.Error("Bot is not in that server.")
         }
         val title = titleService.getById(titleId) ?: return BuyWithTobyOutcome.Error("Title not found.")
-        if (titleService.owns(actorDiscordId, titleId)) {
-            return BuyWithTobyOutcome.AlreadyOwns
-        }
 
         // Lock the user row first — same order as EconomyTradeService to avoid deadlock.
         val actor = userService.getUserByIdForUpdate(actorDiscordId, guildId)
             ?: return BuyWithTobyOutcome.Error("You don't have a profile in that server yet.")
+
+        // Re-check ownership INSIDE the lock. Two concurrent callers can both
+        // pre-check `owns=false`; if the check lived before the lock, the loser
+        // would proceed past the gate and trip user_owned_title's PK on insert.
+        // Inside the lock the loser observes the winner's commit and returns
+        // AlreadyOwns cleanly.
+        if (titleService.owns(actorDiscordId, titleId)) {
+            return BuyWithTobyOutcome.AlreadyOwns
+        }
         val currentCredits = actor.socialCredit ?: 0L
         val shortfall = (title.cost - currentCredits).coerceAtLeast(0L)
 

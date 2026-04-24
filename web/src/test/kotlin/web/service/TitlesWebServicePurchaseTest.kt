@@ -173,17 +173,24 @@ class TitlesWebServicePurchaseTest {
     }
 
     @Test
-    fun `already-owned title short-circuits with no DB mutation`() {
+    fun `already-owned title returns AlreadyOwns with no DB mutation`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
+        val actor = UserDto(discordId = discordId, guildId = guildId).apply {
+            socialCredit = 500L
+            tobyCoins = 0L
+        }
         every { titleService.getById(9L) } returns title
+        // User lock is acquired BEFORE the owns check (so concurrent callers
+        // serialise). Ownership is then observed inside the lock.
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
         every { titleService.owns(discordId, 9L) } returns true
 
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         assertEquals(BuyWithTobyOutcome.AlreadyOwns, outcome)
-        verify(exactly = 0) { userService.getUserByIdForUpdate(any(), any()) }
         verify(exactly = 0) { tradeService.sell(any(), any(), any()) }
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
+        verify(exactly = 0) { userService.updateUser(any()) }
     }
 
     @Test
