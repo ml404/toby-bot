@@ -1,7 +1,9 @@
 package web.service
 
+import database.dto.TitleDto
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
+import database.service.TitleService
 import database.service.TobyCoinMarketService
 import database.service.UserService
 import io.mockk.every
@@ -23,6 +25,7 @@ class LeaderboardWebServiceTobyCoinTest {
     private lateinit var guild: Guild
     private lateinit var userService: UserService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var titleService: TitleService
     private lateinit var service: LeaderboardWebService
 
     @BeforeEach
@@ -31,6 +34,7 @@ class LeaderboardWebServiceTobyCoinTest {
         guild = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        titleService = mockk(relaxed = true)
         every { jda.getGuildById(guildId) } returns guild
         every { guild.name } returns "Test Guild"
 
@@ -41,7 +45,8 @@ class LeaderboardWebServiceTobyCoinTest {
                 every { getLeaderboard(guildId) } returns emptyList()
             },
             userService = userService,
-            marketService = marketService
+            marketService = marketService,
+            titleService = titleService
         )
     }
 
@@ -102,6 +107,49 @@ class LeaderboardWebServiceTobyCoinTest {
         assertEquals(1, leaders.size)
         assertEquals(0L, leaders[0].portfolioCredits, "portfolio = 0 when price unknown")
         assertEquals(10L, leaders[0].coins)
+    }
+
+    @Test
+    fun `tobyCoinLeaders shows each user's equipped title, null if none`() {
+        every { marketService.getMarket(guildId) } returns
+            TobyCoinMarketDto(guildId = guildId, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply {
+                tobyCoins = 100L
+                activeTitleId = 7L
+            },
+            UserDto(discordId = 2L, guildId = guildId).apply {
+                tobyCoins = 50L
+                activeTitleId = null
+            }
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { guild.getMemberById(2L) } returns member(2L, "Bob")
+        every { titleService.getById(7L) } returns TitleDto(id = 7L, label = "Centurion", cost = 500L)
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals("Centurion", leaders.first { it.name == "Alice" }.title)
+        assertEquals(null, leaders.first { it.name == "Bob" }.title)
+    }
+
+    @Test
+    fun `tobyCoinLeaders swallows title lookup failures rather than breaking the page`() {
+        every { marketService.getMarket(guildId) } returns
+            TobyCoinMarketDto(guildId = guildId, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply {
+                tobyCoins = 100L
+                activeTitleId = 7L
+            }
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { titleService.getById(7L) } throws RuntimeException("title table unavailable")
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals(1, leaders.size)
+        assertEquals(null, leaders[0].title, "title failure falls back to null, row still renders")
     }
 
     @Test

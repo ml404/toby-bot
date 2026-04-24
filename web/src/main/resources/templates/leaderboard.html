@@ -167,6 +167,7 @@
                     <tr>
                         <th class="lb-col-rank">#</th>
                         <th>Member</th>
+                        <th>Title</th>
                         <th class="lb-col-value">🪙 TOBY</th>
                         <th class="lb-col-value">💰 Portfolio</th>
                     </tr>
@@ -186,6 +187,10 @@
                                      alt="">
                                 <span class="lb-name" th:text="${row.name}">Name</span>
                             </div>
+                        </td>
+                        <td data-label="Title">
+                            <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
+                            <span th:unless="${row.title != null}" class="muted">—</span>
                         </td>
                         <td data-label="TOBY" class="lb-col-value">
                             <strong class="lb-value lb-value-toby" th:text="${row.coins}">0</strong>
