@@ -25,17 +25,28 @@ object TobyCoinEngine {
     /** Scheduled tick cadence — also used as Δt in the GBM formula. */
     const val TICK_INTERVAL_SECONDS = 5L * 60L
 
-    /** Annualised volatility. 0.6 ≈ typical small-cap / crypto territory. */
-    const val VOLATILITY = 0.6
+    /**
+     * Annualised volatility. 1.5 ≈ memecoin / small-cap territory — gives
+     * roughly ±0.5 % per 5-min tick and ±8 % per day, dramatic enough that
+     * the chart visibly moves but recoverable enough that holders aren't
+     * wiped out by a bad afternoon.
+     */
+    const val VOLATILITY = 1.5
 
-    // Drift chosen so E[log(S_{t+dt}/S_t)] = 0 — the median path is flat and
-    // the walk is equally likely to go up or down each tick. With DRIFT=0 the
-    // lognormal Itô correction makes the median decay, so most observed paths
-    // trend downward even though the mean is conserved.
-    const val DRIFT = 0.5 * VOLATILITY * VOLATILITY
+    /**
+     * Slight positive drift on top of the lognormal Itô correction, so the
+     * median path trends upward instead of being flat. With pure
+     * `0.5 * σ²` the median is technically flat but human eyes read the
+     * lognormal asymmetry as "always sinking"; a small bias counters that.
+     */
+    const val DRIFT = 0.5 * VOLATILITY * VOLATILITY + 0.05
 
-    /** Per-coin trade impact on price. 1000 coins moves the market ~40 %. */
-    const val TRADE_IMPACT = 0.0004
+    /**
+     * Per-coin trade impact on price. 1000 coins moves the market ~10 %.
+     * Whales can still shift the chart but a single big sell no longer nukes
+     * the market for everyone else.
+     */
+    const val TRADE_IMPACT = 0.0001
 
     private const val SECONDS_PER_YEAR = 365.0 * 24.0 * 60.0 * 60.0
 
