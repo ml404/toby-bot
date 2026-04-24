@@ -42,12 +42,6 @@ class VoiceEventHandler @Autowired constructor(
     private val awardService: SocialCreditAwardService
 ) : ListenerAdapter() {
 
-    companion object {
-        // Small, daily-capped reward so joining a channel with an intro set
-        // feels like something without becoming farmable via rejoin spam.
-        const val INTRO_PLAY_CREDIT: Long = 2L
-    }
-
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun onReady(event: ReadyEvent) {
@@ -285,5 +279,9 @@ class VoiceEventHandler @Autowired constructor(
 
     companion object {
         val lastConnectedChannel = ConcurrentHashMap<Long, VoiceChannel>()
+
+        // Small, daily-capped reward so joining a channel with an intro set
+        // feels like something without becoming farmable via rejoin spam.
+        const val INTRO_PLAY_CREDIT: Long = 2L
     }
 }
