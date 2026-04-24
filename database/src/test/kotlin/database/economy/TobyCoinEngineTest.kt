@@ -47,8 +47,10 @@ internal class TobyCoinEngineTest {
     /**
      * Regression guard: with DRIFT=0 the lognormal Itô correction made the
      * median of many ticks decay, so users saw charts that "only went down".
-     * Drift is now set so the median step is zero — a Monte-Carlo run should
-     * land the median trajectory very close to where it started.
+     * Drift is now slightly positive so the median trends gently up — a
+     * Monte-Carlo run over a short window should land the median close to
+     * the starting price (the upward bias only meaningfully accumulates
+     * over much longer horizons).
      */
     @Test
     fun `median of many ticks stays close to the starting price`() {
@@ -65,8 +67,45 @@ internal class TobyCoinEngineTest {
 
         val median = finals[finals.size / 2]
         assertTrue(
-            median in 85.0..115.0,
+            median in 80.0..120.0,
             "median final price after $ticksPerRun ticks should stay near $startPrice but was $median"
         )
+    }
+
+    /**
+     * The market is meant to feel volatile enough to be fun. After a day's
+     * worth of ticks (~288), the spread between the 5th and 95th percentiles
+     * should be wide — a flat-line chart is boring.
+     */
+    @Test
+    fun `daily ticks produce visibly volatile spread across paths`() {
+        val runs = 5_000
+        val ticksPerDay = 288   // 5-min ticks * 12 per hour * 24
+        val startPrice = 100.0
+        val rng = Random(20260424L)
+
+        val finals = DoubleArray(runs) {
+            var price = startPrice
+            repeat(ticksPerDay) { price = TobyCoinEngine.tickRandomWalk(price, random = rng) }
+            price
+        }.also { it.sort() }
+
+        val p5 = finals[(runs * 0.05).toInt()]
+        val p95 = finals[(runs * 0.95).toInt()]
+        // With σ=1.5 annualised, 1-day log-stdev ≈ 0.078; ~95% band should
+        // span at least ±10% from the start price.
+        assertTrue(p5 < 90.0,  "5th percentile after a day should be below 90 but was $p5")
+        assertTrue(p95 > 110.0, "95th percentile after a day should be above 110 but was $p95")
+    }
+
+    @Test
+    fun `trade impact is meaningful but not market-nuking`() {
+        // 1000 coins should move the price by roughly 10%, not 40%.
+        val priceAfterBuy  = TobyCoinEngine.applyBuyPressure(100.0, 1_000L)
+        val priceAfterSell = TobyCoinEngine.applySellPressure(100.0, 1_000L)
+        assertTrue(priceAfterBuy in 105.0..115.0,
+            "1000 coins bought should move price ~10% up, was ${priceAfterBuy}")
+        assertTrue(priceAfterSell in 85.0..95.0,
+            "1000 coins sold should move price ~10% down, was ${priceAfterSell}")
     }
 }
