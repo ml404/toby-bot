@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TobyBot &mdash; Commands</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
+    <style>
+        .commands-page { max-width: 960px; margin: 40px auto; padding: 0 24px 80px; }
+        .commands-page h1 { font-size: 1.8rem; color: var(--text); margin-bottom: 8px; }
+        .commands-page .subtitle { color: var(--text-muted); margin-bottom: 40px; }
+        .category { margin-bottom: 48px; }
+        .category h2 {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-wrap {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .commands-table { width: 100%; border-collapse: collapse; }
+        .commands-table th {
+            text-align: left;
+            padding: 10px 16px;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+        .commands-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+        .commands-table tr:last-child td { border-bottom: none; }
+        .commands-table tr:hover td { background: rgba(88, 101, 242, 0.05); }
+        .cmd { font-family: monospace; color: var(--accent); font-size: 0.95rem; white-space: nowrap; }
+        .desc { color: var(--text); }
+        .opts { list-style: none; padding: 0; margin: 0; }
+        .opt { margin-bottom: 8px; }
+        .opt:last-child { margin-bottom: 0; }
+        .opt-name { font-family: monospace; color: var(--text); font-size: 0.85rem; }
+        .badge {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            background: var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .opt-desc { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+        .choices { list-style: none; margin: 4px 0 0; padding-left: 10px; }
+        .choice { font-size: 0.78rem; color: var(--text-muted); font-family: monospace; }
+        .choice::before { content: "• "; color: var(--accent); }
+        .none { color: var(--text-muted); font-style: italic; font-size: 0.85rem; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="commands-page">
+    <h1>Commands</h1>
+    <p class="subtitle">All available slash commands for TobyBot.</p>
+
+    <section class="category" th:each="category : ${categories}">
+        <h2 th:text="${category.title}">Category</h2>
+        <div class="table-wrap">
+            <table class="commands-table">
+                <thead>
+                <tr>
+                    <th>Command</th>
+                    <th>Description</th>
+                    <th>Options</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="command : ${category.commands}">
+                    <td>
+                        <span class="cmd" th:text="'/' + ${command.name}">/cmd</span>
+                    </td>
+                    <td class="desc" th:text="${command.description}">Description</td>
+                    <td>
+                        <!-- Three render modes: top-level options, sub-commands, or nothing. -->
+                        <ul class="opts" th:if="${not #lists.isEmpty(command.optionData)}">
+                            <li class="opt" th:each="option : ${command.optionData}">
+                                <span class="opt-name" th:text="${option.name}">name</span>
+                                <span class="badge" th:text="${option.type.name}">TYPE</span>
+                                <div class="opt-desc" th:text="${option.description}">description</div>
+                                <ul class="choices" th:if="${not #lists.isEmpty(option.choices)}">
+                                    <li class="choice"
+                                        th:each="choice : ${option.choices}"
+                                        th:text="${choice.name}">choice</li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <ul class="opts"
+                            th:if="${#lists.isEmpty(command.optionData) and not #lists.isEmpty(command.subCommands)}">
+                            <li class="opt" th:each="sub : ${command.subCommands}">
+                                <span class="opt-name" th:text="${sub.name}">subname</span>
+                                <div class="opt-desc" th:text="${sub.description}">subdescription</div>
+                                <ul class="choices" th:if="${not #lists.isEmpty(sub.options)}">
+                                    <li class="choice"
+                                        th:each="subopt : ${sub.options}"
+                                        th:text="${subopt.name} + ': ' + ${subopt.description}">subopt</li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <span class="none"
+                              th:if="${#lists.isEmpty(command.optionData) and #lists.isEmpty(command.subCommands)}">&mdash;</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+</body>
+</html>
