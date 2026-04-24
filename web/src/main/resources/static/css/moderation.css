@@ -9,6 +9,38 @@
     color: var(--text-muted);
 }
 
+/* Member search bar on the Users tab — client-side filter. */
+.mod-search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+.mod-search-input {
+    flex: 1;
+    max-width: 360px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mod-search-input::placeholder { color: var(--text-muted); }
+.mod-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+}
+.mod-search-count {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.mod-table tr.is-hidden { display: none; }
+
 .tabs {
     display: flex;
     flex-wrap: wrap;
