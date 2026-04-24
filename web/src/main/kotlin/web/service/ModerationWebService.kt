@@ -16,7 +16,8 @@ class ModerationWebService(
     private val jda: JDA,
     private val userService: UserService,
     private val configService: ConfigService,
-    private val introWebService: IntroWebService
+    private val introWebService: IntroWebService,
+    private val initiativeResolver: InitiativeResolver
 ) {
     companion object {
         const val MAX_POLL_OPTIONS = 10
@@ -63,7 +64,7 @@ class ModerationWebService(
                 memePermission = dto?.memePermission ?: true,
                 digPermission = dto?.digPermission ?: true,
                 superUser = dto?.superUser ?: false,
-                initiativeModifier = dto?.initiativeModifier ?: 0
+                initiativeModifier = dto?.let { initiativeResolver.resolve(it) }
             )
         }.sortedBy { it.name.lowercase() }
 
@@ -139,21 +140,6 @@ class ModerationWebService(
             UserDto.Permissions.DIG -> target.digPermission = !target.digPermission
             UserDto.Permissions.SUPERUSER -> target.superUser = !target.superUser
         }
-        userService.updateUser(target)
-        return null
-    }
-
-    fun setInitiativeModifier(
-        actorDiscordId: Long,
-        guildId: Long,
-        targetDiscordId: Long,
-        modifier: Int
-    ): String? {
-        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
-        if (modifier !in -20..20) return "Modifier must be between -20 and 20."
-        val target = userService.getUserById(targetDiscordId, guildId)
-            ?: UserDto(discordId = targetDiscordId, guildId = guildId).also { userService.createNewUser(it) }
-        target.initiativeModifier = modifier
         userService.updateUser(target)
         return null
     }
@@ -392,7 +378,7 @@ data class ModeratedMember(
     val memePermission: Boolean,
     val digPermission: Boolean,
     val superUser: Boolean,
-    val initiativeModifier: Int
+    val initiativeModifier: Int?
 )
 
 data class VoiceChannelInfo(

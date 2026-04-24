@@ -8,6 +8,7 @@ import bot.toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RES
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.UserDtoHelper
+import web.service.InitiativeResolver
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -36,7 +37,7 @@ class DnDCommandQueryHandlerTest {
     fun setUp() {
         userDtoHelper = mockk(relaxed = true)
         httpHelper = mockk(relaxed = true)
-        dndHelper = DnDHelper(userDtoHelper)
+        dndHelper = DnDHelper(userDtoHelper, mockk<InitiativeResolver>(relaxed = true))
 
     }
 

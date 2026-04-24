@@ -57,6 +57,10 @@
     text-transform: uppercase;
     color: var(--text-muted);
     letter-spacing: 0.04em;
+    position: sticky;
+    top: 0;
+    background: var(--bg-elevated);
+    z-index: 1;
 }
 .mod-table tr:last-child td { border-bottom: 0; }
 
@@ -100,13 +104,9 @@
     cursor: not-allowed;
 }
 
-.initiative-input {
-    width: 68px;
-    padding: 4px 8px;
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
+.initiative-value {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 .btn-danger {
@@ -224,4 +224,42 @@
 
 @media (max-width: 640px) {
     .tab-btn { padding: 8px 10px; font-size: 0.9rem; }
+
+    .mod-table-wrap {
+        overflow-x: visible;
+        border: 0;
+        background: transparent;
+        border-radius: 0;
+    }
+    .mod-table { min-width: 0; border-collapse: separate; border-spacing: 0; }
+    .mod-table thead { display: none; }
+    .mod-table tbody, .mod-table tr, .mod-table td { display: block; width: 100%; }
+    .mod-table tr {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 8px 12px;
+        margin-bottom: var(--space-3);
+    }
+    .mod-table tr:last-child td { border-bottom: 1px solid var(--border); }
+    .mod-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        padding: 8px 0;
+    }
+    .mod-table td:last-child { border-bottom: 0; }
+    .mod-table td::before {
+        content: attr(data-label);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        font-weight: 600;
+        flex: 0 0 auto;
+    }
+    .mod-table td[data-label="Member"] { display: block; }
+    .mod-table td[data-label="Member"]::before { display: none; }
 }

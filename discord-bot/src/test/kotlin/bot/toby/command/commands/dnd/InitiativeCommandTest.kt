@@ -11,6 +11,7 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
+import web.service.InitiativeResolver
 import database.service.UserService
 import io.mockk.*
 import net.dv8tion.jda.api.components.actionrow.ActionRow
@@ -39,7 +40,7 @@ internal class InitiativeCommandTest : CommandTest {
     fun setup() {
         setUpCommonMocks()
         userDtoHelper = mockk()
-        dndHelper = DnDHelper(userDtoHelper)
+        dndHelper = DnDHelper(userDtoHelper, mockk<InitiativeResolver>(relaxed = true))
         initiativeCommand = InitiativeCommand(dndHelper, mockk(relaxed = true))
         channelOption = mockk<OptionMapping>()
         initButtons = dndHelper.initButtons

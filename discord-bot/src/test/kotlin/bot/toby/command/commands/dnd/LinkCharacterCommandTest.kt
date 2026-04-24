@@ -52,7 +52,6 @@ class LinkCharacterCommandTest : CommandTest {
         userDtoHelper = mockk(relaxed = true)
         every { event.deferReply(true) } returns replyCallbackAction
         every { requestingUserDto.dndBeyondCharacterId = any() } just Runs
-        every { requestingUserDto.initiativeModifier = any() } just Runs
         command = LinkCharacterCommand(dispatcher, characterSheetProvider, userDtoHelper)
     }
 
@@ -62,7 +61,7 @@ class LinkCharacterCommandTest : CommandTest {
     }
 
     @Test
-    fun `valid dndbeyond URL links character and syncs DEX modifier`() = runTest {
+    fun `valid dndbeyond URL links character and shows DEX modifier in embed`() = runTest {
         val optionMapping = mockk<OptionMapping>()
         every { event.getOption(LinkCharacterCommand.CHARACTER) } returns optionMapping
         every { optionMapping.asString } returns "https://www.dndbeyond.com/characters/48690485"
@@ -72,7 +71,6 @@ class LinkCharacterCommandTest : CommandTest {
 
         coVerify { characterSheetProvider.getCharacterSheet(48690485L) }
         verify { requestingUserDto.dndBeyondCharacterId = 48690485L }
-        verify { requestingUserDto.initiativeModifier = 2 } // DEX 14 -> +2
         verify { userDtoHelper.updateUser(requestingUserDto) }
         verify { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
     }

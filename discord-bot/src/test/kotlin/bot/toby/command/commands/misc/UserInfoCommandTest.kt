@@ -47,7 +47,6 @@ class UserInfoCommandTest : CommandTest {
             digPermission = true,
             memePermission = true,
             socialCredit = 0,
-            initiativeModifier = 0,
             musicDtos = emptyList<MusicDto>().toMutableList()
         )
         every { userDtoHelper.calculateUserDto(any(), any()) } returns userDto
@@ -78,7 +77,6 @@ class UserInfoCommandTest : CommandTest {
             digPermission = true,
             memePermission = true,
             socialCredit = 0,
-            initiativeModifier = 0,
             musicDtos = emptyList<MusicDto>().toMutableList()
         )
 

@@ -245,7 +245,8 @@ class CampaignWebService(
     private val encounterEntryService: EncounterEntryService,
     private val initiativeStore: InitiativeStore,
     private val sessionLog: SessionLogPublisher,
-    private val jda: JDA
+    private val jda: JDA,
+    private val initiativeResolver: InitiativeResolver
 ) {
 
     private val objectMapper = ObjectMapper()
@@ -1261,7 +1262,7 @@ class CampaignWebService(
         val entries = mutableListOf<InitiativeEntryData>()
 
         request.playerDiscordIds.forEach { playerDiscordId ->
-            val modifier = userService.getUserById(playerDiscordId, guildId)?.initiativeModifier ?: 0
+            val modifier = userService.getUserById(playerDiscordId, guildId)?.let { initiativeResolver.resolve(it) } ?: 0
             val displayName = resolveMemberName(guildId, playerDiscordId) ?: "Player $playerDiscordId"
             entries += InitiativeEntryData(
                 name = displayName,

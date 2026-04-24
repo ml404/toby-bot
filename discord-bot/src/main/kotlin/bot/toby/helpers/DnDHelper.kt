@@ -14,11 +14,15 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import org.springframework.stereotype.Service
+import web.service.InitiativeResolver
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
 @Service
-class DnDHelper(private val userDtoHelper: UserDtoHelper) {
+class DnDHelper(
+    private val userDtoHelper: UserDtoHelper,
+    private val initiativeResolver: InitiativeResolver
+) {
 
     private val logger = DiscordLogger(this::class.java)
     private val states: ConcurrentHashMap<Long, InitiativeState> = ConcurrentHashMap()
@@ -62,7 +66,7 @@ class DnDHelper(private val userDtoHelper: UserDtoHelper) {
         val nonDmMembers = memberList.filter { it != dm }.nonBots()
         nonDmMembers.forEach { target ->
             val userDto = userDtoHelper.calculateUserDto(target.idLong, target.guild.idLong, target.isOwner)
-            rollAndAddToMap(initiativeMap, target.user.effectiveName, userDto.initiativeModifier ?: 0)
+            rollAndAddToMap(initiativeMap, target.user.effectiveName, initiativeResolver.resolve(userDto) ?: 0)
         }
         stateFor(guildId).sortMap(initiativeMap)
     }

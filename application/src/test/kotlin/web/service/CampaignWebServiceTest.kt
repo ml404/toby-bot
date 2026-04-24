@@ -48,6 +48,7 @@ class CampaignWebServiceTest {
     private lateinit var initiativeStore: InitiativeStore
     private lateinit var sessionLog: SessionLogPublisher
     private lateinit var jda: JDA
+    private lateinit var initiativeResolver: InitiativeResolver
     private lateinit var service: CampaignWebService
 
     private val guildId = 100L
@@ -78,6 +79,7 @@ class CampaignWebServiceTest {
         initiativeStore = mockk(relaxed = true)
         sessionLog = mockk(relaxed = true)
         jda = mockk(relaxed = true)
+        initiativeResolver = mockk(relaxed = true)
         service = CampaignWebService(
             campaignService,
             campaignPlayerService,
@@ -92,7 +94,8 @@ class CampaignWebServiceTest {
             encounterEntryService,
             initiativeStore,
             sessionLog,
-            jda
+            jda,
+            initiativeResolver
         )
     }
 
@@ -1153,9 +1156,9 @@ class CampaignWebServiceTest {
     @Test
     fun `rollInitiative seeds store and publishes INITIATIVE_ROLLED`() {
         every { campaignService.getActiveCampaignForGuild(guildId) } returns makeCampaign()
-        every { userService.getUserById(playerDiscordId, guildId) } returns UserDto(playerDiscordId, guildId).apply {
-            initiativeModifier = 3
-        }
+        val player = UserDto(playerDiscordId, guildId)
+        every { userService.getUserById(playerDiscordId, guildId) } returns player
+        every { initiativeResolver.resolve(player) } returns 3
         every { monsterTemplateService.getById(77L) } returns MonsterTemplateDto(
             id = 77L, dmDiscordId = dmDiscordId, name = "Goblin", initiativeModifier = 2
         )
