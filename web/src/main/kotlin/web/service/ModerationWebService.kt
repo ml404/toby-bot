@@ -71,7 +71,7 @@ class ModerationWebService(
             VoiceChannelInfo(
                 id = it.id,
                 name = it.name,
-                memberIds = it.members.filter { m -> !m.user.isBot }.map { m -> m.id }
+                memberIds = it.members.mapNotNull { m -> if (m.user.isBot) null else m.id }
             )
         }
         val textChannels = guild.textChannels
