@@ -123,7 +123,11 @@ class LeaderboardWebServiceTest {
         every { guild43.getMemberById(discordId) } returns null // user not a member of Beta
         every { moderationWebService.getLeaderboard(42L) } returns listOf(
             LeaderboardRow(rank = 1, discordId = "1", name = "Ace", avatarUrl = null, socialCredit = 1000,
-                title = "🥇", voiceSecondsThisMonth = 1800)
+                title = "🥇", voiceSecondsThisMonth = 1800, creditsEarnedThisMonth = 250),
+            // Bigger lifetime balance but no earnings this month — should NOT be
+            // surfaced as the picker's top this-month earner.
+            LeaderboardRow(rank = 2, discordId = "2", name = "Stale", avatarUrl = null, socialCredit = 5000,
+                title = null, voiceSecondsThisMonth = 0, creditsEarnedThisMonth = 0)
         )
 
         val cards = service.getGuildsWhereUserCanView("token", discordId)
@@ -131,8 +135,30 @@ class LeaderboardWebServiceTest {
         assertEquals("42", cards.first().id)
         assertEquals("Ace", cards.first().topName)
         assertEquals("🥇", cards.first().topTitle)
-        assertEquals(1000L, cards.first().topCredits)
+        assertEquals(250L, cards.first().topCreditsThisMonth)
         assertEquals(1800L, cards.first().totalVoiceSeconds)
+    }
+
+    @Test
+    fun `getGuildsWhereUserCanView leaves topName null when no one earned this month`() {
+        val mutuals = listOf(GuildInfo(id = "42", name = "Quiet", iconHash = null))
+        every { introWebService.getMutualGuilds("token") } returns mutuals
+        val guild42 = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(42L) } returns guild42
+        every { guild42.getMemberById(discordId) } returns mockk<Member>(relaxed = true)
+        // Lifetime balances exist but creditsEarnedThisMonth is 0 for everyone —
+        // start of the month, fresh baselines, etc. Don't claim a "top earner".
+        every { moderationWebService.getLeaderboard(42L) } returns listOf(
+            LeaderboardRow(rank = 1, discordId = "1", name = "Ace", avatarUrl = null,
+                socialCredit = 1000, creditsEarnedThisMonth = 0),
+            LeaderboardRow(rank = 2, discordId = "2", name = "Bee", avatarUrl = null,
+                socialCredit = 500, creditsEarnedThisMonth = 0)
+        )
+
+        val cards = service.getGuildsWhereUserCanView("token", discordId)
+        assertEquals(1, cards.size)
+        assertEquals(null, cards.first().topName)
+        assertEquals(0L, cards.first().topCreditsThisMonth)
     }
 
     // ---- sort behaviour ----

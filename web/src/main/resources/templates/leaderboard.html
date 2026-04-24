@@ -9,7 +9,7 @@
     <div class="lb-header">
         <a class="back-link" th:href="@{/leaderboards}">&larr; All leaderboards</a>
         <h1 th:text="${view.guildName}">Guild Name</h1>
-        <p class="muted">Social credit standings &middot; lifetime totals with this month's earnings highlighted</p>
+        <p class="muted">Social credit standings &middot; current totals with this month's earnings highlighted</p>
     </div>
 
     <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
@@ -46,7 +46,7 @@
            class="lb-sort-option"
            th:classappend="${view.sort.name() == 'LIFETIME' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'LIFETIME'}">
-            Lifetime
+            Current total
         </a>
     </nav>
 
@@ -72,7 +72,7 @@
             </div>
             <div class="lb-podium-month"
                  th:if="${isMonth}"
-                 th:text="${view.podium[1].socialCredit} + ' lifetime'">0 lifetime</div>
+                 th:text="${view.podium[1].socialCredit} + ' total'">0 total</div>
             <div class="lb-podium-month"
                  th:if="${!isMonth and view.podium[1].creditsEarnedThisMonth > 0}"
                  th:text="'+' + ${view.podium[1].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
@@ -97,7 +97,7 @@
             </div>
             <div class="lb-podium-month"
                  th:if="${isMonth}"
-                 th:text="${view.podium[0].socialCredit} + ' lifetime'">0 lifetime</div>
+                 th:text="${view.podium[0].socialCredit} + ' total'">0 total</div>
             <div class="lb-podium-month"
                  th:if="${!isMonth and view.podium[0].creditsEarnedThisMonth > 0}"
                  th:text="'+' + ${view.podium[0].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
@@ -122,7 +122,7 @@
             </div>
             <div class="lb-podium-month"
                  th:if="${isMonth}"
-                 th:text="${view.podium[2].socialCredit} + ' lifetime'">0 lifetime</div>
+                 th:text="${view.podium[2].socialCredit} + ' total'">0 total</div>
             <div class="lb-podium-month"
                  th:if="${!isMonth and view.podium[2].creditsEarnedThisMonth > 0}"
                  th:text="'+' + ${view.podium[2].creditsEarnedThisMonth} + ' this month'">+0 this month</div>

@@ -31,12 +31,12 @@
                 <div class="lb-guild-name" th:text="${g.name}" th:title="${g.name}">Guild</div>
             </div>
             <div class="lb-guild-top" th:if="${g.topName != null}">
-                <span class="muted">Top earner:</span>
+                <span class="muted">Top this month:</span>
                 <span class="lb-top-name">
                     <span th:if="${g.topTitle != null}" class="lb-title-pill" th:text="${g.topTitle}"></span>
                     <span th:text="${g.topName}">Top user</span>
                 </span>
-                <span class="muted" th:text="${g.topCredits} + ' credits'">0 credits</span>
+                <span class="muted" th:text="'+' + ${g.topCreditsThisMonth} + ' credits'">+0 credits</span>
             </div>
             <div class="lb-guild-stats">
                 <span th:text="${g.memberCount} + ' tracked'">0 tracked</span>
