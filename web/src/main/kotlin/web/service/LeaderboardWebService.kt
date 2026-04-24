@@ -32,14 +32,20 @@ class LeaderboardWebService(
             val guildId = info.id.toLongOrNull() ?: return@mapNotNull null
             if (!isMember(discordId, guildId)) return@mapNotNull null
             val leaderboard = moderationWebService.getLeaderboard(guildId)
-            val top = leaderboard.firstOrNull()
+            // Pick the top by this-month earnings to match the page's default
+            // sort. Only surface someone if they've actually earned > 0 this
+            // month — otherwise the card claims a "top earner" with +0, which
+            // is misleading at the start of the month.
+            val top = leaderboard
+                .filter { it.creditsEarnedThisMonth > 0L }
+                .maxByOrNull { it.creditsEarnedThisMonth }
             LeaderboardGuildCard(
                 id = info.id,
                 name = info.name,
                 iconUrl = info.iconUrl,
                 topName = top?.name,
                 topTitle = top?.title,
-                topCredits = top?.socialCredit ?: 0L,
+                topCreditsThisMonth = top?.creditsEarnedThisMonth ?: 0L,
                 totalVoiceSeconds = leaderboard.sumOf { it.voiceSecondsThisMonth },
                 memberCount = leaderboard.size
             )
@@ -149,7 +155,7 @@ data class LeaderboardGuildCard(
     val iconUrl: String?,
     val topName: String?,
     val topTitle: String?,
-    val topCredits: Long,
+    val topCreditsThisMonth: Long,
     val totalVoiceSeconds: Long,
     val memberCount: Int
 ) {
