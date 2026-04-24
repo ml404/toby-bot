@@ -448,6 +448,47 @@ class ModerationWebServiceTest {
         assertEquals(0L, rows.first().creditsEarnedThisMonth)
     }
 
+    @Test
+    fun `getLeaderboard tolerates missing voice tables by returning zeroed voice stats`() {
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 500L }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } throws
+            RuntimeException("relation \"voice_session\" does not exist")
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } throws
+            RuntimeException("relation \"voice_session\" does not exist")
+        every { snapshotService.listForGuildDate(guildId, any()) } throws
+            RuntimeException("relation \"monthly_credit_snapshot\" does not exist")
+
+        val rows = service.getLeaderboard(guildId)
+
+        assertEquals(1, rows.size)
+        assertEquals(500L, rows[0].socialCredit)
+        assertEquals(0L, rows[0].voiceSecondsLifetime)
+        assertEquals(0L, rows[0].voiceSecondsThisMonth)
+        assertEquals(0L, rows[0].creditsEarnedThisMonth)
+    }
+
+    @Test
+    fun `getLeaderboard tolerates missing title rows without breaking the whole page`() {
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply {
+            socialCredit = 100L
+            activeTitleId = 42L
+        }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        every { titleService.getById(42L) } throws
+            RuntimeException("relation \"title\" does not exist")
+
+        val rows = service.getLeaderboard(guildId)
+
+        assertEquals(1, rows.size)
+        assertNull(rows[0].title)
+    }
+
     // ---- getTitlesForGuild ----
 
     @Test

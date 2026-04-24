@@ -1,5 +1,6 @@
 package web.service
 
+import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.service.ConfigService
@@ -33,7 +34,13 @@ class ModerationWebService(
             "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣",
             "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
         )
+        private val logger = DiscordLogger(ModerationWebService::class.java)
     }
+
+    private fun <T> safely(label: String, default: T, block: () -> T): T =
+        runCatching(block)
+            .onFailure { logger.warn("Leaderboard enrichment failed ($label): ${it::class.simpleName}: ${it.message}") }
+            .getOrDefault(default)
 
     fun getModeratableGuilds(accessToken: String, discordId: Long): List<GuildInfo> {
         return introWebService.getMutualGuilds(accessToken).filter { info ->
@@ -103,23 +110,31 @@ class ModerationWebService(
     fun getLeaderboard(guildId: Long): List<LeaderboardRow> {
         val guild = jda.getGuildById(guildId) ?: return emptyList()
         val users = userService.listGuildUsers(guildId).filterNotNull()
-        val lifetimeVoice = voiceSessionService.sumCountedSecondsLifetimeByUser(guildId)
 
         val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
         val prevMonthStart = thisMonthStart.minusMonths(1)
-        val thisMonthVoice = voiceSessionService.sumCountedSecondsInRangeByUser(
-            guildId,
-            prevMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC),
-            thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
-        )
-        val priorSnapshots = snapshotService.listForGuildDate(guildId, thisMonthStart)
-            .associateBy { it.discordId }
+
+        val lifetimeVoice = safely("lifetime voice", emptyMap<Long, Long>()) {
+            voiceSessionService.sumCountedSecondsLifetimeByUser(guildId)
+        }
+        val thisMonthVoice = safely("this-month voice", emptyMap<Long, Long>()) {
+            voiceSessionService.sumCountedSecondsInRangeByUser(
+                guildId,
+                prevMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC),
+                thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
+            )
+        }
+        val priorSnapshots = safely("prior snapshots", emptyList<database.dto.MonthlyCreditSnapshotDto>()) {
+            snapshotService.listForGuildDate(guildId, thisMonthStart)
+        }.associateBy { it.discordId }
 
         return users
             .sortedByDescending { it.socialCredit ?: 0L }
             .mapIndexed { index, dto ->
                 val member = guild.getMemberById(dto.discordId)
-                val title = dto.activeTitleId?.let { titleService.getById(it) }?.label
+                val title = safely("title for ${dto.discordId}", null as String?) {
+                    dto.activeTitleId?.let { titleService.getById(it) }?.label
+                }
                 val current = dto.socialCredit ?: 0L
                 val baseline = priorSnapshots[dto.discordId]?.socialCredit
                 val creditsDelta = if (baseline == null) 0L else current - baseline
@@ -138,7 +153,9 @@ class ModerationWebService(
     }
 
     fun getTitlesForGuild(guildId: Long, actorDiscordId: Long): TitleShopView {
-        val catalog = titleService.listAll().map { t ->
+        val catalog = safely("title catalog", emptyList<database.dto.TitleDto>()) {
+            titleService.listAll()
+        }.map { t ->
             TitleShopEntry(
                 id = t.id ?: 0,
                 label = t.label,
@@ -147,7 +164,9 @@ class ModerationWebService(
                 colorHex = t.colorHex
             )
         }
-        val ownedIds = titleService.listOwned(actorDiscordId).map { it.titleId }.toSet()
+        val ownedIds: Set<Long> = safely("owned titles", emptyList<database.dto.UserOwnedTitleDto>()) {
+            titleService.listOwned(actorDiscordId)
+        }.mapTo(HashSet()) { it.titleId }
         val actorDto = userService.getUserById(actorDiscordId, guildId)
         val equippedId = actorDto?.activeTitleId
         val balance = actorDto?.socialCredit ?: 0L
@@ -301,11 +320,17 @@ class ModerationWebService(
         val guildIdString = guild.id
         val newDto = ConfigDto(key.configValue, value, guildIdString)
         val existing = configService.getConfigByName(key.configValue, guildIdString)
-        if (existing != null && existing.guildId == guildIdString) {
+        val path = if (existing != null && existing.guildId == guildIdString) {
             configService.updateConfig(newDto)
+            "update"
         } else {
             configService.createNewConfig(newDto)
+            "create"
         }
+        logger.info(
+            "Config $path: guild=$guildIdString actor=$actorDiscordId key=${key.configValue} " +
+                "value=$value existing.guildId=${existing?.guildId}"
+        )
         return null
     }
 

@@ -8,19 +8,17 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.LeaderboardWebService
 import web.util.discordIdOrNull
 import web.util.displayName
 
 @Controller
-@RequestMapping("/leaderboard")
 class LeaderboardController(
     private val leaderboardWebService: LeaderboardWebService
 ) {
 
-    @GetMapping("s")
+    @GetMapping("/leaderboards")
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
@@ -36,7 +34,7 @@ class LeaderboardController(
         return "leaderboards"
     }
 
-    @GetMapping("/{guildId}")
+    @GetMapping("/leaderboard/{guildId}")
     fun leaderboardPage(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,

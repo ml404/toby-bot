@@ -112,10 +112,13 @@
 
     <!-- CONFIG TAB -->
     <section class="tab-panel" data-panel="config">
-        <p class="muted mb-4" th:if="${!isOwner}">
-            Only the server owner can change guild config. Values are read-only
-            for you.
-        </p>
+        <div class="alert alert-error" th:if="${!isOwner}" style="margin-bottom: 16px;">
+            <strong>Read-only.</strong> Only the server owner can change guild
+            config. You're a TobyBot superuser, which lets you moderate
+            members on the Users tab, but not edit server-wide settings. Ask
+            the server owner to change these, or take ownership of the server
+            first.
+        </div>
         <div class="config-grid">
             <div class="config-row" data-key="VOLUME">
                 <label>Default volume</label>
