@@ -15,10 +15,14 @@ import org.springframework.cache.concurrent.ConcurrentMapCache
 import org.springframework.cache.support.SimpleCacheManager
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Profile
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.util.concurrent.atomic.AtomicInteger
+
+private const val CACHE_EVICTION_TEST_PROFILE = "cache-eviction-unit-test"
 
 /**
  * Regression tests for the user cache. A write through any of the mutating methods on
@@ -28,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @ExtendWith(SpringExtension::class)
 @ContextConfiguration(classes = [DefaultUserServiceCacheTest.TestContext::class])
+@ActiveProfiles(CACHE_EVICTION_TEST_PROFILE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class DefaultUserServiceCacheTest {
 
@@ -117,11 +122,13 @@ class DefaultUserServiceCacheTest {
         private const val USER_ID = 1L
     }
 
-    // @TestConfiguration (not @Configuration) so Spring Boot's component scan
-    // excludes this class from the main Application context. Otherwise the
-    // cacheManager bean here would collide with TestCachingConfig's when this
-    // test's compiled output is on the classpath via the :database testArtifacts.
+    // Guarded by an isolated profile so this nested config never activates
+    // in the main Application context (loaded from :database testArtifacts by
+    // downstream test modules). Without the profile, the `cacheManager` bean
+    // below collides with TestCachingConfig's and throws BeanDefinitionOverrideException
+    // across every @SpringBootTest in :application.
     @TestConfiguration
+    @Profile(CACHE_EVICTION_TEST_PROFILE)
     @EnableCaching
     @Import(DefaultUserService::class)
     open class TestContext {
