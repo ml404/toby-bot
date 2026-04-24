@@ -475,6 +475,8 @@ class VoiceEventHandlerTest {
         every { guild.idLong } returns 7L
         every { guild.id } returns "7"
         every { audioManager.isConnected } returns false
+        // Must match event.channelJoined so setupAndPlayUserIntro fires (see VoiceEventHandler line 164).
+        every { audioManager.connectedChannel } returns channel
 
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns audioPlayerManager
@@ -521,6 +523,7 @@ class VoiceEventHandlerTest {
         every { guild.idLong } returns 8L
         every { guild.id } returns "8"
         every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns channel
 
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns audioPlayerManager

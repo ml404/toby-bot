@@ -8,12 +8,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.cache.CacheManager
 import org.springframework.cache.annotation.EnableCaching
 import org.springframework.cache.concurrent.ConcurrentMapCache
 import org.springframework.cache.support.SimpleCacheManager
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ContextConfiguration
@@ -117,7 +117,11 @@ class DefaultUserServiceCacheTest {
         private const val USER_ID = 1L
     }
 
-    @Configuration
+    // @TestConfiguration (not @Configuration) so Spring Boot's component scan
+    // excludes this class from the main Application context. Otherwise the
+    // cacheManager bean here would collide with TestCachingConfig's when this
+    // test's compiled output is on the classpath via the :database testArtifacts.
+    @TestConfiguration
     @EnableCaching
     @Import(DefaultUserService::class)
     open class TestContext {
