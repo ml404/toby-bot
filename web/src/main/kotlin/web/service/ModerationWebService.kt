@@ -1,5 +1,6 @@
 package web.service
 
+import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UserDto
@@ -13,6 +14,7 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.emoji.Emoji
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -25,7 +27,8 @@ class ModerationWebService(
     private val introWebService: IntroWebService,
     private val voiceSessionService: VoiceSessionService,
     private val titleService: TitleService,
-    private val snapshotService: MonthlyCreditSnapshotService
+    private val snapshotService: MonthlyCreditSnapshotService,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
         const val MAX_POLL_OPTIONS = 10
@@ -286,6 +289,17 @@ class ModerationWebService(
             "Config $path: guild=$guildIdString actor=$actorDiscordId key=${key.configValue} " +
                 "value=$value existing.guildId=${existing?.guildId}"
         )
+
+        // Mirror SetConfigCommand's Discord-side behaviour: when activity
+        // tracking is switched on, fire the first-enable notifier. The
+        // ActivityTrackingNotifier listener de-duplicates via the
+        // ACTIVITY_TRACKING_NOTIFIED flag, so it's safe to publish on every
+        // "true" write (including true->true no-ops) — no false-positive DM
+        // floods. We publish regardless of the previous value for the same
+        // reason.
+        if (key == ConfigDto.Configurations.ACTIVITY_TRACKING && value == "true") {
+            eventPublisher.publishEvent(ActivityTrackingEnabled(guildId))
+        }
         return null
     }
 

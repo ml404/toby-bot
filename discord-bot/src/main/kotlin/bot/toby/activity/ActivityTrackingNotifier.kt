@@ -1,19 +1,42 @@
 package bot.toby.activity
 
+import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED
 import database.service.ConfigService
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.User
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 
 @Service
 class ActivityTrackingNotifier @Autowired constructor(
-    private val configService: ConfigService
+    private val configService: ConfigService,
+    private val jda: JDA
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+
+    /**
+     * Cross-module entry point for the web moderation UI. Web publishes an
+     * [ActivityTrackingEnabled] event whenever ACTIVITY_TRACKING is set to
+     * `true`; this listener resolves the guild via JDA and runs the same
+     * first-enable flow the Discord `/setconfig` command runs. Already-
+     * notified guilds short-circuit inside [notifyMembersOnFirstEnable].
+     */
+    @EventListener
+    fun onActivityTrackingEnabled(event: ActivityTrackingEnabled) {
+        val guild = jda.getGuildById(event.guildId)
+        if (guild == null) {
+            logger.warn(
+                "ActivityTrackingEnabled received for guild ${event.guildId} but JDA has no matching guild; skipping."
+            )
+            return
+        }
+        notifyMembersOnFirstEnable(guild)
+    }
 
     fun notifyMembersOnFirstEnable(guild: Guild) {
         val guildIdStr = guild.id

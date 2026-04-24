@@ -49,6 +49,8 @@ class ModerationWebServiceTest {
     private val plainUserId = 102L
     private val targetUserId = 103L
 
+    private lateinit var eventPublisher: org.springframework.context.ApplicationEventPublisher
+
     @BeforeEach
     fun setup() {
         jda = mockk(relaxed = true)
@@ -58,6 +60,7 @@ class ModerationWebServiceTest {
         voiceSessionService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
+        eventPublisher = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         service = ModerationWebService(
             jda,
@@ -66,7 +69,8 @@ class ModerationWebServiceTest {
             introWebService,
             voiceSessionService,
             titleService,
-            snapshotService
+            snapshotService,
+            eventPublisher
         )
 
         every { jda.getGuildById(guildId) } returns guild
@@ -567,6 +571,49 @@ class ModerationWebServiceTest {
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LEADERBOARD_CHANNEL, "111")
         assertNull(err)
         verify(exactly = 1) { configService.createNewConfig(any()) }
+    }
+
+    @Test
+    fun `updateConfig ACTIVITY_TRACKING=true publishes the first-enable event`() {
+        mockMember(ownerId, isOwner = true)
+        every { configService.getConfigByName(any(), any()) } returns null
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.ACTIVITY_TRACKING, "true")
+
+        assertNull(err)
+        // Event must fire regardless of previous value — the listener
+        // de-duplicates via ACTIVITY_TRACKING_NOTIFIED, so publishing on
+        // every "true" write is the right contract.
+        verify(exactly = 1) {
+            eventPublisher.publishEvent(common.events.ActivityTrackingEnabled(guildId))
+        }
+    }
+
+    @Test
+    fun `updateConfig ACTIVITY_TRACKING=false does NOT publish the event`() {
+        mockMember(ownerId, isOwner = true)
+        every { configService.getConfigByName(any(), any()) } returns null
+
+        service.updateConfig(ownerId, guildId, ConfigDto.Configurations.ACTIVITY_TRACKING, "false")
+
+        // Disabling tracking must never trigger member DMs.
+        verify(exactly = 0) {
+            eventPublisher.publishEvent(any<common.events.ActivityTrackingEnabled>())
+        }
+    }
+
+    @Test
+    fun `updateConfig ACTIVITY_TRACKING rejects non-boolean values`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.ACTIVITY_TRACKING, "maybe")
+
+        assertEquals("Value must be true or false.", err)
+        verify(exactly = 0) { configService.createNewConfig(any()) }
+        verify(exactly = 0) { configService.updateConfig(any()) }
+        verify(exactly = 0) {
+            eventPublisher.publishEvent(any<common.events.ActivityTrackingEnabled>())
+        }
     }
 
     @Test
