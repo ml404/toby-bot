@@ -134,4 +134,62 @@ class LeaderboardWebServiceTest {
         assertEquals(1000L, cards.first().topCredits)
         assertEquals(1800L, cards.first().totalVoiceSeconds)
     }
+
+    // ---- sort behaviour ----
+
+    @Test
+    fun `getGuildView defaults to THIS_MONTH and ranks by creditsEarnedThisMonth`() {
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.name } returns "Sort test"
+        // Alice has the biggest lifetime, Bob is the biggest earner THIS month.
+        every { moderationWebService.getLeaderboard(guildId) } returns listOf(
+            LeaderboardRow(rank = 1, discordId = "1", name = "Alice", avatarUrl = null,
+                socialCredit = 1_000, creditsEarnedThisMonth = 10),
+            LeaderboardRow(rank = 2, discordId = "2", name = "Bob", avatarUrl = null,
+                socialCredit = 500, creditsEarnedThisMonth = 400),
+            LeaderboardRow(rank = 3, discordId = "3", name = "Carol", avatarUrl = null,
+                socialCredit = 200, creditsEarnedThisMonth = 50)
+        )
+
+        val view = service.getGuildView(guildId)!!
+
+        assertEquals(LeaderboardSort.THIS_MONTH, view.sort)
+        assertEquals("Bob", view.podium[0].name, "top of podium in month mode is biggest monthly earner")
+        assertEquals(1, view.podium[0].rank, "rank reassigned to match the active sort")
+        assertEquals("Carol", view.podium[1].name)
+        assertEquals("Alice", view.podium[2].name)
+    }
+
+    @Test
+    fun `getGuildView with LIFETIME sort preserves the moderation service order`() {
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.name } returns "Sort test"
+        every { moderationWebService.getLeaderboard(guildId) } returns listOf(
+            LeaderboardRow(rank = 1, discordId = "1", name = "Alice", avatarUrl = null,
+                socialCredit = 1_000, creditsEarnedThisMonth = 10),
+            LeaderboardRow(rank = 2, discordId = "2", name = "Bob", avatarUrl = null,
+                socialCredit = 500, creditsEarnedThisMonth = 400),
+            LeaderboardRow(rank = 3, discordId = "3", name = "Carol", avatarUrl = null,
+                socialCredit = 200, creditsEarnedThisMonth = 50)
+        )
+
+        val view = service.getGuildView(guildId, LeaderboardSort.LIFETIME)!!
+
+        assertEquals(LeaderboardSort.LIFETIME, view.sort)
+        assertEquals("Alice", view.podium[0].name)
+        assertEquals(1, view.podium[0].rank)
+        assertEquals("Bob", view.podium[1].name)
+        assertEquals("Carol", view.podium[2].name)
+    }
+
+    @Test
+    fun `LeaderboardSort fromQuery maps tokens and falls back to THIS_MONTH`() {
+        assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery("month"))
+        assertEquals(LeaderboardSort.LIFETIME, LeaderboardSort.fromQuery("lifetime"))
+        assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery(null))
+        assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery(""))
+        assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery("garbage"))
+    }
 }

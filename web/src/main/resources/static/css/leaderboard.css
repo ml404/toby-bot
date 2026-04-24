@@ -179,6 +179,35 @@
     .lb-podium-1 { order: -1; }
 }
 
+/* -- Sort toggle (This month / Lifetime) -- */
+.lb-sort {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: var(--space-4);
+}
+.lb-sort-option {
+    color: var(--text-muted);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+.lb-sort-option:hover { color: var(--text); }
+.lb-sort-option.active {
+    background: var(--accent);
+    color: #fff;
+}
+.lb-sort-option:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 /* -- Standings table (reuses mod-table) -- */
 .lb-standings { margin-top: var(--space-5); }
 .lb-standings-title {
