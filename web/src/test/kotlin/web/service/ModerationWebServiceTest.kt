@@ -4,7 +4,6 @@ import database.dto.ConfigDto
 import database.dto.MonthlyCreditSnapshotDto
 import database.dto.TitleDto
 import database.dto.UserDto
-import database.dto.UserOwnedTitleDto
 import database.service.ConfigService
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
@@ -39,7 +38,6 @@ class ModerationWebServiceTest {
     private lateinit var voiceSessionService: VoiceSessionService
     private lateinit var titleService: TitleService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
-    private lateinit var titleRoleService: TitleRoleService
     private lateinit var service: ModerationWebService
 
     private lateinit var guild: Guild
@@ -59,7 +57,6 @@ class ModerationWebServiceTest {
         voiceSessionService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
-        titleRoleService = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         service = ModerationWebService(
             jda,
@@ -68,8 +65,7 @@ class ModerationWebServiceTest {
             introWebService,
             voiceSessionService,
             titleService,
-            snapshotService,
-            titleRoleService
+            snapshotService
         )
 
         every { jda.getGuildById(guildId) } returns guild
@@ -489,180 +485,6 @@ class ModerationWebServiceTest {
         assertNull(rows[0].title)
     }
 
-    // ---- getTitlesForGuild ----
-
-    @Test
-    fun `getTitlesForGuild returns catalog with ownership, equipped flag, and balance`() {
-        val titles = listOf(
-            TitleDto(id = 1L, label = "A", cost = 100L, description = "d1"),
-            TitleDto(id = 2L, label = "B", cost = 500L, description = null, colorHex = "#FFD700", hoisted = true)
-        )
-        val owned = listOf(UserOwnedTitleDto(discordId = plainUserId, titleId = 1L))
-        val actor = UserDto(discordId = plainUserId, guildId = guildId).apply {
-            socialCredit = 350L
-            activeTitleId = 1L
-        }
-        every { titleService.listAll() } returns titles
-        every { titleService.listOwned(plainUserId) } returns owned
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-
-        val view = service.getTitlesForGuild(guildId, plainUserId)
-        assertEquals(2, view.catalog.size)
-        assertEquals(setOf(1L), view.ownedTitleIds)
-        assertEquals(1L, view.equippedTitleId)
-        assertEquals(350L, view.balance)
-    }
-
-    // ---- buyTitle ----
-
-    @Test
-    fun `buyTitle deducts credits and records purchase`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 100L)
-        val actor = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 500L }
-        every { titleService.getById(1L) } returns title
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.owns(plainUserId, 1L) } returns false
-
-        val err = service.buyTitle(plainUserId, guildId, 1L)
-        assertNull(err)
-        assertEquals(400L, actor.socialCredit)
-        verify(exactly = 1) { userService.updateUser(actor) }
-        verify(exactly = 1) { titleService.recordPurchase(plainUserId, 1L) }
-    }
-
-    @Test
-    fun `buyTitle rejects when user already owns the title`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 100L)
-        val actor = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 500L }
-        every { titleService.getById(1L) } returns title
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.owns(plainUserId, 1L) } returns true
-
-        val err = service.buyTitle(plainUserId, guildId, 1L)
-        assertEquals("You already own this title.", err)
-        verify(exactly = 0) { userService.updateUser(any()) }
-        verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
-    }
-
-    @Test
-    fun `buyTitle rejects when credits insufficient`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 1_000L)
-        val actor = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 50L }
-        every { titleService.getById(1L) } returns title
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.owns(plainUserId, 1L) } returns false
-
-        val err = service.buyTitle(plainUserId, guildId, 1L)
-        assertNotNull(err)
-        assertTrue(err!!.contains("Not enough credits"))
-        assertEquals(50L, actor.socialCredit)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    @Test
-    fun `buyTitle rejects when bot is not in guild`() {
-        every { jda.getGuildById(guildId) } returns null
-        val err = service.buyTitle(plainUserId, guildId, 1L)
-        assertEquals("Bot is not in that server.", err)
-    }
-
-    @Test
-    fun `buyTitle rejects when user has no profile`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 100L)
-        every { titleService.getById(1L) } returns title
-        every { userService.getUserById(plainUserId, guildId) } returns null
-
-        val err = service.buyTitle(plainUserId, guildId, 1L)
-        assertEquals("You don't have a profile in that server yet.", err)
-    }
-
-    @Test
-    fun `buyTitle rejects when title does not exist`() {
-        every { titleService.getById(99L) } returns null
-        val err = service.buyTitle(plainUserId, guildId, 99L)
-        assertEquals("Title not found.", err)
-    }
-
-    // ---- equipTitle ----
-
-    @Test
-    fun `equipTitle sets activeTitleId when role service succeeds`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 100L)
-        val actor = UserDto(discordId = plainUserId, guildId = guildId)
-        val member = mockMember(plainUserId)
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.getById(1L) } returns title
-        every { titleService.owns(plainUserId, 1L) } returns true
-        every { titleService.listOwned(plainUserId) } returns listOf(UserOwnedTitleDto(discordId = plainUserId, titleId = 1L))
-        every { titleRoleService.equip(guild, member, title, setOf(1L)) } returns TitleRoleResult.Ok
-
-        val err = service.equipTitle(plainUserId, guildId, 1L)
-        assertNull(err)
-        assertEquals(1L, actor.activeTitleId)
-        verify(exactly = 1) { userService.updateUser(actor) }
-    }
-
-    @Test
-    fun `equipTitle rejects when user does not own the title`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 100L)
-        val actor = UserDto(discordId = plainUserId, guildId = guildId)
-        mockMember(plainUserId)
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.getById(1L) } returns title
-        every { titleService.owns(plainUserId, 1L) } returns false
-
-        val err = service.equipTitle(plainUserId, guildId, 1L)
-        assertEquals("You don't own this title.", err)
-        assertNull(actor.activeTitleId)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    @Test
-    fun `equipTitle surfaces role service error and does not persist`() {
-        val title = TitleDto(id = 1L, label = "A", cost = 100L)
-        val actor = UserDto(discordId = plainUserId, guildId = guildId)
-        val member = mockMember(plainUserId)
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.getById(1L) } returns title
-        every { titleService.owns(plainUserId, 1L) } returns true
-        every { titleService.listOwned(plainUserId) } returns listOf(UserOwnedTitleDto(discordId = plainUserId, titleId = 1L))
-        every { titleRoleService.equip(guild, member, title, any()) } returns TitleRoleResult.Error("no Manage Roles")
-
-        val err = service.equipTitle(plainUserId, guildId, 1L)
-        assertEquals("no Manage Roles", err)
-        assertNull(actor.activeTitleId)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    // ---- unequipTitle ----
-
-    @Test
-    fun `unequipTitle clears activeTitleId when role service succeeds`() {
-        val actor = UserDto(discordId = plainUserId, guildId = guildId).apply { activeTitleId = 1L }
-        val member = mockMember(plainUserId)
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.listOwned(plainUserId) } returns listOf(UserOwnedTitleDto(discordId = plainUserId, titleId = 1L))
-        every { titleRoleService.unequip(guild, member, setOf(1L)) } returns TitleRoleResult.Ok
-
-        val err = service.unequipTitle(plainUserId, guildId)
-        assertNull(err)
-        assertNull(actor.activeTitleId)
-        verify(exactly = 1) { userService.updateUser(actor) }
-    }
-
-    @Test
-    fun `unequipTitle surfaces role service error`() {
-        val actor = UserDto(discordId = plainUserId, guildId = guildId).apply { activeTitleId = 1L }
-        val member = mockMember(plainUserId)
-        every { userService.getUserById(plainUserId, guildId) } returns actor
-        every { titleService.listOwned(plainUserId) } returns emptyList()
-        every { titleRoleService.unequip(guild, member, any()) } returns TitleRoleResult.Error("bot has no Manage Roles")
-
-        val err = service.unequipTitle(plainUserId, guildId)
-        assertEquals("bot has no Manage Roles", err)
-        assertEquals(1L, actor.activeTitleId)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
 
     // ---- updateConfig LEADERBOARD_CHANNEL ----
 

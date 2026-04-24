@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Utilities', '/css/utils.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Utilities</h1>
+    <p class="muted mb-5">
+        Quick tools that mirror some of TobyBot's chat commands. These don't
+        post to Discord — they just run here in your browser.
+    </p>
+
+    <div class="utils-grid">
+
+        <section class="util-card" data-util="dice">
+            <h2>Dice roller</h2>
+            <p class="muted">Equivalent to <code>/roll</code>.</p>
+            <form class="util-form" data-form="dice">
+                <label>Number of dice
+                    <input type="number" name="count" value="1" min="1" max="100" required>
+                </label>
+                <label>Sides
+                    <input type="number" name="sides" value="20" min="2" max="1000" required>
+                </label>
+                <label>Modifier
+                    <input type="number" name="modifier" value="0" step="1">
+                </label>
+                <button type="submit" class="btn">Roll</button>
+            </form>
+            <pre class="util-output" data-output="dice" aria-live="polite"></pre>
+        </section>
+
+        <section class="util-card" data-util="random">
+            <h2>Random chooser</h2>
+            <p class="muted">Equivalent to <code>/random</code>. Comma-separated list.</p>
+            <form class="util-form" data-form="random">
+                <label>Options
+                    <input type="text" name="list" placeholder="pizza, burger, tacos" required>
+                </label>
+                <button type="submit" class="btn">Pick one</button>
+            </form>
+            <pre class="util-output" data-output="random" aria-live="polite"></pre>
+        </section>
+
+        <section class="util-card" data-util="eightball">
+            <h2>Magic 8-ball</h2>
+            <p class="muted">Equivalent to <code>/8ball</code>.</p>
+            <button type="button" class="btn" data-action="eightball">Ask the ball</button>
+            <pre class="util-output" data-output="eightball" aria-live="polite"></pre>
+        </section>
+
+        <section class="util-card" data-util="meme">
+            <h2>Reddit meme</h2>
+            <p class="muted">Equivalent to <code>/meme</code>. Returns a SFW image post.</p>
+            <form class="util-form" data-form="meme">
+                <label>Subreddit
+                    <input type="text" name="subreddit" placeholder="memes" required>
+                </label>
+                <label>Time period
+                    <select name="timePeriod">
+                        <option value="day" selected>Day</option>
+                        <option value="week">Week</option>
+                        <option value="month">Month</option>
+                        <option value="all">All time</option>
+                    </select>
+                </label>
+                <label>Pick from top
+                    <input type="number" name="limit" value="10" min="1" max="100">
+                </label>
+                <button type="submit" class="btn">Fetch meme</button>
+            </form>
+            <div class="util-output meme-output" data-output="meme" aria-live="polite"></div>
+        </section>
+
+        <section class="util-card" data-util="dbd">
+            <h2>DBD random killer</h2>
+            <p class="muted">Equivalent to <code>/dbd-killer</code>.</p>
+            <button type="button" class="btn" data-action="dbd">Pick a killer</button>
+            <pre class="util-output" data-output="dbd" aria-live="polite"></pre>
+        </section>
+
+        <section class="util-card" data-util="kf2">
+            <h2>KF2 random map</h2>
+            <p class="muted">Equivalent to <code>/kf2</code>.</p>
+            <button type="button" class="btn" data-action="kf2">Pick a map</button>
+            <pre class="util-output" data-output="kf2" aria-live="polite"></pre>
+        </section>
+    </div>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/utils.js}"></script>
+</body>
+</html>
