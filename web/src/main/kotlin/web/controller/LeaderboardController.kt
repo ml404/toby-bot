@@ -55,6 +55,7 @@ class LeaderboardController(
         }
 
         model.addAttribute("view", view)
+        model.addAttribute("guildId", guildId.toString())
         model.addAttribute("username", user.displayName())
         return "leaderboard"
     }

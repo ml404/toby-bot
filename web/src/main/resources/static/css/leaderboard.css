@@ -186,6 +186,117 @@
     margin-bottom: var(--space-3);
 }
 
+/* -- Collapsible sections (standings + wallets) -- */
+details.lb-collapse {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-5);
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+details.lb-collapse[open] {
+    border-color: var(--accent);
+}
+details.lb-collapse > summary {
+    cursor: pointer;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    list-style: none;
+    user-select: none;
+    transition: background 0.15s;
+}
+details.lb-collapse > summary::-webkit-details-marker { display: none; }
+details.lb-collapse > summary::marker { display: none; content: ''; }
+details.lb-collapse > summary:hover { background: rgba(255, 255, 255, 0.03); }
+details.lb-collapse > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+.lb-collapse-icon { font-size: 1.4rem; line-height: 1; }
+.lb-collapse-title {
+    flex: 1;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.lb-collapse-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+}
+.lb-collapse-caret {
+    display: inline-flex;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
+.lb-collapse-body {
+    border-top: 1px solid var(--border);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+}
+.lb-collapse-body .mod-table-wrap { margin: 0; }
+
+/* -- Rank badges shared between both tables -- */
+.lb-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+}
+.lb-rank-1 {
+    background: linear-gradient(135deg, #FFE066, #FFA500);
+    color: #1a1a1a;
+    border-color: #FFD700;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+}
+.lb-rank-2 {
+    background: linear-gradient(135deg, #E5E7EB, #9CA3AF);
+    color: #1a1a1a;
+    border-color: #C0C0C0;
+}
+.lb-rank-3 {
+    background: linear-gradient(135deg, #CD7F32, #8B4513);
+    color: #fff;
+    border-color: #CD7F32;
+}
+
+/* -- Table flourish shared between both tables -- */
+.lb-standings-table tbody tr {
+    transition: background 0.15s;
+}
+.lb-standings-table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.015);
+}
+.lb-standings-table tbody tr:hover td {
+    background: rgba(87, 242, 135, 0.05);
+}
+.lb-standings-table .lb-col-rank { width: 60px; text-align: left; }
+.lb-standings-table .lb-col-value { text-align: right; font-variant-numeric: tabular-nums; }
+.lb-standings-table thead th { letter-spacing: 0.02em; }
+.lb-standings-table .lb-name { font-weight: 600; }
+
+/* Value accents */
+.lb-value { font-size: 1rem; }
+.lb-value-credits { color: #FFD700; }
+.lb-value-toby { color: #57F287; }
+.lb-value-portfolio { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lb-value-month { color: #2ECC71; font-weight: 600; }
+
 /* -- Title pill -- */
 .lb-title-pill {
     display: inline-block;

@@ -1,5 +1,6 @@
 package web.service
 
+import database.service.TitleService
 import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
@@ -12,7 +13,8 @@ class LeaderboardWebService(
     private val introWebService: IntroWebService,
     private val moderationWebService: ModerationWebService,
     private val userService: UserService,
-    private val marketService: TobyCoinMarketService
+    private val marketService: TobyCoinMarketService,
+    private val titleService: TitleService
 ) {
 
     companion object {
@@ -74,11 +76,15 @@ class LeaderboardWebService(
             .take(TOBY_COIN_LEADERBOARD_LIMIT)
             .mapIndexed { index, dto ->
                 val member = guild.getMemberById(dto.discordId)
+                val title = runCatching {
+                    dto.activeTitleId?.let { titleService.getById(it) }?.label
+                }.getOrNull()
                 TobyCoinLeaderRow(
                     rank = index + 1,
                     discordId = dto.discordId.toString(),
                     name = member?.effectiveName ?: "Unknown",
                     avatarUrl = member?.effectiveAvatarUrl,
+                    title = title,
                     coins = dto.tobyCoins,
                     portfolioCredits = floor(dto.tobyCoins.toDouble() * price).toLong()
                 )
@@ -130,6 +136,7 @@ data class TobyCoinLeaderRow(
     val discordId: String,
     val name: String,
     val avatarUrl: String?,
+    val title: String?,
     val coins: Long,
     val portfolioCredits: Long
 )

@@ -33,7 +33,7 @@ class LeaderboardWebServiceTest {
         moderationWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
-        service = LeaderboardWebService(jda, introWebService, moderationWebService, userService, marketService)
+        service = LeaderboardWebService(jda, introWebService, moderationWebService, userService, marketService, mockk(relaxed = true))
     }
 
     @Test
