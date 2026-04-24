@@ -47,7 +47,23 @@ CREATE TABLE public."user" (
     initiative smallint default 0,
     dnd_beyond_character_id bigint default null,
     active_title_id bigint default null,
-    activity_tracking_opt_out boolean DEFAULT false NOT NULL
+    activity_tracking_opt_out boolean DEFAULT false NOT NULL,
+    toby_coins bigint NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS public.toby_coin_price_history;
+DROP TABLE IF EXISTS public.toby_coin_market;
+CREATE TABLE public.toby_coin_market (
+    guild_id     BIGINT PRIMARY KEY,
+    price        DOUBLE PRECISION NOT NULL,
+    last_tick_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE public.toby_coin_price_history (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id   BIGINT NOT NULL,
+    sampled_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    price      DOUBLE PRECISION NOT NULL
 );
 
 DROP TABLE IF EXISTS public.voice_session;

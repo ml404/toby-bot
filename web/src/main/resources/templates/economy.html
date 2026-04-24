@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Market', '/css/economy.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container-wide" th:attr="data-guild-id=${guildId}">
+
+    <div class="economy-header">
+        <div>
+            <a class="back-link" th:href="@{/economy/guilds}">&larr; All markets</a>
+            <h1 th:text="'TOBY • ' + ${view.guildName}">TOBY</h1>
+        </div>
+        <div class="economy-price">
+            <div class="economy-price-value" id="economy-price"
+                 th:text="${#numbers.formatDecimal(view.price, 1, 2)}">0.00</div>
+            <div class="economy-price-change"
+                 th:if="${view.change24h != null}"
+                 th:classappend="${view.change24h >= 0 ? 'up' : 'down'}"
+                 th:text="${#numbers.formatDecimal(view.change24h, 1, 2)} + '% (24h)'">0%</div>
+            <div class="economy-price-change muted"
+                 th:unless="${view.change24h != null}">no 24h data yet</div>
+        </div>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="economy-chart-card">
+        <div class="economy-chart-header">
+            <h2>Price history</h2>
+            <div class="segmented" id="economy-windows" role="tablist">
+                <button type="button" data-window="1d" role="tab" aria-pressed="true">1D</button>
+                <button type="button" data-window="5d" role="tab" aria-pressed="false">5D</button>
+                <button type="button" data-window="1mo" role="tab" aria-pressed="false">1M</button>
+                <button type="button" data-window="3mo" role="tab" aria-pressed="false">3M</button>
+                <button type="button" data-window="1y" role="tab" aria-pressed="false">1Y</button>
+                <button type="button" data-window="all" role="tab" aria-pressed="false">ALL</button>
+            </div>
+        </div>
+        <div class="economy-chart-wrap">
+            <canvas id="economy-chart" height="280"></canvas>
+            <div class="economy-chart-empty" id="economy-chart-empty" hidden>
+                Not enough price history yet. Come back after a tick or two.
+            </div>
+        </div>
+    </section>
+
+    <div class="economy-grid">
+        <section class="economy-card">
+            <h2>Your wallet</h2>
+            <div class="economy-row">
+                <span class="muted">Toby Coin</span>
+                <strong id="economy-coins" th:text="${view.coins} + ' TOBY'">0 TOBY</strong>
+            </div>
+            <div class="economy-row">
+                <span class="muted">Value at market</span>
+                <strong id="economy-portfolio"
+                        th:text="${view.portfolioCredits} + ' credits'">0 credits</strong>
+            </div>
+            <div class="economy-row">
+                <span class="muted">Social credit</span>
+                <strong id="economy-credits" th:text="${view.credits} + ' credits'">0 credits</strong>
+            </div>
+        </section>
+
+        <section class="economy-card">
+            <h2>Trade</h2>
+            <div class="form-group">
+                <label for="economy-amount">Amount (coins)</label>
+                <input id="economy-amount" type="number" min="1" step="1" value="1">
+            </div>
+            <div class="economy-trade-actions">
+                <button type="button" class="btn" id="economy-buy">Buy</button>
+                <button type="button" class="btn btn-danger" id="economy-sell">Sell</button>
+            </div>
+            <p class="hint">
+                Buys push the price up, sells push it down. The market also
+                drifts on its own every few minutes.
+            </p>
+        </section>
+    </div>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/economy.js}"></script>
+</body>
+</html>
