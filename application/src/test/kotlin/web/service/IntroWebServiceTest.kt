@@ -15,6 +15,7 @@ import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -195,7 +196,9 @@ class IntroWebServiceTest {
 
         val result = service.getUserIntros(discordId, guildId)
         assertEquals(1, result.size)
-        assertEquals(shortsUrl, result[0].url)
+        // The view-model URL is the canonicalised watch form — the stored
+        // Shorts URL is rewritten on read via the lazy-migration path.
+        assertEquals("https://www.youtube.com/watch?v=dQw4w9WgXcQ", result[0].url)
         assertEquals("dQw4w9WgXcQ", result[0].videoId)
         assertEquals("https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg", result[0].thumbnailUrl)
     }
@@ -238,6 +241,96 @@ class IntroWebServiceTest {
         assertEquals("dQw4w9WgXcQ", result[0].videoId)
     }
 
+    @Test
+    fun `getUserIntros lazily rewrites a stored Shorts URL to the canonical watch URL`() {
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        val expected = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "Pre-normalisation legacy row",
+            musicBlob = shortsUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+        every { musicFileService.updateMusicFile(any()) } returns intro
+
+        val result = service.getUserIntros(discordId, guildId)
+
+        assertEquals(expected, result[0].url)
+        assertEquals(expected, String(intro.musicBlob!!))
+        verify(exactly = 1) { musicFileService.updateMusicFile(match { it.id == intro.id }) }
+    }
+
+    @Test
+    fun `getUserIntros rescues a corrupt row with null musicBlob by treating fileName as the source URL`() {
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        val expected = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = shortsUrl,
+            musicBlob = null
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+        every { musicFileService.updateMusicFile(any()) } returns intro
+
+        val result = service.getUserIntros(discordId, guildId)
+
+        assertEquals(expected, result[0].url)
+        assertEquals("dQw4w9WgXcQ", result[0].videoId)
+        assertEquals(expected, String(intro.musicBlob!!))
+        verify(atLeast = 1) { musicFileService.updateMusicFile(match { it.id == intro.id }) }
+    }
+
+    @Test
+    fun `getUserIntros leaves a real file upload alone even when fileName looks like a URL`() {
+        // Regression guard: the salvage path must never replace non-URL blob
+        // bytes (a real MP3 upload) with a URL derived from the fileName.
+        val fileBytes = "pretend-mp3-bytes".toByteArray()
+        val urlShapedName = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = urlShapedName,
+            musicBlob = fileBytes
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        service.getUserIntros(discordId, guildId)
+
+        assertArrayEquals(fileBytes, intro.musicBlob)
+        verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
+    }
+
+    @Test
+    fun `getUserIntros does not rewrite non-Shorts URLs`() {
+        val watchUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val intro = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "Already canonical",
+            musicBlob = watchUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(intro)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val result = service.getUserIntros(discordId, guildId)
+
+        assertEquals(watchUrl, result[0].url)
+        verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
+    }
+
     // setIntroByUrl
 
     @Test
@@ -255,6 +348,66 @@ class IntroWebServiceTest {
         val error = service.setIntroByUrl(discordId, guildId, "https://example.com/audio.mp3", 90, null, null, null)
         assertNull(error)
         verify(exactly = 1) { musicFileService.createNewMusicFile(any()) }
+    }
+
+    @Test
+    fun `setIntroByUrl returns error naming the slot when the same URL is already in another slot`() {
+        // The pre-empt in setIntroByUrl finds the matching slot and reports
+        // its index so the user knows where to replace.
+        val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val existing = MusicDto(
+            id = "${guildId}_${discordId}_2",
+            index = 2,
+            fileName = "Already saved",
+            musicBlob = url.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(existing)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val error = service.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
+        assertNotNull(error)
+        assertTrue(error!!.contains("slot 2"))
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+    }
+
+    @Test
+    fun `setIntroByUrl detects a duplicate even when the existing slot is still in pre-migration Shorts form`() {
+        // Existing row was saved before Shorts canonicalisation, so its blob
+        // is still `…/shorts/ID`. Pasting the canonical `watch?v=ID` form
+        // must still be recognised as a duplicate.
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        val watchUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val existing = MusicDto(
+            id = "${guildId}_${discordId}_1",
+            index = 1,
+            fileName = "Legacy Shorts row",
+            musicBlob = shortsUrl.toByteArray()
+        )
+        val user = UserDto(discordId = discordId, guildId = guildId).apply {
+            musicDtos = mutableListOf(existing)
+        }
+        every { userService.getUserById(discordId, guildId) } returns user
+
+        val error = service.setIntroByUrl(discordId, guildId, watchUrl, 90, null, null, null)
+        assertNotNull(error)
+        assertTrue(error!!.contains("slot 1"))
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+    }
+
+    @Test
+    fun `setIntroByUrl falls back to hash-based dedupe message when existingIntros byte compare misses`() {
+        // Safety net: if the user's existingIntros list happens to be empty
+        // (e.g. a stale cached UserDto) but the DB hash check still catches
+        // the collision, surface that instead of a spurious success.
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        every { musicFileService.createNewMusicFile(any()) } returns null
+
+        val error = service.setIntroByUrl(discordId, guildId, "https://example.com/audio.mp3", 90, null, null, null)
+        assertNotNull(error)
+        assertTrue(error!!.contains("already have this intro"))
     }
 
     @Test
@@ -402,6 +555,43 @@ class IntroWebServiceTest {
             thumbnailUrl = null,
             durationSeconds = null
         )
+
+        spyService.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
+
+        assertEquals(url, slot.captured.musicBlob?.let { String(it) })
+    }
+
+    @Test
+    fun `setIntroByUrl canonicalises Shorts URLs to watch form before storing`() {
+        val shortsUrl = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+        val expected = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+        val spyService = spyk(service)
+        every { spyService.fetchYouTubePreview(any()) } returns web.service.YouTubePreview(
+            videoId = "dQw4w9WgXcQ",
+            title = "A Short",
+            thumbnailUrl = null,
+            durationSeconds = 10
+        )
+
+        spyService.setIntroByUrl(discordId, guildId, shortsUrl, 90, null, null, null)
+
+        assertEquals(expected, slot.captured.musicBlob?.let { String(it) })
+        verify { spyService.fetchYouTubePreview(expected) }
+    }
+
+    @Test
+    fun `setIntroByUrl leaves non-Shorts URLs untouched`() {
+        val url = "https://example.com/audio.mp3"
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { userService.getUserById(discordId, guildId) } returns user
+        val slot = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
+        val spyService = spyk(service)
+        every { spyService.fetchYouTubePreview(any()) } returns null
 
         spyService.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
 

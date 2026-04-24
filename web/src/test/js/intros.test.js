@@ -375,37 +375,67 @@ function makeClipRow(id, { videoId, startMs, endMs } = {}) {
     return { tr, btn, tbody };
 }
 
+// togglePlayClip now routes saved-row previews through YT.Player (same path
+// as the form's URL preview) instead of a raw <iframe src> — a raw iframe
+// doesn't do the enablejsapi+origin handshake YouTube's Shorts anti-bot gate
+// keys on, and was failing silently (blank preview row) for users.
+function stubYtPlayer() {
+    return jest.fn().mockImplementation(function (el, opts) {
+        const iframe = document.createElement('iframe');
+        iframe.dataset.ytStub = '1';
+        iframe.dataset.videoId = opts && opts.videoId;
+        if (el && el.parentNode) el.parentNode.replaceChild(iframe, el);
+        return { destroy: jest.fn() };
+    });
+}
+const flushMicrotasks = () => new Promise(r => setTimeout(r, 0));
+
 describe('togglePlayClip', () => {
+    let originalYT;
+
     beforeEach(() => {
         document.body.innerHTML = '';
+        _resetYtApiPromiseForTests();
+        document.querySelectorAll('script[src*="iframe_api"]').forEach(s => s.remove());
+        originalYT = window.YT;
+        window.YT = { Player: stubYtPlayer() };
     });
 
-    test('injects a video-preview-row with a clip-configured iframe', () => {
+    afterEach(() => {
+        if (originalYT === undefined) delete window.YT;
+        else window.YT = originalYT;
+    });
+
+    test('mounts a YT.Player with the clip range in a new preview row', async () => {
         const { tr, btn } = makeClipRow('1_2_1', { videoId: 'dQw4w9WgXcQ', startMs: 5000, endMs: 12000 });
         togglePlayClip(btn);
 
         const previewRow = tr.nextElementSibling;
         expect(previewRow).not.toBeNull();
         expect(previewRow.className).toBe('video-preview-row');
+        // Button UI transitions synchronously so the click feels responsive.
+        expect(btn.textContent).toBe('⏹');
+        expect(btn.classList.contains('playing')).toBe(true);
+
+        await flushMicrotasks();
+
+        expect(window.YT.Player).toHaveBeenCalledTimes(1);
+        const opts = window.YT.Player.mock.calls[0][1];
+        expect(opts.videoId).toBe('dQw4w9WgXcQ');
+        expect(opts.playerVars.start).toBe(5);
+        expect(opts.playerVars.end).toBe(12);
+        expect(opts.playerVars.autoplay).toBe(1);
+        expect(opts.playerVars.playsinline).toBe(1);
 
         const iframe = previewRow.querySelector('iframe');
         expect(iframe).not.toBeNull();
-        const src = iframe.getAttribute('src');
-        // Use the privacy-enhanced host so Shorts (and strict-anti-bot videos)
-        // render reliably instead of blanking the preview row.
-        expect(src).toContain('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
-        expect(src).toContain('start=5');
-        expect(src).toContain('end=12');
-        expect(src).toContain('autoplay=1');
-        expect(src).toContain('playsinline=1');
-
-        expect(btn.textContent).toBe('⏹');
-        expect(btn.classList.contains('playing')).toBe(true);
+        expect(iframe.dataset.videoId).toBe('dQw4w9WgXcQ');
     });
 
-    test('second click tears the preview row back down', () => {
+    test('second click tears the preview row back down', async () => {
         const { tr, btn } = makeClipRow('1_2_1', { videoId: 'abc', startMs: 0, endMs: 7000 });
         togglePlayClip(btn);
+        await flushMicrotasks();
         togglePlayClip(btn);
 
         expect(tr.nextElementSibling).toBeNull();
@@ -413,23 +443,26 @@ describe('togglePlayClip', () => {
         expect(btn.classList.contains('playing')).toBe(false);
     });
 
-    test('omits start / end params when no clip is set', () => {
-        const { tr, btn } = makeClipRow('1_2_1', { videoId: 'abc' });
+    test('omits start / end params when no clip is set', async () => {
+        const { btn } = makeClipRow('1_2_1', { videoId: 'abc' });
         togglePlayClip(btn);
+        await flushMicrotasks();
 
-        const iframe = tr.nextElementSibling.querySelector('iframe');
-        const src = iframe.getAttribute('src');
-        expect(src).not.toContain('start=');
-        expect(src).not.toContain('end=');
+        expect(window.YT.Player).toHaveBeenCalledTimes(1);
+        const opts = window.YT.Player.mock.calls[0][1];
+        expect(opts.playerVars.start).toBeUndefined();
+        expect(opts.playerVars.end).toBeUndefined();
     });
 
-    test('starting a clip preview closes any previously-open preview', () => {
+    test('starting a clip preview closes any previously-open preview', async () => {
         const first = makeClipRow('1_2_1', { videoId: 'first' });
         const second = makeClipRow('1_2_2', { videoId: 'second' });
         togglePlayClip(first.btn);
+        await flushMicrotasks();
         expect(first.tr.nextElementSibling.className).toBe('video-preview-row');
 
         togglePlayClip(second.btn);
+        await flushMicrotasks();
 
         // Only one preview row exists at a time; first button reset, second open.
         expect(document.querySelectorAll('.video-preview-row').length).toBe(1);
@@ -437,11 +470,31 @@ describe('togglePlayClip', () => {
         expect(second.btn.classList.contains('playing')).toBe(true);
         expect(second.tr.nextElementSibling.className).toBe('video-preview-row');
     });
+
+    test('skips YT.Player if the preview row was torn down before the API resolved', async () => {
+        const { btn } = makeClipRow('1_2_1', { videoId: 'abc' });
+        togglePlayClip(btn);
+        // User clicks away (or hits another play button) before the API promise
+        // resolves; the preview row is gone, so we must not mount the player.
+        closeClipPreviewRow();
+        await flushMicrotasks();
+        expect(window.YT.Player).not.toHaveBeenCalled();
+    });
 });
 
 describe('closeClipPreviewRow', () => {
+    let originalYT;
+
     beforeEach(() => {
         document.body.innerHTML = '';
+        _resetYtApiPromiseForTests();
+        originalYT = window.YT;
+        window.YT = { Player: stubYtPlayer() };
+    });
+
+    afterEach(() => {
+        if (originalYT === undefined) delete window.YT;
+        else window.YT = originalYT;
     });
 
     test('removes injected preview rows and resets their buttons', () => {
