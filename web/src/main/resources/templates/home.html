@@ -6,13 +6,13 @@
     <title>TobyBot — Your Discord Companion</title>
 
     <!-- SEO -->
-    <meta name="description" content="Music, moderation, DnD tools, and more — all in one bot for your Discord server.">
+    <meta name="description" content="Music, moderation, DnD, a live TOBY coin market, titles to equip, and monthly leaderboards — all in one bot.">
 
     <!-- Open Graph (WhatsApp, Facebook, etc.) -->
     <meta property="og:type"        content="website">
     <meta property="og:url"         content="https://www.toby-bot.co.uk/">
     <meta property="og:title"       content="TobyBot — Your Discord Companion">
-    <meta property="og:description" content="Music, moderation, DnD tools, and more — all in one bot for your Discord server.">
+    <meta property="og:description" content="Music, moderation, DnD, a live TOBY coin market, titles to equip, and monthly leaderboards — all in one bot.">
     <meta property="og:image"       content="https://www.toby-bot.co.uk/images/preview.svg">
 
     <!-- Favicon -->
@@ -124,6 +124,9 @@
         .feature-icon { font-size: 2.2rem; margin-bottom: 14px; }
         .feature-card h3 { font-size: 1rem; color: #fff; margin-bottom: 8px; }
         .feature-card p { font-size: 0.88rem; color: #a0a0b0; line-height: 1.5; }
+        /* Linkable feature cards: no underline, full-card click target. */
+        a.feature-card { display: block; text-decoration: none; color: inherit; }
+        a.feature-card h3 { color: #fff; }
         .commands-link {
             text-align: center;
             margin-top: 32px;
@@ -191,7 +194,7 @@
 <section class="hero">
     <div class="hero-badge">Discord Bot</div>
     <h1>Your server's <span>best companion</span></h1>
-    <p>Music, moderation, DnD tools, and more — all in one bot for your Discord server.</p>
+    <p>Music, moderation, DnD tools, a live TOBY coin market, titles to equip, and monthly leaderboards — all in one bot.</p>
     <div class="hero-actions">
         <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
         <a href="/intro/guilds" class="btn-secondary">Manage Intro Songs</a>
@@ -204,21 +207,36 @@
 <section class="features">
     <h2>What can TobyBot do?</h2>
     <div class="feature-grid">
-        <div class="feature-card">
+        <a class="feature-card" href="/intro/guilds">
             <div class="feature-icon">&#127925;</div>
-            <h3>Music</h3>
+            <h3>Music &amp; Intros</h3>
             <p>Play audio and set personal intro songs that play when you join a voice channel.</p>
-        </div>
+        </a>
+        <a class="feature-card" href="/economy/guilds">
+            <div class="feature-icon">&#128176;</div>
+            <h3>TOBY Market</h3>
+            <p>Earn social credit by hanging out, then trade it for TOBY coin on a live per-server market.</p>
+        </a>
+        <a class="feature-card" href="/titles/guilds">
+            <div class="feature-icon">&#127942;</div>
+            <h3>Titles</h3>
+            <p>Spend credit on vanity titles that grant a matching Discord role when equipped.</p>
+        </a>
+        <a class="feature-card" href="/leaderboards">
+            <div class="feature-icon">&#128200;</div>
+            <h3>Leaderboards</h3>
+            <p>Monthly standings and TobyCoin wallet rankings per server.</p>
+        </a>
         <div class="feature-card">
             <div class="feature-icon">&#127922;</div>
             <h3>DnD Tools</h3>
             <p>Roll dice, look up spells and monsters, and streamline your tabletop sessions.</p>
         </div>
-        <div class="feature-card">
+        <a class="feature-card" href="/moderation/guilds">
             <div class="feature-icon">&#128737;</div>
             <h3>Moderation</h3>
             <p>Kick, mute, tweak permissions, and run polls &mdash; from your browser.</p>
-        </div>
+        </a>
         <div class="feature-card">
             <div class="feature-icon">&#10024;</div>
             <h3>Miscellaneous</h3>
@@ -243,6 +261,33 @@
         <h2>&#127925; Personalise Your Entrance</h2>
         <p>Set a custom intro song that plays whenever you join a voice channel. Supports YouTube links and MP3 uploads.</p>
         <a href="/intro/guilds" class="btn-primary">Manage Your Intros &#8594;</a>
+    </div>
+</section>
+
+<!-- TOBY Market CTA -->
+<section class="intro-cta">
+    <div class="cta-card">
+        <h2>&#128176; Trade TOBY Coin</h2>
+        <p>Every server has its own live market with a 5-minute price tick. Earn social credit by being active, then buy low and sell high. Your wallet travels with you to the leaderboard.</p>
+        <a href="/economy/guilds" class="btn-primary">Open The Market &#8594;</a>
+    </div>
+</section>
+
+<!-- Titles CTA -->
+<section class="intro-cta">
+    <div class="cta-card">
+        <h2>&#127942; Wear A Title</h2>
+        <p>Spend social credit &mdash; or pay with TOBY in one click &mdash; on vanity titles that come with a matching Discord role you can equip any time.</p>
+        <a href="/titles/guilds" class="btn-primary">Browse The Title Shop &#8594;</a>
+    </div>
+</section>
+
+<!-- Leaderboards CTA -->
+<section class="intro-cta">
+    <div class="cta-card">
+        <h2>&#128200; See The Leaderboards</h2>
+        <p>Monthly social-credit standings with a podium, TobyCoin wallet rankings, and a This month / Lifetime toggle so the top of the list actually changes.</p>
+        <a href="/leaderboards" class="btn-primary">View Leaderboards &#8594;</a>
     </div>
 </section>
 
