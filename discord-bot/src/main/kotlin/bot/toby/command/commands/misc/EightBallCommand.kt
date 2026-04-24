@@ -56,6 +56,9 @@ class EightBallCommand @Autowired constructor(private val userService: UserServi
         get() = "Think of a question and let me divine to you an answer!"
 
     companion object {
+        // A Discord snowflake, not a credential. The shape trips Qodana's
+        // "discord-client-id" hardcoded-password heuristic.
+        @Suppress("HardcodedPasswords")
         const val TOMS_DISCORD_ID = 312691905030782977L
     }
 }

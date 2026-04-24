@@ -25,21 +25,21 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
 
     fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
-        val endNote = endPosition?.let { " (clipped to ${it} ms)" }.orEmpty()
+        val endNote = endPosition?.let { " (clipped to $it ms)" }.orEmpty()
         event?.hook
             ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms'$endNote with volume '$volume'")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
         track.position = startPosition
         track.userData = volume
         if (endPosition != null && endPosition > startPosition) {
-            track.setMarker(TrackMarker(endPosition, TrackMarkerHandler { state ->
+            track.setMarker(TrackMarker(endPosition) { state ->
                 // Stop the clipped track on reaching the end marker. onTrackEnd then
                 // advances the queue and restores the previous volume.
                 if (state == TrackMarkerHandler.MarkerState.REACHED) {
-                    logger.info("Clip end marker reached at ${endPosition} ms for ${track.info.title}, stopping track.")
+                    logger.info("Clip end marker reached at $endPosition ms for ${track.info.title}, stopping track.")
                     track.stop()
                 }
-            }))
+            })
         }
         synchronized(queue) {
             if (!player.startTrack(track, true)) {

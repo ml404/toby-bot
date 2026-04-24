@@ -80,7 +80,7 @@ tasks.named('build').configure {
 
 bootJar {
     launchScript()
-    mainClass.set('Application')
+    mainClass.set('app.Application')
 }
 
 /**
