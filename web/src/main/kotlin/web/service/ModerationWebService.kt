@@ -3,20 +3,29 @@ package web.service
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.service.ConfigService
+import database.service.MonthlyCreditSnapshotService
+import database.service.TitleService
 import database.service.UserService
+import database.service.VoiceSessionService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import org.springframework.stereotype.Service
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Service
 class ModerationWebService(
     private val jda: JDA,
     private val userService: UserService,
     private val configService: ConfigService,
-    private val introWebService: IntroWebService
+    private val introWebService: IntroWebService,
+    private val voiceSessionService: VoiceSessionService,
+    private val titleService: TitleService,
+    private val snapshotService: MonthlyCreditSnapshotService,
+    private val titleRoleService: TitleRoleService
 ) {
     companion object {
         const val MAX_POLL_OPTIONS = 10
@@ -93,19 +102,106 @@ class ModerationWebService(
 
     fun getLeaderboard(guildId: Long): List<LeaderboardRow> {
         val guild = jda.getGuildById(guildId) ?: return emptyList()
-        return userService.listGuildUsers(guildId)
-            .filterNotNull()
+        val users = userService.listGuildUsers(guildId).filterNotNull()
+        val lifetimeVoice = voiceSessionService.sumCountedSecondsLifetimeByUser(guildId)
+
+        val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        val prevMonthStart = thisMonthStart.minusMonths(1)
+        val thisMonthVoice = voiceSessionService.sumCountedSecondsInRangeByUser(
+            guildId,
+            prevMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC),
+            thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
+        )
+        val priorSnapshots = snapshotService.listForGuildDate(guildId, thisMonthStart)
+            .associateBy { it.discordId }
+
+        return users
             .sortedByDescending { it.socialCredit ?: 0L }
             .mapIndexed { index, dto ->
                 val member = guild.getMemberById(dto.discordId)
+                val title = dto.activeTitleId?.let { titleService.getById(it) }?.label
+                val current = dto.socialCredit ?: 0L
+                val baseline = priorSnapshots[dto.discordId]?.socialCredit
+                val creditsDelta = if (baseline == null) 0L else current - baseline
                 LeaderboardRow(
                     rank = index + 1,
                     discordId = dto.discordId.toString(),
                     name = member?.effectiveName ?: "Unknown",
                     avatarUrl = member?.effectiveAvatarUrl,
-                    socialCredit = dto.socialCredit ?: 0L
+                    socialCredit = current,
+                    title = title,
+                    voiceSecondsLifetime = lifetimeVoice[dto.discordId] ?: 0L,
+                    voiceSecondsThisMonth = thisMonthVoice[dto.discordId] ?: 0L,
+                    creditsEarnedThisMonth = creditsDelta
                 )
             }
+    }
+
+    fun getTitlesForGuild(guildId: Long, actorDiscordId: Long): TitleShopView {
+        val catalog = titleService.listAll().map { t ->
+            TitleShopEntry(
+                id = t.id ?: 0,
+                label = t.label,
+                cost = t.cost,
+                description = t.description,
+                colorHex = t.colorHex
+            )
+        }
+        val ownedIds = titleService.listOwned(actorDiscordId).map { it.titleId }.toSet()
+        val actorDto = userService.getUserById(actorDiscordId, guildId)
+        val equippedId = actorDto?.activeTitleId
+        val balance = actorDto?.socialCredit ?: 0L
+        return TitleShopView(
+            catalog = catalog,
+            ownedTitleIds = ownedIds,
+            equippedTitleId = equippedId,
+            balance = balance
+        )
+    }
+
+    fun buyTitle(actorDiscordId: Long, guildId: Long, titleId: Long): String? {
+        if (jda.getGuildById(guildId) == null) return "Bot is not in that server."
+        val title = titleService.getById(titleId) ?: return "Title not found."
+        val actor = userService.getUserById(actorDiscordId, guildId) ?: return "You don't have a profile in that server yet."
+        if (titleService.owns(actorDiscordId, titleId)) return "You already own this title."
+        val balance = actor.socialCredit ?: 0L
+        if (balance < title.cost) return "Not enough credits. You need ${title.cost}, you have $balance."
+        actor.socialCredit = balance - title.cost
+        userService.updateUser(actor)
+        titleService.recordPurchase(actorDiscordId, titleId)
+        return null
+    }
+
+    fun equipTitle(actorDiscordId: Long, guildId: Long, titleId: Long): String? {
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val member = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
+        val actor = userService.getUserById(actorDiscordId, guildId) ?: return "No profile in that server."
+        val title = titleService.getById(titleId) ?: return "Title not found."
+        if (!titleService.owns(actorDiscordId, titleId)) return "You don't own this title."
+        val ownedIds = titleService.listOwned(actorDiscordId).map { it.titleId }.toSet()
+        return when (val r = titleRoleService.equip(guild, member, title, ownedIds)) {
+            is TitleRoleResult.Ok -> {
+                actor.activeTitleId = titleId
+                userService.updateUser(actor)
+                null
+            }
+            is TitleRoleResult.Error -> r.message
+        }
+    }
+
+    fun unequipTitle(actorDiscordId: Long, guildId: Long): String? {
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val member = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
+        val actor = userService.getUserById(actorDiscordId, guildId) ?: return "No profile in that server."
+        val ownedIds = titleService.listOwned(actorDiscordId).map { it.titleId }.toSet()
+        return when (val r = titleRoleService.unequip(guild, member, ownedIds)) {
+            is TitleRoleResult.Ok -> {
+                actor.activeTitleId = null
+                userService.updateUser(actor)
+                null
+            }
+            is TitleRoleResult.Error -> r.message
+        }
     }
 
     fun togglePermission(
@@ -182,6 +278,16 @@ class ModerationWebService(
                     return "No voice channel with that name exists in this server."
                 }
                 name
+            }
+            ConfigDto.Configurations.LEADERBOARD_CHANNEL -> {
+                val id = rawValue.trim()
+                if (id.isEmpty()) return "Channel id is required."
+                val idLong = id.toLongOrNull()
+                    ?: return "Channel id must be numeric."
+                if (guild.getTextChannelById(idLong) == null) {
+                    return "No text channel with that id exists in this server."
+                }
+                id
             }
         }
 
@@ -394,7 +500,36 @@ data class LeaderboardRow(
     val discordId: String,
     val name: String,
     val avatarUrl: String?,
-    val socialCredit: Long
+    val socialCredit: Long,
+    val title: String? = null,
+    val voiceSecondsLifetime: Long = 0,
+    val voiceSecondsThisMonth: Long = 0,
+    val creditsEarnedThisMonth: Long = 0
+) {
+    val voiceLifetimeDisplay: String get() = formatDuration(voiceSecondsLifetime)
+    val voiceThisMonthDisplay: String get() = formatDuration(voiceSecondsThisMonth)
+
+    private fun formatDuration(seconds: Long): String {
+        if (seconds <= 0) return "0m"
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    }
+}
+
+data class TitleShopEntry(
+    val id: Long,
+    val label: String,
+    val cost: Long,
+    val description: String?,
+    val colorHex: String?
+)
+
+data class TitleShopView(
+    val catalog: List<TitleShopEntry>,
+    val ownedTitleIds: Set<Long>,
+    val equippedTitleId: Long?,
+    val balance: Long
 )
 
 data class MoveResult(

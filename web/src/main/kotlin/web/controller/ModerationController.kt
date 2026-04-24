@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2Aut
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.ModerationWebService
+import web.service.TitleShopView
 import web.util.discordIdOrNull
 import web.util.discordIdString
 import web.util.displayName
@@ -70,13 +72,56 @@ class ModerationController(
             return "redirect:/moderation/guilds"
         }
         val leaderboard = moderationWebService.getLeaderboard(guildId)
+        val titleShop = moderationWebService.getTitlesForGuild(guildId, discordId)
 
         model.addAttribute("overview", overview)
         model.addAttribute("leaderboard", leaderboard)
+        model.addAttribute("titleShop", titleShop)
         model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
         model.addAttribute("username", user.displayName())
         model.addAttribute("actorDiscordId", discordId.toString())
         return "moderation"
+    }
+
+    @PostMapping("/{guildId}/titles/{titleId}/buy")
+    @ResponseBody
+    fun buyTitle(
+        @PathVariable guildId: Long,
+        @PathVariable titleId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> {
+        val actor = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+        val error = moderationWebService.buyTitle(actor, guildId, titleId)
+        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/titles/{titleId}/equip")
+    @ResponseBody
+    fun equipTitle(
+        @PathVariable guildId: Long,
+        @PathVariable titleId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> {
+        val actor = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+        val error = moderationWebService.equipTitle(actor, guildId, titleId)
+        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @DeleteMapping("/{guildId}/titles/equipped")
+    @ResponseBody
+    fun unequipTitle(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> {
+        val actor = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+        val error = moderationWebService.unequipTitle(actor, guildId)
+        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
     }
 
     @PostMapping("/{guildId}/user/{targetDiscordId}/permission", consumes = ["application/json"])

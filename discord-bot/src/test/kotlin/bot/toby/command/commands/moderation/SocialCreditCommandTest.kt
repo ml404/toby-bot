@@ -8,7 +8,9 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.CommandTest.Companion.user
 import bot.toby.command.DefaultCommandContext
+import database.service.TitleService
 import database.service.UserService
+import database.service.VoiceSessionService
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -24,18 +26,22 @@ internal class SocialCreditCommandTest : CommandTest {
     lateinit var socialCreditCommand: SocialCreditCommand
 
     private lateinit var userService: UserService
+    private lateinit var voiceSessionService: VoiceSessionService
+    private lateinit var titleService: TitleService
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
         userService = mockk(relaxed = true)
-        socialCreditCommand = SocialCreditCommand(userService)
+        voiceSessionService = mockk(relaxed = true)
+        titleService = mockk(relaxed = true)
+        socialCreditCommand = SocialCreditCommand(userService, voiceSessionService, titleService)
     }
 
     @AfterEach
     fun tearDown() {
         tearDownCommonMocks()
-        clearMocks(userService)
+        clearMocks(userService, voiceSessionService, titleService)
     }
 
     @Test
@@ -187,8 +193,12 @@ internal class SocialCreditCommandTest : CommandTest {
         every { targetUserDto.guildId } returns 1L
         every { userService.listGuildUsers(1L) } returns listOf(requestingUserDto, targetUserDto)
         every { requestingUserDto.socialCredit } returns 100L
+        every { requestingUserDto.discordId } returns 1L
+        every { requestingUserDto.activeTitleId } returns null
         every { targetUserDto.socialCredit } returns 50L
         every { targetUserDto.discordId } returns 2L
+        every { targetUserDto.activeTitleId } returns null
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(1L) } returns emptyMap()
         every { guild.members } returns memberList
         every { guild.getMemberById(1L) } returns member
         every { guild.getMemberById(2L) } returns targetMember
@@ -200,8 +210,8 @@ internal class SocialCreditCommandTest : CommandTest {
         val expectedMessage = buildString {
             append("**Social Credit Leaderboard**\n")
             append("**-----------------------------**\n")
-            append("#1: Effective Name - score: 100\n")
-            append("#2: Target Effective Name - score: 50\n")
+            append("#1: Effective Name — 100 credits · 0m voice\n")
+            append("#2: Target Effective Name — 50 credits · 0m voice")
         }
         // Act
         socialCreditCommand.handle(commandContext, requestingUserDto, 0)

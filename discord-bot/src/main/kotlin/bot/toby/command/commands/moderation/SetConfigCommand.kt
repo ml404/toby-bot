@@ -5,6 +5,7 @@ import core.command.CommandContext
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.service.ConfigService
+import net.dv8tion.jda.api.entities.channel.ChannelType
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -51,8 +52,31 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
                 )
                 ConfigDto.Configurations.INTRO_VOLUME -> setConfigAndSendMessage(event, optionMapping, deleteDelay,
                     "Set default intro volume to '${optionMapping.asInt}'")
+                ConfigDto.Configurations.LEADERBOARD_CHANNEL -> setLeaderboardChannel(event, deleteDelay)
             }
         }
+    }
+
+    private fun setLeaderboardChannel(event: SlashCommandInteractionEvent, deleteDelay: Int) {
+        val configValue = ConfigDto.Configurations.LEADERBOARD_CHANNEL.configValue
+        val guildId = event.guild?.id ?: return
+        val channel = event.getOption(
+            ConfigDto.Configurations.LEADERBOARD_CHANNEL.name.lowercase(Locale.getDefault())
+        )?.asChannel
+        if (channel == null) {
+            event.hook.sendMessage("No valid text channel was mentioned, so config was not updated")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val newConfigDto = ConfigDto(configValue, channel.id, guildId)
+        val databaseConfig = configService.getConfigByName(configValue, guildId)
+        if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
+            configService.updateConfig(newConfigDto)
+        } else {
+            configService.createNewConfig(newConfigDto)
+        }
+        event.hook.sendMessage("Monthly leaderboards will now post in <#${channel.id}> on the 1st of each month.")
+            .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun setConfigAndSendMessage(
@@ -137,6 +161,12 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
                 ConfigDto.Configurations.MOVE.name.lowercase(Locale.getDefault()),
                 "Value for the default move channel you want if using move command without arguments",
                 false
-            )
+            ),
+            OptionData(
+                OptionType.CHANNEL,
+                ConfigDto.Configurations.LEADERBOARD_CHANNEL.name.lowercase(Locale.getDefault()),
+                "Text channel for the monthly social credit leaderboard post",
+                false
+            ).setChannelTypes(ChannelType.TEXT)
         )
 }

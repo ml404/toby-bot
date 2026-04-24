@@ -25,6 +25,7 @@
         <button class="tab-btn active" data-tab="users" role="tab" aria-selected="true">Users</button>
         <button class="tab-btn" data-tab="config" role="tab" aria-selected="false">Config</button>
         <button class="tab-btn" data-tab="social" role="tab" aria-selected="false">Social Credit</button>
+        <button class="tab-btn" data-tab="titles" role="tab" aria-selected="false">Titles</button>
         <button class="tab-btn" data-tab="voice" role="tab" aria-selected="false">Voice</button>
         <button class="tab-btn" data-tab="poll" role="tab" aria-selected="false">Poll</button>
     </div>
@@ -148,6 +149,17 @@
                 </select>
                 <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
             </div>
+            <div class="config-row" data-key="LEADERBOARD_CHANNEL">
+                <label>Monthly leaderboard channel</label>
+                <select th:disabled="${!isOwner}">
+                    <option value="">&mdash; system channel &mdash;</option>
+                    <option th:each="tc : ${overview.textChannels}"
+                            th:value="${tc.id}"
+                            th:text="'#' + ${tc.name}"
+                            th:selected="${overview.config['LEADERBOARD_CHANNEL'] == tc.id}"></option>
+                </select>
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
         </div>
     </section>
 
@@ -156,13 +168,23 @@
         <p class="muted mb-4" th:if="${!isOwner}">
             Only the server owner can adjust social credit.
         </p>
+        <p class="muted mb-4">
+            Score is the lifetime total. "This month" shows credits earned and
+            counted voice time since the 1st. Monthly leaderboard is posted on the
+            1st of each month.
+            <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}" style="margin-left:8px;">View full leaderboard &rarr;</a>
+        </p>
         <div class="mod-table-wrap">
             <table class="mod-table">
                 <thead>
                 <tr>
                     <th>#</th>
                     <th>Member</th>
+                    <th>Title</th>
                     <th>Score</th>
+                    <th>Credits this month</th>
+                    <th>Voice (lifetime)</th>
+                    <th>Voice this month</th>
                     <th th:if="${isOwner}">Adjust</th>
                 </tr>
                 </thead>
@@ -178,7 +200,11 @@
                             <span th:text="${row.name}">Name</span>
                         </div>
                     </td>
+                    <td class="sc-title" th:text="${row.title != null ? row.title : '—'}">—</td>
                     <td class="sc-score" th:text="${row.socialCredit}">0</td>
+                    <td th:text="${row.creditsEarnedThisMonth}">0</td>
+                    <td th:text="${row.voiceLifetimeDisplay}">0m</td>
+                    <td th:text="${row.voiceThisMonthDisplay}">0m</td>
                     <td th:if="${isOwner}">
                         <div class="sc-adjust">
                             <input type="number" value="0" step="1" aria-label="Delta">
@@ -187,7 +213,62 @@
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(leaderboard)}">
-                    <td colspan="4" class="muted" style="text-align:center;">No users tracked yet.</td>
+                    <td colspan="8" class="muted" style="text-align:center;">No users tracked yet.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- TITLES TAB -->
+    <section class="tab-panel" data-panel="titles">
+        <p class="muted mb-4">
+            Spend your social credit on vanity titles. Each purchased title also
+            grants you a matching Discord role on this server when equipped —
+            visible everywhere you appear in chat, member list and voice.
+            The bot needs the <strong>Manage Roles</strong> permission, and its
+            role must sit above the title roles in the hierarchy.
+        </p>
+        <p class="muted mb-4">
+            Your balance: <strong th:text="${titleShop.balance} + ' credits'">0 credits</strong>
+        </p>
+        <div class="mod-table-wrap">
+            <table class="mod-table">
+                <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Cost</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${titleShop.catalog}" th:attr="data-title-id=${t.id}">
+                    <td>
+                        <span class="title-label"
+                              th:text="${t.label}"
+                              th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}">Title</span>
+                    </td>
+                    <td th:text="${t.cost}">0</td>
+                    <td th:text="${t.description != null ? t.description : ''}"></td>
+                    <td>
+                        <span th:if="${titleShop.equippedTitleId == t.id}" class="badge owner">equipped</span>
+                        <span th:if="${titleShop.equippedTitleId != t.id && titleShop.ownedTitleIds.contains(t.id)}" class="muted">owned</span>
+                        <span th:if="${!titleShop.ownedTitleIds.contains(t.id)}" class="muted">available</span>
+                    </td>
+                    <td>
+                        <button type="button" class="btn title-buy"
+                                th:if="${!titleShop.ownedTitleIds.contains(t.id)}"
+                                th:disabled="${titleShop.balance < t.cost}">Buy</button>
+                        <button type="button" class="btn title-equip"
+                                th:if="${titleShop.ownedTitleIds.contains(t.id) && titleShop.equippedTitleId != t.id}">Equip</button>
+                        <button type="button" class="btn title-unequip"
+                                th:if="${titleShop.equippedTitleId == t.id}">Unequip</button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(titleShop.catalog)}">
+                    <td colspan="5" class="muted" style="text-align:center;">No titles configured.</td>
                 </tr>
                 </tbody>
             </table>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Leaderboard', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <div class="lb-header">
+        <a class="back-link" th:href="@{/leaderboards}">&larr; All leaderboards</a>
+        <h1 th:text="${view.guildName}">Guild Name</h1>
+        <p class="muted">Social credit standings &middot; lifetime totals with this month's earnings highlighted</p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="lb-stats" aria-label="Server stats for this month">
+        <div class="lb-stat">
+            <div class="lb-stat-value" th:text="${view.totalMembers}">0</div>
+            <div class="lb-stat-label">Tracked members</div>
+        </div>
+        <div class="lb-stat">
+            <div class="lb-stat-value" th:text="${view.totalCreditsThisMonth}">0</div>
+            <div class="lb-stat-label">Credits earned this month</div>
+        </div>
+        <div class="lb-stat">
+            <div class="lb-stat-value" th:text="${view.totalVoiceThisMonthDisplay}">0m</div>
+            <div class="lb-stat-label">Voice time this month</div>
+        </div>
+        <div class="lb-stat" th:if="${view.mostActiveMember != null}">
+            <div class="lb-stat-value lb-stat-name" th:text="${view.mostActiveMember}">—</div>
+            <div class="lb-stat-label">Most active this month</div>
+        </div>
+    </section>
+
+    <section class="lb-podium" aria-label="Top three" th:if="${not #lists.isEmpty(view.podium)}">
+        <!-- Render in order: 2nd, 1st, 3rd so 1st appears centered and elevated -->
+        <div class="lb-podium-card lb-podium-2" th:if="${#lists.size(view.podium) >= 2}">
+            <div class="lb-podium-rank">2</div>
+            <div class="lb-podium-medal">🥈</div>
+            <img th:if="${view.podium[1].avatarUrl != null}"
+                 th:src="${view.podium[1].avatarUrl}"
+                 class="lb-podium-avatar"
+                 alt="">
+            <div class="lb-podium-name" th:text="${view.podium[1].name}">Name</div>
+            <span th:if="${view.podium[1].title != null}"
+                  class="lb-title-pill"
+                  th:text="${view.podium[1].title}">Title</span>
+            <div class="lb-podium-credits"><strong th:text="${view.podium[1].socialCredit}">0</strong> credits</div>
+            <div class="lb-podium-month"
+                 th:if="${view.podium[1].creditsEarnedThisMonth > 0}"
+                 th:text="'+' + ${view.podium[1].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
+            <div class="lb-podium-voice" th:text="${view.podium[1].voiceThisMonthDisplay} + ' voice'">0m voice</div>
+        </div>
+
+        <div class="lb-podium-card lb-podium-1" th:if="${#lists.size(view.podium) >= 1}">
+            <div class="lb-podium-rank">1</div>
+            <div class="lb-podium-medal">🥇</div>
+            <img th:if="${view.podium[0].avatarUrl != null}"
+                 th:src="${view.podium[0].avatarUrl}"
+                 class="lb-podium-avatar"
+                 alt="">
+            <div class="lb-podium-name" th:text="${view.podium[0].name}">Name</div>
+            <span th:if="${view.podium[0].title != null}"
+                  class="lb-title-pill"
+                  th:text="${view.podium[0].title}">Title</span>
+            <div class="lb-podium-credits"><strong th:text="${view.podium[0].socialCredit}">0</strong> credits</div>
+            <div class="lb-podium-month"
+                 th:if="${view.podium[0].creditsEarnedThisMonth > 0}"
+                 th:text="'+' + ${view.podium[0].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
+            <div class="lb-podium-voice" th:text="${view.podium[0].voiceThisMonthDisplay} + ' voice'">0m voice</div>
+        </div>
+
+        <div class="lb-podium-card lb-podium-3" th:if="${#lists.size(view.podium) >= 3}">
+            <div class="lb-podium-rank">3</div>
+            <div class="lb-podium-medal">🥉</div>
+            <img th:if="${view.podium[2].avatarUrl != null}"
+                 th:src="${view.podium[2].avatarUrl}"
+                 class="lb-podium-avatar"
+                 alt="">
+            <div class="lb-podium-name" th:text="${view.podium[2].name}">Name</div>
+            <span th:if="${view.podium[2].title != null}"
+                  class="lb-title-pill"
+                  th:text="${view.podium[2].title}">Title</span>
+            <div class="lb-podium-credits"><strong th:text="${view.podium[2].socialCredit}">0</strong> credits</div>
+            <div class="lb-podium-month"
+                 th:if="${view.podium[2].creditsEarnedThisMonth > 0}"
+                 th:text="'+' + ${view.podium[2].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
+            <div class="lb-podium-voice" th:text="${view.podium[2].voiceThisMonthDisplay} + ' voice'">0m voice</div>
+        </div>
+    </section>
+
+    <section class="lb-standings" aria-label="Standings 4 and below"
+             th:if="${not #lists.isEmpty(view.standings)}">
+        <h2 class="lb-standings-title">Rest of the field</h2>
+        <div class="mod-table-wrap">
+            <table class="mod-table lb-standings-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Title</th>
+                    <th>Credits</th>
+                    <th>This month</th>
+                    <th>Voice this month</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${view.standings}">
+                    <td th:text="${row.rank}">4</td>
+                    <td>
+                        <div class="member-cell">
+                            <img th:if="${row.avatarUrl != null}"
+                                 th:src="${row.avatarUrl}"
+                                 class="avatar"
+                                 alt="">
+                            <span th:text="${row.name}">Name</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
+                        <span th:unless="${row.title != null}" class="muted">—</span>
+                    </td>
+                    <td th:text="${row.socialCredit}">0</td>
+                    <td>
+                        <span th:if="${row.creditsEarnedThisMonth > 0}"
+                              th:text="'+' + ${row.creditsEarnedThisMonth}">+0</span>
+                        <span th:unless="${row.creditsEarnedThisMonth > 0}" class="muted">—</span>
+                    </td>
+                    <td th:text="${row.voiceThisMonthDisplay}">0m</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(view.podium) and #lists.isEmpty(view.standings)}">
+        <span class="emoji" aria-hidden="true">🏁</span>
+        <h2>No credit has been earned here yet</h2>
+        <p class="mb-5">
+            Run commands, spend time in voice together, and check back soon.
+        </p>
+    </div>
+</main>
+</body>
+</html>

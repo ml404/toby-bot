@@ -66,7 +66,7 @@
 <div class="container">
     <div class="page-header">
         <h1>Privacy Policy</h1>
-        <p class="updated">Last updated: March 2026</p>
+        <p class="updated">Last updated: April 2026</p>
     </div>
 
     <div class="section">
@@ -82,8 +82,11 @@
             <li><strong>Username</strong> — stored where attribution is needed (e.g. excuses, intro song ownership).</li>
             <li><strong>Intro audio files</strong> — audio clips you upload for the intro song feature, stored as binary data.</li>
             <li><strong>User preferences and permissions</strong> — music, meme, and dig permissions; social credit scores; superuser status.</li>
-            <li><strong>Server configuration</strong> — per-guild settings such as delete delay and volume level.</li>
+            <li><strong>Server configuration</strong> — per-guild settings such as delete delay, volume level, and the channel where the monthly leaderboard is posted.</li>
             <li><strong>Excuse entries</strong> — text excuses submitted by users for use within a guild.</li>
+            <li><strong>Voice channel activity</strong> — when you are in a voice channel with TobyBot we record the start and end time of each session, the channel and guild it occurred in, and how much of that time had at least one other non-bot user present. These records are used to award social credit (with a daily cap) and to produce monthly leaderboards.</li>
+            <li><strong>Monthly social-credit snapshots</strong> — on the first of each month we record each tracked user's current social-credit total so the leaderboard can show credits earned that month.</li>
+            <li><strong>Vanity title purchases and equipped title</strong> — the titles you have bought with social credit and which one (if any) you have equipped in each server.</li>
         </ul>
         <p>We do not collect passwords, email addresses, payment card numbers, or any data beyond what Discord makes available through its API.</p>
     </div>
@@ -96,6 +99,8 @@
             <li>Enforcing per-user permissions for commands.</li>
             <li>Persisting guild configuration between bot restarts.</li>
             <li>Displaying usernames on excuse and social credit features.</li>
+            <li>Awarding social credit for voice-channel time you spend with other users, subject to a daily cap, and posting a monthly leaderboard on the first of each month in a channel chosen by the server owner.</li>
+            <li>Creating and assigning a Discord role on the server when you equip a vanity title you have purchased, and removing that role when you unequip or switch titles. The role is cosmetic (no elevated permissions) and is managed entirely by the bot.</li>
         </ul>
         <p>We do not sell, rent, or share your data with third parties for marketing or advertising purposes.</p>
     </div>
