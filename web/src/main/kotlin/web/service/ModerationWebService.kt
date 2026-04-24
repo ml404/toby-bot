@@ -112,16 +112,20 @@ class ModerationWebService(
         val users = userService.listGuildUsers(guildId).filterNotNull()
 
         val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
-        val prevMonthStart = thisMonthStart.minusMonths(1)
+        val nextMonthStart = thisMonthStart.plusMonths(1)
 
         val lifetimeVoice = safely("lifetime voice", emptyMap<Long, Long>()) {
             voiceSessionService.sumCountedSecondsLifetimeByUser(guildId)
         }
+        // Range is [thisMonthStart, nextMonthStart) — sessions whose joinedAt
+        // falls inside the current calendar month. The MonthlyLeaderboardJob
+        // uses [prevMonthStart, thisMonthStart) because it runs on the 1st
+        // and reports the JUST-FINISHED month; that range is wrong here.
         val thisMonthVoice = safely("this-month voice", emptyMap<Long, Long>()) {
             voiceSessionService.sumCountedSecondsInRangeByUser(
                 guildId,
-                prevMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC),
-                thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
+                thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC),
+                nextMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
             )
         }
         val existingBaselines = safely("prior snapshots", emptyList<database.dto.MonthlyCreditSnapshotDto>()) {
