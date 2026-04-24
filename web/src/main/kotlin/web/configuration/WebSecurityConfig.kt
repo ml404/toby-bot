@@ -23,6 +23,7 @@ class WebSecurityConfig {
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.requestMatchers("/dnd/**").authenticated()
                 auth.requestMatchers("/moderation/**").authenticated()
+                auth.requestMatchers("/economy/**").authenticated()
                 auth.anyRequest().authenticated()
             }
             .oauth2Login { oauth2 ->

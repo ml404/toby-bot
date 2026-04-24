@@ -22,7 +22,8 @@ open class TestCachingConfig {
                 ConcurrentMapCache("brothers"),
                 ConcurrentMapCache("users"),
                 ConcurrentMapCache("music"),
-                ConcurrentMapCache("excuses")
+                ConcurrentMapCache("excuses"),
+                ConcurrentMapCache("tobyCoinMarkets")
             )
         )
         return cacheManager

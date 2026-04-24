@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 class CachingConfig {
     @Bean
     fun cacheManager(): CacheManager {
-        val manager = CaffeineCacheManager("configs", "brothers", "users", "music", "excuses")
+        val manager = CaffeineCacheManager("configs", "brothers", "users", "music", "excuses", "tobyCoinMarkets")
         manager.setCaffeine(
             Caffeine.newBuilder()
                 .maximumSize(500)
