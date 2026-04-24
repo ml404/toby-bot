@@ -22,16 +22,9 @@ class PlayCommand : MusicCommand {
         requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
+        if (!checkMusicPreconditions(ctx, requestingUserDto, deleteDelay)) return
+
         val event = ctx.event
-        event.deferReply().queue()
-
-        if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay)
-            return
-        }
-
-        if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
-
         val sub = event.subcommandName
         val guild = event.guild ?: return
         val musicManager = instance.getMusicManager(guild)

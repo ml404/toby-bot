@@ -29,15 +29,8 @@ class SetVolumeCommand : MusicCommand {
         requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
-        val event = ctx.event
-        event.deferReply().queue()
-        if (!requestingUserDto.musicPermission) {
-            sendErrorMessage(event, deleteDelay)
-            return
-        }
-        if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
-        val member = ctx.member
-        setNewVolume(event, instance, member, requestingUserDto, deleteDelay)
+        if (!checkMusicPreconditions(ctx, requestingUserDto, deleteDelay)) return
+        setNewVolume(ctx.event, instance, ctx.member, requestingUserDto, deleteDelay)
     }
 
     private fun setNewVolume(

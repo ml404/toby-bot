@@ -1,5 +1,6 @@
 package integration.bot
 
+import app.Application
 import bot.configuration.*
 import bot.toby.command.commands.dnd.CampaignCommand
 import bot.toby.command.commands.dnd.CharacterCommand

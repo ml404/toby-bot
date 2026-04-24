@@ -16,15 +16,8 @@ class DefaultMonsterAttackPersistence : MonsterAttackPersistence {
     private lateinit var entityManager: EntityManager
 
     override fun save(attack: MonsterAttackDto): MonsterAttackDto {
-        return if (attack.id == 0L) {
-            attack.createdAt = LocalDateTime.now()
-            entityManager.persist(attack)
-            entityManager.flush()
-            attack
-        } else {
-            val merged = entityManager.merge(attack)
-            entityManager.flush()
-            merged
+        return entityManager.saveOrMerge(attack, isNew = { it.id == 0L }) {
+            it.createdAt = LocalDateTime.now()
         }
     }
 

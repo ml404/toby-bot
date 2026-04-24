@@ -1,5 +1,6 @@
 package integration.bot
 
+import app.Application
 import bot.configuration.*
 import bot.toby.button.buttons.*
 import bot.toby.helpers.*

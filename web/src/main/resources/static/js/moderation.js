@@ -7,19 +7,8 @@
     const guildId = main.dataset.guildId;
     const isOwner = main.dataset.isOwner === 'true';
     const actorId = main.dataset.actorId;
-    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content || '';
-    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
 
-    function postJson(url, body) {
-        const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-        if (csrfToken) headers[csrfHeader] = csrfToken;
-        return fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: headers,
-            body: JSON.stringify(body)
-        }).then(r => r.json().catch(() => ({ ok: r.ok, error: r.ok ? null : 'Request failed.' })));
-    }
+    const postJson = window.TobyApi.postJson;
 
     function toast(msg, type) {
         if (window.TobyToast && typeof window.TobyToast.show === 'function') {

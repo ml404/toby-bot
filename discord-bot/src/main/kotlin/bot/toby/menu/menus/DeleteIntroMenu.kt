@@ -14,27 +14,10 @@ class DeleteIntroMenu @Autowired constructor(
 ) : Menu {
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
-        val event = ctx.event
-        logger.setGuildAndMemberContext(ctx.guild, event.member)
-        event.deferReply(true).queue()
-
-        logger.info { "Getting the selectedIntroId" }
-        val selectedIntroId = event.values.firstOrNull() ?: return
-
-        // Fetch the selected MusicDto
-        logger.info { "Fetching the musicDto selected ..." }
-
-        val selectedIntro = introHelper.findIntroById(selectedIntroId)
-
-        if (selectedIntro != null) {
-            introHelper.deleteIntro(selectedIntro)
-            event.hook.sendMessage("Successfully deleted intro '${selectedIntro.fileName}'").setEphemeral(true)
-                .queue { it?.deleteAfter(deleteDelay) }
-
-        } else {
-            event.hook.sendMessage("Unable to find the selected intro.").setEphemeral(true)
-                .queue { it?.deleteAfter(deleteDelay) }
-        }
+        val selectedIntro = resolveSelectedIntroOrElse(ctx, introHelper, deleteDelay) ?: return
+        introHelper.deleteIntro(selectedIntro)
+        ctx.event.hook.sendMessage("Successfully deleted intro '${selectedIntro.fileName}'").setEphemeral(true)
+            .queue { it?.deleteAfter(deleteDelay) }
     }
 
 

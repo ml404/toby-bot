@@ -212,7 +212,7 @@ class IntroWebController(
         val targetIndex = if (dbUser.musicDtos.none { it.index == snapshot.index }) {
             snapshot.index
         } else {
-            (dbUser.musicDtos.map { it.index ?: 0 }.maxOrNull() ?: 0) + 1
+            (dbUser.musicDtos.maxOfOrNull { it.index ?: 0 } ?: 0) + 1
         }
         val restored = MusicDto(
             dbUser,

@@ -1,3 +1,18 @@
+// Body-dataset keys + global mocks shared by the two mount* helpers in this
+// file. Centralised to keep the Qodana DuplicatedCode check quiet and so
+// future setup drift lives in one place. Must run *before* intros.js reads
+// window.TobyApi during initIntroPage().
+function applyIntroPageDatasetAndMocks() {
+    document.body.dataset.introPage = '1';
+    document.body.dataset.guildId = '222';
+    document.body.dataset.targetDiscordId = '';
+    document.body.dataset.maxFileKb = '550';
+    document.body.dataset.maxDurationSeconds = '15';
+    window.TobyToast = { show: jest.fn() };
+    window.TobyModal = { confirm: jest.fn().mockResolvedValue(false) };
+    window.TobyApi = { postJson: jest.fn().mockResolvedValue({ ok: true }) };
+}
+
 const {
     toggleInput,
     togglePlay,
@@ -504,13 +519,7 @@ describe('initIntroPage smoke test', () => {
             </tbody></table>
             <template id="clipEditorTemplate"><div class="clip-editor-popover"></div></template>
         `;
-        document.body.dataset.introPage = '1';
-        document.body.dataset.guildId = '222';
-        document.body.dataset.targetDiscordId = '';
-        document.body.dataset.maxFileKb = '550';
-        document.body.dataset.maxDurationSeconds = '15';
-        window.TobyToast = { show: jest.fn() };
-        window.TobyModal = { confirm: jest.fn().mockResolvedValue(false) };
+        applyIntroPageDatasetAndMocks();
         // Re-require to run initIntroPage against the freshly-built DOM.
         require('../../main/resources/static/js/intros');
     }
@@ -1051,13 +1060,7 @@ describe('initIntroPage — trim bar integration', () => {
             <table><tbody id="introsTbody"></tbody></table>
             <template id="clipEditorTemplate"><div class="clip-editor-popover"></div></template>
         `;
-        document.body.dataset.introPage = '1';
-        document.body.dataset.guildId = '222';
-        document.body.dataset.targetDiscordId = '';
-        document.body.dataset.maxFileKb = '550';
-        document.body.dataset.maxDurationSeconds = '15';
-        window.TobyToast = { show: jest.fn() };
-        window.TobyModal = { confirm: jest.fn().mockResolvedValue(false) };
+        applyIntroPageDatasetAndMocks();
         require('../../main/resources/static/js/intros');
     }
 

@@ -2,7 +2,6 @@ package bot.toby.helpers
 
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.nio.charset.StandardCharsets
 
 object FileUtils {
     @JvmStatic
@@ -36,13 +35,4 @@ object FileUtils {
             }
         }
     }
-
-    fun readByteArrayToUTF8InputStream(fileContents: ByteArray): InputStream {
-        return ByteArrayInputStream(fileContents.contentToString().toByteArray(StandardCharsets.UTF_8))
-    }
-
-    fun readInputStreamToUTF8ByteArray(inputStream: InputStream): ByteArray {
-        return inputStream.readAllBytes().contentToString().toByteArray(StandardCharsets.UTF_8)
-    }
-
 }

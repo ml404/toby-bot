@@ -67,8 +67,10 @@ class DefaultExcusePersistence internal constructor() : database.persistence.Exc
         excuseQuery.executeUpdate()
     }
 
-    @Transactional
     private fun persistExcuseDto(excuseDto: ExcuseDto?): ExcuseDto? {
+        // @Transactional on a private method is a no-op — Spring's proxy
+        // can't intercept private calls. The class-level @Transactional
+        // already wraps the public callers.
         entityManager.persist(excuseDto)
         entityManager.flush()
         return excuseDto

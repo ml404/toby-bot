@@ -23,7 +23,7 @@ class FlywayGuardConfig {
 
     @Bean
     fun flywayMigrationStrategy(
-        @Value("\${toby.flyway.require-migrations:true}") required: Boolean
+        @Value($$"${toby.flyway.require-migrations:true}") required: Boolean
     ): FlywayMigrationStrategy = FlywayMigrationStrategy { flyway ->
         val discovered = flyway.info().all().size
         ensureMigrationsAvailable(required, discovered)

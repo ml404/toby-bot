@@ -17,6 +17,27 @@ interface MusicCommand : Command {
         deleteDelay: Int = 5
     )
 
+    /**
+     * Shared preamble for music commands: defers the reply, rejects users
+     * without the music permission, and bails out when the bot/user aren't
+     * in a compatible voice channel state. Returns `true` when the command
+     * should proceed; implementers should `if (!checkMusicPreconditions(...)) return`.
+     */
+    fun checkMusicPreconditions(
+        ctx: CommandContext,
+        requestingUserDto: UserDto,
+        deleteDelay: Int
+    ): Boolean {
+        val event = ctx.event
+        event.deferReply().queue()
+        if (!requestingUserDto.musicPermission) {
+            sendErrorMessage(event, deleteDelay)
+            return false
+        }
+        if (isInvalidChannelStateForCommand(ctx, deleteDelay)) return false
+        return true
+    }
+
     companion object {
         @JvmStatic
         fun sendDeniedStoppableMessage(
