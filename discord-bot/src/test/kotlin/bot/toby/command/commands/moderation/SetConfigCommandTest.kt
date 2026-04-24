@@ -1,5 +1,6 @@
 package bot.toby.command.commands.moderation
 
+import bot.toby.activity.ActivityTrackingNotifier
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.member
@@ -19,12 +20,14 @@ import java.util.*
 internal class SetConfigCommandTest : CommandTest {
     lateinit var setConfigCommand: SetConfigCommand
     lateinit var configService: ConfigService
+    lateinit var activityTrackingNotifier: ActivityTrackingNotifier
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
         configService = mockk(relaxed = true)
-        setConfigCommand = SetConfigCommand(configService)
+        activityTrackingNotifier = mockk(relaxed = true)
+        setConfigCommand = SetConfigCommand(configService, activityTrackingNotifier)
     }
 
     @AfterEach

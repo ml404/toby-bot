@@ -46,7 +46,8 @@ CREATE TABLE public."user" (
     social_credit bigint,
     initiative smallint default 0,
     dnd_beyond_character_id bigint default null,
-    active_title_id bigint default null
+    active_title_id bigint default null,
+    activity_tracking_opt_out boolean DEFAULT false NOT NULL
 );
 
 DROP TABLE IF EXISTS public.voice_session;
@@ -103,6 +104,26 @@ CREATE TABLE public.guild_title_role (
     title_id BIGINT NOT NULL REFERENCES public.title(id),
     discord_role_id BIGINT NOT NULL,
     PRIMARY KEY (guild_id, title_id)
+);
+
+DROP TABLE IF EXISTS public.activity_session;
+CREATE TABLE public.activity_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    discord_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    activity_name TEXT NOT NULL,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ended_at TIMESTAMP WITH TIME ZONE
+);
+
+DROP TABLE IF EXISTS public.activity_monthly_rollup;
+CREATE TABLE public.activity_monthly_rollup (
+    discord_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    month_start DATE NOT NULL,
+    activity_name TEXT NOT NULL,
+    seconds BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (discord_id, guild_id, month_start, activity_name)
 );
 
 DROP TABLE IF EXISTS public.dnd_campaign_player;

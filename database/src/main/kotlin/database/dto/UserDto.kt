@@ -51,6 +51,9 @@ class UserDto(
     @Column(name = "active_title_id")
     var activeTitleId: Long? = null,
 
+    @Column(name = "activity_tracking_opt_out", nullable = false)
+    var activityTrackingOptOut: Boolean = false,
+
     @OneToMany(mappedBy = "userDto", fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
     var musicDtos: MutableList<MusicDto> = mutableListOf()
 ) : Serializable {

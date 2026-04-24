@@ -106,12 +106,25 @@
     </div>
 
     <div class="section">
-        <h2>4. Data Retention</h2>
-        <p>Your data is retained for as long as TobyBot is active in your server. If you remove the bot from your server, or upon your request, we will delete all data associated with your guild. Individual user data (such as intro songs or social credit) can also be deleted on request by a server owner or the user themselves via the appropriate bot commands.</p>
+        <h2>4. Game-Activity Tracking (Opt-In)</h2>
+        <p>TobyBot can optionally record the names of games you are playing on Discord ("game-activity tracking") to produce per-user and per-server monthly top-games summaries. This feature is <strong>disabled by default</strong> and gated by two switches:</p>
+        <ul>
+            <li><strong>Per-guild:</strong> only the server owner can enable it via the <code>/setconfig activity_tracking: true</code> command. When they do, every non-bot member receives a one-time direct message explaining what will be collected and how to opt out.</li>
+            <li><strong>Per-user:</strong> once enabled at the guild level, any member can opt out at any time with <code>/activity tracking-off</code>, and opt back in with <code>/activity tracking-on</code>. No new activity is recorded while you are opted out.</li>
+        </ul>
+        <p><strong>What is recorded:</strong> only Discord activities of type <em>PLAYING</em> (i.e. games). Music listening (Spotify), streaming, watching, and custom statuses are explicitly ignored. For each session we store the activity name, the guild, the user, and the session start and end timestamps.</p>
+        <p><strong>Retention:</strong> raw session rows are kept for 30 days, then purged. Monthly per-user per-game totals are retained for 12 months before being deleted. Sessions shorter than one minute are discarded before they enter the monthly rollup.</p>
+        <p><strong>Where it's shown:</strong> <code>/activity me</code> shows you your own top games this month and across the last 12 months. <code>/activity server</code> shows the server's top games this month, with opted-out users excluded from the aggregate.</p>
+        <p><strong>Not affected by tracking:</strong> game activity does not earn social credit. Tracking is observational only.</p>
     </div>
 
     <div class="section">
-        <h2>5. Third-Party Services</h2>
+        <h2>5. Data Retention</h2>
+        <p>Your data is retained for as long as TobyBot is active in your server. If you remove the bot from your server, or upon your request, we will delete all data associated with your guild. Individual user data (such as intro songs or social credit) can also be deleted on request by a server owner or the user themselves via the appropriate bot commands. Activity-tracking data is additionally governed by the retention rules described in the "Game-Activity Tracking" section above.</p>
+    </div>
+
+    <div class="section">
+        <h2>6. Third-Party Services</h2>
         <p>TobyBot interacts with the following external services to deliver its features:</p>
         <ul>
             <li><strong>Discord API</strong> — all bot interactions are mediated through Discord. Discord's own <a href="https://discord.com/privacy" style="color:#7289fa;">Privacy Policy</a> applies to data held on their platform.</li>
@@ -122,7 +135,7 @@
     </div>
 
     <div class="section">
-        <h2>6. Your Rights</h2>
+        <h2>7. Your Rights</h2>
         <p>You have the right to:</p>
         <ul>
             <li>Request a summary of data stored about you or your guild.</li>
@@ -133,17 +146,17 @@
     </div>
 
     <div class="section">
-        <h2>7. Children's Privacy</h2>
+        <h2>8. Children's Privacy</h2>
         <p>TobyBot is not directed at children under the age of 13. In accordance with Discord's Terms of Service, users must be at least 13 years old. We do not knowingly collect data from anyone under this age. If you believe a minor has provided us with personal data, please contact us so we can remove it.</p>
     </div>
 
     <div class="section">
-        <h2>8. Changes to This Policy</h2>
+        <h2>9. Changes to This Policy</h2>
         <p>We may update this Privacy Policy from time to time to reflect changes in the bot's features or legal requirements. We will update the "Last updated" date at the top of this page when changes are made. Continued use of TobyBot after updates are posted constitutes acceptance of the revised policy.</p>
     </div>
 
     <div class="section">
-        <h2>9. Contact</h2>
+        <h2>10. Contact</h2>
         <p>If you have any questions or concerns about this Privacy Policy, please open an issue on the <a href="https://github.com/ml404/toby-bot" style="color:#7289fa;">GitHub repository</a> or reach out via Discord.</p>
     </div>
 </div>

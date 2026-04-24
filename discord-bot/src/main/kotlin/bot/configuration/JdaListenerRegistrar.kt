@@ -1,5 +1,6 @@
 package bot.configuration
 
+import bot.toby.handler.ActivityEventHandler
 import bot.toby.handler.EventWaiter
 import bot.toby.handler.MessageEventHandler
 import bot.toby.handler.StartUpHandler
@@ -14,6 +15,7 @@ class JdaListenerRegistrar @Autowired constructor(
     startUpHandler: StartUpHandler,
     voiceEventHandler: VoiceEventHandler,
     messageEventHandler: MessageEventHandler,
+    activityEventHandler: ActivityEventHandler,
     eventWaiter: EventWaiter
 ) {
     init {
@@ -21,6 +23,7 @@ class JdaListenerRegistrar @Autowired constructor(
             startUpHandler,
             voiceEventHandler,
             messageEventHandler,
+            activityEventHandler,
             eventWaiter
         )
     }
