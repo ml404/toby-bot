@@ -123,12 +123,13 @@ class CommandManagerTest {
             CharacterCommand::class.java,
             RefreshCharacterCommand::class.java,
             CampaignCommand::class.java,
-            TitleCommand::class.java
+            TitleCommand::class.java,
+            ActivityCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(44, commandManager.allCommands.size)
-        Assertions.assertEquals(44, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(45, commandManager.allCommands.size)
+        Assertions.assertEquals(45, commandManager.allSlashCommands.size)
     }
 
     @Test

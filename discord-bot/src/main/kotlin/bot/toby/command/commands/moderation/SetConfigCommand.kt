@@ -1,5 +1,6 @@
 package bot.toby.command.commands.moderation
 
+import bot.toby.activity.ActivityTrackingNotifier
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
@@ -15,7 +16,10 @@ import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
-class SetConfigCommand @Autowired constructor(private val configService: ConfigService) : ModerationCommand {
+class SetConfigCommand @Autowired constructor(
+    private val configService: ConfigService,
+    private val activityTrackingNotifier: ActivityTrackingNotifier
+) : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -53,6 +57,8 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
                 ConfigDto.Configurations.INTRO_VOLUME -> setConfigAndSendMessage(event, optionMapping, deleteDelay,
                     "Set default intro volume to '${optionMapping.asInt}'")
                 ConfigDto.Configurations.LEADERBOARD_CHANNEL -> setLeaderboardChannel(event, deleteDelay)
+                ConfigDto.Configurations.ACTIVITY_TRACKING -> setActivityTracking(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED -> Unit
             }
         }
     }
@@ -77,6 +83,41 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
         }
         event.hook.sendMessage("Monthly leaderboards will now post in <#${channel.id}> on the 1st of each month.")
             .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setActivityTracking(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val enabled = optionMapping.asBoolean
+        val configValue = ConfigDto.Configurations.ACTIVITY_TRACKING.configValue
+        val guildId = event.guild?.id ?: return
+
+        val newConfigDto = ConfigDto(configValue, enabled.toString(), guildId)
+        val existing = configService.getConfigByName(configValue, guildId)
+        val previouslyEnabled = existing?.value?.equals("true", ignoreCase = true) == true
+
+        if (existing != null && existing.guildId == newConfigDto.guildId) {
+            configService.updateConfig(newConfigDto)
+        } else {
+            configService.createNewConfig(newConfigDto)
+        }
+
+        val message = if (enabled) {
+            "Enabled game-activity tracking for this server. Members will only be tracked while they have set " +
+                    "their Discord activity visibility to allow it. Any member can opt out with `/activity tracking-off`."
+        } else {
+            "Disabled game-activity tracking for this server. Existing rollups are retained but no new activity " +
+                    "will be recorded."
+        }
+        event.hook.sendMessage(message)
+            .setEphemeral(true)
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+
+        if (enabled && !previouslyEnabled) {
+            event.guild?.let { activityTrackingNotifier.notifyMembersOnFirstEnable(it) }
+        }
     }
 
     private fun setConfigAndSendMessage(
@@ -167,6 +208,12 @@ class SetConfigCommand @Autowired constructor(private val configService: ConfigS
                 ConfigDto.Configurations.LEADERBOARD_CHANNEL.name.lowercase(Locale.getDefault()),
                 "Text channel for the monthly social credit leaderboard post",
                 false
-            ).setChannelTypes(ChannelType.TEXT)
+            ).setChannelTypes(ChannelType.TEXT),
+            OptionData(
+                OptionType.BOOLEAN,
+                ConfigDto.Configurations.ACTIVITY_TRACKING.name.lowercase(Locale.getDefault()),
+                "Enable game-activity tracking in this server (users can opt out individually)",
+                false
+            )
         )
 }

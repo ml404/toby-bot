@@ -1,5 +1,6 @@
 package bot.configuration
 
+import bot.toby.handler.ActivityEventHandler
 import bot.toby.handler.EventWaiter
 import bot.toby.handler.MessageEventHandler
 import bot.toby.handler.StartUpHandler
@@ -18,6 +19,7 @@ class JdaListenerRegistrarTest {
         val startUpHandler = mockk<StartUpHandler>()
         val voiceEventHandler = mockk<VoiceEventHandler>()
         val messageEventHandler = mockk<MessageEventHandler>()
+        val activityEventHandler = mockk<ActivityEventHandler>()
         val eventWaiter = mockk<EventWaiter>()
 
         // Act
@@ -26,6 +28,7 @@ class JdaListenerRegistrarTest {
             startUpHandler,
             voiceEventHandler,
             messageEventHandler,
+            activityEventHandler,
             eventWaiter
         )
 
@@ -35,6 +38,7 @@ class JdaListenerRegistrarTest {
                 startUpHandler,
                 voiceEventHandler,
                 messageEventHandler,
+                activityEventHandler,
                 eventWaiter
             )
         }

@@ -289,6 +289,13 @@ class ModerationWebService(
                 }
                 id
             }
+            ConfigDto.Configurations.ACTIVITY_TRACKING -> {
+                val v = rawValue.trim().lowercase()
+                if (v != "true" && v != "false") return "Value must be true or false."
+                v
+            }
+            ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED ->
+                return "This flag is managed automatically and cannot be edited."
         }
 
         val guildIdString = guild.id
