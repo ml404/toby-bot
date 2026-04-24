@@ -325,6 +325,7 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 .lb-value-toby { color: #57F287; }
 .lb-value-portfolio { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .lb-value-month { color: #2ECC71; font-weight: 600; }
+.lb-value-month-down { color: #ED4245; font-weight: 600; }
 
 /* -- Title pill -- */
 .lb-title-pill {

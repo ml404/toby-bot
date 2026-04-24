@@ -1,10 +1,13 @@
 package web.service
 
+import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
 import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.math.floor
 
 @Service
@@ -14,7 +17,8 @@ class LeaderboardWebService(
     private val moderationWebService: ModerationWebService,
     private val userService: UserService,
     private val marketService: TobyCoinMarketService,
-    private val titleService: TitleService
+    private val titleService: TitleService,
+    private val snapshotService: MonthlyCreditSnapshotService
 ) {
 
     companion object {
@@ -82,6 +86,14 @@ class LeaderboardWebService(
     private fun buildTobyCoinLeaders(guildId: Long): List<TobyCoinLeaderRow> {
         val guild = jda.getGuildById(guildId) ?: return emptyList()
         val price = marketService.getMarket(guildId)?.price ?: 0.0
+        val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        // Best-effort: if the snapshot table read fails (schema drift on an old
+        // deploy), degrade gracefully and skip the delta rather than 500 the page.
+        val baselineByUser = runCatching {
+            snapshotService.listForGuildDate(guildId, thisMonthStart)
+                .associate { it.discordId to it.tobyCoins }
+        }.getOrDefault(emptyMap())
+
         return userService.listGuildUsers(guildId).asSequence()
             .filterNotNull()
             .filter { it.tobyCoins > 0L }
@@ -92,6 +104,11 @@ class LeaderboardWebService(
                 val title = runCatching {
                     dto.activeTitleId?.let { titleService.getById(it) }?.label
                 }.getOrNull()
+                // If there's no snapshot row for this user yet, report 0 rather
+                // than the full current balance — "all their coins this month"
+                // is misleading for users who held TOBY before we started
+                // tracking the delta.
+                val coinsThisMonth = baselineByUser[dto.discordId]?.let { dto.tobyCoins - it } ?: 0L
                 TobyCoinLeaderRow(
                     rank = index + 1,
                     discordId = dto.discordId.toString(),
@@ -99,6 +116,7 @@ class LeaderboardWebService(
                     avatarUrl = member?.effectiveAvatarUrl,
                     title = title,
                     coins = dto.tobyCoins,
+                    coinsThisMonth = coinsThisMonth,
                     portfolioCredits = floor(dto.tobyCoins.toDouble() * price).toLong()
                 )
             }
@@ -162,5 +180,6 @@ data class TobyCoinLeaderRow(
     val avatarUrl: String?,
     val title: String?,
     val coins: Long,
+    val coinsThisMonth: Long = 0L,
     val portfolioCredits: Long
 )

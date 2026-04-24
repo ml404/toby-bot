@@ -78,8 +78,10 @@ class MonthlyLeaderboardJobTest {
 
     @Test
     fun `postMonthlyLeaderboard writes snapshot for each user for the current month`() {
-        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 500L }
-        val bob = UserDto(discordId = 2L, guildId = guildId).apply { socialCredit = 300L }
+        val alice = UserDto(discordId = 1L, guildId = guildId)
+            .apply { socialCredit = 500L; tobyCoins = 7L }
+        val bob = UserDto(discordId = 2L, guildId = guildId)
+            .apply { socialCredit = 300L; tobyCoins = 11L }
         every { userService.listGuildUsers(guildId) } returns listOf(alice, bob)
         member(1L, "Alice")
         member(2L, "Bob")
@@ -96,6 +98,12 @@ class MonthlyLeaderboardJobTest {
         val byUser = snapshots.associateBy { it.discordId }
         assertEquals(500L, byUser[1L]?.socialCredit)
         assertEquals(300L, byUser[2L]?.socialCredit)
+        // Regression guard: the scheduler must also snapshot the user's TOBY
+        // balance, otherwise the wallet "+/- this month" delta permanently
+        // reads as 0 (or current, depending on the fallback) after the next
+        // month rolls over.
+        assertEquals(7L, byUser[1L]?.tobyCoins)
+        assertEquals(11L, byUser[2L]?.tobyCoins)
     }
 
     @Test

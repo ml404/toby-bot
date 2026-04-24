@@ -140,7 +140,8 @@ class MonthlyLeaderboardJob @Autowired constructor(
                     discordId = dto.discordId,
                     guildId = guildId,
                     snapshotDate = snapshotDate,
-                    socialCredit = dto.socialCredit ?: 0L
+                    socialCredit = dto.socialCredit ?: 0L,
+                    tobyCoins = dto.tobyCoins
                 )
             )
         }
