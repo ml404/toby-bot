@@ -31,6 +31,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'org.jsoup:jsoup:1.18.3'
+    // Needed for @Transactional on service methods that coordinate DB writes
+    // (e.g. TitlesWebService.buyTitleWithTobyCoin).
+    implementation 'org.springframework:spring-tx'
     testImplementation project(path: ':common', configuration: 'testArtifacts')
     testImplementation project(path: ':core-api', configuration: 'testArtifacts')
     testImplementation project(path: ':database', configuration: 'testArtifacts')

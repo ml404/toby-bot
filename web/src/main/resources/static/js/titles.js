@@ -39,6 +39,29 @@
         });
     });
 
+    document.querySelectorAll('.title-buy-toby').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const row = btn.closest('tr');
+            const titleId = row.dataset.titleId;
+            btn.disabled = true;
+            postJson('/titles/' + guildId + '/' + titleId + '/buy-with-toby', {})
+                .then(r => {
+                    btn.disabled = false;
+                    if (r && r.ok) {
+                        const sold = r.soldTobyCoins || 0;
+                        toast(
+                            sold > 0 ? 'Sold ' + sold + ' TOBY to buy the title.' : 'Title purchased.',
+                            'success'
+                        );
+                        setTimeout(() => window.location.reload(), 600);
+                    } else {
+                        toast(r?.error || 'Could not buy with TOBY.', 'error');
+                    }
+                })
+                .catch(() => { btn.disabled = false; toast('Network error.', 'error'); });
+        });
+    });
+
     document.querySelectorAll('.title-equip').forEach(btn => {
         btn.addEventListener('click', () => {
             const row = btn.closest('tr');

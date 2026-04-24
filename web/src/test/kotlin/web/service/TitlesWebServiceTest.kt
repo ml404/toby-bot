@@ -3,7 +3,9 @@ package web.service
 import database.dto.TitleDto
 import database.dto.UserDto
 import database.dto.UserOwnedTitleDto
+import database.service.EconomyTradeService
 import database.service.TitleService
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -27,6 +29,8 @@ class TitlesWebServiceTest {
     private lateinit var titleService: TitleService
     private lateinit var titleRoleService: TitleRoleService
     private lateinit var introWebService: IntroWebService
+    private lateinit var marketService: TobyCoinMarketService
+    private lateinit var tradeService: EconomyTradeService
     private lateinit var service: TitlesWebService
 
     private lateinit var guild: Guild
@@ -41,13 +45,17 @@ class TitlesWebServiceTest {
         titleService = mockk(relaxed = true)
         titleRoleService = mockk(relaxed = true)
         introWebService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
+        tradeService = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         service = TitlesWebService(
             jda,
             userService,
             titleService,
             titleRoleService,
-            introWebService
+            introWebService,
+            marketService,
+            tradeService
         )
 
         every { jda.getGuildById(guildId) } returns guild

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.BuyWithTobyOutcome
 import web.service.TitlesWebService
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -79,6 +80,41 @@ class TitlesController(
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
+    @PostMapping("/{guildId}/{titleId}/buy-with-toby")
+    @ResponseBody
+    fun buyWithToby(
+        @PathVariable guildId: Long,
+        @PathVariable titleId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<BuyWithTobyResponse> {
+        val actor = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(BuyWithTobyResponse(false, "Not signed in."))
+        if (!titlesWebService.isMember(actor, guildId)) {
+            return ResponseEntity.status(403).body(BuyWithTobyResponse(false, "You are not a member of that server."))
+        }
+        return when (val outcome = titlesWebService.buyTitleWithTobyCoin(actor, guildId, titleId)) {
+            is BuyWithTobyOutcome.Ok -> ResponseEntity.ok(
+                BuyWithTobyResponse(
+                    ok = true,
+                    error = null,
+                    soldTobyCoins = outcome.soldTobyCoins,
+                    newCoins = outcome.newCoins,
+                    newCredits = outcome.newCredits,
+                    newPrice = outcome.newPrice
+                )
+            )
+            is BuyWithTobyOutcome.InsufficientCoins -> ResponseEntity.badRequest().body(
+                BuyWithTobyResponse(false, "Need ${outcome.needed} TOBY, you have ${outcome.have}.")
+            )
+            BuyWithTobyOutcome.AlreadyOwns -> ResponseEntity.badRequest().body(
+                BuyWithTobyResponse(false, "You already own this title.")
+            )
+            is BuyWithTobyOutcome.Error -> ResponseEntity.badRequest().body(
+                BuyWithTobyResponse(false, outcome.message)
+            )
+        }
+    }
+
     @PostMapping("/{guildId}/{titleId}/equip")
     @ResponseBody
     fun equip(
@@ -112,3 +148,12 @@ class TitlesController(
         else ResponseEntity.ok(ApiResult(true, null))
     }
 }
+
+data class BuyWithTobyResponse(
+    val ok: Boolean,
+    val error: String? = null,
+    val soldTobyCoins: Long? = null,
+    val newCoins: Long? = null,
+    val newCredits: Long? = null,
+    val newPrice: Double? = null
+)

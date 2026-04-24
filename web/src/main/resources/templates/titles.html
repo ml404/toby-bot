@@ -25,7 +25,14 @@
             role must sit above the title roles in the hierarchy.
         </p>
         <p class="muted mb-4">
-            Your balance: <strong th:text="${titleShop.balance} + ' credits'">0 credits</strong>
+            Your balance: <strong id="title-balance" th:text="${titleShop.balance} + ' credits'">0 credits</strong>
+            <span th:if="${titleShop.tobyCoins > 0}">
+                &middot;
+                <strong id="title-tobycoins" th:text="${titleShop.tobyCoins} + ' TOBY'">0 TOBY</strong>
+                <span class="muted"
+                      th:if="${titleShop.marketPrice > 0}"
+                      th:text="'(@ ' + ${#numbers.formatDecimal(titleShop.marketPrice, 1, 2)} + ')'">(@ 0.00)</span>
+            </span>
         </p>
         <div class="mod-table-wrap">
             <table class="mod-table">
@@ -55,9 +62,17 @@
                     <td data-label="Action">
                         <button type="button" class="btn title-buy"
                                 th:if="${!titleShop.ownedTitleIds.contains(t.id)}"
-                                th:disabled="${titleShop.balance < t.cost}">Buy</button>
+                                th:disabled="${titleShop.balance &lt; t.cost}">Buy</button>
+                        <button type="button" class="btn title-buy-toby"
+                                th:if="${!titleShop.ownedTitleIds.contains(t.id) and titleShop.tobyCoins > 0 and titleShop.marketPrice > 0}"
+                                th:with="shortfall=${t.cost - titleShop.balance &gt; 0 ? t.cost - titleShop.balance : 0},
+                                         coinsNeeded=${T(java.lang.Math).ceil(shortfall / titleShop.marketPrice)}"
+                                th:disabled="${coinsNeeded > titleShop.tobyCoins}"
+                                th:title="${shortfall > 0 ? 'Sells ~' + coinsNeeded + ' TOBY at live market price' : 'Buys with credits (no TOBY sold)'}">
+                            Buy with TOBY
+                        </button>
                         <button type="button" class="btn title-equip"
-                                th:if="${titleShop.ownedTitleIds.contains(t.id) && titleShop.equippedTitleId != t.id}">Equip</button>
+                                th:if="${titleShop.ownedTitleIds.contains(t.id) and titleShop.equippedTitleId != t.id}">Equip</button>
                         <button type="button" class="btn title-unequip"
                                 th:if="${titleShop.equippedTitleId == t.id}">Unequip</button>
                     </td>
