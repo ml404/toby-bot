@@ -491,12 +491,7 @@ class VoiceEventHandlerTest {
         handler.onGuildVoiceUpdate(event)
 
         verify(exactly = 1) {
-            awardService.award(
-                discordId = 1L,
-                guildId = 7L,
-                amount = VoiceEventHandler.INTRO_PLAY_CREDIT,
-                reason = "intro-play"
-            )
+            awardService.award(1L, 7L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any(), any())
         }
 
         unmockkObject(PlayerManager)
@@ -543,12 +538,7 @@ class VoiceEventHandlerTest {
         handler.onGuildVoiceUpdate(event)
 
         verify(exactly = 0) {
-            awardService.award(
-                discordId = any(),
-                guildId = any(),
-                amount = VoiceEventHandler.INTRO_PLAY_CREDIT,
-                reason = "intro-play"
-            )
+            awardService.award(any(), any(), VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any(), any())
         }
 
         unmockkObject(PlayerManager)

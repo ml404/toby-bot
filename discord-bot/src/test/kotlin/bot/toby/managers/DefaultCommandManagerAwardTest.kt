@@ -88,12 +88,7 @@ class DefaultCommandManagerAwardTest {
         spy.handle(eventFor("ping"))
 
         verifyOrder {
-            awardService.award(
-                discordId = discordId,
-                guildId = guildId,
-                amount = any(),
-                reason = "command:ping"
-            )
+            awardService.award(discordId, guildId, any(), "command:ping", any(), any(), any())
             command.handle(any(), any(), any())
         }
     }
@@ -113,12 +108,7 @@ class DefaultCommandManagerAwardTest {
         runCatching { spy.handle(eventFor("boom")) }
 
         verify(exactly = 1) {
-            awardService.award(
-                discordId = discordId,
-                guildId = guildId,
-                amount = any(),
-                reason = "command:boom"
-            )
+            awardService.award(discordId, guildId, any(), "command:boom", any(), any(), any())
         }
     }
 }

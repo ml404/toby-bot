@@ -28,13 +28,9 @@ class TobyCoinPriceTickJobTest {
         val marketService: TobyCoinMarketService = mockk(relaxed = true)
         val guild: Guild = mockk(relaxed = true)
         every { guild.idLong } returns 1L
-        val cache: SnowflakeCacheView<Guild> = mockk(relaxed = true) {
-            every { iterator() } answers { mutableListOf(guild).iterator() }
-            every { forEach(any()) } answers {
-                val consumer = firstArg<(Guild) -> Unit>()
-                consumer(guild)
-            }
-        }
+
+        val cache: SnowflakeCacheView<Guild> = mockk(relaxed = true)
+        every { cache.iterator() } answers { mutableListOf(guild).iterator() }
         every { jda.guildCache } returns cache
 
         var currentPrice = 100.0
