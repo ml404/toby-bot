@@ -29,4 +29,9 @@ class DefaultCharacterSheetPersistence : CharacterSheetPersistence {
 
     override fun findById(characterId: Long): String? =
         entityManager.find(CharacterSheetDto::class.java, characterId)?.sheetJson
+
+    override fun findCached(characterId: Long): CharacterSheetPersistence.CachedSheet? =
+        entityManager.find(CharacterSheetDto::class.java, characterId)?.let {
+            CharacterSheetPersistence.CachedSheet(it.sheetJson, it.lastUpdated)
+        }
 }

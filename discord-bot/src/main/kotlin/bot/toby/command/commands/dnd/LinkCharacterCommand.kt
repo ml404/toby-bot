@@ -3,6 +3,7 @@ package bot.toby.command.commands.dnd
 import bot.toby.dto.web.dnd.CharacterSheet
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.charactersheet.CharacterSheetProvider
+import bot.toby.helpers.charactersheet.CharacterSheetProvider.FetchResult
 import common.helpers.parseDndBeyondCharacterId
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
@@ -48,30 +49,46 @@ class LinkCharacterCommand @Autowired constructor(
             return
         }
 
-        requestingUserDto.dndBeyondCharacterId = characterId
-
         CoroutineScope(dispatcher).launch {
-            val cachedSheet = runCatching { characterSheetProvider.getCharacterSheet(characterId) }.getOrNull()
+            when (val result = runCatching { characterSheetProvider.fetchCharacterSheet(characterId) }
+                .getOrElse { FetchResult.Unavailable(it) }) {
+                is FetchResult.Success -> {
+                    val sheet = result.sheet
+                    requestingUserDto.dndBeyondCharacterId = characterId
+                    userDtoHelper.updateUser(requestingUserDto)
 
-            if (cachedSheet != null) {
-                val dexMod = cachedSheet.modifier(CharacterSheet.DEX)
-                userDtoHelper.updateUser(requestingUserDto)
-
-                val embed = EmbedBuilder()
-                    .setTitle("✅ Character Linked: ${cachedSheet.name}")
-                    .addField("Race", cachedSheet.raceName(), true)
-                    .addField("Class", cachedSheet.classesString(), true)
-                    .addField("Initiative Modifier", "${formatModifier(dexMod)} (from DEX)", true)
-                    .setColor(0x42f5a7)
-                    .build()
-                hook.sendMessageEmbeds(embed).queue()
-            } else {
-                userDtoHelper.updateUser(requestingUserDto)
-                hook.sendMessage(
-                    "✅ Linked character ID `$characterId`. " +
-                    "No cached sheet yet — stats will populate the next time D&D Beyond is reachable. " +
-                    "View sheet: https://www.dndbeyond.com/characters/$characterId"
-                ).queue()
+                    val dexMod = sheet.modifier(CharacterSheet.DEX)
+                    val embed = EmbedBuilder()
+                        .setTitle("✅ Character Linked: ${sheet.name}")
+                        .addField("Race", sheet.raceName(), true)
+                        .addField("Class", sheet.classesString(), true)
+                        .addField("Initiative Modifier", "${formatModifier(dexMod)} (from DEX)", true)
+                        .setColor(0x42f5a7)
+                        .build()
+                    hook.sendMessageEmbeds(embed).queue()
+                }
+                FetchResult.Forbidden -> {
+                    hook.sendMessage(
+                        "❌ Character `$characterId` is private. " +
+                        "Open it on D&D Beyond → **Home** → **Privacy** and set it to **Public** " +
+                        "(or **Campaign Only** if your DM has a paid subscription), then run `/linkcharacter` again. " +
+                        "Your existing link was not changed."
+                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                }
+                FetchResult.NotFound -> {
+                    hook.sendMessage(
+                        "❌ No D&D Beyond character found with ID `$characterId`. Double-check the URL or ID and try again."
+                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                }
+                is FetchResult.Unavailable -> {
+                    requestingUserDto.dndBeyondCharacterId = characterId
+                    userDtoHelper.updateUser(requestingUserDto)
+                    hook.sendMessage(
+                        "⚠️ Linked character ID `$characterId`, but D&D Beyond is unreachable right now — " +
+                        "stats will populate on the next successful fetch. Try `/refreshcharacter` later. " +
+                        "View sheet: https://www.dndbeyond.com/characters/$characterId"
+                    ).queue()
+                }
             }
         }
     }
