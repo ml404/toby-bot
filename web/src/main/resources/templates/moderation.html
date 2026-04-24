@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div class="mod-header">
+        <div>
+            <a class="back-link" th:href="@{/moderation/guilds}">&larr; All servers</a>
+            <h1 th:text="${overview.guildName}">Guild Name</h1>
+            <p class="muted" th:if="${isOwner}">You are the server owner.</p>
+            <p class="muted" th:unless="${isOwner}">You are a TobyBot superuser.</p>
+        </div>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="users" role="tab" aria-selected="true">Users</button>
+        <button class="tab-btn" data-tab="config" role="tab" aria-selected="false">Config</button>
+        <button class="tab-btn" data-tab="social" role="tab" aria-selected="false">Social Credit</button>
+        <button class="tab-btn" data-tab="voice" role="tab" aria-selected="false">Voice</button>
+        <button class="tab-btn" data-tab="poll" role="tab" aria-selected="false">Poll</button>
+    </div>
+
+    <!-- USERS TAB -->
+    <section class="tab-panel active" data-panel="users">
+        <p class="muted mb-4">
+            Toggle TobyBot permissions for members of this server. Server owners
+            can also toggle SUPERUSER and kick members.
+        </p>
+        <div class="mod-table-wrap">
+            <table class="mod-table">
+                <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Music</th>
+                    <th>Meme</th>
+                    <th>Dig</th>
+                    <th>Superuser</th>
+                    <th>Initiative</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${overview.members}"
+                    th:attr="data-member-id=${m.id}">
+                    <td>
+                        <div class="member-cell">
+                            <img th:if="${m.avatarUrl != null}"
+                                 th:src="${m.avatarUrl}"
+                                 th:alt="${m.name} + ' avatar'"
+                                 class="avatar">
+                            <span th:text="${m.name}">Name</span>
+                            <span class="badge owner" th:if="${m.isOwner}">owner</span>
+                        </div>
+                    </td>
+                    <td>
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.musicPermission} ? ' on' : ''"
+                                th:attr="data-permission='MUSIC',
+                                         data-owner=${m.isOwner}"
+                                th:text="${m.musicPermission} ? 'On' : 'Off'">On</button>
+                    </td>
+                    <td>
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.memePermission} ? ' on' : ''"
+                                th:attr="data-permission='MEME',
+                                         data-owner=${m.isOwner}"
+                                th:text="${m.memePermission} ? 'On' : 'Off'">On</button>
+                    </td>
+                    <td>
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.digPermission} ? ' on' : ''"
+                                th:attr="data-permission='DIG',
+                                         data-owner=${m.isOwner}"
+                                th:text="${m.digPermission} ? 'On' : 'Off'">On</button>
+                    </td>
+                    <td>
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.superUser} ? ' on' : ''"
+                                th:attr="data-permission='SUPERUSER',
+                                         data-owner=${m.isOwner},
+                                         data-owner-only='true'"
+                                th:disabled="${!isOwner}"
+                                th:text="${m.superUser} ? 'On' : 'Off'">Off</button>
+                    </td>
+                    <td>
+                        <input type="number" class="initiative-input"
+                               th:value="${m.initiativeModifier}"
+                               min="-20" max="20" step="1" aria-label="Initiative modifier">
+                    </td>
+                    <td>
+                        <button type="button" class="btn-danger kick-btn"
+                                th:attr="data-name=${m.name}"
+                                th:disabled="${m.isOwner}">Kick</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- CONFIG TAB -->
+    <section class="tab-panel" data-panel="config">
+        <p class="muted mb-4" th:if="${!isOwner}">
+            Only the server owner can change guild config. Values are read-only
+            for you.
+        </p>
+        <div class="config-grid">
+            <div class="config-row" data-key="VOLUME">
+                <label>Default volume</label>
+                <input type="number" min="0" max="200"
+                       th:value="${overview.config['VOLUME']}"
+                       th:disabled="${!isOwner}">
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
+            <div class="config-row" data-key="INTRO_VOLUME">
+                <label>Default intro volume</label>
+                <input type="number" min="0" max="200"
+                       th:value="${overview.config['INTRO_VOLUME']}"
+                       th:disabled="${!isOwner}">
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
+            <div class="config-row" data-key="DELETE_DELAY">
+                <label>Message delete delay (seconds)</label>
+                <input type="number" min="0" max="600"
+                       th:value="${overview.config['DELETE_DELAY']}"
+                       th:disabled="${!isOwner}">
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
+            <div class="config-row" data-key="MOVE">
+                <label>Default move channel</label>
+                <select th:disabled="${!isOwner}">
+                    <option value="">&mdash; none &mdash;</option>
+                    <option th:each="vc : ${overview.voiceChannels}"
+                            th:value="${vc.name}"
+                            th:text="${vc.name}"
+                            th:selected="${overview.config['MOVE'] == vc.name}"></option>
+                </select>
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOCIAL CREDIT TAB -->
+    <section class="tab-panel" data-panel="social">
+        <p class="muted mb-4" th:if="${!isOwner}">
+            Only the server owner can adjust social credit.
+        </p>
+        <div class="mod-table-wrap">
+            <table class="mod-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Score</th>
+                    <th th:if="${isOwner}">Adjust</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${leaderboard}" th:attr="data-member-id=${row.discordId}">
+                    <td th:text="${row.rank}">1</td>
+                    <td>
+                        <div class="member-cell">
+                            <img th:if="${row.avatarUrl != null}"
+                                 th:src="${row.avatarUrl}"
+                                 class="avatar"
+                                 alt="">
+                            <span th:text="${row.name}">Name</span>
+                        </div>
+                    </td>
+                    <td class="sc-score" th:text="${row.socialCredit}">0</td>
+                    <td th:if="${isOwner}">
+                        <div class="sc-adjust">
+                            <input type="number" value="0" step="1" aria-label="Delta">
+                            <button type="button" class="btn sc-apply">Apply</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(leaderboard)}">
+                    <td colspan="4" class="muted" style="text-align:center;">No users tracked yet.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- VOICE TAB -->
+    <section class="tab-panel" data-panel="voice">
+        <p class="muted mb-4">
+            Pick a voice channel to mass-mute, unmute, or move its occupants.
+            Requires the bot and you to have the Mute Members / Move Members
+            permissions.
+        </p>
+        <div class="voice-grid">
+            <div class="voice-card" th:each="vc : ${overview.voiceChannels}"
+                 th:attr="data-channel-id=${vc.id}">
+                <header>
+                    <span class="vc-name" th:text="${vc.name}">#channel</span>
+                    <span class="vc-count"
+                          th:text="${#lists.size(vc.memberIds)} + ' in channel'">0 in channel</span>
+                </header>
+                <div class="voice-actions">
+                    <button type="button" class="btn mute-btn" data-mute="true">Shh</button>
+                    <button type="button" class="btn mute-btn" data-mute="false">Talk</button>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="mt-5">Move members</h2>
+        <form class="move-form">
+            <label>
+                Destination
+                <select name="targetChannelId" required>
+                    <option value="">&mdash; choose &mdash;</option>
+                    <option th:each="vc : ${overview.voiceChannels}"
+                            th:value="${vc.id}"
+                            th:text="${vc.name}"></option>
+                </select>
+            </label>
+            <label>
+                Members (ctrl+click for multi)
+                <select name="memberIds" multiple size="6" required>
+                    <option th:each="m : ${overview.members}"
+                            th:if="${!m.isBot}"
+                            th:value="${m.id}"
+                            th:text="${m.name}"></option>
+                </select>
+            </label>
+            <button type="submit" class="btn">Move</button>
+        </form>
+    </section>
+
+    <!-- POLL TAB -->
+    <section class="tab-panel" data-panel="poll">
+        <p class="muted mb-4">
+            Post an emoji-reaction poll in a text channel. Up to 10 options.
+        </p>
+        <form class="poll-form">
+            <label>
+                Channel
+                <select name="channelId" required>
+                    <option value="">&mdash; choose &mdash;</option>
+                    <option th:each="tc : ${overview.textChannels}"
+                            th:value="${tc.id}"
+                            th:text="'#' + ${tc.name}"></option>
+                </select>
+            </label>
+            <label>
+                Question
+                <input type="text" name="question" maxlength="256" required>
+            </label>
+            <div class="poll-options">
+                <label>Option 1 <input type="text" maxlength="100" class="poll-option" required></label>
+                <label>Option 2 <input type="text" maxlength="100" class="poll-option" required></label>
+                <label>Option 3 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 4 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 5 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 6 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 7 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 8 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 9 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 10 <input type="text" maxlength="100" class="poll-option"></label>
+            </div>
+            <button type="submit" class="btn">Post poll</button>
+        </form>
+    </section>
+</main>
+
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderation.js}"></script>
+</body>
+</html>
