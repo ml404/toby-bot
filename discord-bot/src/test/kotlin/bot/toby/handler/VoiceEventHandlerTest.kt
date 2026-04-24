@@ -172,6 +172,7 @@ class VoiceEventHandlerTest {
         every { bot.user.isBot } returns true
         every { human1.idLong } returns 100L
         every { human2.idLong } returns 200L
+        every { bot.idLong } returns 999L  // explicit so the verify-block matcher doesn't touch the relaxed mock
 
         // No prior session for either human — fresh insert path.
         every { voiceSessionService.findOpenSession(any(), any()) } returns null
@@ -196,7 +197,7 @@ class VoiceEventHandlerTest {
             voiceSessionService.openSession(match { it.discordId == 200L && it.guildId == 7L && it.channelId == 99L })
         }
         verify(exactly = 0) {
-            voiceSessionService.openSession(match { it.discordId == bot.idLong })
+            voiceSessionService.openSession(match { it.discordId == 999L })
         }
     }
 
