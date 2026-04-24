@@ -124,9 +124,31 @@ class ModerationWebService(
                 thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
             )
         }
-        val priorSnapshots = safely("prior snapshots", emptyList<database.dto.MonthlyCreditSnapshotDto>()) {
+        val existingBaselines = safely("prior snapshots", emptyList<database.dto.MonthlyCreditSnapshotDto>()) {
             snapshotService.listForGuildDate(guildId, thisMonthStart)
-        }.associateBy { it.discordId }
+        }.associateBy { it.discordId }.toMutableMap()
+
+        // Lazy-baseline: if a user has no snapshot row for this month's 1st
+        // (fresh deploy, new guild, bot was down on the 1st), the scheduled
+        // job hasn't run for them and "this month" delta would report 0
+        // forever. Snapshot their current balance now so the NEXT earn
+        // produces a correct delta. One-time cost: earnings between the 1st
+        // and this first visit are baked into the baseline.
+        users.forEach { dto ->
+            if (!existingBaselines.containsKey(dto.discordId)) {
+                safely("lazy baseline for ${dto.discordId}", null as database.dto.MonthlyCreditSnapshotDto?) {
+                    snapshotService.upsertIfMissing(
+                        database.dto.MonthlyCreditSnapshotDto(
+                            discordId = dto.discordId,
+                            guildId = guildId,
+                            snapshotDate = thisMonthStart,
+                            socialCredit = dto.socialCredit ?: 0L,
+                            tobyCoins = dto.tobyCoins
+                        )
+                    )
+                }?.let { existingBaselines[dto.discordId] = it }
+            }
+        }
 
         return users
             .sortedByDescending { it.socialCredit ?: 0L }
@@ -136,7 +158,7 @@ class ModerationWebService(
                     dto.activeTitleId?.let { titleService.getById(it) }?.label
                 }
                 val current = dto.socialCredit ?: 0L
-                val baseline = priorSnapshots[dto.discordId]?.socialCredit
+                val baseline = existingBaselines[dto.discordId]?.socialCredit
                 val creditsDelta = if (baseline == null) 0L else current - baseline
                 LeaderboardRow(
                     rank = index + 1,

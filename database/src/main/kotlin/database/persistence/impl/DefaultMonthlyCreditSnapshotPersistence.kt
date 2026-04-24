@@ -47,4 +47,12 @@ class DefaultMonthlyCreditSnapshotPersistence : MonthlyCreditSnapshotPersistence
             existing
         }
     }
+
+    override fun upsertIfMissing(dto: MonthlyCreditSnapshotDto): MonthlyCreditSnapshotDto {
+        val existing = get(dto.discordId, dto.guildId, dto.snapshotDate)
+        if (existing != null) return existing
+        entityManager.persist(dto)
+        entityManager.flush()
+        return dto
+    }
 }
