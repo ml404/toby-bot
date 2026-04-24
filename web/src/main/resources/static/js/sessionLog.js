@@ -390,27 +390,24 @@
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }
 
-    function spawnAttackDie(payload) {
-        const start = rowCenter(payload.attacker);
-        const end = rowCenter(payload.target);
-        if (!start || !end) return;
+    // Build + attach a die that flies from `start` to `end`, displays `faceText`,
+    // and cleans itself up through the settling/fading animation phases.
+    // Callers can pass `className` to add variants (e.g. 'attack-die roll') or
+    // append further classes via the `classes` array before the die is shown.
+    function spawnFlightDie(start, end, faceText, classes) {
         const stage = getCombatStage();
         const die = document.createElement('div');
         die.className = 'attack-die';
-        const isHit = (payload.result === 'HIT') || (payload.eventType === 'ATTACK_HIT');
-        const isCrit = payload.roll === 20;
-        const isFumble = payload.roll === 1;
-        if (isCrit) die.classList.add('crit');
-        else if (isFumble) die.classList.add('fumble');
-        if (isHit) die.classList.add('hit');
-        else die.classList.add('miss');
+        if (classes && classes.length) {
+            classes.forEach(function (c) { if (c) die.classList.add(c); });
+        }
         die.style.setProperty('--start-x', start.x + 'px');
         die.style.setProperty('--start-y', start.y + 'px');
         die.style.setProperty('--end-x', end.x + 'px');
         die.style.setProperty('--end-y', end.y + 'px');
         const face = document.createElement('span');
         face.className = 'attack-die__face';
-        face.textContent = String(payload.total != null ? payload.total : '?');
+        face.textContent = faceText;
         die.appendChild(face);
         stage.appendChild(die);
 
@@ -423,6 +420,23 @@
                 setTimeout(function () { die.remove(); }, 350);
             }, 700);
         });
+        return die;
+    }
+
+    function spawnAttackDie(payload) {
+        const start = rowCenter(payload.attacker);
+        const end = rowCenter(payload.target);
+        if (!start || !end) return;
+        const isHit = (payload.result === 'HIT') || (payload.eventType === 'ATTACK_HIT');
+        const isCrit = payload.roll === 20;
+        const isFumble = payload.roll === 1;
+        const variantClass = isCrit ? 'crit' : (isFumble ? 'fumble' : null);
+        spawnFlightDie(
+            start,
+            end,
+            String(payload.total != null ? payload.total : '?'),
+            [variantClass, isHit ? 'hit' : 'miss']
+        );
     }
 
     function spawnCombatFloater(payload, tone) {
@@ -476,28 +490,7 @@
             start = { x: vw - 48, y: 48 };
         }
         const end = { x: vw / 2, y: vh / 2 };
-        const stage = getCombatStage();
-        const die = document.createElement('div');
-        die.className = 'attack-die roll';
-        die.style.setProperty('--start-x', start.x + 'px');
-        die.style.setProperty('--start-y', start.y + 'px');
-        die.style.setProperty('--end-x', end.x + 'px');
-        die.style.setProperty('--end-y', end.y + 'px');
-        const face = document.createElement('span');
-        face.className = 'attack-die__face';
-        face.textContent = String(total);
-        die.appendChild(face);
-        stage.appendChild(die);
-
-        die.addEventListener('animationend', function onFlight(ev) {
-            if (ev.animationName !== 'attack-die-flight') return;
-            die.removeEventListener('animationend', onFlight);
-            die.classList.add('settling');
-            setTimeout(function () {
-                die.classList.add('fading');
-                setTimeout(function () { die.remove(); }, 350);
-            }, 700);
-        });
+        spawnFlightDie(start, end, String(total), ['roll']);
     }
 
     function handleInitiativeEvent(event) {

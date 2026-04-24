@@ -21,15 +21,9 @@ function initEncounterLibrary() {
         document.querySelector('[data-guild-id]')?.dataset.guildId;
     const guildId = guildIdAttr || inferGuildIdFromUrl();
 
-    const csrfToken =
-        document.querySelector('meta[name="_csrf"]')?.content || '';
-    const csrfHeader =
-        document.querySelector('meta[name="_csrf_header"]')?.content ||
-        'X-CSRF-TOKEN';
-
     if (root) {
         bindAddEntryMode(root);
-        bindDragReorder(root, guildId, csrfToken, csrfHeader);
+        bindDragReorder(root, guildId);
         bindLoadButtons(root);
     }
     if (composer) {
@@ -62,7 +56,7 @@ function initEncounterLibrary() {
     }
 
     // --- Drag-and-drop reorder per encounter tbody ----------------------
-    function bindDragReorder(scope, guildId, csrfToken, csrfHeader) {
+    function bindDragReorder(scope, guildId) {
         scope.querySelectorAll('tbody.encounter-entry-tbody').forEach(tbody => {
             const encounterId = tbody.dataset.encounterId;
             let dragged = null;
@@ -232,16 +226,7 @@ function initEncounterLibrary() {
 
     // --- Helpers -------------------------------------------------------
 
-    function apiPostJson(url, body) {
-        const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-        if (csrfToken) headers[csrfHeader] = csrfToken;
-        return fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: headers,
-            body: JSON.stringify(body)
-        }).then(r => r.json().catch(() => ({ ok: r.ok, error: r.ok ? null : 'Request failed.' })));
-    }
+    const apiPostJson = window.TobyApi.postJson;
 
     function toast(message, type, duration) {
         if (window.TobyToast && typeof window.TobyToast.show === 'function') {

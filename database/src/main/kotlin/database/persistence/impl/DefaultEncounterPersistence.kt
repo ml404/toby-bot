@@ -18,15 +18,8 @@ class DefaultEncounterPersistence : EncounterPersistence {
     override fun save(encounter: EncounterDto): EncounterDto {
         val now = LocalDateTime.now()
         encounter.updatedAt = now
-        return if (encounter.id == 0L) {
-            encounter.createdAt = now
-            entityManager.persist(encounter)
-            entityManager.flush()
-            encounter
-        } else {
-            val merged = entityManager.merge(encounter)
-            entityManager.flush()
-            merged
+        return entityManager.saveOrMerge(encounter, isNew = { it.id == 0L }) {
+            it.createdAt = now
         }
     }
 

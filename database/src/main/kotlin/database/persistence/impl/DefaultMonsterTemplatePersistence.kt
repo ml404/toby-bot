@@ -18,15 +18,8 @@ class DefaultMonsterTemplatePersistence : MonsterTemplatePersistence {
     override fun save(template: MonsterTemplateDto): MonsterTemplateDto {
         val now = LocalDateTime.now()
         template.updatedAt = now
-        return if (template.id == 0L) {
-            template.createdAt = now
-            entityManager.persist(template)
-            entityManager.flush()
-            template
-        } else {
-            val merged = entityManager.merge(template)
-            entityManager.flush()
-            merged
+        return entityManager.saveOrMerge(template, isNew = { it.id == 0L }) {
+            it.createdAt = now
         }
     }
 

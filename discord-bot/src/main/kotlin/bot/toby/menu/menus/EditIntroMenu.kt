@@ -18,64 +18,48 @@ class EditIntroMenu @Autowired constructor(
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.event
-        logger.setGuildAndMemberContext(ctx.guild, event.member)
-        event.deferReply(true).queue()
+        val selectedIntro = resolveSelectedIntroOrElse(ctx, introHelper, deleteDelay) ?: return
 
-        logger.info { "Getting the selectedIntroId" }
-        val selectedIntroId = event.values.firstOrNull() ?: return
+        logger.info { "Valid musicDto selected." }
+        event.hook.sendMessage("You've selected ${selectedIntro.fileName}. Please reply with the new volume (0-100).")
+            .setEphemeral(true)
+            .queue { messageHook ->
+                // Wait for the user's next message
+                eventWaiter.waitForMessage(
+                    condition = { msgEvent ->
+                        msgEvent.author.idLong == event.user.idLong && msgEvent.channel.idLong == event.channel.idLong
+                    },
+                    action = { msgEvent ->
+                        logger.info { "Waiting for a response from the user for the new volume" }
 
-        // Fetch the selected MusicDto
-        logger.info { "Fetching the musicDto selected ..." }
+                        val newVolume = msgEvent.message.contentRaw.toIntOrNull()
 
-        val selectedIntro = introHelper.findIntroById(selectedIntroId)
+                        if (newVolume != null && newVolume in 0..100) {
+                            selectedIntro.introVolume = newVolume
+                            introHelper.updateIntro(selectedIntro)
 
-        if (selectedIntro != null) {
-            // Prompt the user to reply with a new volume
-            logger.info { "Valid musicDto selected." }
-
-            event.hook.sendMessage("You've selected ${selectedIntro.fileName}. Please reply with the new volume (0-100).")
-                .setEphemeral(true)
-                .queue { messageHook ->
-                    // Wait for the user's next message
-                    eventWaiter.waitForMessage(
-                        condition = { msgEvent ->
-                            msgEvent.author.idLong == event.user.idLong && msgEvent.channel.idLong == event.channel.idLong
-                        },
-                        action = { msgEvent ->
-                            logger.info { "Waiting for a response from the user for the new volume" }
-
-                            val newVolume = msgEvent.message.contentRaw.toIntOrNull()
-
-                            if (newVolume != null && newVolume in 0..100) {
-                                selectedIntro.introVolume = newVolume
-                                introHelper.updateIntro(selectedIntro)
-
-                                messageHook.editMessage("Volume updated successfully to $newVolume!")
-                                    .queue { it?.deleteAfter(deleteDelay) }
-
-                                logger.info { "Volume updated successfully to $newVolume!" }
-                                msgEvent.message.deleteAfter(0)
-                            } else {
-                                logger.warn { "Invalid volume was sent" }
-
-                                messageHook.editMessage("Invalid volume. Please enter a number between 0 and 100.")
-                                    .queue { it?.deleteAfter(deleteDelay) }
-
-                                msgEvent.message.deleteAfter(0)
-                            }
-                        },
-                        timeout = 10.seconds,
-                        timeoutAction = {
-                            messageHook
-                                .editMessage("No response received. Volume update canceled.")
+                            messageHook.editMessage("Volume updated successfully to $newVolume!")
                                 .queue { it?.deleteAfter(deleteDelay) }
+
+                            logger.info { "Volume updated successfully to $newVolume!" }
+                            msgEvent.message.deleteAfter(0)
+                        } else {
+                            logger.warn { "Invalid volume was sent" }
+
+                            messageHook.editMessage("Invalid volume. Please enter a number between 0 and 100.")
+                                .queue { it?.deleteAfter(deleteDelay) }
+
+                            msgEvent.message.deleteAfter(0)
                         }
-                    )
-                }
-        } else {
-            event.hook.sendMessage("Unable to find the selected intro.").setEphemeral(true)
-                .queue { it?.deleteAfter(deleteDelay) }
-        }
+                    },
+                    timeout = 10.seconds,
+                    timeoutAction = {
+                        messageHook
+                            .editMessage("No response received. Volume update canceled.")
+                            .queue { it?.deleteAfter(deleteDelay) }
+                    }
+                )
+            }
     }
 
 

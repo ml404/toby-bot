@@ -396,8 +396,6 @@ function initIntroPage() {
         targetDiscordId: document.body.dataset.targetDiscordId || '',
         maxFileBytes: parseInt(document.body.dataset.maxFileKb || '550', 10) * 1024,
         maxDurationSeconds: parseInt(document.body.dataset.maxDurationSeconds || '15', 10),
-        csrfToken: document.querySelector('meta[name="_csrf"]')?.content || '',
-        csrfHeader: document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN',
     };
     const maxClipMs = cfg.maxDurationSeconds * 1000;
 
@@ -1167,16 +1165,7 @@ function initIntroPage() {
     }
 
     // --- Helpers ---
-    function apiPostJson(url, body) {
-        const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-        if (cfg.csrfToken) headers[cfg.csrfHeader] = cfg.csrfToken;
-        return fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: headers,
-            body: JSON.stringify(body)
-        }).then(r => r.json().catch(() => ({ ok: r.ok, error: r.ok ? null : 'Request failed.' })));
-    }
+    const apiPostJson = window.TobyApi.postJson;
 
     // Wraps apiPostJson so callers only supply success/error branches. Network
     // failures go through onError with r = null so the same handler can cover both.

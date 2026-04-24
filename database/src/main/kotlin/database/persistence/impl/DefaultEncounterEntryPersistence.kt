@@ -16,15 +16,8 @@ class DefaultEncounterEntryPersistence : EncounterEntryPersistence {
     private lateinit var entityManager: EntityManager
 
     override fun save(entry: EncounterEntryDto): EncounterEntryDto {
-        return if (entry.id == 0L) {
-            entry.createdAt = LocalDateTime.now()
-            entityManager.persist(entry)
-            entityManager.flush()
-            entry
-        } else {
-            val merged = entityManager.merge(entry)
-            entityManager.flush()
-            merged
+        return entityManager.saveOrMerge(entry, isNew = { it.id == 0L }) {
+            it.createdAt = LocalDateTime.now()
         }
     }
 
