@@ -53,11 +53,13 @@ class VoiceEventHandler @Autowired constructor(
             // eventual leave event has nothing to close and the post-restart
             // span gets silently dropped. The recovery hook just closed any
             // *pre-restart* sessions; this opens fresh ones from this moment.
+            var reopened = 0
             guild.voiceChannels.forEach { channel ->
                 channel.members
                     .filter { !it.user.isBot }
                     .forEach { member ->
                         runCatching { openSessionForUser(member.idLong, guild.idLong, channel, now) }
+                            .onSuccess { reopened++ }
                             .onFailure {
                                 logger.error(
                                     "Failed to open startup voice session for user ${member.idLong} " +
@@ -66,6 +68,10 @@ class VoiceEventHandler @Autowired constructor(
                             }
                     }
             }
+            // Always log the count, even when zero — silence is ambiguous, and
+            // we need to be able to confirm in production logs whether the
+            // reconciliation loop actually ran for this guild.
+            logger.info { "Startup voice reconciliation: opened $reopened session(s) in guild ${guild.idLong}." }
             guild.connectToMostPopulatedVoiceChannel()
         }
     }

@@ -64,11 +64,14 @@ class VoiceSessionShutdownHookTest {
     }
 
     @Test
-    fun `destroy delegates to closeOpenSessions so Spring triggers the flush`() {
+    fun `onContextClosed delegates to closeOpenSessions so Spring triggers the flush`() {
+        // Listening for ContextClosedEvent (vs DisposableBean.destroy) is what
+        // makes this hook actually persist its writes — by destroy()-time the
+        // EntityManager and TransactionInterceptor may already be torn down.
         val s1 = VoiceSessionDto(id = 1L, discordId = 1L, guildId = 10L, channelId = 100L, joinedAt = Instant.now())
         every { voiceSessionService.findAllOpenSessions() } returns listOf(s1)
 
-        hook.destroy()
+        hook.onContextClosed()
 
         verify(exactly = 1) { voiceCreditAwardService.closeSessionAtShutdown(s1, any()) }
     }
