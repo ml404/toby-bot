@@ -1,6 +1,7 @@
 package database.configuration
 
 import common.logging.DiscordLogger
+import org.flywaydb.core.api.MigrationInfo
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy
 import org.springframework.context.annotation.Bean
@@ -12,6 +13,11 @@ import org.springframework.context.annotation.Configuration
  * its db.migration SQL resources. Without this guard Spring Boot would
  * happily start serving, silently skip every migration, and the first
  * request that touches a missing table returns 500.
+ *
+ * Also fails start-up when Flyway reports any migration as FAILED or still
+ * PENDING after `migrate()`. Without this, a partially-applied schema will
+ * let the bot come up but any feature that relies on the missing column or
+ * table will 500 on first use — exactly the symptom we saw post-#267.
  *
  * Can be disabled for specialised builds (ad-hoc test rigs, DB dumps) via the
  * `toby.flyway.require-migrations` property — default `true`.
@@ -29,6 +35,9 @@ class FlywayGuardConfig {
         ensureMigrationsAvailable(required, discovered)
         logger.info("Flyway: $discovered migration(s) on classpath (required=$required)")
         flyway.migrate()
+        if (required) {
+            ensureAllMigrationsApplied(flyway.info().all().toList())
+        }
     }
 
     companion object {
@@ -41,6 +50,30 @@ class FlywayGuardConfig {
                         "to override."
                 )
             }
+        }
+
+        internal fun ensureAllMigrationsApplied(all: List<MigrationInfo>) {
+            val failed = all.filter { it.state?.isFailed == true }
+            val pending = all.filter { it.state?.isApplied == false && it.state?.isFailed == false }
+            if (failed.isEmpty() && pending.isEmpty()) return
+
+            val details = buildString {
+                if (failed.isNotEmpty()) {
+                    append("FAILED: ")
+                    append(failed.joinToString(", ") { "${it.version}/${it.description}" })
+                    if (pending.isNotEmpty()) append("; ")
+                }
+                if (pending.isNotEmpty()) {
+                    append("PENDING: ")
+                    append(pending.joinToString(", ") { "${it.version}/${it.description}" })
+                }
+            }
+            throw IllegalStateException(
+                "Flyway migrations are not fully applied ($details). The schema is out of " +
+                    "sync with the deployed artifact — features that rely on the missing " +
+                    "columns or tables will return 500. Fix the broken migration state and " +
+                    "redeploy, or set toby.flyway.require-migrations=false to override."
+            )
         }
     }
 }

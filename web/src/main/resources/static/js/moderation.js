@@ -102,14 +102,31 @@
         if (!btn || !input) return;
         btn.addEventListener('click', () => {
             const value = (input.value || '').toString();
+            console.debug('[config save]', { key: key, value: value });
             btn.disabled = true;
             postJson('/moderation/' + guildId + '/config', { key: key, value: value })
                 .then(r => {
                     btn.disabled = false;
-                    if (r && r.ok) toast('Config saved.', 'success');
-                    else toast(r?.error || 'Could not save config.', 'error');
+                    console.debug('[config save response]', { key: key, response: r });
+                    if (r && r.ok) {
+                        toast('Config saved.', 'success');
+                        // Reflect the saved value as the new default so a refresh
+                        // doesn't look like "nothing happened" even if the read path
+                        // is cached stale somewhere.
+                        if (input.tagName === 'SELECT') {
+                            Array.from(input.options).forEach(o => o.defaultSelected = (o.value === value));
+                        } else {
+                            input.defaultValue = value;
+                        }
+                    } else {
+                        toast(r?.error || 'Could not save config.', 'error');
+                    }
                 })
-                .catch(() => { btn.disabled = false; toast('Network error.', 'error'); });
+                .catch((err) => {
+                    btn.disabled = false;
+                    console.error('[config save error]', { key: key, err: err });
+                    toast('Network error.', 'error');
+                });
         });
     });
 
