@@ -1,6 +1,7 @@
 package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.benmanes.caffeine.cache.Caffeine
 import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.util.concurrent.TimeUnit
 
 @Service
 class IntroWebService(
@@ -28,26 +30,58 @@ class IntroWebService(
         private val logger = DiscordLogger(IntroWebService::class.java)
     }
 
+    // Caches the Discord-side guild list per access token so rapid navigation
+    // (Market -> Leaderboards -> Intros -> ...) doesn't hammer Discord's
+    // /users/@me/guilds endpoint and trip a 429, which previously manifested
+    // to users as "you share no servers with toby-bot" on otherwise-valid
+    // sessions. 60s is short enough that a user leaving/joining a guild
+    // recovers on the next navigation, long enough to absorb click-bursts.
+    //
+    // Keyed on the token itself (in memory, never logged). Expiring writes
+    // ensures a stale token fails fresh rather than serving bogus success.
+    private val guildListCache = Caffeine.newBuilder()
+        .expireAfterWrite(60, TimeUnit.SECONDS)
+        .maximumSize(1_000)
+        .build<String, List<GuildInfo>>()
+
     fun getMutualGuilds(accessToken: String): List<GuildInfo> {
         val userGuilds = fetchUserGuildsFromDiscord(accessToken)
         return userGuilds.filter { jda.getGuildById(it.id) != null }
     }
 
     private fun fetchUserGuildsFromDiscord(accessToken: String): List<GuildInfo> {
+        guildListCache.getIfPresent(accessToken)?.let { return it }
+
         val connection = URL("https://discord.com/api/users/@me/guilds").openConnection() as HttpURLConnection
         connection.setRequestProperty("Authorization", "Bearer $accessToken")
         connection.setRequestProperty("Content-Type", "application/json")
 
-        if (connection.responseCode != 200) return emptyList()
+        val status = connection.responseCode
+        if (status != 200) {
+            // Explicit logging so the next "I share no servers with toby-bot"
+            // is diagnosable from the bot's logs alone. Common cases:
+            //  401 — token expired; OAuth2 should refresh but may have lagged.
+            //  429 — rate-limited; Caffeine cache above should prevent this.
+            //  5xx — Discord outage; we degrade to empty and retry next call.
+            val body = runCatching {
+                (connection.errorStream ?: connection.inputStream).bufferedReader().readText()
+            }.getOrDefault("<no body>")
+            logger.warn(
+                "Discord /users/@me/guilds returned $status; treating as empty guild list. Body: $body"
+            )
+            return emptyList()
+        }
 
         val body = connection.inputStream.bufferedReader().readText()
-        return objectMapper.readTree(body).map { node ->
+        val parsed = objectMapper.readTree(body).map { node ->
             GuildInfo(
                 id = node["id"].asText(),
                 name = node["name"].asText(),
                 iconHash = node["icon"]?.takeUnless { it.isNull }?.asText()
             )
         }
+        guildListCache.put(accessToken, parsed)
+        return parsed
     }
 
     fun getGuildName(guildId: Long): String? = jda.getGuildById(guildId)?.name

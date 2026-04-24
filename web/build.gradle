@@ -34,6 +34,9 @@ dependencies {
     // Needed for @Transactional on service methods that coordinate DB writes
     // (e.g. TitlesWebService.buyTitleWithTobyCoin).
     implementation 'org.springframework:spring-tx'
+    // IntroWebService caches the Discord /users/@me/guilds response with
+    // Caffeine to avoid 429-triggered "no mutual servers" false empties.
+    implementation 'com.github.ben-manes.caffeine:caffeine'
     testImplementation project(path: ':common', configuration: 'testArtifacts')
     testImplementation project(path: ':core-api', configuration: 'testArtifacts')
     testImplementation project(path: ':database', configuration: 'testArtifacts')
