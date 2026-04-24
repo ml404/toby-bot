@@ -9,13 +9,19 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.User
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
 
 @Service
 class ActivityTrackingNotifier @Autowired constructor(
     private val configService: ConfigService,
-    private val jda: JDA
+    // @Lazy breaks a context-startup cycle introduced in #288:
+    //   JDA -> StartUpHandler -> CommandManager -> SetConfigCommand
+    //       -> ActivityTrackingNotifier -> JDA
+    // The JDA reference is only dereferenced from the @EventListener (i.e.
+    // post-startup), so deferring resolution is safe.
+    @Lazy private val jda: JDA
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
