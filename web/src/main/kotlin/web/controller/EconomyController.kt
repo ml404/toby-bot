@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.EconomyWebService
 import database.service.EconomyTradeService.TradeOutcome
+import database.service.SocialCreditAwardService
 import web.service.PricePoint
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -24,8 +25,14 @@ import web.util.displayName
 @Controller
 @RequestMapping("/economy")
 class EconomyController(
-    private val economyWebService: EconomyWebService
+    private val economyWebService: EconomyWebService,
+    private val awardService: SocialCreditAwardService
 ) {
+
+    companion object {
+        // Tiny participation award — the daily cap absorbs trade-spam abuse.
+        const val UI_TRADE_CREDIT: Long = 1L
+    }
 
     @GetMapping("/guilds")
     fun guildList(
@@ -119,16 +126,24 @@ class EconomyController(
             return ResponseEntity.badRequest().body(TradeResponse(false, "Amount must be positive."))
         }
         return when (val outcome = action(discordId)) {
-            is TradeOutcome.Ok -> ResponseEntity.ok(
-                TradeResponse(
-                    ok = true,
-                    error = null,
-                    newCoins = outcome.newCoins,
-                    newCredits = outcome.newCredits,
-                    newPrice = outcome.newPrice,
-                    transactedCredits = outcome.transactedCredits
+            is TradeOutcome.Ok -> {
+                val granted = awardService.award(
+                    discordId = discordId,
+                    guildId = guildId,
+                    amount = UI_TRADE_CREDIT,
+                    reason = "ui-trade"
                 )
-            )
+                ResponseEntity.ok(
+                    TradeResponse(
+                        ok = true,
+                        error = null,
+                        newCoins = outcome.newCoins,
+                        newCredits = outcome.newCredits + granted,
+                        newPrice = outcome.newPrice,
+                        transactedCredits = outcome.transactedCredits
+                    )
+                )
+            }
             is TradeOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 TradeResponse(false, "Need ${outcome.needed} credits, you have ${outcome.have}.")
             )

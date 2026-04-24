@@ -28,8 +28,11 @@ object TobyCoinEngine {
     /** Annualised volatility. 0.6 ≈ typical small-cap / crypto territory. */
     const val VOLATILITY = 0.6
 
-    /** Long-term drift. Zero = no systemic bias up or down. */
-    const val DRIFT = 0.0
+    // Drift chosen so E[log(S_{t+dt}/S_t)] = 0 — the median path is flat and
+    // the walk is equally likely to go up or down each tick. With DRIFT=0 the
+    // lognormal Itô correction makes the median decay, so most observed paths
+    // trend downward even though the mean is conserved.
+    const val DRIFT = 0.5 * VOLATILITY * VOLATILITY
 
     /** Per-coin trade impact on price. 1000 coins moves the market ~40 %. */
     const val TRADE_IMPACT = 0.0004

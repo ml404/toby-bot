@@ -13,6 +13,7 @@ import database.dto.ConfigDto.Configurations.DELETE_DELAY
 import database.dto.ConfigDto.Configurations.VOLUME
 import database.dto.VoiceSessionDto
 import database.service.ConfigService
+import database.service.SocialCreditAwardService
 import database.service.VoiceSessionService
 import bot.toby.helpers.MusicPlayerHelper
 import net.dv8tion.jda.api.entities.Guild
@@ -37,7 +38,8 @@ class VoiceEventHandler @Autowired constructor(
     private val introHelper: IntroHelper,
     private val voiceSessionService: VoiceSessionService,
     private val voiceCompanyTracker: VoiceCompanyTracker,
-    private val voiceCreditAwardService: VoiceCreditAwardService
+    private val voiceCreditAwardService: VoiceCreditAwardService,
+    private val awardService: SocialCreditAwardService
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -202,6 +204,12 @@ class VoiceEventHandler @Autowired constructor(
                 deleteDelay = deleteDelay,
                 member = member
             )
+            awardService.award(
+                discordId = requestingUserDto.discordId,
+                guildId = requestingUserDto.guildId,
+                amount = INTRO_PLAY_CREDIT,
+                reason = "intro-play"
+            )
         } else {
             logger.info { "User has no musicDto associated with them, no intro will be played" }
         }
@@ -271,5 +279,9 @@ class VoiceEventHandler @Autowired constructor(
 
     companion object {
         val lastConnectedChannel = ConcurrentHashMap<Long, VoiceChannel>()
+
+        // Small, daily-capped reward so joining a channel with an intro set
+        // feels like something without becoming farmable via rejoin spam.
+        const val INTRO_PLAY_CREDIT: Long = 2L
     }
 }

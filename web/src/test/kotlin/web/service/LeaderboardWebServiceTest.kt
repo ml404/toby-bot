@@ -1,5 +1,7 @@
 package web.service
 
+import database.service.TobyCoinMarketService
+import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.JDA
@@ -17,6 +19,8 @@ class LeaderboardWebServiceTest {
     private lateinit var jda: JDA
     private lateinit var introWebService: IntroWebService
     private lateinit var moderationWebService: ModerationWebService
+    private lateinit var userService: UserService
+    private lateinit var marketService: TobyCoinMarketService
     private lateinit var service: LeaderboardWebService
 
     private val guildId = 42L
@@ -27,7 +31,9 @@ class LeaderboardWebServiceTest {
         jda = mockk(relaxed = true)
         introWebService = mockk(relaxed = true)
         moderationWebService = mockk(relaxed = true)
-        service = LeaderboardWebService(jda, introWebService, moderationWebService)
+        userService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
+        service = LeaderboardWebService(jda, introWebService, moderationWebService, userService, marketService)
     }
 
     @Test

@@ -6,6 +6,10 @@ import java.time.Instant
 
 interface TobyCoinMarketService {
     fun getMarket(guildId: Long): TobyCoinMarketDto?
+
+    // Non-cached pessimistic-lock read — must run inside @Transactional.
+    fun getMarketForUpdate(guildId: Long): TobyCoinMarketDto?
+
     fun listMarkets(): List<TobyCoinMarketDto>
     fun saveMarket(market: TobyCoinMarketDto): TobyCoinMarketDto
 

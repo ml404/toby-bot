@@ -69,6 +69,11 @@
     font-size: 0.95rem;
 }
 
+/* [hidden] has lower specificity than .economy-chart-empty, so restore it. */
+.economy-chart-empty[hidden] {
+    display: none;
+}
+
 .economy-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

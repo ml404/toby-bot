@@ -13,6 +13,7 @@ import core.managers.CommandManager
 import core.managers.MenuManager
 import core.menu.Menu
 import database.service.ConfigService
+import database.service.SocialCreditAwardService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -25,11 +26,13 @@ class ManagerConfig {
     fun commandManager(
         configService: ConfigService,
         userDtoHelper: UserDtoHelper,
+        awardService: SocialCreditAwardService,
         commandList: List<core.command.Command>
     ): CommandManager {
         return DefaultCommandManager(
             configService,
             userDtoHelper,
+            awardService,
             commandList
         )
     }

@@ -3,6 +3,7 @@ package database.persistence.impl
 import database.dto.TobyCoinMarketDto
 import database.persistence.TobyCoinMarketPersistence
 import jakarta.persistence.EntityManager
+import jakarta.persistence.LockModeType
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.TypedQuery
 import org.springframework.stereotype.Repository
@@ -20,6 +21,14 @@ class DefaultTobyCoinMarketPersistence : TobyCoinMarketPersistence {
         )
         q.setParameter("guildId", guildId)
         return runCatching { q.singleResult }.getOrNull()
+    }
+
+    override fun getByGuildForUpdate(guildId: Long): TobyCoinMarketDto? {
+        return entityManager.find(
+            TobyCoinMarketDto::class.java,
+            guildId,
+            LockModeType.PESSIMISTIC_WRITE
+        )
     }
 
     override fun listAll(): List<TobyCoinMarketDto> {

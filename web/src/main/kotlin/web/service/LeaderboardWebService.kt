@@ -1,14 +1,25 @@
 package web.service
 
+import database.service.TobyCoinMarketService
+import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import kotlin.math.floor
 
 @Service
 class LeaderboardWebService(
     private val jda: JDA,
     private val introWebService: IntroWebService,
-    private val moderationWebService: ModerationWebService
+    private val moderationWebService: ModerationWebService,
+    private val userService: UserService,
+    private val marketService: TobyCoinMarketService
 ) {
+
+    companion object {
+        // Keep the list tight so the leaderboard page stays scannable. Users
+        // below this don't meaningfully change the story of "who owns coin".
+        const val TOBY_COIN_LEADERBOARD_LIMIT = 10
+    }
 
     fun getGuildsWhereUserCanView(accessToken: String, discordId: Long): List<LeaderboardGuildCard> {
         return introWebService.getMutualGuilds(accessToken).mapNotNull { info ->
@@ -48,8 +59,31 @@ class LeaderboardWebService(
             totalCreditsThisMonth = totalCreditsThisMonth,
             totalVoiceThisMonth = totalVoiceThisMonth,
             mostActiveMember = mostActiveName,
-            totalMembers = rows.size
+            totalMembers = rows.size,
+            tobyCoinLeaders = buildTobyCoinLeaders(guildId)
         )
+    }
+
+    private fun buildTobyCoinLeaders(guildId: Long): List<TobyCoinLeaderRow> {
+        val guild = jda.getGuildById(guildId) ?: return emptyList()
+        val price = marketService.getMarket(guildId)?.price ?: 0.0
+        return userService.listGuildUsers(guildId).asSequence()
+            .filterNotNull()
+            .filter { it.tobyCoins > 0L }
+            .sortedByDescending { it.tobyCoins }
+            .take(TOBY_COIN_LEADERBOARD_LIMIT)
+            .mapIndexed { index, dto ->
+                val member = guild.getMemberById(dto.discordId)
+                TobyCoinLeaderRow(
+                    rank = index + 1,
+                    discordId = dto.discordId.toString(),
+                    name = member?.effectiveName ?: "Unknown",
+                    avatarUrl = member?.effectiveAvatarUrl,
+                    coins = dto.tobyCoins,
+                    portfolioCredits = floor(dto.tobyCoins.toDouble() * price).toLong()
+                )
+            }
+            .toList()
     }
 }
 
@@ -79,7 +113,8 @@ data class LeaderboardGuildView(
     val totalCreditsThisMonth: Long,
     val totalVoiceThisMonth: Long,
     val mostActiveMember: String?,
-    val totalMembers: Int
+    val totalMembers: Int,
+    val tobyCoinLeaders: List<TobyCoinLeaderRow> = emptyList()
 ) {
     val totalVoiceThisMonthDisplay: String get() = formatDuration(totalVoiceThisMonth)
     private fun formatDuration(seconds: Long): String {
@@ -89,3 +124,12 @@ data class LeaderboardGuildView(
         return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
     }
 }
+
+data class TobyCoinLeaderRow(
+    val rank: Int,
+    val discordId: String,
+    val name: String,
+    val avatarUrl: String?,
+    val coins: Long,
+    val portfolioCredits: Long
+)

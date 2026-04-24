@@ -2,6 +2,7 @@ import bot.toby.handler.StartUpHandler
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.DefaultCommandManager
 import database.service.ConfigService
+import database.service.SocialCreditAwardService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA
@@ -18,7 +19,8 @@ class StartUpHandlerTest {
     private val jda: JDA = mockk()
     private val configService: ConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
-    private val commandManager: DefaultCommandManager = DefaultCommandManager(configService, userDtoHelper, emptyList())
+    private val awardService: SocialCreditAwardService = mockk(relaxed = true)
+    private val commandManager: DefaultCommandManager = DefaultCommandManager(configService, userDtoHelper, awardService, emptyList())
     private val handler = spyk(
         StartUpHandler(
             commandManager

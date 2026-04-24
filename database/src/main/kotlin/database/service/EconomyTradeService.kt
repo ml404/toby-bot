@@ -5,6 +5,7 @@ import database.dto.TobyCoinPricePointDto
 import database.dto.UserDto
 import database.economy.TobyCoinEngine
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -21,6 +22,7 @@ import kotlin.math.floor
  * form suits (Discord embed, web JSON, etc.).
  */
 @Service
+@Transactional
 class EconomyTradeService(
     private val userService: UserService,
     private val marketService: TobyCoinMarketService
@@ -59,8 +61,10 @@ class EconomyTradeService(
 
     fun buy(discordId: Long, guildId: Long, amount: Long): TradeOutcome {
         if (amount <= 0) return TradeOutcome.InvalidAmount
-        val user = userService.getUserById(discordId, guildId) ?: return TradeOutcome.UnknownUser
-        val market = loadOrCreateMarket(guildId)
+        // Lock order — user first, then market. Same in sell() to avoid deadlock.
+        val user = userService.getUserByIdForUpdate(discordId, guildId)
+            ?: return TradeOutcome.UnknownUser
+        val market = loadOrCreateMarketForUpdate(guildId)
 
         val cost = ceil(market.price * amount).toLong()
         val credits = user.socialCredit ?: 0L
@@ -84,8 +88,10 @@ class EconomyTradeService(
 
     fun sell(discordId: Long, guildId: Long, amount: Long): TradeOutcome {
         if (amount <= 0) return TradeOutcome.InvalidAmount
-        val user = userService.getUserById(discordId, guildId) ?: return TradeOutcome.UnknownUser
-        val market = loadOrCreateMarket(guildId)
+        // Lock order — user first, then market. Same in buy() to avoid deadlock.
+        val user = userService.getUserByIdForUpdate(discordId, guildId)
+            ?: return TradeOutcome.UnknownUser
+        val market = loadOrCreateMarketForUpdate(guildId)
 
         if (user.tobyCoins < amount) return TradeOutcome.InsufficientCoins(amount, user.tobyCoins)
 
@@ -104,6 +110,16 @@ class EconomyTradeService(
             newCredits = user.socialCredit ?: 0L,
             newPrice = newPrice
         )
+    }
+
+    // Seed the market row if missing, then re-read it with a write lock. Only
+    // the first trade for a brand-new guild hits the seed branch; after that
+    // `getMarketForUpdate` finds the row immediately.
+    private fun loadOrCreateMarketForUpdate(guildId: Long): TobyCoinMarketDto {
+        marketService.getMarketForUpdate(guildId)?.let { return it }
+        loadOrCreateMarket(guildId)
+        return marketService.getMarketForUpdate(guildId)
+            ?: error("Market row for guild $guildId could not be locked after creation")
     }
 
     private fun commitPriceChange(market: TobyCoinMarketDto, newPrice: Double) {
