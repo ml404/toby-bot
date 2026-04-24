@@ -43,4 +43,30 @@ internal class TobyCoinEngineTest {
         val result = TobyCoinEngine.applySellPressure(2.0, 1_000_000L)
         assertEquals(TobyCoinEngine.PRICE_FLOOR, result, 1e-9)
     }
+
+    /**
+     * Regression guard: with DRIFT=0 the lognormal Itô correction made the
+     * median of many ticks decay, so users saw charts that "only went down".
+     * Drift is now set so the median step is zero — a Monte-Carlo run should
+     * land the median trajectory very close to where it started.
+     */
+    @Test
+    fun `median of many ticks stays close to the starting price`() {
+        val runs = 5_000
+        val ticksPerRun = 200
+        val startPrice = 100.0
+        val rng = Random(20260424L)
+
+        val finals = DoubleArray(runs) {
+            var price = startPrice
+            repeat(ticksPerRun) { price = TobyCoinEngine.tickRandomWalk(price, random = rng) }
+            price
+        }.also { it.sort() }
+
+        val median = finals[finals.size / 2]
+        assertTrue(
+            median in 85.0..115.0,
+            "median final price after $ticksPerRun ticks should stay near $startPrice but was $median"
+        )
+    }
 }

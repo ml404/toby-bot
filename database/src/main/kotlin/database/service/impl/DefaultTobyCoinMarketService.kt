@@ -24,6 +24,11 @@ class DefaultTobyCoinMarketService : TobyCoinMarketService {
         return marketPersistence.getByGuild(guildId)
     }
 
+    // Bypass cache deliberately: the trade path needs a fresh DB row + row lock.
+    override fun getMarketForUpdate(guildId: Long): TobyCoinMarketDto? {
+        return marketPersistence.getByGuildForUpdate(guildId)
+    }
+
     override fun listMarkets(): List<TobyCoinMarketDto> {
         return marketPersistence.listAll()
     }

@@ -134,6 +134,39 @@
         </div>
     </section>
 
+    <section class="lb-tobycoins" aria-label="TobyCoin wallet leaders"
+             th:if="${not #lists.isEmpty(view.tobyCoinLeaders)}">
+        <h2 class="lb-standings-title">TobyCoin wallets</h2>
+        <div class="mod-table-wrap">
+            <table class="mod-table lb-standings-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>TOBY</th>
+                    <th>Portfolio (credits)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${view.tobyCoinLeaders}">
+                    <td th:text="${row.rank}">1</td>
+                    <td>
+                        <div class="member-cell">
+                            <img th:if="${row.avatarUrl != null}"
+                                 th:src="${row.avatarUrl}"
+                                 class="avatar"
+                                 alt="">
+                            <span th:text="${row.name}">Name</span>
+                        </div>
+                    </td>
+                    <td th:text="${row.coins}">0</td>
+                    <td th:text="${row.portfolioCredits}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <div class="empty-hero" th:if="${#lists.isEmpty(view.podium) and #lists.isEmpty(view.standings)}">
         <span class="emoji" aria-hidden="true">🏁</span>
         <h2>No credit has been earned here yet</h2>

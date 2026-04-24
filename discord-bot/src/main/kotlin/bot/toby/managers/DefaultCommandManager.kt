@@ -14,6 +14,7 @@ import core.managers.CommandManager
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.service.ConfigService
+import database.service.SocialCreditAwardService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
@@ -25,6 +26,7 @@ import java.util.*
 class DefaultCommandManager @Autowired constructor(
     private val configService: ConfigService,
     private val userDtoHelper: UserDtoHelper,
+    private val awardService: SocialCreditAwardService,
     override val commands: List<Command>
 ) : CommandManager {
     override val slashCommands: MutableList<CommandData?> = ArrayList()
@@ -90,23 +92,21 @@ class DefaultCommandManager @Autowired constructor(
             val ctx = DefaultCommandContext(event)
             lastCommands[event.guild!!] = Pair(it, ctx)
             requestingUserDto?.let { userDto ->
+                // Award before dispatch so a throwing command still earns credit
+                // and so all user-initiated actions share the same hook point.
+                awardCommandCredit(userDto, invoke)
                 it.handle(ctx, userDto, deleteDelay)
-                attributeSocialCredit(ctx, userDtoHelper, userDto, deleteDelay)
             }
         }
     }
 
-    private fun attributeSocialCredit(
-        ctx: CommandContext,
-        userDtoHelper: UserDtoHelper,
-        requestingUserDto: UserDto,
-        deleteDelay: Int
-    ) {
-        val socialCreditScore = requestingUserDto.socialCredit
-        val r = Random()
-        val socialCredit = r.nextInt(5)
-        val awardedSocialCredit = socialCredit * 5
-        requestingUserDto.socialCredit = socialCreditScore?.plus(awardedSocialCredit)
-        userDtoHelper.updateUser(requestingUserDto)
+    private fun awardCommandCredit(userDto: UserDto, invoke: String) {
+        val amount = Random().nextInt(5) * 5L
+        awardService.award(
+            discordId = userDto.discordId,
+            guildId = userDto.guildId,
+            amount = amount,
+            reason = "command:$invoke"
+        )
     }
 }

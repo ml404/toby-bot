@@ -29,6 +29,11 @@ class TobyCoinPriceTickJob @Autowired constructor(
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
+    // Single long-lived PRNG. Reseeding per tick with predictable seeds
+    // (epoch-ms xor guildId) biases consecutive outputs; letting the state
+    // evolve naturally gives an honest random walk.
+    private val random: Random = Random.Default
+
     companion object {
         // Kept long enough that the /economy 1Y view always has real data
         // to draw. Pruning older samples still protects the table from
@@ -53,10 +58,7 @@ class TobyCoinPriceTickJob @Autowired constructor(
             price = TobyCoinEngine.INITIAL_PRICE,
             lastTickAt = now
         )
-        // Seed the walk from epoch-millis xor'd with the guild id so each
-        // guild's market moves independently and every tick is a fresh draw.
-        val seed = now.toEpochMilli() xor guildId
-        val newPrice = TobyCoinEngine.tickRandomWalk(market.price, random = Random(seed))
+        val newPrice = TobyCoinEngine.tickRandomWalk(market.price, random = random)
         market.price = newPrice
         market.lastTickAt = now
         marketService.saveMarket(market)

@@ -58,6 +58,7 @@ class CommandManagerTest {
 
     lateinit var configService: ConfigService
     lateinit var userDtoHelper: UserDtoHelper
+    lateinit var awardService: SocialCreditAwardService
     private lateinit var commandManager: DefaultCommandManager
 
     @Autowired
@@ -67,7 +68,8 @@ class CommandManagerTest {
     fun openMocks() {
         configService = mockk()
         userDtoHelper = mockk()
-        commandManager = DefaultCommandManager(configService, userDtoHelper, commands)
+        awardService = mockk(relaxed = true)
+        commandManager = DefaultCommandManager(configService, userDtoHelper, awardService, commands)
         mockkStatic(PlayerManager::class)
         mockkObject(MusicPlayerHelper)
     }

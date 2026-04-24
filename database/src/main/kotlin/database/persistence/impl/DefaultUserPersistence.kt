@@ -3,6 +3,7 @@ package database.persistence.impl
 import database.dto.UserDto
 import database.persistence.UserPersistence
 import jakarta.persistence.EntityManager
+import jakarta.persistence.LockModeType
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Query
 import jakarta.persistence.TypedQuery
@@ -32,6 +33,15 @@ class DefaultUserPersistence : UserPersistence {
         userQuery.setParameter("discordId", discordId)
         userQuery.setParameter("guildId", guildId)
         return runCatching { userQuery.singleResult as UserDto? }.getOrNull()
+    }
+
+    override fun getUserByIdForUpdate(discordId: Long?, guildId: Long?): UserDto? {
+        val q: TypedQuery<UserDto> = entityManager
+            .createNamedQuery("UserDto.getById", UserDto::class.java)
+            .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+        q.setParameter("discordId", discordId)
+        q.setParameter("guildId", guildId)
+        return runCatching { q.singleResult }.getOrNull()
     }
 
     override fun updateUser(userDto: UserDto): UserDto {
