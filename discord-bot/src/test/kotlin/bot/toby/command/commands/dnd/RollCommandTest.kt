@@ -6,6 +6,7 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.UserDtoHelper
+import web.service.InitiativeResolver
 import common.events.CampaignEventType
 import io.mockk.every
 import io.mockk.mockk
@@ -30,7 +31,7 @@ class RollCommandTest : CommandTest {
     fun setUp() {
         setUpCommonMocks()
         userDtoHelper = mockk()
-        dndHelper = DnDHelper(userDtoHelper)
+        dndHelper = DnDHelper(userDtoHelper, mockk<InitiativeResolver>(relaxed = true))
         sessionLog = mockk(relaxed = true)
         every { event.hook.sendMessageEmbeds(any(), *anyVararg()) } returns webhookMessageCreateAction
         rollCommand = RollCommand(dndHelper, sessionLog)

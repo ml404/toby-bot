@@ -67,18 +67,15 @@ class AdjustUserCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         val permission = event.getOption(PERMISSION_NAME)?.asString
-        val modifier = event.getOption(MODIFIER)?.asInt
 
-        if (permission == null && modifier == null) {
+        if (permission == null) {
             event.hook.sendMessage("You did not mention a valid permission to update")
                 .setEphemeral(true)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
 
-        modifier?.let { targetUserDto.initiativeModifier = it }
-
-        permission?.uppercase()?.let {
+        permission.uppercase().let {
             when (UserDto.Permissions.valueOf(it)) {
                 UserDto.Permissions.MUSIC -> targetUserDto.musicPermission =
                     !targetUserDto.musicPermission
@@ -159,13 +156,11 @@ class AdjustUserCommand @Autowired constructor(
                     UserDto.Permissions.SUPERUSER.name
                 )
             }
-            val initiative = OptionData(OptionType.INTEGER, MODIFIER, "modifier for the initiative command when used on your user")
-            return listOf(userOption, permission, initiative)
+            return listOf(userOption, permission)
         }
 
     companion object {
         private const val PERMISSION_NAME = "name"
         private const val USERS = "users"
-        const val MODIFIER = "modifier"
     }
 }

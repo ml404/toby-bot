@@ -51,7 +51,7 @@
                 <tbody>
                 <tr th:each="m : ${overview.members}"
                     th:attr="data-member-id=${m.id}">
-                    <td>
+                    <td data-label="Member">
                         <div class="member-cell">
                             <img th:if="${m.avatarUrl != null}"
                                  th:src="${m.avatarUrl}"
@@ -61,42 +61,50 @@
                             <span class="badge owner" th:if="${m.isOwner}">owner</span>
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Music">
                         <button type="button" class="toggle-btn"
                                 th:classappend="${m.musicPermission} ? ' on' : ''"
                                 th:attr="data-permission='MUSIC',
                                          data-owner=${m.isOwner}"
+                                th:title="'Music: ' + (${m.musicPermission} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Music permission for ' + ${m.name}"
                                 th:text="${m.musicPermission} ? 'On' : 'Off'">On</button>
                     </td>
-                    <td>
+                    <td data-label="Meme">
                         <button type="button" class="toggle-btn"
                                 th:classappend="${m.memePermission} ? ' on' : ''"
                                 th:attr="data-permission='MEME',
                                          data-owner=${m.isOwner}"
+                                th:title="'Meme: ' + (${m.memePermission} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Meme permission for ' + ${m.name}"
                                 th:text="${m.memePermission} ? 'On' : 'Off'">On</button>
                     </td>
-                    <td>
+                    <td data-label="Dig">
                         <button type="button" class="toggle-btn"
                                 th:classappend="${m.digPermission} ? ' on' : ''"
                                 th:attr="data-permission='DIG',
                                          data-owner=${m.isOwner}"
+                                th:title="'Dig: ' + (${m.digPermission} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Dig permission for ' + ${m.name}"
                                 th:text="${m.digPermission} ? 'On' : 'Off'">On</button>
                     </td>
-                    <td>
+                    <td data-label="Superuser">
                         <button type="button" class="toggle-btn"
                                 th:classappend="${m.superUser} ? ' on' : ''"
                                 th:attr="data-permission='SUPERUSER',
                                          data-owner=${m.isOwner},
                                          data-owner-only='true'"
                                 th:disabled="${!isOwner}"
+                                th:title="'Superuser: ' + (${m.superUser} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Superuser permission for ' + ${m.name}"
                                 th:text="${m.superUser} ? 'On' : 'Off'">Off</button>
                     </td>
-                    <td>
-                        <input type="number" class="initiative-input"
-                               th:value="${m.initiativeModifier}"
-                               min="-20" max="20" step="1" aria-label="Initiative modifier">
+                    <td data-label="Initiative">
+                        <span class="initiative-value"
+                              th:text="${m.initiativeModifier == null ? '—' : (m.initiativeModifier >= 0 ? '+' + m.initiativeModifier : m.initiativeModifier)}"
+                              th:title="${m.initiativeModifier == null ? 'Link a D&amp;D Beyond character with /linkcharacter to populate.' : 'Derived from linked character sheet (DEX modifier).'}">—</span>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                         <button type="button" class="btn-danger kick-btn"
                                 th:attr="data-name=${m.name}"
                                 th:disabled="${m.isOwner}">Kick</button>

@@ -55,7 +55,6 @@ class LinkCharacterCommand @Autowired constructor(
 
             if (cachedSheet != null) {
                 val dexMod = cachedSheet.modifier(CharacterSheet.DEX)
-                requestingUserDto.initiativeModifier = dexMod
                 userDtoHelper.updateUser(requestingUserDto)
 
                 val embed = EmbedBuilder()

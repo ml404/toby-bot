@@ -66,34 +66,6 @@
         });
     });
 
-    // --- Users tab: initiative modifier (commit on blur or Enter) ---
-    document.querySelectorAll('.initiative-input').forEach(input => {
-        let lastValue = input.value;
-        const commit = () => {
-            const val = parseInt(input.value, 10);
-            if (Number.isNaN(val) || val === parseInt(lastValue, 10)) {
-                input.value = lastValue;
-                return;
-            }
-            const memberId = input.closest('tr').dataset.memberId;
-            input.disabled = true;
-            postJson('/moderation/' + guildId + '/user/' + memberId + '/initiative', { modifier: val })
-                .then(r => {
-                    input.disabled = false;
-                    if (r && r.ok) {
-                        lastValue = String(val);
-                        toast('Initiative modifier saved.', 'success');
-                    } else {
-                        input.value = lastValue;
-                        toast(r?.error || 'Could not save modifier.', 'error');
-                    }
-                })
-                .catch(() => { input.disabled = false; input.value = lastValue; toast('Network error.', 'error'); });
-        };
-        input.addEventListener('blur', commit);
-        input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
-    });
-
     // --- Users tab: kick ---
     document.querySelectorAll('.kick-btn').forEach(btn => {
         btn.addEventListener('click', () => {

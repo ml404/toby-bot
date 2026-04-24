@@ -43,7 +43,6 @@ internal class AdjustUserCommandTest : CommandTest {
         val targetUserDto = mockk<database.dto.UserDto>(relaxed = true)
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
-        val modifier = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
 
         every { userService.getUserById(any(), any()) } returns targetUserDto
@@ -51,11 +50,9 @@ internal class AdjustUserCommandTest : CommandTest {
         every { targetUserDto.guildId } returns 1L
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("name") } returns permissionOptionMapping
-        every { event.getOption("modifier") } returns modifier
         every { userOptionMapping.mentions } returns mentions
         every { permissionOptionMapping.asString } returns database.dto.UserDto.Permissions.MUSIC.name
         every { mentions.members } returns listOf(targetMember)
-        every { modifier.asInt } returns 1
 
         // Act
         adjustUserCommand.handle(commandContext, requestingUserDto, 0)

@@ -30,6 +30,7 @@ class ModerationWebServiceTest {
     private lateinit var userService: UserService
     private lateinit var configService: ConfigService
     private lateinit var introWebService: IntroWebService
+    private lateinit var initiativeResolver: InitiativeResolver
     private lateinit var service: ModerationWebService
 
     private lateinit var guild: Guild
@@ -46,8 +47,9 @@ class ModerationWebServiceTest {
         userService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         introWebService = mockk(relaxed = true)
+        initiativeResolver = mockk(relaxed = true)
         guild = mockk(relaxed = true)
-        service = ModerationWebService(jda, userService, configService, introWebService)
+        service = ModerationWebService(jda, userService, configService, introWebService, initiativeResolver)
 
         every { jda.getGuildById(guildId) } returns guild
         every { guild.id } returns guildId.toString()
@@ -163,26 +165,6 @@ class ModerationWebServiceTest {
         assertNull(err)
         verify { userService.createNewUser(any()) }
         verify { userService.updateUser(any()) }
-    }
-
-    // ---- setInitiativeModifier ----
-
-    @Test
-    fun `setInitiativeModifier rejects out-of-range value`() {
-        mockMember(ownerId, isOwner = true)
-        assertNotNull(service.setInitiativeModifier(ownerId, guildId, targetUserId, 100))
-    }
-
-    @Test
-    fun `setInitiativeModifier persists value`() {
-        mockMember(ownerId, isOwner = true)
-        val target = UserDto(discordId = targetUserId, guildId = guildId)
-        every { userService.getUserById(targetUserId, guildId) } returns target
-
-        val err = service.setInitiativeModifier(ownerId, guildId, targetUserId, 5)
-        assertNull(err)
-        assertEquals(5, target.initiativeModifier)
-        verify { userService.updateUser(target) }
     }
 
     // ---- adjustSocialCredit ----

@@ -55,8 +55,7 @@ internal class EightBallCommandTest : CommandTest {
             musicPermission = true,
             digPermission = true,
             memePermission = true,
-            socialCredit = 0L,
-            initiativeModifier = 0
+            socialCredit = 0L
         ) // You can set the user as needed
         val deleteDelay = 0 // Set your desired deleteDelay
 

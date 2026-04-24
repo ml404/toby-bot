@@ -96,21 +96,6 @@ class ModerationController(
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
-    @PostMapping("/{guildId}/user/{targetDiscordId}/initiative", consumes = ["application/json"])
-    @ResponseBody
-    fun setInitiative(
-        @PathVariable guildId: Long,
-        @PathVariable targetDiscordId: Long,
-        @RequestBody body: InitiativeRequest,
-        @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
-        val error = moderationWebService.setInitiativeModifier(actor, guildId, targetDiscordId, body.modifier)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
-        else ResponseEntity.ok(ApiResult(true, null))
-    }
-
     @PostMapping("/{guildId}/user/{targetDiscordId}/social-credit", consumes = ["application/json"])
     @ResponseBody
     fun adjustSocialCredit(
@@ -205,7 +190,6 @@ class ModerationController(
 }
 
 data class PermissionRequest(val permission: String = "")
-data class InitiativeRequest(val modifier: Int = 0)
 data class SocialCreditRequest(val delta: Long = 0)
 data class ConfigRequest(val key: String = "", val value: String = "")
 data class KickRequest(val targetDiscordId: Long = 0, val reason: String? = null)

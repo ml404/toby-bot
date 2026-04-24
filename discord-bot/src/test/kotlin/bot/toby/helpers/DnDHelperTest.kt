@@ -23,6 +23,7 @@ import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
+import web.service.InitiativeResolver
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -41,6 +42,7 @@ internal class DnDHelperTest {
     lateinit var memberList: List<Member>
     lateinit var initiativeMap: MutableMap<String, Int>
     lateinit var userDtoHelper: UserDtoHelper
+    lateinit var initiativeResolver: InitiativeResolver
     lateinit var dndHelper: DnDHelper
 
     private val guildId = 1L
@@ -59,7 +61,8 @@ internal class DnDHelperTest {
         memberList = mockk()
         initiativeMap = mutableMapOf()
         userDtoHelper = mockk()
-        dndHelper = DnDHelper(userDtoHelper)
+        initiativeResolver = mockk()
+        dndHelper = DnDHelper(userDtoHelper, initiativeResolver)
 
         val player1 = mockk<Member>()
         val player2 = mockk<Member>()
@@ -120,9 +123,9 @@ internal class DnDHelperTest {
         every { userDto1.guildId } returns 1L
         every { userDto2.guildId } returns 1L
         every { userDto3.guildId } returns 1L
-        every { userDto1.initiativeModifier } returns 0
-        every { userDto2.initiativeModifier } returns 1
-        every { userDto3.initiativeModifier } returns 2
+        every { initiativeResolver.resolve(userDto1) } returns 0
+        every { initiativeResolver.resolve(userDto2) } returns 1
+        every { initiativeResolver.resolve(userDto3) } returns 2
 
         every { userService.listGuildUsers(any()) } returns listOf(userDto1, userDto2, userDto3)
         every { userDtoHelper.calculateUserDto(1L, 1L) } returns userDto1

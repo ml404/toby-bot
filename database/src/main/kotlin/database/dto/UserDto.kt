@@ -45,9 +45,6 @@ class UserDto(
     @Column(name = "social_credit")
     var socialCredit: Long? = 0L,
 
-    @Column(name = "initiative")
-    var initiativeModifier: Int? = 0,
-
     @Column(name = "dnd_beyond_character_id")
     var dndBeyondCharacterId: Long? = null,
 
