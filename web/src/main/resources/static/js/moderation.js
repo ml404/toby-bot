@@ -33,6 +33,44 @@
         });
     });
 
+    // --- Users tab: client-side search filter ---
+    (function setupUserSearch() {
+        const input = document.getElementById('user-search');
+        const count = document.getElementById('user-search-count');
+        const usersPanel = document.querySelector('.tab-panel[data-panel="users"]');
+        if (!input || !usersPanel) return;
+
+        // Cache each row's lowercased display name so we don't touch the DOM
+        // per keystroke.
+        const rows = Array.from(usersPanel.querySelectorAll('.mod-table tbody tr[data-member-id]'));
+        const nameByRow = new Map(
+            rows.map(tr => {
+                const nameCell = tr.querySelector('.member-cell span');
+                return [tr, (nameCell?.textContent || '').trim().toLowerCase()];
+            })
+        );
+        const total = rows.length;
+
+        function apply(query) {
+            const q = query.trim().toLowerCase();
+            let shown = 0;
+            rows.forEach(tr => {
+                const hit = q === '' || (nameByRow.get(tr) || '').includes(q);
+                tr.classList.toggle('is-hidden', !hit);
+                if (hit) shown++;
+            });
+            if (count) {
+                count.textContent = q === '' ? '' : shown + ' of ' + total;
+            }
+        }
+
+        input.addEventListener('input', () => apply(input.value));
+        // Esc clears the filter.
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { input.value = ''; apply(''); }
+        });
+    })();
+
     // --- Users tab: permission toggles ---
     document.querySelectorAll('.toggle-btn').forEach(btn => {
         btn.addEventListener('click', () => {

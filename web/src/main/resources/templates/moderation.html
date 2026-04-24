@@ -36,6 +36,16 @@
             View the full credit standings on the
             <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}">leaderboard page</a>.
         </p>
+        <div class="mod-search">
+            <label for="user-search" class="sr-only">Search members</label>
+            <input id="user-search"
+                   type="search"
+                   class="mod-search-input"
+                   placeholder="Search members by name…"
+                   autocomplete="off"
+                   aria-describedby="user-search-count">
+            <span id="user-search-count" class="mod-search-count" aria-live="polite"></span>
+        </div>
         <div class="mod-table-wrap">
             <table class="mod-table">
                 <thead>
