@@ -146,6 +146,36 @@ class VoiceCreditAwardServiceTest {
     }
 
     @Test
+    fun `closeSessionAtShutdown awards full raw seconds without the recovery cap`() {
+        val t0 = Instant.parse("2026-04-10T10:00:00Z")
+        every { awardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        val closed = slot<VoiceSessionDto>()
+        every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
+
+        // 3600s session, shutdown right at the end. Whole duration must count —
+        // this is the reason shutdown is different from recovery: we KNOW the
+        // user was present up to this instant.
+        service.closeSessionAtShutdown(session(t0), t0.plusSeconds(3600L))
+
+        assertEquals(3600L, closed.captured.countedSeconds)
+        assertEquals(t0.plusSeconds(3600L), closed.captured.leftAt,
+            "leftAt must reflect the actual shutdown moment, not any later wake-time")
+    }
+
+    @Test
+    fun `closeSessionAtShutdown treats a negative duration as zero`() {
+        // Clock skew / backwards-moving Instant.now — shouldn't produce negative credits.
+        val t0 = Instant.parse("2026-04-10T10:00:00Z")
+        every { awardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        val closed = slot<VoiceSessionDto>()
+        every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
+
+        service.closeSessionAtShutdown(session(t0), t0.minusSeconds(10L))
+
+        assertEquals(0L, closed.captured.countedSeconds)
+    }
+
+    @Test
     fun `closeSessionAndAward records zero when award service returns zero (unknown user)`() {
         val t0 = Instant.parse("2026-04-10T10:00:00Z")
         // Simulate "user doesn't exist" — central service returns 0 without consuming cap.
