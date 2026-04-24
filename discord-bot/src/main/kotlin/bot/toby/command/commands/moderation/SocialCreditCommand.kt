@@ -3,7 +3,9 @@ package bot.toby.command.commands.moderation
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
+import database.service.TitleService
 import database.service.UserService
+import database.service.VoiceSessionService
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -12,7 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class SocialCreditCommand @Autowired constructor(private val userService: UserService) : ModerationCommand {
+class SocialCreditCommand @Autowired constructor(
+    private val userService: UserService,
+    private val voiceSessionService: VoiceSessionService,
+    private val titleService: TitleService
+) : ModerationCommand {
     companion object {
         private const val LEADERBOARD = "leaderboard"
         private const val USERS = "users"
@@ -64,13 +70,20 @@ class SocialCreditCommand @Autowired constructor(private val userService: UserSe
 
     private fun createAndPrintLeaderboard(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val guild = event.guild ?: return
-        val socialCreditMap = userService.listGuildUsers(guild.idLong).associate { it?.discordId to it?.socialCredit }
+        val users = userService.listGuildUsers(guild.idLong).filterNotNull()
+        val voiceSecondsByUser = voiceSessionService.sumCountedSecondsLifetimeByUser(guild.idLong)
 
-        val leaderboard = socialCreditMap.entries
-            .sortedByDescending { it.value }
-            .mapIndexed { index, entry ->
-                val member = entry.key?.let { guild.getMemberById(it) }
-                "#${index + 1}: ${member?.effectiveName ?: "Unknown"} - score: ${entry.value}"
+        val leaderboard = users
+            .sortedByDescending { it.socialCredit ?: 0L }
+            .mapIndexed { index, dto ->
+                val member = guild.getMemberById(dto.discordId)
+                val titlePrefix = dto.activeTitleId
+                    ?.let { titleService.getById(it) }
+                    ?.label
+                    ?.let { "$it " }
+                    ?: ""
+                val voice = formatDuration(voiceSecondsByUser[dto.discordId] ?: 0L)
+                "#${index + 1}: $titlePrefix${member?.effectiveName ?: "Unknown"} — ${dto.socialCredit ?: 0L} credits · $voice voice"
             }
 
         val message = buildString {
@@ -82,6 +95,13 @@ class SocialCreditCommand @Autowired constructor(private val userService: UserSe
         event.hook.sendMessage(message)
             .setEphemeral(true)
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun formatDuration(seconds: Long): String {
+        if (seconds <= 0) return "0m"
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
     }
 
     private fun listSocialCreditScore(

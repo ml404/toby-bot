@@ -9,6 +9,7 @@ import bot.toby.command.commands.dnd.InitiativeCommand
 import bot.toby.command.commands.dnd.LinkCharacterCommand
 import bot.toby.command.commands.dnd.RefreshCharacterCommand
 import bot.toby.command.commands.dnd.RollCommand
+import bot.toby.command.commands.economy.TitleCommand
 import bot.toby.command.commands.fetch.DbdRandomKillerCommand
 import bot.toby.command.commands.fetch.Kf2RandomMapCommand
 import bot.toby.command.commands.fetch.MemeCommand
@@ -121,12 +122,13 @@ class CommandManagerTest {
             LinkCharacterCommand::class.java,
             CharacterCommand::class.java,
             RefreshCharacterCommand::class.java,
-            CampaignCommand::class.java
+            CampaignCommand::class.java,
+            TitleCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(43, commandManager.allCommands.size)
-        Assertions.assertEquals(43, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(44, commandManager.allCommands.size)
+        Assertions.assertEquals(44, commandManager.allSlashCommands.size)
     }
 
     @Test

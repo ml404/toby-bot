@@ -45,7 +45,64 @@ CREATE TABLE public."user" (
     meme_permission boolean DEFAULT true NOT NULL,
     social_credit bigint,
     initiative smallint default 0,
-    dnd_beyond_character_id bigint default null
+    dnd_beyond_character_id bigint default null,
+    active_title_id bigint default null
+);
+
+DROP TABLE IF EXISTS public.voice_session;
+CREATE TABLE public.voice_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    discord_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL,
+    joined_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    left_at TIMESTAMP WITH TIME ZONE,
+    counted_seconds BIGINT,
+    credits_awarded BIGINT NOT NULL DEFAULT 0
+);
+
+DROP TABLE IF EXISTS public.voice_credit_daily;
+CREATE TABLE public.voice_credit_daily (
+    discord_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    earn_date DATE NOT NULL,
+    credits BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (discord_id, guild_id, earn_date)
+);
+
+DROP TABLE IF EXISTS public.monthly_credit_snapshot;
+CREATE TABLE public.monthly_credit_snapshot (
+    discord_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    snapshot_date DATE NOT NULL,
+    social_credit BIGINT NOT NULL,
+    PRIMARY KEY (discord_id, guild_id, snapshot_date)
+);
+
+DROP TABLE IF EXISTS public.user_owned_title;
+DROP TABLE IF EXISTS public.guild_title_role;
+DROP TABLE IF EXISTS public.title;
+CREATE TABLE public.title (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    label TEXT NOT NULL UNIQUE,
+    cost BIGINT NOT NULL,
+    description TEXT,
+    color_hex TEXT,
+    hoisted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE public.user_owned_title (
+    discord_id BIGINT NOT NULL,
+    title_id BIGINT NOT NULL REFERENCES public.title(id),
+    bought_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (discord_id, title_id)
+);
+
+CREATE TABLE public.guild_title_role (
+    guild_id BIGINT NOT NULL,
+    title_id BIGINT NOT NULL REFERENCES public.title(id),
+    discord_role_id BIGINT NOT NULL,
+    PRIMARY KEY (guild_id, title_id)
 );
 
 DROP TABLE IF EXISTS public.dnd_campaign_player;

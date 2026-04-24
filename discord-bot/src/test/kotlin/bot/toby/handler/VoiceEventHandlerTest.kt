@@ -4,9 +4,12 @@ import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
+import bot.toby.voice.VoiceCompanyTracker
+import bot.toby.voice.VoiceCreditAwardService
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.service.ConfigService
+import database.service.VoiceSessionService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA
@@ -36,12 +39,18 @@ class VoiceEventHandlerTest {
     private val configService: ConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
     private val introHelper: IntroHelper = mockk()
+    private val voiceSessionService: VoiceSessionService = mockk(relaxed = true)
+    private val voiceCompanyTracker: VoiceCompanyTracker = mockk(relaxed = true)
+    private val voiceCreditAwardService: VoiceCreditAwardService = mockk(relaxed = true)
 
     private val handler = spyk(
         VoiceEventHandler(
             configService,
             userDtoHelper,
-            introHelper
+            introHelper,
+            voiceSessionService,
+            voiceCompanyTracker,
+            voiceCreditAwardService
         )
     )
 
@@ -113,7 +122,10 @@ class VoiceEventHandlerTest {
         val handler = VoiceEventHandler(
             configService = mockk(),
             userDtoHelper = mockk(),
-            introHelper = mockk()
+            introHelper = mockk(),
+            voiceSessionService = mockk(relaxed = true),
+            voiceCompanyTracker = mockk(relaxed = true),
+            voiceCreditAwardService = mockk(relaxed = true)
         )
 
         handler.onReady(readyEvent)

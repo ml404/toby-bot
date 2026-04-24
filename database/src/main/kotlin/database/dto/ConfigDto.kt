@@ -32,7 +32,8 @@ class ConfigDto(
         INTRO_VOLUME("DEFAULT_INTRO_VOLUME"),
         VOLUME("DEFAULT_VOLUME"),
         MOVE("DEFAULT_MOVE_CHANNEL"),
-        DELETE_DELAY("DELETE_MESSAGE_DELAY");
+        DELETE_DELAY("DELETE_MESSAGE_DELAY"),
+        LEADERBOARD_CHANNEL("LEADERBOARD_CHANNEL");
     }
 
     override fun toString(): String {
