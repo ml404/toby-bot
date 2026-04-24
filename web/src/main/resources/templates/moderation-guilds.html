@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderate a Server', null)}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<style>
+    .guild-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: var(--space-4);
+    }
+    .guild-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        text-align: center;
+        text-decoration: none;
+        color: var(--text);
+        transition: border-color 0.15s, transform 0.1s;
+        display: block;
+    }
+    .guild-card:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--text); }
+    .guild-icon, .guild-icon-placeholder {
+        width: 64px; height: 64px; border-radius: 50%;
+        margin: 0 auto 12px; display: block;
+    }
+    .guild-icon-placeholder {
+        background: var(--accent);
+        color: #fff;
+        font-size: 1.5rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .guild-name {
+        font-weight: 600; font-size: 0.95rem;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .empty-hero {
+        background: var(--bg-elevated);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-lg);
+        padding: 48px 24px;
+        text-align: center;
+        color: var(--text-muted);
+    }
+    .empty-hero h2 { color: var(--text); margin-bottom: 10px; }
+    .empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
+</style>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Moderate a Server</h1>
+    <p class="muted mb-5">
+        Servers where you are the owner or a TobyBot superuser.
+    </p>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <a class="guild-card"
+           th:each="guild : ${guilds}"
+           th:href="@{/moderation/{id}(id=${guild.id})}">
+            <img th:if="${guild.iconUrl != null}"
+                 th:src="${guild.iconUrl}"
+                 th:alt="${guild.name} + ' icon'"
+                 class="guild-icon"
+                 onerror="this.style.display='none'">
+            <div th:unless="${guild.iconUrl != null}"
+                 class="guild-icon-placeholder"
+                 aria-hidden="true"
+                 th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
+            <div class="guild-name" th:text="${guild.name}" th:title="${guild.name}">Guild Name</div>
+        </a>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">🛡️</span>
+        <h2>You're not a moderator anywhere yet</h2>
+        <p class="mb-5">
+            You need to be either the server owner or a TobyBot superuser on a
+            server that TobyBot has joined.
+        </p>
+        <a th:href="${inviteUrl}" class="btn" target="_blank" rel="noopener">Invite TobyBot</a>
+    </div>
+</main>
+
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>

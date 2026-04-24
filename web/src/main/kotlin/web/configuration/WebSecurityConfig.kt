@@ -22,6 +22,7 @@ class WebSecurityConfig {
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.requestMatchers("/dnd/**").authenticated()
+                auth.requestMatchers("/moderation/**").authenticated()
                 auth.anyRequest().authenticated()
             }
             .oauth2Login { oauth2 ->
