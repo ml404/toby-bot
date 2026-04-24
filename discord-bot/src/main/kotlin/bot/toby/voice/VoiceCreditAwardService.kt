@@ -56,4 +56,22 @@ class VoiceCreditAwardService @Autowired constructor(
         val cappedSeconds = rawSeconds.coerceAtMost(VoiceCreditConfig.MAX_RECOVERED_SESSION_SECONDS)
         closeSessionAndAward(session, closedAt, cappedSeconds)
     }
+
+    /**
+     * Close a still-open session because the bot is shutting down cleanly.
+     * The user's session was live right up to this moment, so we treat the
+     * entire duration as counted — no 8h recovery cap, since a session can't
+     * outlive the uptime that spawned it. Stopping the bot here means:
+     *
+     *   - `leftAt` reflects the actual shutdown time (not whenever the bot
+     *     wakes up next, which can be hours later and would inflate credit)
+     *   - Credits get awarded immediately rather than deferred to startup
+     *   - On the next boot, [VoiceSessionRecoveryHook] sees nothing to
+     *     recover for this user, so no over-count path exists for clean
+     *     deploys. Crash shutdowns still fall through to recovery.
+     */
+    fun closeSessionAtShutdown(session: VoiceSessionDto, closedAt: Instant) {
+        val rawSeconds = Duration.between(session.joinedAt, closedAt).seconds.coerceAtLeast(0)
+        closeSessionAndAward(session, closedAt, rawSeconds)
+    }
 }
