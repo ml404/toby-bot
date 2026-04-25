@@ -51,4 +51,45 @@ describe('navbar fragment', () => {
             /<script[^>]*th:src\s*=\s*"@\{\s*\/js\/home\.js\s*}"/
         );
     });
+
+    // PR 2 (navbar dropdowns): Economy folds Market + Titles; Casino is
+    // the home for the upcoming /slots minigame. Both must render as
+    // <button class="nav-dropdown-toggle"> with their menu links inside
+    // a sibling .nav-dropdown-menu — anything else breaks the CSS
+    // selectors that show/hide the menu on hover/click.
+    test('Economy dropdown contains the Market and Titles links', () => {
+        const economy = html.match(
+            /<div class="nav-dropdown">[\s\S]*?Economy[\s\S]*?<\/div>\s*<\/div>/
+        );
+        expect(economy).not.toBeNull();
+        expect(economy[0]).toMatch(/href="\/economy\/guilds"[^>]*>\s*Market\s*</);
+        expect(economy[0]).toMatch(/href="\/titles\/guilds"[^>]*>\s*Titles\s*</);
+        expect(economy[0]).toMatch(
+            /<button[^>]*class="[^"]*\bnav-dropdown-toggle\b[^"]*"[^>]*onclick="toggleDropdown\(this\)"/
+        );
+    });
+
+    test('Casino dropdown ships with a Coming soon placeholder', () => {
+        const casino = html.match(
+            /<div class="nav-dropdown">[\s\S]*?Casino[\s\S]*?<\/div>\s*<\/div>/
+        );
+        expect(casino).not.toBeNull();
+        expect(casino[0]).toMatch(/class="nav-dropdown-coming-soon"/);
+        expect(casino[0]).toMatch(/coming soon/i);
+    });
+
+    test('Market and Titles are no longer top-level nav-links siblings', () => {
+        // Regression: if someone re-introduces them at the top level the
+        // navbar grows by two items and the dropdown becomes redundant.
+        const navLinks = html.match(
+            /<div class="nav-links" id="nav-menu">([\s\S]*?)<button class="nav-toggle"/
+        );
+        expect(navLinks).not.toBeNull();
+        const topLevel = navLinks[1];
+        // Market / Titles links exist (inside dropdowns) but not as direct
+        // children of nav-links — strip out the dropdown subtrees first.
+        const stripped = topLevel.replace(/<div class="nav-dropdown">[\s\S]*?<\/div>\s*<\/div>/g, '');
+        expect(stripped).not.toMatch(/href="\/economy\/guilds"/);
+        expect(stripped).not.toMatch(/href="\/titles\/guilds"/);
+    });
 });
