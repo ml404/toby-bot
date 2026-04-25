@@ -26,6 +26,10 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     runtimeOnly 'org.hibernate.orm:hibernate-core:6.6.1.Final'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testRuntimeOnly 'org.postgresql:postgresql'
     testImplementation project(configuration: 'testArtifacts', path: ':common')
 }
 
