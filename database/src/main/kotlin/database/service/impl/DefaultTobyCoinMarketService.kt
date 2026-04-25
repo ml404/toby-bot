@@ -2,8 +2,10 @@ package database.service.impl
 
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
+import database.dto.TobyCoinTradeDto
 import database.persistence.TobyCoinMarketPersistence
 import database.persistence.TobyCoinPriceHistoryPersistence
+import database.persistence.TobyCoinTradePersistence
 import database.service.TobyCoinMarketService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CachePut
@@ -18,6 +20,9 @@ class DefaultTobyCoinMarketService : TobyCoinMarketService {
 
     @Autowired
     private lateinit var historyPersistence: TobyCoinPriceHistoryPersistence
+
+    @Autowired
+    private lateinit var tradePersistence: TobyCoinTradePersistence
 
     @Cacheable(value = ["tobyCoinMarkets"], key = "#guildId")
     override fun getMarket(guildId: Long): TobyCoinMarketDto? {
@@ -52,5 +57,17 @@ class DefaultTobyCoinMarketService : TobyCoinMarketService {
 
     override fun pruneHistoryOlderThan(cutoff: Instant): Int {
         return historyPersistence.deleteOlderThan(cutoff)
+    }
+
+    override fun recordTrade(trade: TobyCoinTradeDto): TobyCoinTradeDto {
+        return tradePersistence.record(trade)
+    }
+
+    override fun listTradesSince(guildId: Long, since: Instant): List<TobyCoinTradeDto> {
+        return tradePersistence.listSince(guildId, since)
+    }
+
+    override fun pruneTradesOlderThan(cutoff: Instant): Int {
+        return tradePersistence.deleteOlderThan(cutoff)
     }
 }

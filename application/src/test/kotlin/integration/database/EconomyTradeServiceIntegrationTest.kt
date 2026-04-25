@@ -102,6 +102,16 @@ class EconomyTradeServiceIntegrationTest {
         val samples = marketService.listAllHistory(fx.guildId)
         assertEquals(openingHistorySize + 1, samples.size, "one sample should be appended")
         assertEquals(market.price, samples.last().price, 1e-9)
+
+        // Trade ledger: one row recorded with the PRE-pressure price (so the
+        // market chart marker shows what the user paid, not the post-trade price).
+        val trades = marketService.listTradesSince(fx.guildId, java.time.Instant.EPOCH)
+        assertEquals(1, trades.size, "buy should record exactly one trade row")
+        val trade = trades.single()
+        assertEquals("BUY", trade.side)
+        assertEquals(5L, trade.amount)
+        assertEquals(fx.discordId, trade.discordId)
+        assertEquals(openingPrice, trade.pricePerCoin, 1e-9, "marker must show pre-pressure price")
     }
 
     @Test
@@ -139,6 +149,12 @@ class EconomyTradeServiceIntegrationTest {
         assertTrue(sold.newPrice < bought.newPrice, "sell should drop below the post-buy price")
         val user = userService.getUserById(fx.discordId, fx.guildId)!!
         assertEquals(0L, user.tobyCoins)
+
+        // Trade ledger: both legs recorded with the right side, in order.
+        val trades = marketService.listTradesSince(fx.guildId, java.time.Instant.EPOCH)
+        assertEquals(2, trades.size, "buy then sell should record two trade rows")
+        assertEquals("BUY", trades[0].side)
+        assertEquals("SELL", trades[1].side)
     }
 
     @Test

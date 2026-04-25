@@ -2,6 +2,7 @@ package web.service
 
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
+import database.dto.TobyCoinTradeDto
 import database.dto.UserDto
 import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
@@ -10,9 +11,11 @@ import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -79,5 +82,56 @@ class EconomyWebServiceTest {
         assertEquals(1, points.size)
         assertEquals(now.toEpochMilli(), points[0].t)
         assertEquals(100.0, points[0].price)
+    }
+
+    @Test
+    fun `getTrades resolves member display name and maps fields`() {
+        val now = Instant.now()
+        val guild = mockk<Guild>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(7L) } returns member
+        every { member.effectiveName } returns "FratLayton"
+        every { marketService.listTradesSince(guildId, any()) } returns listOf(
+            TobyCoinTradeDto(
+                guildId = guildId, discordId = 7L, side = "BUY",
+                amount = 5L, pricePerCoin = 12.5, executedAt = now
+            )
+        )
+
+        val markers = service.getTrades(guildId, "1d")
+
+        assertEquals(1, markers.size)
+        val m = markers.single()
+        assertEquals(now.toEpochMilli(), m.t)
+        assertEquals("BUY", m.side)
+        assertEquals(5L, m.amount)
+        assertEquals(12.5, m.price)
+        assertEquals("FratLayton", m.name)
+    }
+
+    @Test
+    fun `getTrades falls back to Unknown when member is not in guild cache`() {
+        val now = Instant.now()
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(any<Long>()) } returns null
+        every { marketService.listTradesSince(guildId, any()) } returns listOf(
+            TobyCoinTradeDto(
+                guildId = guildId, discordId = 99L, side = "SELL",
+                amount = 1L, pricePerCoin = 9.0, executedAt = now
+            )
+        )
+
+        val markers = service.getTrades(guildId, "1d")
+
+        assertEquals("Unknown", markers.single().name)
+    }
+
+    @Test
+    fun `getTrades returns empty list without hitting JDA when there are no trades`() {
+        every { marketService.listTradesSince(guildId, any()) } returns emptyList()
+        val markers = service.getTrades(guildId, "1d")
+        assertTrue(markers.isEmpty())
     }
 }

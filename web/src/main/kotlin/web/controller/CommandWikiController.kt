@@ -30,6 +30,7 @@ class CommandWikiController(
             CommandCategory("Music", commandManager.musicCommands),
             CommandCategory("DnD", commandManager.dndCommands),
             CommandCategory("Moderation", commandManager.moderationCommands),
+            CommandCategory("Economy", commandManager.economyCommands),
             CommandCategory("Miscellaneous", commandManager.miscCommands),
             CommandCategory("Fetch", commandManager.fetchCommands)
         ).filter { it.commands.isNotEmpty() }
