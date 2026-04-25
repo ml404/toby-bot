@@ -47,35 +47,28 @@ class SlotsService(
     }
 
     fun spin(discordId: Long, guildId: Long, stake: Long): SpinOutcome {
-        if (stake < SlotMachine.MIN_STAKE || stake > SlotMachine.MAX_STAKE) {
-            return SpinOutcome.InvalidStake(SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE)
-        }
-        val user = userService.getUserByIdForUpdate(discordId, guildId)
-            ?: return SpinOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < stake) return SpinOutcome.InsufficientCredits(stake, balance)
-
-        val pull = machine.pull(random)
-        // payout = multiplier × stake on a win, 0 on a loss. Net change to
-        // the user's balance is (payout - stake): positive on wins (we eat
-        // their stake first then pay them out), -stake on losses.
-        val payout = pull.multiplier * stake
-        val net = payout - stake
-        user.socialCredit = balance + net
-        userService.updateUser(user)
-        val newBalance = user.socialCredit ?: 0L
-
-        return if (pull.isWin) {
-            SpinOutcome.Win(
-                stake = stake,
-                multiplier = pull.multiplier,
-                payout = payout,
-                net = net,
-                symbols = pull.symbols,
-                newBalance = newBalance
-            )
-        } else {
-            SpinOutcome.Lose(stake = stake, symbols = pull.symbols, newBalance = newBalance)
+        return when (val check = WagerHelper.checkAndLock(
+            userService, discordId, guildId, stake, SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE
+        )) {
+            is BalanceCheck.InvalidStake -> SpinOutcome.InvalidStake(check.min, check.max)
+            BalanceCheck.UnknownUser -> SpinOutcome.UnknownUser
+            is BalanceCheck.Insufficient -> SpinOutcome.InsufficientCredits(check.stake, check.have)
+            is BalanceCheck.Ok -> {
+                val pull = machine.pull(random)
+                val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, pull.multiplier)
+                if (pull.isWin) {
+                    SpinOutcome.Win(
+                        stake = stake,
+                        multiplier = pull.multiplier,
+                        payout = r.payout,
+                        net = r.net,
+                        symbols = pull.symbols,
+                        newBalance = r.newBalance
+                    )
+                } else {
+                    SpinOutcome.Lose(stake = stake, symbols = pull.symbols, newBalance = r.newBalance)
+                }
+            }
         }
     }
 }

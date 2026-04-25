@@ -43,39 +43,35 @@ class HighlowService(
     }
 
     fun play(discordId: Long, guildId: Long, stake: Long, direction: Highlow.Direction): PlayOutcome {
-        if (stake < Highlow.MIN_STAKE || stake > Highlow.MAX_STAKE) {
-            return PlayOutcome.InvalidStake(Highlow.MIN_STAKE, Highlow.MAX_STAKE)
-        }
-        val user = userService.getUserByIdForUpdate(discordId, guildId)
-            ?: return PlayOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < stake) return PlayOutcome.InsufficientCredits(stake, balance)
-
-        val hand = highlow.play(direction, random)
-        val payout = hand.multiplier * stake
-        val net = payout - stake
-        user.socialCredit = balance + net
-        userService.updateUser(user)
-        val newBalance = user.socialCredit ?: 0L
-
-        return if (hand.isWin) {
-            PlayOutcome.Win(
-                stake = stake,
-                payout = payout,
-                net = net,
-                anchor = hand.anchor,
-                next = hand.next,
-                direction = hand.direction,
-                newBalance = newBalance
-            )
-        } else {
-            PlayOutcome.Lose(
-                stake = stake,
-                anchor = hand.anchor,
-                next = hand.next,
-                direction = hand.direction,
-                newBalance = newBalance
-            )
+        return when (val check = WagerHelper.checkAndLock(
+            userService, discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE
+        )) {
+            is BalanceCheck.InvalidStake -> PlayOutcome.InvalidStake(check.min, check.max)
+            BalanceCheck.UnknownUser -> PlayOutcome.UnknownUser
+            is BalanceCheck.Insufficient -> PlayOutcome.InsufficientCredits(check.stake, check.have)
+            is BalanceCheck.Ok -> {
+                val hand = highlow.play(direction, random)
+                val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, hand.multiplier)
+                if (hand.isWin) {
+                    PlayOutcome.Win(
+                        stake = stake,
+                        payout = r.payout,
+                        net = r.net,
+                        anchor = hand.anchor,
+                        next = hand.next,
+                        direction = hand.direction,
+                        newBalance = r.newBalance
+                    )
+                } else {
+                    PlayOutcome.Lose(
+                        stake = stake,
+                        anchor = hand.anchor,
+                        next = hand.next,
+                        direction = hand.direction,
+                        newBalance = r.newBalance
+                    )
+                }
+            }
         }
     }
 }

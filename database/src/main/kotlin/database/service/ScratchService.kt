@@ -40,33 +40,29 @@ class ScratchService(
     }
 
     fun scratch(discordId: Long, guildId: Long, stake: Long): ScratchOutcome {
-        if (stake < ScratchCard.MIN_STAKE || stake > ScratchCard.MAX_STAKE) {
-            return ScratchOutcome.InvalidStake(ScratchCard.MIN_STAKE, ScratchCard.MAX_STAKE)
-        }
-        val user = userService.getUserByIdForUpdate(discordId, guildId)
-            ?: return ScratchOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < stake) return ScratchOutcome.InsufficientCredits(stake, balance)
-
-        val result = card.scratch(random)
-        val payout = result.multiplier * stake
-        val net = payout - stake
-        user.socialCredit = balance + net
-        userService.updateUser(user)
-        val newBalance = user.socialCredit ?: 0L
-
-        return if (result.isWin && result.winningSymbol != null) {
-            ScratchOutcome.Win(
-                stake = stake,
-                payout = payout,
-                net = net,
-                cells = result.cells,
-                winningSymbol = result.winningSymbol,
-                matchCount = result.matchCount,
-                newBalance = newBalance
-            )
-        } else {
-            ScratchOutcome.Lose(stake = stake, cells = result.cells, newBalance = newBalance)
+        return when (val check = WagerHelper.checkAndLock(
+            userService, discordId, guildId, stake, ScratchCard.MIN_STAKE, ScratchCard.MAX_STAKE
+        )) {
+            is BalanceCheck.InvalidStake -> ScratchOutcome.InvalidStake(check.min, check.max)
+            BalanceCheck.UnknownUser -> ScratchOutcome.UnknownUser
+            is BalanceCheck.Insufficient -> ScratchOutcome.InsufficientCredits(check.stake, check.have)
+            is BalanceCheck.Ok -> {
+                val result = card.scratch(random)
+                val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, result.multiplier)
+                if (result.isWin && result.winningSymbol != null) {
+                    ScratchOutcome.Win(
+                        stake = stake,
+                        payout = r.payout,
+                        net = r.net,
+                        cells = result.cells,
+                        winningSymbol = result.winningSymbol,
+                        matchCount = result.matchCount,
+                        newBalance = r.newBalance
+                    )
+                } else {
+                    ScratchOutcome.Lose(stake = stake, cells = result.cells, newBalance = r.newBalance)
+                }
+            }
         }
     }
 }
