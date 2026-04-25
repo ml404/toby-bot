@@ -78,6 +78,7 @@ describe('navbar fragment', () => {
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Coinflip/);
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Dice/);
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*High-Low/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Scratch/);
         // Coming-soon placeholder is gone now that the games ship.
         expect(casino[0]).not.toMatch(/coming soon/i);
     });
