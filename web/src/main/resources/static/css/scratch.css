@@ -1,0 +1,139 @@
+.scratch-header { margin-bottom: var(--space-5); }
+.scratch-header h1 { margin: var(--space-2) 0; }
+
+.scratch-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.scratch-cells {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-2);
+    width: 100%;
+    max-width: 480px;
+}
+
+.scratch-cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: linear-gradient(135deg, #c0c0c8 0%, #8a8a92 100%);
+    color: #1a1a2e;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.1s, border-color 0.2s;
+    user-select: none;
+}
+.scratch-cell:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: #f1c40f;
+}
+.scratch-cell:focus-visible {
+    outline: 2px solid #5865F2;
+    outline-offset: 2px;
+}
+
+.scratch-cell-cover,
+.scratch-cell-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    transition: opacity 0.25s;
+}
+.scratch-cell-cover { opacity: 1; }
+.scratch-cell-face {
+    opacity: 0;
+    background: #0f1830;
+    color: #fff;
+    border-radius: 10px;
+}
+.scratch-cell.revealed {
+    cursor: default;
+    border-color: var(--border);
+    background: transparent;
+}
+.scratch-cell.revealed .scratch-cell-cover { opacity: 0; }
+.scratch-cell.revealed .scratch-cell-face { opacity: 1; }
+.scratch-cell.win-cell .scratch-cell-face {
+    background: #1a3322;
+    border: 2px solid #57F287;
+}
+
+.scratch-result {
+    min-height: 1.5em;
+    font-size: 1.05rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.scratch-result-win { color: #57F287; }
+.scratch-result-lose { color: #a0a0b0; }
+.scratch-result strong { color: inherit; }
+
+.scratch-bet {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 320px;
+}
+
+.scratch-stake-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.scratch-bet input[type="number"] {
+    padding: 8px 10px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.scratch-balance {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.scratch-balance strong { color: #fff; }
+
+.scratch-rules {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.scratch-rules h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.scratch-rules ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+
+@media (max-width: 600px) {
+    .scratch-cells { max-width: 360px; }
+    .scratch-cell-cover, .scratch-cell-face { font-size: 1.4rem; }
+}
