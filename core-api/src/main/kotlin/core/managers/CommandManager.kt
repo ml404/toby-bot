@@ -15,6 +15,7 @@ interface CommandManager {
     val moderationCommands: List<Command>
     val miscCommands: List<Command>
     val fetchCommands: List<Command>
+    val economyCommands: List<Command>
 
     val lastCommands: Map<Guild, Pair<Command, CommandContext>>
 
