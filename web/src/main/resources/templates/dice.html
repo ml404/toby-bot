@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Dice', '/css/dice.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container" th:attr="data-guild-id=${guildId}">
+
+    <div class="dice-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🎲 Dice • ' + ${guildName}">🎲 Dice</h1>
+        <p class="muted">Pick a number 1-<span th:text="${sides}">6</span>, roll the die, match for
+            <strong th:text="${multiplier} + '×'">5×</strong> stake. Bet
+            <span th:text="${minStake}">10</span> to
+            <span th:text="${maxStake}">500</span> credits.</p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="dice-table">
+        <div class="dice-die" id="dice-die" aria-live="polite">
+            <span class="dice-die-face" id="dice-die-face">⚀</span>
+        </div>
+
+        <div class="dice-result" id="dice-result" hidden></div>
+
+        <form class="dice-bet" id="dice-bet" autocomplete="off">
+            <div class="dice-prediction-picker" role="radiogroup" aria-label="Pick a number">
+                <label class="dice-prediction" th:each="n : ${#numbers.sequence(1, sides)}">
+                    <input type="radio" name="prediction" th:value="${n}" th:checked="${n == 1}">
+                    <span th:text="${n}">1</span>
+                </label>
+            </div>
+            <label for="dice-stake" class="dice-stake-label">Stake (credits)</label>
+            <input id="dice-stake"
+                   name="stake"
+                   type="number"
+                   th:attr="min=${minStake}, max=${maxStake}"
+                   th:value="${minStake}"
+                   step="1">
+            <button type="submit" id="dice-roll" class="btn-primary">Roll</button>
+        </form>
+
+        <div class="dice-balance">
+            Balance: <strong id="dice-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="dice-rules">
+        <h2>Rules</h2>
+        <ul>
+            <li>Pick a number 1-<span th:text="${sides}">6</span>, set a stake.</li>
+            <li>Roll matches your number → <strong th:text="${multiplier} + '×'">5×</strong> stake.</li>
+            <li>Anything else → lose your stake.</li>
+            <li>True odds 1/<span th:text="${sides}">6</span>; long-run RTP ≈ <span th:text="${multiplier} + '/' + ${sides}">5/6</span> ≈ 0.833 (~17% house edge).</li>
+        </ul>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/dice.js}"></script>
+</body>
+</html>
