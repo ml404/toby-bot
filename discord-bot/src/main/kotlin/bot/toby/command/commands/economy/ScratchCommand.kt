@@ -16,10 +16,10 @@ import org.springframework.stereotype.Component
 import java.awt.Color
 
 /**
- * `/scratch stake:<int>` — buy a 5-cell scratchcard. Win on 3+ of any
- * symbol; payouts scale with match count. Calls through to
- * [ScratchService.scratch]; same path the web
- * `/casino/{guildId}/scratch` page uses.
+ * `/scratch stake:<int>` — buy a scratchcard. Win on
+ * [ScratchCard.MATCH_THRESHOLD]+ of any symbol; payouts scale with
+ * match count. Calls through to [ScratchService.scratch]; same path
+ * the web `/casino/{guildId}/scratch` page uses.
  */
 @Component
 class ScratchCommand @Autowired constructor(
@@ -28,7 +28,8 @@ class ScratchCommand @Autowired constructor(
 
     override val name: String = "scratch"
     override val description: String =
-        "Buy a 5-cell scratchcard. Match 3+ of any symbol. Bet ${ScratchCard.MIN_STAKE}-${ScratchCard.MAX_STAKE} credits."
+        "Buy a ${ScratchCard.CELL_COUNT}-cell scratchcard. Match ${ScratchCard.MATCH_THRESHOLD}+ of any symbol. " +
+            "Bet ${ScratchCard.MIN_STAKE}-${ScratchCard.MAX_STAKE} credits."
 
     companion object {
         private const val OPT_STAKE = "stake"
@@ -79,7 +80,7 @@ class ScratchCommand @Autowired constructor(
 
             is ScratchOutcome.Lose -> EmbedBuilder()
                 .setTitle("🎟️ ${cellsLine(outcome.cells)}")
-                .setDescription("No 3-of-a-kind. Lost **${outcome.stake} credits**.")
+                .setDescription("No ${ScratchCard.MATCH_THRESHOLD}-of-a-kind. Lost **${outcome.stake} credits**.")
                 .addField("New balance", "${outcome.newBalance} credits", true)
                 .setColor(LOSE_COLOR)
                 .build()

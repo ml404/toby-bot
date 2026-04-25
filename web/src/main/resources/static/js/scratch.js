@@ -5,6 +5,7 @@
     if (!main) return;
 
     const guildId = main.dataset.guildId;
+    const matchThreshold = parseInt(main.dataset.matchThreshold, 10) || 5;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     function toast(msg, type) {
@@ -51,10 +52,11 @@
         btn.disabled = true;
         const face = btn.querySelector('.scratch-cell-face');
         if (face) face.textContent = activeCard.cells[index] || '?';
-        if (activeCard.winningSymbol && activeCard.cells[index] === activeCard.winningSymbol) {
-            btn.classList.add('win-cell');
-        }
+        // Don't paint the winning cells green yet — that would spoil the
+        // outcome before the user has finished scratching. We tag the
+        // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
+            highlightWinCells(activeCard);
             showResult(activeCard);
             // Card consumed — next "Buy ticket" starts a fresh one.
             activeCard = null;
@@ -62,9 +64,22 @@
         }
     }
 
+    function highlightWinCells(body) {
+        if (!body || !body.winningSymbol) return;
+        cellButtons.forEach(function (btn, i) {
+            if (body.cells[i] === body.winningSymbol) {
+                btn.classList.add('win-cell');
+            }
+        });
+    }
+
     function revealAll() {
         if (!activeCard) return;
-        cellButtons.forEach(function (_, i) { revealCell(i); });
+        // Stagger so the scratch-off animation cascades across the grid
+        // instead of all 9 cells popping open simultaneously.
+        cellButtons.forEach(function (_, i) {
+            setTimeout(function () { revealCell(i); }, i * 60);
+        });
     }
 
     function showResult(body) {
@@ -77,7 +92,7 @@
                 '</strong> &middot; <strong>+' + body.net + ' credits</strong>';
         } else {
             resultEl.classList.add('scratch-result-lose');
-            resultEl.innerHTML = 'No 3-of-a-kind &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+            resultEl.innerHTML = 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
         }
         if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
     }

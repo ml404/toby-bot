@@ -10,7 +10,7 @@ import kotlin.random.Random
 class ScratchCardTest {
 
     @Test
-    fun `scratch always returns 5 cells`() {
+    fun `scratch always returns 9 cells`() {
         val card = ScratchCard()
         val rng = Random(42)
         repeat(1_000) {
@@ -21,31 +21,31 @@ class ScratchCardTest {
     }
 
     @Test
-    fun `five-of-a-kind cherry pays base cherry times 2`() {
-        // Reel of only cherries → all 5 cells will be cherries → match=5.
-        // multiplier = base 5 × (5 - (4-1)) = 5 × 2 = 10.
+    fun `nine-of-a-kind cherry pays base cherry times 5`() {
+        // Reel of only cherries → all 9 cells will be cherries → match=9.
+        // multiplier = base 1 × (9 - (5-1)) = 1 × 5 = 5.
         val card = ScratchCard(reel = listOf(SlotMachine.Symbol.CHERRY))
         val result = card.scratch(Random(0))
         assertTrue(result.isWin)
         assertEquals(SlotMachine.Symbol.CHERRY, result.winningSymbol)
-        assertEquals(5, result.matchCount)
-        assertEquals(10L, result.multiplier, "5 cherries × base 5 × (5-3) = 10")
+        assertEquals(9, result.matchCount)
+        assertEquals(5L, result.multiplier, "9 cherries × base 1 × (9-4) = 5")
     }
 
     @Test
-    fun `five-of-a-kind star pays the rare payout scaled`() {
+    fun `nine-of-a-kind star pays the rare payout scaled`() {
         val card = ScratchCard(reel = listOf(SlotMachine.Symbol.STAR))
         val result = card.scratch(Random(0))
         assertEquals(SlotMachine.Symbol.STAR, result.winningSymbol)
-        assertEquals(5, result.matchCount)
-        // 5 stars × base 90 × (5-3) = 180
-        assertEquals(180L, result.multiplier)
+        assertEquals(9, result.matchCount)
+        // 9 stars × base 40 × (9-4) = 200
+        assertEquals(200L, result.multiplier)
     }
 
     @Test
-    fun `no 4-of-a-kind is a loss`() {
-        // With the default weighted reel (4🍒+3🍋+2🔔+1⭐) and 5 cells,
-        // sub-4 cards hit ~88% of the time, so seed 0 already produces
+    fun `no 5-of-a-kind is a loss`() {
+        // With the default weighted reel (4🍒+3🍋+2🔔+1⭐) and 9 cells,
+        // sub-5 cards hit ~61% of the time, so seed 0 already produces
         // one. Iterating to 200 keeps this future-proof against rng
         // ordering shifts.
         val card = ScratchCard()
@@ -66,10 +66,10 @@ class ScratchCardTest {
     fun `RTP across 200k cards lands in casino-style range`() {
         // ScratchCard's RTP isn't a clean closed-form — it depends on the
         // multinomial over the 4-symbol weighted reel × the multiplier
-        // table. With the 4-of-a-kind threshold and the current bases
-        // (5/7/22/90) we expect ~0.85-0.91 RTP. ±10pp around that range
-        // catches gross misconfiguration (back-to-3-of-a-kind would
-        // overshoot 1.7×; payout-zero would undershoot to 0).
+        // table. With the 5-of-a-kind threshold on 9 cells and the current
+        // bases (1/2/8/40) the closed-form math lands ~0.875. ±10pp around
+        // that range catches gross misconfiguration (back-to-3-of-a-kind
+        // would overshoot 1.7×; payout-zero would undershoot to 0).
         val card = ScratchCard()
         val rng = Random(2026)
         val stake = 1_000L
@@ -82,6 +82,6 @@ class ScratchCardTest {
             totalReturned += result.multiplier * stake
         }
         val rtp = totalReturned.toDouble() / totalWagered.toDouble()
-        assertTrue(rtp in 0.75..1.0, "RTP $rtp outside expected casino range")
+        assertTrue(rtp in 0.78..0.97, "RTP $rtp outside expected casino range")
     }
 }
