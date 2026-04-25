@@ -51,6 +51,7 @@ CREATE TABLE public."user" (
     toby_coins bigint NOT NULL DEFAULT 0
 );
 
+DROP TABLE IF EXISTS public.toby_coin_trade;
 DROP TABLE IF EXISTS public.toby_coin_price_history;
 DROP TABLE IF EXISTS public.toby_coin_market;
 CREATE TABLE public.toby_coin_market (
@@ -64,6 +65,16 @@ CREATE TABLE public.toby_coin_price_history (
     guild_id   BIGINT NOT NULL,
     sampled_at TIMESTAMP WITH TIME ZONE NOT NULL,
     price      DOUBLE PRECISION NOT NULL
+);
+
+CREATE TABLE public.toby_coin_trade (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    guild_id        BIGINT           NOT NULL,
+    discord_id      BIGINT           NOT NULL,
+    side            VARCHAR(8)       NOT NULL,
+    amount          BIGINT           NOT NULL,
+    price_per_coin  DOUBLE PRECISION NOT NULL,
+    executed_at     TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 DROP TABLE IF EXISTS public.voice_session;
