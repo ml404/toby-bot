@@ -30,6 +30,7 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testRuntimeOnly 'org.postgresql:postgresql'
+    testImplementation "io.mockk:mockk:$mockk_version"
     testImplementation project(configuration: 'testArtifacts', path: ':common')
 }
 
