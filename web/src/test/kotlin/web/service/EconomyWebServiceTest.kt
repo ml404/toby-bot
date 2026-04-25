@@ -115,7 +115,7 @@ class EconomyWebServiceTest {
         val now = Instant.now()
         val guild = mockk<Guild>(relaxed = true)
         every { jda.getGuildById(guildId) } returns guild
-        every { guild.getMemberById(any()) } returns null
+        every { guild.getMemberById(any<Long>()) } returns null
         every { marketService.listTradesSince(guildId, any()) } returns listOf(
             TobyCoinTradeDto(
                 guildId = guildId, discordId = 99L, side = "SELL",
