@@ -173,6 +173,46 @@
     line-height: 1.7;
 }
 
+.scratch-payouts {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+
+.scratch-payouts h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+
+.scratch-payouts table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.scratch-payouts th,
+.scratch-payouts td {
+    text-align: left;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+}
+
+.scratch-payouts th {
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.scratch-payouts tr:last-child td { border-bottom: none; }
+
 @media (max-width: 600px) {
     .scratch-cells { max-width: 300px; }
     .scratch-cell-cover, .scratch-cell-face { font-size: 1.4rem; }

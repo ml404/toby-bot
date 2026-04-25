@@ -1,6 +1,7 @@
 package web.controller
 
 import database.economy.ScratchCard
+import database.economy.SlotMachine
 import database.service.ScratchService
 import database.service.ScratchService.ScratchOutcome
 import database.service.UserService
@@ -57,9 +58,25 @@ class ScratchController(
         model.addAttribute("maxStake", ScratchCard.MAX_STAKE)
         model.addAttribute("cellCount", ScratchCard.CELL_COUNT)
         model.addAttribute("matchThreshold", ScratchCard.MATCH_THRESHOLD)
+        model.addAttribute("matchCounts", (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).toList())
+        model.addAttribute("payoutTable", scratchPayoutRows())
         model.addAttribute("username", user.displayName())
         return "scratch"
     }
+
+    // Per-symbol payout row: one cell per match count from MATCH_THRESHOLD
+    // to CELL_COUNT. Driven by ScratchCard.multiplierFor() so the table
+    // stays locked to the live formula — change the bases or floor in code
+    // and the page updates without anyone editing HTML.
+    private fun scratchPayoutRows(): List<ScratchPayoutRow> =
+        SlotMachine.Symbol.entries.map { symbol ->
+            ScratchPayoutRow(
+                symbol = symbol.display,
+                multipliers = (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).map { k ->
+                    "${ScratchCard.multiplierFor(symbol, k)}×"
+                }
+            )
+        }
 
     @PostMapping("/scratch")
     @ResponseBody
@@ -113,6 +130,8 @@ class ScratchController(
         }
     }
 }
+
+data class ScratchPayoutRow(val symbol: String, val multipliers: List<String>)
 
 data class ScratchRequest(val stake: Long = 0)
 

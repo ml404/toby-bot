@@ -54,9 +54,26 @@
             <li>Buy a ticket for any stake between <span th:text="${minStake}">10</span> and <span th:text="${maxStake}">500</span> credits.</li>
             <li>The 3×3 card has <span th:text="${cellCount}">9</span> cells, each a random symbol from a weighted pool (4🍒, 3🍋, 2🔔, 1⭐).</li>
             <li>Click each cell to scratch it off, OR hit "Reveal all".</li>
-            <li>Match <span th:text="${matchThreshold}">5</span>+ of one symbol → win max(2, base × (match count − 4)) × stake.</li>
-            <li>Base payouts: 🍒=1×, 🍋=2×, 🔔=8×, ⭐=40×. So 5🍒=2× (floor), 9🍒=5×, 5⭐=40×, 9⭐=200× stake.</li>
+            <li>Match <span th:text="${matchThreshold}">5</span>+ of one symbol — payouts in the table below.</li>
         </ul>
+    </section>
+
+    <section class="scratch-payouts">
+        <h2>Payouts (× stake)</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Symbol</th>
+                <th th:each="k : ${matchCounts}" th:text="${k} + '×'">5×</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${payoutTable}">
+                <td th:text="${row.symbol}">🍒</td>
+                <td th:each="m : ${row.multipliers}" th:text="${m}">2×</td>
+            </tr>
+            </tbody>
+        </table>
     </section>
 </main>
 

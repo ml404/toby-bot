@@ -48,15 +48,7 @@ class ScratchCard(
             .filter { it.value >= MATCH_THRESHOLD }
             .maxWithOrNull(compareBy({ it.value }, { basePayouts[it.key] ?: 0L }))
         return if (winner != null) {
-            val base = basePayouts[winner.key] ?: 0L
-            // 2× floor: WagerHelper subtracts stake from `multiplier × stake`
-            // to compute net, so a multiplier of 1 nets zero — a "win" that
-            // pays nothing. Only the 5-of-a-kind cherry path hits this (base
-            // 1 × 1 = 1); every other path is already ≥ 2. Floor it to 2
-            // here rather than padding the formula globally so the +1 only
-            // costs us on the boundary case (RTP creeps up by ~P(5🍒) ≈ 0.17
-            // instead of inflating across all wins).
-            val multiplier = maxOf(2L, base * (winner.value - (MATCH_THRESHOLD - 1)))
+            val multiplier = multiplierFor(winner.key, winner.value, basePayouts)
             Scratch(cells = cells, winningSymbol = winner.key, matchCount = winner.value, multiplier = multiplier)
         } else {
             Scratch(cells = cells, winningSymbol = null, matchCount = 0, multiplier = 0L)
@@ -84,5 +76,20 @@ class ScratchCard(
             SlotMachine.Symbol.BELL to 8L,      // 5🔔=8×,  …, 9🔔=40×
             SlotMachine.Symbol.STAR to 40L      // 5⭐=40×, …, 9⭐=200×
         )
+
+        /**
+         * Closed-form multiplier for [matchCount]-of-a-kind on [symbol].
+         * Single source of truth — the live [scratch] path and any UI that
+         * displays a payout table both call this so they can't drift.
+         */
+        fun multiplierFor(
+            symbol: SlotMachine.Symbol,
+            matchCount: Int,
+            basePayouts: Map<SlotMachine.Symbol, Long> = DEFAULT_BASE_PAYOUTS
+        ): Long {
+            if (matchCount < MATCH_THRESHOLD) return 0L
+            val base = basePayouts[symbol] ?: 0L
+            return maxOf(2L, base * (matchCount - (MATCH_THRESHOLD - 1)))
+        }
     }
 }

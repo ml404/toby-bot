@@ -83,6 +83,24 @@ class ScratchCardTest {
     }
 
     @Test
+    fun `multiplierFor matches the live scratch path`() {
+        // Single source of truth: the helper used by UI payout tables and
+        // the live scratch() draw must produce the same multiplier for the
+        // same (symbol, matchCount). Fix a single-symbol reel so we can
+        // observe the live formula at k=CELL_COUNT and cross-check it.
+        for (symbol in SlotMachine.Symbol.entries) {
+            val card = ScratchCard(reel = listOf(symbol))
+            val live = card.scratch(Random(0))
+            val viaHelper = ScratchCard.multiplierFor(symbol, ScratchCard.CELL_COUNT)
+            assertEquals(viaHelper, live.multiplier, "$symbol live vs helper drift")
+        }
+        // Sub-threshold returns 0 (helper is the only path that can be
+        // queried at a non-winning matchCount; the live path always reports
+        // 0 multiplier when no symbol hits MATCH_THRESHOLD).
+        assertEquals(0L, ScratchCard.multiplierFor(SlotMachine.Symbol.STAR, ScratchCard.MATCH_THRESHOLD - 1))
+    }
+
+    @Test
     fun `every winning outcome has multiplier greater than 1`() {
         // Regression guard: the prior formula was `base × (k - 4)`, which
         // collapsed to multiplier=1 for 5🍒 (base=1) — a "win" that nets 0
