@@ -114,6 +114,61 @@
 
 .economy-trade-actions .btn { flex: 1; }
 
+.economy-chart-legend {
+    margin-top: var(--space-2);
+    font-size: 0.85rem;
+    text-align: right;
+}
+
+.economy-trade-buy { color: #57F287; font-weight: 600; }
+.economy-trade-sell { color: #ED4245; font-weight: 600; }
+
+.economy-recent-trades-card {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.economy-recent-trades-card h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+
+.economy-recent-trades {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.economy-trade-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+}
+
+.economy-trade-row:last-child { border-bottom: none; }
+
+.economy-trade-when {
+    color: var(--text-muted);
+    min-width: 7ch;
+    font-size: 0.85rem;
+}
+
+.economy-trade-who { font-weight: 600; }
+
 @media (max-width: 640px) {
     .economy-header { flex-direction: column; align-items: stretch; }
     .economy-price { text-align: left; }

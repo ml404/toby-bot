@@ -19,25 +19,114 @@
     const canvas = document.getElementById('economy-chart');
     const empty = document.getElementById('economy-chart-empty');
     const windowButtons = document.querySelectorAll('#economy-windows button');
+    const recentTradesPanel = document.getElementById('economy-recent-trades-panel');
+    const recentTradesList = document.getElementById('economy-recent-trades');
+    const RECENT_TRADES_LIMIT = 20;
+
+    const BUY_COLOR = '#57F287';
+    const SELL_COLOR = '#ED4245';
 
     let chart = null;
     let currentWindow = '1d';
 
-    function chartConfig(points) {
+    function tradeMarkerData(trades) {
+        return trades.map(function (t) {
+            return {
+                x: t.t,
+                y: t.price,
+                trade: t
+            };
+        });
+    }
+
+    function tradeMarkerColors(trades) {
+        return trades.map(function (t) {
+            return t.side === 'BUY' ? BUY_COLOR : SELL_COLOR;
+        });
+    }
+
+    function tradeMarkerStyles(trades) {
+        return trades.map(function (t) {
+            return t.side === 'BUY' ? 'triangle' : 'rectRot';
+        });
+    }
+
+    function tradeMarkerDataset(trades) {
+        return {
+            label: 'Trades',
+            type: 'scatter',
+            data: tradeMarkerData(trades),
+            pointBackgroundColor: tradeMarkerColors(trades),
+            pointBorderColor: tradeMarkerColors(trades),
+            pointStyle: tradeMarkerStyles(trades),
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            showLine: false,
+            order: 0
+        };
+    }
+
+    function formatRelative(ms) {
+        const diff = Math.max(0, Date.now() - ms);
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return mins + 'm ago';
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + 'h ago';
+        return Math.floor(hours / 24) + 'd ago';
+    }
+
+    function renderRecentTrades(trades) {
+        if (!recentTradesList || !recentTradesPanel) return;
+        if (!trades.length) {
+            recentTradesPanel.hidden = true;
+            return;
+        }
+        recentTradesPanel.hidden = false;
+        // Newest first, capped — older activity stays on the chart but the
+        // textual log is bounded so it doesn't grow without limit on busy markets.
+        const recent = trades.slice().reverse().slice(0, RECENT_TRADES_LIMIT);
+        recentTradesList.innerHTML = '';
+        recent.forEach(function (t) {
+            const li = document.createElement('li');
+            li.className = 'economy-trade-row';
+            const verb = t.side === 'BUY' ? 'bought' : 'sold';
+            const verbClass = t.side === 'BUY' ? 'economy-trade-buy' : 'economy-trade-sell';
+            li.innerHTML =
+                '<span class="economy-trade-when">' + formatRelative(t.t) + '</span>' +
+                '<span class="economy-trade-who">' + escapeHtml(t.name) + '</span>' +
+                ' <span class="' + verbClass + '">' + verb + '</span> ' +
+                '<strong>' + t.amount + '</strong> @ ' +
+                t.price.toFixed(2);
+            recentTradesList.appendChild(li);
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+
+    function chartConfig(points, trades) {
         const data = points.map(function (p) { return { x: p.t, y: p.price }; });
         return {
             type: 'line',
             data: {
-                datasets: [{
-                    label: 'TOBY',
-                    data: data,
-                    borderColor: '#57F287',
-                    backgroundColor: 'rgba(87, 242, 135, 0.15)',
-                    pointRadius: 0,
-                    tension: 0.25,
-                    fill: true,
-                    borderWidth: 2
-                }]
+                datasets: [
+                    {
+                        label: 'TOBY',
+                        data: data,
+                        borderColor: '#57F287',
+                        backgroundColor: 'rgba(87, 242, 135, 0.15)',
+                        pointRadius: 0,
+                        tension: 0.25,
+                        fill: true,
+                        borderWidth: 2,
+                        order: 1
+                    },
+                    tradeMarkerDataset(trades)
+                ]
             },
             options: {
                 responsive: true,
@@ -56,6 +145,11 @@
                                 return items.length ? new Date(items[0].parsed.x).toLocaleString() : '';
                             },
                             label: function (item) {
+                                const trade = item.raw && item.raw.trade;
+                                if (trade) {
+                                    const verb = trade.side === 'BUY' ? 'bought' : 'sold';
+                                    return trade.name + ' ' + verb + ' ' + trade.amount + ' @ ' + trade.price.toFixed(2);
+                                }
                                 return item.parsed.y.toFixed(2) + ' credits';
                             }
                         }
@@ -98,6 +192,8 @@
         }).then(function (r) { return r.json(); })
           .then(function (body) {
             const points = (body && body.points) || [];
+            const trades = (body && body.trades) || [];
+            renderRecentTrades(trades);
             if (points.length < 2) {
                 if (chart) { chart.destroy(); chart = null; }
                 if (empty) empty.hidden = false;
@@ -106,9 +202,14 @@
             if (empty) empty.hidden = true;
             if (chart) {
                 chart.data.datasets[0].data = points.map(function (p) { return { x: p.t, y: p.price }; });
+                const markerDs = chart.data.datasets[1];
+                markerDs.data = tradeMarkerData(trades);
+                markerDs.pointBackgroundColor = tradeMarkerColors(trades);
+                markerDs.pointBorderColor = tradeMarkerColors(trades);
+                markerDs.pointStyle = tradeMarkerStyles(trades);
                 chart.update('none');
             } else {
-                chart = new Chart(canvas.getContext('2d'), chartConfig(points));
+                chart = new Chart(canvas.getContext('2d'), chartConfig(points, trades));
             }
           })
           .catch(function () { toast('Could not load chart.', 'error'); });

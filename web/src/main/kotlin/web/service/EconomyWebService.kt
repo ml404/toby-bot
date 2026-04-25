@@ -59,16 +59,47 @@ class EconomyWebService(
     }
 
     fun getHistory(guildId: Long, window: String): List<PricePoint> {
-        val now = Instant.now()
-        val samples = when (window) {
-            "5d" -> marketService.listHistory(guildId, now.minus(Duration.ofDays(5)))
-            "1mo" -> marketService.listHistory(guildId, now.minus(Duration.ofDays(30)))
-            "3mo" -> marketService.listHistory(guildId, now.minus(Duration.ofDays(90)))
-            "1y" -> marketService.listHistory(guildId, now.minus(Duration.ofDays(365)))
-            "all" -> marketService.listAllHistory(guildId)
-            else -> marketService.listHistory(guildId, now.minus(Duration.ofDays(1)))
+        val samples = when (val since = windowSince(window)) {
+            null -> marketService.listAllHistory(guildId)
+            else -> marketService.listHistory(guildId, since)
         }
         return samples.map { PricePoint(it.sampledAt.toEpochMilli(), it.price) }
+    }
+
+    fun getTrades(guildId: Long, window: String): List<TradeMarker> {
+        // The "all" window has no lower bound for prices, but trades are
+        // capped at 30 days by retention regardless. Pick a generous upper
+        // bound so we don't pretend trades older than the prune cutoff
+        // exist; "all" still returns whatever's left in the table.
+        val since = windowSince(window) ?: Instant.now().minus(Duration.ofDays(365))
+        val trades = marketService.listTradesSince(guildId, since)
+        if (trades.isEmpty()) return emptyList()
+
+        val guild = jda.getGuildById(guildId)
+        return trades.map { trade ->
+            val name = guild?.getMemberById(trade.discordId)?.effectiveName ?: "Unknown"
+            TradeMarker(
+                t = trade.executedAt.toEpochMilli(),
+                side = trade.side,
+                amount = trade.amount,
+                price = trade.pricePerCoin,
+                name = name
+            )
+        }
+    }
+
+    // Resolves a window code to a `since` Instant. Returns null for "all"
+    // (callers should use the unbounded list).
+    private fun windowSince(window: String): Instant? {
+        val now = Instant.now()
+        return when (window) {
+            "5d" -> now.minus(Duration.ofDays(5))
+            "1mo" -> now.minus(Duration.ofDays(30))
+            "3mo" -> now.minus(Duration.ofDays(90))
+            "1y" -> now.minus(Duration.ofDays(365))
+            "all" -> null
+            else -> now.minus(Duration.ofDays(1))
+        }
     }
 
     fun buy(discordId: Long, guildId: Long, amount: Long): EconomyTradeService.TradeOutcome =
@@ -100,4 +131,12 @@ data class EconomyView(
 data class PricePoint(
     val t: Long,
     val price: Double
+)
+
+data class TradeMarker(
+    val t: Long,
+    val side: String,
+    val amount: Long,
+    val price: Double,
+    val name: String
 )

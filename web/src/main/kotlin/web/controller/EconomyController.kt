@@ -19,6 +19,7 @@ import web.service.EconomyWebService
 import database.service.EconomyTradeService.TradeOutcome
 import database.service.SocialCreditAwardService
 import web.service.PricePoint
+import web.service.TradeMarker
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -88,7 +89,12 @@ class EconomyController(
         if (!economyWebService.isMember(discordId, guildId)) {
             return ResponseEntity.status(403).build()
         }
-        return ResponseEntity.ok(HistoryResponse(economyWebService.getHistory(guildId, window)))
+        return ResponseEntity.ok(
+            HistoryResponse(
+                points = economyWebService.getHistory(guildId, window),
+                trades = economyWebService.getTrades(guildId, window)
+            )
+        )
     }
 
     @PostMapping("/{guildId}/buy")
@@ -171,4 +177,7 @@ data class TradeResponse(
     val transactedCredits: Long? = null
 )
 
-data class HistoryResponse(val points: List<PricePoint>)
+data class HistoryResponse(
+    val points: List<PricePoint>,
+    val trades: List<TradeMarker> = emptyList()
+)

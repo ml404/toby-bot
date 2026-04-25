@@ -2,6 +2,7 @@ package database.service
 
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
+import database.dto.TobyCoinTradeDto
 import database.dto.UserDto
 import database.economy.TobyCoinEngine
 import org.springframework.stereotype.Service
@@ -66,7 +67,10 @@ class EconomyTradeService(
             ?: return TradeOutcome.UnknownUser
         val market = loadOrCreateMarketForUpdate(guildId)
 
-        val cost = ceil(market.price * amount).toLong()
+        // Capture pre-pressure price so the recorded trade reflects what
+        // the trader actually paid per coin, not the post-trade price.
+        val executionPrice = market.price
+        val cost = ceil(executionPrice * amount).toLong()
         val credits = user.socialCredit ?: 0L
         if (credits < cost) return TradeOutcome.InsufficientCredits(cost, credits)
 
@@ -74,8 +78,8 @@ class EconomyTradeService(
         user.tobyCoins += amount
         userService.updateUser(user)
 
-        val newPrice = TobyCoinEngine.applyBuyPressure(market.price, amount)
-        commitPriceChange(market, newPrice)
+        val newPrice = TobyCoinEngine.applyBuyPressure(executionPrice, amount)
+        commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount)
 
         return TradeOutcome.Ok(
             amount = amount,
@@ -95,13 +99,14 @@ class EconomyTradeService(
 
         if (user.tobyCoins < amount) return TradeOutcome.InsufficientCoins(amount, user.tobyCoins)
 
-        val proceeds = floor(market.price * amount).toLong()
+        val executionPrice = market.price
+        val proceeds = floor(executionPrice * amount).toLong()
         user.tobyCoins -= amount
         user.socialCredit = (user.socialCredit ?: 0L) + proceeds
         userService.updateUser(user)
 
-        val newPrice = TobyCoinEngine.applySellPressure(market.price, amount)
-        commitPriceChange(market, newPrice)
+        val newPrice = TobyCoinEngine.applySellPressure(executionPrice, amount)
+        commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount)
 
         return TradeOutcome.Ok(
             amount = amount,
@@ -122,13 +127,30 @@ class EconomyTradeService(
             ?: error("Market row for guild $guildId could not be locked after creation")
     }
 
-    private fun commitPriceChange(market: TobyCoinMarketDto, newPrice: Double) {
+    private fun commitPriceChange(
+        market: TobyCoinMarketDto,
+        newPrice: Double,
+        executionPrice: Double,
+        discordId: Long,
+        side: String,
+        amount: Long
+    ) {
         val now = Instant.now()
         market.price = newPrice
         market.lastTickAt = now
         marketService.saveMarket(market)
         marketService.appendPricePoint(
             TobyCoinPricePointDto(guildId = market.guildId, sampledAt = now, price = newPrice)
+        )
+        marketService.recordTrade(
+            TobyCoinTradeDto(
+                guildId = market.guildId,
+                discordId = discordId,
+                side = side,
+                amount = amount,
+                pricePerCoin = executionPrice,
+                executedAt = now
+            )
         )
     }
 }

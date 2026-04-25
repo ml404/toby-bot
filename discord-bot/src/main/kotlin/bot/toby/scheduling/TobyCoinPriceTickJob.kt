@@ -39,6 +39,11 @@ class TobyCoinPriceTickJob @Autowired constructor(
         // to draw. Pruning older samples still protects the table from
         // growing forever on long-lived guilds.
         val HISTORY_RETENTION: Duration = Duration.ofDays(400)
+
+        // Trade rows include a Discord display name and surface in the
+        // Market chart's "Recent trades" list. The privacy policy promises
+        // 30-day retention for this — anything older gets swept here.
+        val TRADE_RETENTION: Duration = Duration.ofDays(30)
     }
 
     @Scheduled(fixedDelayString = "PT5M", initialDelayString = "PT1M")
@@ -50,6 +55,10 @@ class TobyCoinPriceTickJob @Autowired constructor(
         }
         runCatching { marketService.pruneHistoryOlderThan(now.minus(HISTORY_RETENTION)) }
             .onFailure { logger.warn("Toby coin history prune failed: ${it.message}") }
+        runCatching {
+            val removed = marketService.pruneTradesOlderThan(now.minus(TRADE_RETENTION))
+            if (removed > 0) logger.info { "Pruned $removed expired toby coin trade rows." }
+        }.onFailure { logger.warn("Toby coin trade prune failed: ${it.message}") }
     }
 
     private fun tickGuild(guildId: Long, now: Instant) {
