@@ -15,6 +15,7 @@ import kotlin.random.Random
 @Transactional
 class DiceService(
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val dice: Dice = Dice(),
     private val random: Random = Random.Default
 ) {
@@ -26,7 +27,8 @@ class DiceService(
             val net: Long,
             val landed: Int,
             val predicted: Int,
-            val newBalance: Long
+            val newBalance: Long,
+            val jackpotPayout: Long = 0L
         ) : RollOutcome
 
         data class Lose(
@@ -56,13 +58,15 @@ class DiceService(
                 val roll = dice.roll(predicted, random)
                 val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, roll.multiplier)
                 if (roll.isWin) {
+                    val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, check.user, guildId, random)
                     RollOutcome.Win(
                         stake = stake,
                         payout = r.payout,
                         net = r.net,
                         landed = roll.landed,
                         predicted = roll.predicted,
-                        newBalance = r.newBalance
+                        newBalance = r.newBalance + jackpot,
+                        jackpotPayout = jackpot
                     )
                 } else {
                     RollOutcome.Lose(

@@ -1,6 +1,7 @@
 package web.controller
 
 import database.economy.SlotMachine
+import database.service.JackpotService
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
 import database.service.UserService
@@ -29,6 +30,7 @@ class SlotsControllerTest {
     private lateinit var slotsService: SlotsService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var controller: SlotsController
@@ -38,13 +40,14 @@ class SlotsControllerTest {
         slotsService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = SlotsController(slotsService, economyWebService, userService, jda)
+        controller = SlotsController(slotsService, economyWebService, userService, jackpotService, jda)
     }
 
     @Test
@@ -141,5 +144,43 @@ class SlotsControllerTest {
 
         assertEquals(403, response.statusCode.value())
         verify(exactly = 0) { slotsService.spin(any(), any(), any()) }
+    }
+
+    @Test
+    fun `jackpot win surfaces jackpotPayout in the response body`() {
+        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Win(
+            stake = 100L,
+            multiplier = 5L,
+            payout = 500L,
+            net = 400L,
+            symbols = listOf(SlotMachine.Symbol.STAR, SlotMachine.Symbol.STAR, SlotMachine.Symbol.STAR),
+            newBalance = 9_000L,
+            jackpotPayout = 7_500L
+        )
+
+        val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
+
+        assertTrue(response.statusCode.is2xxSuccessful)
+        val body = response.body!!
+        assertEquals(true, body.win)
+        assertEquals(7_500L, body.jackpotPayout, "jackpot payout passes straight through")
+        assertEquals(9_000L, body.newBalance, "newBalance already includes the jackpot per service contract")
+    }
+
+    @Test
+    fun `non-jackpot win does not include jackpotPayout`() {
+        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Win(
+            stake = 100L,
+            multiplier = 2L,
+            payout = 200L,
+            net = 100L,
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.CHERRY),
+            newBalance = 1_100L,
+            jackpotPayout = 0L
+        )
+
+        val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
+
+        assertEquals(null, response.body!!.jackpotPayout, "zero jackpot is omitted from the JSON shape")
     }
 }

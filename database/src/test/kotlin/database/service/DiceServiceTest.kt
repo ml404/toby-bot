@@ -15,6 +15,7 @@ import kotlin.random.Random
 class DiceServiceTest {
 
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var dice: Dice
     private lateinit var service: DiceService
 
@@ -24,11 +25,12 @@ class DiceServiceTest {
     @BeforeEach
     fun setup() {
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         dice = mockk(relaxed = true) {
             every { isValidPrediction(any()) } answers { firstArg<Int>() in 1..6 }
             every { sidesCount } returns 6
         }
-        service = DiceService(userService, dice, Random(0))
+        service = DiceService(userService, jackpotService, dice, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {

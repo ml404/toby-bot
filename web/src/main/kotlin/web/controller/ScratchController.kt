@@ -2,6 +2,7 @@ package web.controller
 
 import database.economy.ScratchCard
 import database.economy.SlotMachine
+import database.service.JackpotService
 import database.service.ScratchService
 import database.service.ScratchService.ScratchOutcome
 import database.service.UserService
@@ -28,6 +29,7 @@ class ScratchController(
     private val scratchService: ScratchService,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA
 ) {
 
@@ -60,6 +62,7 @@ class ScratchController(
         model.addAttribute("matchThreshold", ScratchCard.MATCH_THRESHOLD)
         model.addAttribute("matchCounts", (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).toList())
         model.addAttribute("payoutTable", scratchPayoutRows())
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
         return "scratch"
     }
@@ -101,7 +104,8 @@ class ScratchController(
                     net = outcome.net,
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
-                    win = true
+                    win = true,
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
                 )
             )
 
@@ -144,5 +148,6 @@ data class ScratchResponse(
     val net: Long? = null,
     val payout: Long? = null,
     val newBalance: Long? = null,
-    val win: Boolean? = null
+    val win: Boolean? = null,
+    val jackpotPayout: Long? = null
 )

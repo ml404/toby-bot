@@ -1,3 +1,27 @@
+// Pure-DOM render for a /scratch response. Hoisted out of the IIFE so
+// the jest test in `scratch.test.js` can drive it without booting the
+// page. matchThreshold and balanceEl are passed in (they live as DOM
+// attributes / element references inside the IIFE) to keep this fully
+// stateless.
+function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
+    if (!resultEl) return;
+    resultEl.hidden = false;
+    resultEl.classList.remove('scratch-result-win', 'scratch-result-lose', 'scratch-result-jackpot');
+    if (body.win) {
+        resultEl.classList.add('scratch-result-win');
+        const winLine = '<strong>' + body.matchCount + '× ' + body.winningSymbol +
+            '</strong> &middot; <strong>+' + body.net + ' credits</strong>';
+        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'scratch-result-jackpot', winLine)
+            : winLine;
+    } else {
+        resultEl.classList.add('scratch-result-lose');
+        resultEl.innerHTML = 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' +
+            Math.abs(body.net) + ' credits</strong>';
+    }
+    if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
+}
+
 (function () {
     'use strict';
 
@@ -83,18 +107,7 @@
     }
 
     function showResult(body) {
-        if (!resultEl) return;
-        resultEl.hidden = false;
-        resultEl.classList.remove('scratch-result-win', 'scratch-result-lose');
-        if (body.win) {
-            resultEl.classList.add('scratch-result-win');
-            resultEl.innerHTML = '<strong>' + body.matchCount + '× ' + body.winningSymbol +
-                '</strong> &middot; <strong>+' + body.net + ' credits</strong>';
-        } else {
-            resultEl.classList.add('scratch-result-lose');
-            resultEl.innerHTML = 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
-        }
-        if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
+        renderScratchResult(resultEl, body, matchThreshold, balanceEl);
     }
 
     cellButtons.forEach(function (btn) {
@@ -152,3 +165,7 @@
             });
     });
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { renderScratchResult };
+}

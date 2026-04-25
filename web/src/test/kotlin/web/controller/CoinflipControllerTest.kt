@@ -3,6 +3,7 @@ package web.controller
 import database.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
+import database.service.JackpotService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -23,6 +24,7 @@ class CoinflipControllerTest {
     private lateinit var coinflipService: CoinflipService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var controller: CoinflipController
@@ -32,13 +34,14 @@ class CoinflipControllerTest {
         coinflipService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = CoinflipController(coinflipService, economyWebService, userService, jda)
+        controller = CoinflipController(coinflipService, economyWebService, userService, jackpotService, jda)
     }
 
     @Test
@@ -142,5 +145,39 @@ class CoinflipControllerTest {
 
         assertEquals(403, response.statusCode.value())
         verify(exactly = 0) { coinflipService.flip(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `jackpot win surfaces jackpotPayout in the response body`() {
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Win(
+            stake = 100L,
+            payout = 200L,
+            net = 100L,
+            landed = Coinflip.Side.HEADS,
+            predicted = Coinflip.Side.HEADS,
+            newBalance = 5_100L,
+            jackpotPayout = 4_000L
+        )
+
+        val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 100L), user)
+
+        assertTrue(response.statusCode.is2xxSuccessful)
+        assertEquals(4_000L, response.body!!.jackpotPayout)
+    }
+
+    @Test
+    fun `non-jackpot win does not include jackpotPayout`() {
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Win(
+            stake = 100L,
+            payout = 200L,
+            net = 100L,
+            landed = Coinflip.Side.HEADS,
+            predicted = Coinflip.Side.HEADS,
+            newBalance = 1_100L
+        )
+
+        val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 100L), user)
+
+        assertEquals(null, response.body!!.jackpotPayout)
     }
 }

@@ -3,6 +3,7 @@ package web.controller
 import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
+import database.service.JackpotService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -30,6 +31,7 @@ class HighlowControllerTest {
     private lateinit var highlowService: HighlowService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var session: HttpSession
@@ -40,6 +42,7 @@ class HighlowControllerTest {
         highlowService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
@@ -54,7 +57,7 @@ class HighlowControllerTest {
         }
         every { jda.getGuildById(guildId) } returns guild
 
-        controller = HighlowController(highlowService, economyWebService, userService, jda)
+        controller = HighlowController(highlowService, economyWebService, userService, jackpotService, jda)
     }
 
     @Test
@@ -155,6 +158,30 @@ class HighlowControllerTest {
         assertEquals(400, response.statusCode.value())
         assertNotNull(response.body!!.error)
         verify(exactly = 0) { highlowService.play(any(), any(), any(), any(), any<Int>()) }
+    }
+
+    @Test
+    fun `jackpot win surfaces jackpotPayout in the response body`() {
+        session.setAttribute(anchorKey, 5)
+        every {
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5)
+        } returns PlayOutcome.Win(
+            stake = 50L, payout = 100L, net = 50L,
+            anchor = 5, next = 12,
+            direction = Highlow.Direction.HIGHER,
+            newBalance = 5_050L,
+            jackpotPayout = 4_000L
+        )
+        every { highlowService.dealAnchor() } returns 9
+
+        val response = controller.play(
+            guildId,
+            PlayRequest(direction = "HIGHER", stake = 50L),
+            user,
+            session
+        )
+
+        assertEquals(4_000L, response.body!!.jackpotPayout)
     }
 
     private fun inMemorySession(): HttpSession {

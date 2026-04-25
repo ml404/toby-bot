@@ -21,6 +21,7 @@ import kotlin.random.Random
 @Transactional
 class HighlowService(
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val highlow: Highlow = Highlow(),
     private val random: Random = Random.Default
 ) {
@@ -33,7 +34,8 @@ class HighlowService(
             val anchor: Int,
             val next: Int,
             val direction: Highlow.Direction,
-            val newBalance: Long
+            val newBalance: Long,
+            val jackpotPayout: Long = 0L
         ) : PlayOutcome
 
         data class Lose(
@@ -89,6 +91,7 @@ class HighlowService(
                 }
                 val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, hand.multiplier)
                 if (hand.isWin) {
+                    val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, check.user, guildId, random)
                     PlayOutcome.Win(
                         stake = stake,
                         payout = r.payout,
@@ -96,7 +99,8 @@ class HighlowService(
                         anchor = hand.anchor,
                         next = hand.next,
                         direction = hand.direction,
-                        newBalance = r.newBalance
+                        newBalance = r.newBalance + jackpot,
+                        jackpotPayout = jackpot
                     )
                 } else {
                     PlayOutcome.Lose(

@@ -46,6 +46,11 @@
         <div class="scratch-balance">
             Balance: <strong id="scratch-balance" th:text="${balance}">0</strong> credits
         </div>
+        <div class="casino-jackpot-banner">
+            🎰 Jackpot pool:
+            <strong th:text="${jackpotPool}">0</strong> credits
+            <span class="muted">— win any minigame for a 1% chance to bank the pool.</span>
+        </div>
     </section>
 
     <section class="scratch-rules">
@@ -81,6 +86,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-jackpot.js}"></script>
 <script th:src="@{/js/scratch.js}"></script>
 </body>
 </html>

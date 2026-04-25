@@ -15,6 +15,7 @@ import kotlin.random.Random
 class CoinflipServiceTest {
 
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var coinflip: Coinflip
     private lateinit var service: CoinflipService
 
@@ -24,8 +25,9 @@ class CoinflipServiceTest {
     @BeforeEach
     fun setup() {
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         coinflip = mockk(relaxed = true)
-        service = CoinflipService(userService, coinflip, Random(0))
+        service = CoinflipService(userService, jackpotService, coinflip, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {
