@@ -1,0 +1,138 @@
+package web.controller
+
+import database.economy.Highlow
+import database.service.HighlowService
+import database.service.HighlowService.PlayOutcome
+import database.service.UserService
+import net.dv8tion.jda.api.JDA
+import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.EconomyWebService
+import web.util.discordIdOrNull
+import web.util.displayName
+
+@Controller
+@RequestMapping("/casino/{guildId}/highlow")
+class HighlowController(
+    private val highlowService: HighlowService,
+    private val economyWebService: EconomyWebService,
+    private val userService: UserService,
+    private val jda: JDA
+) {
+
+    @GetMapping
+    fun page(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String {
+        val discordId = user.discordIdOrNull()
+            ?: return "redirect:/casino/guilds"
+        if (!economyWebService.isMember(discordId, guildId)) {
+            ra.addFlashAttribute("error", "You are not a member of that server.")
+            return "redirect:/casino/guilds"
+        }
+        val guild = jda.getGuildById(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return "redirect:/casino/guilds"
+        }
+
+        val balance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+
+        model.addAttribute("guildId", guildId.toString())
+        model.addAttribute("guildName", guild.name)
+        model.addAttribute("balance", balance)
+        model.addAttribute("minStake", Highlow.MIN_STAKE)
+        model.addAttribute("maxStake", Highlow.MAX_STAKE)
+        model.addAttribute("multiplier", Highlow.DEFAULT_MULTIPLIER)
+        model.addAttribute("username", user.displayName())
+        return "highlow"
+    }
+
+    @PostMapping("/play")
+    @ResponseBody
+    fun play(
+        @PathVariable guildId: Long,
+        @RequestBody request: PlayRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<PlayResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(PlayResponse(false, "Not signed in."))
+        if (!economyWebService.isMember(discordId, guildId)) {
+            return ResponseEntity.status(403).body(PlayResponse(false, "You are not a member of that server."))
+        }
+        val direction = parseDirection(request.direction)
+            ?: return ResponseEntity.badRequest().body(PlayResponse(false, "Pick a direction: HIGHER or LOWER."))
+
+        return when (val outcome = highlowService.play(discordId, guildId, request.stake, direction)) {
+            is PlayOutcome.Win -> ResponseEntity.ok(
+                PlayResponse(
+                    ok = true,
+                    anchor = outcome.anchor,
+                    next = outcome.next,
+                    direction = outcome.direction.name,
+                    net = outcome.net,
+                    payout = outcome.payout,
+                    newBalance = outcome.newBalance,
+                    win = true
+                )
+            )
+
+            is PlayOutcome.Lose -> ResponseEntity.ok(
+                PlayResponse(
+                    ok = true,
+                    anchor = outcome.anchor,
+                    next = outcome.next,
+                    direction = outcome.direction.name,
+                    net = -outcome.stake,
+                    payout = 0L,
+                    newBalance = outcome.newBalance,
+                    win = false
+                )
+            )
+
+            is PlayOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
+                PlayResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
+            )
+
+            is PlayOutcome.InvalidStake -> ResponseEntity.badRequest().body(
+                PlayResponse(false, "Stake must be between ${outcome.min} and ${outcome.max} credits.")
+            )
+
+            PlayOutcome.UnknownUser -> ResponseEntity.badRequest().body(
+                PlayResponse(false, "No user record yet. Try another TobyBot command first.")
+            )
+        }
+    }
+
+    private fun parseDirection(raw: String?): Highlow.Direction? = when (raw?.uppercase()) {
+        "HIGHER" -> Highlow.Direction.HIGHER
+        "LOWER" -> Highlow.Direction.LOWER
+        else -> null
+    }
+}
+
+data class PlayRequest(val direction: String = "", val stake: Long = 0)
+
+data class PlayResponse(
+    val ok: Boolean,
+    val error: String? = null,
+    val anchor: Int? = null,
+    val next: Int? = null,
+    val direction: String? = null,
+    val net: Long? = null,
+    val payout: Long? = null,
+    val newBalance: Long? = null,
+    val win: Boolean? = null
+)
