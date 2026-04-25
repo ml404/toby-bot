@@ -3,14 +3,36 @@
 <body>
 <nav th:fragment="navbar">
     <a class="brand" href="/">TobyBot</a>
-    <!-- Order: personal anchor -> daily-driver features (leaderboards, market,
-         titles) -> social features -> utilities/docs -> admin. Keep admin-ish
-         Moderation last so it doesn't sit next to the everyday links. -->
+    <!-- Order: personal anchor -> daily-driver dropdowns (Economy, Casino)
+         -> social/observational features -> utilities/docs -> admin. Economy
+         folds Market + Titles into one navbar item; Casino is the home for
+         /slots and future minigames (currently shows a "Coming soon" entry
+         until the Slots feature lands). Keep admin-ish Moderation last so
+         it doesn't sit next to the everyday links. -->
     <div class="nav-links" id="nav-menu">
         <a href="/profile/guilds">Profile</a>
         <a href="/leaderboards">Leaderboards</a>
-        <a href="/economy/guilds">Market</a>
-        <a href="/titles/guilds">Titles</a>
+        <div class="nav-dropdown">
+            <button type="button"
+                    class="nav-dropdown-toggle"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    onclick="toggleDropdown(this)">Economy <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="/economy/guilds" role="menuitem">Market</a>
+                <a href="/titles/guilds" role="menuitem">Titles</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button type="button"
+                    class="nav-dropdown-toggle"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    onclick="toggleDropdown(this)">Casino <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <span class="nav-dropdown-coming-soon" aria-disabled="true">&#127920; Slots &mdash; coming soon</span>
+            </div>
+        </div>
         <a href="/intro/guilds">Intro Songs</a>
         <a href="/dnd/campaign">Campaigns</a>
         <a href="/utils">Utils</a>

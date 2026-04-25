@@ -47,10 +47,80 @@ nav {
     cursor: pointer;
 }
 
+/* Dropdown menus (Economy, Casino, ...). Trigger looks like a regular nav
+   link; menu absolutely positioned below on desktop, inlined on mobile. */
+.nav-dropdown { position: relative; }
+.nav-dropdown-toggle {
+    background: transparent;
+    border: none;
+    color: #a0a0b0;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.nav-dropdown-toggle:hover,
+.nav-dropdown.open > .nav-dropdown-toggle { color: #fff; }
+.nav-dropdown-caret { font-size: 0.75em; transition: transform 0.2s; }
+.nav-dropdown:hover .nav-dropdown-caret,
+.nav-dropdown.open .nav-dropdown-caret { transform: rotate(180deg); }
+.nav-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: #16213e;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 6px 0;
+    min-width: 160px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    flex-direction: column;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown.open .nav-dropdown-menu { display: flex; }
+.nav-dropdown-menu a,
+.nav-dropdown-menu .nav-dropdown-coming-soon {
+    padding: 8px 16px;
+    color: #a0a0b0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+.nav-dropdown-menu a:hover { background: #2a2a4a; color: #fff; }
+.nav-dropdown-coming-soon { color: #555; cursor: default; font-style: italic; }
+
 @media (max-width: 600px) {
     .nav-toggle { display: block; min-height: 40px; min-width: 40px; }
     .nav-links { display: none; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; padding: 8px 0; }
     .nav-links.open { display: flex; }
     .nav-links a, .nav-user { padding: 10px 4px; min-height: 40px; display: flex; align-items: center; }
     .nav-links .btn-discord, .nav-links .btn-logout { align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; }
+
+    /* On mobile, dropdown items render inline under the trigger so the
+       whole menu is one vertical scroll — no second tap required. */
+    .nav-dropdown { width: 100%; }
+    .nav-dropdown-toggle { padding: 10px 4px; min-height: 40px; width: 100%; justify-content: flex-start; }
+    .nav-dropdown-menu {
+        position: static;
+        display: flex;
+        margin-top: 0;
+        border: none;
+        padding: 0 0 0 16px;
+        background: transparent;
+        box-shadow: none;
+        min-width: 0;
+    }
+    .nav-dropdown-menu a, .nav-dropdown-menu .nav-dropdown-coming-soon {
+        padding: 8px 4px;
+        min-height: 36px;
+        white-space: normal;
+    }
 }
