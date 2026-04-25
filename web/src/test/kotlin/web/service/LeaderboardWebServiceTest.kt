@@ -93,6 +93,26 @@ class LeaderboardWebServiceTest {
     }
 
     @Test
+    fun `getGuildView leaves mostActiveMember null when no one has voice this month`() {
+        // Regression: rawRows arrive ordered by current-total socialCredit desc.
+        // If everyone's voiceSecondsThisMonth is 0, naive maxByOrNull picks the
+        // first row (the lifetime leader) and mislabels them as "Most active
+        // this month". Should be null so the template hides the stat card.
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.name } returns "Quiet"
+        every { moderationWebService.getLeaderboard(guildId) } returns listOf(
+            LeaderboardRow(rank = 1, discordId = "1", name = "Whale", avatarUrl = null,
+                socialCredit = 10_000, voiceSecondsThisMonth = 0),
+            LeaderboardRow(rank = 2, discordId = "2", name = "Minnow", avatarUrl = null,
+                socialCredit = 100, voiceSecondsThisMonth = 0)
+        )
+
+        val view = service.getGuildView(guildId)!!
+        assertNull(view.mostActiveMember)
+    }
+
+    @Test
     fun `getGuildView with fewer than 3 users returns only what exists`() {
         val guild = mockk<Guild>(relaxed = true)
         every { jda.getGuildById(guildId) } returns guild
