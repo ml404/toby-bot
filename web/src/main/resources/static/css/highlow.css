@@ -1,0 +1,168 @@
+.highlow-header { margin-bottom: var(--space-5); }
+.highlow-header h1 { margin: var(--space-2) 0; }
+.highlow-header strong { color: #fff; }
+
+.highlow-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.highlow-cards {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.highlow-card {
+    width: 96px;
+    height: 134px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff 0%, #e8e8f0 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    position: relative;
+}
+.highlow-card-face {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.highlow-card-label {
+    position: absolute;
+    bottom: 8px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #666;
+    font-weight: 600;
+}
+.highlow-card.shuffling { animation: highlow-pulse 0.4s linear infinite; }
+@keyframes highlow-pulse {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-4px) scale(1.02); }
+}
+.highlow-arrow {
+    font-size: 2rem;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+.highlow-result {
+    min-height: 1.5em;
+    font-size: 1rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.highlow-result-win { color: #57F287; }
+.highlow-result-lose { color: #a0a0b0; }
+.highlow-result strong { color: inherit; }
+
+.highlow-bet {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 360px;
+}
+
+.highlow-direction-picker {
+    display: flex;
+    gap: var(--space-3);
+    width: 100%;
+}
+.highlow-direction {
+    flex: 1;
+    cursor: pointer;
+    user-select: none;
+}
+.highlow-direction input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.highlow-direction span {
+    display: block;
+    text-align: center;
+    padding: 12px;
+    background: #0f1830;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-weight: 600;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.highlow-direction input[type="radio"]:checked + span {
+    border-color: #f1c40f;
+    color: #fff;
+    background: #1a2240;
+}
+.highlow-direction input[type="radio"]:focus-visible + span {
+    outline: 2px solid #5865F2;
+    outline-offset: 2px;
+}
+
+.highlow-stake-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    align-self: flex-start;
+}
+.highlow-bet input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+.highlow-bet button[type="submit"] { width: 100%; }
+
+.highlow-balance {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.highlow-balance strong { color: #fff; }
+
+.highlow-rules {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.highlow-rules h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.highlow-rules ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.highlow-rules strong { color: #fff; }
+
+@media (max-width: 600px) {
+    .highlow-card { width: 76px; height: 110px; }
+    .highlow-card-face { font-size: 2rem; }
+    .highlow-arrow { font-size: 1.5rem; }
+}
