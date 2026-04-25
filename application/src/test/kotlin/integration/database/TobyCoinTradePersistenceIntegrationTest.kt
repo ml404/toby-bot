@@ -47,12 +47,19 @@ class TobyCoinTradePersistenceIntegrationTest {
     companion object {
         private val seq = AtomicLong()
         private fun freshGuildId() = 800_000L + seq.incrementAndGet()
+
+        // Fixed reference point for deterministic windowing math. Avoids
+        // Instant.now()-based off-by-microsecond drift between the value
+        // stored in H2 and the same value used as a query bound — that
+        // difference made the recorded row drop out of `executedAt >= since`
+        // when `since` was computed off the same `now`.
+        private val REF: Instant = Instant.parse("2026-06-15T12:00:00Z")
     }
 
     @Test
     fun `record then listSince returns the row`() {
         val guildId = freshGuildId()
-        val now = Instant.now()
+        val executed = REF
         persistence.record(
             TobyCoinTradeDto(
                 guildId = guildId,
@@ -60,11 +67,13 @@ class TobyCoinTradePersistenceIntegrationTest {
                 side = "BUY",
                 amount = 5L,
                 pricePerCoin = 12.5,
-                executedAt = now
+                executedAt = executed
             )
         )
 
-        val rows = persistence.listSince(guildId, now.minus(Duration.ofMinutes(1)))
+        // Use EPOCH as the floor so we don't depend on H2's precision when
+        // comparing executedAt to a since value computed off the same Instant.
+        val rows = persistence.listSince(guildId, Instant.EPOCH)
 
         assertEquals(1, rows.size)
         val row = rows.single()
@@ -77,22 +86,21 @@ class TobyCoinTradePersistenceIntegrationTest {
     @Test
     fun `listSince filters by window`() {
         val guildId = freshGuildId()
-        val now = Instant.now()
         // Two rows: one inside the 1h window, one well outside it.
         persistence.record(
             TobyCoinTradeDto(
                 guildId = guildId, discordId = 1L, side = "BUY", amount = 1L,
-                pricePerCoin = 10.0, executedAt = now.minus(Duration.ofMinutes(10))
+                pricePerCoin = 10.0, executedAt = REF.minus(Duration.ofMinutes(10))
             )
         )
         persistence.record(
             TobyCoinTradeDto(
                 guildId = guildId, discordId = 2L, side = "SELL", amount = 2L,
-                pricePerCoin = 11.0, executedAt = now.minus(Duration.ofDays(2))
+                pricePerCoin = 11.0, executedAt = REF.minus(Duration.ofDays(2))
             )
         )
 
-        val recent = persistence.listSince(guildId, now.minus(Duration.ofHours(1)))
+        val recent = persistence.listSince(guildId, REF.minus(Duration.ofHours(1)))
 
         assertEquals(1, recent.size, "older row must be excluded")
         assertEquals(1L, recent.single().discordId)
@@ -101,24 +109,23 @@ class TobyCoinTradePersistenceIntegrationTest {
     @Test
     fun `deleteOlderThan removes pre-cutoff rows`() {
         val guildId = freshGuildId()
-        val now = Instant.now()
         persistence.record(
             TobyCoinTradeDto(
                 guildId = guildId, discordId = 1L, side = "BUY", amount = 1L,
-                pricePerCoin = 10.0, executedAt = now.minus(Duration.ofDays(40))
+                pricePerCoin = 10.0, executedAt = REF.minus(Duration.ofDays(40))
             )
         )
         persistence.record(
             TobyCoinTradeDto(
                 guildId = guildId, discordId = 2L, side = "BUY", amount = 1L,
-                pricePerCoin = 10.0, executedAt = now.minus(Duration.ofDays(5))
+                pricePerCoin = 10.0, executedAt = REF.minus(Duration.ofDays(5))
             )
         )
 
-        val removed = persistence.deleteOlderThan(now.minus(Duration.ofDays(30)))
+        val removed = persistence.deleteOlderThan(REF.minus(Duration.ofDays(30)))
 
         assertTrue(removed >= 1, "expected at least the 40-day-old row to be deleted")
-        val survivors = persistence.listSince(guildId, now.minus(Duration.ofDays(365)))
+        val survivors = persistence.listSince(guildId, Instant.EPOCH)
         assertEquals(1, survivors.size, "the 5-day-old row should survive")
         assertEquals(2L, survivors.single().discordId)
     }
