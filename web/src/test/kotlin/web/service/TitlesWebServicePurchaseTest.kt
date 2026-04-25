@@ -62,41 +62,44 @@ class TitlesWebServicePurchaseTest {
     private fun market(price: Double) = TobyCoinMarketDto(guildId = guildId, price = price, lastTickAt = Instant.now())
 
     @Test
-    fun `pure-TOBY path sells exactly ceil(cost price) coins`() {
+    fun `pure-TOBY path sells enough coins to cover the shortfall under midpoint pricing`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
         val actor = UserDto(discordId = discordId, guildId = guildId).apply {
             socialCredit = 0L
-            tobyCoins = 1_000L  // plenty to cover ceil(500/2.5) = 200
+            // ceil(500/2.5) = 200, but under midpoint slippage the
+            // proceeds for 200 coins fall to 495 (5 short of cost).
+            // The compensator bumps to 203 — first N whose midpoint
+            // proceeds clear 500.
+            tobyCoins = 1_000L
         }
         every { titleService.getById(9L) } returns title
         every { titleService.owns(discordId, 9L) } returns false
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
         every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
-        // sell adjusts the mocked user in-memory so the re-read sees new values
-        every { tradeService.sell(discordId, guildId, 200L) } answers {
-            actor.socialCredit = 500L
-            actor.tobyCoins -= 200L
+        every { tradeService.sell(discordId, guildId, 203L) } answers {
+            actor.socialCredit = 502L  // proceeds at midpoint for N=203 / P=2.5
+            actor.tobyCoins -= 203L
             TradeOutcome.Ok(
-                amount = 200L,
-                transactedCredits = 500L,
+                amount = 203L,
+                transactedCredits = 502L,
                 newCoins = actor.tobyCoins,
                 newCredits = actor.socialCredit ?: 0L,
-                newPrice = 2.49
+                newPrice = 2.4495
             )
         }
 
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         val ok = assertInstanceOf(BuyWithTobyOutcome.Ok::class.java, outcome)
-        assertEquals(200L, ok.soldTobyCoins, "ceil(500/2.5) = 200")
-        assertEquals(0L, ok.newCredits, "credits = 500 sold - 500 cost")
-        assertEquals(2.49, ok.newPrice, 1e-9)
-        verify(exactly = 1) { tradeService.sell(discordId, guildId, 200L) }
+        assertEquals(203L, ok.soldTobyCoins, "midpoint slippage adds 3 to ceil(500/2.5)")
+        assertEquals(2L, ok.newCredits, "credits = 502 sold − 500 cost")
+        assertEquals(2.4495, ok.newPrice, 1e-9)
+        verify(exactly = 1) { tradeService.sell(discordId, guildId, 203L) }
         verify(exactly = 1) { titleService.recordPurchase(discordId, 9L) }
     }
 
     @Test
-    fun `top-up path sells just the shortfall`() {
+    fun `top-up path sells enough to cover the shortfall under midpoint pricing`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
         val actor = UserDto(discordId = discordId, guildId = guildId).apply {
             socialCredit = 200L
@@ -106,26 +109,28 @@ class TitlesWebServicePurchaseTest {
         every { titleService.owns(discordId, 9L) } returns false
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
         every { marketService.getMarketForUpdate(guildId) } returns market(10.0)
-        // shortfall = 500 - 200 = 300, price = 10 → 30 coins needed
-        every { tradeService.sell(discordId, guildId, 30L) } answers {
-            actor.socialCredit = (actor.socialCredit ?: 0L) + 300L
-            actor.tobyCoins -= 30L
+        // shortfall = 500 − 200 = 300, price = 10. ceil(300/10) = 30, but
+        // midpoint proceeds for N=30 fall to 299 — slippage compensator
+        // bumps to 31.
+        every { tradeService.sell(discordId, guildId, 31L) } answers {
+            actor.socialCredit = (actor.socialCredit ?: 0L) + 309L  // midpoint proceeds at N=31, P=10
+            actor.tobyCoins -= 31L
             TradeOutcome.Ok(
-                amount = 30L,
-                transactedCredits = 300L,
+                amount = 31L,
+                transactedCredits = 309L,
                 newCoins = actor.tobyCoins,
                 newCredits = actor.socialCredit ?: 0L,
-                newPrice = 9.7
+                newPrice = 9.969
             )
         }
 
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         val ok = assertInstanceOf(BuyWithTobyOutcome.Ok::class.java, outcome)
-        assertEquals(30L, ok.soldTobyCoins)
-        assertEquals(0L, ok.newCredits, "200 + 300 - 500 = 0")
-        assertEquals(70L, ok.newCoins, "100 TOBY - 30 sold")
-        verify(exactly = 1) { tradeService.sell(discordId, guildId, 30L) }
+        assertEquals(31L, ok.soldTobyCoins)
+        assertEquals(9L, ok.newCredits, "200 + 309 − 500 = 9 (slippage delta lands in the leftover credits)")
+        assertEquals(69L, ok.newCoins, "100 TOBY − 31 sold")
+        verify(exactly = 1) { tradeService.sell(discordId, guildId, 31L) }
     }
 
     @Test
@@ -151,7 +156,7 @@ class TitlesWebServicePurchaseTest {
     }
 
     @Test
-    fun `insufficient TOBY reports needed vs have without touching state`() {
+    fun `insufficient TOBY reports slippage-adjusted needed vs have without touching state`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
         val actor = UserDto(discordId = discordId, guildId = guildId).apply {
             socialCredit = 0L
@@ -165,7 +170,7 @@ class TitlesWebServicePurchaseTest {
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         val insufficient = assertInstanceOf(BuyWithTobyOutcome.InsufficientCoins::class.java, outcome)
-        assertEquals(200L, insufficient.needed)
+        assertEquals(203L, insufficient.needed, "midpoint slippage compensator bumps ceil(500/2.5)=200 to 203")
         assertEquals(5L, insufficient.have)
         verify(exactly = 0) { tradeService.sell(any(), any(), any()) }
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }

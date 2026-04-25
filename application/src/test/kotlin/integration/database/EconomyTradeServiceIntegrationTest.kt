@@ -103,15 +103,19 @@ class EconomyTradeServiceIntegrationTest {
         assertEquals(openingHistorySize + 1, samples.size, "one sample should be appended")
         assertEquals(market.price, samples.last().price, 1e-9)
 
-        // Trade ledger: one row recorded with the PRE-pressure price (so the
-        // market chart marker shows what the user paid, not the post-trade price).
+        // Trade ledger: one row recorded with the MIDPOINT price (the
+        // average of pre- and post-pressure — what the trader actually
+        // paid per coin once slippage is accounted for).
         val trades = marketService.listTradesSince(fx.guildId, java.time.Instant.EPOCH)
         assertEquals(1, trades.size, "buy should record exactly one trade row")
         val trade = trades.single()
         assertEquals("BUY", trade.side)
         assertEquals(5L, trade.amount)
         assertEquals(fx.discordId, trade.discordId)
-        assertEquals(openingPrice, trade.pricePerCoin, 1e-9, "marker must show pre-pressure price")
+        val expectedMidpoint = (openingPrice + market.price) / 2.0
+        assertEquals(expectedMidpoint, trade.pricePerCoin, 1e-9, "marker must show midpoint fill price")
+        assertTrue(trade.pricePerCoin > openingPrice, "midpoint above pre-pressure for a buy")
+        assertTrue(trade.pricePerCoin < market.price, "midpoint below post-pressure for a buy")
     }
 
     @Test
@@ -187,6 +191,32 @@ class EconomyTradeServiceIntegrationTest {
 
         assertInstanceOf(TradeOutcome.InvalidAmount::class.java, tradeService.buy(fx.discordId, fx.guildId, 0L))
         assertInstanceOf(TradeOutcome.InvalidAmount::class.java, tradeService.sell(fx.discordId, fx.guildId, -5L))
+    }
+
+    /**
+     * Regression guard for the buy/sell round-trip exploit. Before
+     * midpoint pricing, a trader could buy N coins at the pre-pressure
+     * price, then immediately sell them at the (pumped) post-pressure
+     * price — pocketing roughly `TRADE_IMPACT × N² × P` credits per
+     * round-trip. With midpoint fills both legs eat half the slippage,
+     * so the round-trip is guaranteed to net non-positive.
+     */
+    @Test
+    fun `buy then immediate sell does not net credits`() {
+        // 1000 coins @ P0=100 used to print +10k credits; pick a budget
+        // big enough to make the exploit visible if it regressed.
+        val fx = newFixture(openingCredits = 200_000L)
+        tradeService.loadOrCreateMarket(fx.guildId)
+
+        val openingCredits = userService.getUserById(fx.discordId, fx.guildId)!!.socialCredit ?: 0L
+
+        assertInstanceOf(TradeOutcome.Ok::class.java, tradeService.buy(fx.discordId, fx.guildId, 1_000L))
+        assertInstanceOf(TradeOutcome.Ok::class.java, tradeService.sell(fx.discordId, fx.guildId, 1_000L))
+
+        val finalUser = userService.getUserById(fx.discordId, fx.guildId)!!
+        assertEquals(0L, finalUser.tobyCoins)
+        val net = (finalUser.socialCredit ?: 0L) - openingCredits
+        assertTrue(net <= 0L, "round-trip must net non-positive (was $net)")
     }
 
     /**
