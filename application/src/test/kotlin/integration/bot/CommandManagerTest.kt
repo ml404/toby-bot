@@ -10,6 +10,7 @@ import bot.toby.command.commands.dnd.LinkCharacterCommand
 import bot.toby.command.commands.dnd.RefreshCharacterCommand
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.command.commands.economy.CoinflipCommand
+import bot.toby.command.commands.economy.DiceCommand
 import bot.toby.command.commands.economy.SlotsCommand
 import bot.toby.command.commands.economy.TitleCommand
 import bot.toby.command.commands.economy.TobyCoinCommand
@@ -132,12 +133,13 @@ class CommandManagerTest {
             TobyCoinCommand::class.java,
             SlotsCommand::class.java,
             CoinflipCommand::class.java,
+            DiceCommand::class.java,
             ActivityCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(48, commandManager.allCommands.size)
-        Assertions.assertEquals(48, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(49, commandManager.allCommands.size)
+        Assertions.assertEquals(49, commandManager.allSlashCommands.size)
     }
 
     @Test
