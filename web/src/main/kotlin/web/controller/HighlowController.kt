@@ -4,6 +4,7 @@ import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
 import database.service.UserService
+import jakarta.servlet.http.HttpSession
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -34,6 +35,7 @@ class HighlowController(
     fun page(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
+        session: HttpSession,
         model: Model,
         ra: RedirectAttributes
     ): String {
@@ -50,12 +52,19 @@ class HighlowController(
 
         val balance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
 
+        // Anchor sticks to the user's session so refreshing the page
+        // can't reroll a fresh card. Drawn lazily on first hit.
+        val anchor = activeAnchor(session, guildId)
+            ?: highlowService.dealAnchor().also { storeAnchor(session, guildId, it) }
+
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", balance)
         model.addAttribute("minStake", Highlow.MIN_STAKE)
         model.addAttribute("maxStake", Highlow.MAX_STAKE)
         model.addAttribute("multiplier", Highlow.DEFAULT_MULTIPLIER)
+        model.addAttribute("anchor", anchor)
+        model.addAttribute("anchorLabel", cardLabel(anchor))
         model.addAttribute("username", user.displayName())
         return "highlow"
     }
@@ -65,7 +74,8 @@ class HighlowController(
     fun play(
         @PathVariable guildId: Long,
         @RequestBody request: PlayRequest,
-        @AuthenticationPrincipal user: OAuth2User
+        @AuthenticationPrincipal user: OAuth2User,
+        session: HttpSession
     ): ResponseEntity<PlayResponse> {
         val discordId = user.discordIdOrNull()
             ?: return ResponseEntity.status(401).body(PlayResponse(false, "Not signed in."))
@@ -75,7 +85,25 @@ class HighlowController(
         val direction = parseDirection(request.direction)
             ?: return ResponseEntity.badRequest().body(PlayResponse(false, "Pick a direction: HIGHER or LOWER."))
 
-        return when (val outcome = highlowService.play(discordId, guildId, request.stake, direction)) {
+        val anchor = activeAnchor(session, guildId)
+            ?: return ResponseEntity.badRequest().body(
+                PlayResponse(false, "No active round — refresh the page to draw a new card.")
+            )
+
+        val outcome = highlowService.play(discordId, guildId, request.stake, direction, anchor)
+
+        // Only consume the anchor on outcomes that actually drew a next
+        // card. Validation rejections (invalid stake, insufficient
+        // credits, unknown user) leave the same anchor in place so the
+        // player can retry without losing the card they were looking at.
+        val consumed = outcome is PlayOutcome.Win || outcome is PlayOutcome.Lose
+        val nextRoundAnchor: Int? = if (consumed) {
+            highlowService.dealAnchor().also { storeAnchor(session, guildId, it) }
+        } else {
+            null
+        }
+
+        return when (outcome) {
             is PlayOutcome.Win -> ResponseEntity.ok(
                 PlayResponse(
                     ok = true,
@@ -85,7 +113,8 @@ class HighlowController(
                     net = outcome.net,
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
-                    win = true
+                    win = true,
+                    nextAnchor = nextRoundAnchor
                 )
             )
 
@@ -98,7 +127,8 @@ class HighlowController(
                     net = -outcome.stake,
                     payout = 0L,
                     newBalance = outcome.newBalance,
-                    win = false
+                    win = false,
+                    nextAnchor = nextRoundAnchor
                 )
             )
 
@@ -121,6 +151,23 @@ class HighlowController(
         "LOWER" -> Highlow.Direction.LOWER
         else -> null
     }
+
+    private fun anchorKey(guildId: Long): String = "highlow.anchor.$guildId"
+
+    private fun activeAnchor(session: HttpSession, guildId: Long): Int? =
+        session.getAttribute(anchorKey(guildId)) as? Int
+
+    private fun storeAnchor(session: HttpSession, guildId: Long, anchor: Int) {
+        session.setAttribute(anchorKey(guildId), anchor)
+    }
+
+    private fun cardLabel(n: Int): String = when (n) {
+        1 -> "A"
+        11 -> "J"
+        12 -> "Q"
+        13 -> "K"
+        else -> n.toString()
+    }
 }
 
 data class PlayRequest(val direction: String = "", val stake: Long = 0)
@@ -134,5 +181,6 @@ data class PlayResponse(
     val net: Long? = null,
     val payout: Long? = null,
     val newBalance: Long? = null,
-    val win: Boolean? = null
+    val win: Boolean? = null,
+    val nextAnchor: Int? = null
 )

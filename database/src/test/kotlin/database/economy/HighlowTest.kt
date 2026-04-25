@@ -55,6 +55,48 @@ class HighlowTest {
     }
 
     @Test
+    fun `dealAnchor returns a card in 1 to deckSize`() {
+        val highlow = Highlow(deckSize = 13)
+        val rng = Random(2026)
+        repeat(1_000) {
+            val a = highlow.dealAnchor(rng)
+            assertTrue(a in 1..13)
+        }
+    }
+
+    @Test
+    fun `resolve uses the supplied anchor and draws next from rng`() {
+        // mockSequenceRng emits one value per nextInt — resolve only
+        // calls nextInt once (for `next`), so seq=[12] gives next=12.
+        val rng = mockSequenceRng(intArrayOf(12))
+        val hand = Highlow(deckSize = 13).resolve(anchor = 5, direction = Highlow.Direction.HIGHER, random = rng)
+        assertEquals(5, hand.anchor)
+        assertEquals(12, hand.next)
+        assertTrue(hand.isWin)
+    }
+
+    @Test
+    fun `resolve with a tie loses regardless of direction`() {
+        val anchor = 9
+        val rng = mockSequenceRng(intArrayOf(9))
+        val hand = Highlow(deckSize = 13).resolve(anchor, Highlow.Direction.LOWER, rng)
+        assertEquals(9, hand.next)
+        assertFalse(hand.isWin)
+        assertEquals(0L, hand.multiplier)
+    }
+
+    @Test
+    fun `resolve rejects an out-of-range anchor`() {
+        val highlow = Highlow(deckSize = 13)
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            highlow.resolve(anchor = 0, direction = Highlow.Direction.HIGHER, random = Random.Default)
+        }
+        org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+            highlow.resolve(anchor = 14, direction = Highlow.Direction.HIGHER, random = Random.Default)
+        }
+    }
+
+    @Test
     fun `RTP across 200k hands is within 5pp of 12 over 13`() {
         // With tie-loses and a 2x payout, expected RTP is 12/13 ≈ 0.923.
         val highlow = Highlow(deckSize = 13, multiplier = 2L)
