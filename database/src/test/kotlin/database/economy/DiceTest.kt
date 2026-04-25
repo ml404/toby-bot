@@ -55,6 +55,18 @@ class DiceTest {
     }
 
     @Test
+    fun `winning multiplier is greater than 1`() {
+        // WagerHelper computes net = multiplier × stake − stake, so a payout
+        // of 1× nets zero — a "win" that pays nothing. Pin the default win
+        // multiplier strictly above 1× so future tuning can't introduce that
+        // boundary bug.
+        assertTrue(
+            Dice.DEFAULT_MULTIPLIER > 1L,
+            "Dice win multiplier ${Dice.DEFAULT_MULTIPLIER} must be > 1 so a correct call nets > 0"
+        )
+    }
+
+    @Test
     fun `RTP across 200k rolls is within 5pp of 5 over 6`() {
         // 5× payout at 1/6 odds → expected RTP = 5/6 ≈ 0.833. ±5pp floor
         // is forgiving; n=200k 95% CI is much tighter.
