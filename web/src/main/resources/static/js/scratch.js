@@ -7,16 +7,20 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
     if (!resultEl) return;
     resultEl.hidden = false;
     resultEl.classList.remove('scratch-result-win', 'scratch-result-lose', 'scratch-result-jackpot');
+    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
+        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
+        : '';
     if (body.win) {
         resultEl.classList.add('scratch-result-win');
         const winLine = '<strong>' + body.matchCount + '× ' + body.winningSymbol +
             '</strong> &middot; <strong>+' + body.net + ' credits</strong>';
-        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
             ? window.TobyJackpot.renderWinHtml(resultEl, body, 'scratch-result-jackpot', winLine)
             : winLine;
+        resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('scratch-result-lose');
-        resultEl.innerHTML = 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' +
+        resultEl.innerHTML = topUpPrefix + 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' +
             Math.abs(body.net) + ' credits</strong>';
     }
     if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
@@ -30,6 +34,8 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
     const guildId = main.dataset.guildId;
     const matchThreshold = parseInt(main.dataset.matchThreshold, 10) || 5;
+    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
+    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     function toast(msg, type) {
@@ -44,12 +50,24 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
     const cellButtons = Array.from(cellsContainer ? cellsContainer.querySelectorAll('.scratch-cell') : []);
     const stakeInput = document.getElementById('scratch-stake');
     const buyBtn = document.getElementById('scratch-buy');
+    const buyTobyBtn = document.getElementById('scratch-buy-toby');
     const revealBtn = document.getElementById('scratch-reveal-all');
     const balanceEl = document.getElementById('scratch-balance');
     const resultEl = document.getElementById('scratch-result');
     const form = document.getElementById('scratch-bet');
 
     if (!form || !buyBtn || !stakeInput || cellButtons.length === 0) return;
+
+    const topUp = (window.TobyTopUp && buyTobyBtn) ? window.TobyTopUp.init({
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: buyBtn,
+        tobyBtn: buyTobyBtn,
+        balanceEl: balanceEl,
+        tobyCoins: initialTobyCoins,
+        marketPrice: initialMarketPrice,
+        onSubmit: function (autoTopUp) { runBuy(autoTopUp); },
+    }) : null;
 
     let busy = false;
     // Latest active card. Server returns the symbols up front; cells are
@@ -119,8 +137,7 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
     if (revealBtn) revealBtn.addEventListener('click', revealAll);
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
+    function runBuy(autoTopUp) {
         if (busy) return;
 
         const stake = parseInt(stakeInput.value, 10);
@@ -131,23 +148,32 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
         busy = true;
         buyBtn.disabled = true;
+        if (buyTobyBtn) buyTobyBtn.disabled = true;
         if (resultEl) resultEl.hidden = true;
         resetCells();
 
         if (!postJson) {
             buyBtn.disabled = false;
+            if (buyTobyBtn) buyTobyBtn.disabled = false;
             busy = false;
             toast('API helper missing — refresh the page.', 'error');
             return;
         }
 
-        postJson('/casino/' + guildId + '/scratch/scratch', { stake: stake })
+        postJson('/casino/' + guildId + '/scratch/scratch', { stake: stake, autoTopUp: !!autoTopUp })
             .then(function (body) {
                 buyBtn.disabled = false;
+                if (buyTobyBtn) buyTobyBtn.disabled = false;
                 busy = false;
                 if (body && body.ok) {
                     activeCard = body;
                     if (revealBtn) revealBtn.hidden = false;
+                    if (topUp) {
+                        if (typeof body.soldTobyCoins === 'number') {
+                            topUp.setTobyCoins(Math.max(0, initialTobyCoins - body.soldTobyCoins));
+                        }
+                        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
+                    }
                     // Don't auto-reveal — the user clicks each cell. The
                     // result and balance only apply when all cells are
                     // scratched (or "Reveal all" is hit), so the player
@@ -160,10 +186,18 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
             })
             .catch(function () {
                 buyBtn.disabled = false;
+                if (buyTobyBtn) buyTobyBtn.disabled = false;
                 busy = false;
                 toast('Network error.', 'error');
             });
-    });
+    }
+
+    if (!topUp) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            runBuy(false);
+        });
+    }
 })();
 
 if (typeof module !== 'undefined' && module.exports) {

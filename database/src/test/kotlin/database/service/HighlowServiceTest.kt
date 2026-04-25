@@ -16,6 +16,8 @@ class HighlowServiceTest {
 
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
+    private lateinit var tradeService: EconomyTradeService
+    private lateinit var marketService: TobyCoinMarketService
     private lateinit var highlow: Highlow
     private lateinit var service: HighlowService
 
@@ -26,8 +28,10 @@ class HighlowServiceTest {
     fun setup() {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
+        tradeService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
         highlow = mockk(relaxed = true)
-        service = HighlowService(userService, jackpotService, highlow, Random(0))
+        service = HighlowService(userService, jackpotService, tradeService, marketService, highlow, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =

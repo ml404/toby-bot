@@ -5,6 +5,7 @@ import database.economy.SlotMachine
 import database.service.JackpotService
 import database.service.ScratchService
 import database.service.ScratchService.ScratchOutcome
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
@@ -30,6 +31,7 @@ class ScratchController(
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
     private val jackpotService: JackpotService,
+    private val marketService: TobyCoinMarketService,
     private val jda: JDA
 ) {
 
@@ -51,11 +53,16 @@ class ScratchController(
             return "redirect:/casino/guilds"
         }
 
-        val balance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+        val profile = userService.getUserById(discordId, guildId)
+        val balance = profile?.socialCredit ?: 0L
+        val tobyCoins = profile?.tobyCoins ?: 0L
+        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
 
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", balance)
+        model.addAttribute("tobyCoins", tobyCoins)
+        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", ScratchCard.MIN_STAKE)
         model.addAttribute("maxStake", ScratchCard.MAX_STAKE)
         model.addAttribute("cellCount", ScratchCard.CELL_COUNT)
@@ -94,7 +101,7 @@ class ScratchController(
             return ResponseEntity.status(403).body(ScratchResponse(false, "You are not a member of that server."))
         }
 
-        return when (val outcome = scratchService.scratch(discordId, guildId, request.stake)) {
+        return when (val outcome = scratchService.scratch(discordId, guildId, request.stake, request.autoTopUp)) {
             is ScratchOutcome.Win -> ResponseEntity.ok(
                 ScratchResponse(
                     ok = true,
@@ -105,7 +112,9 @@ class ScratchController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
@@ -116,12 +125,18 @@ class ScratchController(
                     net = -outcome.stake,
                     payout = 0L,
                     newBalance = outcome.newBalance,
-                    win = false
+                    win = false,
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
             is ScratchOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 ScratchResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
+            )
+
+            is ScratchOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
+                ScratchResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
             )
 
             is ScratchOutcome.InvalidStake -> ResponseEntity.badRequest().body(
@@ -137,7 +152,7 @@ class ScratchController(
 
 data class ScratchPayoutRow(val symbol: String, val multipliers: List<String>)
 
-data class ScratchRequest(val stake: Long = 0)
+data class ScratchRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class ScratchResponse(
     val ok: Boolean,
@@ -149,5 +164,7 @@ data class ScratchResponse(
     val payout: Long? = null,
     val newBalance: Long? = null,
     val win: Boolean? = null,
-    val jackpotPayout: Long? = null
+    val jackpotPayout: Long? = null,
+    val soldTobyCoins: Long? = null,
+    val newPrice: Double? = null
 )

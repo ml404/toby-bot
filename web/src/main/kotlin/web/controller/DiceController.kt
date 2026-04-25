@@ -4,6 +4,7 @@ import database.economy.Dice
 import database.service.DiceService
 import database.service.DiceService.RollOutcome
 import database.service.JackpotService
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
@@ -36,6 +37,7 @@ class DiceController(
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
     private val jackpotService: JackpotService,
+    private val marketService: TobyCoinMarketService,
     private val jda: JDA
 ) {
 
@@ -57,11 +59,16 @@ class DiceController(
             return "redirect:/casino/guilds"
         }
 
-        val balance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+        val profile = userService.getUserById(discordId, guildId)
+        val balance = profile?.socialCredit ?: 0L
+        val tobyCoins = profile?.tobyCoins ?: 0L
+        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
 
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", balance)
+        model.addAttribute("tobyCoins", tobyCoins)
+        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", Dice.MIN_STAKE)
         model.addAttribute("maxStake", Dice.MAX_STAKE)
         model.addAttribute("sides", Dice.DEFAULT_SIDES)
@@ -84,7 +91,7 @@ class DiceController(
             return ResponseEntity.status(403).body(RollResponse(false, "You are not a member of that server."))
         }
 
-        return when (val outcome = diceService.roll(discordId, guildId, request.stake, request.prediction)) {
+        return when (val outcome = diceService.roll(discordId, guildId, request.stake, request.prediction, request.autoTopUp)) {
             is RollOutcome.Win -> ResponseEntity.ok(
                 RollResponse(
                     ok = true,
@@ -94,7 +101,9 @@ class DiceController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
@@ -106,12 +115,18 @@ class DiceController(
                     net = -outcome.stake,
                     payout = 0L,
                     newBalance = outcome.newBalance,
-                    win = false
+                    win = false,
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
             is RollOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 RollResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
+            )
+
+            is RollOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
+                RollResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
             )
 
             is RollOutcome.InvalidStake -> ResponseEntity.badRequest().body(
@@ -129,7 +144,7 @@ class DiceController(
     }
 }
 
-data class RollRequest(val prediction: Int = 0, val stake: Long = 0)
+data class RollRequest(val prediction: Int = 0, val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class RollResponse(
     val ok: Boolean,
@@ -140,5 +155,7 @@ data class RollResponse(
     val payout: Long? = null,
     val newBalance: Long? = null,
     val win: Boolean? = null,
-    val jackpotPayout: Long? = null
+    val jackpotPayout: Long? = null,
+    val soldTobyCoins: Long? = null,
+    val newPrice: Double? = null
 )

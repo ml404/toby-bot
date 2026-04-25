@@ -6,16 +6,20 @@ function renderCoinflipResult(resultEl, body) {
     resultEl.classList.remove('coinflip-result-win', 'coinflip-result-lose', 'coinflip-result-jackpot');
     const landedLabel = body.landed === 'HEADS' ? 'Heads' : 'Tails';
     const predictedLabel = body.predicted === 'HEADS' ? 'Heads' : 'Tails';
+    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
+        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
+        : '';
     if (body.win) {
         resultEl.classList.add('coinflip-result-win');
         const winLine = '<strong>' + landedLabel + '!</strong> You called ' +
             predictedLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
             ? window.TobyJackpot.renderWinHtml(resultEl, body, 'coinflip-result-jackpot', winLine)
             : winLine;
+        resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('coinflip-result-lose');
-        resultEl.innerHTML = '<strong>' + landedLabel + '.</strong> You called ' +
+        resultEl.innerHTML = topUpPrefix + '<strong>' + landedLabel + '.</strong> You called ' +
             predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
     }
 }
@@ -27,6 +31,8 @@ function renderCoinflipResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
+    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
+    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     function toast(msg, type) {
@@ -41,11 +47,23 @@ function renderCoinflipResult(resultEl, body) {
     const coinFace = document.getElementById('coinflip-coin-face');
     const stakeInput = document.getElementById('coinflip-stake');
     const flipBtn = document.getElementById('coinflip-flip');
+    const flipTobyBtn = document.getElementById('coinflip-flip-toby');
     const balanceEl = document.getElementById('coinflip-balance');
     const resultEl = document.getElementById('coinflip-result');
     const form = document.getElementById('coinflip-bet');
 
     if (!form || !flipBtn || !stakeInput || !coin || !coinFace) return;
+
+    const topUp = (window.TobyTopUp && flipTobyBtn) ? window.TobyTopUp.init({
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: flipBtn,
+        tobyBtn: flipTobyBtn,
+        balanceEl: balanceEl,
+        tobyCoins: initialTobyCoins,
+        marketPrice: initialMarketPrice,
+        onSubmit: function (autoTopUp) { runFlip(autoTopUp); },
+    }) : null;
 
     const FLIP_DURATION_MS = 800;
     const FLIP_INTERVAL_MS = 80;
@@ -91,8 +109,16 @@ function renderCoinflipResult(resultEl, body) {
         if (balanceEl) balanceEl.textContent = newBalance;
     }
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
+    function applyTobyDelta(body) {
+        if (!topUp) return;
+        if (typeof body.soldTobyCoins === 'number') {
+            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
+            topUp.setTobyCoins(remaining);
+        }
+        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
+    }
+
+    function runFlip(autoTopUp) {
         if (flipping) return;
 
         const side = selectedSide();
@@ -107,26 +133,32 @@ function renderCoinflipResult(resultEl, body) {
         }
 
         flipBtn.disabled = true;
+        if (flipTobyBtn) flipTobyBtn.disabled = true;
         const intervalId = startFlipAnimation();
         const requestStart = Date.now();
 
         if (!postJson) {
             stopFlipAnimation(intervalId);
             flipBtn.disabled = false;
+            if (flipTobyBtn) flipTobyBtn.disabled = false;
             toast('API helper missing — refresh the page.', 'error');
             return;
         }
 
-        postJson('/casino/' + guildId + '/coinflip/flip', { side: side, stake: stake })
+        postJson('/casino/' + guildId + '/coinflip/flip', {
+            side: side, stake: stake, autoTopUp: !!autoTopUp,
+        })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
                 const remaining = Math.max(0, FLIP_DURATION_MS - elapsed);
                 setTimeout(function () {
                     stopFlipAnimation(intervalId, body && body.landed);
                     flipBtn.disabled = false;
+                    if (flipTobyBtn) flipTobyBtn.disabled = false;
                     if (body && body.ok) {
                         renderCoinflipResult(resultEl, body);
                         applyBalance(body.newBalance);
+                        applyTobyDelta(body);
                     } else {
                         if (resultEl) resultEl.hidden = true;
                         toast((body && body.error) || 'Flip failed.', 'error');
@@ -136,10 +168,18 @@ function renderCoinflipResult(resultEl, body) {
             .catch(function () {
                 stopFlipAnimation(intervalId);
                 flipBtn.disabled = false;
+                if (flipTobyBtn) flipTobyBtn.disabled = false;
                 if (resultEl) resultEl.hidden = true;
                 toast('Network error.', 'error');
             });
-    });
+    }
+
+    if (!topUp) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            runFlip(false);
+        });
+    }
 })();
 
 if (typeof module !== 'undefined' && module.exports) {

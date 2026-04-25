@@ -83,7 +83,8 @@ class EconomyWebService(
                 side = trade.side,
                 amount = trade.amount,
                 price = trade.pricePerCoin,
-                name = name
+                name = name,
+                reason = trade.reason
             )
         }
     }
@@ -138,5 +139,7 @@ data class TradeMarker(
     val side: String,
     val amount: Long,
     val price: Double,
-    val name: String
+    val name: String,
+    /** USER / TITLE_TOPUP / CASINO_TOPUP — see TobyCoinTradeDto. */
+    val reason: String = "USER"
 )

@@ -78,6 +78,17 @@
         return Math.floor(hours / 24) + 'd ago';
     }
 
+    // Map of reason discriminator → human-readable suffix shown next to
+    // a trade. USER trades render no suffix; the others get a tag so the
+    // viewer can tell organic activity from automated tops-up.
+    function reasonSuffix(reason) {
+        switch (reason) {
+            case 'TITLE_TOPUP': return ' (title top-up)';
+            case 'CASINO_TOPUP': return ' (casino top-up)';
+            default: return '';
+        }
+    }
+
     function renderRecentTrades(trades) {
         if (!recentTradesList || !recentTradesPanel) return;
         if (!trades.length) {
@@ -94,12 +105,14 @@
             li.className = 'economy-trade-row';
             const verb = t.side === 'BUY' ? 'bought' : 'sold';
             const verbClass = t.side === 'BUY' ? 'economy-trade-buy' : 'economy-trade-sell';
+            const suffix = reasonSuffix(t.reason);
             li.innerHTML =
                 '<span class="economy-trade-when">' + formatRelative(t.t) + '</span>' +
                 '<span class="economy-trade-who">' + escapeHtml(t.name) + '</span>' +
                 ' <span class="' + verbClass + '">' + verb + '</span> ' +
                 '<strong>' + t.amount + '</strong> @ ' +
-                t.price.toFixed(2);
+                t.price.toFixed(2) +
+                (suffix ? '<span class="economy-trade-reason">' + escapeHtml(suffix) + '</span>' : '');
             recentTradesList.appendChild(li);
         });
     }
@@ -150,7 +163,8 @@
                                 const trade = item.raw && item.raw.trade;
                                 if (trade) {
                                     const verb = trade.side === 'BUY' ? 'bought' : 'sold';
-                                    return trade.name + ' ' + verb + ' ' + trade.amount + ' @ ' + trade.price.toFixed(2);
+                                    return trade.name + ' ' + verb + ' ' + trade.amount + ' @ ' +
+                                        trade.price.toFixed(2) + reasonSuffix(trade.reason);
                                 }
                                 return item.parsed.y.toFixed(2) + ' credits';
                             }

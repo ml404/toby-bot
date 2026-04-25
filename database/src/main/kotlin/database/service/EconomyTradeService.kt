@@ -80,7 +80,12 @@ class EconomyTradeService(
         return fresh
     }
 
-    fun buy(discordId: Long, guildId: Long, amount: Long): TradeOutcome {
+    fun buy(
+        discordId: Long,
+        guildId: Long,
+        amount: Long,
+        reason: String = REASON_USER
+    ): TradeOutcome {
         if (amount <= 0) return TradeOutcome.InvalidAmount
         // Lock order — user first, then market. Same in sell() to avoid deadlock.
         val user = userService.getUserByIdForUpdate(discordId, guildId)
@@ -104,7 +109,7 @@ class EconomyTradeService(
 
         if (fee > 0L) jackpotService.addToPool(guildId, fee)
 
-        commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount)
+        commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount, reason)
 
         return TradeOutcome.Ok(
             amount = amount,
@@ -116,7 +121,12 @@ class EconomyTradeService(
         )
     }
 
-    fun sell(discordId: Long, guildId: Long, amount: Long): TradeOutcome {
+    fun sell(
+        discordId: Long,
+        guildId: Long,
+        amount: Long,
+        reason: String = REASON_USER
+    ): TradeOutcome {
         if (amount <= 0) return TradeOutcome.InvalidAmount
         // Lock order — user first, then market. Same in buy() to avoid deadlock.
         val user = userService.getUserByIdForUpdate(discordId, guildId)
@@ -139,7 +149,7 @@ class EconomyTradeService(
 
         if (fee > 0L) jackpotService.addToPool(guildId, fee)
 
-        commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount)
+        commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount, reason)
 
         return TradeOutcome.Ok(
             amount = amount,
@@ -149,6 +159,17 @@ class EconomyTradeService(
             newPrice = newPrice,
             fee = fee
         )
+    }
+
+    companion object {
+        /** Manual `/economy` or `/tobycoin` trade — the default attribution. */
+        const val REASON_USER = "USER"
+
+        /** TitlesWebService.buyTitleWithTobyCoin auto-sold to cover a credit shortfall. */
+        const val REASON_TITLE_TOPUP = "TITLE_TOPUP"
+
+        /** A casino minigame auto-sold to fund a wager. */
+        const val REASON_CASINO_TOPUP = "CASINO_TOPUP"
     }
 
     // Seed the market row if missing, then re-read it with a write lock. Only
@@ -167,7 +188,8 @@ class EconomyTradeService(
         executionPrice: Double,
         discordId: Long,
         side: String,
-        amount: Long
+        amount: Long,
+        reason: String
     ) {
         val now = Instant.now()
         market.price = newPrice
@@ -183,7 +205,8 @@ class EconomyTradeService(
                 side = side,
                 amount = amount,
                 pricePerCoin = executionPrice,
-                executedAt = now
+                executedAt = now,
+                reason = reason
             )
         )
     }
