@@ -97,6 +97,18 @@ class HighlowTest {
     }
 
     @Test
+    fun `winning multiplier is greater than 1`() {
+        // WagerHelper computes net = multiplier × stake − stake, so a payout
+        // of 1× nets zero — a "win" that pays nothing. Pin the default win
+        // multiplier strictly above 1× so future tuning can't introduce that
+        // boundary bug.
+        assertTrue(
+            Highlow.DEFAULT_MULTIPLIER > 1L,
+            "Highlow win multiplier ${Highlow.DEFAULT_MULTIPLIER} must be > 1 so a correct call nets > 0"
+        )
+    }
+
+    @Test
     fun `RTP across 200k hands is within 5pp of 12 over 13`() {
         // With tie-loses and a 2x payout, expected RTP is 12/13 ≈ 0.923.
         val highlow = Highlow(deckSize = 13, multiplier = 2L)

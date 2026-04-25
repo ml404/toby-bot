@@ -42,6 +42,18 @@ class CoinflipTest {
     }
 
     @Test
+    fun `winning multiplier is greater than 1`() {
+        // WagerHelper computes net = multiplier × stake − stake, so a payout
+        // of 1× nets zero — a "win" that pays nothing. Pin the default win
+        // multiplier strictly above 1× so future tuning can't introduce that
+        // boundary bug.
+        assertTrue(
+            Coinflip.DEFAULT_MULTIPLIER > 1L,
+            "Coinflip win multiplier ${Coinflip.DEFAULT_MULTIPLIER} must be > 1 so a correct call nets > 0"
+        )
+    }
+
+    @Test
     fun `RTP across 200k flips is within 5pp of 1_0`() {
         // No house edge by design — fair 50/50 with 2× payout. Across n flips
         // with random predictions, expected return is exactly 1.0 stake. The

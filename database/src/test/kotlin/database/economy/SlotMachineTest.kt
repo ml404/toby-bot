@@ -50,6 +50,20 @@ class SlotMachineTest {
     }
 
     @Test
+    fun `every winning multiplier is greater than 1`() {
+        // WagerHelper computes net = multiplier × stake − stake, so a payout
+        // of 1× nets zero — a "win" that pays nothing. Pin every entry in
+        // the default payout table strictly above 1× to make sure no future
+        // retuning accidentally introduces that boundary bug.
+        SlotMachine.DEFAULT_PAYOUTS.forEach { (symbol, multiplier) ->
+            assertTrue(
+                multiplier > 1L,
+                "$symbol payout $multiplier must be > 1 so a 3-of-a-kind win nets > 0"
+            )
+        }
+    }
+
+    @Test
     fun `RTP across 100k pulls is within +- 5 percent of 0_89`() {
         // The machine's expected return-to-player is 0.890 with the default
         // weights and payouts (see SlotMachine kdoc). With n = 100k the 95%
