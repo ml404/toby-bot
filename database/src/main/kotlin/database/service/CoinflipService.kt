@@ -16,6 +16,7 @@ import kotlin.random.Random
 @Transactional
 class CoinflipService(
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val coinflip: Coinflip = Coinflip(),
     private val random: Random = Random.Default
 ) {
@@ -27,7 +28,8 @@ class CoinflipService(
             val net: Long,
             val landed: Coinflip.Side,
             val predicted: Coinflip.Side,
-            val newBalance: Long
+            val newBalance: Long,
+            val jackpotPayout: Long = 0L
         ) : FlipOutcome
 
         data class Lose(
@@ -53,13 +55,15 @@ class CoinflipService(
                 val flip = coinflip.flip(predicted, random)
                 val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, flip.multiplier)
                 if (flip.isWin) {
+                    val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, check.user, guildId, random)
                     FlipOutcome.Win(
                         stake = stake,
                         payout = r.payout,
                         net = r.net,
                         landed = flip.landed,
                         predicted = flip.predicted,
-                        newBalance = r.newBalance
+                        newBalance = r.newBalance + jackpot,
+                        jackpotPayout = jackpot
                     )
                 } else {
                     FlipOutcome.Lose(

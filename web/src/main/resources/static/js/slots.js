@@ -1,3 +1,23 @@
+// Pure-DOM render for a /spin response. Hoisted out of the IIFE so the
+// jest test in `slots.test.js` can drive it without booting the whole
+// page. The IIFE below calls it with the live result element.
+function renderSlotsResult(resultEl, body) {
+    if (!resultEl) return;
+    resultEl.hidden = false;
+    resultEl.classList.remove('slots-result-win', 'slots-result-lose', 'slots-result-jackpot');
+    if (body.win) {
+        resultEl.classList.add('slots-result-win');
+        const winLine = '<strong>+' + body.net + ' credits</strong> &middot; ' +
+            body.multiplier + '× on a stake';
+        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'slots-result-jackpot', winLine)
+            : winLine;
+    } else {
+        resultEl.classList.add('slots-result-lose');
+        resultEl.innerHTML = 'Lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+    }
+}
+
 (function () {
     'use strict';
 
@@ -28,9 +48,6 @@
 
     if (!form || !spinBtn || !stakeInput || reels.some(function (r) { return !r; })) return;
 
-    // Symbols the reel cycles through during the spin animation. Order
-    // is purely cosmetic — the final symbols are set from the server
-    // response when the request resolves.
     const SPIN_SYMBOLS = ['🍒', '🍋', '🔔', '⭐'];
     const SPIN_INTERVAL_MS = 60;
     const SPIN_DURATION_MS = 800;
@@ -54,20 +71,6 @@
             reel.classList.remove('spinning');
             if (finalSymbols && finalSymbols[i]) reel.textContent = finalSymbols[i];
         });
-    }
-
-    function showResult(body) {
-        if (!resultEl) return;
-        resultEl.hidden = false;
-        resultEl.classList.remove('slots-result-win', 'slots-result-lose');
-        if (body.win) {
-            resultEl.classList.add('slots-result-win');
-            resultEl.innerHTML = '<strong>+' + body.net + ' credits</strong> &middot; ' +
-                body.multiplier + '× on a stake';
-        } else {
-            resultEl.classList.add('slots-result-lose');
-            resultEl.innerHTML = 'Lost <strong>' + Math.abs(body.net) + ' credits</strong>';
-        }
     }
 
     function applyBalance(newBalance) {
@@ -98,15 +101,13 @@
 
         postJson('/casino/' + guildId + '/slots/spin', { stake: stake })
             .then(function (body) {
-                // Wait at least SPIN_DURATION_MS so a fast network doesn't
-                // make the spin look snappy-and-jarring.
                 const elapsed = Date.now() - requestStart;
                 const remaining = Math.max(0, SPIN_DURATION_MS - elapsed);
                 setTimeout(function () {
                     stopSpinAnimation(intervalId, body && body.symbols);
                     spinBtn.disabled = false;
                     if (body && body.ok) {
-                        showResult(body);
+                        renderSlotsResult(resultEl, body);
                         applyBalance(body.newBalance);
                     } else {
                         if (resultEl) resultEl.hidden = true;
@@ -122,3 +123,7 @@
             });
     });
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { renderSlotsResult };
+}

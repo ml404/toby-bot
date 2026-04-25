@@ -15,6 +15,7 @@ import kotlin.random.Random
 class SlotsServiceTest {
 
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var machine: SlotMachine
     private lateinit var service: SlotsService
 
@@ -24,8 +25,9 @@ class SlotsServiceTest {
     @BeforeEach
     fun setup() {
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         machine = mockk(relaxed = true)
-        service = SlotsService(userService, machine, Random(0))
+        service = SlotsService(userService, jackpotService, machine, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {

@@ -408,6 +408,35 @@ td { font-size: 0.95rem; }
     .toast-stack { left: 12px; right: 12px; bottom: 12px; max-width: none; }
 }
 
+/* Per-guild casino jackpot banner — rendered on every minigame page so
+   players can see the pool before they spin. Styling is intentionally
+   loud so the pool is the eye-grabbing element of the table. */
+.casino-jackpot-banner {
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: linear-gradient(90deg, rgba(241, 196, 15, 0.18), rgba(241, 196, 15, 0.06));
+    border: 1px solid rgba(241, 196, 15, 0.55);
+    border-radius: 10px;
+    color: #f1c40f;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+.casino-jackpot-banner strong { color: #ffe066; }
+.casino-jackpot-banner .muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* Game result lines paint themselves with `<game>-result-jackpot` when a
+   spin/flip/roll/play/scratch wins the jackpot. Shared accent so each
+   game's CSS doesn't have to redefine the colour. */
+.slots-result-jackpot,
+.coinflip-result-jackpot,
+.dice-result-jackpot,
+.highlow-result-jackpot,
+.scratch-result-jackpot {
+    color: #f1c40f;
+    text-shadow: 0 0 8px rgba(241, 196, 15, 0.4);
+}
+
 /* Grow tap targets on any touch device without ballooning desktop buttons */
 @media (hover: none) and (pointer: coarse) {
     .btn-sm { padding: 8px 14px; min-height: 40px; }

@@ -16,11 +16,15 @@ import kotlin.random.Random
  * `@Transactional` boundary so concurrent `/slots` invocations from the
  * same user (Discord + web at once, or just spam-clicking) can't double-
  * spend the stake.
+ *
+ * Wins also roll [JackpotHelper] for a chance to bank the per-guild
+ * jackpot pool (fed by trade fees in [EconomyTradeService]).
  */
 @Service
 @Transactional
 class SlotsService(
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val machine: SlotMachine = SlotMachine(),
     private val random: Random = Random.Default
 ) {
@@ -32,7 +36,8 @@ class SlotsService(
             val payout: Long,
             val net: Long,
             val symbols: List<SlotMachine.Symbol>,
-            val newBalance: Long
+            val newBalance: Long,
+            val jackpotPayout: Long = 0L
         ) : SpinOutcome
 
         data class Lose(
@@ -57,13 +62,15 @@ class SlotsService(
                 val pull = machine.pull(random)
                 val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, pull.multiplier)
                 if (pull.isWin) {
+                    val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, check.user, guildId, random)
                     SpinOutcome.Win(
                         stake = stake,
                         multiplier = pull.multiplier,
                         payout = r.payout,
                         net = r.net,
                         symbols = pull.symbols,
-                        newBalance = r.newBalance
+                        newBalance = r.newBalance + jackpot,
+                        jackpotPayout = jackpot
                     )
                 } else {
                     SpinOutcome.Lose(stake = stake, symbols = pull.symbols, newBalance = r.newBalance)

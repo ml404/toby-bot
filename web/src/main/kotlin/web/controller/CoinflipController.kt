@@ -3,6 +3,7 @@ package web.controller
 import database.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
+import database.service.JackpotService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
@@ -36,6 +37,7 @@ class CoinflipController(
     private val coinflipService: CoinflipService,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA
 ) {
 
@@ -66,6 +68,7 @@ class CoinflipController(
         model.addAttribute("minStake", Coinflip.MIN_STAKE)
         model.addAttribute("maxStake", Coinflip.MAX_STAKE)
         model.addAttribute("multiplier", Coinflip.DEFAULT_MULTIPLIER)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
         return "coinflip"
     }
@@ -94,7 +97,8 @@ class CoinflipController(
                     net = outcome.net,
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
-                    win = true
+                    win = true,
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
                 )
             )
 
@@ -141,5 +145,6 @@ data class FlipResponse(
     val net: Long? = null,
     val payout: Long? = null,
     val newBalance: Long? = null,
-    val win: Boolean? = null
+    val win: Boolean? = null,
+    val jackpotPayout: Long? = null
 )

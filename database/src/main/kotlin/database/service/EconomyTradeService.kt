@@ -32,12 +32,18 @@ import kotlin.math.floor
  * close). Midpoint slips the trader by half the impact on each leg,
  * which is what real markets approximate via "average fill price"
  * anyway, and it makes round-trips a strict net loss.
+ *
+ * Fees: a flat [TobyCoinEngine.TRADE_FEE] is skimmed off each leg and
+ * routed into the per-guild jackpot pool ([JackpotService]). The
+ * pool is paid out to casino minigame winners that hit the jackpot
+ * roll, so trade activity directly seeds gambling rewards.
  */
 @Service
 @Transactional
 class EconomyTradeService(
     private val userService: UserService,
-    private val marketService: TobyCoinMarketService
+    private val marketService: TobyCoinMarketService,
+    private val jackpotService: JackpotService
 ) {
 
     sealed interface TradeOutcome {
@@ -46,7 +52,10 @@ class EconomyTradeService(
             val transactedCredits: Long,
             val newCoins: Long,
             val newCredits: Long,
-            val newPrice: Double
+            val newPrice: Double,
+            // Fee skimmed off this trade and routed to the jackpot pool.
+            // Defaulted so existing test fixtures keep compiling.
+            val fee: Long = 0L
         ) : TradeOutcome
 
         data class InsufficientCredits(val needed: Long, val have: Long) : TradeOutcome
@@ -80,17 +89,20 @@ class EconomyTradeService(
 
         val prePrice = market.price
         val newPrice = TobyCoinEngine.applyBuyPressure(prePrice, amount)
-        // Midpoint fill — the trader pays the average of the pre- and
-        // post-pressure prices, eating half the slippage they cause.
-        // See class kdoc for why this exists.
         val executionPrice = (prePrice + newPrice) / 2.0
-        val cost = ceil(executionPrice * amount).toLong()
+        // Buyer pays the midpoint price plus the fee on top — the fee
+        // lives in the jackpot pool, not on the user's coin allotment.
+        val gross = ceil(executionPrice * amount).toLong()
+        val fee = ceil(gross * TobyCoinEngine.TRADE_FEE).toLong()
+        val cost = gross + fee
         val credits = user.socialCredit ?: 0L
         if (credits < cost) return TradeOutcome.InsufficientCredits(cost, credits)
 
         user.socialCredit = credits - cost
         user.tobyCoins += amount
         userService.updateUser(user)
+
+        if (fee > 0L) jackpotService.addToPool(guildId, fee)
 
         commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount)
 
@@ -99,7 +111,8 @@ class EconomyTradeService(
             transactedCredits = cost,
             newCoins = user.tobyCoins,
             newCredits = user.socialCredit ?: 0L,
-            newPrice = newPrice
+            newPrice = newPrice,
+            fee = fee
         )
     }
 
@@ -114,13 +127,17 @@ class EconomyTradeService(
 
         val prePrice = market.price
         val newPrice = TobyCoinEngine.applySellPressure(prePrice, amount)
-        // Midpoint fill — the trader receives the average of the pre- and
-        // post-pressure prices, paying half the slippage they cause.
         val executionPrice = (prePrice + newPrice) / 2.0
-        val proceeds = floor(executionPrice * amount).toLong()
+        // Seller's fee is taken off the midpoint proceeds before they
+        // hit the wallet — the fee feeds the jackpot pool.
+        val gross = floor(executionPrice * amount).toLong()
+        val fee = floor(gross * TobyCoinEngine.TRADE_FEE).toLong()
+        val proceeds = gross - fee
         user.tobyCoins -= amount
         user.socialCredit = (user.socialCredit ?: 0L) + proceeds
         userService.updateUser(user)
+
+        if (fee > 0L) jackpotService.addToPool(guildId, fee)
 
         commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount)
 
@@ -129,7 +146,8 @@ class EconomyTradeService(
             transactedCredits = proceeds,
             newCoins = user.tobyCoins,
             newCredits = user.socialCredit ?: 0L,
-            newPrice = newPrice
+            newPrice = newPrice,
+            fee = fee
         )
     }
 

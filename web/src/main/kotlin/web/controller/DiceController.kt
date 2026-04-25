@@ -3,6 +3,7 @@ package web.controller
 import database.economy.Dice
 import database.service.DiceService
 import database.service.DiceService.RollOutcome
+import database.service.JackpotService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
@@ -34,6 +35,7 @@ class DiceController(
     private val diceService: DiceService,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA
 ) {
 
@@ -64,6 +66,7 @@ class DiceController(
         model.addAttribute("maxStake", Dice.MAX_STAKE)
         model.addAttribute("sides", Dice.DEFAULT_SIDES)
         model.addAttribute("multiplier", Dice.DEFAULT_MULTIPLIER)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
         return "dice"
     }
@@ -90,7 +93,8 @@ class DiceController(
                     net = outcome.net,
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
-                    win = true
+                    win = true,
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
                 )
             )
 
@@ -135,5 +139,6 @@ data class RollResponse(
     val net: Long? = null,
     val payout: Long? = null,
     val newBalance: Long? = null,
-    val win: Boolean? = null
+    val win: Boolean? = null,
+    val jackpotPayout: Long? = null
 )
