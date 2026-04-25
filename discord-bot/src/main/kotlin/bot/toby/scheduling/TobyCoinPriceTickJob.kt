@@ -36,14 +36,10 @@ class TobyCoinPriceTickJob @Autowired constructor(
 
     companion object {
         // Kept long enough that the /economy 1Y view always has real data
-        // to draw. Pruning older samples still protects the table from
-        // growing forever on long-lived guilds.
+        // to draw, and that the Recent trades list mirrors the same window.
+        // Pruning still protects the table from growing forever on long-
+        // lived guilds.
         val HISTORY_RETENTION: Duration = Duration.ofDays(400)
-
-        // Trade rows include a Discord display name and surface in the
-        // Market chart's "Recent trades" list. The privacy policy promises
-        // 30-day retention for this — anything older gets swept here.
-        val TRADE_RETENTION: Duration = Duration.ofDays(30)
     }
 
     @Scheduled(fixedDelayString = "PT5M", initialDelayString = "PT1M")
@@ -53,10 +49,11 @@ class TobyCoinPriceTickJob @Autowired constructor(
             runCatching { tickGuild(guild.idLong, now) }
                 .onFailure { logger.error("Toby coin tick failed for guild ${guild.idLong}: ${it.message}") }
         }
-        runCatching { marketService.pruneHistoryOlderThan(now.minus(HISTORY_RETENTION)) }
+        val cutoff = now.minus(HISTORY_RETENTION)
+        runCatching { marketService.pruneHistoryOlderThan(cutoff) }
             .onFailure { logger.warn("Toby coin history prune failed: ${it.message}") }
         runCatching {
-            val removed = marketService.pruneTradesOlderThan(now.minus(TRADE_RETENTION))
+            val removed = marketService.pruneTradesOlderThan(cutoff)
             if (removed > 0) logger.info { "Pruned $removed expired toby coin trade rows." }
         }.onFailure { logger.warn("Toby coin trade prune failed: ${it.message}") }
     }
