@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicLong
         TestBotConfig::class,
     ]
 )
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 class TobyCoinTradePersistenceIntegrationTest {
 

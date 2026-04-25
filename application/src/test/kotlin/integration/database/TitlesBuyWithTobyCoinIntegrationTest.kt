@@ -52,7 +52,7 @@ import io.mockk.mockk
         TestBotConfig::class,
     ]
 )
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 class TitlesBuyWithTobyCoinIntegrationTest {
 

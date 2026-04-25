@@ -26,7 +26,7 @@ import org.springframework.test.context.ActiveProfiles
         TestBotConfig::class,
     ]
 )
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 class BrotherServiceImplIntegrationTest {
     @Autowired
