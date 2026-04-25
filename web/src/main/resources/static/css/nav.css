@@ -85,6 +85,16 @@ nav {
 }
 .nav-dropdown:hover .nav-dropdown-menu,
 .nav-dropdown.open .nav-dropdown-menu { display: flex; }
+/* Transparent bridge across the 8px gap between toggle and menu so the
+   cursor can travel from button to menu items without dropping :hover. */
+.nav-dropdown-menu::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+}
 .nav-dropdown-menu a,
 .nav-dropdown-menu .nav-dropdown-coming-soon {
     padding: 8px 16px;
@@ -118,6 +128,8 @@ nav {
         box-shadow: none;
         min-width: 0;
     }
+    /* No gap to bridge in the inline mobile layout. */
+    .nav-dropdown-menu::before { content: none; }
     .nav-dropdown-menu a, .nav-dropdown-menu .nav-dropdown-coming-soon {
         padding: 8px 4px;
         min-height: 36px;
