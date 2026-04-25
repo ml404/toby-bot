@@ -71,9 +71,10 @@ class TobyCoinTradePersistenceIntegrationTest {
             )
         )
 
-        // Use EPOCH as the floor so we don't depend on H2's precision when
-        // comparing executedAt to a since value computed off the same Instant.
-        val rows = persistence.listSince(guildId, Instant.EPOCH)
+        // Lower bound well before REF — same pattern test 2 uses successfully.
+        // Plain Instant.EPOCH triggers an H2 binding quirk against
+        // TIMESTAMP WITH TIME ZONE that drops the row from the result set.
+        val rows = persistence.listSince(guildId, REF.minus(Duration.ofDays(1)))
 
         assertEquals(1, rows.size)
         val row = rows.single()
@@ -125,7 +126,7 @@ class TobyCoinTradePersistenceIntegrationTest {
         val removed = persistence.deleteOlderThan(REF.minus(Duration.ofDays(30)))
 
         assertTrue(removed >= 1, "expected at least the 40-day-old row to be deleted")
-        val survivors = persistence.listSince(guildId, Instant.EPOCH)
+        val survivors = persistence.listSince(guildId, REF.minus(Duration.ofDays(365)))
         assertEquals(1, survivors.size, "the 5-day-old row should survive")
         assertEquals(2L, survivors.single().discordId)
     }
