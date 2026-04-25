@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Coinflip', '/css/coinflip.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container" th:attr="data-guild-id=${guildId}">
+
+    <div class="coinflip-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🪙 Coinflip • ' + ${guildName}">🪙 Coinflip</h1>
+        <p class="muted">Fair 50/50 double-or-nothing. Pick a side, set a stake. Bet between
+            <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">1000</span> credits per flip.</p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="coinflip-table">
+        <div class="coinflip-coin" id="coinflip-coin" aria-live="polite">
+            <span class="coinflip-coin-face" id="coinflip-coin-face">🪙</span>
+        </div>
+
+        <div class="coinflip-result" id="coinflip-result" hidden></div>
+
+        <form class="coinflip-bet" id="coinflip-bet" autocomplete="off">
+            <div class="coinflip-side-picker" role="radiogroup" aria-label="Pick a side">
+                <label class="coinflip-side">
+                    <input type="radio" name="side" value="HEADS" checked>
+                    <span>Heads</span>
+                </label>
+                <label class="coinflip-side">
+                    <input type="radio" name="side" value="TAILS">
+                    <span>Tails</span>
+                </label>
+            </div>
+            <label for="coinflip-stake" class="coinflip-stake-label">Stake (credits)</label>
+            <input id="coinflip-stake"
+                   name="stake"
+                   type="number"
+                   th:attr="min=${minStake}, max=${maxStake}"
+                   th:value="${minStake}"
+                   step="1">
+            <button type="submit" id="coinflip-flip" class="btn-primary">Flip</button>
+        </form>
+
+        <div class="coinflip-balance">
+            Balance: <strong id="coinflip-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="coinflip-rules">
+        <h2>Rules</h2>
+        <ul>
+            <li>Pick heads or tails, set a stake.</li>
+            <li>Match the flip → <strong th:text="${multiplier} + '×'">2×</strong> stake (you keep your stake and win the same amount on top).</li>
+            <li>Miss → lose your stake.</li>
+            <li>Fair 50/50, no house edge.</li>
+        </ul>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/coinflip.js}"></script>
+</body>
+</html>

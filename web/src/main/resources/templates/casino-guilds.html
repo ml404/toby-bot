@@ -15,9 +15,7 @@
     <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
 
     <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
-        <a class="lb-guild-card"
-           th:each="g : ${guilds}"
-           th:href="@{/casino/{id}/slots(id=${g.id})}">
+        <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">
             <div class="lb-guild-card-header">
                 <img th:if="${g.iconUrl != null}"
                      th:src="${g.iconUrl}"
@@ -34,10 +32,13 @@
                 <span class="muted">Your wallet:</span>
                 <span th:text="${g.credits} + ' credits'">0 credits</span>
             </div>
-            <div class="lb-guild-stats">
-                <span>🎰 Slots</span>
+            <div class="lb-guild-games">
+                <a class="btn-secondary"
+                   th:href="@{/casino/{id}/slots(id=${g.id})}">🎰 Slots</a>
+                <a class="btn-secondary"
+                   th:href="@{/casino/{id}/coinflip(id=${g.id})}">🪙 Coinflip</a>
             </div>
-        </a>
+        </div>
     </div>
 
     <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">

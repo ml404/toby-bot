@@ -69,13 +69,14 @@ describe('navbar fragment', () => {
         );
     });
 
-    test('Casino dropdown links to the Slots guild picker', () => {
+    test('Casino dropdown lists every minigame and points at the picker', () => {
         const casino = html.match(
             /<div class="nav-dropdown">[\s\S]*?Casino[\s\S]*?<\/div>\s*<\/div>/
         );
         expect(casino).not.toBeNull();
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Slots/);
-        // Coming-soon placeholder is gone now that Slots ships.
+        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Coinflip/);
+        // Coming-soon placeholder is gone now that the games ship.
         expect(casino[0]).not.toMatch(/coming soon/i);
     });
 
