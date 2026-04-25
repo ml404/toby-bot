@@ -74,7 +74,15 @@ class LeaderboardWebService(
 
         val totalCreditsThisMonth = rawRows.sumOf { it.creditsEarnedThisMonth }
         val totalVoiceThisMonth = rawRows.sumOf { it.voiceSecondsThisMonth }
-        val mostActiveName = rawRows.maxByOrNull { it.voiceSecondsThisMonth }?.name
+        // rawRows arrive ordered by current-total socialCredit desc. If nobody
+        // has any voice time this month, maxByOrNull returns the first row
+        // (tied-max at 0) — i.e. the lifetime leader — and the "Most active
+        // this month" card silently misrepresents them. Filter out the zeros
+        // so the card hides itself in that case (template guards on null).
+        val mostActiveName = rawRows
+            .filter { it.voiceSecondsThisMonth > 0L }
+            .maxByOrNull { it.voiceSecondsThisMonth }
+            ?.name
 
         return LeaderboardGuildView(
             guildName = guild.name,
