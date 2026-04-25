@@ -7,11 +7,10 @@
 -- the trade happened — "(title top-up)", "(casino top-up)" — so a
 -- viewer can tell organic activity from automated tops-up.
 --
--- Backfill is per-row; pre-existing rows can't tell you their source
--- after the fact, so they get the catch-all 'USER'. New writes are
--- explicit.
+-- Done in one ALTER so the DEFAULT lands together with the NOT NULL
+-- constraint (Postgres back-fills existing rows with the default in
+-- the same statement). Pre-migration trades get the catch-all 'USER'
+-- since we can't know retroactively what tagged them.
 
-ALTER TABLE toby_coin_trade ADD COLUMN reason VARCHAR(32);
-UPDATE toby_coin_trade SET reason = 'USER' WHERE reason IS NULL;
-ALTER TABLE toby_coin_trade ALTER COLUMN reason SET NOT NULL;
-ALTER TABLE toby_coin_trade ALTER COLUMN reason SET DEFAULT 'USER';
+ALTER TABLE toby_coin_trade
+    ADD COLUMN reason VARCHAR(32) NOT NULL DEFAULT 'USER';
