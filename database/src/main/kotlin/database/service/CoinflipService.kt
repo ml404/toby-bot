@@ -43,40 +43,33 @@ class CoinflipService(
     }
 
     fun flip(discordId: Long, guildId: Long, stake: Long, predicted: Coinflip.Side): FlipOutcome {
-        if (stake < Coinflip.MIN_STAKE || stake > Coinflip.MAX_STAKE) {
-            return FlipOutcome.InvalidStake(Coinflip.MIN_STAKE, Coinflip.MAX_STAKE)
-        }
-        val user = userService.getUserByIdForUpdate(discordId, guildId)
-            ?: return FlipOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < stake) return FlipOutcome.InsufficientCredits(stake, balance)
-
-        val flip = coinflip.flip(predicted, random)
-        // payout = multiplier × stake on a match, 0 on a miss. Net change
-        // to the user's balance is (payout - stake): positive on wins, -stake
-        // on losses.
-        val payout = flip.multiplier * stake
-        val net = payout - stake
-        user.socialCredit = balance + net
-        userService.updateUser(user)
-        val newBalance = user.socialCredit ?: 0L
-
-        return if (flip.isWin) {
-            FlipOutcome.Win(
-                stake = stake,
-                payout = payout,
-                net = net,
-                landed = flip.landed,
-                predicted = flip.predicted,
-                newBalance = newBalance
-            )
-        } else {
-            FlipOutcome.Lose(
-                stake = stake,
-                landed = flip.landed,
-                predicted = flip.predicted,
-                newBalance = newBalance
-            )
+        return when (val check = WagerHelper.checkAndLock(
+            userService, discordId, guildId, stake, Coinflip.MIN_STAKE, Coinflip.MAX_STAKE
+        )) {
+            is BalanceCheck.InvalidStake -> FlipOutcome.InvalidStake(check.min, check.max)
+            BalanceCheck.UnknownUser -> FlipOutcome.UnknownUser
+            is BalanceCheck.Insufficient -> FlipOutcome.InsufficientCredits(check.stake, check.have)
+            is BalanceCheck.Ok -> {
+                val flip = coinflip.flip(predicted, random)
+                val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, flip.multiplier)
+                if (flip.isWin) {
+                    FlipOutcome.Win(
+                        stake = stake,
+                        payout = r.payout,
+                        net = r.net,
+                        landed = flip.landed,
+                        predicted = flip.predicted,
+                        newBalance = r.newBalance
+                    )
+                } else {
+                    FlipOutcome.Lose(
+                        stake = stake,
+                        landed = flip.landed,
+                        predicted = flip.predicted,
+                        newBalance = r.newBalance
+                    )
+                }
+            }
         }
     }
 }
