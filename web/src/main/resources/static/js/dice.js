@@ -1,3 +1,23 @@
+// Pure-DOM render for a /roll response. Hoisted out of the IIFE so the
+// jest test in `dice.test.js` can drive it without booting the page.
+function renderDiceResult(resultEl, body) {
+    if (!resultEl) return;
+    resultEl.hidden = false;
+    resultEl.classList.remove('dice-result-win', 'dice-result-lose', 'dice-result-jackpot');
+    if (body.win) {
+        resultEl.classList.add('dice-result-win');
+        const winLine = '<strong>' + body.landed + '!</strong> You called ' +
+            body.predicted + ' &middot; <strong>+' + body.net + ' credits</strong>';
+        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'dice-result-jackpot', winLine)
+            : winLine;
+    } else {
+        resultEl.classList.add('dice-result-lose');
+        resultEl.innerHTML = '<strong>' + body.landed + '.</strong> You called ' +
+            body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+    }
+}
+
 (function () {
     'use strict';
 
@@ -58,20 +78,6 @@
         }
     }
 
-    function showResult(body) {
-        if (!resultEl) return;
-        resultEl.hidden = false;
-        resultEl.classList.remove('dice-result-win', 'dice-result-lose');
-        if (body.win) {
-            resultEl.classList.add('dice-result-win');
-            resultEl.innerHTML = '<strong>' + body.landed + '!</strong> You called ' +
-                body.predicted + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        } else {
-            resultEl.classList.add('dice-result-lose');
-            resultEl.innerHTML = '<strong>' + body.landed + '.</strong> You called ' +
-                body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
-        }
-    }
 
     function applyBalance(newBalance) {
         if (typeof newBalance !== 'number') return;
@@ -112,7 +118,7 @@
                     stopRollAnimation(intervalId, body && body.landed);
                     rollBtn.disabled = false;
                     if (body && body.ok) {
-                        showResult(body);
+                        renderDiceResult(resultEl, body);
                         applyBalance(body.newBalance);
                     } else {
                         if (resultEl) resultEl.hidden = true;
@@ -128,3 +134,7 @@
             });
     });
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { renderDiceResult };
+}

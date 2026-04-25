@@ -48,6 +48,16 @@ object TobyCoinEngine {
      */
     const val TRADE_IMPACT = 0.0001
 
+    /**
+     * Flat fee charged on each trade leg. The fee is skimmed off the
+     * trader's payment (or proceeds) and routed into the per-guild
+     * jackpot pool, which casino minigame wins can hit for a payout.
+     * 1 % per leg means a buy-then-sell round trip pays ~2 % to the
+     * pool, which together with midpoint pricing makes the
+     * round-trip exploit unprofitable at any size and seeds gameplay.
+     */
+    const val TRADE_FEE = 0.01
+
     private const val SECONDS_PER_YEAR = 365.0 * 24.0 * 60.0 * 60.0
 
     /**

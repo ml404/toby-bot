@@ -15,6 +15,7 @@ import kotlin.random.Random
 class HighlowServiceTest {
 
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var highlow: Highlow
     private lateinit var service: HighlowService
 
@@ -24,8 +25,9 @@ class HighlowServiceTest {
     @BeforeEach
     fun setup() {
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         highlow = mockk(relaxed = true)
-        service = HighlowService(userService, highlow, Random(0))
+        service = HighlowService(userService, jackpotService, highlow, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =

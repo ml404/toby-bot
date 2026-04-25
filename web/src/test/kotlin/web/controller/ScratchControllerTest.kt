@@ -1,6 +1,7 @@
 package web.controller
 
 import database.economy.SlotMachine
+import database.service.JackpotService
 import database.service.ScratchService
 import database.service.ScratchService.ScratchOutcome
 import database.service.UserService
@@ -23,6 +24,7 @@ class ScratchControllerTest {
     private lateinit var scratchService: ScratchService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var controller: ScratchController
@@ -32,13 +34,14 @@ class ScratchControllerTest {
         scratchService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = ScratchController(scratchService, economyWebService, userService, jda)
+        controller = ScratchController(scratchService, economyWebService, userService, jackpotService, jda)
     }
 
     @Test
@@ -112,5 +115,21 @@ class ScratchControllerTest {
 
         assertEquals(403, response.statusCode.value())
         verify(exactly = 0) { scratchService.scratch(any(), any(), any()) }
+    }
+
+    @Test
+    fun `jackpot win surfaces jackpotPayout in the response body`() {
+        every { scratchService.scratch(discordId, guildId, 100L) } returns ScratchOutcome.Win(
+            stake = 100L, payout = 3_000L, net = 2_900L,
+            cells = List(9) { SlotMachine.Symbol.STAR },
+            winningSymbol = SlotMachine.Symbol.STAR,
+            matchCount = 9,
+            newBalance = 8_900L,
+            jackpotPayout = 6_000L
+        )
+
+        val response = controller.scratch(guildId, ScratchRequest(stake = 100L), user)
+
+        assertEquals(6_000L, response.body!!.jackpotPayout)
     }
 }

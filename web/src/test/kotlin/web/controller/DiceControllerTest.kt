@@ -2,6 +2,7 @@ package web.controller
 
 import database.service.DiceService
 import database.service.DiceService.RollOutcome
+import database.service.JackpotService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -22,6 +23,7 @@ class DiceControllerTest {
     private lateinit var diceService: DiceService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var controller: DiceController
@@ -31,13 +33,14 @@ class DiceControllerTest {
         diceService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = DiceController(diceService, economyWebService, userService, jda)
+        controller = DiceController(diceService, economyWebService, userService, jackpotService, jda)
     }
 
     @Test
@@ -112,5 +115,28 @@ class DiceControllerTest {
 
         assertEquals(403, response.statusCode.value())
         verify(exactly = 0) { diceService.roll(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `jackpot win surfaces jackpotPayout in the response body`() {
+        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Win(
+            stake = 100L, payout = 500L, net = 400L, landed = 4, predicted = 4,
+            newBalance = 11_400L, jackpotPayout = 10_000L
+        )
+
+        val response = controller.roll(guildId, RollRequest(prediction = 4, stake = 100L), user)
+
+        assertEquals(10_000L, response.body!!.jackpotPayout)
+    }
+
+    @Test
+    fun `non-jackpot win does not include jackpotPayout`() {
+        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Win(
+            stake = 100L, payout = 500L, net = 400L, landed = 4, predicted = 4, newBalance = 1_400L
+        )
+
+        val response = controller.roll(guildId, RollRequest(prediction = 4, stake = 100L), user)
+
+        assertEquals(null, response.body!!.jackpotPayout)
     }
 }

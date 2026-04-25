@@ -3,6 +3,7 @@ package web.controller
 import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
+import database.service.JackpotService
 import database.service.UserService
 import jakarta.servlet.http.HttpSession
 import net.dv8tion.jda.api.JDA
@@ -28,6 +29,7 @@ class HighlowController(
     private val highlowService: HighlowService,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA
 ) {
 
@@ -65,6 +67,7 @@ class HighlowController(
         model.addAttribute("multiplier", Highlow.DEFAULT_MULTIPLIER)
         model.addAttribute("anchor", anchor)
         model.addAttribute("anchorLabel", cardLabel(anchor))
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
         return "highlow"
     }
@@ -114,7 +117,8 @@ class HighlowController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    nextAnchor = nextRoundAnchor
+                    nextAnchor = nextRoundAnchor,
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
                 )
             )
 
@@ -182,5 +186,6 @@ data class PlayResponse(
     val payout: Long? = null,
     val newBalance: Long? = null,
     val win: Boolean? = null,
-    val nextAnchor: Int? = null
+    val nextAnchor: Int? = null,
+    val jackpotPayout: Long? = null
 )

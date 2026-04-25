@@ -13,6 +13,7 @@ import kotlin.random.Random
 @Transactional
 class ScratchService(
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val card: ScratchCard = ScratchCard(),
     private val random: Random = Random.Default
 ) {
@@ -25,7 +26,8 @@ class ScratchService(
             val cells: List<database.economy.SlotMachine.Symbol>,
             val winningSymbol: database.economy.SlotMachine.Symbol,
             val matchCount: Int,
-            val newBalance: Long
+            val newBalance: Long,
+            val jackpotPayout: Long = 0L
         ) : ScratchOutcome
 
         data class Lose(
@@ -50,6 +52,7 @@ class ScratchService(
                 val result = card.scratch(random)
                 val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, result.multiplier)
                 if (result.isWin && result.winningSymbol != null) {
+                    val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, check.user, guildId, random)
                     ScratchOutcome.Win(
                         stake = stake,
                         payout = r.payout,
@@ -57,7 +60,8 @@ class ScratchService(
                         cells = result.cells,
                         winningSymbol = result.winningSymbol,
                         matchCount = result.matchCount,
-                        newBalance = r.newBalance
+                        newBalance = r.newBalance + jackpot,
+                        jackpotPayout = jackpot
                     )
                 } else {
                     ScratchOutcome.Lose(stake = stake, cells = result.cells, newBalance = r.newBalance)

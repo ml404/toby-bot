@@ -1,3 +1,25 @@
+// Pure-DOM render for a /flip response. Hoisted out of the IIFE so the
+// jest test in `coinflip.test.js` can drive it without booting the page.
+function renderCoinflipResult(resultEl, body) {
+    if (!resultEl) return;
+    resultEl.hidden = false;
+    resultEl.classList.remove('coinflip-result-win', 'coinflip-result-lose', 'coinflip-result-jackpot');
+    const landedLabel = body.landed === 'HEADS' ? 'Heads' : 'Tails';
+    const predictedLabel = body.predicted === 'HEADS' ? 'Heads' : 'Tails';
+    if (body.win) {
+        resultEl.classList.add('coinflip-result-win');
+        const winLine = '<strong>' + landedLabel + '!</strong> You called ' +
+            predictedLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
+        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'coinflip-result-jackpot', winLine)
+            : winLine;
+    } else {
+        resultEl.classList.add('coinflip-result-lose');
+        resultEl.innerHTML = '<strong>' + landedLabel + '.</strong> You called ' +
+            predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+    }
+}
+
 (function () {
     'use strict';
 
@@ -64,23 +86,6 @@
         }
     }
 
-    function showResult(body) {
-        if (!resultEl) return;
-        resultEl.hidden = false;
-        resultEl.classList.remove('coinflip-result-win', 'coinflip-result-lose');
-        const landedLabel = body.landed === 'HEADS' ? 'Heads' : 'Tails';
-        const predictedLabel = body.predicted === 'HEADS' ? 'Heads' : 'Tails';
-        if (body.win) {
-            resultEl.classList.add('coinflip-result-win');
-            resultEl.innerHTML = '<strong>' + landedLabel + '!</strong> You called ' +
-                predictedLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        } else {
-            resultEl.classList.add('coinflip-result-lose');
-            resultEl.innerHTML = '<strong>' + landedLabel + '.</strong> You called ' +
-                predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
-        }
-    }
-
     function applyBalance(newBalance) {
         if (typeof newBalance !== 'number') return;
         if (balanceEl) balanceEl.textContent = newBalance;
@@ -120,7 +125,7 @@
                     stopFlipAnimation(intervalId, body && body.landed);
                     flipBtn.disabled = false;
                     if (body && body.ok) {
-                        showResult(body);
+                        renderCoinflipResult(resultEl, body);
                         applyBalance(body.newBalance);
                     } else {
                         if (resultEl) resultEl.hidden = true;
@@ -136,3 +141,7 @@
             });
     });
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { renderCoinflipResult };
+}

@@ -1,3 +1,39 @@
+// Pure card-face label. Hoisted so the jest test can call it directly.
+function highlowCardLabel(n) {
+    switch (n) {
+        case 1: return 'A';
+        case 11: return 'J';
+        case 12: return 'Q';
+        case 13: return 'K';
+        default: return String(n);
+    }
+}
+
+// Pure-DOM render for a /play response. Hoisted out of the IIFE so the
+// jest test in `highlow.test.js` can drive it without booting the page.
+function renderHighlowResult(resultEl, body) {
+    if (!resultEl) return;
+    resultEl.hidden = false;
+    resultEl.classList.remove('highlow-result-win', 'highlow-result-lose', 'highlow-result-jackpot');
+    const dirLabel = body.direction === 'HIGHER' ? 'Higher' : 'Lower';
+    if (body.win) {
+        resultEl.classList.add('highlow-result-win');
+        const winLine = '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
+            (body.next > body.anchor ? '>' : '<') + ' <strong>' + highlowCardLabel(body.anchor) +
+            '</strong> &middot; you called ' + dirLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
+        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'highlow-result-jackpot', winLine)
+            : winLine;
+    } else {
+        resultEl.classList.add('highlow-result-lose');
+        const tie = body.next === body.anchor;
+        resultEl.innerHTML = '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
+            (tie ? '=' : (body.next > body.anchor ? '>' : '<')) +
+            ' <strong>' + highlowCardLabel(body.anchor) + '</strong> &middot; you called ' +
+            dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+    }
+}
+
 (function () {
     'use strict';
 
@@ -37,15 +73,7 @@
         return checked ? checked.value : null;
     }
 
-    function cardLabel(n) {
-        switch (n) {
-            case 1: return 'A';
-            case 11: return 'J';
-            case 12: return 'Q';
-            case 13: return 'K';
-            default: return String(n);
-        }
-    }
+    const cardLabel = highlowCardLabel;
 
     function startNextShuffle() {
         dealing = true;
@@ -77,26 +105,6 @@
         anchorCard.dataset.value = String(value);
         nextFace.textContent = '?';
         delete nextCard.dataset.value;
-    }
-
-    function showResult(body) {
-        if (!resultEl) return;
-        resultEl.hidden = false;
-        resultEl.classList.remove('highlow-result-win', 'highlow-result-lose');
-        const dirLabel = body.direction === 'HIGHER' ? 'Higher' : 'Lower';
-        if (body.win) {
-            resultEl.classList.add('highlow-result-win');
-            resultEl.innerHTML = '<strong>' + cardLabel(body.next) + '</strong> ' +
-                (body.next > body.anchor ? '>' : '<') + ' <strong>' + cardLabel(body.anchor) +
-                '</strong> &middot; you called ' + dirLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        } else {
-            resultEl.classList.add('highlow-result-lose');
-            const tie = body.next === body.anchor;
-            resultEl.innerHTML = '<strong>' + cardLabel(body.next) + '</strong> ' +
-                (tie ? '=' : (body.next > body.anchor ? '>' : '<')) +
-                ' <strong>' + cardLabel(body.anchor) + '</strong> &middot; you called ' +
-                dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
-        }
     }
 
     function applyBalance(newBalance) {
@@ -137,7 +145,7 @@
                 setTimeout(function () {
                     if (body && body.ok) {
                         stopNextShuffle(intervalId, body.next);
-                        showResult(body);
+                        renderHighlowResult(resultEl, body);
                         applyBalance(body.newBalance);
                         // Pause briefly so the player reads the result, then
                         // surface the next round's anchor without requiring
@@ -161,3 +169,7 @@
             });
     });
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { renderHighlowResult, highlowCardLabel };
+}

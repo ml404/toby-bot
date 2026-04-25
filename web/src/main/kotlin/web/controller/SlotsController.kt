@@ -1,6 +1,7 @@
 package web.controller
 
 import database.economy.SlotMachine
+import database.service.JackpotService
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
 import database.service.UserService
@@ -36,6 +37,7 @@ class SlotsController(
     private val slotsService: SlotsService,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA
 ) {
 
@@ -66,6 +68,7 @@ class SlotsController(
         model.addAttribute("minStake", SlotMachine.MIN_STAKE)
         model.addAttribute("maxStake", SlotMachine.MAX_STAKE)
         model.addAttribute("payoutTable", payoutRows())
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
         return "slots"
     }
@@ -91,7 +94,8 @@ class SlotsController(
                     payout = outcome.payout,
                     net = outcome.net,
                     newBalance = outcome.newBalance,
-                    win = true
+                    win = true,
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
                 )
             )
 
@@ -146,7 +150,8 @@ data class SpinResponse(
     val payout: Long? = null,
     val net: Long? = null,
     val newBalance: Long? = null,
-    val win: Boolean? = null
+    val win: Boolean? = null,
+    val jackpotPayout: Long? = null
 )
 
 data class PayoutRow(val symbols: String, val multiplier: String)
