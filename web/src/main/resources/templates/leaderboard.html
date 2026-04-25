@@ -66,7 +66,8 @@
                   class="lb-title-pill"
                   th:text="${view.podium[1].title}">Title</span>
             <div class="lb-podium-credits">
-                <strong th:if="${isMonth}" th:text="'+' + ${view.podium[1].creditsEarnedThisMonth}">+0</strong>
+                <strong th:if="${isMonth}"
+                        th:text="|${view.podium[1].creditsEarnedThisMonth >= 0 ? '+' : ''}${view.podium[1].creditsEarnedThisMonth}|">+0</strong>
                 <strong th:unless="${isMonth}" th:text="${view.podium[1].socialCredit}">0</strong>
                 <span th:text="${isMonth ? 'this month' : 'credits'}">credits</span>
             </div>
@@ -74,8 +75,8 @@
                  th:if="${isMonth}"
                  th:text="${view.podium[1].socialCredit} + ' total'">0 total</div>
             <div class="lb-podium-month"
-                 th:if="${!isMonth and view.podium[1].creditsEarnedThisMonth > 0}"
-                 th:text="'+' + ${view.podium[1].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
+                 th:if="${!isMonth and view.podium[1].creditsEarnedThisMonth != 0}"
+                 th:text="|${view.podium[1].creditsEarnedThisMonth > 0 ? '+' : ''}${view.podium[1].creditsEarnedThisMonth} this month|">+0 this month</div>
             <div class="lb-podium-voice" th:text="${view.podium[1].voiceThisMonthDisplay} + ' voice'">0m voice</div>
         </div>
 
@@ -91,7 +92,8 @@
                   class="lb-title-pill"
                   th:text="${view.podium[0].title}">Title</span>
             <div class="lb-podium-credits">
-                <strong th:if="${isMonth}" th:text="'+' + ${view.podium[0].creditsEarnedThisMonth}">+0</strong>
+                <strong th:if="${isMonth}"
+                        th:text="|${view.podium[0].creditsEarnedThisMonth >= 0 ? '+' : ''}${view.podium[0].creditsEarnedThisMonth}|">+0</strong>
                 <strong th:unless="${isMonth}" th:text="${view.podium[0].socialCredit}">0</strong>
                 <span th:text="${isMonth ? 'this month' : 'credits'}">credits</span>
             </div>
@@ -99,8 +101,8 @@
                  th:if="${isMonth}"
                  th:text="${view.podium[0].socialCredit} + ' total'">0 total</div>
             <div class="lb-podium-month"
-                 th:if="${!isMonth and view.podium[0].creditsEarnedThisMonth > 0}"
-                 th:text="'+' + ${view.podium[0].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
+                 th:if="${!isMonth and view.podium[0].creditsEarnedThisMonth != 0}"
+                 th:text="|${view.podium[0].creditsEarnedThisMonth > 0 ? '+' : ''}${view.podium[0].creditsEarnedThisMonth} this month|">+0 this month</div>
             <div class="lb-podium-voice" th:text="${view.podium[0].voiceThisMonthDisplay} + ' voice'">0m voice</div>
         </div>
 
@@ -116,7 +118,8 @@
                   class="lb-title-pill"
                   th:text="${view.podium[2].title}">Title</span>
             <div class="lb-podium-credits">
-                <strong th:if="${isMonth}" th:text="'+' + ${view.podium[2].creditsEarnedThisMonth}">+0</strong>
+                <strong th:if="${isMonth}"
+                        th:text="|${view.podium[2].creditsEarnedThisMonth >= 0 ? '+' : ''}${view.podium[2].creditsEarnedThisMonth}|">+0</strong>
                 <strong th:unless="${isMonth}" th:text="${view.podium[2].socialCredit}">0</strong>
                 <span th:text="${isMonth ? 'this month' : 'credits'}">credits</span>
             </div>
@@ -124,8 +127,8 @@
                  th:if="${isMonth}"
                  th:text="${view.podium[2].socialCredit} + ' total'">0 total</div>
             <div class="lb-podium-month"
-                 th:if="${!isMonth and view.podium[2].creditsEarnedThisMonth > 0}"
-                 th:text="'+' + ${view.podium[2].creditsEarnedThisMonth} + ' this month'">+0 this month</div>
+                 th:if="${!isMonth and view.podium[2].creditsEarnedThisMonth != 0}"
+                 th:text="|${view.podium[2].creditsEarnedThisMonth > 0 ? '+' : ''}${view.podium[2].creditsEarnedThisMonth} this month|">+0 this month</div>
             <div class="lb-podium-voice" th:text="${view.podium[2].voiceThisMonthDisplay} + ' voice'">0m voice</div>
         </div>
     </section>
@@ -185,7 +188,10 @@
                             <span th:if="${row.creditsEarnedThisMonth > 0}"
                                   class="lb-value-month"
                                   th:text="'+' + ${row.creditsEarnedThisMonth}">+0</span>
-                            <span th:unless="${row.creditsEarnedThisMonth > 0}" class="muted">—</span>
+                            <span th:if="${row.creditsEarnedThisMonth &lt; 0}"
+                                  class="lb-value-month-down"
+                                  th:text="${row.creditsEarnedThisMonth}">-0</span>
+                            <span th:if="${row.creditsEarnedThisMonth == 0}" class="muted">—</span>
                         </td>
                         <td data-label="Voice" th:text="${row.voiceThisMonthDisplay}">0m</td>
                     </tr>
