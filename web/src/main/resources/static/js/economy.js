@@ -21,7 +21,9 @@
     const windowButtons = document.querySelectorAll('#economy-windows button');
     const recentTradesPanel = document.getElementById('economy-recent-trades-panel');
     const recentTradesList = document.getElementById('economy-recent-trades');
-    const RECENT_TRADES_LIMIT = 20;
+    // Cap is generous — the panel scrolls (see economy.css), so the
+    // only ceiling is rendering cost on very busy markets.
+    const RECENT_TRADES_LIMIT = 100;
 
     const BUY_COLOR = '#57F287';
     const SELL_COLOR = '#ED4245';

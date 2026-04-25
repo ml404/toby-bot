@@ -21,6 +21,17 @@ import kotlin.math.floor
  * user balances + market price + history append, and returns a
  * descriptive result so the caller can render messaging in whatever
  * form suits (Discord embed, web JSON, etc.).
+ *
+ * Pricing: trades execute at the **midpoint** of the pre-pressure and
+ * post-pressure prices, i.e. the average price the trader's order
+ * walks across as it consumes liquidity. Without this — when buys paid
+ * the pre-pressure price and sells received the post-pressure price —
+ * a buy-then-immediate-sell of N coins printed `TRADE_IMPACT × N² × P`
+ * credits per round-trip (with N=1000 / P=100 / k=0.0001 that's 10k
+ * credits a cycle, the live exploit this service was patched to
+ * close). Midpoint slips the trader by half the impact on each leg,
+ * which is what real markets approximate via "average fill price"
+ * anyway, and it makes round-trips a strict net loss.
  */
 @Service
 @Transactional
@@ -67,9 +78,12 @@ class EconomyTradeService(
             ?: return TradeOutcome.UnknownUser
         val market = loadOrCreateMarketForUpdate(guildId)
 
-        // Capture pre-pressure price so the recorded trade reflects what
-        // the trader actually paid per coin, not the post-trade price.
-        val executionPrice = market.price
+        val prePrice = market.price
+        val newPrice = TobyCoinEngine.applyBuyPressure(prePrice, amount)
+        // Midpoint fill — the trader pays the average of the pre- and
+        // post-pressure prices, eating half the slippage they cause.
+        // See class kdoc for why this exists.
+        val executionPrice = (prePrice + newPrice) / 2.0
         val cost = ceil(executionPrice * amount).toLong()
         val credits = user.socialCredit ?: 0L
         if (credits < cost) return TradeOutcome.InsufficientCredits(cost, credits)
@@ -78,7 +92,6 @@ class EconomyTradeService(
         user.tobyCoins += amount
         userService.updateUser(user)
 
-        val newPrice = TobyCoinEngine.applyBuyPressure(executionPrice, amount)
         commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount)
 
         return TradeOutcome.Ok(
@@ -99,13 +112,16 @@ class EconomyTradeService(
 
         if (user.tobyCoins < amount) return TradeOutcome.InsufficientCoins(amount, user.tobyCoins)
 
-        val executionPrice = market.price
+        val prePrice = market.price
+        val newPrice = TobyCoinEngine.applySellPressure(prePrice, amount)
+        // Midpoint fill — the trader receives the average of the pre- and
+        // post-pressure prices, paying half the slippage they cause.
+        val executionPrice = (prePrice + newPrice) / 2.0
         val proceeds = floor(executionPrice * amount).toLong()
         user.tobyCoins -= amount
         user.socialCredit = (user.socialCredit ?: 0L) + proceeds
         userService.updateUser(user)
 
-        val newPrice = TobyCoinEngine.applySellPressure(executionPrice, amount)
         commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount)
 
         return TradeOutcome.Ok(
