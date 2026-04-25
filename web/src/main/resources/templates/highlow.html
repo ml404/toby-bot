@@ -19,8 +19,10 @@
 
     <section class="highlow-table">
         <div class="highlow-cards">
-            <div class="highlow-card" id="highlow-anchor" aria-live="polite">
-                <span class="highlow-card-face" id="highlow-anchor-face">?</span>
+            <div class="highlow-card" id="highlow-anchor"
+                 th:attr="data-value=${anchor}" aria-live="polite">
+                <span class="highlow-card-face" id="highlow-anchor-face"
+                      th:text="${anchorLabel}">?</span>
                 <span class="highlow-card-label">Anchor</span>
             </div>
             <div class="highlow-arrow" id="highlow-arrow" aria-hidden="true">→</div>
@@ -61,10 +63,11 @@
     <section class="highlow-rules">
         <h2>Rules</h2>
         <ul>
-            <li>Pick higher or lower, set a stake.</li>
-            <li>The anchor and next card are drawn together — you don't see the anchor first.</li>
+            <li>The anchor card is revealed up front — you see it before betting.</li>
+            <li>Pick higher or lower, set a stake, then deal the next card.</li>
             <li>Direction matches → <strong th:text="${multiplier} + '×'">2×</strong> stake.</li>
             <li>Wrong direction or tie (anchor == next) → lose stake.</li>
+            <li>The anchor is locked to your session, so refreshing won't reroll it.</li>
             <li>Average RTP ≈ 12/13 ≈ 0.923 (~7.7% house edge from the tie-loses rule).</li>
         </ul>
     </section>

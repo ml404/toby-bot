@@ -7,8 +7,8 @@ import kotlin.random.Random
  * card draws and a comparison against the caller's direction.
  *
  * Mechanic
- *   Server draws an anchor card (1..13). User pre-commits HIGHER or
- *   LOWER. Server draws the next card. Win condition:
+ *   Server draws an anchor card (1..13). User commits HIGHER or LOWER.
+ *   Server draws the next card. Win condition:
  *     - HIGHER → next > anchor
  *     - LOWER  → next < anchor
  *     - tie (next == anchor) → lose
@@ -16,10 +16,14 @@ import kotlin.random.Random
  *   (~7.7% house edge from the tie-loses rule). Sits between
  *   /coinflip (no edge) and /slots (~11% edge).
  *
- * Why pre-commit instead of "show card, then pick"
- *   Single API call, no sticky state, identical Discord and web shape.
- *   Anchor is part of the result, not a pre-state. Variance is real
- *   though — anchor=13 + HIGHER is a sure loss.
+ * Two flows live here:
+ *   - [play] — bundled draw used by Discord. Anchor + next come out
+ *     together; the player has no chance to peek before committing.
+ *   - [dealAnchor] + [resolve] — split flow used by the web page.
+ *     Anchor is revealed first; the user picks direction having seen
+ *     it. The web caller is responsible for persisting the anchor
+ *     between requests (HttpSession in [HighlowController]) so the
+ *     player can't reroll a fresh anchor by refreshing the page.
  */
 class Highlow(
     private val deckSize: Int = DEFAULT_DECK_SIZE,
@@ -40,8 +44,22 @@ class Highlow(
         val isWin: Boolean get() = multiplier > 0L
     }
 
+    /** Bundled draw — anchor + next in a single call. Discord uses this. */
     fun play(direction: Direction, random: Random): Hand {
-        val anchor = random.nextInt(1, deckSize + 1)
+        val anchor = dealAnchor(random)
+        return resolve(anchor, direction, random)
+    }
+
+    /** Standalone anchor draw for the split web flow. */
+    fun dealAnchor(random: Random): Int = random.nextInt(1, deckSize + 1)
+
+    /**
+     * Given an anchor that's already been revealed, draw the next card
+     * and decide the outcome. Used by the web flow where the anchor was
+     * shown before the user picked direction.
+     */
+    fun resolve(anchor: Int, direction: Direction, random: Random): Hand {
+        require(anchor in 1..deckSize) { "anchor $anchor outside 1..$deckSize" }
         val next = random.nextInt(1, deckSize + 1)
         val won = when (direction) {
             Direction.HIGHER -> next > anchor

@@ -27,7 +27,7 @@
 
     if (!form || !dealBtn || !stakeInput || !anchorFace || !nextFace) return;
 
-    const DEAL_DURATION_MS = 1000;
+    const NEXT_DEAL_MS = 900;
     const SHUFFLE_INTERVAL_MS = 70;
 
     let dealing = false;
@@ -47,30 +47,36 @@
         }
     }
 
-    function startShuffle() {
+    function startNextShuffle() {
         dealing = true;
-        anchorCard.classList.add('shuffling');
         nextCard.classList.add('shuffling');
         return setInterval(function () {
-            anchorFace.textContent = cardLabel(1 + Math.floor(Math.random() * 13));
             nextFace.textContent = cardLabel(1 + Math.floor(Math.random() * 13));
         }, SHUFFLE_INTERVAL_MS);
     }
 
-    function stopShuffle(intervalId, body) {
+    function stopNextShuffle(intervalId, value) {
         clearInterval(intervalId);
         dealing = false;
-        anchorCard.classList.remove('shuffling');
         nextCard.classList.remove('shuffling');
-        if (body && typeof body.anchor === 'number' && typeof body.next === 'number') {
-            anchorFace.textContent = cardLabel(body.anchor);
-            nextFace.textContent = cardLabel(body.next);
-            anchorCard.dataset.value = String(body.anchor);
-            nextCard.dataset.value = String(body.next);
+        if (typeof value === 'number') {
+            nextFace.textContent = cardLabel(value);
+            nextCard.dataset.value = String(value);
         } else {
-            anchorFace.textContent = '?';
             nextFace.textContent = '?';
+            delete nextCard.dataset.value;
         }
+    }
+
+    // After a settled round, surface the next round's anchor in the
+    // anchor slot and reset the next-card placeholder so the player can
+    // see the new draw without refreshing the page.
+    function rollAnchorTo(value) {
+        if (typeof value !== 'number') return;
+        anchorFace.textContent = cardLabel(value);
+        anchorCard.dataset.value = String(value);
+        nextFace.textContent = '?';
+        delete nextCard.dataset.value;
     }
 
     function showResult(body) {
@@ -114,11 +120,11 @@
         }
 
         dealBtn.disabled = true;
-        const intervalId = startShuffle();
+        const intervalId = startNextShuffle();
         const requestStart = Date.now();
 
         if (!postJson) {
-            stopShuffle(intervalId);
+            stopNextShuffle(intervalId);
             dealBtn.disabled = false;
             toast('API helper missing — refresh the page.', 'error');
             return;
@@ -127,21 +133,28 @@
         postJson('/casino/' + guildId + '/highlow/play', { direction: direction, stake: stake })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
-                const remaining = Math.max(0, DEAL_DURATION_MS - elapsed);
+                const remaining = Math.max(0, NEXT_DEAL_MS - elapsed);
                 setTimeout(function () {
-                    stopShuffle(intervalId, body);
-                    dealBtn.disabled = false;
                     if (body && body.ok) {
+                        stopNextShuffle(intervalId, body.next);
                         showResult(body);
                         applyBalance(body.newBalance);
+                        // Pause briefly so the player reads the result, then
+                        // surface the next round's anchor without requiring
+                        // a page refresh.
+                        if (typeof body.nextAnchor === 'number') {
+                            setTimeout(function () { rollAnchorTo(body.nextAnchor); }, 1200);
+                        }
                     } else {
+                        stopNextShuffle(intervalId);
                         if (resultEl) resultEl.hidden = true;
                         toast((body && body.error) || 'Deal failed.', 'error');
                     }
+                    dealBtn.disabled = false;
                 }, remaining);
             })
             .catch(function () {
-                stopShuffle(intervalId);
+                stopNextShuffle(intervalId);
                 dealBtn.disabled = false;
                 if (resultEl) resultEl.hidden = true;
                 toast('Network error.', 'error');

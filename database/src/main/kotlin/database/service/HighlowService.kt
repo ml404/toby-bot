@@ -9,6 +9,13 @@ import kotlin.random.Random
  * Atomic play path for the `/highlow` minigame. Same lock-then-mutate
  * pattern as the other minigame services via
  * [UserService.getUserByIdForUpdate].
+ *
+ * Two entry points:
+ *   - [play] without an anchor — Discord and any caller that wants the
+ *     bundled "draw both cards now" semantics.
+ *   - [play] with an anchor — the web caller has already revealed the
+ *     anchor to the player; this resolves the next card against that
+ *     anchor inside the same transaction as the wager.
  */
 @Service
 @Transactional
@@ -42,7 +49,32 @@ class HighlowService(
         data object UnknownUser : PlayOutcome
     }
 
-    fun play(discordId: Long, guildId: Long, stake: Long, direction: Highlow.Direction): PlayOutcome {
+    /** Draw a fresh anchor without committing any state. The web flow uses this on page load. */
+    fun dealAnchor(): Int = highlow.dealAnchor(random)
+
+    /** Bundled flow: server draws both cards inside this call. */
+    fun play(discordId: Long, guildId: Long, stake: Long, direction: Highlow.Direction): PlayOutcome =
+        playInternal(discordId, guildId, stake, direction, anchor = null)
+
+    /**
+     * Stepwise flow: caller already revealed [anchor] to the player.
+     * The next card is drawn here and the wager settles atomically.
+     */
+    fun play(
+        discordId: Long,
+        guildId: Long,
+        stake: Long,
+        direction: Highlow.Direction,
+        anchor: Int
+    ): PlayOutcome = playInternal(discordId, guildId, stake, direction, anchor = anchor)
+
+    private fun playInternal(
+        discordId: Long,
+        guildId: Long,
+        stake: Long,
+        direction: Highlow.Direction,
+        anchor: Int?
+    ): PlayOutcome {
         return when (val check = WagerHelper.checkAndLock(
             userService, discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE
         )) {
@@ -50,7 +82,11 @@ class HighlowService(
             BalanceCheck.UnknownUser -> PlayOutcome.UnknownUser
             is BalanceCheck.Insufficient -> PlayOutcome.InsufficientCredits(check.stake, check.have)
             is BalanceCheck.Ok -> {
-                val hand = highlow.play(direction, random)
+                val hand = if (anchor != null) {
+                    highlow.resolve(anchor, direction, random)
+                } else {
+                    highlow.play(direction, random)
+                }
                 val r = WagerHelper.applyMultiplier(userService, check.user, check.balance, stake, hand.multiplier)
                 if (hand.isWin) {
                     PlayOutcome.Win(

@@ -98,4 +98,36 @@ class HighlowServiceTest {
 
         assertEquals(HighlowService.PlayOutcome.UnknownUser, outcome)
     }
+
+    @Test
+    fun `play with anchor delegates to resolve, not the bundled play`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { highlow.resolve(anchor = 7, direction = Highlow.Direction.HIGHER, random = any()) } returns
+            Highlow.Hand(anchor = 7, next = 12, direction = Highlow.Direction.HIGHER, multiplier = 2L)
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.play(
+            discordId, guildId, stake = 100L,
+            direction = Highlow.Direction.HIGHER,
+            anchor = 7
+        )
+
+        val win = assertInstanceOf(HighlowService.PlayOutcome.Win::class.java, outcome)
+        assertEquals(7, win.anchor)
+        assertEquals(12, win.next)
+        verify(exactly = 1) { highlow.resolve(7, Highlow.Direction.HIGHER, any()) }
+        verify(exactly = 0) { highlow.play(any(), any()) }
+    }
+
+    @Test
+    fun `dealAnchor delegates to the underlying logic and does not touch the user`() {
+        every { highlow.dealAnchor(any()) } returns 4
+
+        val anchor = service.dealAnchor()
+
+        assertEquals(4, anchor)
+        verify(exactly = 0) { userService.getUserByIdForUpdate(any(), any()) }
+        verify(exactly = 0) { userService.updateUser(any()) }
+    }
 }
