@@ -188,6 +188,12 @@
 }
 
 .economy-trade-who { font-weight: 600; }
+.economy-trade-reason {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-style: italic;
+    margin-left: 4px;
+}
 
 @media (max-width: 640px) {
     .economy-header { flex-direction: column; align-items: stretch; }

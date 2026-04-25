@@ -49,5 +49,12 @@ class TobyCoinTradeDto(
     var pricePerCoin: Double = 0.0,
 
     @Column(name = "executed_at", nullable = false)
-    var executedAt: Instant = Instant.now()
+    var executedAt: Instant = Instant.now(),
+
+    // 'USER' (default) → manual `/economy sell` or `/tobycoin sell`.
+    // 'TITLE_TOPUP' → TitlesWebService.buyTitleWithTobyCoin auto-sold
+    // to cover a credit shortfall. 'CASINO_TOPUP' → a casino minigame
+    // (slots/coinflip/dice/highlow/scratch) auto-sold to fund a wager.
+    @Column(name = "reason", nullable = false)
+    var reason: String = "USER"
 ) : Serializable

@@ -12,8 +12,6 @@ import database.economy.TobyCoinEngine
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import kotlin.math.ceil
-import kotlin.math.floor
 
 @Service
 class TitlesWebService(
@@ -137,17 +135,20 @@ class TitlesWebService(
             if (market.price <= 0.0) {
                 return BuyWithTobyOutcome.Error("Market price is not available right now.")
             }
-            // EconomyTradeService now fills sells at the midpoint of pre-
-            // and post-pressure prices (slippage). The naive
-            // `ceil(shortfall / market.price)` underestimates the coins
-            // needed by 1 because proceeds = floor(N×P×(1 − k×N/2)).
-            // Bump until proceeds-at-midpoint cover the shortfall.
-            val coinsNeeded = coinsNeededForShortfall(shortfall, market.price)
+            // EconomyTradeService fills sells at the midpoint of pre-
+            // and post-pressure prices (slippage) AND skims a flat
+            // TRADE_FEE off the proceeds for the jackpot pool. Naive
+            // ceil(shortfall / price) under-counts; ask the engine for
+            // the right N.
+            val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(shortfall, market.price)
             if (actor.tobyCoins < coinsNeeded) {
                 return BuyWithTobyOutcome.InsufficientCoins(needed = coinsNeeded, have = actor.tobyCoins)
             }
 
-            val sellOutcome = tradeService.sell(actorDiscordId, guildId, coinsNeeded)
+            val sellOutcome = tradeService.sell(
+                actorDiscordId, guildId, coinsNeeded,
+                reason = EconomyTradeService.REASON_TITLE_TOPUP
+            )
             if (sellOutcome !is TradeOutcome.Ok) {
                 return BuyWithTobyOutcome.Error("Sell failed: $sellOutcome")
             }
@@ -171,27 +172,6 @@ class TitlesWebService(
             newCredits = refreshed.socialCredit ?: 0L,
             newPrice = priceAfterSell
         )
-    }
-
-    /**
-     * Smallest coin count whose midpoint-price proceeds cover [shortfall].
-     * Closed-form would be a quadratic; in practice the naive
-     * `ceil(shortfall / price)` is at most one coin short of correct, so
-     * we bump iteratively. Bounded for safety against extreme `k×N`.
-     */
-    private fun coinsNeededForShortfall(shortfall: Long, price: Double): Long {
-        var n = ceil(shortfall.toDouble() / price).toLong().coerceAtLeast(1L)
-        repeat(8) {
-            if (proceedsAtMidpoint(n, price) >= shortfall) return n
-            n += 1L
-        }
-        return n
-    }
-
-    private fun proceedsAtMidpoint(coins: Long, price: Double): Long {
-        val newPrice = TobyCoinEngine.applySellPressure(price, coins)
-        val midpoint = (price + newPrice) / 2.0
-        return floor(midpoint * coins).toLong()
     }
 
     fun equipTitle(actorDiscordId: Long, guildId: Long, titleId: Long): String? {

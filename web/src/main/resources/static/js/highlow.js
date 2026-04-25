@@ -16,18 +16,22 @@ function renderHighlowResult(resultEl, body) {
     resultEl.hidden = false;
     resultEl.classList.remove('highlow-result-win', 'highlow-result-lose', 'highlow-result-jackpot');
     const dirLabel = body.direction === 'HIGHER' ? 'Higher' : 'Lower';
+    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
+        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
+        : '';
     if (body.win) {
         resultEl.classList.add('highlow-result-win');
         const winLine = '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
             (body.next > body.anchor ? '>' : '<') + ' <strong>' + highlowCardLabel(body.anchor) +
             '</strong> &middot; you called ' + dirLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
             ? window.TobyJackpot.renderWinHtml(resultEl, body, 'highlow-result-jackpot', winLine)
             : winLine;
+        resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('highlow-result-lose');
         const tie = body.next === body.anchor;
-        resultEl.innerHTML = '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
+        resultEl.innerHTML = topUpPrefix + '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
             (tie ? '=' : (body.next > body.anchor ? '>' : '<')) +
             ' <strong>' + highlowCardLabel(body.anchor) + '</strong> &middot; you called ' +
             dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
@@ -41,6 +45,8 @@ function renderHighlowResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
+    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
+    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     function toast(msg, type) {
@@ -57,11 +63,23 @@ function renderHighlowResult(resultEl, body) {
     const nextCard = document.getElementById('highlow-next');
     const stakeInput = document.getElementById('highlow-stake');
     const dealBtn = document.getElementById('highlow-deal');
+    const dealTobyBtn = document.getElementById('highlow-deal-toby');
     const balanceEl = document.getElementById('highlow-balance');
     const resultEl = document.getElementById('highlow-result');
     const form = document.getElementById('highlow-bet');
 
     if (!form || !dealBtn || !stakeInput || !anchorFace || !nextFace) return;
+
+    const topUp = (window.TobyTopUp && dealTobyBtn) ? window.TobyTopUp.init({
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: dealBtn,
+        tobyBtn: dealTobyBtn,
+        balanceEl: balanceEl,
+        tobyCoins: initialTobyCoins,
+        marketPrice: initialMarketPrice,
+        onSubmit: function (autoTopUp) { runDeal(autoTopUp); },
+    }) : null;
 
     const NEXT_DEAL_MS = 900;
     const SHUFFLE_INTERVAL_MS = 70;
@@ -112,8 +130,16 @@ function renderHighlowResult(resultEl, body) {
         if (balanceEl) balanceEl.textContent = newBalance;
     }
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
+    function applyTobyDelta(body) {
+        if (!topUp) return;
+        if (typeof body.soldTobyCoins === 'number') {
+            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
+            topUp.setTobyCoins(remaining);
+        }
+        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
+    }
+
+    function runDeal(autoTopUp) {
         if (dealing) return;
 
         const direction = selectedDirection();
@@ -128,17 +154,21 @@ function renderHighlowResult(resultEl, body) {
         }
 
         dealBtn.disabled = true;
+        if (dealTobyBtn) dealTobyBtn.disabled = true;
         const intervalId = startNextShuffle();
         const requestStart = Date.now();
 
         if (!postJson) {
             stopNextShuffle(intervalId);
             dealBtn.disabled = false;
+            if (dealTobyBtn) dealTobyBtn.disabled = false;
             toast('API helper missing — refresh the page.', 'error');
             return;
         }
 
-        postJson('/casino/' + guildId + '/highlow/play', { direction: direction, stake: stake })
+        postJson('/casino/' + guildId + '/highlow/play', {
+            direction: direction, stake: stake, autoTopUp: !!autoTopUp,
+        })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
                 const remaining = Math.max(0, NEXT_DEAL_MS - elapsed);
@@ -147,9 +177,7 @@ function renderHighlowResult(resultEl, body) {
                         stopNextShuffle(intervalId, body.next);
                         renderHighlowResult(resultEl, body);
                         applyBalance(body.newBalance);
-                        // Pause briefly so the player reads the result, then
-                        // surface the next round's anchor without requiring
-                        // a page refresh.
+                        applyTobyDelta(body);
                         if (typeof body.nextAnchor === 'number') {
                             setTimeout(function () { rollAnchorTo(body.nextAnchor); }, 1200);
                         }
@@ -159,15 +187,24 @@ function renderHighlowResult(resultEl, body) {
                         toast((body && body.error) || 'Deal failed.', 'error');
                     }
                     dealBtn.disabled = false;
+                    if (dealTobyBtn) dealTobyBtn.disabled = false;
                 }, remaining);
             })
             .catch(function () {
                 stopNextShuffle(intervalId);
                 dealBtn.disabled = false;
+                if (dealTobyBtn) dealTobyBtn.disabled = false;
                 if (resultEl) resultEl.hidden = true;
                 toast('Network error.', 'error');
             });
-    });
+    }
+
+    if (!topUp) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            runDeal(false);
+        });
+    }
 })();
 
 if (typeof module !== 'undefined' && module.exports) {

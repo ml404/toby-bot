@@ -4,6 +4,7 @@ import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
 import database.service.JackpotService
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import jakarta.servlet.http.HttpSession
 import net.dv8tion.jda.api.JDA
@@ -30,6 +31,7 @@ class HighlowController(
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
     private val jackpotService: JackpotService,
+    private val marketService: TobyCoinMarketService,
     private val jda: JDA
 ) {
 
@@ -52,7 +54,10 @@ class HighlowController(
             return "redirect:/casino/guilds"
         }
 
-        val balance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+        val profile = userService.getUserById(discordId, guildId)
+        val balance = profile?.socialCredit ?: 0L
+        val tobyCoins = profile?.tobyCoins ?: 0L
+        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
 
         // Anchor sticks to the user's session so refreshing the page
         // can't reroll a fresh card. Drawn lazily on first hit.
@@ -62,6 +67,8 @@ class HighlowController(
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", balance)
+        model.addAttribute("tobyCoins", tobyCoins)
+        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", Highlow.MIN_STAKE)
         model.addAttribute("maxStake", Highlow.MAX_STAKE)
         model.addAttribute("multiplier", Highlow.DEFAULT_MULTIPLIER)
@@ -93,7 +100,7 @@ class HighlowController(
                 PlayResponse(false, "No active round — refresh the page to draw a new card.")
             )
 
-        val outcome = highlowService.play(discordId, guildId, request.stake, direction, anchor)
+        val outcome = highlowService.play(discordId, guildId, request.stake, direction, anchor, request.autoTopUp)
 
         // Only consume the anchor on outcomes that actually drew a next
         // card. Validation rejections (invalid stake, insufficient
@@ -118,7 +125,9 @@ class HighlowController(
                     newBalance = outcome.newBalance,
                     win = true,
                     nextAnchor = nextRoundAnchor,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
@@ -132,12 +141,18 @@ class HighlowController(
                     payout = 0L,
                     newBalance = outcome.newBalance,
                     win = false,
-                    nextAnchor = nextRoundAnchor
+                    nextAnchor = nextRoundAnchor,
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
             is PlayOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 PlayResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
+            )
+
+            is PlayOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
+                PlayResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
             )
 
             is PlayOutcome.InvalidStake -> ResponseEntity.badRequest().body(
@@ -174,7 +189,7 @@ class HighlowController(
     }
 }
 
-data class PlayRequest(val direction: String = "", val stake: Long = 0)
+data class PlayRequest(val direction: String = "", val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class PlayResponse(
     val ok: Boolean,
@@ -187,5 +202,7 @@ data class PlayResponse(
     val newBalance: Long? = null,
     val win: Boolean? = null,
     val nextAnchor: Int? = null,
-    val jackpotPayout: Long? = null
+    val jackpotPayout: Long? = null,
+    val soldTobyCoins: Long? = null,
+    val newPrice: Double? = null
 )

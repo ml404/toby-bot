@@ -16,6 +16,8 @@ class SlotsServiceTest {
 
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
+    private lateinit var tradeService: EconomyTradeService
+    private lateinit var marketService: TobyCoinMarketService
     private lateinit var machine: SlotMachine
     private lateinit var service: SlotsService
 
@@ -26,8 +28,10 @@ class SlotsServiceTest {
     fun setup() {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
+        tradeService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
         machine = mockk(relaxed = true)
-        service = SlotsService(userService, jackpotService, machine, Random(0))
+        service = SlotsService(userService, jackpotService, tradeService, marketService, machine, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {

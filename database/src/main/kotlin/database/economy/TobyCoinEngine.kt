@@ -81,6 +81,47 @@ object TobyCoinEngine {
     fun applySellPressure(price: Double, coins: Long): Double =
         max(PRICE_FLOOR, price * (1.0 - TRADE_IMPACT * coins))
 
+    /**
+     * Net credits the seller actually receives for [coins] sold at
+     * pre-pressure [price] — the same math `EconomyTradeService.sell`
+     * applies, exposed so callers that need to size a sell to a
+     * target shortfall (Titles' "Buy with TOBY", casino top-up) don't
+     * re-derive it.
+     *
+     * = floor(midpoint × N) − floor(floor(midpoint × N) × TRADE_FEE)
+     */
+    fun proceedsForSell(price: Double, coins: Long): Long {
+        if (coins <= 0L || price <= 0.0) return 0L
+        val newPrice = applySellPressure(price, coins)
+        val midpoint = (price + newPrice) / 2.0
+        val gross = kotlin.math.floor(midpoint * coins).toLong()
+        val fee = kotlin.math.floor(gross * TRADE_FEE).toLong()
+        return gross - fee
+    }
+
+    /**
+     * Smallest coin count whose sell proceeds (after slippage + fee)
+     * cover [shortfall]. The naive `ceil(shortfall / price)` undercounts
+     * by 1–2 coins because the trader eats half the slippage and 1 %
+     * goes to the jackpot pool. We bump iteratively; bounded for
+     * safety against pathological `k × N` regimes.
+     *
+     * Returns the *true* required coin count regardless of what the
+     * user actually holds — callers compare against the balance and
+     * surface "insufficient coins" themselves.
+     */
+    fun coinsNeededForShortfall(shortfall: Long, price: Double): Long {
+        if (shortfall <= 0L || price <= 0.0) return 0L
+        var n = kotlin.math.ceil(shortfall.toDouble() / price).toLong().coerceAtLeast(1L)
+        // 16 iterations: empirically the loop converges in 1–2 for sane
+        // shortfalls. The cap is just paranoia for adversarial inputs.
+        repeat(16) {
+            if (proceedsForSell(price, n) >= shortfall) return n
+            n += 1L
+        }
+        return n
+    }
+
     /** Box–Muller — Kotlin's stdlib has nextDouble() but no normal sampler. */
     private fun gaussian(random: Random): Double {
         var u1: Double

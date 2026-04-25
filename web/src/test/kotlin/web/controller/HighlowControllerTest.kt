@@ -4,6 +4,7 @@ import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
 import database.service.JackpotService
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -32,6 +33,7 @@ class HighlowControllerTest {
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
+    private lateinit var marketService: TobyCoinMarketService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var session: HttpSession
@@ -43,6 +45,7 @@ class HighlowControllerTest {
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
@@ -57,7 +60,7 @@ class HighlowControllerTest {
         }
         every { jda.getGuildById(guildId) } returns guild
 
-        controller = HighlowController(highlowService, economyWebService, userService, jackpotService, jda)
+        controller = HighlowController(highlowService, economyWebService, userService, jackpotService, marketService, jda)
     }
 
     @Test

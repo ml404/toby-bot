@@ -4,6 +4,7 @@ import database.economy.SlotMachine
 import database.service.JackpotService
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
+import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
@@ -38,6 +39,7 @@ class SlotsController(
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
     private val jackpotService: JackpotService,
+    private val marketService: TobyCoinMarketService,
     private val jda: JDA
 ) {
 
@@ -60,11 +62,16 @@ class SlotsController(
             return "redirect:/leaderboards"
         }
 
-        val balance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+        val profile = userService.getUserById(discordId, guildId)
+        val balance = profile?.socialCredit ?: 0L
+        val tobyCoins = profile?.tobyCoins ?: 0L
+        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
 
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", balance)
+        model.addAttribute("tobyCoins", tobyCoins)
+        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", SlotMachine.MIN_STAKE)
         model.addAttribute("maxStake", SlotMachine.MAX_STAKE)
         model.addAttribute("payoutTable", payoutRows())
@@ -85,7 +92,7 @@ class SlotsController(
         if (!economyWebService.isMember(discordId, guildId)) {
             return ResponseEntity.status(403).body(SpinResponse(false, "You are not a member of that server."))
         }
-        return when (val outcome = slotsService.spin(discordId, guildId, request.stake)) {
+        return when (val outcome = slotsService.spin(discordId, guildId, request.stake, request.autoTopUp)) {
             is SpinOutcome.Win -> ResponseEntity.ok(
                 SpinResponse(
                     ok = true,
@@ -95,7 +102,9 @@ class SlotsController(
                     net = outcome.net,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L }
+                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
@@ -107,12 +116,18 @@ class SlotsController(
                     payout = 0L,
                     net = -outcome.stake,
                     newBalance = outcome.newBalance,
-                    win = false
+                    win = false,
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
                 )
             )
 
             is SpinOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 SpinResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
+            )
+
+            is SpinOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
+                SpinResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
             )
 
             is SpinOutcome.InvalidStake -> ResponseEntity.badRequest().body(
@@ -140,7 +155,7 @@ class SlotsController(
     }
 }
 
-data class SpinRequest(val stake: Long = 0)
+data class SpinRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class SpinResponse(
     val ok: Boolean,
@@ -151,7 +166,9 @@ data class SpinResponse(
     val net: Long? = null,
     val newBalance: Long? = null,
     val win: Boolean? = null,
-    val jackpotPayout: Long? = null
+    val jackpotPayout: Long? = null,
+    val soldTobyCoins: Long? = null,
+    val newPrice: Double? = null
 )
 
 data class PayoutRow(val symbols: String, val multiplier: String)

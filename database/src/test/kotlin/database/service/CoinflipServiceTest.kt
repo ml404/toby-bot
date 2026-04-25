@@ -16,6 +16,8 @@ class CoinflipServiceTest {
 
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
+    private lateinit var tradeService: EconomyTradeService
+    private lateinit var marketService: TobyCoinMarketService
     private lateinit var coinflip: Coinflip
     private lateinit var service: CoinflipService
 
@@ -26,8 +28,10 @@ class CoinflipServiceTest {
     fun setup() {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
+        tradeService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
         coinflip = mockk(relaxed = true)
-        service = CoinflipService(userService, jackpotService, coinflip, Random(0))
+        service = CoinflipService(userService, jackpotService, tradeService, marketService, coinflip, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {

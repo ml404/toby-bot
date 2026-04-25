@@ -17,6 +17,8 @@ class ScratchServiceTest {
 
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
+    private lateinit var tradeService: EconomyTradeService
+    private lateinit var marketService: TobyCoinMarketService
     private lateinit var card: ScratchCard
     private lateinit var service: ScratchService
 
@@ -27,8 +29,10 @@ class ScratchServiceTest {
     fun setup() {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
+        tradeService = mockk(relaxed = true)
+        marketService = mockk(relaxed = true)
         card = mockk(relaxed = true)
-        service = ScratchService(userService, jackpotService, card, Random(0))
+        service = ScratchService(userService, jackpotService, tradeService, marketService, card, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =

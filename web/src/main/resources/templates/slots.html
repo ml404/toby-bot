@@ -5,7 +5,8 @@
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-<main id="main" class="container" th:attr="data-guild-id=${guildId}">
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}">
 
     <div class="slots-header">
         <a class="back-link" th:href="@{/leaderboards}">&larr; All servers</a>
@@ -35,6 +36,10 @@
                    th:value="${minStake}"
                    step="1">
             <button type="submit" id="slots-spin" class="btn-primary">Spin</button>
+            <button type="submit" id="slots-spin-toby" class="btn-secondary casino-bet-toby" hidden
+                    title="Sells just enough TOBY at the live market price to cover the shortfall, then spins.">
+                Spin (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+            </button>
         </form>
 
         <div class="slots-balance">
@@ -71,6 +76,7 @@
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/casino-jackpot.js}"></script>
+<script th:src="@{/js/casino-topup.js}"></script>
 <script th:src="@{/js/slots.js}"></script>
 </body>
 </html>

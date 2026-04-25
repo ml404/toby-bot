@@ -81,6 +81,11 @@ class SlotsCommand @Autowired constructor(
                 "Not enough credits. You need ${outcome.stake} but only have ${outcome.have}."
             )
 
+            is SpinOutcome.InsufficientCoinsForTopUp -> errorEmbed(
+                "Not enough credits, and not enough TOBY to cover. " +
+                    "Need ${outcome.needed} TOBY, you have ${outcome.have}."
+            )
+
             is SpinOutcome.InvalidStake -> errorEmbed(
                 "Stake must be between ${outcome.min} and ${outcome.max} credits."
             )

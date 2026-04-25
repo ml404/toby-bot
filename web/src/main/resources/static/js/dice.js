@@ -4,16 +4,20 @@ function renderDiceResult(resultEl, body) {
     if (!resultEl) return;
     resultEl.hidden = false;
     resultEl.classList.remove('dice-result-win', 'dice-result-lose', 'dice-result-jackpot');
+    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
+        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
+        : '';
     if (body.win) {
         resultEl.classList.add('dice-result-win');
         const winLine = '<strong>' + body.landed + '!</strong> You called ' +
             body.predicted + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        resultEl.innerHTML = (typeof window !== 'undefined' && window.TobyJackpot)
+        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
             ? window.TobyJackpot.renderWinHtml(resultEl, body, 'dice-result-jackpot', winLine)
             : winLine;
+        resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('dice-result-lose');
-        resultEl.innerHTML = '<strong>' + body.landed + '.</strong> You called ' +
+        resultEl.innerHTML = topUpPrefix + '<strong>' + body.landed + '.</strong> You called ' +
             body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
     }
 }
@@ -25,6 +29,8 @@ function renderDiceResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
+    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
+    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     function toast(msg, type) {
@@ -39,11 +45,23 @@ function renderDiceResult(resultEl, body) {
     const dieFace = document.getElementById('dice-die-face');
     const stakeInput = document.getElementById('dice-stake');
     const rollBtn = document.getElementById('dice-roll');
+    const rollTobyBtn = document.getElementById('dice-roll-toby');
     const balanceEl = document.getElementById('dice-balance');
     const resultEl = document.getElementById('dice-result');
     const form = document.getElementById('dice-bet');
 
     if (!form || !rollBtn || !stakeInput || !die || !dieFace) return;
+
+    const topUp = (window.TobyTopUp && rollTobyBtn) ? window.TobyTopUp.init({
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: rollBtn,
+        tobyBtn: rollTobyBtn,
+        balanceEl: balanceEl,
+        tobyCoins: initialTobyCoins,
+        marketPrice: initialMarketPrice,
+        onSubmit: function (autoTopUp) { runRoll(autoTopUp); },
+    }) : null;
 
     const FACES = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
     const ROLL_DURATION_MS = 800;
@@ -84,8 +102,16 @@ function renderDiceResult(resultEl, body) {
         if (balanceEl) balanceEl.textContent = newBalance;
     }
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
+    function applyTobyDelta(body) {
+        if (!topUp) return;
+        if (typeof body.soldTobyCoins === 'number') {
+            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
+            topUp.setTobyCoins(remaining);
+        }
+        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
+    }
+
+    function runRoll(autoTopUp) {
         if (rolling) return;
 
         const prediction = selectedPrediction();
@@ -100,26 +126,32 @@ function renderDiceResult(resultEl, body) {
         }
 
         rollBtn.disabled = true;
+        if (rollTobyBtn) rollTobyBtn.disabled = true;
         const intervalId = startRollAnimation();
         const requestStart = Date.now();
 
         if (!postJson) {
             stopRollAnimation(intervalId);
             rollBtn.disabled = false;
+            if (rollTobyBtn) rollTobyBtn.disabled = false;
             toast('API helper missing — refresh the page.', 'error');
             return;
         }
 
-        postJson('/casino/' + guildId + '/dice/roll', { prediction: prediction, stake: stake })
+        postJson('/casino/' + guildId + '/dice/roll', {
+            prediction: prediction, stake: stake, autoTopUp: !!autoTopUp,
+        })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
                 const remaining = Math.max(0, ROLL_DURATION_MS - elapsed);
                 setTimeout(function () {
                     stopRollAnimation(intervalId, body && body.landed);
                     rollBtn.disabled = false;
+                    if (rollTobyBtn) rollTobyBtn.disabled = false;
                     if (body && body.ok) {
                         renderDiceResult(resultEl, body);
                         applyBalance(body.newBalance);
+                        applyTobyDelta(body);
                     } else {
                         if (resultEl) resultEl.hidden = true;
                         toast((body && body.error) || 'Roll failed.', 'error');
@@ -129,10 +161,18 @@ function renderDiceResult(resultEl, body) {
             .catch(function () {
                 stopRollAnimation(intervalId);
                 rollBtn.disabled = false;
+                if (rollTobyBtn) rollTobyBtn.disabled = false;
                 if (resultEl) resultEl.hidden = true;
                 toast('Network error.', 'error');
             });
-    });
+    }
+
+    if (!topUp) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            runRoll(false);
+        });
+    }
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
