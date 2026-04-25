@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Slots', '/css/slots.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container" th:attr="data-guild-id=${guildId}">
+
+    <div class="slots-header">
+        <a class="back-link" th:href="@{/leaderboards}">&larr; All servers</a>
+        <h1 th:text="'🎰 Slots • ' + ${guildName}">🎰 Slots</h1>
+        <p class="muted">3-of-a-kind wins. Bet between
+            <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">500</span> credits per pull.</p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="slots-machine">
+        <div class="slots-reels" id="slots-reels" aria-live="polite">
+            <div class="slots-reel" id="slots-reel-0" data-symbol="🍒">🍒</div>
+            <div class="slots-reel" id="slots-reel-1" data-symbol="🍋">🍋</div>
+            <div class="slots-reel" id="slots-reel-2" data-symbol="🔔">🔔</div>
+        </div>
+
+        <div class="slots-result" id="slots-result" hidden></div>
+
+        <form class="slots-bet" id="slots-bet" autocomplete="off">
+            <label for="slots-stake">Stake (credits)</label>
+            <input id="slots-stake"
+                   name="stake"
+                   type="number"
+                   th:attr="min=${minStake}, max=${maxStake}"
+                   th:value="${minStake}"
+                   step="1">
+            <button type="submit" id="slots-spin" class="btn-primary">Spin</button>
+        </form>
+
+        <div class="slots-balance">
+            Balance: <strong id="slots-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="slots-payouts">
+        <h2>Payouts</h2>
+        <table>
+            <thead>
+            <tr><th>Combo</th><th>Wins</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${payoutTable}">
+                <td th:text="${row.symbols}">🍒 🍒 🍒</td>
+                <td th:text="${row.multiplier}">5×</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted">Anything else loses your stake. Each reel draws independently from a weighted
+            set (4 🍒, 3 🍋, 2 🔔, 1 ⭐). Long-run RTP ≈ 89%.</p>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/slots.js}"></script>
+</body>
+</html>

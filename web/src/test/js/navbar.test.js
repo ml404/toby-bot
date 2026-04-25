@@ -69,13 +69,14 @@ describe('navbar fragment', () => {
         );
     });
 
-    test('Casino dropdown ships with a Coming soon placeholder', () => {
+    test('Casino dropdown links to the Slots guild picker', () => {
         const casino = html.match(
             /<div class="nav-dropdown">[\s\S]*?Casino[\s\S]*?<\/div>\s*<\/div>/
         );
         expect(casino).not.toBeNull();
-        expect(casino[0]).toMatch(/class="nav-dropdown-coming-soon"/);
-        expect(casino[0]).toMatch(/coming soon/i);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Slots/);
+        // Coming-soon placeholder is gone now that Slots ships.
+        expect(casino[0]).not.toMatch(/coming soon/i);
     });
 
     test('Market and Titles are no longer top-level nav-links siblings', () => {

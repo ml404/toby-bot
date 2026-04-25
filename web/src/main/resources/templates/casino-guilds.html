@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Casino', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">🎰 Casino</h1>
+    <p class="muted mb-5">
+        Wager social credit on the reels. Each server has its own slots room —
+        balances are per-guild. Pick a server below to spin.
+    </p>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <a class="lb-guild-card"
+           th:each="g : ${guilds}"
+           th:href="@{/casino/{id}/slots(id=${g.id})}">
+            <div class="lb-guild-card-header">
+                <img th:if="${g.iconUrl != null}"
+                     th:src="${g.iconUrl}"
+                     th:alt="${g.name} + ' icon'"
+                     class="lb-guild-icon"
+                     onerror="this.style.display='none'">
+                <div th:unless="${g.iconUrl != null}"
+                     class="lb-guild-icon-placeholder"
+                     aria-hidden="true"
+                     th:text="${#strings.substring(g.name, 0, 1).toUpperCase()}">G</div>
+                <div class="lb-guild-name" th:text="${g.name}" th:title="${g.name}">Guild</div>
+            </div>
+            <div class="lb-guild-top">
+                <span class="muted">Your wallet:</span>
+                <span th:text="${g.credits} + ' credits'">0 credits</span>
+            </div>
+            <div class="lb-guild-stats">
+                <span>🎰 Slots</span>
+            </div>
+        </a>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">🎰</span>
+        <h2>No servers to play in yet</h2>
+        <p class="mb-5">
+            You need to share at least one server with TobyBot to use the casino.
+        </p>
+    </div>
+</main>
+</body>
+</html>
