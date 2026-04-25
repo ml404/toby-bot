@@ -49,7 +49,6 @@ class BotConfig {
             .disableCache(
                 EnumSet.of(
                     CacheFlag.CLIENT_STATUS,
-                    CacheFlag.ACTIVITY,
                     CacheFlag.SCHEDULED_EVENTS
                 )
             )
