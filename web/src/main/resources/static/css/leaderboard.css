@@ -24,6 +24,26 @@
     transform: translateY(-2px);
     color: var(--text);
 }
+/* Static guild cards (e.g. Casino picker) don't navigate as a whole — the
+   hover lift would be a misleading affordance, so suppress it. The internal
+   game buttons supply their own hover state. */
+.lb-guild-card-static:hover {
+    border-color: var(--border);
+    transform: none;
+}
+.lb-guild-games {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-top: auto;
+}
+.lb-guild-games .btn-secondary {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
 .lb-guild-card-header {
     display: flex;
     align-items: center;
