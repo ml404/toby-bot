@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Poker', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">🃏 Poker</h1>
+    <p class="muted mb-5">
+        Multiplayer fixed-limit Texas Hold'em over the social-credit economy.
+        Buy in, deal hands, take credits from your friends. 5% rake feeds the
+        per-server jackpot.
+    </p>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">
+            <div class="lb-guild-card-header">
+                <img th:if="${g.iconUrl != null}"
+                     th:src="${g.iconUrl}"
+                     th:alt="${g.name} + ' icon'"
+                     class="lb-guild-icon"
+                     onerror="this.style.display='none'">
+                <div th:unless="${g.iconUrl != null}"
+                     class="lb-guild-icon-placeholder"
+                     aria-hidden="true"
+                     th:text="${#strings.substring(g.name, 0, 1).toUpperCase()}">G</div>
+                <div class="lb-guild-name" th:text="${g.name}" th:title="${g.name}">Guild</div>
+            </div>
+            <div class="lb-guild-top">
+                <span class="muted">Your wallet:</span>
+                <span th:text="${g.credits} + ' credits'">0 credits</span>
+            </div>
+            <div class="lb-guild-games">
+                <a class="btn-secondary" th:href="@{/poker/{id}(id=${g.id})}">🃏 Poker tables</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">🃏</span>
+        <h2>No servers to play poker in yet</h2>
+        <p class="mb-5">
+            You need to share at least one server with TobyBot to sit down at a table.
+        </p>
+    </div>
+</main>
+</body>
+</html>

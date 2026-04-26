@@ -38,7 +38,11 @@ class ConfigDto(
         ACTIVITY_TRACKING_NOTIFIED("ACTIVITY_TRACKING_NOTIFIED"),
         // Whole-number percentage (0-50) of every lost casino stake that
         // routes into the per-guild jackpot pool. Defaults to 10 if unset.
-        JACKPOT_LOSS_TRIBUTE_PCT("JACKPOT_LOSS_TRIBUTE_PCT");
+        JACKPOT_LOSS_TRIBUTE_PCT("JACKPOT_LOSS_TRIBUTE_PCT"),
+
+        // Whole-number percentage (0-20) of every settled poker pot that
+        // routes into the per-guild jackpot pool. Defaults to 5 if unset.
+        POKER_RAKE_PCT("POKER_RAKE_PCT");
     }
 
     override fun toString(): String {

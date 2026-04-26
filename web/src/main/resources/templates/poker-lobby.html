@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Poker lobby', '/css/poker.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-min-buyin=${minBuyIn}, data-max-buyin=${maxBuyIn}">
+
+    <div class="poker-header">
+        <a class="back-link" th:href="@{/poker/guilds}">&larr; All servers</a>
+        <h1 th:text="'🃏 Poker • ' + ${guildName}">🃏 Poker</h1>
+        <p class="muted">
+            Fixed-limit Texas Hold'em.
+            Blinds <span th:text="${smallBlind}">5</span>/<span th:text="${bigBlind}">10</span>,
+            bets <span th:text="${smallBet}">10</span>/<span th:text="${bigBet}">20</span>,
+            up to <span th:text="${maxSeats}">6</span> seats per table.
+            5% rake on each pot feeds the per-server jackpot.
+        </p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="poker-card">
+        <h2>Create a new table</h2>
+        <form id="poker-create" autocomplete="off">
+            <label for="poker-create-buyin">Buy-in (credits)</label>
+            <input id="poker-create-buyin" name="buyIn" type="number"
+                   th:attr="min=${minBuyIn}, max=${maxBuyIn}" th:value="${minBuyIn}" step="1" required>
+            <button type="submit" class="btn-primary">Create table</button>
+        </form>
+        <div>Wallet: <strong id="poker-balance" th:text="${balance}">0</strong> credits</div>
+    </section>
+
+    <section class="poker-card">
+        <h2>Open tables</h2>
+        <div id="poker-table-list" class="poker-table-list">
+            <div th:if="${#lists.isEmpty(tables)}" class="muted">
+                No active tables yet. Create one above.
+            </div>
+            <div class="poker-table-row" th:each="t : ${tables}"
+                 th:attr="data-table-id=${t.tableId}">
+                <div>
+                    <div>Table #<strong th:text="${t.tableId}">1</strong>
+                        — <span th:text="${t.seats}">0</span>/<span th:text="${t.maxSeats}">6</span> seats</div>
+                    <div class="muted">Host: <span th:text="${t.hostDiscordId}">000</span> ·
+                        Phase: <span th:text="${t.phase}">WAITING</span> ·
+                        Hand #<span th:text="${t.handNumber}">0</span></div>
+                </div>
+                <div>
+                    <a class="btn-primary" th:href="@{/poker/{g}/{t}(g=${guildId}, t=${t.tableId})}">Open table</a>
+                </div>
+            </div>
+        </div>
+        <p class="muted">Refreshes automatically.</p>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/poker-lobby.js}"></script>
+</body>
+</html>
