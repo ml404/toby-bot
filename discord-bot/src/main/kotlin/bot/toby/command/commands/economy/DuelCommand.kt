@@ -40,7 +40,6 @@ class DuelCommand @Autowired constructor(
     companion object {
         private const val OPT_USER = "user"
         private const val OPT_STAKE = "stake"
-        private const val TTL_SECONDS = 60L
     }
 
     override val optionData: List<OptionData> = listOf(
@@ -116,9 +115,12 @@ class DuelCommand @Autowired constructor(
             "Decline"
         )
 
-        event.hook.sendMessageEmbeds(
-            DuelEmbeds.offerEmbed(initiatorId, opponentId, stake, TTL_SECONDS)
-        ).addComponents(ActionRow.of(accept, decline)).queue()
+        // sendMessage(content) (not sendMessageEmbeds) so the <@opponent> in the
+        // content actually pings — embed-mention pings are silent.
+        event.hook.sendMessage("<@$opponentId>")
+            .setEmbeds(DuelEmbeds.offerEmbed(initiatorId, opponentId, stake, pendingDuelRegistry.ttl))
+            .addComponents(ActionRow.of(accept, decline))
+            .queue()
     }
 
     private fun replyError(

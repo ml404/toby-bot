@@ -76,6 +76,7 @@ class DuelController(
         val profile = userService.getUserById(discordId, guildId)
         val balance = profile?.socialCredit ?: 0L
         val pending = duelWebService.pendingForOpponent(discordId, guildId)
+        val outgoing = duelWebService.pendingForInitiator(discordId, guildId)
         val members = economyWebService.getGuildMembers(guildId).filter { it.id != discordId.toString() }
 
         model.addAttribute("guildId", guildId.toString())
@@ -84,6 +85,8 @@ class DuelController(
         model.addAttribute("minStake", DuelService.MIN_STAKE)
         model.addAttribute("maxStake", DuelService.MAX_STAKE)
         model.addAttribute("pending", pending)
+        model.addAttribute("outgoing", outgoing)
+        model.addAttribute("ttlLabel", PendingDuelRegistry.formatTtl(pendingDuelRegistry.ttl))
         model.addAttribute("members", members)
         model.addAttribute("username", user.displayName())
         return "duel"
@@ -100,6 +103,19 @@ class DuelController(
             return ResponseEntity.status(403).build()
         }
         return ResponseEntity.ok(duelWebService.pendingForOpponent(discordId, guildId))
+    }
+
+    @GetMapping("/{guildId}/outgoing")
+    @ResponseBody
+    fun outgoingForMe(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<List<DuelWebService.PendingDuelView>> {
+        val discordId = user.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (!economyWebService.isMember(discordId, guildId)) {
+            return ResponseEntity.status(403).build()
+        }
+        return ResponseEntity.ok(duelWebService.pendingForInitiator(discordId, guildId))
     }
 
     @PostMapping("/{guildId}/challenge")
@@ -217,6 +233,29 @@ class DuelController(
             return ResponseEntity.badRequest().body(DuelActionResponse(false, error = "Wrong guild for this offer."))
         }
         if (offer.opponentDiscordId != discordId) {
+            return ResponseEntity.status(403).body(DuelActionResponse(false, error = "This isn't your duel offer."))
+        }
+        pendingDuelRegistry.cancel(duelId)
+            ?: return ResponseEntity.status(410).body(DuelActionResponse(false, error = "This offer already resolved or expired."))
+        return ResponseEntity.ok(DuelActionResponse(ok = true))
+    }
+
+    @PostMapping("/{guildId}/{duelId}/cancel")
+    @ResponseBody
+    fun cancel(
+        @PathVariable guildId: Long,
+        @PathVariable duelId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<DuelActionResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(DuelActionResponse(false, error = "Not signed in."))
+
+        val offer = pendingDuelRegistry.get(duelId)
+            ?: return ResponseEntity.status(410).body(DuelActionResponse(false, error = "This offer already resolved or expired."))
+        if (offer.guildId != guildId) {
+            return ResponseEntity.badRequest().body(DuelActionResponse(false, error = "Wrong guild for this offer."))
+        }
+        if (offer.initiatorDiscordId != discordId) {
             return ResponseEntity.status(403).body(DuelActionResponse(false, error = "This isn't your duel offer."))
         }
         pendingDuelRegistry.cancel(duelId)

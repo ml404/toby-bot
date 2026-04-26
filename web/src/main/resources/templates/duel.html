@@ -60,7 +60,24 @@
                 </div>
             </div>
         </div>
-        <p class="muted">Offers expire after 60 seconds. Refreshes automatically.</p>
+        <p class="muted">Offers expire after <span th:text="${ttlLabel}">3m</span>. Refreshes automatically.</p>
+    </section>
+
+    <section class="duel-outbox">
+        <h2>Your outgoing offers</h2>
+        <div id="duel-outgoing-list" class="duel-pending-list">
+            <div th:if="${#lists.isEmpty(outgoing)}" class="muted">No outgoing challenges right now.</div>
+            <div class="duel-pending-row" th:each="p : ${outgoing}"
+                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}">
+                <div>
+                    <span>To <strong th:text="${p.opponentDiscordId}">user</strong></span>
+                    <span> for <strong th:text="${p.stake}">100</strong> credits</span>
+                </div>
+                <div class="duel-pending-actions">
+                    <button class="btn-secondary duel-cancel" type="button">Cancel</button>
+                </div>
+            </div>
+        </div>
     </section>
 </main>
 

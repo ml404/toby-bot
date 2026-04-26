@@ -12,6 +12,7 @@
     const balanceEl = document.getElementById('duel-balance');
     const challengeForm = document.getElementById('duel-challenge');
     const pendingList = document.getElementById('duel-pending-list');
+    const outgoingList = document.getElementById('duel-outgoing-list');
 
     function showToast(level, msg) {
         if (window.TobyToasts && window.TobyToasts[level]) window.TobyToasts[level](msg);
@@ -50,6 +51,43 @@
             .catch(function () { /* keep last known state */ });
     }
 
+    function renderOutgoing(rows) {
+        if (!outgoingList) return;
+        outgoingList.innerHTML = '';
+        if (!rows || rows.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'muted';
+            empty.textContent = 'No outgoing challenges right now.';
+            outgoingList.appendChild(empty);
+            return;
+        }
+        rows.forEach(function (row) {
+            const node = document.createElement('div');
+            node.className = 'duel-pending-row';
+            node.dataset.duelId = String(row.duelId);
+            node.dataset.stake = String(row.stake);
+            node.innerHTML =
+                '<div><span>To <strong>' + row.opponentDiscordId + '</strong></span>' +
+                '<span> for <strong>' + row.stake + '</strong> credits</span></div>' +
+                '<div class="duel-pending-actions">' +
+                '<button class="btn-secondary duel-cancel" type="button">Cancel</button>' +
+                '</div>';
+            outgoingList.appendChild(node);
+        });
+    }
+
+    function refreshOutgoing() {
+        fetch('/duel/' + guildId + '/outgoing', { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(renderOutgoing)
+            .catch(function () { /* keep last known state */ });
+    }
+
+    function refreshAll() {
+        refreshPending();
+        refreshOutgoing();
+    }
+
     if (challengeForm) {
         challengeForm.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -71,7 +109,8 @@
                     showToast('error', (resp && resp.error) || 'Challenge failed.');
                     return;
                 }
-                showToast('success', 'Challenge sent. Waiting for them to accept (60s window).');
+                showToast('success', 'Challenge sent. Waiting for them to accept.');
+                refreshOutgoing();
             }).catch(function () { showToast('error', 'Network error sending challenge.'); });
         });
     }
@@ -92,7 +131,7 @@
             window.TobyApi.postJson(path, {}).then(function (resp) {
                 if (!resp || !resp.ok) {
                     showToast('error', (resp && resp.error) || 'Action failed.');
-                    refreshPending();
+                    refreshAll();
                     return;
                 }
                 if (isAccept && resp.winnerDiscordId) {
@@ -107,10 +146,31 @@
                 } else if (isDecline) {
                     showToast('success', 'Declined.');
                 }
-                refreshPending();
+                refreshAll();
             }).catch(function () { showToast('error', 'Network error.'); });
         });
     }
 
-    setInterval(refreshPending, 5000);
+    if (outgoingList) {
+        outgoingList.addEventListener('click', function (e) {
+            const btn = e.target.closest('button.duel-cancel');
+            if (!btn) return;
+            const row = btn.closest('.duel-pending-row');
+            if (!row) return;
+            const duelId = row.dataset.duelId;
+            if (!duelId) return;
+            window.TobyApi.postJson('/duel/' + guildId + '/' + duelId + '/cancel', {})
+                .then(function (resp) {
+                    if (!resp || !resp.ok) {
+                        showToast('error', (resp && resp.error) || 'Cancel failed.');
+                    } else {
+                        showToast('success', 'Cancelled.');
+                    }
+                    refreshOutgoing();
+                })
+                .catch(function () { showToast('error', 'Network error.'); });
+        });
+    }
+
+    setInterval(refreshAll, 5000);
 })();

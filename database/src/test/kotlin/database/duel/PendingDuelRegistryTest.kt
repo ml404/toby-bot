@@ -95,4 +95,25 @@ class PendingDuelRegistryTest {
         assertEquals(2, rows.size)
         assertTrue(rows.all { it.opponentDiscordId == 20L && it.guildId == 1L })
     }
+
+    @Test
+    fun `pendingForInitiator returns only matching offers`() {
+        val registry = newRegistry(ttl = Duration.ofSeconds(60))
+        registry.register(1L, 10L, 20L, 50L)   // initiator 10 in guild 1
+        registry.register(1L, 10L, 21L, 75L)   // initiator 10 in guild 1, different opponent
+        registry.register(2L, 10L, 22L, 25L)   // initiator 10 in guild 2 — different guild
+        registry.register(1L, 99L, 23L, 30L)   // different initiator
+
+        val rows = registry.pendingForInitiator(10L, 1L)
+        assertEquals(2, rows.size)
+        assertTrue(rows.all { it.initiatorDiscordId == 10L && it.guildId == 1L })
+    }
+
+    @Test
+    fun `formatTtl renders short forms`() {
+        assertEquals("3m", PendingDuelRegistry.formatTtl(Duration.ofMinutes(3)))
+        assertEquals("45s", PendingDuelRegistry.formatTtl(Duration.ofSeconds(45)))
+        assertEquals("1m 30s", PendingDuelRegistry.formatTtl(Duration.ofSeconds(90)))
+        assertEquals("1h 5m", PendingDuelRegistry.formatTtl(Duration.ofMinutes(65)))
+    }
 }
