@@ -115,10 +115,10 @@ class DuelCommand @Autowired constructor(
             "Decline"
         )
 
-        // sendMessage(content) (not sendMessageEmbeds) so the <@opponent> in the
-        // content actually pings — embed-mention pings are silent.
-        event.hook.sendMessage("<@$opponentId>")
-            .setEmbeds(DuelEmbeds.offerEmbed(initiatorId, opponentId, stake, pendingDuelRegistry.ttl))
+        // addContent on the message (not the embed description) so the
+        // <@opponent> mention actually pings — embed-mention pings are silent.
+        event.hook.sendMessageEmbeds(DuelEmbeds.offerEmbed(initiatorId, opponentId, stake, pendingDuelRegistry.ttl))
+            .addContent("<@$opponentId>")
             .addComponents(ActionRow.of(accept, decline))
             .queue()
     }
