@@ -70,6 +70,7 @@ class ButtonManagerTest {
     @Test
     fun testButtonManagerFindsAllButtons() {
         val availableButtons = listOf(
+            DuelButton::class.java,
             HighlowButton::class.java,
             InitiativeClearButton::class.java,
             InitiativeNextButton::class.java,
@@ -81,7 +82,7 @@ class ButtonManagerTest {
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
-        assertEquals(8, buttonManager.buttons.size)
+        assertEquals(9, buttonManager.buttons.size)
     }
 
     @Test

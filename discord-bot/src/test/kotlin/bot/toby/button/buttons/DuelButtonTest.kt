@@ -92,7 +92,7 @@ class DuelButtonTest : ButtonTest {
         every { event.componentId } returns DuelEmbeds.acceptButtonId(duelId, opponentId)
         every { pendingDuelRegistry.consumeForAccept(duelId) } returns pendingDuel()
         every {
-            duelService.acceptDuel(initiatorId, opponentId, guildId, stake)
+            duelService.acceptDuel(initiatorId, opponentId, guildId, stake, any())
         } returns DuelService.AcceptOutcome.Win(
             winnerDiscordId = initiatorId, loserDiscordId = opponentId,
             stake = stake, pot = 100L,
@@ -103,8 +103,8 @@ class DuelButtonTest : ButtonTest {
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
 
         verify(exactly = 1) { pendingDuelRegistry.consumeForAccept(duelId) }
-        verify(exactly = 1) { duelService.acceptDuel(initiatorId, opponentId, guildId, stake) }
-        verify { event.message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { duelService.acceptDuel(initiatorId, opponentId, guildId, stake, any()) }
+        verify { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
@@ -127,7 +127,7 @@ class DuelButtonTest : ButtonTest {
 
         verify(exactly = 1) { pendingDuelRegistry.cancel(duelId) }
         verify(exactly = 0) { duelService.acceptDuel(any(), any(), any(), any(), any()) }
-        verify { event.message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
@@ -135,11 +135,11 @@ class DuelButtonTest : ButtonTest {
         every { event.componentId } returns DuelEmbeds.acceptButtonId(duelId, opponentId)
         every { pendingDuelRegistry.consumeForAccept(duelId) } returns pendingDuel()
         every {
-            duelService.acceptDuel(initiatorId, opponentId, guildId, stake)
+            duelService.acceptDuel(initiatorId, opponentId, guildId, stake, any())
         } returns DuelService.AcceptOutcome.InitiatorInsufficient(have = 5L, needed = 50L)
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
 
-        verify { event.message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 }

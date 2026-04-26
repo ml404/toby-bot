@@ -75,7 +75,7 @@ internal class TipCommandTest : CommandTest {
         every { event.getOption("amount") } returns intOpt(50L)
         every { event.getOption("message") } returns strOpt("thanks")
         every {
-            tipService.tip(senderId, recipientId, guildId, 50L, "thanks")
+            tipService.tip(senderId, recipientId, guildId, 50L, "thanks", any(), any())
         } returns TipService.TipOutcome.Ok(
             sender = senderId, recipient = recipientId, amount = 50L, note = "thanks",
             senderNewBalance = 150L, recipientNewBalance = 50L,
@@ -85,7 +85,7 @@ internal class TipCommandTest : CommandTest {
         command.handle(DefaultCommandContext(event), sender, 5)
 
         verify(exactly = 1) {
-            tipService.tip(senderId, recipientId, guildId, 50L, "thanks")
+            tipService.tip(senderId, recipientId, guildId, 50L, "thanks", any(), any())
         }
         verify(exactly = 1) {
             userDtoHelper.calculateUserDto(recipientId, guildId, false)
@@ -136,7 +136,7 @@ internal class TipCommandTest : CommandTest {
 
         outcomes.forEach { variant ->
             every {
-                tipService.tip(senderId, recipientId, guildId, 50L, null)
+                tipService.tip(senderId, recipientId, guildId, 50L, null, any(), any())
             } returns variant
 
             // Should not throw on any variant.
