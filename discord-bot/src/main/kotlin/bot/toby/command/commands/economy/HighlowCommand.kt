@@ -54,17 +54,19 @@ class HighlowCommand @Autowired constructor(
         }
 
         val anchor = highlowService.dealAnchor()
+        val higherMultiplier = highlowService.payoutMultiplier(anchor, Highlow.Direction.HIGHER)
+        val lowerMultiplier = highlowService.payoutMultiplier(anchor, Highlow.Direction.LOWER)
         val userId = requestingUserDto.discordId
         val higher = Button.primary(
             HighlowEmbeds.directionButtonId(Highlow.Direction.HIGHER, anchor, stake, userId),
-            Highlow.Direction.HIGHER.display
+            "${Highlow.Direction.HIGHER.display} (${HighlowEmbeds.multiplierLabel(higherMultiplier)})"
         )
         val lower = Button.primary(
             HighlowEmbeds.directionButtonId(Highlow.Direction.LOWER, anchor, stake, userId),
-            Highlow.Direction.LOWER.display
+            "${Highlow.Direction.LOWER.display} (${HighlowEmbeds.multiplierLabel(lowerMultiplier)})"
         )
 
-        event.hook.sendMessageEmbeds(HighlowEmbeds.anchorEmbed(anchor, stake))
+        event.hook.sendMessageEmbeds(HighlowEmbeds.anchorEmbed(anchor, stake, higherMultiplier, lowerMultiplier))
             .addComponents(ActionRow.of(higher, lower))
             .queue()
     }

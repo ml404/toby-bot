@@ -75,4 +75,25 @@ internal object WagerHelper {
         userService.updateUser(user)
         return WagerResolution(payout = payout, net = net, newBalance = user.socialCredit ?: 0L)
     }
+
+    /**
+     * Fractional-multiplier variant for games whose payout schedule
+     * isn't a clean integer (currently only [database.economy.Highlow]'s
+     * anchor-aware payouts). payout truncates toward zero so any
+     * remainder stays with the house, matching the Long overload's
+     * implicit semantics.
+     */
+    fun applyMultiplier(
+        userService: UserService,
+        user: UserDto,
+        balance: Long,
+        stake: Long,
+        multiplier: Double
+    ): WagerResolution {
+        val payout = (stake * multiplier).toLong()
+        val net = payout - stake
+        user.socialCredit = balance + net
+        userService.updateUser(user)
+        return WagerResolution(payout = payout, net = net, newBalance = user.socialCredit ?: 0L)
+    }
 }

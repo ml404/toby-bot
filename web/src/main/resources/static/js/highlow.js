@@ -9,6 +9,15 @@ function highlowCardLabel(n) {
     }
 }
 
+// Format a payout multiplier for the UI (e.g. 1.50× ). Returns an
+// empty string for non-finite or non-positive values so a missing
+// multiplier just collapses the label rather than rendering "0.00×".
+function highlowFormatMultiplier(m) {
+    const num = Number(m);
+    if (!Number.isFinite(num) || num <= 0) return '';
+    return num.toFixed(2) + '×';
+}
+
 // Pure-DOM render for a /play response. Hoisted out of the IIFE so the
 // jest test in `highlow.test.js` can drive it without booting the page.
 function renderHighlowResult(resultEl, body) {
@@ -21,9 +30,12 @@ function renderHighlowResult(resultEl, body) {
         : '';
     if (body.win) {
         resultEl.classList.add('highlow-result-win');
+        const multSuffix = highlowFormatMultiplier(body.multiplier);
         const winLine = '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
             (body.next > body.anchor ? '>' : '<') + ' <strong>' + highlowCardLabel(body.anchor) +
-            '</strong> &middot; you called ' + dirLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
+            '</strong> &middot; you called ' + dirLabel +
+            (multSuffix ? ' (' + multSuffix + ')' : '') +
+            ' &middot; <strong>+' + body.net + ' credits</strong>';
         const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
             ? window.TobyJackpot.renderWinHtml(resultEl, body, 'highlow-result-jackpot', winLine)
             : winLine;
@@ -74,9 +86,20 @@ function renderHighlowResult(resultEl, body) {
     const directionPicker = document.getElementById('highlow-direction-picker');
     const higherBtn = document.getElementById('highlow-call-higher');
     const lowerBtn = document.getElementById('highlow-call-lower');
+    const higherMultEl = document.getElementById('highlow-call-higher-mult');
+    const lowerMultEl = document.getElementById('highlow-call-lower-mult');
 
     if (!form || !dealBtn || !stakeInput || !anchorFace || !nextFace) return;
     if (!directionPicker || !higherBtn || !lowerBtn) return;
+
+    function setMultiplierLabels(higher, lower) {
+        if (higherMultEl) higherMultEl.textContent = highlowFormatMultiplier(higher);
+        if (lowerMultEl) lowerMultEl.textContent = highlowFormatMultiplier(lower);
+    }
+
+    function clearMultiplierLabels() {
+        setMultiplierLabels(null, null);
+    }
 
     const topUp = (window.TobyTopUp && dealTobyBtn) ? window.TobyTopUp.init({
         form: form,
@@ -111,9 +134,10 @@ function renderHighlowResult(resultEl, body) {
         if (anchorCard) delete anchorCard.dataset.value;
         nextFace.textContent = '?';
         if (nextCard) delete nextCard.dataset.value;
+        clearMultiplierLabels();
     }
 
-    function showCallMode(anchorValue) {
+    function showCallMode(anchorValue, higherMult, lowerMult) {
         if (typeof anchorValue === 'number') {
             anchorFace.textContent = cardLabel(anchorValue);
             if (anchorCard) anchorCard.dataset.value = String(anchorValue);
@@ -124,6 +148,7 @@ function renderHighlowResult(resultEl, body) {
         directionPicker.hidden = false;
         higherBtn.disabled = false;
         lowerBtn.disabled = false;
+        setMultiplierLabels(higherMult, lowerMult);
         if (resultEl) resultEl.hidden = true;
     }
 
@@ -185,7 +210,7 @@ function renderHighlowResult(resultEl, body) {
         })
             .then(function (body) {
                 if (body && body.ok && typeof body.anchor === 'number') {
-                    showCallMode(body.anchor);
+                    showCallMode(body.anchor, body.higherMultiplier, body.lowerMultiplier);
                 } else {
                     dealBtn.disabled = false;
                     if (dealTobyBtn) dealTobyBtn.disabled = false;
@@ -256,10 +281,12 @@ function renderHighlowResult(resultEl, body) {
     // jump straight to call mode so the player can finish their bet.
     const preloadedAnchor = parseInt(main.dataset.activeAnchor || '', 10);
     if (Number.isFinite(preloadedAnchor) && preloadedAnchor > 0) {
-        showCallMode(preloadedAnchor);
+        const preloadedHigher = parseFloat(main.dataset.higherMultiplier || '');
+        const preloadedLower = parseFloat(main.dataset.lowerMultiplier || '');
+        showCallMode(preloadedAnchor, preloadedHigher, preloadedLower);
     }
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { renderHighlowResult, highlowCardLabel };
+    module.exports = { renderHighlowResult, highlowCardLabel, highlowFormatMultiplier };
 }

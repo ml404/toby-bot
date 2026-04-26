@@ -72,6 +72,7 @@ class HighlowButtonTest : ButtonTest {
             anchor = anchor,
             next = 12,
             direction = Highlow.Direction.HIGHER,
+            multiplier = 2.0,
             newBalance = 1_050L
         )
 

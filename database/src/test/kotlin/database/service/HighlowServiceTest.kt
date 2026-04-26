@@ -44,7 +44,7 @@ class HighlowServiceTest {
         val user = userWithBalance(1_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { highlow.play(Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
-            anchor = 5, next = 10, direction = Highlow.Direction.HIGHER, multiplier = 2L
+            anchor = 7, next = 10, direction = Highlow.Direction.HIGHER, multiplier = 2.0
         )
         val captured = slot<UserDto>()
         every { userService.updateUser(capture(captured)) } returns user
@@ -55,8 +55,9 @@ class HighlowServiceTest {
         assertEquals(100L, win.stake)
         assertEquals(200L, win.payout)
         assertEquals(100L, win.net)
+        assertEquals(2.0, win.multiplier, 1e-9)
         assertEquals(1_100L, win.newBalance)
-        assertEquals(5, win.anchor)
+        assertEquals(7, win.anchor)
         assertEquals(10, win.next)
         assertEquals(1_100L, captured.captured.socialCredit)
     }
@@ -66,7 +67,7 @@ class HighlowServiceTest {
         val user = userWithBalance(500L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { highlow.play(Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
-            anchor = 7, next = 7, direction = Highlow.Direction.HIGHER, multiplier = 0L
+            anchor = 7, next = 7, direction = Highlow.Direction.HIGHER, multiplier = 0.0
         )
         every { userService.updateUser(any()) } returns user
 
@@ -112,7 +113,7 @@ class HighlowServiceTest {
         val user = userWithBalance(1_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { highlow.resolve(anchor = 7, direction = Highlow.Direction.HIGHER, random = any()) } returns
-            Highlow.Hand(anchor = 7, next = 12, direction = Highlow.Direction.HIGHER, multiplier = 2L)
+            Highlow.Hand(anchor = 7, next = 12, direction = Highlow.Direction.HIGHER, multiplier = 2.0)
         every { userService.updateUser(any()) } returns user
 
         val outcome = service.play(
@@ -144,7 +145,7 @@ class HighlowServiceTest {
         val user = userWithBalance(500L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { highlow.play(Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
-            anchor = 7, next = 7, direction = Highlow.Direction.HIGHER, multiplier = 0L
+            anchor = 7, next = 7, direction = Highlow.Direction.HIGHER, multiplier = 0.0
         )
         every { userService.updateUser(any()) } returns user
 

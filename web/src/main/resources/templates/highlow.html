@@ -6,13 +6,13 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <main id="main" class="container"
-      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-active-anchor=${anchor}, data-active-stake=${activeStake}">
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-active-anchor=${anchor}, data-active-stake=${activeStake}, data-higher-multiplier=${higherMultiplier}, data-lower-multiplier=${lowerMultiplier}">
 
     <div class="highlow-header">
         <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
         <h1 th:text="'🃏 High-Low • ' + ${guildName}">🃏 High-Low</h1>
         <p class="muted">Lock your stake first — the anchor is dealt only after you commit.
-            Match → <strong th:text="${multiplier} + '×'">2×</strong> stake. Tie loses.
+            Each direction's payout depends on the anchor; safer calls pay less. Tie loses.
             Bet <span th:text="${minStake}">10</span>-<span th:text="${maxStake}">500</span> credits.</p>
     </div>
 
@@ -53,9 +53,15 @@
         <div class="highlow-direction-picker" id="highlow-direction-picker" hidden
              role="group" aria-label="Pick a direction">
             <button type="button" class="btn-primary highlow-direction-btn"
-                    id="highlow-call-higher" data-direction="HIGHER">▲ Higher</button>
+                    id="highlow-call-higher" data-direction="HIGHER">
+                <span class="highlow-direction-label">▲ Higher</span>
+                <span class="highlow-direction-mult" id="highlow-call-higher-mult"></span>
+            </button>
             <button type="button" class="btn-primary highlow-direction-btn"
-                    id="highlow-call-lower" data-direction="LOWER">▼ Lower</button>
+                    id="highlow-call-lower" data-direction="LOWER">
+                <span class="highlow-direction-label">▼ Lower</span>
+                <span class="highlow-direction-mult" id="highlow-call-lower-mult"></span>
+            </button>
         </div>
 
         <div class="highlow-balance">
@@ -73,10 +79,10 @@
         <ul>
             <li>Set your stake and click <strong>Lock stake &amp; deal</strong>; the anchor is revealed only after.</li>
             <li>Once the anchor is up, call higher or lower to draw the next card.</li>
-            <li>Direction matches → <strong th:text="${multiplier} + '×'">2×</strong> stake.</li>
+            <li>Each direction's payout multiplier is shown on its button — safer calls pay less, riskier calls pay more.</li>
             <li>Wrong direction or tie (anchor == next) → lose stake.</li>
             <li>The locked stake + anchor sticks to your session, so refreshing won't reroll the round.</li>
-            <li>Average RTP ≈ 12/13 ≈ 0.923 (~7.7% house edge from the tie-loses rule).</li>
+            <li>Average RTP ≈ 12/13 ≈ 0.923 (~7.7% house edge regardless of direction).</li>
         </ul>
     </section>
 </main>
