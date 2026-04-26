@@ -200,6 +200,22 @@
                 </select>
                 <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
             </div>
+            <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
+                <label>Jackpot loss tribute (% of every lost casino stake)</label>
+                <input type="number" min="0" max="50"
+                       th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
+                       placeholder="10"
+                       th:disabled="${!isOwner}">
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
+            <div class="config-row" data-key="POKER_RAKE_PCT">
+                <label>Poker rake (% of every settled pot)</label>
+                <input type="number" min="0" max="20"
+                       th:value="${overview.config['POKER_RAKE_PCT']}"
+                       placeholder="5"
+                       th:disabled="${!isOwner}">
+                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+            </div>
         </div>
     </section>
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Poker table', '/css/poker.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId},
+               data-table-id=${tableId},
+               data-min-buyin=${minBuyIn},
+               data-max-buyin=${maxBuyIn},
+               data-my-discord-id=${myDiscordId}">
+
+    <div class="poker-header">
+        <a class="back-link" th:href="@{/poker/{g}(g=${guildId})}">&larr; Back to lobby</a>
+        <h1 th:text="'🃏 Table #' + ${tableId}">🃏 Poker table</h1>
+        <p class="muted">
+            Wallet: <strong id="poker-balance" th:text="${balance}">0</strong> credits.
+            Buy-in <span th:text="${minBuyIn}">100</span>–<span th:text="${maxBuyIn}">5000</span> credits.
+        </p>
+    </div>
+
+    <section class="poker-card" id="poker-join-card" hidden>
+        <h2>Join this table</h2>
+        <form id="poker-join" autocomplete="off">
+            <label for="poker-join-buyin">Buy-in</label>
+            <input id="poker-join-buyin" name="buyIn" type="number"
+                   th:attr="min=${minBuyIn}, max=${maxBuyIn}" th:value="${minBuyIn}" step="1" required>
+            <button type="submit" class="btn-primary">Sit down</button>
+        </form>
+    </section>
+
+    <section class="poker-table">
+        <div class="poker-info">
+            <div>Phase: <strong id="poker-phase">—</strong></div>
+            <div>Hand #<strong id="poker-hand-number">0</strong></div>
+            <div>Pot: <strong id="poker-pot">0</strong></div>
+            <div>To call: <strong id="poker-current-bet">0</strong></div>
+        </div>
+
+        <div class="poker-board" id="poker-board"></div>
+
+        <div class="poker-seats" id="poker-seats"></div>
+
+        <div class="poker-actions">
+            <button id="poker-action-checkcall" class="btn-primary" type="button" disabled>Check / Call</button>
+            <button id="poker-action-raise" class="btn-success" type="button" disabled>Raise</button>
+            <button id="poker-action-fold" class="btn-danger" type="button" disabled>Fold</button>
+            <button id="poker-action-start" class="btn-secondary" type="button" hidden>Deal next hand</button>
+            <button id="poker-action-cashout" class="btn-secondary" type="button" hidden>Cash out</button>
+        </div>
+
+        <div id="poker-status" class="muted" style="margin-top: 0.75rem;"></div>
+        <div id="poker-result" class="muted" style="margin-top: 0.5rem;"></div>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/poker-table.js}"></script>
+</body>
+</html>

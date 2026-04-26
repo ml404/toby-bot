@@ -279,6 +279,12 @@ class ModerationWebService(
                 if (n !in 0..50) return "Value must be between 0 and 50 (capped server-side)."
                 n.toString()
             }
+            ConfigDto.Configurations.POKER_RAKE_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (0-20)."
+                if (n !in 0..20) return "Value must be between 0 and 20 (capped server-side)."
+                n.toString()
+            }
         }
 
         val guildIdString = guild.id

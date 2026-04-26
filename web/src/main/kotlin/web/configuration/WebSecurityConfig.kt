@@ -26,6 +26,7 @@ class WebSecurityConfig {
                 auth.requestMatchers("/economy/**").authenticated()
                 auth.requestMatchers("/tip/**").authenticated()
                 auth.requestMatchers("/duel/**").authenticated()
+                auth.requestMatchers("/poker/**").authenticated()
                 auth.anyRequest().authenticated()
             }
             .oauth2Login { oauth2 ->

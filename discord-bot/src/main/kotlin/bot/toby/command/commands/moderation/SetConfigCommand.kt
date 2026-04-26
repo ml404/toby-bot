@@ -60,6 +60,7 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.ACTIVITY_TRACKING -> setActivityTracking(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED -> Unit
                 ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> setJackpotLossTribute(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.POKER_RAKE_PCT -> setPokerRake(event, optionMapping, deleteDelay)
             }
         }
     }
@@ -173,6 +174,30 @@ class SetConfigCommand @Autowired constructor(
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
+    private fun setPokerRake(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val pct = optionMapping.asInt
+        if (pct !in 0..20) {
+            event.hook.sendMessage("Poker rake must be between 0 and 20 (default 5).")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val configValue = ConfigDto.Configurations.POKER_RAKE_PCT.configValue
+        val guildId = event.guild?.id ?: return
+        val newConfigDto = ConfigDto(configValue, pct.toString(), guildId)
+        val existing = configService.getConfigByName(configValue, guildId)
+        if (existing != null && existing.guildId == newConfigDto.guildId) {
+            configService.updateConfig(newConfigDto)
+        } else {
+            configService.createNewConfig(newConfigDto)
+        }
+        event.hook.sendMessage("Poker rake set to $pct % of every settled pot.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val movePropertyName = ConfigDto.Configurations.MOVE.configValue
         val guildId = event.guild?.id ?: return
@@ -244,6 +269,12 @@ class SetConfigCommand @Autowired constructor(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.name.lowercase(Locale.getDefault()),
                 "Percent (0-50) of every lost casino stake routed into the per-guild jackpot pool. Default 10.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_RAKE_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-20) of every settled poker pot routed into the per-guild jackpot pool. Default 5.",
                 false
             )
         )
