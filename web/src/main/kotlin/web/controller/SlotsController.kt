@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.EconomyWebService
-import web.util.discordIdOrNull
+import web.util.WebGuildAccess
 import web.util.displayName
 
 /**
@@ -49,17 +49,12 @@ class SlotsController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/leaderboards"
-
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/leaderboards"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/leaderboards"
+    ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/leaderboards"
+            return@requireMemberForPage "redirect:/leaderboards"
         }
 
         val profile = userService.getUserById(discordId, guildId)
@@ -77,7 +72,7 @@ class SlotsController(
         model.addAttribute("payoutTable", payoutRows())
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
-        return "slots"
+        "slots"
     }
 
     @PostMapping("/spin")
@@ -86,13 +81,18 @@ class SlotsController(
         @PathVariable guildId: Long,
         @RequestBody request: SpinRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<SpinResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(SpinResponse(false, "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(SpinResponse(false, "You are not a member of that server."))
+    ): ResponseEntity<SpinResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                SpinResponse(
+                    false,
+                    if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
-        return when (val outcome = slotsService.spin(discordId, guildId, request.stake, request.autoTopUp)) {
+    ) { discordId ->
+        when (val outcome = slotsService.spin(discordId, guildId, request.stake, request.autoTopUp)) {
             is SpinOutcome.Win -> ResponseEntity.ok(
                 SpinResponse(
                     ok = true,

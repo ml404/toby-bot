@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -64,16 +65,12 @@ class DuelController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes,
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/duel/guilds"
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/duel/guilds"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/duel/guilds"
+    ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/duel/guilds"
+            return@requireMemberForPage "redirect:/duel/guilds"
         }
 
         val profile = userService.getUserById(discordId, guildId)
@@ -92,7 +89,7 @@ class DuelController(
         model.addAttribute("ttlLabel", PendingDuelRegistry.formatTtl(pendingDuelRegistry.ttl))
         model.addAttribute("members", members)
         model.addAttribute("username", user.displayName())
-        return "duel"
+        "duel"
     }
 
     @GetMapping("/{guildId}/pending")
@@ -100,12 +97,10 @@ class DuelController(
     fun pendingForMe(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<List<DuelWebService.PendingDuelView>> {
-        val discordId = user.discordIdOrNull() ?: return ResponseEntity.status(401).build()
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).build()
-        }
-        return ResponseEntity.ok(duelWebService.pendingForOpponent(discordId, guildId))
+    ): ResponseEntity<List<DuelWebService.PendingDuelView>> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
+        ResponseEntity.ok(duelWebService.pendingForOpponent(discordId, guildId))
     }
 
     @GetMapping("/{guildId}/outgoing")
@@ -113,12 +108,10 @@ class DuelController(
     fun outgoingForMe(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<List<DuelWebService.PendingDuelView>> {
-        val discordId = user.discordIdOrNull() ?: return ResponseEntity.status(401).build()
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).build()
-        }
-        return ResponseEntity.ok(duelWebService.pendingForInitiator(discordId, guildId))
+    ): ResponseEntity<List<DuelWebService.PendingDuelView>> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
+        ResponseEntity.ok(duelWebService.pendingForInitiator(discordId, guildId))
     }
 
     @PostMapping("/{guildId}/challenge")
@@ -127,17 +120,26 @@ class DuelController(
         @PathVariable guildId: Long,
         @RequestBody request: ChallengeRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<ChallengeResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ChallengeResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(ChallengeResponse(false, error = "You are not a member of that server."))
+    ): ResponseEntity<ChallengeResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                ChallengeResponse(
+                    false,
+                    error = if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
+    ) { discordId ->
         if (request.opponentDiscordId == discordId) {
-            return ResponseEntity.badRequest().body(ChallengeResponse(false, error = "You can't duel yourself."))
+            return@requireMemberForJson ResponseEntity.badRequest().body(
+                ChallengeResponse(false, error = "You can't duel yourself.")
+            )
         }
         if (!economyWebService.isMember(request.opponentDiscordId, guildId)) {
-            return ResponseEntity.badRequest().body(ChallengeResponse(false, error = "Pick someone from this server."))
+            return@requireMemberForJson ResponseEntity.badRequest().body(
+                ChallengeResponse(false, error = "Pick someone from this server.")
+            )
         }
 
         duelWebService.ensureOpponent(request.opponentDiscordId, guildId)
@@ -149,7 +151,9 @@ class DuelController(
             stake = request.stake
         )
         if (start !is StartOutcome.Ok) {
-            return ResponseEntity.badRequest().body(ChallengeResponse(false, error = startErrorMessage(start)))
+            return@requireMemberForJson ResponseEntity.badRequest().body(
+                ChallengeResponse(false, error = startErrorMessage(start))
+            )
         }
 
         val offer = pendingDuelRegistry.register(
@@ -167,7 +171,7 @@ class DuelController(
                 stake = request.stake
             )
         )
-        return ResponseEntity.ok(
+        ResponseEntity.ok(
             ChallengeResponse(ok = true, duelId = offer.id, stake = request.stake)
         )
     }

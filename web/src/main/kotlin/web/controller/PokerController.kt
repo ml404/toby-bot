@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.EconomyWebService
 import web.service.PokerWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -69,16 +70,12 @@ class PokerController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes,
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/poker/guilds"
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/poker/guilds"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/poker/guilds"
+    ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/poker/guilds"
+            return@requireMemberForPage "redirect:/poker/guilds"
         }
 
         val profile = userService.getUserById(discordId, guildId)
@@ -94,7 +91,7 @@ class PokerController(
         model.addAttribute("maxSeats", PokerService.MAX_SEATS)
         model.addAttribute("tables", pokerWebService.listGuildTables(guildId))
         model.addAttribute("username", user.displayName())
-        return "poker-lobby"
+        "poker-lobby"
     }
 
     @GetMapping("/{guildId}/{tableId}")
@@ -104,16 +101,12 @@ class PokerController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes,
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/poker/guilds"
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/poker/guilds"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/poker/guilds"
+    ) { discordId ->
         if (pokerWebService.snapshot(tableId, discordId) == null) {
             ra.addFlashAttribute("error", "That table no longer exists.")
-            return "redirect:/poker/$guildId"
+            return@requireMemberForPage "redirect:/poker/$guildId"
         }
         val profile = userService.getUserById(discordId, guildId)
         model.addAttribute("guildId", guildId.toString())
@@ -123,7 +116,7 @@ class PokerController(
         model.addAttribute("maxBuyIn", PokerService.MAX_BUY_IN)
         model.addAttribute("username", user.displayName())
         model.addAttribute("myDiscordId", discordId.toString())
-        return "poker-table"
+        "poker-table"
     }
 
     @GetMapping("/{guildId}/{tableId}/state")
@@ -132,15 +125,15 @@ class PokerController(
         @PathVariable guildId: Long,
         @PathVariable tableId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PokerWebService.TableStateView> {
-        val discordId = user.discordIdOrNull() ?: return ResponseEntity.status(401).build()
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).build()
-        }
+    ): ResponseEntity<PokerWebService.TableStateView> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
         val view = pokerWebService.snapshot(tableId, discordId)
-            ?: return ResponseEntity.status(404).build()
-        if (view.guildId != guildId) return ResponseEntity.status(404).build()
-        return ResponseEntity.ok(view)
+            ?: return@requireMemberForJsonNoBody ResponseEntity.status(404).build()
+        if (view.guildId != guildId) {
+            return@requireMemberForJsonNoBody ResponseEntity.status(404).build()
+        }
+        ResponseEntity.ok(view)
     }
 
     @PostMapping("/{guildId}/create")
@@ -149,13 +142,11 @@ class PokerController(
         @PathVariable guildId: Long,
         @RequestBody request: CreateRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<TableActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TableActionResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TableActionResponse(false, error = "You are not a member of that server."))
-        }
-        return when (val outcome = pokerService.createTable(discordId, guildId, request.buyIn)) {
+    ): ResponseEntity<TableActionResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status -> tableErrorResponse(status) }
+    ) { discordId ->
+        when (val outcome = pokerService.createTable(discordId, guildId, request.buyIn)) {
             is CreateOutcome.Ok -> ResponseEntity.ok(TableActionResponse(ok = true, tableId = outcome.tableId))
             is CreateOutcome.InvalidBuyIn -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "Buy-in must be between ${outcome.min} and ${outcome.max}.")
@@ -176,13 +167,11 @@ class PokerController(
         @PathVariable tableId: Long,
         @RequestBody request: JoinRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<TableActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TableActionResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TableActionResponse(false, error = "You are not a member of that server."))
-        }
-        return when (val outcome = pokerService.buyIn(discordId, guildId, tableId, request.buyIn)) {
+    ): ResponseEntity<TableActionResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status -> tableErrorResponse(status) }
+    ) { discordId ->
+        when (val outcome = pokerService.buyIn(discordId, guildId, tableId, request.buyIn)) {
             is BuyInOutcome.Ok -> ResponseEntity.ok(
                 TableActionResponse(ok = true, tableId = tableId, newBalance = outcome.newBalance)
             )
@@ -213,13 +202,11 @@ class PokerController(
         @PathVariable guildId: Long,
         @PathVariable tableId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<TableActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TableActionResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TableActionResponse(false, error = "You are not a member of that server."))
-        }
-        return when (val outcome = pokerService.startHand(discordId, guildId, tableId)) {
+    ): ResponseEntity<TableActionResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status -> tableErrorResponse(status) }
+    ) { discordId ->
+        when (val outcome = pokerService.startHand(discordId, guildId, tableId)) {
             is StartHandOutcome.Ok -> ResponseEntity.ok(TableActionResponse(ok = true, handNumber = outcome.handNumber))
             StartHandOutcome.HandAlreadyInProgress -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "A hand is already in progress.")
@@ -243,16 +230,16 @@ class PokerController(
         @PathVariable tableId: Long,
         @RequestBody request: ActionRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<TableActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TableActionResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TableActionResponse(false, error = "You are not a member of that server."))
-        }
+    ): ResponseEntity<TableActionResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status -> tableErrorResponse(status) }
+    ) { discordId ->
         val pokerAction = parseAction(request.action, tableId, discordId)
-            ?: return ResponseEntity.badRequest().body(TableActionResponse(false, error = "Unknown or illegal action: ${request.action}"))
+            ?: return@requireMemberForJson ResponseEntity.badRequest().body(
+                TableActionResponse(false, error = "Unknown or illegal action: ${request.action}")
+            )
 
-        return when (val outcome = pokerService.applyAction(discordId, guildId, tableId, pokerAction)) {
+        when (val outcome = pokerService.applyAction(discordId, guildId, tableId, pokerAction)) {
             ActionOutcome.Continued -> ResponseEntity.ok(TableActionResponse(ok = true))
             is ActionOutcome.StreetAdvanced -> ResponseEntity.ok(
                 TableActionResponse(ok = true, phase = outcome.phase.name)
@@ -280,13 +267,11 @@ class PokerController(
         @PathVariable guildId: Long,
         @PathVariable tableId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<TableActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TableActionResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TableActionResponse(false, error = "You are not a member of that server."))
-        }
-        return when (val outcome = pokerService.cashOut(discordId, guildId, tableId)) {
+    ): ResponseEntity<TableActionResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status -> tableErrorResponse(status) }
+    ) { discordId ->
+        when (val outcome = pokerService.cashOut(discordId, guildId, tableId)) {
             is CashOutOutcome.Ok -> ResponseEntity.ok(
                 TableActionResponse(ok = true, chipsReturned = outcome.chipsReturned, newBalance = outcome.newBalance)
             )
@@ -321,6 +306,19 @@ class PokerController(
             else -> null
         }
     }
+
+    /**
+     * Single source of truth for the auth/membership 401/403 envelopes
+     * every POST endpoint shares. Wraps the typed [TableActionResponse]
+     * shape so callers don't have to duplicate the body.
+     */
+    private fun tableErrorResponse(status: Int): ResponseEntity<TableActionResponse> =
+        ResponseEntity.status(status).body(
+            TableActionResponse(
+                false,
+                error = if (status == 401) "Not signed in." else "You are not a member of that server."
+            )
+        )
 
     private fun describeRejection(reason: PokerEngine.RejectReason): String = when (reason) {
         PokerEngine.RejectReason.NO_HAND_IN_PROGRESS -> "No hand in progress."
