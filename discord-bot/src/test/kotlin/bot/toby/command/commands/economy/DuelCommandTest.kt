@@ -86,14 +86,7 @@ internal class DuelCommandTest : CommandTest {
             duelService.startDuel(initiatorId, opponentId, guildId, 50L)
         }
         verify(exactly = 1) {
-            pendingDuelRegistry.register(
-                guildId = guildId,
-                initiatorDiscordId = initiatorId,
-                opponentDiscordId = opponentId,
-                stake = 50L,
-                createdAt = any(),
-                onTimeout = any()
-            )
+            pendingDuelRegistry.register(guildId, initiatorId, opponentId, 50L, any(), any())
         }
     }
 

@@ -49,7 +49,7 @@ class TipControllerTest {
     @Test
     fun `tip Ok returns 200 with balances and daily totals`() {
         every {
-            tipService.tip(discordId, recipientId, guildId, 50L, "thanks")
+            tipService.tip(discordId, recipientId, guildId, 50L, "thanks", any(), any())
         } returns TipOutcome.Ok(
             sender = discordId, recipient = recipientId,
             amount = 50L, note = "thanks",
@@ -112,7 +112,7 @@ class TipControllerTest {
             TipOutcome.UnknownRecipient,
         )
         outcomes.forEach { variant ->
-            every { tipService.tip(discordId, recipientId, guildId, 50L, null) } returns variant
+            every { tipService.tip(discordId, recipientId, guildId, 50L, null, any(), any()) } returns variant
             val response = controller.tip(guildId, TipRequest(recipientId, 50L, null), user)
             assertEquals(400, response.statusCode.value(), "outcome $variant should be 400")
             assertFalse(response.body!!.ok)

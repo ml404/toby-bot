@@ -66,7 +66,7 @@ class DuelControllerTest {
             duelService.startDuel(discordId, opponentId, guildId, 50L)
         } returns StartOutcome.Ok(initiatorBalance = 200L)
         every {
-            pendingDuelRegistry.register(guildId, discordId, opponentId, 50L)
+            pendingDuelRegistry.register(guildId, discordId, opponentId, 50L, any(), any())
         } returns PendingDuelRegistry.PendingDuel(
             id = duelId, guildId = guildId,
             initiatorDiscordId = discordId, opponentDiscordId = opponentId,
@@ -88,7 +88,7 @@ class DuelControllerTest {
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
         verify(exactly = 0) { duelService.startDuel(any(), any(), any(), any()) }
-        verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any()) }
+        verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -101,7 +101,7 @@ class DuelControllerTest {
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
-        verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any()) }
+        verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -109,7 +109,7 @@ class DuelControllerTest {
         every { pendingDuelRegistry.get(duelId) } returns pendingFor(discordId)
         every { pendingDuelRegistry.consumeForAccept(duelId) } returns pendingFor(discordId)
         every {
-            duelService.acceptDuel(discordId, discordId, guildId, 50L)
+            duelService.acceptDuel(discordId, discordId, guildId, 50L, any())
         } returns AcceptOutcome.Win(
             winnerDiscordId = discordId, loserDiscordId = 0L,
             stake = 50L, pot = 100L,
