@@ -101,7 +101,7 @@ class VoiceCreditAwardServiceTest {
             awardService.award(
                 discordId = discordId,
                 guildId = guildId,
-                amount = 60L,
+                amount = 90L,
                 reason = "voice-session",
                 countsAgainstDailyCap = any(),
                 at = any(),
@@ -112,8 +112,8 @@ class VoiceCreditAwardServiceTest {
         val closed = slot<VoiceSessionDto>()
         every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
 
-        // 7200s / 120s = 60 credits requested; awardService only grants 5 (cap).
-        service.closeSessionAndAward(session(t0), t0.plusSeconds(7200), hadCompanyDurationSeconds = 7200L)
+        // 10800s / 120s = 90 credits requested; awardService only grants 5 (cap).
+        service.closeSessionAndAward(session(t0), t0.plusSeconds(10800), hadCompanyDurationSeconds = 10800L)
 
         assertEquals(5L, closed.captured.creditsAwarded)
     }

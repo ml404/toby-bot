@@ -79,6 +79,6 @@ class SocialCreditAwardService(
 
     companion object {
         // Matches the voice credit cap so all daily-capped sources share one bucket.
-        const val DEFAULT_DAILY_CAP: Long = 60L
+        const val DEFAULT_DAILY_CAP: Long = 90L
     }
 }

@@ -1,0 +1,67 @@
+.duel-header {
+    margin-bottom: 1.5rem;
+}
+
+.duel-header h1 {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.duel-card,
+.duel-inbox {
+    background: var(--surface, #1f2128);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 36rem;
+    margin-bottom: 1.5rem;
+}
+
+.duel-card h2,
+.duel-inbox h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.duel-card form {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.duel-card input {
+    background: var(--surface-2, #16181d);
+    color: inherit;
+    border: 1px solid var(--border, #2a2d35);
+    border-radius: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+}
+
+.duel-card input:focus {
+    outline: 2px solid var(--accent, #5865f2);
+    outline-offset: 2px;
+}
+
+.duel-balance {
+    border-top: 1px solid var(--border, #2a2d35);
+    padding-top: 1rem;
+}
+
+.duel-pending-list {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.duel-pending-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border, #2a2d35);
+    border-radius: 0.5rem;
+}
+
+.duel-pending-actions {
+    display: flex;
+    gap: 0.5rem;
+}
