@@ -79,4 +79,47 @@ class ConfigServiceImplIntegrationTest {
         Assertions.assertEquals(1, configSize)
         configService.deleteAll("test")
     }
+
+    @Test
+    fun upsertConfig_returnsCreated_andInsertsRow_whenNoneExists() {
+        val result = configService.upsertConfig("TOKEN", "1234", "test")
+
+        Assertions.assertTrue(result is ConfigService.UpsertResult.Created)
+        configService.clearCache()
+        val read = configService.getConfigByName("TOKEN", "test")
+        Assertions.assertEquals("1234", read?.value)
+        Assertions.assertEquals(1, configService.listGuildConfig("test")!!.size)
+        configService.deleteAll("test")
+    }
+
+    @Test
+    fun upsertConfig_returnsUpdated_withPreviousValue_whenRowExists() {
+        configService.createNewConfig(ConfigDto("TOKEN", "1234", "test"))
+        configService.clearCache()
+
+        val result = configService.upsertConfig("TOKEN", "5678", "test")
+
+        Assertions.assertTrue(result is ConfigService.UpsertResult.Updated)
+        Assertions.assertEquals("1234", (result as ConfigService.UpsertResult.Updated).previousValue)
+        configService.clearCache()
+        Assertions.assertEquals("5678", configService.getConfigByName("TOKEN", "test")?.value)
+        Assertions.assertEquals(1, configService.listGuildConfig("test")!!.size, "must not double-write")
+        configService.deleteAll("test")
+    }
+
+    @Test
+    fun upsertConfig_does_not_collide_across_guilds() {
+        configService.createNewConfig(ConfigDto("TOKEN", "guildA-value", "guildA"))
+        configService.clearCache()
+
+        // Upserting the same name for a different guild creates a new row.
+        val result = configService.upsertConfig("TOKEN", "guildB-value", "guildB")
+
+        Assertions.assertTrue(result is ConfigService.UpsertResult.Created)
+        configService.clearCache()
+        Assertions.assertEquals("guildA-value", configService.getConfigByName("TOKEN", "guildA")?.value)
+        Assertions.assertEquals("guildB-value", configService.getConfigByName("TOKEN", "guildB")?.value)
+        configService.deleteAll("guildA")
+        configService.deleteAll("guildB")
+    }
 }

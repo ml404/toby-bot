@@ -288,18 +288,13 @@ class ModerationWebService(
         }
 
         val guildIdString = guild.id
-        val newDto = ConfigDto(key.configValue, value, guildIdString)
-        val existing = configService.getConfigByName(key.configValue, guildIdString)
-        val path = if (existing != null && existing.guildId == guildIdString) {
-            configService.updateConfig(newDto)
-            "update"
-        } else {
-            configService.createNewConfig(newDto)
-            "create"
+        val result = configService.upsertConfig(key.configValue, value, guildIdString)
+        val path = when (result) {
+            is ConfigService.UpsertResult.Created -> "create"
+            is ConfigService.UpsertResult.Updated -> "update"
         }
         logger.info(
-            "Config $path: guild=$guildIdString actor=$actorDiscordId key=${key.configValue} " +
-                "value=$value existing.guildId=${existing?.guildId}"
+            "Config $path: guild=$guildIdString actor=$actorDiscordId key=${key.configValue} value=$value"
         )
 
         // Mirror SetConfigCommand's Discord-side behaviour: when activity
