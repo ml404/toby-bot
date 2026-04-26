@@ -17,7 +17,6 @@ import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -37,11 +36,6 @@ class DuelButtonTest : ButtonTest {
     private val duelId = 100L
 
     private lateinit var message: Message
-    private lateinit var messageEditAction: RestAction<Void>
-    @Suppress("UNCHECKED_CAST")
-    private fun anyEditAction(): RestAction<Void> = mockk(relaxed = true) {
-        every { queue() } just Runs
-    }
 
     @BeforeEach
     override fun setup() {

@@ -6,6 +6,7 @@ import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
 import database.service.DuelService
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -62,7 +63,7 @@ class DuelButton @Autowired constructor(
         }
         event.message.editMessageEmbeds(
             DuelEmbeds.declineEmbed(offer.initiatorDiscordId, offer.opponentDiscordId, offer.stake)
-        ).setComponents(emptyList()).queue()
+        ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
     }
 
     private fun handleAccept(
@@ -84,11 +85,11 @@ class DuelButton @Autowired constructor(
         when (outcome) {
             is DuelService.AcceptOutcome.Win -> {
                 event.message.editMessageEmbeds(DuelEmbeds.winEmbed(outcome))
-                    .setComponents(emptyList()).queue()
+                    .setComponents(emptyList<MessageTopLevelComponent>()).queue()
             }
             else -> {
                 event.message.editMessageEmbeds(DuelEmbeds.acceptErrorEmbed(outcome))
-                    .setComponents(emptyList()).queue()
+                    .setComponents(emptyList<MessageTopLevelComponent>()).queue()
             }
         }
     }

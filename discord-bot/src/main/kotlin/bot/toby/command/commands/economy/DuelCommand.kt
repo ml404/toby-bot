@@ -7,6 +7,7 @@ import core.command.CommandContext
 import database.dto.UserDto
 import database.service.DuelService
 import database.service.DuelService.StartOutcome
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -102,7 +103,7 @@ class DuelCommand @Autowired constructor(
             runCatching {
                 event.hook.editOriginalEmbeds(
                     DuelEmbeds.timeoutEmbed(expired.initiatorDiscordId, expired.opponentDiscordId, expired.stake)
-                ).setComponents(emptyList()).queue()
+                ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
             }
         }
 

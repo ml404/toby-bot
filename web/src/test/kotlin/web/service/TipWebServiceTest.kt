@@ -58,14 +58,11 @@ class TipWebServiceTest {
     @Test
     fun `ensureRecipient lazily creates a row when none exists`() {
         every { userService.getUserById(recipient, guildId) } returns null
-        val captured = slot()
-        every { userService.createNewUser(capture(captured)) } answers { captured.captured }
+        every { userService.createNewUser(any()) } answers { firstArg() }
 
         val result = service.ensureRecipient(recipient, guildId)
 
         assertEquals(recipient, result.discordId)
         assertEquals(guildId, result.guildId)
     }
-
-    private inline fun <reified T : Any> slot(): io.mockk.CapturingSlot<T> = io.mockk.slot()
 }
