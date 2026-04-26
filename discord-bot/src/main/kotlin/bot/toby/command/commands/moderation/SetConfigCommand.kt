@@ -76,13 +76,7 @@ class SetConfigCommand @Autowired constructor(
                 .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
-        val newConfigDto = ConfigDto(configValue, channel.id, guildId)
-        val databaseConfig = configService.getConfigByName(configValue, guildId)
-        if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
-            configService.updateConfig(newConfigDto)
-        } else {
-            configService.createNewConfig(newConfigDto)
-        }
+        configService.upsertConfig(configValue, channel.id, guildId)
         event.hook.sendMessage("Monthly leaderboards will now post in <#${channel.id}> on the 1st of each month.")
             .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -96,14 +90,14 @@ class SetConfigCommand @Autowired constructor(
         val configValue = ConfigDto.Configurations.ACTIVITY_TRACKING.configValue
         val guildId = event.guild?.id ?: return
 
-        val newConfigDto = ConfigDto(configValue, enabled.toString(), guildId)
-        val existing = configService.getConfigByName(configValue, guildId)
-        val previouslyEnabled = existing?.value?.equals("true", ignoreCase = true) == true
-
-        if (existing != null && existing.guildId == newConfigDto.guildId) {
-            configService.updateConfig(newConfigDto)
-        } else {
-            configService.createNewConfig(newConfigDto)
+        // Need to know whether tracking was previously enabled to decide
+        // whether to fire the first-enable DM flow — that's why we branch
+        // on the result instead of ignoring it.
+        val result = configService.upsertConfig(configValue, enabled.toString(), guildId)
+        val previouslyEnabled = when (result) {
+            is ConfigService.UpsertResult.Created -> false
+            is ConfigService.UpsertResult.Updated ->
+                result.previousValue?.equals("true", ignoreCase = true) == true
         }
 
         val message = if (enabled) {
@@ -139,14 +133,7 @@ class SetConfigCommand @Autowired constructor(
             ConfigDto.Configurations.valueOf(optionMapping.name.uppercase(Locale.getDefault())).configValue
         val guildId = event.guild?.id ?: return
 
-        val newConfigDto = ConfigDto(configValue, newValue.toString(), guildId)
-        val databaseConfig = configService.getConfigByName(configValue, guildId)
-
-        if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
-            configService.updateConfig(newConfigDto)
-        } else {
-            configService.createNewConfig(newConfigDto)
-        }
+        configService.upsertConfig(configValue, newValue.toString(), guildId)
         event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
@@ -163,13 +150,7 @@ class SetConfigCommand @Autowired constructor(
         }
         val configValue = ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue
         val guildId = event.guild?.id ?: return
-        val newConfigDto = ConfigDto(configValue, pct.toString(), guildId)
-        val existing = configService.getConfigByName(configValue, guildId)
-        if (existing != null && existing.guildId == newConfigDto.guildId) {
-            configService.updateConfig(newConfigDto)
-        } else {
-            configService.createNewConfig(newConfigDto)
-        }
+        configService.upsertConfig(configValue, pct.toString(), guildId)
         event.hook.sendMessage("Jackpot loss-tribute set to $pct % of every lost casino stake.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -187,13 +168,7 @@ class SetConfigCommand @Autowired constructor(
         }
         val configValue = ConfigDto.Configurations.POKER_RAKE_PCT.configValue
         val guildId = event.guild?.id ?: return
-        val newConfigDto = ConfigDto(configValue, pct.toString(), guildId)
-        val existing = configService.getConfigByName(configValue, guildId)
-        if (existing != null && existing.guildId == newConfigDto.guildId) {
-            configService.updateConfig(newConfigDto)
-        } else {
-            configService.createNewConfig(newConfigDto)
-        }
+        configService.upsertConfig(configValue, pct.toString(), guildId)
         event.hook.sendMessage("Poker rake set to $pct % of every settled pot.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -205,14 +180,7 @@ class SetConfigCommand @Autowired constructor(
             event.getOption(ConfigDto.Configurations.MOVE.name.lowercase(Locale.getDefault()))?.asChannel
 
         if (newDefaultMoveChannel != null) {
-            val newConfigDto = ConfigDto(movePropertyName, newDefaultMoveChannel.name, guildId)
-            val databaseConfig = configService.getConfigByName(movePropertyName, guildId)
-
-            if (databaseConfig != null && databaseConfig.guildId == newConfigDto.guildId) {
-                configService.updateConfig(newConfigDto)
-            } else {
-                configService.createNewConfig(newConfigDto)
-            }
+            configService.upsertConfig(movePropertyName, newDefaultMoveChannel.name, guildId)
             event.hook.sendMessage("Set default move channel to '${newDefaultMoveChannel.name}'")
                 .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         } else {

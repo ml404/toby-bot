@@ -2,7 +2,6 @@ package bot.toby.activity
 
 import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
 import database.dto.ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED
 import database.service.ConfigService
 import net.dv8tion.jda.api.JDA
@@ -58,12 +57,7 @@ class ActivityTrackingNotifier @Autowired constructor(
             .filter { !it.isBot }
             .forEach { user -> sendDmSafely(user, message) }
 
-        val flag = ConfigDto(ACTIVITY_TRACKING_NOTIFIED.configValue, "true", guildIdStr)
-        if (existing != null && existing.guildId == guildIdStr) {
-            configService.updateConfig(flag)
-        } else {
-            configService.createNewConfig(flag)
-        }
+        configService.upsertConfig(ACTIVITY_TRACKING_NOTIFIED.configValue, "true", guildIdStr)
     }
 
     private fun sendDmSafely(user: User, body: String) {

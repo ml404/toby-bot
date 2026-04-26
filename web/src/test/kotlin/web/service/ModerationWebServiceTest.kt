@@ -76,6 +76,11 @@ class ModerationWebServiceTest {
         every { jda.getGuildById(guildId) } returns guild
         every { guild.id } returns guildId.toString()
         every { guild.name } returns "Test Guild"
+        // Default upsert: report a "created" outcome so callers can branch
+        // on the result without each test having to wire it up.
+        every { configService.upsertConfig(any(), any(), any()) } answers {
+            ConfigService.UpsertResult.Created(ConfigDto(firstArg(), secondArg(), thirdArg()))
+        }
     }
 
     @AfterEach
@@ -228,13 +233,12 @@ class ModerationWebServiceTest {
     }
 
     @Test
-    fun `updateConfig creates new config when none exists`() {
+    fun `updateConfig writes the value when no row exists`() {
         mockMember(ownerId, isOwner = true)
-        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, guildId.toString()) } returns null
 
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.VOLUME, "75")
         assertNull(err)
-        verify { configService.createNewConfig(match { it.value == "75" }) }
+        verify { configService.upsertConfig("DEFAULT_VOLUME", "75", guildId.toString()) }
     }
 
     @Test
@@ -244,8 +248,7 @@ class ModerationWebServiceTest {
 
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.MOVE, "nope")
         assertNotNull(err)
-        verify(exactly = 0) { configService.createNewConfig(any()) }
-        verify(exactly = 0) { configService.updateConfig(any()) }
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
     }
 
     @Test
@@ -253,11 +256,10 @@ class ModerationWebServiceTest {
         mockMember(ownerId, isOwner = true)
         val vc = mockk<VoiceChannel>(relaxed = true)
         every { guild.getVoiceChannelsByName("afk", true) } returns listOf(vc)
-        every { configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, guildId.toString()) } returns null
 
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.MOVE, "afk")
         assertNull(err)
-        verify { configService.createNewConfig(match { it.value == "afk" }) }
+        verify { configService.upsertConfig("DEFAULT_MOVE_CHANNEL", "afk", guildId.toString()) }
     }
 
     // ---- kickMember ----
@@ -566,17 +568,17 @@ class ModerationWebServiceTest {
         mockMember(ownerId, isOwner = true)
         val textChannel = mockk<TextChannel>(relaxed = true)
         every { guild.getTextChannelById(111L) } returns textChannel
-        every { configService.getConfigByName(any(), any()) } returns null
 
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LEADERBOARD_CHANNEL, "111")
         assertNull(err)
-        verify(exactly = 1) { configService.createNewConfig(any()) }
+        verify(exactly = 1) {
+            configService.upsertConfig("LEADERBOARD_CHANNEL", "111", guildId.toString())
+        }
     }
 
     @Test
     fun `updateConfig ACTIVITY_TRACKING=true publishes the first-enable event`() {
         mockMember(ownerId, isOwner = true)
-        every { configService.getConfigByName(any(), any()) } returns null
 
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.ACTIVITY_TRACKING, "true")
 
@@ -592,7 +594,6 @@ class ModerationWebServiceTest {
     @Test
     fun `updateConfig ACTIVITY_TRACKING=false does NOT publish the event`() {
         mockMember(ownerId, isOwner = true)
-        every { configService.getConfigByName(any(), any()) } returns null
 
         service.updateConfig(ownerId, guildId, ConfigDto.Configurations.ACTIVITY_TRACKING, "false")
 
@@ -609,8 +610,7 @@ class ModerationWebServiceTest {
         val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.ACTIVITY_TRACKING, "maybe")
 
         assertEquals("Value must be true or false.", err)
-        verify(exactly = 0) { configService.createNewConfig(any()) }
-        verify(exactly = 0) { configService.updateConfig(any()) }
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         verify(exactly = 0) {
             eventPublisher.publishEvent(any<common.events.ActivityTrackingEnabled>())
         }

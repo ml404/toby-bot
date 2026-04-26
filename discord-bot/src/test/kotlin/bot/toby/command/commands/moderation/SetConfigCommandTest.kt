@@ -27,6 +27,11 @@ internal class SetConfigCommandTest : CommandTest {
         setUpCommonMocks()
         configService = mockk(relaxed = true)
         activityTrackingNotifier = mockk(relaxed = true)
+        // Default upsert: report Created. Tests that need Updated semantics
+        // (e.g. ACTIVITY_TRACKING first-enable) override per-test.
+        every { configService.upsertConfig(any(), any(), any()) } answers {
+            ConfigService.UpsertResult.Created(ConfigDto(firstArg(), secondArg(), thirdArg()))
+        }
         setConfigCommand = SetConfigCommand(configService, activityTrackingNotifier)
     }
 
@@ -38,7 +43,6 @@ internal class SetConfigCommandTest : CommandTest {
 
     @Test
     fun testSetConfig_notAsServerOwner_sendsErrorMessage() {
-        // Arrange
         val commandContext = DefaultCommandContext(event)
         val volumeOptionMapping = mockk<OptionMapping>()
 
@@ -47,22 +51,17 @@ internal class SetConfigCommandTest : CommandTest {
         every { volumeOptionMapping.name } returns VOLUME.name
         every { member.isOwner } returns false
         every { event.options } returns listOf(volumeOptionMapping)
-        every { configService.getConfigByName(VOLUME.name, "1") } returns null
 
-        // Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
-        // Assert
-        verify(exactly = 0) { configService.getConfigByName(VOLUME.configValue, "1") }
-        verify(exactly = 0) { configService.createNewConfig(any()) }
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         verify(exactly = 1) {
             event.hook.sendMessage("This is currently reserved for the owner of the server only, this may change in future")
         }
     }
 
     @Test
-    fun testSetConfig_withOneConfig_createsThatConfig() {
-        // Arrange
+    fun testSetConfig_withOneConfig_writesViaUpsert() {
         val commandContext = DefaultCommandContext(event)
         val volumeOptionMapping = mockk<OptionMapping>()
 
@@ -71,65 +70,52 @@ internal class SetConfigCommandTest : CommandTest {
         every { volumeOptionMapping.name } returns VOLUME.name
         every { member.isOwner } returns true
         every { event.options } returns listOf(volumeOptionMapping)
-        every { configService.getConfigByName(VOLUME.configValue, "1") } returns null
 
-        // Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
-        // Assert
-        verify(exactly = 1) { configService.getConfigByName(VOLUME.configValue, "1") }
-        verify(exactly = 1) { configService.createNewConfig(any()) }
-        verify(exactly = 1) {
-            event.hook.sendMessage("Set default volume to '20'")
-        }
+        verify(exactly = 1) { configService.upsertConfig(VOLUME.configValue, "20", "1") }
+        verify(exactly = 1) { event.hook.sendMessage("Set default volume to '20'") }
     }
 
     @Test
-    fun testSetConfig_withOneConfig_updatesThatConfig() {
-        // Arrange
+    fun testSetConfig_updateBranch_isInvisibleToCallers() {
+        // The whole point of upsertConfig: the caller doesn't branch on
+        // exists-vs-not-exists. Verify a single call regardless of the
+        // pre-existing row.
         val commandContext = DefaultCommandContext(event)
         val volumeOptionMapping = mockk<OptionMapping>()
-        val dbConfig = ConfigDto(VOLUME.configValue, "20", "1")
-
+        every { configService.upsertConfig(VOLUME.configValue, "20", "1") } returns
+            ConfigService.UpsertResult.Updated(
+                ConfigDto(VOLUME.configValue, "20", "1"),
+                previousValue = "10"
+            )
 
         every { event.getOption(VOLUME.name.lowercase(Locale.getDefault())) } returns volumeOptionMapping
         every { volumeOptionMapping.asInt } returns 20
         every { volumeOptionMapping.name } returns VOLUME.name
         every { member.isOwner } returns true
         every { event.options } returns listOf(volumeOptionMapping)
-        every { configService.getConfigByName(VOLUME.configValue, "1") } returns dbConfig
 
-        // Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
-        // Assert
-        verify(exactly = 1) { configService.getConfigByName(VOLUME.configValue, "1") }
-        verify(exactly = 1) { configService.updateConfig(any<ConfigDto>()) }
-        verify(exactly = 1) {
-            event.hook.sendMessage("Set default volume to '20'")
-        }
+        verify(exactly = 1) { configService.upsertConfig(VOLUME.configValue, "20", "1") }
+        verify(exactly = 1) { event.hook.sendMessage("Set default volume to '20'") }
     }
 
     @Test
-    fun testSetConfig_withDeleteDelay_createsThatConfig() {
-        // Arrange
+    fun testSetConfig_withDeleteDelay_writesViaUpsert() {
         val commandContext = DefaultCommandContext(event)
         val deleteDelayOptionMapping = mockk<OptionMapping>()
-        every { configService.createNewConfig(any()) } returns ConfigDto(DELETE_DELAY.name, "20", "1")
 
         every { event.getOption(DELETE_DELAY.name.lowercase(Locale.getDefault())) } returns deleteDelayOptionMapping
         every { deleteDelayOptionMapping.asInt } returns 20
         every { deleteDelayOptionMapping.name } returns DELETE_DELAY.name
         every { member.isOwner } returns true
         every { event.options } returns listOf(deleteDelayOptionMapping)
-        every { configService.getConfigByName(DELETE_DELAY.configValue, "1") } returns null
 
-        // Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
-        // Assert
-        verify(exactly = 1) { configService.getConfigByName(DELETE_DELAY.configValue, "1") }
-        verify(exactly = 1) { configService.createNewConfig(any()) }
+        verify(exactly = 1) { configService.upsertConfig(DELETE_DELAY.configValue, "20", "1") }
         verify(exactly = 1) {
             event.hook.sendMessage(
                 "Set default delete message delay for TobyBot music messages to '20' seconds"
@@ -138,8 +124,7 @@ internal class SetConfigCommandTest : CommandTest {
     }
 
     @Test
-    fun testSetConfig_withMultipleSpecified_createsTwoConfig() {
-        // Arrange
+    fun testSetConfig_withMultipleSpecified_writesTwoUpserts() {
         val commandContext = DefaultCommandContext(event)
         val deleteDelayOptionMapping = mockk<OptionMapping>()
         val volumeOptionMapping = mockk<OptionMapping>()
@@ -154,29 +139,22 @@ internal class SetConfigCommandTest : CommandTest {
         every { event.guild } returns mockk {
             every { id } returns "1"
         }
-        every { configService.getConfigByName(DELETE_DELAY.configValue, "1") } returns null
-        every { configService.getConfigByName(VOLUME.configValue, "1") } returns null
-        every { configService.createNewConfig(any()) } returns null
         every { event.hook.sendMessage(any<String>()) } returns mockk {
             every { setEphemeral(any()) } returns this
             every { queue(any()) } just Runs
         }
 
-        // Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
-        // Assert
-        verify(exactly = 1) { configService.getConfigByName(DELETE_DELAY.configValue, "1") }
-        verify(exactly = 1) { configService.getConfigByName(VOLUME.configValue, "1") }
-        verify(exactly = 2) { configService.createNewConfig(any()) }
+        verify(exactly = 1) { configService.upsertConfig(DELETE_DELAY.configValue, "20", "1") }
+        verify(exactly = 1) { configService.upsertConfig(VOLUME.configValue, "20", "1") }
         verify(exactly = 2) {
             event.hook.sendMessage(any<String>())
         }
     }
 
     @Test
-    fun testSetConfig_withMoveChannel_createsThatConfig() {
-        // Arrange
+    fun testSetConfig_withMoveChannel_writesViaUpsert() {
         val commandContext = DefaultCommandContext(event)
         val moveOptionMapping = mockk<OptionMapping>()
         val guildChannelUnion = mockk<GuildChannelUnion>()
@@ -187,16 +165,65 @@ internal class SetConfigCommandTest : CommandTest {
         every { guildChannelUnion.name } returns "Channel Name"
         every { member.isOwner } returns true
         every { event.options } returns listOf(moveOptionMapping)
-        every { configService.getConfigByName(MOVE.configValue, "1") } returns null
 
-        // Act
         setConfigCommand.handle(commandContext, requestingUserDto, 0)
 
-        // Assert
-        verify(exactly = 1) { configService.getConfigByName(MOVE.configValue, "1") }
-        verify(exactly = 1) { configService.createNewConfig(any()) }
+        verify(exactly = 1) { configService.upsertConfig(MOVE.configValue, "Channel Name", "1") }
         verify(exactly = 1) {
             event.hook.sendMessage("Set default move channel to 'Channel Name'")
         }
+    }
+
+    @Test
+    fun testSetConfig_activityTrackingFirstEnable_firesNotifierWhenPreviouslyDisabled() {
+        // Updated outcome with previousValue="false" → notifier should fire.
+        val commandContext = DefaultCommandContext(event)
+        val optionMapping = mockk<OptionMapping>()
+        val guildMock = mockk<net.dv8tion.jda.api.entities.Guild>(relaxed = true).also {
+            every { it.id } returns "1"
+            every { it.idLong } returns 1L
+        }
+        every { event.guild } returns guildMock
+        every { event.member } returns member
+        every { member.isOwner } returns true
+        every { event.options } returns listOf(optionMapping)
+        every { optionMapping.name } returns ACTIVITY_TRACKING.name.lowercase(Locale.getDefault())
+        every { optionMapping.asBoolean } returns true
+        every { configService.upsertConfig(ACTIVITY_TRACKING.configValue, "true", "1") } returns
+            ConfigService.UpsertResult.Updated(
+                ConfigDto(ACTIVITY_TRACKING.configValue, "true", "1"),
+                previousValue = "false"
+            )
+
+        setConfigCommand.handle(commandContext, requestingUserDto, 0)
+
+        verify(exactly = 1) { activityTrackingNotifier.notifyMembersOnFirstEnable(guildMock) }
+    }
+
+    @Test
+    fun testSetConfig_activityTrackingAlreadyEnabled_doesNotReFireNotifier() {
+        // Updated outcome with previousValue="true" → notifier already
+        // ran historically, so don't fire again.
+        val commandContext = DefaultCommandContext(event)
+        val optionMapping = mockk<OptionMapping>()
+        val guildMock = mockk<net.dv8tion.jda.api.entities.Guild>(relaxed = true).also {
+            every { it.id } returns "1"
+            every { it.idLong } returns 1L
+        }
+        every { event.guild } returns guildMock
+        every { event.member } returns member
+        every { member.isOwner } returns true
+        every { event.options } returns listOf(optionMapping)
+        every { optionMapping.name } returns ACTIVITY_TRACKING.name.lowercase(Locale.getDefault())
+        every { optionMapping.asBoolean } returns true
+        every { configService.upsertConfig(ACTIVITY_TRACKING.configValue, "true", "1") } returns
+            ConfigService.UpsertResult.Updated(
+                ConfigDto(ACTIVITY_TRACKING.configValue, "true", "1"),
+                previousValue = "true"
+            )
+
+        setConfigCommand.handle(commandContext, requestingUserDto, 0)
+
+        verify(exactly = 0) { activityTrackingNotifier.notifyMembersOnFirstEnable(any()) }
     }
 }

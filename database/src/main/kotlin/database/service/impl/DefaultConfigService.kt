@@ -39,6 +39,19 @@ class DefaultConfigService : ConfigService {
         return configService.updateConfig(configDto)
     }
 
+    override fun upsertConfig(name: String, value: String, guildId: String): ConfigService.UpsertResult {
+        val existing = getConfigByName(name, guildId)
+        val dto = ConfigDto(name, value, guildId)
+        return if (existing != null && existing.guildId == guildId) {
+            val previous = existing.value
+            updateConfig(dto)
+            ConfigService.UpsertResult.Updated(dto, previousValue = previous)
+        } else {
+            createNewConfig(dto)
+            ConfigService.UpsertResult.Created(dto)
+        }
+    }
+
     @CacheEvict(value = ["configs"], allEntries = true)
     override fun deleteAll(guildId: String?) {
         configService.deleteAll(guildId)
