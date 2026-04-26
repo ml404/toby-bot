@@ -1,28 +1,16 @@
 // Pure-DOM render for a /roll response. Hoisted out of the IIFE so the
 // jest test in `dice.test.js` can drive it without booting the page.
 function renderDiceResult(resultEl, body) {
-    if (!resultEl) return;
-    resultEl.hidden = false;
-    resultEl.classList.remove('dice-result-win', 'dice-result-lose', 'dice-result-jackpot');
-    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
-        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
-        : '';
-    if (body.win) {
-        resultEl.classList.add('dice-result-win');
-        const winLine = '<strong>' + body.landed + '!</strong> You called ' +
-            body.predicted + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'dice-result-jackpot', winLine)
-            : winLine;
-        resultEl.innerHTML = topUpPrefix + withJackpot;
-    } else {
-        resultEl.classList.add('dice-result-lose');
-        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.lossTributeSuffix(body)
-            : '';
-        resultEl.innerHTML = topUpPrefix + '<strong>' + body.landed + '.</strong> You called ' +
-            body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>' +
-            tributeSuffix;
+    if (typeof window !== 'undefined' && window.TobyCasinoResult) {
+        window.TobyCasinoResult.render({
+            resultEl: resultEl,
+            body: body,
+            classPrefix: 'dice',
+            winLineHtml: '<strong>' + body.landed + '!</strong> You called ' +
+                body.predicted + ' &middot; <strong>+' + body.net + ' credits</strong>',
+            loseLineHtml: '<strong>' + body.landed + '.</strong> You called ' +
+                body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
+        });
     }
 }
 

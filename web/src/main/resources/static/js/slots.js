@@ -2,27 +2,15 @@
 // jest test in `slots.test.js` can drive it without booting the whole
 // page. The IIFE below calls it with the live result element.
 function renderSlotsResult(resultEl, body) {
-    if (!resultEl) return;
-    resultEl.hidden = false;
-    resultEl.classList.remove('slots-result-win', 'slots-result-lose', 'slots-result-jackpot');
-    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
-        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
-        : '';
-    if (body.win) {
-        resultEl.classList.add('slots-result-win');
-        const winLine = '<strong>+' + body.net + ' credits</strong> &middot; ' +
-            body.multiplier + '× on a stake';
-        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'slots-result-jackpot', winLine)
-            : winLine;
-        resultEl.innerHTML = topUpPrefix + withJackpot;
-    } else {
-        resultEl.classList.add('slots-result-lose');
-        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.lossTributeSuffix(body)
-            : '';
-        resultEl.innerHTML = topUpPrefix + 'Lost <strong>' + Math.abs(body.net) +
-            ' credits</strong>' + tributeSuffix;
+    if (typeof window !== 'undefined' && window.TobyCasinoResult) {
+        window.TobyCasinoResult.render({
+            resultEl: resultEl,
+            body: body,
+            classPrefix: 'slots',
+            winLineHtml: '<strong>+' + body.net + ' credits</strong> &middot; ' +
+                body.multiplier + '× on a stake',
+            loseLineHtml: 'Lost <strong>' + Math.abs(body.net) + ' credits</strong>',
+        });
     }
 }
 

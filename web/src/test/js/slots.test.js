@@ -4,6 +4,7 @@
 
 const { renderSlotsResult } = require('../../main/resources/static/js/slots');
 require('../../main/resources/static/js/casino-jackpot');
+require('../../main/resources/static/js/casino-result');
 
 describe('renderSlotsResult', () => {
     let resultEl;

@@ -1,5 +1,6 @@
 const { renderScratchResult } = require('../../main/resources/static/js/scratch');
 require('../../main/resources/static/js/casino-jackpot');
+require('../../main/resources/static/js/casino-result');
 
 describe('renderScratchResult', () => {
     let resultEl;

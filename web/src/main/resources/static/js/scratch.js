@@ -4,27 +4,16 @@
 // attributes / element references inside the IIFE) to keep this fully
 // stateless.
 function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
-    if (!resultEl) return;
-    resultEl.hidden = false;
-    resultEl.classList.remove('scratch-result-win', 'scratch-result-lose', 'scratch-result-jackpot');
-    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
-        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
-        : '';
-    if (body.win) {
-        resultEl.classList.add('scratch-result-win');
-        const winLine = '<strong>' + body.matchCount + '× ' + body.winningSymbol +
-            '</strong> &middot; <strong>+' + body.net + ' credits</strong>';
-        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'scratch-result-jackpot', winLine)
-            : winLine;
-        resultEl.innerHTML = topUpPrefix + withJackpot;
-    } else {
-        resultEl.classList.add('scratch-result-lose');
-        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.lossTributeSuffix(body)
-            : '';
-        resultEl.innerHTML = topUpPrefix + 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' +
-            Math.abs(body.net) + ' credits</strong>' + tributeSuffix;
+    if (typeof window !== 'undefined' && window.TobyCasinoResult) {
+        window.TobyCasinoResult.render({
+            resultEl: resultEl,
+            body: body,
+            classPrefix: 'scratch',
+            winLineHtml: '<strong>' + body.matchCount + '× ' + body.winningSymbol +
+                '</strong> &middot; <strong>+' + body.net + ' credits</strong>',
+            loseLineHtml: 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' +
+                Math.abs(body.net) + ' credits</strong>',
+        });
     }
     if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
 }
