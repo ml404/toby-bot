@@ -17,8 +17,12 @@ function renderDiceResult(resultEl, body) {
         resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('dice-result-lose');
+        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.lossTributeSuffix(body)
+            : '';
         resultEl.innerHTML = topUpPrefix + '<strong>' + body.landed + '.</strong> You called ' +
-            body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+            body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>' +
+            tributeSuffix;
     }
 }
 

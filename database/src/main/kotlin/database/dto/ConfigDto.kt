@@ -35,7 +35,10 @@ class ConfigDto(
         DELETE_DELAY("DELETE_MESSAGE_DELAY"),
         LEADERBOARD_CHANNEL("LEADERBOARD_CHANNEL"),
         ACTIVITY_TRACKING("ACTIVITY_TRACKING"),
-        ACTIVITY_TRACKING_NOTIFIED("ACTIVITY_TRACKING_NOTIFIED");
+        ACTIVITY_TRACKING_NOTIFIED("ACTIVITY_TRACKING_NOTIFIED"),
+        // Whole-number percentage (0-50) of every lost casino stake that
+        // routes into the per-guild jackpot pool. Defaults to 10 if unset.
+        JACKPOT_LOSS_TRIBUTE_PCT("JACKPOT_LOSS_TRIBUTE_PCT");
     }
 
     override fun toString(): String {

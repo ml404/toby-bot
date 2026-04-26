@@ -42,4 +42,12 @@ describe('renderCoinflipResult', () => {
     test('returns early on missing result element', () => {
         expect(() => renderCoinflipResult(null, { win: true })).not.toThrow();
     });
+
+    test('lose with lossTribute appends "+N to jackpot" suffix', () => {
+        renderCoinflipResult(resultEl, {
+            win: false, landed: 'TAILS', predicted: 'HEADS', net: -50, lossTribute: 5
+        });
+
+        expect(resultEl.innerHTML).toContain('+5 to jackpot');
+    });
 });

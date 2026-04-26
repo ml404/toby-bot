@@ -18,6 +18,7 @@ class CoinflipServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var configService: ConfigService
     private lateinit var coinflip: Coinflip
     private lateinit var service: CoinflipService
 
@@ -30,8 +31,9 @@ class CoinflipServiceTest {
         jackpotService = mockk(relaxed = true)
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        configService = mockk(relaxed = true)
         coinflip = mockk(relaxed = true)
-        service = CoinflipService(userService, jackpotService, tradeService, marketService, coinflip, Random(0))
+        service = CoinflipService(userService, jackpotService, tradeService, marketService, configService, coinflip, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {
@@ -121,5 +123,21 @@ class CoinflipServiceTest {
 
         assertEquals(CoinflipService.FlipOutcome.UnknownUser, outcome)
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `loss tributes 10 percent of the stake into the jackpot pool`() {
+        val user = userWithBalance(500L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { coinflip.flip(any(), any()) } returns Coinflip.Flip(
+            landed = Coinflip.Side.TAILS, predicted = Coinflip.Side.HEADS, multiplier = 0L
+        )
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.flip(discordId, guildId, stake = 100L, predicted = Coinflip.Side.HEADS)
+
+        val lose = assertInstanceOf(CoinflipService.FlipOutcome.Lose::class.java, outcome)
+        assertEquals(10L, lose.lossTribute)
+        verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
     }
 }

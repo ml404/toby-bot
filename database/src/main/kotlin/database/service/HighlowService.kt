@@ -28,6 +28,7 @@ class HighlowService(
     private val jackpotService: JackpotService,
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
+    private val configService: ConfigService,
     private val highlow: Highlow = Highlow(),
     private val random: Random = Random.Default
 ) {
@@ -53,7 +54,8 @@ class HighlowService(
             val direction: Highlow.Direction,
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val lossTribute: Long = 0L
         ) : PlayOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : PlayOutcome
@@ -142,6 +144,7 @@ class HighlowService(
                 newPrice = soldNewPrice
             )
         } else {
+            val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
             PlayOutcome.Lose(
                 stake = stake,
                 anchor = hand.anchor,
@@ -149,7 +152,8 @@ class HighlowService(
                 direction = hand.direction,
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
-                newPrice = soldNewPrice
+                newPrice = soldNewPrice,
+                lossTribute = tribute
             )
         }
     }

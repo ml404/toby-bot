@@ -57,4 +57,12 @@ describe('renderHighlowResult', () => {
         expect(resultEl.classList.contains('highlow-result-jackpot')).toBe(true);
         expect(resultEl.innerHTML).toContain('+1500 credits');
     });
+
+    test('lose with lossTribute appends "+N to jackpot" suffix', () => {
+        renderHighlowResult(resultEl, {
+            win: false, anchor: 7, next: 7, direction: 'HIGHER', net: -50, lossTribute: 5
+        });
+
+        expect(resultEl.innerHTML).toContain('+5 to jackpot');
+    });
 });

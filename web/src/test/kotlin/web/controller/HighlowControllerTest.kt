@@ -261,6 +261,33 @@ class HighlowControllerTest {
         assertEquals(4_000L, response.body!!.jackpotPayout)
     }
 
+    @Test
+    fun `lose with loss tribute surfaces lossTribute on the response`() {
+        session.setAttribute(anchorKey, 13)
+        session.setAttribute(stakeKey, 50L)
+        session.setAttribute(autoTopUpKey, false)
+        every {
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 13, false)
+        } returns PlayOutcome.Lose(
+            stake = 50L,
+            anchor = 13,
+            next = 7,
+            direction = Highlow.Direction.HIGHER,
+            newBalance = 950L,
+            lossTribute = 5L
+        )
+        every { highlowService.dealAnchor() } returns 4
+
+        val response = controller.play(
+            guildId,
+            PlayRequest(direction = "HIGHER"),
+            user,
+            session
+        )
+
+        assertEquals(5L, response.body!!.lossTribute)
+    }
+
     private fun inMemorySession(): HttpSession {
         val store = HashMap<String, Any?>()
         return mockk(relaxed = true) {

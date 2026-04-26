@@ -273,6 +273,12 @@ class ModerationWebService(
             }
             ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED ->
                 return "This flag is managed automatically and cannot be edited."
+            ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (0-50)."
+                if (n !in 0..50) return "Value must be between 0 and 50 (capped server-side)."
+                n.toString()
+            }
         }
 
         val guildIdString = guild.id

@@ -22,6 +22,7 @@ class DiceService(
     private val jackpotService: JackpotService,
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
+    private val configService: ConfigService,
     private val dice: Dice = Dice(),
     private val random: Random = Random.Default
 ) {
@@ -45,7 +46,8 @@ class DiceService(
             val predicted: Int,
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val lossTribute: Long = 0L
         ) : RollOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : RollOutcome
@@ -112,13 +114,15 @@ class DiceService(
                 newPrice = newPrice
             )
         } else {
+            val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
             RollOutcome.Lose(
                 stake = stake,
                 landed = roll.landed,
                 predicted = roll.predicted,
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
-                newPrice = newPrice
+                newPrice = newPrice,
+                lossTribute = tribute
             )
         }
     }

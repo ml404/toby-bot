@@ -186,4 +186,33 @@ class SlotsControllerTest {
 
         assertEquals(null, response.body!!.jackpotPayout, "zero jackpot is omitted from the JSON shape")
     }
+
+    @Test
+    fun `lose with loss tribute surfaces lossTribute on the response`() {
+        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Lose(
+            stake = 100L,
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            newBalance = 900L,
+            lossTribute = 10L
+        )
+
+        val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
+
+        assertEquals(10L, response.body!!.lossTribute)
+        assertEquals(false, response.body!!.win)
+    }
+
+    @Test
+    fun `lose with zero tribute (admin disabled) omits lossTribute`() {
+        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Lose(
+            stake = 100L,
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            newBalance = 900L,
+            lossTribute = 0L
+        )
+
+        val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
+
+        assertEquals(null, response.body!!.lossTribute)
+    }
 }

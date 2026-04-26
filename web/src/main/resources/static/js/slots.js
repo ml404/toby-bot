@@ -18,7 +18,11 @@ function renderSlotsResult(resultEl, body) {
         resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('slots-result-lose');
-        resultEl.innerHTML = topUpPrefix + 'Lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.lossTributeSuffix(body)
+            : '';
+        resultEl.innerHTML = topUpPrefix + 'Lost <strong>' + Math.abs(body.net) +
+            ' credits</strong>' + tributeSuffix;
     }
 }
 

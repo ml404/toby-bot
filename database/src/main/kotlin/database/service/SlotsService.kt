@@ -33,6 +33,7 @@ class SlotsService(
     private val jackpotService: JackpotService,
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
+    private val configService: ConfigService,
     private val machine: SlotMachine = SlotMachine(),
     private val random: Random = Random.Default
 ) {
@@ -55,7 +56,8 @@ class SlotsService(
             val symbols: List<SlotMachine.Symbol>,
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val lossTribute: Long = 0L
         ) : SpinOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : SpinOutcome
@@ -114,12 +116,14 @@ class SlotsService(
                 newPrice = newPrice
             )
         } else {
+            val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
             SpinOutcome.Lose(
                 stake = stake,
                 symbols = pull.symbols,
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
-                newPrice = newPrice
+                newPrice = newPrice,
+                lossTribute = tribute
             )
         }
     }

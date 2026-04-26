@@ -135,4 +135,18 @@ class ScratchControllerTest {
 
         assertEquals(6_000L, response.body!!.jackpotPayout)
     }
+
+    @Test
+    fun `lose with loss tribute surfaces lossTribute on the response`() {
+        every { scratchService.scratch(discordId, guildId, 100L) } returns ScratchOutcome.Lose(
+            stake = 100L,
+            cells = List(9) { SlotMachine.Symbol.CHERRY },
+            newBalance = 900L,
+            lossTribute = 10L
+        )
+
+        val response = controller.scratch(guildId, ScratchRequest(stake = 100L), user)
+
+        assertEquals(10L, response.body!!.lossTribute)
+    }
 }

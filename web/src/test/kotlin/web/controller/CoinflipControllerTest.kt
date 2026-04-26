@@ -183,4 +183,19 @@ class CoinflipControllerTest {
 
         assertEquals(null, response.body!!.jackpotPayout)
     }
+
+    @Test
+    fun `lose with loss tribute surfaces lossTribute on the response`() {
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Lose(
+            stake = 100L,
+            landed = Coinflip.Side.TAILS,
+            predicted = Coinflip.Side.HEADS,
+            newBalance = 900L,
+            lossTribute = 10L
+        )
+
+        val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 100L), user)
+
+        assertEquals(10L, response.body!!.lossTribute)
+    }
 }

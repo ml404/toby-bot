@@ -59,6 +59,7 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.LEADERBOARD_CHANNEL -> setLeaderboardChannel(event, deleteDelay)
                 ConfigDto.Configurations.ACTIVITY_TRACKING -> setActivityTracking(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED -> Unit
+                ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> setJackpotLossTribute(event, optionMapping, deleteDelay)
             }
         }
     }
@@ -148,6 +149,30 @@ class SetConfigCommand @Autowired constructor(
         event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
+    private fun setJackpotLossTribute(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val pct = optionMapping.asInt
+        if (pct !in 0..50) {
+            event.hook.sendMessage("Tribute percent must be between 0 and 50 (default 10).")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val configValue = ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue
+        val guildId = event.guild?.id ?: return
+        val newConfigDto = ConfigDto(configValue, pct.toString(), guildId)
+        val existing = configService.getConfigByName(configValue, guildId)
+        if (existing != null && existing.guildId == newConfigDto.guildId) {
+            configService.updateConfig(newConfigDto)
+        } else {
+            configService.createNewConfig(newConfigDto)
+        }
+        event.hook.sendMessage("Jackpot loss-tribute set to $pct % of every lost casino stake.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val movePropertyName = ConfigDto.Configurations.MOVE.configValue
         val guildId = event.guild?.id ?: return
@@ -213,6 +238,12 @@ class SetConfigCommand @Autowired constructor(
                 OptionType.BOOLEAN,
                 ConfigDto.Configurations.ACTIVITY_TRACKING.name.lowercase(Locale.getDefault()),
                 "Enable game-activity tracking in this server (users can opt out individually)",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-50) of every lost casino stake routed into the per-guild jackpot pool. Default 10.",
                 false
             )
         )

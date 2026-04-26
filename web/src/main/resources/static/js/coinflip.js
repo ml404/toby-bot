@@ -19,8 +19,12 @@ function renderCoinflipResult(resultEl, body) {
         resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('coinflip-result-lose');
+        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.lossTributeSuffix(body)
+            : '';
         resultEl.innerHTML = topUpPrefix + '<strong>' + landedLabel + '.</strong> You called ' +
-            predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+            predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>' +
+            tributeSuffix;
     }
 }
 

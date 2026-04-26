@@ -32,4 +32,12 @@ describe('renderDiceResult', () => {
         expect(resultEl.classList.contains('dice-result-jackpot')).toBe(true);
         expect(resultEl.innerHTML).toContain('+2000 credits');
     });
+
+    test('lose with lossTribute appends "+N to jackpot" suffix', () => {
+        renderDiceResult(resultEl, {
+            win: false, landed: 2, predicted: 4, net: -100, lossTribute: 10
+        });
+
+        expect(resultEl.innerHTML).toContain('+10 to jackpot');
+    });
 });

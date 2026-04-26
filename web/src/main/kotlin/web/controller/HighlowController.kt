@@ -172,7 +172,8 @@ class HighlowController(
                     newBalance = outcome.newBalance,
                     win = false,
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
-                    newPrice = outcome.newPrice
+                    newPrice = outcome.newPrice,
+                    lossTribute = outcome.lossTribute.takeIf { it > 0L }
                 )
             )
 
@@ -263,5 +264,6 @@ data class PlayResponse(
     val win: Boolean? = null,
     val jackpotPayout: Long? = null,
     val soldTobyCoins: Long? = null,
-    val newPrice: Double? = null
+    val newPrice: Double? = null,
+    val lossTribute: Long? = null
 )

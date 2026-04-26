@@ -2,6 +2,7 @@ const {
     isJackpotHit,
     jackpotPrefixHtml,
     renderWinHtml,
+    lossTributeSuffix,
 } = require('../../main/resources/static/js/casino-jackpot');
 
 // ---------------------------------------------------------------------------
@@ -101,5 +102,29 @@ describe('renderWinHtml', () => {
         renderWinHtml(resultEl, null, 'slots-result-jackpot', winLine);
 
         expect(resultEl.classList.length).toBe(0);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// lossTributeSuffix
+// ---------------------------------------------------------------------------
+
+describe('lossTributeSuffix', () => {
+    test('renders a "+N to jackpot" span with the casino-loss-tribute class', () => {
+        const html = lossTributeSuffix({ lossTribute: 10 });
+        expect(html).toContain('+10 to jackpot');
+        expect(html).toContain('casino-loss-tribute');
+        expect(html.startsWith(' &middot; ')).toBe(true);
+    });
+
+    test('returns empty string when no tribute', () => {
+        expect(lossTributeSuffix({ lossTribute: 0 })).toBe('');
+        expect(lossTributeSuffix({})).toBe('');
+        expect(lossTributeSuffix(null)).toBe('');
+        expect(lossTributeSuffix({ lossTribute: -5 })).toBe('');
+    });
+
+    test('returns empty string for non-numeric tribute', () => {
+        expect(lossTributeSuffix({ lossTribute: '10' })).toBe('');
     });
 });

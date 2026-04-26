@@ -437,6 +437,13 @@ td { font-size: 0.95rem; }
     text-shadow: 0 0 8px rgba(241, 196, 15, 0.4);
 }
 
+/* "+N to jackpot" suffix on lose lines — same accent gold as the
+   banner so the visual loop reads "loss → pool grows". */
+.casino-loss-tribute {
+    color: #f1c40f;
+    font-size: 0.85rem;
+}
+
 /* Grow tap targets on any touch device without ballooning desktop buttons */
 @media (hover: none) and (pointer: coarse) {
     .btn-sm { padding: 8px 14px; min-height: 40px; }

@@ -31,10 +31,14 @@ function renderHighlowResult(resultEl, body) {
     } else {
         resultEl.classList.add('highlow-result-lose');
         const tie = body.next === body.anchor;
+        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.lossTributeSuffix(body)
+            : '';
         resultEl.innerHTML = topUpPrefix + '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
             (tie ? '=' : (body.next > body.anchor ? '>' : '<')) +
             ' <strong>' + highlowCardLabel(body.anchor) + '</strong> &middot; you called ' +
-            dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>';
+            dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>' +
+            tributeSuffix;
     }
 }
 

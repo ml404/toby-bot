@@ -18,6 +18,7 @@ class DiceServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var configService: ConfigService
     private lateinit var dice: Dice
     private lateinit var service: DiceService
 
@@ -30,11 +31,12 @@ class DiceServiceTest {
         jackpotService = mockk(relaxed = true)
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        configService = mockk(relaxed = true)
         dice = mockk(relaxed = true) {
             every { isValidPrediction(any()) } answers { firstArg<Int>() in 1..6 }
             every { sidesCount } returns 6
         }
-        service = DiceService(userService, jackpotService, tradeService, marketService, dice, Random(0))
+        service = DiceService(userService, jackpotService, tradeService, marketService, configService, dice, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {
@@ -115,5 +117,19 @@ class DiceServiceTest {
 
         assertEquals(DiceService.RollOutcome.UnknownUser, outcome)
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `loss tributes 10 percent of the stake into the jackpot pool`() {
+        val user = UserDto(discordId, guildId).apply { socialCredit = 500L }
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { dice.roll(any(), any()) } returns Dice.Roll(landed = 1, predicted = 4, multiplier = 0L)
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.roll(discordId, guildId, stake = 100L, predicted = 4)
+
+        val lose = assertInstanceOf(DiceService.RollOutcome.Lose::class.java, outcome)
+        assertEquals(10L, lose.lossTribute)
+        verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
     }
 }
