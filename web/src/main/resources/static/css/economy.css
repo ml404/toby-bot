@@ -37,6 +37,11 @@
 .economy-price-change.up { color: var(--success); }
 .economy-price-change.down { color: var(--danger); }
 
+.economy-price-fee {
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
 .economy-chart-card {
     background: var(--bg-elevated);
     border: 1px solid var(--border);

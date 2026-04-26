@@ -264,6 +264,18 @@
     const portfolioEl = document.getElementById('economy-portfolio');
     const priceEl = document.getElementById('economy-price');
 
+    function formatTradeMessage(kind, amount, r) {
+        const verb = kind === 'buy' ? 'Bought' : 'Sold';
+        const head = verb + ' ' + amount + ' TOBY';
+        if (r.transactedCredits == null) return head + '.';
+        const base = head + ' for ' + r.transactedCredits + ' credits';
+        if (!r.fee) return base + '.';
+        const note = kind === 'buy'
+            ? ' (incl. ' + r.fee + ' fee, 1%)'
+            : ' (after ' + r.fee + ' fee, 1%)';
+        return base + note + '.';
+    }
+
     function applyTradeResult(r) {
         if (r.newCoins !== null && coinsEl) coinsEl.textContent = r.newCoins + ' TOBY';
         if (r.newCredits !== null && creditsEl) creditsEl.textContent = r.newCredits + ' credits';
@@ -281,7 +293,7 @@
             .then(function (r) {
                 btn.disabled = false;
                 if (r && r.ok) {
-                    toast(kind === 'buy' ? 'Bought ' + amount + ' TOBY.' : 'Sold ' + amount + ' TOBY.', 'success');
+                    toast(formatTradeMessage(kind, amount, r), 'success');
                     applyTradeResult(r);
                     loadHistory(currentWindow);
                 } else {

@@ -102,6 +102,11 @@ class TobyCoinCommand @Autowired constructor(
             .addField("Price", "%.2f credits / coin".format(market.price), true)
             .addField("24h change", changeText, true)
             .addField("Last tick", "<t:${market.lastTickAt.epochSecond}:R>", true)
+            .addField(
+                "Fee",
+                "1% on every buy & sell — feeds the server jackpot.",
+                false
+            )
             .setColor(priceColor(change))
             .setFooter("Try /tobycoin chart to see the market")
             .build()
@@ -136,7 +141,7 @@ class TobyCoinCommand @Autowired constructor(
             reply(event, "You must specify an amount.", deleteDelay); return
         }
         val outcome = tradeService.buy(userDto.discordId, userDto.guildId, amount)
-        reply(event, describe(outcome, "Bought", amount), deleteDelay)
+        reply(event, describe(outcome, "Bought", amount, isBuy = true), deleteDelay)
     }
 
     private fun handleSell(
@@ -148,7 +153,7 @@ class TobyCoinCommand @Autowired constructor(
             reply(event, "You must specify an amount.", deleteDelay); return
         }
         val outcome = tradeService.sell(userDto.discordId, userDto.guildId, amount)
-        reply(event, describe(outcome, "Sold", amount), deleteDelay)
+        reply(event, describe(outcome, "Sold", amount, isBuy = false), deleteDelay)
     }
 
     private fun handleChart(
@@ -195,12 +200,21 @@ class TobyCoinCommand @Autowired constructor(
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
-    private fun describe(outcome: TradeOutcome, verb: String, amount: Long): String = when (outcome) {
-        is TradeOutcome.Ok -> ("$verb **${outcome.amount} TOBY** for ${outcome.transactedCredits} credits. " +
-                "New price: %.2f. You now hold ${outcome.newCoins} TOBY and ${outcome.newCredits} credits.")
-            .format(outcome.newPrice)
+    private fun describe(outcome: TradeOutcome, verb: String, amount: Long, isBuy: Boolean): String = when (outcome) {
+        is TradeOutcome.Ok -> {
+            val breakdown = if (outcome.fee > 0L) {
+                // Buyers pay gross + fee; sellers receive gross − fee.
+                val gross = if (isBuy) outcome.transactedCredits - outcome.fee
+                            else outcome.transactedCredits + outcome.fee
+                val sign = if (isBuy) "+" else "−"
+                " ($gross gross $sign ${outcome.fee} fee, 1%)"
+            } else ""
+            ("$verb **${outcome.amount} TOBY** for ${outcome.transactedCredits} credits$breakdown. " +
+                    "New price: %.2f. You now hold ${outcome.newCoins} TOBY and ${outcome.newCredits} credits.")
+                .format(outcome.newPrice)
+        }
         is TradeOutcome.InsufficientCredits ->
-            "You need ${outcome.needed} credits for this trade but only have ${outcome.have}."
+            "You need ${outcome.needed} credits for this trade (price + 1% fee) but only have ${outcome.have}."
         is TradeOutcome.InsufficientCoins ->
             "You need ${outcome.needed} TOBY for this trade but only have ${outcome.have}."
         TradeOutcome.InvalidAmount -> "Amount must be a positive number. You asked for $amount."
