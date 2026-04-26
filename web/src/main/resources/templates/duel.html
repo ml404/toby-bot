@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Duel', '/css/duel.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}">
+
+    <div class="duel-header">
+        <a class="back-link" th:href="@{/duel/guilds}">&larr; All servers</a>
+        <h1 th:text="'⚔️ Duel • ' + ${guildName}">⚔️ Duel</h1>
+        <p class="muted">
+            Stake between <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">500</span> credits each. Both players ante; winner
+            takes the pot minus the per-guild jackpot tribute.
+        </p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+    <section class="duel-card">
+        <h2>Challenge someone</h2>
+        <form id="duel-challenge" autocomplete="off">
+            <label for="duel-opponent">Opponent Discord ID</label>
+            <input id="duel-opponent" name="opponentDiscordId" type="text" inputmode="numeric"
+                   placeholder="e.g. 312691905030782977" required>
+
+            <label for="duel-stake">Stake (credits)</label>
+            <input id="duel-stake" name="stake" type="number"
+                   th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+
+            <button type="submit" id="duel-send" class="btn-primary">Send challenge</button>
+        </form>
+
+        <div class="duel-balance">
+            Balance: <strong id="duel-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="duel-inbox">
+        <h2>Pending offers for you</h2>
+        <div id="duel-pending-list" class="duel-pending-list">
+            <div th:if="${#lists.isEmpty(pending)}" class="muted">No pending duels right now.</div>
+            <div class="duel-pending-row" th:each="p : ${pending}"
+                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}">
+                <div>
+                    <span>From <strong th:text="${p.initiatorDiscordId}">user</strong></span>
+                    <span> for <strong th:text="${p.stake}">100</strong> credits</span>
+                </div>
+                <div class="duel-pending-actions">
+                    <button class="btn-primary duel-accept" type="button">Accept</button>
+                    <button class="btn-secondary duel-decline" type="button">Decline</button>
+                </div>
+            </div>
+        </div>
+        <p class="muted">Offers expire after 60 seconds. Refreshes automatically.</p>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/duel.js}"></script>
+</body>
+</html>

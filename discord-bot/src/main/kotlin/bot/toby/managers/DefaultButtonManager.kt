@@ -38,5 +38,10 @@ class DefaultButtonManager @Autowired constructor(
         }
     }
 
-    override fun getButton(search: String): Button? = buttons.find { it.name.equals(search, true) }
+    // Component IDs may be stateful (e.g. "highlow:HIGHER:9:50:6", "duel:accept:1:42").
+    // Match on the colon-prefix so a single Button bean handles every variant.
+    override fun getButton(search: String): Button? {
+        val prefix = search.substringBefore(':').lowercase()
+        return buttons.find { it.name.equals(prefix, true) }
+    }
 }

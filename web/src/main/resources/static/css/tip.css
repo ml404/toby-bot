@@ -1,0 +1,46 @@
+.tip-header {
+    margin-bottom: 1.5rem;
+}
+
+.tip-header h1 {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.tip-card {
+    background: var(--surface, #1f2128);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 32rem;
+}
+
+.tip-card form {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.tip-card input {
+    background: var(--surface-2, #16181d);
+    color: inherit;
+    border: 1px solid var(--border, #2a2d35);
+    border-radius: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+}
+
+.tip-card input:focus {
+    outline: 2px solid var(--accent, #5865f2);
+    outline-offset: 2px;
+}
+
+.tip-card .btn-primary {
+    margin-top: 0.5rem;
+    align-self: flex-start;
+}
+
+.tip-balance {
+    display: grid;
+    gap: 0.25rem;
+    border-top: 1px solid var(--border, #2a2d35);
+    padding-top: 1rem;
+}

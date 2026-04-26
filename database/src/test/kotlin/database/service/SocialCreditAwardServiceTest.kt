@@ -52,20 +52,20 @@ class SocialCreditAwardServiceTest {
     @Test
     fun `award respects the daily cap and consumes the remaining headroom only`() {
         userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L })
-        // 55/60 already used today.
-        dailyService.upsert(VoiceCreditDailyDto(discordId, guildId, today, credits = 55L))
+        // 85/90 already used today.
+        dailyService.upsert(VoiceCreditDailyDto(discordId, guildId, today, credits = 85L))
 
         val granted = service.award(discordId, guildId, amount = 20L, reason = "test", at = now)
 
         assertEquals(5L, granted, "only 5 credits of headroom remain under the default cap")
         assertEquals(5L, userService.current(discordId, guildId)?.socialCredit)
-        assertEquals(60L, dailyService.get(discordId, guildId, today)?.credits)
+        assertEquals(90L, dailyService.get(discordId, guildId, today)?.credits)
     }
 
     @Test
     fun `award with countsAgainstDailyCap false bypasses the cap and the ledger`() {
         userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L })
-        dailyService.upsert(VoiceCreditDailyDto(discordId, guildId, today, credits = 60L)) // capped
+        dailyService.upsert(VoiceCreditDailyDto(discordId, guildId, today, credits = 90L)) // capped
 
         val granted = service.award(
             discordId, guildId,
@@ -77,7 +77,7 @@ class SocialCreditAwardServiceTest {
 
         assertEquals(10L, granted, "uncapped award should pass through the full amount")
         assertEquals(10L, userService.current(discordId, guildId)?.socialCredit)
-        assertEquals(60L, dailyService.get(discordId, guildId, today)?.credits, "ledger untouched")
+        assertEquals(90L, dailyService.get(discordId, guildId, today)?.credits, "ledger untouched")
     }
 
     @Test
