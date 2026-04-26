@@ -91,24 +91,30 @@ class TipCommand @Autowired constructor(
         outcome: TipOutcome,
         deleteDelay: Int
     ) {
-        val embed = when (outcome) {
-            is TipOutcome.Ok -> {
-                val builder = EmbedBuilder()
-                    .setTitle("💸 Tip sent")
-                    .setDescription(
-                        "<@${outcome.sender}> tipped <@${outcome.recipient}> **${outcome.amount} credits**." +
-                            outcome.note?.let { "\n*${it}*" }.orEmpty()
-                    )
-                    .addField("Your balance", "${outcome.senderNewBalance} credits", true)
-                    .addField(
-                        "Tipped today",
-                        "${outcome.sentTodayAfter}/${outcome.dailyCap}",
-                        true
-                    )
-                    .setColor(OK_COLOR)
-                builder.build()
-            }
+        if (outcome is TipOutcome.Ok) {
+            val embed = EmbedBuilder()
+                .setTitle("💸 Tip sent")
+                .setDescription(
+                    "<@${outcome.sender}> tipped <@${outcome.recipient}> **${outcome.amount} credits**." +
+                        outcome.note?.let { "\n*${it}*" }.orEmpty()
+                )
+                .addField("Your balance", "${outcome.senderNewBalance} credits", true)
+                .addField(
+                    "Tipped today",
+                    "${outcome.sentTodayAfter}/${outcome.dailyCap}",
+                    true
+                )
+                .setColor(OK_COLOR)
+                .build()
+            // addContent on the message (not the embed description) so the
+            // <@recipient> mention actually pings — embed-mention pings are silent.
+            event.hook.sendMessageEmbeds(embed)
+                .addContent("<@${outcome.recipient}>")
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
 
+        val embed = when (outcome) {
             is TipOutcome.InvalidAmount -> errorEmbed(
                 "Tip amount must be between ${outcome.min} and ${outcome.max} credits."
             )
@@ -137,6 +143,8 @@ class TipCommand @Autowired constructor(
             TipOutcome.UnknownRecipient -> errorEmbed(
                 "Recipient has no user record in this guild yet."
             )
+
+            is TipOutcome.Ok -> error("unreachable") // handled above
         }
         event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
