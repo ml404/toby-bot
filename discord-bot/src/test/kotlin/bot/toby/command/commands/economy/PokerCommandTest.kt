@@ -126,19 +126,20 @@ internal class PokerCommandTest : CommandTest {
     fun `start subcommand delegates to PokerService startHand and looks up table`() {
         every { event.subcommandName } returns "start"
         every { event.getOption("table") } returns intOpt(7L)
-        every { pokerService.startHand(hostId, guildId, 7L) } returns StartHandOutcome.Ok(handNumber = 1L)
+        every { pokerService.startHand(hostId, guildId, 7L, any()) } returns
+            StartHandOutcome.Ok(handNumber = 1L)
         every { tableRegistry.get(7L) } returns stubTable(7L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 1) { pokerService.startHand(hostId, guildId, 7L) }
+        verify(exactly = 1) { pokerService.startHand(hostId, guildId, 7L, any()) }
     }
 
     @Test
     fun `start by non-host does not call tableRegistry get`() {
         every { event.subcommandName } returns "start"
         every { event.getOption("table") } returns intOpt(7L)
-        every { pokerService.startHand(hostId, guildId, 7L) } returns StartHandOutcome.NotHost
+        every { pokerService.startHand(hostId, guildId, 7L, any()) } returns StartHandOutcome.NotHost
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
