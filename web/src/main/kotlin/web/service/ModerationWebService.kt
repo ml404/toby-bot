@@ -276,7 +276,7 @@ class ModerationWebService(
             ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> {
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number percentage (0-50)."
-                if (n < 0 || n > 50) return "Value must be between 0 and 50 (capped server-side)."
+                if (n !in 0..50) return "Value must be between 0 and 50 (capped server-side)."
                 n.toString()
             }
         }

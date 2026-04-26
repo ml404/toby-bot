@@ -155,7 +155,7 @@ class SetConfigCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         val pct = optionMapping.asInt
-        if (pct < 0 || pct > 50) {
+        if (pct !in 0..50) {
             event.hook.sendMessage("Tribute percent must be between 0 and 50 (default 10).")
                 .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
