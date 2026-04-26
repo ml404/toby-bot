@@ -264,8 +264,10 @@ class HighlowControllerTest {
     @Test
     fun `lose with loss tribute surfaces lossTribute on the response`() {
         session.setAttribute(anchorKey, 13)
+        session.setAttribute(stakeKey, 50L)
+        session.setAttribute(autoTopUpKey, false)
         every {
-            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 13)
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 13, false)
         } returns PlayOutcome.Lose(
             stake = 50L,
             anchor = 13,
@@ -278,7 +280,7 @@ class HighlowControllerTest {
 
         val response = controller.play(
             guildId,
-            PlayRequest(direction = "HIGHER", stake = 50L),
+            PlayRequest(direction = "HIGHER"),
             user,
             session
         )
