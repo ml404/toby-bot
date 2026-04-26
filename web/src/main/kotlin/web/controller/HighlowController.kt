@@ -72,9 +72,14 @@ class HighlowController(
         model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", Highlow.MIN_STAKE)
         model.addAttribute("maxStake", Highlow.MAX_STAKE)
-        model.addAttribute("multiplier", Highlow.DEFAULT_MULTIPLIER)
         model.addAttribute("anchor", activeAnchor)
         model.addAttribute("anchorLabel", activeAnchor?.let { cardLabel(it) } ?: "?")
+        model.addAttribute("higherMultiplier", activeAnchor?.let {
+            highlowService.payoutMultiplier(it, Highlow.Direction.HIGHER)
+        })
+        model.addAttribute("lowerMultiplier", activeAnchor?.let {
+            highlowService.payoutMultiplier(it, Highlow.Direction.LOWER)
+        })
         model.addAttribute("activeStake", activeStake)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
@@ -105,7 +110,15 @@ class HighlowController(
         storeAutoTopUp(session, guildId, request.autoTopUp)
         storeAnchor(session, guildId, anchor)
 
-        return ResponseEntity.ok(StartResponse(ok = true, anchor = anchor, anchorLabel = cardLabel(anchor)))
+        return ResponseEntity.ok(
+            StartResponse(
+                ok = true,
+                anchor = anchor,
+                anchorLabel = cardLabel(anchor),
+                higherMultiplier = highlowService.payoutMultiplier(anchor, Highlow.Direction.HIGHER),
+                lowerMultiplier = highlowService.payoutMultiplier(anchor, Highlow.Direction.LOWER)
+            )
+        )
     }
 
     @PostMapping("/play")
@@ -153,6 +166,7 @@ class HighlowController(
                     direction = outcome.direction.name,
                     net = outcome.net,
                     payout = outcome.payout,
+                    multiplier = outcome.multiplier,
                     newBalance = outcome.newBalance,
                     win = true,
                     jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
@@ -247,7 +261,9 @@ data class StartResponse(
     val ok: Boolean,
     val error: String? = null,
     val anchor: Int? = null,
-    val anchorLabel: String? = null
+    val anchorLabel: String? = null,
+    val higherMultiplier: Double? = null,
+    val lowerMultiplier: Double? = null
 )
 
 data class PlayRequest(val direction: String = "")
@@ -260,6 +276,7 @@ data class PlayResponse(
     val direction: String? = null,
     val net: Long? = null,
     val payout: Long? = null,
+    val multiplier: Double? = null,
     val newBalance: Long? = null,
     val win: Boolean? = null,
     val jackpotPayout: Long? = null,

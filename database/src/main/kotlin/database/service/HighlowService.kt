@@ -41,6 +41,7 @@ class HighlowService(
             val anchor: Int,
             val next: Int,
             val direction: Highlow.Direction,
+            val multiplier: Double,
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
             val soldTobyCoins: Long = 0L,
@@ -66,6 +67,14 @@ class HighlowService(
 
     /** Draw a fresh anchor without committing any state. The web flow uses this on page load. */
     fun dealAnchor(): Int = highlow.dealAnchor(random)
+
+    /**
+     * Per-anchor payout multiplier for [direction]. Surfaced so the web
+     * page and the Discord embed can label each direction button with
+     * what it actually pays before the player commits.
+     */
+    fun payoutMultiplier(anchor: Int, direction: Highlow.Direction): Double =
+        highlow.payoutMultiplier(anchor, direction)
 
     /** Bundled flow: server draws both cards inside this call. Discord uses this. */
     fun play(discordId: Long, guildId: Long, stake: Long, direction: Highlow.Direction): PlayOutcome =
@@ -138,6 +147,7 @@ class HighlowService(
                 anchor = hand.anchor,
                 next = hand.next,
                 direction = hand.direction,
+                multiplier = hand.multiplier,
                 newBalance = r.newBalance + jackpot,
                 jackpotPayout = jackpot,
                 soldTobyCoins = soldCoins,

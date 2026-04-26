@@ -7,14 +7,19 @@ import kotlin.random.Random
  * card draws and a comparison against the caller's direction.
  *
  * Mechanic
- *   Server draws an anchor card (1..13). User commits HIGHER or LOWER.
- *   Server draws the next card. Win condition:
+ *   Server draws an anchor card (2..deckSize-1; extremes are clipped so
+ *   every dealt hand is winnable in both directions). User commits
+ *   HIGHER or LOWER. Server draws the next card from the full 1..deckSize
+ *   range. Win condition:
  *     - HIGHER → next > anchor
  *     - LOWER  → next < anchor
  *     - tie (next == anchor) → lose
- *   Payout is flat 2× on win. Average RTP ≈ 12/13 ≈ 0.923
- *   (~7.7% house edge from the tie-loses rule). Sits between
- *   /coinflip (no edge) and /slots (~11% edge).
+ *   Payout is anchor- and direction-aware: a winning bet pays
+ *   `(deckSize - 1) / winningOutcomes` × stake. Average RTP per hand is
+ *   `(deckSize - 1) / deckSize` ≈ 12/13 ≈ 0.923 regardless of which
+ *   direction the player picks, so a player who can see the anchor (web
+ *   flow) cannot exploit extreme anchors for a positive edge. Sits
+ *   between /coinflip (no edge) and /slots (~11% edge).
  *
  * Two flows live here:
  *   - [play] — bundled draw used by Discord. Anchor + next come out
@@ -26,8 +31,7 @@ import kotlin.random.Random
  *     player can't reroll a fresh anchor by refreshing the page.
  */
 class Highlow(
-    private val deckSize: Int = DEFAULT_DECK_SIZE,
-    private val multiplier: Long = DEFAULT_MULTIPLIER
+    private val deckSize: Int = DEFAULT_DECK_SIZE
 ) {
 
     enum class Direction(val display: String) {
@@ -39,9 +43,9 @@ class Highlow(
         val anchor: Int,
         val next: Int,
         val direction: Direction,
-        val multiplier: Long
+        val multiplier: Double
     ) {
-        val isWin: Boolean get() = multiplier > 0L
+        val isWin: Boolean get() = multiplier > 0.0
     }
 
     /** Bundled draw — anchor + next in a single call. Discord uses this. */
@@ -50,8 +54,14 @@ class Highlow(
         return resolve(anchor, direction, random)
     }
 
-    /** Standalone anchor draw for the split web flow. */
-    fun dealAnchor(random: Random): Int = random.nextInt(1, deckSize + 1)
+    /**
+     * Standalone anchor draw for the split web flow. Capped to
+     * 2..deckSize-1 so both HIGHER and LOWER are winnable for every
+     * dealt anchor (the formula in [payoutMultiplier] would yield a 0
+     * payout for an impossible direction or a 1× refund for the trivial
+     * one on the extremes, which is poor UX).
+     */
+    fun dealAnchor(random: Random): Int = random.nextInt(2, deckSize)
 
     /**
      * Given an anchor that's already been revealed, draw the next card
@@ -69,8 +79,26 @@ class Highlow(
             anchor = anchor,
             next = next,
             direction = direction,
-            multiplier = if (won) multiplier else 0L
+            multiplier = if (won) payoutMultiplier(anchor, direction) else 0.0
         )
+    }
+
+    /**
+     * Payout multiplier for a winning bet on [anchor] in [direction].
+     * Equal to `(deckSize - 1) / winningOutcomes`, which holds RTP at
+     * `(deckSize - 1) / deckSize` for every (anchor, direction) pair.
+     * Returns `0.0` for an impossible direction (no winning outcomes),
+     * which happens only on extreme anchors that [dealAnchor] does not
+     * produce — kept defensive in case a stale session-stored anchor
+     * reaches [resolve].
+     */
+    fun payoutMultiplier(anchor: Int, direction: Direction): Double {
+        val winningOutcomes = when (direction) {
+            Direction.HIGHER -> deckSize - anchor
+            Direction.LOWER -> anchor - 1
+        }
+        if (winningOutcomes <= 0) return 0.0
+        return (deckSize - 1).toDouble() / winningOutcomes
     }
 
     val deckSizeValue: Int get() = deckSize
@@ -79,8 +107,5 @@ class Highlow(
         const val MIN_STAKE: Long = 10L
         const val MAX_STAKE: Long = 500L
         const val DEFAULT_DECK_SIZE: Int = 13
-        // 2× on win; with tie-loses the average win probability is ≈ 6/13,
-        // so RTP ≈ 12/13 ≈ 0.923.
-        const val DEFAULT_MULTIPLIER: Long = 2L
     }
 }

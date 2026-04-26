@@ -30,6 +30,9 @@ internal object HighlowEmbeds {
         else -> n.toString()
     }
 
+    /** "1.50×"-style label for direction buttons / embed copy. */
+    fun multiplierLabel(multiplier: Double): String = "%.2f×".format(multiplier)
+
     fun directionButtonId(direction: Highlow.Direction, anchor: Int, stake: Long, userId: Long): String =
         listOf(BUTTON_NAME, direction.name, anchor.toString(), stake.toString(), userId.toString())
             .joinToString(BUTTON_DELIM)
@@ -51,16 +54,24 @@ internal object HighlowEmbeds {
         return ParsedButtonId(direction, anchor, stake, userId)
     }
 
-    fun anchorEmbed(anchor: Int, stake: Long): MessageEmbed = EmbedBuilder()
-        .setTitle("🃏 Anchor: ${cardLabel(anchor)}")
-        .setDescription("Stake **$stake credits**. Will the next card be **higher** or **lower**?")
-        .setColor(ANCHOR_COLOR)
-        .build()
+    fun anchorEmbed(anchor: Int, stake: Long, higherMultiplier: Double, lowerMultiplier: Double): MessageEmbed =
+        EmbedBuilder()
+            .setTitle("🃏 Anchor: ${cardLabel(anchor)}")
+            .setDescription(
+                "Stake **$stake credits**. Will the next card be **higher** or **lower**?\n" +
+                    "Higher pays **${multiplierLabel(higherMultiplier)}**, " +
+                    "lower pays **${multiplierLabel(lowerMultiplier)}**."
+            )
+            .setColor(ANCHOR_COLOR)
+            .build()
 
     fun outcomeEmbed(outcome: PlayOutcome): MessageEmbed = when (outcome) {
         is PlayOutcome.Win -> EmbedBuilder()
             .setTitle("🃏 ${cardLabel(outcome.anchor)} → ${cardLabel(outcome.next)}")
-            .setDescription("You called **${outcome.direction.display}** and won **+${outcome.net} credits**.")
+            .setDescription(
+                "You called **${outcome.direction.display}** at " +
+                    "**${multiplierLabel(outcome.multiplier)}** and won **+${outcome.net} credits**."
+            )
             .addField("New balance", "${outcome.newBalance} credits", true)
             .setColor(WIN_COLOR)
             .build()

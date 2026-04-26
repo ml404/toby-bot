@@ -90,6 +90,8 @@ class HighlowControllerTest {
     @Test
     fun `start locks stake and deals anchor into session`() {
         every { highlowService.dealAnchor() } returns 9
+        every { highlowService.payoutMultiplier(9, Highlow.Direction.HIGHER) } returns 3.0
+        every { highlowService.payoutMultiplier(9, Highlow.Direction.LOWER) } returns 1.5
 
         val response = controller.start(
             guildId,
@@ -101,6 +103,8 @@ class HighlowControllerTest {
         assertTrue(response.statusCode.is2xxSuccessful)
         assertEquals(true, response.body!!.ok)
         assertEquals(9, response.body!!.anchor)
+        assertEquals(3.0, response.body!!.higherMultiplier)
+        assertEquals(1.5, response.body!!.lowerMultiplier)
         assertEquals(9, session.getAttribute(anchorKey))
         assertEquals(50L, session.getAttribute(stakeKey))
         assertEquals(false, session.getAttribute(autoTopUpKey))
@@ -161,6 +165,7 @@ class HighlowControllerTest {
             stake = 50L, payout = 100L, net = 50L,
             anchor = 5, next = 12,
             direction = Highlow.Direction.HIGHER,
+            multiplier = 2.0,
             newBalance = 1_050L
         )
 
@@ -176,6 +181,7 @@ class HighlowControllerTest {
         assertEquals(true, body.win)
         assertEquals(5, body.anchor)
         assertEquals(12, body.next)
+        assertEquals(2.0, body.multiplier)
         assertNull(session.getAttribute(anchorKey), "round must be cleared so the next bet starts fresh")
         assertNull(session.getAttribute(stakeKey))
     }
@@ -247,6 +253,7 @@ class HighlowControllerTest {
             stake = 50L, payout = 100L, net = 50L,
             anchor = 5, next = 12,
             direction = Highlow.Direction.HIGHER,
+            multiplier = 2.0,
             newBalance = 5_050L,
             jackpotPayout = 4_000L
         )
