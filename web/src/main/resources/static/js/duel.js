@@ -50,19 +50,10 @@
             .catch(function () { /* keep last known state */ });
     }
 
-    function resolveOpponentId() {
-        const typed = (document.getElementById('duel-opponent').value || '').trim();
-        if (!typed) return null;
-        const escaped = (window.CSS && window.CSS.escape) ? window.CSS.escape(typed) : typed.replace(/"/g, '\\"');
-        const opt = document.querySelector('#duel-member-list option[value="' + escaped + '"]');
-        const id = opt && opt.dataset.id ? parseInt(opt.dataset.id, 10) : NaN;
-        return Number.isFinite(id) ? id : null;
-    }
-
     if (challengeForm) {
         challengeForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            const opponent = resolveOpponentId();
+            const opponent = parseInt(document.getElementById('duel-opponent').value, 10);
             const stake = parseInt(document.getElementById('duel-stake').value, 10);
             if (!opponent) {
                 showToast('error', 'Pick someone from the list.');

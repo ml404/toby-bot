@@ -24,11 +24,13 @@
         <h2>Challenge someone</h2>
         <form id="duel-challenge" autocomplete="off">
             <label for="duel-opponent">Opponent</label>
-            <input id="duel-opponent" name="opponentName" type="text" list="duel-member-list"
-                   autocomplete="off" placeholder="Type a name…" required>
-            <datalist id="duel-member-list">
-                <option th:each="m : ${members}" th:value="${m.name}" th:attr="data-id=${m.id}"></option>
-            </datalist>
+            <select id="duel-opponent" name="opponentDiscordId" required>
+                <option value="">Pick an opponent…</option>
+                <option th:each="m : ${members}" th:value="${m.id}" th:text="${m.name}"></option>
+            </select>
+            <p th:if="${#lists.isEmpty(members)}" class="muted">
+                No other members found in this server. Try again in a moment if the bot just connected.
+            </p>
 
             <label for="duel-stake">Stake (credits)</label>
             <input id="duel-stake" name="stake" type="number"
