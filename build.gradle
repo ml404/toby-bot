@@ -36,6 +36,13 @@ allprojects {
     version = "6.1-SNAPSHOT"
 
     ext['kotlin.version'] = kotlin_version
+    // Override Spring Boot 3.3.4's BOM-managed versions with patched releases.
+    // Spring's dependency-management plugin reads these ext properties before
+    // applying the BOM, so any transitive consumer resolves the patched
+    // version. resolutionStrategy.force in subprojects is a belt-and-braces
+    // fallback for configurations the dep-management plugin doesn't reach.
+    ext['jackson-bom.version'] = '2.18.2'           // GHSA-72hv-8253-57qq (jackson-core <2.18.x)
+    ext['commons-lang3.version'] = '3.18.0'         // CVE-2025-48924 (commons-lang3 <3.18.0)
 
     repositories {
         mavenCentral()
