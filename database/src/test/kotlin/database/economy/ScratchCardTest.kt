@@ -23,33 +23,45 @@ class ScratchCardTest {
     @Test
     fun `nine-of-a-kind cherry pays base cherry times 5`() {
         // Reel of only cherries → all 9 cells will be cherries → match=9.
-        // multiplier = max(2, base 1 × (9 - (5-1))) = max(2, 5) = 5.
+        // multiplier = base 1 × (9 - (5-1)) = 5.
         val card = ScratchCard(reel = listOf(SlotMachine.Symbol.CHERRY))
         val result = card.scratch(Random(0))
         assertTrue(result.isWin)
         assertEquals(SlotMachine.Symbol.CHERRY, result.winningSymbol)
         assertEquals(9, result.matchCount)
-        assertEquals(5L, result.multiplier, "9 cherries × base 1 × (9-4) = 5 (above floor)")
+        assertEquals(5L, result.multiplier, "9 cherries × base 1 × (9-4) = 5")
     }
 
     @Test
-    fun `five-of-a-kind cherry hits the 2x floor instead of paying nothing`() {
-        // Boundary regression: with the unfloored formula `base × (k - 4)`,
-        // a 5-of-a-kind cherry produces multiplier = 1, which WagerHelper
-        // turns into net = 0 — a "win" that pays nothing. The 2× floor in
-        // scratch() corrects that to multiplier = 2 (net = stake).
-        val card = ScratchCard(reel = listOf(SlotMachine.Symbol.CHERRY))
-        // Single-symbol reel → all 9 cells cherries. We cap matchCount via
-        // the public surface by inspecting the result and re-checking the
-        // formula closed-form for k=5..9, since the live draw will give k=9.
-        val result = card.scratch(Random(0))
-        assertEquals(9, result.matchCount, "single-symbol reel always draws full match")
-        // Closed-form: prove the 5-of-a-kind cherry path is floored to 2.
-        val cherryBase = ScratchCard.DEFAULT_BASE_PAYOUTS.getValue(SlotMachine.Symbol.CHERRY)
-        val rawAtThreshold = cherryBase * (ScratchCard.MATCH_THRESHOLD - (ScratchCard.MATCH_THRESHOLD - 1))
-        val flooredAtThreshold = maxOf(2L, rawAtThreshold)
-        assertEquals(1L, rawAtThreshold, "without the floor, 5🍒 would pay 1× (= net 0, the bug)")
-        assertEquals(2L, flooredAtThreshold, "the floor raises 5🍒 to 2× (net = stake, real win)")
+    fun `five-of-a-kind cherry is a stake-refund push`() {
+        // 5🍒 sits at the boundary: multiplier = 1 → payout = stake →
+        // net = 0. Intentional design — cherry is the cheapest symbol and
+        // its lowest tier returns the stake rather than paying out. This
+        // is what keeps cherry distinct from lemon at k=5 (5🍋 = 2×) while
+        // respecting the closed-form RTP target.
+        assertEquals(1L, ScratchCard.multiplierFor(SlotMachine.Symbol.CHERRY, 5))
+        assertEquals(2L, ScratchCard.multiplierFor(SlotMachine.Symbol.LEMON, 5))
+    }
+
+    @Test
+    fun `at each match-count every symbol pays a distinct multiplier`() {
+        // Regression for the floor-collision bug: the prior `max(2, base × (k-4))`
+        // wrapper made 5🍒 and 5🍋 both pay 2×, so players couldn't tell
+        // them apart at the most common winning tier. The pure formula
+        // separates the four symbols at every k. (Cross-k collisions like
+        // 6🍒=2=5🍋 are fine — within a single card a player only sees one
+        // matchCount.)
+        for (k in ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT) {
+            val perSymbol = SlotMachine.Symbol.entries.associateWith {
+                ScratchCard.multiplierFor(it, k)
+            }
+            val unique = perSymbol.values.toSet()
+            assertEquals(
+                perSymbol.size,
+                unique.size,
+                "at $k matches, multipliers $perSymbol have collisions — symbols indistinguishable"
+            )
+        }
     }
 
     @Test
@@ -58,7 +70,7 @@ class ScratchCardTest {
         val result = card.scratch(Random(0))
         assertEquals(SlotMachine.Symbol.STAR, result.winningSymbol)
         assertEquals(9, result.matchCount)
-        // 9 stars × base 40 × (9-4) = 200 (well above floor)
+        // 9 stars × base 40 × (9-4) = 200.
         assertEquals(200L, result.multiplier)
     }
 
@@ -101,48 +113,30 @@ class ScratchCardTest {
     }
 
     @Test
-    fun `every winning outcome has multiplier greater than 1`() {
-        // Regression guard: the prior formula was `base × (k - 4)`, which
-        // collapsed to multiplier=1 for 5🍒 (base=1) — a "win" that nets 0
-        // in WagerHelper. The 2× floor in scratch() must keep every match
-        // count k=5..9 on every symbol strictly above 1× (so net > 0).
+    fun `multipliers are monotonic non-decreasing in k for every symbol`() {
+        // Soft guard against a future tuning that accidentally inverts the
+        // payout curve (e.g. negative base, or a typo that makes 6-of-a-kind
+        // pay less than 5). Strict monotonicity isn't required — what
+        // matters is that more matches never pays less.
         for (symbol in SlotMachine.Symbol.entries) {
-            val card = ScratchCard(reel = listOf(symbol))
-            val base = ScratchCard.DEFAULT_BASE_PAYOUTS.getValue(symbol)
+            var prev = Long.MIN_VALUE
             for (k in ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT) {
-                val raw = base * (k - (ScratchCard.MATCH_THRESHOLD - 1))
-                val floored = maxOf(2L, raw)
-                assertTrue(floored > 1L, "$symbol $k-of-a-kind floored multiplier $floored must be > 1")
+                val mult = ScratchCard.multiplierFor(symbol, k)
+                assertTrue(mult >= prev, "$symbol $k-of-a-kind multiplier $mult below k-1's $prev")
+                prev = mult
             }
-            // And confirm the wired-up card itself produces > 1 on a real draw.
-            val result = card.scratch(Random(0))
-            assertTrue(result.multiplier > 1L, "$symbol 9-of-a-kind via scratch() must produce multiplier > 1")
         }
     }
 
     @Test
-    fun `RTP across 200k cards lands in casino-style range`() {
-        // ScratchCard's RTP isn't a clean closed-form — it depends on the
-        // multinomial over the 4-symbol weighted reel × the multiplier
-        // table. With the 5-of-a-kind threshold on 9 cells, current bases
-        // (1/2/8/40), and the 2× floor on 5🍒, the closed-form math lands
-        // ~1.04 (slightly above break-even — the floor on the otherwise
-        // buggy boundary case adds ~P(5🍒) ≈ +0.17 on top of the unfloored
-        // 0.875). The bound below catches gross misconfiguration: payout-
-        // zero would undershoot to 0, removing the floor would dip back to
-        // ~0.875, and a back-to-3-of-a-kind change would overshoot 1.7×.
-        val card = ScratchCard()
-        val rng = Random(2026)
-        val stake = 1_000L
-        val n = 200_000
-        var totalWagered = 0L
-        var totalReturned = 0L
-        repeat(n) {
-            val result = card.scratch(rng)
-            totalWagered += stake
-            totalReturned += result.multiplier * stake
-        }
-        val rtp = totalReturned.toDouble() / totalWagered.toDouble()
-        assertTrue(rtp in 0.95..1.10, "RTP $rtp outside expected casino range")
+    fun `expected RTP lands in target band`() {
+        // Closed-form RTP via the binomial-PMF helper: deterministic, no
+        // Monte Carlo. With current bases (1/2/8/40) on the default reel
+        // the math lands ~0.875 — a 12.5% house edge. The lower bound
+        // catches accidental payout-zero / threshold-too-high; the upper
+        // bound is the real guard, ensuring tuning changes can't push RTP
+        // back over break-even and have users always winning.
+        val rtp = ScratchCard.expectedRtp()
+        assertTrue(rtp in 0.85..0.92, "RTP $rtp outside target band 0.85..0.92")
     }
 }

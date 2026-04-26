@@ -9,11 +9,9 @@ import kotlin.random.Random
  *   Nine cells drawn independently from a weighted reel (same shape as
  *   [SlotMachine]: 4🍒 + 3🍋 + 2🔔 + 1⭐ = 10 cells). Win condition:
  *   5 or more cells of the SAME symbol anywhere on the card.
- *   Payout multiplier = max(2, basePayout × (matchCount − (MATCH_THRESHOLD − 1)))
- *   — so 5-of-a-kind pays base (floored to 2), 6 pays 2×, … 9 pays 5×.
- *   The 2× floor only matters for 5-of-a-kind cherry (base 1) — every
- *   other path is already ≥ 2 — and keeps that boundary a real win
- *   (net ≥ stake) instead of a stake-back no-op.
+ *   Payout multiplier = basePayout × (matchCount − (MATCH_THRESHOLD − 1)) —
+ *   pure closed form, every (symbol, k) pair distinct, no special cases.
+ *   So 5🍒 = 1× (stake refund / push, net 0), 5🍋 = 2×, … 9⭐ = 200×.
  *
  *   Two symbols both hitting ≥5 is impossible with 9 cells (5+5 > 9),
  *   so the tie-break in `scratch` is a guard rather than a gameplay
@@ -23,9 +21,7 @@ import kotlin.random.Random
  *   - 9 cells in a 3×3 grid vs 3 reels → wider hit space, big-card feel
  *   - "≥5 of a kind" vs "exactly 3 of a kind" → counts of 6–9 scale
  *     payouts up linearly
- *   - Different RTP profile (~100-105% on these tunings — the 2× floor on
- *     the otherwise-buggy 5🍒 boundary nudges scratch slightly above
- *     break-even, the RTP test in ScratchCardTest pins the actual number)
+ *   - RTP ≈ 0.875 (12.5% house edge), pinned by [expectedRtp] in tests
  */
 class ScratchCard(
     private val reel: List<SlotMachine.Symbol> = SlotMachine.DEFAULT_REEL,
@@ -66,12 +62,12 @@ class ScratchCard(
         const val MATCH_THRESHOLD: Int = 5
 
         // Base multipliers. Effective multiplier on a k-of-a-kind is
-        // max(2, base × (k - 4)). The floor only fires on 5🍒 (base 1, k=5
-        // → raw 1 → floored to 2); every other (symbol, k) combination is
-        // already ≥ 2. Tuned alongside the RTP convergence test — adjust
-        // here, rerun ScratchCardTest's RTP case, accept the new bound.
+        // base × (k - 4). 5🍒=1× is a stake-refund push (net 0), 5🍋=2×
+        // is the smallest real win — every (symbol, k) pair is distinct.
+        // Tuned alongside [expectedRtp]: adjust bases here, the RTP test
+        // pins the closed-form result so drift surfaces in CI.
         val DEFAULT_BASE_PAYOUTS: Map<SlotMachine.Symbol, Long> = mapOf(
-            SlotMachine.Symbol.CHERRY to 1L,    // 5🍒=2× (floored),  …, 9🍒=5×
+            SlotMachine.Symbol.CHERRY to 1L,    // 5🍒=1× (push), …, 9🍒=5×
             SlotMachine.Symbol.LEMON to 2L,     // 5🍋=2×,  …, 9🍋=10×
             SlotMachine.Symbol.BELL to 8L,      // 5🔔=8×,  …, 9🔔=40×
             SlotMachine.Symbol.STAR to 40L      // 5⭐=40×, …, 9⭐=200×
@@ -79,8 +75,8 @@ class ScratchCard(
 
         /**
          * Closed-form multiplier for [matchCount]-of-a-kind on [symbol].
-         * Single source of truth — the live [scratch] path and any UI that
-         * displays a payout table both call this so they can't drift.
+         * Single source of truth — the live [scratch] path and any UI
+         * that displays a payout table both call this so they can't drift.
          */
         fun multiplierFor(
             symbol: SlotMachine.Symbol,
@@ -89,7 +85,47 @@ class ScratchCard(
         ): Long {
             if (matchCount < MATCH_THRESHOLD) return 0L
             val base = basePayouts[symbol] ?: 0L
-            return maxOf(2L, base * (matchCount - (MATCH_THRESHOLD - 1)))
+            return base * (matchCount - (MATCH_THRESHOLD - 1))
+        }
+
+        /**
+         * Closed-form RTP given [reel], [basePayouts], and the card
+         * geometry. For each symbol s, sums the binomial probability of
+         * exactly k matches across [cellCount] independent draws (with
+         * p_s = reel.count(s) / reel.size) times [multiplierFor]`(s, k)`,
+         * over k ∈ [threshold..cellCount]. Two symbols both reaching
+         * threshold is impossible when threshold > cellCount/2, so the
+         * per-symbol sums don't double-count.
+         *
+         * Pure function — used by tests as the RTP source of truth so any
+         * tuning that drifts the house edge fails CI loudly.
+         */
+        fun expectedRtp(
+            reel: List<SlotMachine.Symbol> = SlotMachine.DEFAULT_REEL,
+            basePayouts: Map<SlotMachine.Symbol, Long> = DEFAULT_BASE_PAYOUTS,
+            cellCount: Int = CELL_COUNT,
+            threshold: Int = MATCH_THRESHOLD
+        ): Double {
+            val total = reel.size.toDouble()
+            return SlotMachine.Symbol.entries.sumOf { symbol ->
+                val p = reel.count { it == symbol } / total
+                if (p == 0.0) 0.0 else {
+                    (threshold..cellCount).sumOf { k ->
+                        binomialPmf(cellCount, k, p) *
+                            multiplierFor(symbol, k, basePayouts).toDouble()
+                    }
+                }
+            }
+        }
+
+        private fun binomialPmf(n: Int, k: Int, p: Double): Double {
+            if (k < 0 || k > n) return 0.0
+            // C(n, k) computed iteratively to avoid factorial overflow on
+            // moderate n; n=9 here so this is overkill, but it keeps the
+            // helper safe to reuse for larger geometries.
+            var coeff = 1.0
+            for (i in 1..k) coeff = coeff * (n - i + 1) / i
+            return coeff * Math.pow(p, k.toDouble()) * Math.pow(1.0 - p, (n - k).toDouble())
         }
     }
 }
