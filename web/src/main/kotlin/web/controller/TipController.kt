@@ -77,6 +77,7 @@ class TipController(
         val balance = profile?.socialCredit ?: 0L
         val today = LocalDate.now(ZoneOffset.UTC)
         val sentToday = tipWebService.getDailyTipped(discordId, guildId, today)
+        val members = economyWebService.getGuildMembers(guildId).filter { it.id != discordId.toString() }
 
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
@@ -86,6 +87,7 @@ class TipController(
         model.addAttribute("dailyCap", TipService.DEFAULT_TIP_DAILY_CAP)
         model.addAttribute("sentToday", sentToday)
         model.addAttribute("dailyHeadroom", (TipService.DEFAULT_TIP_DAILY_CAP - sentToday).coerceAtLeast(0L))
+        model.addAttribute("members", members)
         model.addAttribute("username", user.displayName())
         return "tip"
     }
@@ -104,6 +106,9 @@ class TipController(
         }
         if (request.recipientDiscordId == discordId) {
             return ResponseEntity.badRequest().body(TipResponse(false, error = "You can't tip yourself."))
+        }
+        if (!economyWebService.isMember(request.recipientDiscordId, guildId)) {
+            return ResponseEntity.badRequest().body(TipResponse(false, error = "Pick someone from this server."))
         }
 
         // Ensure recipient row exists (lazy-create through the helper-style path).

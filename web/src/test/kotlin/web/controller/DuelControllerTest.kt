@@ -48,6 +48,7 @@ class DuelControllerTest {
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
+        every { economyWebService.isMember(opponentId, guildId) } returns true
         controller = DuelController(
             duelService, duelWebService, pendingDuelRegistry,
             economyWebService, userService, jda
@@ -89,6 +90,18 @@ class DuelControllerTest {
         assertFalse(response.body!!.ok)
         verify(exactly = 0) { duelService.startDuel(any(), any(), any(), any()) }
         verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `challenge of non-member opponent returns 400 without registering`() {
+        every { economyWebService.isMember(opponentId, guildId) } returns false
+
+        val response = controller.challenge(guildId, ChallengeRequest(opponentId, 50L), user)
+
+        assertEquals(400, response.statusCode.value())
+        assertFalse(response.body!!.ok)
+        verify(exactly = 0) { duelWebService.ensureOpponent(any(), any()) }
+        verify(exactly = 0) { duelService.startDuel(any(), any(), any(), any()) }
     }
 
     @Test

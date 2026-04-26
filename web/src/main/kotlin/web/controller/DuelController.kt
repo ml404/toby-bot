@@ -76,6 +76,7 @@ class DuelController(
         val profile = userService.getUserById(discordId, guildId)
         val balance = profile?.socialCredit ?: 0L
         val pending = duelWebService.pendingForOpponent(discordId, guildId)
+        val members = economyWebService.getGuildMembers(guildId).filter { it.id != discordId.toString() }
 
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
@@ -83,6 +84,7 @@ class DuelController(
         model.addAttribute("minStake", DuelService.MIN_STAKE)
         model.addAttribute("maxStake", DuelService.MAX_STAKE)
         model.addAttribute("pending", pending)
+        model.addAttribute("members", members)
         model.addAttribute("username", user.displayName())
         return "duel"
     }
@@ -114,6 +116,9 @@ class DuelController(
         }
         if (request.opponentDiscordId == discordId) {
             return ResponseEntity.badRequest().body(ChallengeResponse(false, error = "You can't duel yourself."))
+        }
+        if (!economyWebService.isMember(request.opponentDiscordId, guildId)) {
+            return ResponseEntity.badRequest().body(ChallengeResponse(false, error = "Pick someone from this server."))
         }
 
         duelWebService.ensureOpponent(request.opponentDiscordId, guildId)

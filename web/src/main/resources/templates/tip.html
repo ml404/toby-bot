@@ -22,9 +22,12 @@
 
     <section class="tip-card">
         <form id="tip-form" autocomplete="off">
-            <label for="tip-recipient">Recipient Discord ID</label>
-            <input id="tip-recipient" name="recipientDiscordId" type="text" inputmode="numeric"
-                   placeholder="e.g. 312691905030782977" required>
+            <label for="tip-recipient">Recipient</label>
+            <input id="tip-recipient" name="recipientName" type="text" list="tip-member-list"
+                   autocomplete="off" placeholder="Type a name…" required>
+            <datalist id="tip-member-list">
+                <option th:each="m : ${members}" th:value="${m.name}" th:attr="data-id=${m.id}"></option>
+            </datalist>
 
             <label for="tip-amount">Amount (credits)</label>
             <input id="tip-amount" name="amount" type="number"

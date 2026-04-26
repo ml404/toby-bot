@@ -43,6 +43,7 @@ class TipControllerTest {
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
+        every { economyWebService.isMember(recipientId, guildId) } returns true
         controller = TipController(tipService, tipWebService, economyWebService, userService, jda)
     }
 
@@ -90,6 +91,18 @@ class TipControllerTest {
 
         assertEquals(403, response.statusCode.value())
         assertFalse(response.body!!.ok)
+    }
+
+    @Test
+    fun `tip to non-member returns 400 without calling service`() {
+        every { economyWebService.isMember(recipientId, guildId) } returns false
+
+        val response = controller.tip(guildId, TipRequest(recipientId, 50L, null), user)
+
+        assertEquals(400, response.statusCode.value())
+        assertFalse(response.body!!.ok)
+        verify(exactly = 0) { tipWebService.ensureRecipient(any(), any()) }
+        verify(exactly = 0) { tipService.tip(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
