@@ -59,10 +59,11 @@ class HighlowController(
         val tobyCoins = profile?.tobyCoins ?: 0L
         val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
 
-        // Anchor sticks to the user's session so refreshing the page
-        // can't reroll a fresh card. Drawn lazily on first hit.
-        val anchor = activeAnchor(session, guildId)
-            ?: highlowService.dealAnchor().also { storeAnchor(session, guildId, it) }
+        // Stake commits first, anchor is dealt after the player locks it.
+        // If a round is already locked in this session, surface it so the
+        // player isn't asked to lock again on refresh.
+        val activeAnchor = activeAnchor(session, guildId)
+        val activeStake = activeStake(session, guildId)
 
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
@@ -72,11 +73,39 @@ class HighlowController(
         model.addAttribute("minStake", Highlow.MIN_STAKE)
         model.addAttribute("maxStake", Highlow.MAX_STAKE)
         model.addAttribute("multiplier", Highlow.DEFAULT_MULTIPLIER)
-        model.addAttribute("anchor", anchor)
-        model.addAttribute("anchorLabel", cardLabel(anchor))
+        model.addAttribute("anchor", activeAnchor)
+        model.addAttribute("anchorLabel", activeAnchor?.let { cardLabel(it) } ?: "?")
+        model.addAttribute("activeStake", activeStake)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
         return "highlow"
+    }
+
+    @PostMapping("/start")
+    @ResponseBody
+    fun start(
+        @PathVariable guildId: Long,
+        @RequestBody request: StartRequest,
+        @AuthenticationPrincipal user: OAuth2User,
+        session: HttpSession
+    ): ResponseEntity<StartResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(StartResponse(false, "Not signed in."))
+        if (!economyWebService.isMember(discordId, guildId)) {
+            return ResponseEntity.status(403).body(StartResponse(false, "You are not a member of that server."))
+        }
+        if (request.stake < Highlow.MIN_STAKE || request.stake > Highlow.MAX_STAKE) {
+            return ResponseEntity.badRequest().body(
+                StartResponse(false, "Stake must be between ${Highlow.MIN_STAKE} and ${Highlow.MAX_STAKE} credits.")
+            )
+        }
+
+        val anchor = highlowService.dealAnchor()
+        storeStake(session, guildId, request.stake)
+        storeAutoTopUp(session, guildId, request.autoTopUp)
+        storeAnchor(session, guildId, anchor)
+
+        return ResponseEntity.ok(StartResponse(ok = true, anchor = anchor, anchorLabel = cardLabel(anchor)))
     }
 
     @PostMapping("/play")
@@ -96,21 +125,23 @@ class HighlowController(
             ?: return ResponseEntity.badRequest().body(PlayResponse(false, "Pick a direction: HIGHER or LOWER."))
 
         val anchor = activeAnchor(session, guildId)
-            ?: return ResponseEntity.badRequest().body(
-                PlayResponse(false, "No active round — refresh the page to draw a new card.")
+        val stake = activeStake(session, guildId)
+        if (anchor == null || stake == null) {
+            return ResponseEntity.badRequest().body(
+                PlayResponse(false, "No active round — lock a stake first.")
             )
+        }
+        val autoTopUp = activeAutoTopUp(session, guildId)
 
-        val outcome = highlowService.play(discordId, guildId, request.stake, direction, anchor, request.autoTopUp)
+        val outcome = highlowService.play(discordId, guildId, stake, direction, anchor, autoTopUp)
 
-        // Only consume the anchor on outcomes that actually drew a next
-        // card. Validation rejections (invalid stake, insufficient
-        // credits, unknown user) leave the same anchor in place so the
-        // player can retry without losing the card they were looking at.
+        // Once a card is drawn the round is over either way; clear the
+        // session so the next round starts with a fresh stake commit.
+        // Validation/credit failures *do not* draw the next card, so we
+        // keep the locked stake+anchor in place for the player to retry.
         val consumed = outcome is PlayOutcome.Win || outcome is PlayOutcome.Lose
-        val nextRoundAnchor: Int? = if (consumed) {
-            highlowService.dealAnchor().also { storeAnchor(session, guildId, it) }
-        } else {
-            null
+        if (consumed) {
+            clearRound(session, guildId)
         }
 
         return when (outcome) {
@@ -124,7 +155,6 @@ class HighlowController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    nextAnchor = nextRoundAnchor,
                     jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice
@@ -141,7 +171,6 @@ class HighlowController(
                     payout = 0L,
                     newBalance = outcome.newBalance,
                     win = false,
-                    nextAnchor = nextRoundAnchor,
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice
                 )
@@ -172,12 +201,34 @@ class HighlowController(
     }
 
     private fun anchorKey(guildId: Long): String = "highlow.anchor.$guildId"
+    private fun stakeKey(guildId: Long): String = "highlow.stake.$guildId"
+    private fun autoTopUpKey(guildId: Long): String = "highlow.autoTopUp.$guildId"
 
     private fun activeAnchor(session: HttpSession, guildId: Long): Int? =
         session.getAttribute(anchorKey(guildId)) as? Int
 
+    private fun activeStake(session: HttpSession, guildId: Long): Long? =
+        session.getAttribute(stakeKey(guildId)) as? Long
+
+    private fun activeAutoTopUp(session: HttpSession, guildId: Long): Boolean =
+        (session.getAttribute(autoTopUpKey(guildId)) as? Boolean) == true
+
     private fun storeAnchor(session: HttpSession, guildId: Long, anchor: Int) {
         session.setAttribute(anchorKey(guildId), anchor)
+    }
+
+    private fun storeStake(session: HttpSession, guildId: Long, stake: Long) {
+        session.setAttribute(stakeKey(guildId), stake)
+    }
+
+    private fun storeAutoTopUp(session: HttpSession, guildId: Long, autoTopUp: Boolean) {
+        session.setAttribute(autoTopUpKey(guildId), autoTopUp)
+    }
+
+    private fun clearRound(session: HttpSession, guildId: Long) {
+        session.removeAttribute(anchorKey(guildId))
+        session.removeAttribute(stakeKey(guildId))
+        session.removeAttribute(autoTopUpKey(guildId))
     }
 
     private fun cardLabel(n: Int): String = when (n) {
@@ -189,7 +240,16 @@ class HighlowController(
     }
 }
 
-data class PlayRequest(val direction: String = "", val stake: Long = 0, val autoTopUp: Boolean = false)
+data class StartRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
+
+data class StartResponse(
+    val ok: Boolean,
+    val error: String? = null,
+    val anchor: Int? = null,
+    val anchorLabel: String? = null
+)
+
+data class PlayRequest(val direction: String = "")
 
 data class PlayResponse(
     val ok: Boolean,
@@ -201,7 +261,6 @@ data class PlayResponse(
     val payout: Long? = null,
     val newBalance: Long? = null,
     val win: Boolean? = null,
-    val nextAnchor: Int? = null,
     val jackpotPayout: Long? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null

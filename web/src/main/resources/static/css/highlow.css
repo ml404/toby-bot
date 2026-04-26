@@ -113,6 +113,18 @@
     outline-offset: 2px;
 }
 
+.highlow-direction-btn {
+    flex: 1;
+    padding: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.highlow-direction-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .highlow-stake-label {
     font-size: 0.85rem;
     color: var(--text-muted);
