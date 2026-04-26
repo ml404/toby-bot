@@ -6,13 +6,11 @@ import core.command.CommandContext
 import database.dto.UserDto
 import database.service.TipService
 import database.service.TipService.TipOutcome
-import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.awt.Color
 
 /**
  * `/tip user:<member> amount:<int> message:<text?>` — peer-to-peer
@@ -34,8 +32,6 @@ class TipCommand @Autowired constructor(
         private const val OPT_USER = "user"
         private const val OPT_AMOUNT = "amount"
         private const val OPT_MESSAGE = "message"
-        private val OK_COLOR = Color(87, 242, 135)
-        private val ERROR_COLOR = Color(237, 66, 69)
     }
 
     override val optionData: List<OptionData> = listOf(
@@ -92,70 +88,43 @@ class TipCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         if (outcome is TipOutcome.Ok) {
-            val embed = EmbedBuilder()
-                .setTitle("💸 Tip sent")
-                .setDescription(
-                    "<@${outcome.sender}> tipped <@${outcome.recipient}> **${outcome.amount} credits**." +
-                        outcome.note?.let { "\n*${it}*" }.orEmpty()
-                )
-                .addField("Your balance", "${outcome.senderNewBalance} credits", true)
-                .addField(
-                    "Tipped today",
-                    "${outcome.sentTodayAfter}/${outcome.dailyCap}",
-                    true
-                )
-                .setColor(OK_COLOR)
-                .build()
             // addContent on the message (not the embed description) so the
             // <@recipient> mention actually pings — embed-mention pings are silent.
-            event.hook.sendMessageEmbeds(embed)
+            event.hook.sendMessageEmbeds(TipEmbeds.okEmbed(outcome))
                 .addContent("<@${outcome.recipient}>")
                 .queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
 
-        val embed = when (outcome) {
-            is TipOutcome.InvalidAmount -> errorEmbed(
+        val message = when (outcome) {
+            is TipOutcome.InvalidAmount ->
                 "Tip amount must be between ${outcome.min} and ${outcome.max} credits."
-            )
 
-            is TipOutcome.InvalidRecipient -> errorEmbed(
-                when (outcome.reason) {
-                    TipOutcome.InvalidRecipient.Reason.SELF -> "You can't tip yourself."
-                    TipOutcome.InvalidRecipient.Reason.BOT -> "You can't tip a bot."
-                    TipOutcome.InvalidRecipient.Reason.MISSING -> "Recipient does not exist."
-                }
-            )
+            is TipOutcome.InvalidRecipient -> when (outcome.reason) {
+                TipOutcome.InvalidRecipient.Reason.SELF -> "You can't tip yourself."
+                TipOutcome.InvalidRecipient.Reason.BOT -> "You can't tip a bot."
+                TipOutcome.InvalidRecipient.Reason.MISSING -> "Recipient does not exist."
+            }
 
-            is TipOutcome.InsufficientCredits -> errorEmbed(
+            is TipOutcome.InsufficientCredits ->
                 "You only have ${outcome.have} credits but tried to send ${outcome.needed}."
-            )
 
-            is TipOutcome.DailyCapExceeded -> errorEmbed(
+            is TipOutcome.DailyCapExceeded ->
                 "Daily tip cap reached. You've sent ${outcome.sentToday}/${outcome.cap} today; " +
                     "${outcome.cap - outcome.sentToday} credits of headroom remain."
-            )
 
-            TipOutcome.UnknownSender -> errorEmbed(
-                "No user record yet. Try another TobyBot command first."
-            )
+            TipOutcome.UnknownSender -> "No user record yet. Try another TobyBot command first."
 
-            TipOutcome.UnknownRecipient -> errorEmbed(
-                "Recipient has no user record in this guild yet."
-            )
+            TipOutcome.UnknownRecipient -> "Recipient has no user record in this guild yet."
 
             is TipOutcome.Ok -> error("unreachable") // handled above
         }
-        event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.sendMessageEmbeds(TipEmbeds.errorEmbed(message))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
-    private fun errorEmbed(message: String) = EmbedBuilder()
-        .setTitle("💸 Tip")
-        .setDescription(message)
-        .setColor(ERROR_COLOR)
-        .build()
-
     private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessageEmbeds(errorEmbed(message)).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.sendMessageEmbeds(TipEmbeds.errorEmbed(message))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 }

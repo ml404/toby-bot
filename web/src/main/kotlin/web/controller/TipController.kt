@@ -4,6 +4,7 @@ import database.service.TipService
 import database.service.TipService.TipOutcome
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.event.WebTipSentEvent
 import web.service.EconomyWebService
 import web.service.TipWebService
 import web.util.discordIdOrNull
@@ -37,6 +39,7 @@ class TipController(
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
     private val jda: JDA,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @GetMapping("/guilds")
     fun guildList(
@@ -122,17 +125,32 @@ class TipController(
             note = request.note?.takeIf { it.isNotBlank() }
         )
         return when (outcome) {
-            is TipOutcome.Ok -> ResponseEntity.ok(
-                TipResponse(
-                    ok = true,
-                    senderNewBalance = outcome.senderNewBalance,
-                    recipientNewBalance = outcome.recipientNewBalance,
-                    sentTodayAfter = outcome.sentTodayAfter,
-                    dailyCap = outcome.dailyCap,
-                    amount = outcome.amount,
-                    note = outcome.note
+            is TipOutcome.Ok -> {
+                eventPublisher.publishEvent(
+                    WebTipSentEvent(
+                        guildId = guildId,
+                        senderDiscordId = outcome.sender,
+                        recipientDiscordId = outcome.recipient,
+                        amount = outcome.amount,
+                        note = outcome.note,
+                        senderNewBalance = outcome.senderNewBalance,
+                        recipientNewBalance = outcome.recipientNewBalance,
+                        sentTodayAfter = outcome.sentTodayAfter,
+                        dailyCap = outcome.dailyCap
+                    )
                 )
-            )
+                ResponseEntity.ok(
+                    TipResponse(
+                        ok = true,
+                        senderNewBalance = outcome.senderNewBalance,
+                        recipientNewBalance = outcome.recipientNewBalance,
+                        sentTodayAfter = outcome.sentTodayAfter,
+                        dailyCap = outcome.dailyCap,
+                        amount = outcome.amount,
+                        note = outcome.note
+                    )
+                )
+            }
             is TipOutcome.InvalidAmount -> ResponseEntity.badRequest().body(
                 TipResponse(false, error = "Tip must be between ${outcome.min} and ${outcome.max} credits.")
             )
