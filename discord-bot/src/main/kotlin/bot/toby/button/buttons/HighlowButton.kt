@@ -5,6 +5,7 @@ import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
 import database.service.HighlowService
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -31,7 +32,7 @@ class HighlowButton @Autowired constructor(
             return
         }
 
-        if (event.user.idLong != parsed.userId) {
+        if (requestingUserDto.discordId != parsed.userId) {
             event.reply("This isn't your /highlow round — run `/highlow` to start your own.")
                 .setEphemeral(true)
                 .queue()
@@ -47,7 +48,7 @@ class HighlowButton @Autowired constructor(
         )
 
         event.editMessageEmbeds(HighlowEmbeds.outcomeEmbed(outcome))
-            .setComponents()
+            .setComponents(emptyList<MessageTopLevelComponent>())
             .queue()
     }
 }
