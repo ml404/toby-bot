@@ -15,12 +15,8 @@
         <div class="economy-price">
             <div class="economy-price-value" id="economy-price"
                  th:text="${#numbers.formatDecimal(view.price, 1, 2)}">0.00</div>
-            <div class="economy-price-change"
-                 th:if="${view.change24h != null}"
-                 th:classappend="${view.change24h >= 0 ? 'up' : 'down'}"
-                 th:text="${#numbers.formatDecimal(view.change24h, 1, 2)} + '% (24h)'">0%</div>
-            <div class="economy-price-change muted"
-                 th:unless="${view.change24h != null}">no 24h data yet</div>
+            <!-- Populated by economy.js once /history responds; tracks the active chart window. -->
+            <div class="economy-price-change">&nbsp;</div>
         </div>
     </div>
 
@@ -98,6 +94,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/economy-change.js}"></script>
 <script th:src="@{/js/economy.js}"></script>
 </body>
 </html>

@@ -21,6 +21,7 @@
     const windowButtons = document.querySelectorAll('#economy-windows button');
     const recentTradesPanel = document.getElementById('economy-recent-trades-panel');
     const recentTradesList = document.getElementById('economy-recent-trades');
+    const priceChangeEl = document.querySelector('.economy-price-change');
     // Cap is generous — the panel scrolls (see economy.css), so the
     // only ceiling is rendering cost on very busy markets.
     const RECENT_TRADES_LIMIT = 100;
@@ -197,6 +198,18 @@
         };
     }
 
+    function activeWindowLabel(windowCode) {
+        // Reuse the button text so the indicator stays in sync with the
+        // segmented control (1D / 5D / 1M / 3M / 1Y / ALL) without keeping
+        // a parallel label table around.
+        for (let i = 0; i < windowButtons.length; i++) {
+            if (windowButtons[i].dataset.window === windowCode) {
+                return (windowButtons[i].textContent || windowCode).trim();
+            }
+        }
+        return windowCode;
+    }
+
     function loadHistory(windowCode) {
         currentWindow = windowCode;
         windowButtons.forEach(function (b) {
@@ -210,6 +223,9 @@
             const points = (body && body.points) || [];
             const trades = (body && body.trades) || [];
             renderRecentTrades(trades);
+            if (window.TobyEconomyChange) {
+                window.TobyEconomyChange.applyChange(priceChangeEl, points, activeWindowLabel(windowCode));
+            }
             if (points.length < 2) {
                 if (chart) { chart.destroy(); chart = null; }
                 if (empty) empty.hidden = false;
