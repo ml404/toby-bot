@@ -43,15 +43,11 @@ class EconomyWebService(
         val guild = jda.getGuildById(guildId) ?: return null
         val market = tradeService.loadOrCreateMarket(guildId)
         val user = userService.getUserById(discordId, guildId)
-        val since = Instant.now().minus(Duration.ofDays(1))
-        val dayAgo = marketService.listHistory(guildId, since).firstOrNull()?.price
-        val change = dayAgo?.let { ((market.price - it) / it) * 100.0 }
 
         return EconomyView(
             guildName = guild.name,
             price = market.price,
             lastTickAt = market.lastTickAt,
-            change24h = change,
             coins = user?.tobyCoins ?: 0L,
             credits = user?.socialCredit ?: 0L,
             portfolioCredits = ((user?.tobyCoins ?: 0L).toDouble() * market.price).toLong()
@@ -123,7 +119,6 @@ data class EconomyView(
     val guildName: String,
     val price: Double,
     val lastTickAt: Instant,
-    val change24h: Double?,
     val coins: Long,
     val credits: Long,
     val portfolioCredits: Long

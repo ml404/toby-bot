@@ -60,7 +60,6 @@ class EconomyWebServiceTest {
             socialCredit = 200L
             tobyCoins = 4L
         }
-        every { marketService.listHistory(guildId, any()) } returns emptyList()
 
         val view = service.getEconomyView(guildId, discordId)
 
@@ -69,7 +68,6 @@ class EconomyWebServiceTest {
         assertEquals(4L, view.coins)
         assertEquals(200L, view.credits)
         assertEquals(600L, view.portfolioCredits) // 4 coins * 150.0 = 600
-        assertNull(view.change24h)
     }
 
     @Test
