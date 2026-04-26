@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.oauth2.core.user.OAuth2User
+import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
 import java.time.Instant
@@ -32,6 +34,7 @@ class DuelControllerTest {
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
     private lateinit var jda: JDA
+    private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var user: OAuth2User
     private lateinit var controller: DuelController
 
@@ -43,6 +46,7 @@ class DuelControllerTest {
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
+        eventPublisher = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -51,7 +55,7 @@ class DuelControllerTest {
         every { economyWebService.isMember(opponentId, guildId) } returns true
         controller = DuelController(
             duelService, duelWebService, pendingDuelRegistry,
-            economyWebService, userService, jda
+            economyWebService, userService, jda, eventPublisher
         )
     }
 
@@ -62,7 +66,7 @@ class DuelControllerTest {
     )
 
     @Test
-    fun `challenge happy path registers in registry and returns the duelId`() {
+    fun `challenge happy path registers in registry and publishes WebDuelOfferedEvent`() {
         every {
             duelService.startDuel(discordId, opponentId, guildId, 50L)
         } returns StartOutcome.Ok(initiatorBalance = 200L)
@@ -80,6 +84,17 @@ class DuelControllerTest {
         assertTrue(response.body!!.ok)
         assertEquals(duelId, response.body!!.duelId)
         verify { duelWebService.ensureOpponent(opponentId, guildId) }
+        verify(exactly = 1) {
+            eventPublisher.publishEvent(
+                WebDuelOfferedEvent(
+                    guildId = guildId,
+                    duelId = duelId,
+                    initiatorDiscordId = discordId,
+                    opponentDiscordId = opponentId,
+                    stake = 50L
+                )
+            )
+        }
     }
 
     @Test
@@ -90,6 +105,7 @@ class DuelControllerTest {
         assertFalse(response.body!!.ok)
         verify(exactly = 0) { duelService.startDuel(any(), any(), any(), any()) }
         verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<WebDuelOfferedEvent>()) }
     }
 
     @Test
@@ -102,6 +118,7 @@ class DuelControllerTest {
         assertFalse(response.body!!.ok)
         verify(exactly = 0) { duelWebService.ensureOpponent(any(), any()) }
         verify(exactly = 0) { duelService.startDuel(any(), any(), any(), any()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<WebDuelOfferedEvent>()) }
     }
 
     @Test
@@ -115,6 +132,7 @@ class DuelControllerTest {
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
         verify(exactly = 0) { pendingDuelRegistry.register(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<WebDuelOfferedEvent>()) }
     }
 
     @Test

@@ -6,6 +6,7 @@ import database.service.DuelService.AcceptOutcome
 import database.service.DuelService.StartOutcome
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
 import web.util.discordIdOrNull
@@ -39,6 +41,7 @@ class DuelController(
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
     private val jda: JDA,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @GetMapping("/guilds")
     fun guildList(
@@ -154,6 +157,15 @@ class DuelController(
             initiatorDiscordId = discordId,
             opponentDiscordId = request.opponentDiscordId,
             stake = request.stake
+        )
+        eventPublisher.publishEvent(
+            WebDuelOfferedEvent(
+                guildId = guildId,
+                duelId = offer.id,
+                initiatorDiscordId = discordId,
+                opponentDiscordId = request.opponentDiscordId,
+                stake = request.stake
+            )
         )
         return ResponseEntity.ok(
             ChallengeResponse(ok = true, duelId = offer.id, stake = request.stake)
