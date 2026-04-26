@@ -319,16 +319,22 @@ class PokerService @Autowired constructor(
      */
     @Transactional
     fun evictAllSeats(table: PokerTable) {
-        val refunds: List<Pair<Long, Long>> = synchronized(table) {
+        val refunds: Map<Long, Long> = synchronized(table) {
             // Treat anyone with chips as a refund target. Mid-hand evictions
             // donate uncalled bets to the survivors via the table pot, but
             // for an idle wipe we just pay back what's on each stack.
-            val out = table.seats.filter { it.chips > 0L }.map { it.discordId to it.chips }
+            val out = table.seats.filter { it.chips > 0L }.associate { it.discordId to it.chips }
             table.seats.clear()
             out
         }
+        if (refunds.isEmpty()) return
+
+        // Lock all refund recipients in ascending discord-id order to avoid
+        // cycles with concurrent /tip, /duel, /coinflip, etc. transactions
+        // that touch the same users.
+        val locked = userService.lockUsersInAscendingOrder(refunds.keys, table.guildId)
         for ((discordId, amount) in refunds) {
-            val user = userService.getUserByIdForUpdate(discordId, table.guildId) ?: continue
+            val user = locked[discordId] ?: continue
             user.socialCredit = (user.socialCredit ?: 0L) + amount
             userService.updateUser(user)
         }

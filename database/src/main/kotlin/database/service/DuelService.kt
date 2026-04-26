@@ -1,7 +1,6 @@
 package database.service
 
 import database.dto.DuelLogDto
-import database.dto.UserDto
 import database.economy.Coinflip
 import database.persistence.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
@@ -110,9 +109,12 @@ class DuelService @Autowired constructor(
         at: Instant = Instant.now(),
     ): AcceptOutcome {
         // Lock both rows in deterministic ascending order to avoid deadlocks.
-        val (initiator, opponent) = lockBoth(initiatorDiscordId, opponentDiscordId, guildId)
-        initiator ?: return AcceptOutcome.UnknownInitiator
-        opponent ?: return AcceptOutcome.UnknownOpponent
+        val locked = userService.lockUsersInAscendingOrder(
+            listOf(initiatorDiscordId, opponentDiscordId),
+            guildId
+        )
+        val initiator = locked[initiatorDiscordId] ?: return AcceptOutcome.UnknownInitiator
+        val opponent = locked[opponentDiscordId] ?: return AcceptOutcome.UnknownOpponent
 
         val initiatorBalance = initiator.socialCredit ?: 0L
         if (initiatorBalance < stake) {
@@ -163,18 +165,6 @@ class DuelService @Autowired constructor(
             loserNewBalance = loser.socialCredit ?: 0L,
             lossTribute = tribute
         )
-    }
-
-    private fun lockBoth(aId: Long, bId: Long, guildId: Long): Pair<UserDto?, UserDto?> {
-        return if (aId < bId) {
-            val a = userService.getUserByIdForUpdate(aId, guildId)
-            val b = userService.getUserByIdForUpdate(bId, guildId)
-            a to b
-        } else {
-            val b = userService.getUserByIdForUpdate(bId, guildId)
-            val a = userService.getUserByIdForUpdate(aId, guildId)
-            a to b
-        }
     }
 
     companion object {
