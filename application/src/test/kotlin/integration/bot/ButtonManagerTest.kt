@@ -76,13 +76,14 @@ class ButtonManagerTest {
             InitiativeNextButton::class.java,
             InitiativePreviousButton::class.java,
             PausePlayButton::class.java,
+            PokerActionButton::class.java,
             ResendLastRequestButton::class.java,
             RollButton::class.java,
             StopButton::class.java,
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
-        assertEquals(9, buttonManager.buttons.size)
+        assertEquals(10, buttonManager.buttons.size)
     }
 
     @Test
