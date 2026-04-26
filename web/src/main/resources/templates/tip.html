@@ -23,11 +23,13 @@
     <section class="tip-card">
         <form id="tip-form" autocomplete="off">
             <label for="tip-recipient">Recipient</label>
-            <input id="tip-recipient" name="recipientName" type="text" list="tip-member-list"
-                   autocomplete="off" placeholder="Type a name…" required>
-            <datalist id="tip-member-list">
-                <option th:each="m : ${members}" th:value="${m.name}" th:attr="data-id=${m.id}"></option>
-            </datalist>
+            <select id="tip-recipient" name="recipientDiscordId" required>
+                <option value="">Pick a recipient…</option>
+                <option th:each="m : ${members}" th:value="${m.id}" th:text="${m.name}"></option>
+            </select>
+            <p th:if="${#lists.isEmpty(members)}" class="muted">
+                No other members found in this server. Try again in a moment if the bot just connected.
+            </p>
 
             <label for="tip-amount">Amount (credits)</label>
             <input id="tip-amount" name="amount" type="number"

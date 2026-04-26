@@ -17,18 +17,9 @@
 
     if (!form) return;
 
-    function resolveRecipientId() {
-        const typed = (document.getElementById('tip-recipient').value || '').trim();
-        if (!typed) return null;
-        const escaped = (window.CSS && window.CSS.escape) ? window.CSS.escape(typed) : typed.replace(/"/g, '\\"');
-        const opt = document.querySelector('#tip-member-list option[value="' + escaped + '"]');
-        const id = opt && opt.dataset.id ? parseInt(opt.dataset.id, 10) : NaN;
-        return Number.isFinite(id) ? id : null;
-    }
-
     form.addEventListener('submit', function (e) {
         e.preventDefault();
-        const recipient = resolveRecipientId();
+        const recipient = parseInt(document.getElementById('tip-recipient').value, 10);
         const amount = parseInt(document.getElementById('tip-amount').value, 10);
         const note = (document.getElementById('tip-note').value || '').trim() || null;
         if (!recipient) {
