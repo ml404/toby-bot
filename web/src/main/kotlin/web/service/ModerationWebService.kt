@@ -117,21 +117,21 @@ class ModerationWebService(
         val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
         val nextMonthStart = thisMonthStart.plusMonths(1)
 
-        val lifetimeVoice = safely("lifetime voice", emptyMap<Long, Long>()) {
+        val lifetimeVoice = safely("lifetime voice", emptyMap()) {
             voiceSessionService.sumCountedSecondsLifetimeByUser(guildId)
         }
         // Range is [thisMonthStart, nextMonthStart) — sessions whose joinedAt
         // falls inside the current calendar month. The MonthlyLeaderboardJob
         // uses [prevMonthStart, thisMonthStart) because it runs on the 1st
         // and reports the JUST-FINISHED month; that range is wrong here.
-        val thisMonthVoice = safely("this-month voice", emptyMap<Long, Long>()) {
+        val thisMonthVoice = safely("this-month voice", emptyMap()) {
             voiceSessionService.sumCountedSecondsInRangeByUser(
                 guildId,
                 thisMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC),
                 nextMonthStart.atStartOfDay().toInstant(ZoneOffset.UTC)
             )
         }
-        val existingBaselines = safely("prior snapshots", emptyList<database.dto.MonthlyCreditSnapshotDto>()) {
+        val existingBaselines = safely("prior snapshots", emptyList()) {
             snapshotService.listForGuildDate(guildId, thisMonthStart)
         }.associateBy { it.discordId }.toMutableMap()
 

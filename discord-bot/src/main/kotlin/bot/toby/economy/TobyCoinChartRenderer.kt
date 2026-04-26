@@ -97,7 +97,7 @@ class TobyCoinChartRenderer {
                     0f, 400f, Color(0x57, 0xF2, 0x87, 20)
                 )
             )
-            setOutline(true)
+            isOutline = true
         }
         plot.renderer = renderer
     }

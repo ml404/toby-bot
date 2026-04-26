@@ -25,6 +25,11 @@ class UtilsWebService(
     fun randomMeme(subreddit: String, timePeriod: String, limit: Int): UtilsResult<MemeResult> {
         val sub = subreddit.trim()
         if (sub.isEmpty()) return UtilsResult.error("Subreddit is required.")
+        // Reddit subreddit names are alphanumeric + underscore, 3-21 chars.
+        // Validating here scrubs the taint before it reaches the URL sink.
+        if (!SUBREDDIT_NAME.matches(sub)) {
+            return UtilsResult.error("Invalid subreddit name.")
+        }
         if (sub.equals("sneakybackgroundfeet", ignoreCase = true)) {
             return UtilsResult.error("Don't talk to me.")
         }
@@ -137,6 +142,10 @@ class UtilsWebService(
             "day", "week", "month", "all" -> tp.lowercase()
             else -> "day"
         }
+
+    private companion object {
+        val SUBREDDIT_NAME: Regex = Regex("^[A-Za-z0-9_]{1,50}$")
+    }
 }
 
 data class UtilsResult<T>(val value: T?, val error: String?) {

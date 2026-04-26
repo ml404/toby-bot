@@ -87,6 +87,7 @@ data class EncounterView(
     val notes: String?,
     val entries: List<EncounterEntryView> = emptyList()
 ) {
+    @Suppress("unused") // consumed by templates/campaignDetail.html via Thymeleaf
     val totalRosterSize: Int
         get() = entries.sumOf { it.effectiveQuantity }
 }
@@ -133,6 +134,7 @@ data class PlayerInfo(
     val characterClasses: String? = null,
     val characterLevel: Int? = null
 ) {
+    @Suppress("unused") // consumed by templates/campaignDetail.html via Thymeleaf
     val characterLink: String?
         get() = characterId?.let { "https://www.dndbeyond.com/characters/$it" }
 }

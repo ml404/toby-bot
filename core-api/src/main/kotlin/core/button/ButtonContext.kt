@@ -43,6 +43,7 @@ interface ButtonContext {
          * @return the [author][net.dv8tion.jda.api.entities.Member] of the message as member
          */
         get() = event.member
+    @Suppress("unused") // public API surface on ButtonContext
     val jDA: JDA
         /**
          * Returns the current [jda][net.dv8tion.jda.api.JDA] instance

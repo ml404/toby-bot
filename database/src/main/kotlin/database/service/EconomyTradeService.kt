@@ -3,7 +3,6 @@ package database.service
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.TobyCoinTradeDto
-import database.dto.UserDto
 import database.economy.TobyCoinEngine
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

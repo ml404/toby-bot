@@ -72,10 +72,8 @@ class MusicDto(
         endMs = endMs
     )
 
-    enum class Adjustment(val adjustment: String) {
-        START("start"),
-        END("end");
-
+    enum class Adjustment {
+        START
     }
 
     override fun toString(): String {

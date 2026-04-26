@@ -8,7 +8,7 @@ buildscript {
         jdaVersion = '6.3.1'
         kotlin_version = '2.3.0'
         kotlinx_version = '1.10.2'
-        ktor_version = '2.3.12'
+        ktor_version = '2.3.13'
         mockk_version = '1.13.13'
         lavaplayer_version = '2.2.6'
         youtube_common_version = '1.18.0'
@@ -59,6 +59,15 @@ subprojects {
     configurations {
         configureEach {
             exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+            // Force patched versions for Qodana-flagged transitive CVEs.
+            // jackson-bom: GHSA-72hv-8253-57qq (jackson-core <2.18.x).
+            // commons-lang3: CVE-2025-48924 (<3.18.0).
+            resolutionStrategy {
+                force 'com.fasterxml.jackson.core:jackson-core:2.18.2'
+                force 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+                force 'com.fasterxml.jackson.core:jackson-annotations:2.18.2'
+                force 'org.apache.commons:commons-lang3:3.18.0'
+            }
         }
     }
 

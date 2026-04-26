@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 class DndBeyondCharacterSheetProvider(
     private val fetcher: DndBeyondCharacterFetcher,
     private val characterSheetService: CharacterSheetService,
-    @param:Value("\${dnd.beyond.sheet.ttl-seconds:3600}") private val ttlSeconds: Long = 3600,
+    @param:Value($$"${dnd.beyond.sheet.ttl-seconds:3600}") private val ttlSeconds: Long = 3600,
 ) : CharacterSheetProvider {
 
     private val logger = LoggerFactory.getLogger(DndBeyondCharacterSheetProvider::class.java)

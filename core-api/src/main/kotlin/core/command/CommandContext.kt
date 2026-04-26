@@ -53,6 +53,7 @@ interface CommandContext {
          * @return the current [jda][net.dv8tion.jda.api.JDA] instance
          */
         get() = event.jda
+    @Suppress("unused") // public API surface on CommandContext
     val shardManager: ShardManager?
         /**
          * Returns the current [net.dv8tion.jda.api.sharding.ShardManager] instance
@@ -60,6 +61,7 @@ interface CommandContext {
          * @return the current [net.dv8tion.jda.api.sharding.ShardManager] instance
          */
         get() = jDA.shardManager
+    @Suppress("unused") // public API surface on CommandContext
     val selfUser: User?
         /**
          * Returns the [user][net.dv8tion.jda.api.entities.User] for the currently logged in account

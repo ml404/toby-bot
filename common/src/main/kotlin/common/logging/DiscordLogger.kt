@@ -48,10 +48,6 @@ class DiscordLogger(clazz: Class<*>) {
         }
     }
 
-    fun clearContext() {
-        MDC.clear()
-    }
-
     // Construct a dynamic log message based on the context
     private fun buildLogMessage(message: String): String {
         val guildName = MDC.get("guildName") ?: ""
