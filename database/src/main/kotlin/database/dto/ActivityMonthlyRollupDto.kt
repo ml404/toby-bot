@@ -29,6 +29,7 @@ import java.time.LocalDate
         query = "delete from ActivityMonthlyRollupDto r where r.monthStart < :cutoff"
     )
 )
+@Suppress("unused") // monthStart is used by NamedQueries above; flagged spuriously by Qodana
 @Entity
 @Table(name = "activity_monthly_rollup", schema = "public")
 @IdClass(ActivityMonthlyRollupId::class)

@@ -69,10 +69,9 @@ class ActivityTrackingNotifier @Autowired constructor(
     private fun sendDmSafely(user: User, body: String) {
         runCatching {
             user.openPrivateChannel().queue({ pm ->
-                pm.sendMessage(body).queue(
-                    null,
-                    { err -> logger.warn("Could not DM ${user.id} about activity tracking: ${err.message}") }
-                )
+                pm.sendMessage(body).queue(null) { err ->
+                    logger.warn("Could not DM ${user.id} about activity tracking: ${err.message}")
+                }
             }, { err ->
                 logger.warn("Could not open DM with ${user.id}: ${err.message}")
             })

@@ -15,9 +15,6 @@ class RedditAPIDto {
     @SerializedName("permalink")
     var url: String? = null
 
-    @SerializedName("url_overridden_by_dest")
-    var image: String? = null
-
     @SerializedName("over_18")
     var isNsfw: Boolean? = null
 

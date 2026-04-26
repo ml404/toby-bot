@@ -117,8 +117,6 @@ class InitiativeState {
         }
     }
 
-    internal val currentEntry: RolledEntry?
-        get() = sortedEntries.getOrNull(initiativeIndex.get())
 }
 
 /**

@@ -167,6 +167,7 @@ data class LeaderboardGuildCard(
     val totalVoiceSeconds: Long,
     val memberCount: Int
 ) {
+    @Suppress("unused") // consumed by templates/leaderboards.html via Thymeleaf
     val totalVoiceDisplay: String get() = formatDuration(totalVoiceSeconds)
     private fun formatDuration(seconds: Long): String {
         if (seconds <= 0) return "0m"
@@ -187,6 +188,7 @@ data class LeaderboardGuildView(
     val sort: LeaderboardSort = LeaderboardSort.THIS_MONTH,
     val tobyCoinLeaders: List<TobyCoinLeaderRow> = emptyList()
 ) {
+    @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
     val totalVoiceThisMonthDisplay: String get() = formatDuration(totalVoiceThisMonth)
     private fun formatDuration(seconds: Long): String {
         if (seconds <= 0) return "0m"

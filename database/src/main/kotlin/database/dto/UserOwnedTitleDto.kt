@@ -15,6 +15,7 @@ import java.time.Instant
         query = "select count(o) from UserOwnedTitleDto o where o.discordId = :discordId and o.titleId = :titleId"
     )
 )
+@Suppress("unused") // boughtAt is written via JPA from DefaultTitleService; flagged spuriously by Qodana
 @Entity
 @Table(name = "user_owned_title", schema = "public")
 @IdClass(UserOwnedTitleId::class)

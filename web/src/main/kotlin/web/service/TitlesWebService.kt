@@ -2,7 +2,6 @@ package web.service
 
 import common.logging.DiscordLogger
 import database.dto.TitleDto
-import database.dto.UserOwnedTitleDto
 import database.service.EconomyTradeService
 import database.service.EconomyTradeService.TradeOutcome
 import database.service.TitleService
@@ -56,7 +55,7 @@ class TitlesWebService(
     }
 
     fun getTitlesForGuild(guildId: Long, actorDiscordId: Long): TitleShopView {
-        val catalog = safely("title catalog", emptyList<TitleDto>()) {
+        val catalog = safely("title catalog", emptyList()) {
             titleService.listAll()
         }.map { t ->
             TitleShopEntry(
@@ -67,7 +66,7 @@ class TitlesWebService(
                 colorHex = t.colorHex
             )
         }
-        val ownedIds: Set<Long> = safely("owned titles", emptyList<UserOwnedTitleDto>()) {
+        val ownedIds: Set<Long> = safely("owned titles", emptyList()) {
             titleService.listOwned(actorDiscordId)
         }.mapTo(HashSet()) { it.titleId }
         val actorDto = userService.getUserById(actorDiscordId, guildId)
@@ -128,7 +127,7 @@ class TitlesWebService(
         val shortfall = (title.cost - currentCredits).coerceAtLeast(0L)
 
         var soldCoins = 0L
-        var priceAfterSell = 0.0
+        val priceAfterSell: Double
         if (shortfall > 0L) {
             val market = marketService.getMarketForUpdate(guildId)
                 ?: return BuyWithTobyOutcome.Error("No market yet for this server — try a Discord trade first.")
