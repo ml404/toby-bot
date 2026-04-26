@@ -146,7 +146,8 @@ class EconomyController(
                         newCoins = outcome.newCoins,
                         newCredits = outcome.newCredits + granted,
                         newPrice = outcome.newPrice,
-                        transactedCredits = outcome.transactedCredits
+                        transactedCredits = outcome.transactedCredits,
+                        fee = outcome.fee
                     )
                 )
             }
@@ -174,7 +175,8 @@ data class TradeResponse(
     val newCoins: Long? = null,
     val newCredits: Long? = null,
     val newPrice: Double? = null,
-    val transactedCredits: Long? = null
+    val transactedCredits: Long? = null,
+    val fee: Long? = null
 )
 
 data class HistoryResponse(

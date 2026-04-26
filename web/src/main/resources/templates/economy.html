@@ -17,6 +17,7 @@
                  th:text="${#numbers.formatDecimal(view.price, 1, 2)}">0.00</div>
             <!-- Populated by economy.js once /history responds; tracks the active chart window. -->
             <div class="economy-price-change">&nbsp;</div>
+            <div class="economy-price-fee muted">+ 1% fee on buys &amp; sells</div>
         </div>
     </div>
 
@@ -83,7 +84,8 @@
             </div>
             <p class="hint">
                 Buys push the price up, sells push it down. The market also
-                drifts on its own every few minutes.
+                drifts on its own every few minutes. Every trade pays a 1%
+                fee into the server jackpot pool.
             </p>
         </section>
     </div>
