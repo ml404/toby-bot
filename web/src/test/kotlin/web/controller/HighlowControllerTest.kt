@@ -28,6 +28,8 @@ class HighlowControllerTest {
     private val guildId = 42L
     private val discordId = 100L
     private val anchorKey = "highlow.anchor.$guildId"
+    private val stakeKey = "highlow.stake.$guildId"
+    private val autoTopUpKey = "highlow.autoTopUp.$guildId"
 
     private lateinit var highlowService: HighlowService
     private lateinit var economyWebService: EconomyWebService
@@ -51,7 +53,6 @@ class HighlowControllerTest {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
-        // Lightweight in-memory session — only get/set/remove are exercised.
         session = inMemorySession()
 
         every { economyWebService.isMember(discordId, guildId) } returns true
@@ -64,31 +65,81 @@ class HighlowControllerTest {
     }
 
     @Test
-    fun `GET draws an anchor on first hit and stores it in session`() {
-        every { highlowService.dealAnchor() } returns 7
-
+    fun `GET does not draw an anchor`() {
         val view = controller.page(guildId, user, session, ConcurrentModel(), RedirectAttributesModelMap())
 
         assertEquals("highlow", view)
-        assertEquals(7, session.getAttribute(anchorKey))
-        verify(exactly = 1) { highlowService.dealAnchor() }
-    }
-
-    @Test
-    fun `GET reuses the session anchor on subsequent hits without redrawing`() {
-        session.setAttribute(anchorKey, 11)
-
-        controller.page(guildId, user, session, ConcurrentModel(), RedirectAttributesModelMap())
-
+        assertNull(session.getAttribute(anchorKey))
         verify(exactly = 0) { highlowService.dealAnchor() }
-        assertEquals(11, session.getAttribute(anchorKey))
     }
 
     @Test
-    fun `POST without an active anchor returns 400`() {
+    fun `GET surfaces an in-progress round so refreshing mid-round still works`() {
+        session.setAttribute(anchorKey, 11)
+        session.setAttribute(stakeKey, 75L)
+
+        val model = ConcurrentModel()
+        controller.page(guildId, user, session, model, RedirectAttributesModelMap())
+
+        assertEquals(11, model.getAttribute("anchor"))
+        assertEquals("J", model.getAttribute("anchorLabel"))
+        assertEquals(75L, model.getAttribute("activeStake"))
+        verify(exactly = 0) { highlowService.dealAnchor() }
+    }
+
+    @Test
+    fun `start locks stake and deals anchor into session`() {
+        every { highlowService.dealAnchor() } returns 9
+
+        val response = controller.start(
+            guildId,
+            StartRequest(stake = 50L, autoTopUp = false),
+            user,
+            session
+        )
+
+        assertTrue(response.statusCode.is2xxSuccessful)
+        assertEquals(true, response.body!!.ok)
+        assertEquals(9, response.body!!.anchor)
+        assertEquals(9, session.getAttribute(anchorKey))
+        assertEquals(50L, session.getAttribute(stakeKey))
+        assertEquals(false, session.getAttribute(autoTopUpKey))
+    }
+
+    @Test
+    fun `start records autoTopUp in session for the eventual play call`() {
+        every { highlowService.dealAnchor() } returns 4
+
+        controller.start(
+            guildId,
+            StartRequest(stake = 50L, autoTopUp = true),
+            user,
+            session
+        )
+
+        assertEquals(true, session.getAttribute(autoTopUpKey))
+    }
+
+    @Test
+    fun `start rejects an out-of-range stake without dealing or persisting`() {
+        val response = controller.start(
+            guildId,
+            StartRequest(stake = 9_999L),
+            user,
+            session
+        )
+
+        assertEquals(400, response.statusCode.value())
+        assertEquals(false, response.body!!.ok)
+        assertNull(session.getAttribute(anchorKey))
+        verify(exactly = 0) { highlowService.dealAnchor() }
+    }
+
+    @Test
+    fun `play without an active round returns 400`() {
         val response = controller.play(
             guildId,
-            PlayRequest(direction = "HIGHER", stake = 50L),
+            PlayRequest(direction = "HIGHER"),
             user,
             session
         )
@@ -100,21 +151,22 @@ class HighlowControllerTest {
     }
 
     @Test
-    fun `POST consumes the session anchor and seeds a new one for the next round`() {
+    fun `play resolves with the session's stake and anchor and clears the round on a settled outcome`() {
         session.setAttribute(anchorKey, 5)
+        session.setAttribute(stakeKey, 50L)
+        session.setAttribute(autoTopUpKey, false)
         every {
-            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5)
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5, false)
         } returns PlayOutcome.Win(
             stake = 50L, payout = 100L, net = 50L,
             anchor = 5, next = 12,
             direction = Highlow.Direction.HIGHER,
             newBalance = 1_050L
         )
-        every { highlowService.dealAnchor() } returns 9
 
         val response = controller.play(
             guildId,
-            PlayRequest(direction = "HIGHER", stake = 50L),
+            PlayRequest(direction = "HIGHER"),
             user,
             session
         )
@@ -124,36 +176,58 @@ class HighlowControllerTest {
         assertEquals(true, body.win)
         assertEquals(5, body.anchor)
         assertEquals(12, body.next)
-        assertEquals(9, body.nextAnchor, "next round's anchor must be in the response")
-        assertEquals(9, session.getAttribute(anchorKey), "session must hold the new anchor")
+        assertNull(session.getAttribute(anchorKey), "round must be cleared so the next bet starts fresh")
+        assertNull(session.getAttribute(stakeKey))
     }
 
     @Test
-    fun `POST with insufficient credits keeps the session anchor in place for retry`() {
+    fun `play forwards the session autoTopUp flag to the service`() {
+        session.setAttribute(anchorKey, 5)
+        session.setAttribute(stakeKey, 50L)
+        session.setAttribute(autoTopUpKey, true)
+        every {
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5, true)
+        } returns PlayOutcome.Lose(
+            stake = 50L, anchor = 5, next = 5,
+            direction = Highlow.Direction.HIGHER,
+            newBalance = 950L
+        )
+
+        controller.play(guildId, PlayRequest(direction = "HIGHER"), user, session)
+
+        verify(exactly = 1) {
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5, true)
+        }
+    }
+
+    @Test
+    fun `play with insufficient credits keeps the locked round in place for retry`() {
         session.setAttribute(anchorKey, 6)
-        every { highlowService.play(discordId, guildId, 9_999L, Highlow.Direction.HIGHER, 6) } returns
-            PlayOutcome.InsufficientCredits(stake = 9_999L, have = 100L)
+        session.setAttribute(stakeKey, 9_999L)
+        every {
+            highlowService.play(discordId, guildId, 9_999L, Highlow.Direction.HIGHER, 6, false)
+        } returns PlayOutcome.InsufficientCredits(stake = 9_999L, have = 100L)
 
         val response = controller.play(
             guildId,
-            PlayRequest(direction = "HIGHER", stake = 9_999L),
+            PlayRequest(direction = "HIGHER"),
             user,
             session
         )
 
         assertEquals(400, response.statusCode.value())
-        assertEquals(6, session.getAttribute(anchorKey), "anchor stays so the user can correct stake and retry")
-        assertNull(response.body!!.nextAnchor)
-        verify(exactly = 0) { highlowService.dealAnchor() }
+        assertEquals(6, session.getAttribute(anchorKey), "anchor stays so the user can retry")
+        assertEquals(9_999L, session.getAttribute(stakeKey), "stake also stays")
     }
 
     @Test
-    fun `POST with invalid direction returns 400 without touching the service`() {
+    fun `play with invalid direction returns 400 without touching the service`() {
         session.setAttribute(anchorKey, 4)
+        session.setAttribute(stakeKey, 25L)
 
         val response = controller.play(
             guildId,
-            PlayRequest(direction = "SIDEWAYS", stake = 50L),
+            PlayRequest(direction = "SIDEWAYS"),
             user,
             session
         )
@@ -166,8 +240,9 @@ class HighlowControllerTest {
     @Test
     fun `jackpot win surfaces jackpotPayout in the response body`() {
         session.setAttribute(anchorKey, 5)
+        session.setAttribute(stakeKey, 50L)
         every {
-            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5)
+            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER, 5, false)
         } returns PlayOutcome.Win(
             stake = 50L, payout = 100L, net = 50L,
             anchor = 5, next = 12,
@@ -175,11 +250,10 @@ class HighlowControllerTest {
             newBalance = 5_050L,
             jackpotPayout = 4_000L
         )
-        every { highlowService.dealAnchor() } returns 9
 
         val response = controller.play(
             guildId,
-            PlayRequest(direction = "HIGHER", stake = 50L),
+            PlayRequest(direction = "HIGHER"),
             user,
             session
         )

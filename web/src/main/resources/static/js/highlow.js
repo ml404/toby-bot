@@ -67,8 +67,12 @@ function renderHighlowResult(resultEl, body) {
     const balanceEl = document.getElementById('highlow-balance');
     const resultEl = document.getElementById('highlow-result');
     const form = document.getElementById('highlow-bet');
+    const directionPicker = document.getElementById('highlow-direction-picker');
+    const higherBtn = document.getElementById('highlow-call-higher');
+    const lowerBtn = document.getElementById('highlow-call-lower');
 
     if (!form || !dealBtn || !stakeInput || !anchorFace || !nextFace) return;
+    if (!directionPicker || !higherBtn || !lowerBtn) return;
 
     const topUp = (window.TobyTopUp && dealTobyBtn) ? window.TobyTopUp.init({
         form: form,
@@ -78,20 +82,46 @@ function renderHighlowResult(resultEl, body) {
         balanceEl: balanceEl,
         tobyCoins: initialTobyCoins,
         marketPrice: initialMarketPrice,
-        onSubmit: function (autoTopUp) { runDeal(autoTopUp); },
+        onSubmit: function (autoTopUp) { runStart(autoTopUp); },
     }) : null;
 
     const NEXT_DEAL_MS = 900;
     const SHUFFLE_INTERVAL_MS = 70;
+    const ROUND_RESET_MS = 1500;
 
     let dealing = false;
-
-    function selectedDirection() {
-        const checked = form.querySelector('input[name="direction"]:checked');
-        return checked ? checked.value : null;
-    }
+    // Tracks which lock variant the player picked so we can pass autoTopUp
+    // through to /play if they hit the shortfall on the actual wager.
+    let pendingAutoTopUp = false;
 
     const cardLabel = highlowCardLabel;
+
+    function showLockMode() {
+        directionPicker.hidden = true;
+        higherBtn.disabled = false;
+        lowerBtn.disabled = false;
+        form.hidden = false;
+        dealBtn.disabled = false;
+        if (dealTobyBtn) dealTobyBtn.disabled = false;
+        anchorFace.textContent = '?';
+        if (anchorCard) delete anchorCard.dataset.value;
+        nextFace.textContent = '?';
+        if (nextCard) delete nextCard.dataset.value;
+    }
+
+    function showCallMode(anchorValue) {
+        if (typeof anchorValue === 'number') {
+            anchorFace.textContent = cardLabel(anchorValue);
+            if (anchorCard) anchorCard.dataset.value = String(anchorValue);
+        }
+        nextFace.textContent = '?';
+        if (nextCard) delete nextCard.dataset.value;
+        form.hidden = true;
+        directionPicker.hidden = false;
+        higherBtn.disabled = false;
+        lowerBtn.disabled = false;
+        if (resultEl) resultEl.hidden = true;
+    }
 
     function startNextShuffle() {
         dealing = true;
@@ -114,17 +144,6 @@ function renderHighlowResult(resultEl, body) {
         }
     }
 
-    // After a settled round, surface the next round's anchor in the
-    // anchor slot and reset the next-card placeholder so the player can
-    // see the new draw without refreshing the page.
-    function rollAnchorTo(value) {
-        if (typeof value !== 'number') return;
-        anchorFace.textContent = cardLabel(value);
-        anchorCard.dataset.value = String(value);
-        nextFace.textContent = '?';
-        delete nextCard.dataset.value;
-    }
-
     function applyBalance(newBalance) {
         if (typeof newBalance !== 'number') return;
         if (balanceEl) balanceEl.textContent = newBalance;
@@ -139,35 +158,57 @@ function renderHighlowResult(resultEl, body) {
         if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
     }
 
-    function runDeal(autoTopUp) {
+    function runStart(autoTopUp) {
         if (dealing) return;
 
-        const direction = selectedDirection();
-        if (!direction) {
-            toast('Pick a direction first.', 'error');
-            return;
-        }
         const stake = parseInt(stakeInput.value, 10);
         if (!stake || stake <= 0) {
             toast('Enter a positive stake.', 'error');
             return;
         }
 
-        dealBtn.disabled = true;
-        if (dealTobyBtn) dealTobyBtn.disabled = true;
-        const intervalId = startNextShuffle();
-        const requestStart = Date.now();
-
         if (!postJson) {
-            stopNextShuffle(intervalId);
-            dealBtn.disabled = false;
-            if (dealTobyBtn) dealTobyBtn.disabled = false;
             toast('API helper missing — refresh the page.', 'error');
             return;
         }
 
+        dealBtn.disabled = true;
+        if (dealTobyBtn) dealTobyBtn.disabled = true;
+        pendingAutoTopUp = !!autoTopUp;
+
+        postJson('/casino/' + guildId + '/highlow/start', {
+            stake: stake, autoTopUp: pendingAutoTopUp,
+        })
+            .then(function (body) {
+                if (body && body.ok && typeof body.anchor === 'number') {
+                    showCallMode(body.anchor);
+                } else {
+                    dealBtn.disabled = false;
+                    if (dealTobyBtn) dealTobyBtn.disabled = false;
+                    toast((body && body.error) || 'Could not lock the round.', 'error');
+                }
+            })
+            .catch(function () {
+                dealBtn.disabled = false;
+                if (dealTobyBtn) dealTobyBtn.disabled = false;
+                toast('Network error.', 'error');
+            });
+    }
+
+    function runPlay(direction) {
+        if (dealing) return;
+        if (!postJson) {
+            toast('API helper missing — refresh the page.', 'error');
+            return;
+        }
+
+        higherBtn.disabled = true;
+        lowerBtn.disabled = true;
+        const intervalId = startNextShuffle();
+        const requestStart = Date.now();
+
         postJson('/casino/' + guildId + '/highlow/play', {
-            direction: direction, stake: stake, autoTopUp: !!autoTopUp,
+            direction: direction,
         })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
@@ -178,23 +219,21 @@ function renderHighlowResult(resultEl, body) {
                         renderHighlowResult(resultEl, body);
                         applyBalance(body.newBalance);
                         applyTobyDelta(body);
-                        if (typeof body.nextAnchor === 'number') {
-                            setTimeout(function () { rollAnchorTo(body.nextAnchor); }, 1200);
-                        }
+                        // Round consumed → reset to lock mode after the
+                        // player has had a moment to read the result.
+                        setTimeout(showLockMode, ROUND_RESET_MS);
                     } else {
                         stopNextShuffle(intervalId);
-                        if (resultEl) resultEl.hidden = true;
+                        higherBtn.disabled = false;
+                        lowerBtn.disabled = false;
                         toast((body && body.error) || 'Deal failed.', 'error');
                     }
-                    dealBtn.disabled = false;
-                    if (dealTobyBtn) dealTobyBtn.disabled = false;
                 }, remaining);
             })
             .catch(function () {
                 stopNextShuffle(intervalId);
-                dealBtn.disabled = false;
-                if (dealTobyBtn) dealTobyBtn.disabled = false;
-                if (resultEl) resultEl.hidden = true;
+                higherBtn.disabled = false;
+                lowerBtn.disabled = false;
                 toast('Network error.', 'error');
             });
     }
@@ -202,8 +241,18 @@ function renderHighlowResult(resultEl, body) {
     if (!topUp) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            runDeal(false);
+            runStart(false);
         });
+    }
+
+    higherBtn.addEventListener('click', function () { runPlay('HIGHER'); });
+    lowerBtn.addEventListener('click', function () { runPlay('LOWER'); });
+
+    // If the server pre-rendered an active round (page refresh mid-round),
+    // jump straight to call mode so the player can finish their bet.
+    const preloadedAnchor = parseInt(main.dataset.activeAnchor || '', 10);
+    if (Number.isFinite(preloadedAnchor) && preloadedAnchor > 0) {
+        showCallMode(preloadedAnchor);
     }
 })();
 

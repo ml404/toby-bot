@@ -3,6 +3,7 @@ package bot.toby.command.commands.economy
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
+import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import database.dto.UserDto
 import database.economy.Highlow
@@ -11,6 +12,8 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -37,62 +40,51 @@ internal class HighlowCommandTest : CommandTest {
         clearAllMocks()
     }
 
-    private fun strOpt(value: String): OptionMapping = mockk<OptionMapping>(relaxed = true).also {
-        every { it.asString } returns value
-    }
-
     private fun intOpt(value: Long): OptionMapping = mockk<OptionMapping>(relaxed = true).also {
         every { it.asLong } returns value
     }
 
     @Test
-    fun `delegates to HighlowService with parsed direction and stake`() {
+    fun `deals anchor and sends embed with direction buttons without resolving the wager`() {
         val user = UserDto(discordId = discordId, guildId = guildId)
-        every { event.getOption("direction") } returns strOpt("HIGHER")
         every { event.getOption("stake") } returns intOpt(50L)
-        every { highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER) } returns
-            HighlowService.PlayOutcome.Lose(stake = 50L, anchor = 7, next = 7, direction = Highlow.Direction.HIGHER, newBalance = 950L)
+        every { highlowService.dealAnchor() } returns 7
 
         command.handle(DefaultCommandContext(event), user, 5)
 
-        verify(exactly = 1) {
-            highlowService.play(discordId, guildId, 50L, Highlow.Direction.HIGHER)
-        }
+        verify(exactly = 1) { highlowService.dealAnchor() }
+        verify(exactly = 0) { highlowService.play(any(), any(), any(), any()) }
+        verify { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify { webhookMessageCreateAction.addComponents(any<ActionRow>()) }
     }
 
     @Test
-    fun `replies with embed on each outcome variant`() {
-        val user = UserDto(discordId = discordId, guildId = guildId)
-        every { event.getOption("direction") } returns strOpt("LOWER")
-        every { event.getOption("stake") } returns intOpt(100L)
+    fun `encodes direction anchor stake and user into the button component ids`() {
+        val anchor = 9
+        val stake = 50L
+        val higherId = HighlowEmbeds.directionButtonId(Highlow.Direction.HIGHER, anchor, stake, discordId)
+        val lowerId = HighlowEmbeds.directionButtonId(Highlow.Direction.LOWER, anchor, stake, discordId)
 
-        val outcomes = listOf(
-            HighlowService.PlayOutcome.Win(stake = 100L, payout = 200L, net = 100L,
-                anchor = 10, next = 3, direction = Highlow.Direction.LOWER, newBalance = 1_100L),
-            HighlowService.PlayOutcome.Lose(stake = 100L, anchor = 5, next = 10,
-                direction = Highlow.Direction.LOWER, newBalance = 900L),
-            HighlowService.PlayOutcome.InsufficientCredits(stake = 100L, have = 50L),
-            HighlowService.PlayOutcome.InvalidStake(min = 10L, max = 500L),
-            HighlowService.PlayOutcome.UnknownUser
-        )
-        outcomes.forEach { outcome ->
-            every { highlowService.play(any(), any(), any(), any()) } returns outcome
-            command.handle(DefaultCommandContext(event), user, 5)
-        }
+        // Round-trip through the same parser HighlowButton uses.
+        val parsedHigher = HighlowEmbeds.parseButtonId(higherId)
+        val parsedLower = HighlowEmbeds.parseButtonId(lowerId)
 
-        verify(atLeast = outcomes.size) {
-            event.hook.sendMessageEmbeds(any<net.dv8tion.jda.api.entities.MessageEmbed>())
-        }
+        check(parsedHigher != null && parsedHigher.direction == Highlow.Direction.HIGHER &&
+              parsedHigher.anchor == anchor && parsedHigher.stake == stake &&
+              parsedHigher.userId == discordId)
+        check(parsedLower != null && parsedLower.direction == Highlow.Direction.LOWER &&
+              parsedLower.anchor == anchor && parsedLower.stake == stake &&
+              parsedLower.userId == discordId)
     }
 
     @Test
-    fun `unknown direction short-circuits`() {
+    fun `does not call play or deal an anchor when no stake is provided`() {
         val user = UserDto(discordId = discordId, guildId = guildId)
-        every { event.getOption("direction") } returns strOpt("SIDEWAYS")
-        every { event.getOption("stake") } returns intOpt(100L)
+        every { event.getOption("stake") } returns null
 
         command.handle(DefaultCommandContext(event), user, 5)
 
+        verify(exactly = 0) { highlowService.dealAnchor() }
         verify(exactly = 0) { highlowService.play(any(), any(), any(), any()) }
     }
 }
