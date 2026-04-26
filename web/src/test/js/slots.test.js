@@ -59,4 +59,19 @@ describe('renderSlotsResult', () => {
     test('returns early on missing result element', () => {
         expect(() => renderSlotsResult(null, { win: true })).not.toThrow();
     });
+
+    test('lose with lossTribute appends "+N to jackpot" suffix', () => {
+        renderSlotsResult(resultEl, { win: false, net: -100, symbols: [], lossTribute: 10 });
+
+        expect(resultEl.classList.contains('slots-result-lose')).toBe(true);
+        expect(resultEl.innerHTML).toContain('100 credits');
+        expect(resultEl.innerHTML).toContain('+10 to jackpot');
+        expect(resultEl.innerHTML).toContain('casino-loss-tribute');
+    });
+
+    test('lose with no lossTribute renders no suffix', () => {
+        renderSlotsResult(resultEl, { win: false, net: -100, symbols: [] });
+
+        expect(resultEl.innerHTML).not.toContain('to jackpot');
+    });
 });

@@ -49,4 +49,12 @@ describe('renderScratchResult', () => {
 
         expect(balanceEl.textContent).toBe('500');
     });
+
+    test('lose with lossTribute appends "+N to jackpot" suffix', () => {
+        renderScratchResult(resultEl, {
+            win: false, net: -100, newBalance: 900, lossTribute: 10
+        }, 5, balanceEl);
+
+        expect(resultEl.innerHTML).toContain('+10 to jackpot');
+    });
 });

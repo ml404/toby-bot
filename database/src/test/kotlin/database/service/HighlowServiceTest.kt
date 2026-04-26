@@ -18,6 +18,7 @@ class HighlowServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var configService: ConfigService
     private lateinit var highlow: Highlow
     private lateinit var service: HighlowService
 
@@ -30,8 +31,9 @@ class HighlowServiceTest {
         jackpotService = mockk(relaxed = true)
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        configService = mockk(relaxed = true)
         highlow = mockk(relaxed = true)
-        service = HighlowService(userService, jackpotService, tradeService, marketService, highlow, Random(0))
+        service = HighlowService(userService, jackpotService, tradeService, marketService, configService, highlow, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =
@@ -135,5 +137,21 @@ class HighlowServiceTest {
         assertEquals(4, anchor)
         verify(exactly = 0) { userService.getUserByIdForUpdate(any(), any()) }
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `loss tributes 10 percent of the stake into the jackpot pool`() {
+        val user = userWithBalance(500L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { highlow.play(Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
+            anchor = 7, next = 7, direction = Highlow.Direction.HIGHER, multiplier = 0L
+        )
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.play(discordId, guildId, stake = 100L, direction = Highlow.Direction.HIGHER)
+
+        val lose = assertInstanceOf(HighlowService.PlayOutcome.Lose::class.java, outcome)
+        assertEquals(10L, lose.lossTribute)
+        verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
     }
 }

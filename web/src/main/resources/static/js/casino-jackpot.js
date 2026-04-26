@@ -28,7 +28,18 @@
         return jackpotPrefixHtml(body.jackpotPayout) + winLineHtml;
     }
 
-    const api = { isJackpotHit, jackpotPrefixHtml, renderWinHtml };
+    /**
+     * Suffix appended to a lose-line when the loss tributed credits
+     * into the per-guild jackpot pool. Empty string when no tribute
+     * (e.g. tiny stake floored to zero, or admin set tribute to 0 %).
+     */
+    function lossTributeSuffix(body) {
+        if (!body || typeof body.lossTribute !== 'number' || body.lossTribute <= 0) return '';
+        return ' &middot; <span class="casino-loss-tribute">+' +
+            body.lossTribute + ' to jackpot</span>';
+    }
+
+    const api = { isJackpotHit, jackpotPrefixHtml, renderWinHtml, lossTributeSuffix };
 
     // Browser global so each game's IIFE-style JS can reach it without
     // bundler plumbing.

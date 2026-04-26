@@ -20,6 +20,7 @@ class ScratchService(
     private val jackpotService: JackpotService,
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
+    private val configService: ConfigService,
     private val card: ScratchCard = ScratchCard(),
     private val random: Random = Random.Default
 ) {
@@ -43,7 +44,8 @@ class ScratchService(
             val cells: List<database.economy.SlotMachine.Symbol>,
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val lossTribute: Long = 0L
         ) : ScratchOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : ScratchOutcome
@@ -101,12 +103,14 @@ class ScratchService(
                 newPrice = newPrice
             )
         } else {
+            val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
             ScratchOutcome.Lose(
                 stake = stake,
                 cells = result.cells,
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
-                newPrice = newPrice
+                newPrice = newPrice,
+                lossTribute = tribute
             )
         }
     }

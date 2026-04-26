@@ -19,6 +19,7 @@ class ScratchServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var configService: ConfigService
     private lateinit var card: ScratchCard
     private lateinit var service: ScratchService
 
@@ -31,8 +32,9 @@ class ScratchServiceTest {
         jackpotService = mockk(relaxed = true)
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        configService = mockk(relaxed = true)
         card = mockk(relaxed = true)
-        service = ScratchService(userService, jackpotService, tradeService, marketService, card, Random(0))
+        service = ScratchService(userService, jackpotService, tradeService, marketService, configService, card, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =
@@ -108,5 +110,24 @@ class ScratchServiceTest {
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns null
         val outcome = service.scratch(discordId, guildId, stake = 100L)
         assertEquals(ScratchService.ScratchOutcome.UnknownUser, outcome)
+    }
+
+    @Test
+    fun `loss tributes 10 percent of the stake into the jackpot pool`() {
+        val user = userWithBalance(500L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { card.scratch(any()) } returns ScratchCard.Scratch(
+            cells = List(9) { SlotMachine.Symbol.CHERRY },
+            winningSymbol = null,
+            matchCount = 0,
+            multiplier = 0L
+        )
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.scratch(discordId, guildId, stake = 100L)
+
+        val lose = assertInstanceOf(ScratchService.ScratchOutcome.Lose::class.java, outcome)
+        assertEquals(10L, lose.lossTribute)
+        verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
     }
 }

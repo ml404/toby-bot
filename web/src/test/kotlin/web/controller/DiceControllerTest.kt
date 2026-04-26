@@ -142,4 +142,15 @@ class DiceControllerTest {
 
         assertEquals(null, response.body!!.jackpotPayout)
     }
+
+    @Test
+    fun `lose with loss tribute surfaces lossTribute on the response`() {
+        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Lose(
+            stake = 100L, landed = 1, predicted = 4, newBalance = 900L, lossTribute = 10L
+        )
+
+        val response = controller.roll(guildId, RollRequest(prediction = 4, stake = 100L), user)
+
+        assertEquals(10L, response.body!!.lossTribute)
+    }
 }

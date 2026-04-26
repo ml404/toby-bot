@@ -18,6 +18,7 @@ class SlotsServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var configService: ConfigService
     private lateinit var machine: SlotMachine
     private lateinit var service: SlotsService
 
@@ -30,8 +31,9 @@ class SlotsServiceTest {
         jackpotService = mockk(relaxed = true)
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        configService = mockk(relaxed = true)
         machine = mockk(relaxed = true)
-        service = SlotsService(userService, jackpotService, tradeService, marketService, machine, Random(0))
+        service = SlotsService(userService, jackpotService, tradeService, marketService, configService, machine, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {
@@ -129,5 +131,22 @@ class SlotsServiceTest {
 
         val rej = assertInstanceOf(SlotsService.SpinOutcome.InsufficientCredits::class.java, outcome)
         assertEquals(0L, rej.have)
+    }
+
+    @Test
+    fun `loss tributes 10 percent of the stake into the jackpot pool`() {
+        val user = userWithBalance(500L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { machine.pull(any()) } returns SlotMachine.Pull(
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            multiplier = 0L
+        )
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.spin(discordId, guildId, stake = 100L)
+
+        val lose = assertInstanceOf(SlotsService.SpinOutcome.Lose::class.java, outcome)
+        assertEquals(10L, lose.lossTribute, "10 % of 100 stake → 10 to jackpot")
+        verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
     }
 }

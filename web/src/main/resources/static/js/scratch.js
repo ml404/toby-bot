@@ -20,8 +20,11 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         resultEl.innerHTML = topUpPrefix + withJackpot;
     } else {
         resultEl.classList.add('scratch-result-lose');
+        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
+            ? window.TobyJackpot.lossTributeSuffix(body)
+            : '';
         resultEl.innerHTML = topUpPrefix + 'No ' + matchThreshold + '-of-a-kind &middot; lost <strong>' +
-            Math.abs(body.net) + ' credits</strong>';
+            Math.abs(body.net) + ' credits</strong>' + tributeSuffix;
     }
     if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
 }
