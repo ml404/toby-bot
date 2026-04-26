@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Duration
 
 internal class DuelCommandTest : CommandTest {
     private lateinit var duelService: DuelService
@@ -33,6 +34,7 @@ internal class DuelCommandTest : CommandTest {
         setUpCommonMocks()
         duelService = mockk(relaxed = true)
         pendingDuelRegistry = mockk(relaxed = true)
+        every { pendingDuelRegistry.ttl } returns Duration.ofMinutes(3)
         userDtoHelper = mockk(relaxed = true)
         command = DuelCommand(duelService, pendingDuelRegistry, userDtoHelper)
         every { guild.idLong } returns guildId

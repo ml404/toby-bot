@@ -11,18 +11,18 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * In-memory book of pending duel offers (the 60-second Accept/Decline
- * window between `/duel` and the opponent's button click). Shared
- * across the whole Spring context so the Discord button handler and
- * the web controller see the same offers — there is exactly one
+ * In-memory book of pending duel offers (the Accept/Decline window
+ * between `/duel` and the opponent's button click; see [DEFAULT_TTL]).
+ * Shared across the whole Spring context so the Discord button handler
+ * and the web controller see the same offers — there is exactly one
  * authoritative bean.
  *
  * Mid-flight offers are lost on bot restart. Acceptable since the TTL
- * is 60 seconds and offers don't move credits until accepted.
+ * is short and offers don't move credits until accepted.
  */
 @Component
 class PendingDuelRegistry(
-    private val ttl: Duration = DEFAULT_TTL,
+    val ttl: Duration = DEFAULT_TTL,
     private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 ) {
     data class PendingDuel(
@@ -81,6 +81,10 @@ class PendingDuelRegistry(
     fun pendingForOpponent(discordId: Long, guildId: Long): List<PendingDuel> =
         offers.values.filter { it.opponentDiscordId == discordId && it.guildId == guildId }
 
+    /** All offers where [discordId] is the initiator — used by the web outbox. */
+    fun pendingForInitiator(discordId: Long, guildId: Long): List<PendingDuel> =
+        offers.values.filter { it.initiatorDiscordId == discordId && it.guildId == guildId }
+
     fun get(id: Long): PendingDuel? = offers[id]
 
     @PreDestroy
@@ -89,6 +93,21 @@ class PendingDuelRegistry(
     }
 
     companion object {
-        val DEFAULT_TTL: Duration = Duration.ofSeconds(60)
+        val DEFAULT_TTL: Duration = Duration.ofMinutes(3)
+
+        /** "3m" / "90s" / "1h 5m" — short-form TTL display for embed copy and web UI. */
+        fun formatTtl(ttl: Duration): String {
+            val total = ttl.seconds.coerceAtLeast(0)
+            val hours = total / 3600
+            val minutes = (total % 3600) / 60
+            val seconds = total % 60
+            return when {
+                hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
+                hours > 0 -> "${hours}h"
+                minutes > 0 && seconds > 0 -> "${minutes}m ${seconds}s"
+                minutes > 0 -> "${minutes}m"
+                else -> "${seconds}s"
+            }
+        }
     }
 }

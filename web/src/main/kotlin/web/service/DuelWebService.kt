@@ -23,14 +23,18 @@ class DuelWebService(
     )
 
     fun pendingForOpponent(discordId: Long, guildId: Long): List<PendingDuelView> =
-        pendingDuelRegistry.pendingForOpponent(discordId, guildId).map {
-            PendingDuelView(
-                duelId = it.id,
-                initiatorDiscordId = it.initiatorDiscordId,
-                opponentDiscordId = it.opponentDiscordId,
-                stake = it.stake
-            )
-        }
+        pendingDuelRegistry.pendingForOpponent(discordId, guildId).map(::toView)
+
+    fun pendingForInitiator(discordId: Long, guildId: Long): List<PendingDuelView> =
+        pendingDuelRegistry.pendingForInitiator(discordId, guildId).map(::toView)
+
+    private fun toView(d: PendingDuelRegistry.PendingDuel): PendingDuelView =
+        PendingDuelView(
+            duelId = d.id,
+            initiatorDiscordId = d.initiatorDiscordId,
+            opponentDiscordId = d.opponentDiscordId,
+            stake = d.stake
+        )
 
     fun ensureOpponent(opponentDiscordId: Long, guildId: Long): UserDto {
         return userService.getUserById(opponentDiscordId, guildId)

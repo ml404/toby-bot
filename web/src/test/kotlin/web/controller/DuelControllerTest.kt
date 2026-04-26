@@ -191,4 +191,56 @@ class DuelControllerTest {
 
         assertEquals(403, response.statusCode.value())
     }
+
+    private fun outgoing() = PendingDuelRegistry.PendingDuel(
+        id = duelId, guildId = guildId,
+        initiatorDiscordId = discordId, opponentDiscordId = opponentId,
+        stake = 50L, createdAt = Instant.now()
+    )
+
+    @Test
+    fun `cancel cancels the offer when caller is the initiator`() {
+        every { pendingDuelRegistry.get(duelId) } returns outgoing()
+        every { pendingDuelRegistry.cancel(duelId) } returns outgoing()
+
+        val response = controller.cancel(guildId, duelId, user)
+
+        assertEquals(200, response.statusCode.value())
+        assertTrue(response.body!!.ok)
+    }
+
+    @Test
+    fun `cancel by non-initiator returns 403`() {
+        // Offer's initiator is someone OTHER than the requesting user.
+        every { pendingDuelRegistry.get(duelId) } returns PendingDuelRegistry.PendingDuel(
+            id = duelId, guildId = guildId,
+            initiatorDiscordId = discordId + 1, opponentDiscordId = opponentId,
+            stake = 50L, createdAt = Instant.now()
+        )
+
+        val response = controller.cancel(guildId, duelId, user)
+
+        assertEquals(403, response.statusCode.value())
+        verify(exactly = 0) { pendingDuelRegistry.cancel(any()) }
+    }
+
+    @Test
+    fun `cancel of expired offer returns 410`() {
+        every { pendingDuelRegistry.get(duelId) } returns null
+
+        val response = controller.cancel(guildId, duelId, user)
+
+        assertEquals(410, response.statusCode.value())
+    }
+
+    @Test
+    fun `outgoingForMe returns the initiator's pending offers`() {
+        val view = DuelWebService.PendingDuelView(duelId, discordId, opponentId, 50L)
+        every { duelWebService.pendingForInitiator(discordId, guildId) } returns listOf(view)
+
+        val response = controller.outgoingForMe(guildId, user)
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(listOf(view), response.body)
+    }
 }

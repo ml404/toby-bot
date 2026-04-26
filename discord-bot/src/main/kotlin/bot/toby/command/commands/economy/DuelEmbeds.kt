@@ -1,10 +1,12 @@
 package bot.toby.command.commands.economy
 
+import database.duel.PendingDuelRegistry
 import database.service.DuelService.AcceptOutcome
 import database.service.DuelService.StartOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
+import java.time.Duration
 
 /**
  * Shared embed/component plumbing for the Discord `/duel` flow.
@@ -54,13 +56,13 @@ internal object DuelEmbeds {
         initiatorDiscordId: Long,
         opponentDiscordId: Long,
         stake: Long,
-        ttlSeconds: Long
+        ttl: Duration
     ): MessageEmbed = EmbedBuilder()
         .setTitle("⚔️ Duel offered")
         .setDescription(
             "<@$initiatorDiscordId> challenges <@$opponentDiscordId> to a duel for **$stake credits** each. " +
                 "Winner takes the pot (minus a small jackpot tribute). " +
-                "Accept within ${ttlSeconds}s."
+                "Accept within ${PendingDuelRegistry.formatTtl(ttl)}."
         )
         .setColor(OFFER_COLOR)
         .build()
