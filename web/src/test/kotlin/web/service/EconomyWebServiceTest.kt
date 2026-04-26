@@ -12,7 +12,9 @@ import io.mockk.mockk
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -131,5 +133,43 @@ class EconomyWebServiceTest {
         every { marketService.listTradesSince(guildId, any()) } returns emptyList()
         val markers = service.getTrades(guildId, "1d")
         assertTrue(markers.isEmpty())
+    }
+
+    @Test
+    fun `getGuildMembers returns empty when bot is not in the guild`() {
+        every { jda.getGuildById(guildId) } returns null
+        assertTrue(service.getGuildMembers(guildId).isEmpty())
+    }
+
+    @Test
+    fun `getGuildMembers filters bots and sorts by lowercase name`() {
+        val guild = mockk<Guild>(relaxed = true)
+        val human = mockk<Member>(relaxed = true)
+        val humanUser = mockk<User>(relaxed = true)
+        val botMember = mockk<Member>(relaxed = true)
+        val botUser = mockk<User>(relaxed = true)
+        val zUser = mockk<User>(relaxed = true)
+        val zMember = mockk<Member>(relaxed = true)
+        every { humanUser.isBot } returns false
+        every { human.user } returns humanUser
+        every { human.id } returns "100"
+        every { human.effectiveName } returns "alice"
+        every { botUser.isBot } returns true
+        every { botMember.user } returns botUser
+        every { botMember.id } returns "999"
+        every { botMember.effectiveName } returns "TobyBot"
+        every { zUser.isBot } returns false
+        every { zMember.user } returns zUser
+        every { zMember.id } returns "200"
+        every { zMember.effectiveName } returns "Zed"
+        every { guild.members } returns listOf(zMember, botMember, human)
+        every { jda.getGuildById(guildId) } returns guild
+
+        val members = service.getGuildMembers(guildId)
+
+        assertEquals(2, members.size)
+        assertFalse(members.any { it.id == "999" })
+        assertEquals("alice", members[0].name)
+        assertEquals("Zed", members[1].name)
     }
 }

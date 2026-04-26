@@ -23,9 +23,12 @@
     <section class="duel-card">
         <h2>Challenge someone</h2>
         <form id="duel-challenge" autocomplete="off">
-            <label for="duel-opponent">Opponent Discord ID</label>
-            <input id="duel-opponent" name="opponentDiscordId" type="text" inputmode="numeric"
-                   placeholder="e.g. 312691905030782977" required>
+            <label for="duel-opponent">Opponent</label>
+            <input id="duel-opponent" name="opponentName" type="text" list="duel-member-list"
+                   autocomplete="off" placeholder="Type a name…" required>
+            <datalist id="duel-member-list">
+                <option th:each="m : ${members}" th:value="${m.name}" th:attr="data-id=${m.id}"></option>
+            </datalist>
 
             <label for="duel-stake">Stake (credits)</label>
             <input id="duel-stake" name="stake" type="number"

@@ -22,6 +22,14 @@ class EconomyWebService(
         return guild.getMemberById(discordId) != null
     }
 
+    fun getGuildMembers(guildId: Long): List<MemberInfo> {
+        val guild = jda.getGuildById(guildId) ?: return emptyList()
+        return guild.members
+            .filter { !it.user.isBot }
+            .map { MemberInfo(id = it.id, name = it.effectiveName, avatarUrl = it.effectiveAvatarUrl) }
+            .sortedBy { it.name.lowercase() }
+    }
+
     fun getGuildsWhereUserCanView(accessToken: String, discordId: Long): List<EconomyGuildCard> {
         return introWebService.getMutualGuilds(accessToken).mapNotNull { info ->
             val guildId = info.id.toLongOrNull() ?: return@mapNotNull null

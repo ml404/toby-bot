@@ -17,14 +17,26 @@
 
     if (!form) return;
 
+    function resolveRecipientId() {
+        const typed = (document.getElementById('tip-recipient').value || '').trim();
+        if (!typed) return null;
+        const escaped = (window.CSS && window.CSS.escape) ? window.CSS.escape(typed) : typed.replace(/"/g, '\\"');
+        const opt = document.querySelector('#tip-member-list option[value="' + escaped + '"]');
+        const id = opt && opt.dataset.id ? parseInt(opt.dataset.id, 10) : NaN;
+        return Number.isFinite(id) ? id : null;
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
-        const recipientStr = (document.getElementById('tip-recipient').value || '').trim();
-        const recipient = parseInt(recipientStr, 10);
+        const recipient = resolveRecipientId();
         const amount = parseInt(document.getElementById('tip-amount').value, 10);
         const note = (document.getElementById('tip-note').value || '').trim() || null;
-        if (!recipient || !amount) {
-            window.TobyToasts && window.TobyToasts.error('Recipient and amount are required.');
+        if (!recipient) {
+            window.TobyToasts && window.TobyToasts.error('Pick someone from the list.');
+            return;
+        }
+        if (!amount) {
+            window.TobyToasts && window.TobyToasts.error('Amount is required.');
             return;
         }
         window.TobyApi.postJson('/tip/' + guildId, {
