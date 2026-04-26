@@ -13,7 +13,9 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.oauth2.core.user.OAuth2User
+import web.event.WebTipSentEvent
 import web.service.EconomyWebService
 import web.service.TipWebService
 
@@ -28,6 +30,7 @@ class TipControllerTest {
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
     private lateinit var jda: JDA
+    private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var user: OAuth2User
     private lateinit var controller: TipController
 
@@ -38,17 +41,20 @@ class TipControllerTest {
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
+        eventPublisher = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
         every { economyWebService.isMember(recipientId, guildId) } returns true
-        controller = TipController(tipService, tipWebService, economyWebService, userService, jda)
+        controller = TipController(
+            tipService, tipWebService, economyWebService, userService, jda, eventPublisher
+        )
     }
 
     @Test
-    fun `tip Ok returns 200 with balances and daily totals`() {
+    fun `tip Ok returns 200 with balances and daily totals and publishes WebTipSentEvent`() {
         every {
             tipService.tip(discordId, recipientId, guildId, 50L, "thanks", any(), any())
         } returns TipOutcome.Ok(
@@ -69,6 +75,21 @@ class TipControllerTest {
         assertEquals(50L, body.sentTodayAfter)
         assertEquals(500L, body.dailyCap)
         verify { tipWebService.ensureRecipient(recipientId, guildId) }
+        verify(exactly = 1) {
+            eventPublisher.publishEvent(
+                WebTipSentEvent(
+                    guildId = guildId,
+                    senderDiscordId = discordId,
+                    recipientDiscordId = recipientId,
+                    amount = 50L,
+                    note = "thanks",
+                    senderNewBalance = 950L,
+                    recipientNewBalance = 1050L,
+                    sentTodayAfter = 50L,
+                    dailyCap = 500L
+                )
+            )
+        }
     }
 
     @Test
@@ -131,5 +152,6 @@ class TipControllerTest {
             assertFalse(response.body!!.ok)
             assertNull(response.body!!.amount)
         }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<WebTipSentEvent>()) }
     }
 }
