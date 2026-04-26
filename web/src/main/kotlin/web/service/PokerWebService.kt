@@ -106,12 +106,21 @@ class PokerWebService(
                 mySeat?.status == PokerTable.SeatStatus.ACTIVE
 
             val betUnit = currentBetUnit(table)
-            val owe = if (mySeat != null) (table.currentBet - mySeat.committedThisRound).coerceAtLeast(0L) else 0L
-            val canCall = isMyTurn && owe > 0L && (mySeat?.chips ?: 0L) >= owe
-            val canCheck = isMyTurn && owe == 0L
-            val canRaise = isMyTurn &&
-                table.raisesThisStreet < table.maxRaisesPerStreet &&
-                (mySeat?.chips ?: 0L) >= owe + betUnit
+            val owe: Long
+            val canCall: Boolean
+            val canCheck: Boolean
+            val canRaise: Boolean
+            if (mySeat != null && isMyTurn) {
+                owe = (table.currentBet - mySeat.committedThisRound).coerceAtLeast(0L)
+                canCall = owe > 0L && mySeat.chips >= owe
+                canCheck = owe == 0L
+                canRaise = table.raisesThisStreet < table.maxRaisesPerStreet && mySeat.chips >= owe + betUnit
+            } else {
+                owe = if (mySeat != null) (table.currentBet - mySeat.committedThisRound).coerceAtLeast(0L) else 0L
+                canCall = false
+                canCheck = false
+                canRaise = false
+            }
 
             return TableStateView(
                 tableId = table.id,

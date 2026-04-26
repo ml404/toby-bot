@@ -119,7 +119,7 @@ object PokerEngine {
         val dealOrder = activeIndicesStartingFrom(table, nextActiveIndex(table, table.dealerIndex))
         repeat(2) {
             for (i in dealOrder) {
-                table.seats[i].holeCards = table.seats[i].holeCards + deck.deal()
+                table.seats[i].holeCards += deck.deal()
             }
         }
 

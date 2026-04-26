@@ -50,7 +50,7 @@ object HandEvaluator {
     fun bestHand(holeCards: List<Card>, board: List<Card>): HandRank {
         val all = holeCards + board
         require(all.size >= 5) { "Need at least 5 cards to evaluate, got ${all.size}" }
-        return combinations(all, 5).map(::scoreFive).max()
+        return combinations(all, 5).maxOf(::scoreFive)
     }
 
     /** Direct 5-card scoring; exposed for unit tests and short-circuit paths. */

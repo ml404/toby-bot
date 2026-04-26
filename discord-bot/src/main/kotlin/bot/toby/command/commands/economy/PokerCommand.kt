@@ -7,7 +7,6 @@ import database.dto.UserDto
 import database.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.PokerService
-import database.service.PokerService.ActionOutcome
 import database.service.PokerService.BuyInOutcome
 import database.service.PokerService.CashOutOutcome
 import database.service.PokerService.CreateOutcome
@@ -114,8 +113,7 @@ class PokerCommand @Autowired constructor(
             replyError(event, "Buy-in is required.", deleteDelay); return
         }
         userDtoHelper.calculateUserDto(userDto.discordId, guildId)
-        val outcome = pokerService.createTable(userDto.discordId, guildId, buyIn)
-        when (outcome) {
+        when (val outcome = pokerService.createTable(userDto.discordId, guildId, buyIn)) {
             is CreateOutcome.Ok -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)
@@ -143,8 +141,7 @@ class PokerCommand @Autowired constructor(
         val buyIn = event.getOption(OPT_BUYIN)?.asLong ?: run {
             replyError(event, "Buy-in is required.", deleteDelay); return
         }
-        val outcome = pokerService.buyIn(userDto.discordId, guildId, tableId, buyIn)
-        when (outcome) {
+        when (val outcome = pokerService.buyIn(userDto.discordId, guildId, tableId, buyIn)) {
             is BuyInOutcome.Ok -> {
                 val table = tableRegistry.get(tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)
@@ -204,8 +201,7 @@ class PokerCommand @Autowired constructor(
         val tableId = event.getOption(OPT_TABLE)?.asLong ?: run {
             replyError(event, "Table id is required.", deleteDelay); return
         }
-        val outcome = pokerService.cashOut(userDto.discordId, guildId, tableId)
-        when (outcome) {
+        when (val outcome = pokerService.cashOut(userDto.discordId, guildId, tableId)) {
             is CashOutOutcome.Ok -> event.hook.sendMessageEmbeds(
                 PokerEmbeds.infoEmbed(
                     "<@${userDto.discordId}> cashed out **${outcome.chipsReturned}** chips. " +

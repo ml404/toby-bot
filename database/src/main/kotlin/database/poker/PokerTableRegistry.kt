@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong
 @Component
 class PokerTableRegistry(
     private val idleTtl: Duration = DEFAULT_IDLE_TTL,
-    private val sweepInterval: Duration = DEFAULT_SWEEP_INTERVAL,
+    sweepInterval: Duration = DEFAULT_SWEEP_INTERVAL,
     private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 ) {
     private val tables = ConcurrentHashMap<Long, PokerTable>()

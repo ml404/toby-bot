@@ -8,7 +8,6 @@ import database.poker.Rank
 import database.poker.Suit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -145,12 +144,12 @@ class PokerWebServiceTest {
             resolvedAt = Instant.now()
         )
         val view = service.snapshot(table.id, viewerDiscordId = 1L)!!
-        assertNotNull(view.lastResult)
-        assertEquals(1L, view.lastResult!!.handNumber)
-        assertEquals(95L, view.lastResult!!.payoutByDiscordId["1"])
-        assertEquals(100L, view.lastResult!!.pot)
-        assertEquals(5L, view.lastResult!!.rake)
-        assertEquals(listOf("A♠", "K♥"), view.lastResult!!.board)
-        assertEquals(listOf("Q♠"), view.lastResult!!.revealedHoleCards["1"])
+        val lastResult = view.lastResult!!
+        assertEquals(1L, lastResult.handNumber)
+        assertEquals(95L, lastResult.payoutByDiscordId["1"])
+        assertEquals(100L, lastResult.pot)
+        assertEquals(5L, lastResult.rake)
+        assertEquals(listOf("A♠", "K♥"), lastResult.board)
+        assertEquals(listOf("Q♠"), lastResult.revealedHoleCards["1"])
     }
 }

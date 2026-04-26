@@ -6,7 +6,6 @@ import database.persistence.PokerHandLogPersistence
 import database.poker.PokerEngine
 import database.poker.PokerEngine.PokerAction
 import database.poker.PokerTable
-import database.poker.PokerTable.SeatStatus
 import database.poker.PokerTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
@@ -112,7 +111,7 @@ class PokerService @Autowired constructor(
         guildId: Long,
         buyIn: Long
     ): CreateOutcome {
-        if (buyIn < MIN_BUY_IN || buyIn > MAX_BUY_IN) {
+        if (buyIn !in MIN_BUY_IN..MAX_BUY_IN) {
             return CreateOutcome.InvalidBuyIn(MIN_BUY_IN, MAX_BUY_IN)
         }
         val user = userService.getUserByIdForUpdate(hostDiscordId, guildId)
