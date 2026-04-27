@@ -19,6 +19,7 @@ class EconomyWebService(
 
     fun isMember(discordId: Long, guildId: Long): Boolean {
         val guild = jda.getGuildById(guildId) ?: return false
+        //TODO recipient ID is malformed for some reason coming from Tip
         return guild.getMemberById(discordId) != null
     }
 

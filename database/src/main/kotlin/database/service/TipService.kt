@@ -60,7 +60,7 @@ class TipService @Autowired constructor(
         at: Instant = Instant.now(),
         dailyCap: Long = DEFAULT_TIP_DAILY_CAP,
     ): TipOutcome {
-        if (amount < MIN_TIP || amount > MAX_TIP) {
+        if (amount !in MIN_TIP..MAX_TIP) {
             return TipOutcome.InvalidAmount(MIN_TIP, MAX_TIP)
         }
         if (senderDiscordId == recipientDiscordId) {
