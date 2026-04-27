@@ -17,10 +17,8 @@ internal object HighlowEmbeds {
     const val BUTTON_NAME = "highlow"
     private const val BUTTON_DELIM = ":"
 
+    private const val TITLE = "🃏 High-Low"
     private val ANCHOR_COLOR = Color(88, 101, 242)
-    private val WIN_COLOR = Color(87, 242, 135)
-    private val LOSE_COLOR = Color(160, 160, 176)
-    private val ERROR_COLOR = Color(237, 66, 69)
 
     fun cardLabel(n: Int): String = when (n) {
         1 -> "A"
@@ -73,37 +71,27 @@ internal object HighlowEmbeds {
                     "**${multiplierLabel(outcome.multiplier)}** and won **+${outcome.net} credits**."
             )
             .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WIN_COLOR)
+            .setColor(WagerCommandColors.WIN)
             .build()
 
         is PlayOutcome.Lose -> EmbedBuilder()
             .setTitle("🃏 ${cardLabel(outcome.anchor)} → ${cardLabel(outcome.next)}")
             .setDescription("You called **${outcome.direction.display}**. Lost **${outcome.stake} credits**.")
             .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(LOSE_COLOR)
+            .setColor(WagerCommandColors.LOSE)
             .build()
 
-        is PlayOutcome.InsufficientCredits -> errorEmbed(
-            "Not enough credits. You need ${outcome.stake} but only have ${outcome.have}."
+        is PlayOutcome.InsufficientCredits -> WagerCommandEmbeds.failureEmbed(
+            TITLE, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have)
         )
-
-        is PlayOutcome.InsufficientCoinsForTopUp -> errorEmbed(
-            "Not enough credits, and not enough TOBY to cover. " +
-                "Need ${outcome.needed} TOBY, you have ${outcome.have}."
+        is PlayOutcome.InsufficientCoinsForTopUp -> WagerCommandEmbeds.failureEmbed(
+            TITLE, WagerCommandFailure.InsufficientCoinsForTopUp(outcome.needed, outcome.have)
         )
-
-        is PlayOutcome.InvalidStake -> errorEmbed(
-            "Stake must be between ${outcome.min} and ${outcome.max} credits."
+        is PlayOutcome.InvalidStake -> WagerCommandEmbeds.failureEmbed(
+            TITLE, WagerCommandFailure.InvalidStake(outcome.min, outcome.max)
         )
-
-        PlayOutcome.UnknownUser -> errorEmbed(
-            "No user record yet. Try another TobyBot command first."
-        )
+        PlayOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
     }
 
-    fun errorEmbed(message: String): MessageEmbed = EmbedBuilder()
-        .setTitle("🃏 High-Low")
-        .setDescription(message)
-        .setColor(ERROR_COLOR)
-        .build()
+    fun errorEmbed(message: String): MessageEmbed = WagerCommandEmbeds.errorEmbed(TITLE, message)
 }
