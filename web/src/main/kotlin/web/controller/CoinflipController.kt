@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.EconomyWebService
-import web.util.discordIdOrNull
+import web.util.WebGuildAccess
 import web.util.displayName
 
 /**
@@ -49,17 +49,12 @@ class CoinflipController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/casino/guilds"
-
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/casino/guilds"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
+    ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/casino/guilds"
+            return@requireMemberForPage "redirect:/casino/guilds"
         }
 
         val profile = userService.getUserById(discordId, guildId)
@@ -77,7 +72,7 @@ class CoinflipController(
         model.addAttribute("multiplier", Coinflip.DEFAULT_MULTIPLIER)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
-        return "coinflip"
+        "coinflip"
     }
 
     @PostMapping("/flip")
@@ -86,16 +81,23 @@ class CoinflipController(
         @PathVariable guildId: Long,
         @RequestBody request: FlipRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<FlipResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(FlipResponse(false, "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(FlipResponse(false, "You are not a member of that server."))
+    ): ResponseEntity<FlipResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                FlipResponse(
+                    false,
+                    if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
+    ) { discordId ->
         val side = parseSide(request.side)
-            ?: return ResponseEntity.badRequest().body(FlipResponse(false, "Pick a side: HEADS or TAILS."))
+            ?: return@requireMemberForJson ResponseEntity.badRequest().body(
+                FlipResponse(false, "Pick a side: HEADS or TAILS.")
+            )
 
-        return when (val outcome = coinflipService.flip(discordId, guildId, request.stake, side, request.autoTopUp)) {
+        when (val outcome = coinflipService.flip(discordId, guildId, request.stake, side, request.autoTopUp)) {
             is FlipOutcome.Win -> ResponseEntity.ok(
                 FlipResponse(
                     ok = true,

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.EconomyWebService
-import web.util.discordIdOrNull
+import web.util.WebGuildAccess
 import web.util.displayName
 
 @Controller
@@ -42,16 +42,12 @@ class HighlowController(
         session: HttpSession,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/casino/guilds"
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/casino/guilds"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
+    ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/casino/guilds"
+            return@requireMemberForPage "redirect:/casino/guilds"
         }
 
         val profile = userService.getUserById(discordId, guildId)
@@ -83,7 +79,7 @@ class HighlowController(
         model.addAttribute("activeStake", activeStake)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
-        return "highlow"
+        "highlow"
     }
 
     @PostMapping("/start")
@@ -93,14 +89,19 @@ class HighlowController(
         @RequestBody request: StartRequest,
         @AuthenticationPrincipal user: OAuth2User,
         session: HttpSession
-    ): ResponseEntity<StartResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(StartResponse(false, "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(StartResponse(false, "You are not a member of that server."))
+    ): ResponseEntity<StartResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                StartResponse(
+                    false,
+                    if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
+    ) { _ ->
         if (request.stake < Highlow.MIN_STAKE || request.stake > Highlow.MAX_STAKE) {
-            return ResponseEntity.badRequest().body(
+            return@requireMemberForJson ResponseEntity.badRequest().body(
                 StartResponse(false, "Stake must be between ${Highlow.MIN_STAKE} and ${Highlow.MAX_STAKE} credits.")
             )
         }
@@ -110,7 +111,7 @@ class HighlowController(
         storeAutoTopUp(session, guildId, request.autoTopUp)
         storeAnchor(session, guildId, anchor)
 
-        return ResponseEntity.ok(
+        ResponseEntity.ok(
             StartResponse(
                 ok = true,
                 anchor = anchor,
@@ -128,19 +129,26 @@ class HighlowController(
         @RequestBody request: PlayRequest,
         @AuthenticationPrincipal user: OAuth2User,
         session: HttpSession
-    ): ResponseEntity<PlayResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(PlayResponse(false, "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(PlayResponse(false, "You are not a member of that server."))
+    ): ResponseEntity<PlayResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                PlayResponse(
+                    false,
+                    if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
+    ) { discordId ->
         val direction = parseDirection(request.direction)
-            ?: return ResponseEntity.badRequest().body(PlayResponse(false, "Pick a direction: HIGHER or LOWER."))
+            ?: return@requireMemberForJson ResponseEntity.badRequest().body(
+                PlayResponse(false, "Pick a direction: HIGHER or LOWER.")
+            )
 
         val anchor = activeAnchor(session, guildId)
         val stake = activeStake(session, guildId)
         if (anchor == null || stake == null) {
-            return ResponseEntity.badRequest().body(
+            return@requireMemberForJson ResponseEntity.badRequest().body(
                 PlayResponse(false, "No active round — lock a stake first.")
             )
         }
@@ -157,7 +165,7 @@ class HighlowController(
             clearRound(session, guildId)
         }
 
-        return when (outcome) {
+        when (outcome) {
             is PlayOutcome.Win -> ResponseEntity.ok(
                 PlayResponse(
                     ok = true,

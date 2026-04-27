@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.EconomyWebService
-import web.util.discordIdOrNull
+import web.util.WebGuildAccess
 import web.util.displayName
 
 /**
@@ -47,16 +47,12 @@ class DiceController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/casino/guilds"
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/casino/guilds"
-        }
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
+    ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/casino/guilds"
+            return@requireMemberForPage "redirect:/casino/guilds"
         }
 
         val profile = userService.getUserById(discordId, guildId)
@@ -75,7 +71,7 @@ class DiceController(
         model.addAttribute("multiplier", Dice.DEFAULT_MULTIPLIER)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("username", user.displayName())
-        return "dice"
+        "dice"
     }
 
     @PostMapping("/roll")
@@ -84,14 +80,18 @@ class DiceController(
         @PathVariable guildId: Long,
         @RequestBody request: RollRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<RollResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(RollResponse(false, "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(RollResponse(false, "You are not a member of that server."))
+    ): ResponseEntity<RollResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                RollResponse(
+                    false,
+                    if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
-
-        return when (val outcome = diceService.roll(discordId, guildId, request.stake, request.prediction, request.autoTopUp)) {
+    ) { discordId ->
+        when (val outcome = diceService.roll(discordId, guildId, request.stake, request.prediction, request.autoTopUp)) {
             is RollOutcome.Win -> ResponseEntity.ok(
                 RollResponse(
                     ok = true,
