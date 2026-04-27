@@ -1,30 +1,18 @@
 // Pure-DOM render for a /flip response. Hoisted out of the IIFE so the
 // jest test in `coinflip.test.js` can drive it without booting the page.
 function renderCoinflipResult(resultEl, body) {
-    if (!resultEl) return;
-    resultEl.hidden = false;
-    resultEl.classList.remove('coinflip-result-win', 'coinflip-result-lose', 'coinflip-result-jackpot');
     const landedLabel = body.landed === 'HEADS' ? 'Heads' : 'Tails';
     const predictedLabel = body.predicted === 'HEADS' ? 'Heads' : 'Tails';
-    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
-        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
-        : '';
-    if (body.win) {
-        resultEl.classList.add('coinflip-result-win');
-        const winLine = '<strong>' + landedLabel + '!</strong> You called ' +
-            predictedLabel + ' &middot; <strong>+' + body.net + ' credits</strong>';
-        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'coinflip-result-jackpot', winLine)
-            : winLine;
-        resultEl.innerHTML = topUpPrefix + withJackpot;
-    } else {
-        resultEl.classList.add('coinflip-result-lose');
-        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.lossTributeSuffix(body)
-            : '';
-        resultEl.innerHTML = topUpPrefix + '<strong>' + landedLabel + '.</strong> You called ' +
-            predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>' +
-            tributeSuffix;
+    if (typeof window !== 'undefined' && window.TobyCasinoResult) {
+        window.TobyCasinoResult.render({
+            resultEl: resultEl,
+            body: body,
+            classPrefix: 'coinflip',
+            winLineHtml: '<strong>' + landedLabel + '!</strong> You called ' +
+                predictedLabel + ' &middot; <strong>+' + body.net + ' credits</strong>',
+            loseLineHtml: '<strong>' + landedLabel + '.</strong> You called ' +
+                predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
+        });
     }
 }
 

@@ -21,37 +21,24 @@ function highlowFormatMultiplier(m) {
 // Pure-DOM render for a /play response. Hoisted out of the IIFE so the
 // jest test in `highlow.test.js` can drive it without booting the page.
 function renderHighlowResult(resultEl, body) {
-    if (!resultEl) return;
-    resultEl.hidden = false;
-    resultEl.classList.remove('highlow-result-win', 'highlow-result-lose', 'highlow-result-jackpot');
+    if (typeof window === 'undefined' || !window.TobyCasinoResult) return;
     const dirLabel = body.direction === 'HIGHER' ? 'Higher' : 'Lower';
-    const topUpPrefix = (typeof window !== 'undefined' && window.TobyTopUp)
-        ? window.TobyTopUp.soldPrefixHtml(body.soldTobyCoins, body.newPrice)
-        : '';
-    if (body.win) {
-        resultEl.classList.add('highlow-result-win');
-        const multSuffix = highlowFormatMultiplier(body.multiplier);
-        const winLine = '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
+    const tie = body.next === body.anchor;
+    const multSuffix = highlowFormatMultiplier(body.multiplier);
+    window.TobyCasinoResult.render({
+        resultEl: resultEl,
+        body: body,
+        classPrefix: 'highlow',
+        winLineHtml: '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
             (body.next > body.anchor ? '>' : '<') + ' <strong>' + highlowCardLabel(body.anchor) +
             '</strong> &middot; you called ' + dirLabel +
             (multSuffix ? ' (' + multSuffix + ')' : '') +
-            ' &middot; <strong>+' + body.net + ' credits</strong>';
-        const withJackpot = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.renderWinHtml(resultEl, body, 'highlow-result-jackpot', winLine)
-            : winLine;
-        resultEl.innerHTML = topUpPrefix + withJackpot;
-    } else {
-        resultEl.classList.add('highlow-result-lose');
-        const tie = body.next === body.anchor;
-        const tributeSuffix = (typeof window !== 'undefined' && window.TobyJackpot)
-            ? window.TobyJackpot.lossTributeSuffix(body)
-            : '';
-        resultEl.innerHTML = topUpPrefix + '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
+            ' &middot; <strong>+' + body.net + ' credits</strong>',
+        loseLineHtml: '<strong>' + highlowCardLabel(body.next) + '</strong> ' +
             (tie ? '=' : (body.next > body.anchor ? '>' : '<')) +
             ' <strong>' + highlowCardLabel(body.anchor) + '</strong> &middot; you called ' +
-            dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>' +
-            tributeSuffix;
-    }
+            dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
+    });
 }
 
 (function () {

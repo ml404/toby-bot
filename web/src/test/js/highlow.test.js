@@ -4,6 +4,7 @@ const {
     highlowFormatMultiplier,
 } = require('../../main/resources/static/js/highlow');
 require('../../main/resources/static/js/casino-jackpot');
+require('../../main/resources/static/js/casino-result');
 
 describe('highlowCardLabel', () => {
     test('maps face cards to letters', () => {

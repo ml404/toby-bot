@@ -1,5 +1,6 @@
 const { renderCoinflipResult } = require('../../main/resources/static/js/coinflip');
 require('../../main/resources/static/js/casino-jackpot');
+require('../../main/resources/static/js/casino-result');
 
 describe('renderCoinflipResult', () => {
     let resultEl;

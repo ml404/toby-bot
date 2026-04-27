@@ -1,5 +1,6 @@
 const { renderDiceResult } = require('../../main/resources/static/js/dice');
 require('../../main/resources/static/js/casino-jackpot');
+require('../../main/resources/static/js/casino-result');
 
 describe('renderDiceResult', () => {
     let resultEl;
