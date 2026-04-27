@@ -19,7 +19,7 @@
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
-        const recipient = parseInt(document.getElementById('tip-recipient').value, 10);
+        const recipient = document.getElementById('tip-recipient').value;
         const amount = parseInt(document.getElementById('tip-amount').value, 10);
         const note = (document.getElementById('tip-note').value || '').trim() || null;
         if (!recipient) {

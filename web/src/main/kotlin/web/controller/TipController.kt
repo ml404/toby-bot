@@ -12,12 +12,7 @@ import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2Aut
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.event.WebTipSentEvent
 import web.service.EconomyWebService
@@ -107,19 +102,21 @@ class TipController(
         if (!economyWebService.isMember(discordId, guildId)) {
             return ResponseEntity.status(403).body(TipResponse(false, error = "You are not a member of that server."))
         }
-        if (request.recipientDiscordId == discordId) {
+
+        val recipientDiscordId = request.recipientDiscordId.toLong()
+        if (recipientDiscordId == discordId) {
             return ResponseEntity.badRequest().body(TipResponse(false, error = "You can't tip yourself."))
         }
-        if (!economyWebService.isMember(request.recipientDiscordId, guildId)) {
+        if (!economyWebService.isMember(recipientDiscordId, guildId)) {
             return ResponseEntity.badRequest().body(TipResponse(false, error = "Pick someone from this server."))
         }
 
         // Ensure recipient row exists (lazy-create through the helper-style path).
-        tipWebService.ensureRecipient(request.recipientDiscordId, guildId)
+        tipWebService.ensureRecipient(recipientDiscordId, guildId)
 
         val outcome = tipService.tip(
             senderDiscordId = discordId,
-            recipientDiscordId = request.recipientDiscordId,
+            recipientDiscordId = recipientDiscordId,
             guildId = guildId,
             amount = request.amount,
             note = request.note?.takeIf { it.isNotBlank() }
@@ -181,7 +178,7 @@ class TipController(
 }
 
 data class TipRequest(
-    val recipientDiscordId: Long = 0,
+    val recipientDiscordId: String = "",
     val amount: Long = 0,
     val note: String? = null
 )

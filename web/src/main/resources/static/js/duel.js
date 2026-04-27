@@ -91,7 +91,7 @@
     if (challengeForm) {
         challengeForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            const opponent = parseInt(document.getElementById('duel-opponent').value, 10);
+            const opponent = document.getElementById('duel-opponent').value;
             const stake = parseInt(document.getElementById('duel-stake').value, 10);
             if (!opponent) {
                 showToast('error', 'Pick someone from the list.');

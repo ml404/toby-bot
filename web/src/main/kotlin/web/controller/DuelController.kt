@@ -14,12 +14,7 @@ import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2Aut
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
@@ -131,22 +126,23 @@ class DuelController(
             )
         }
     ) { discordId ->
-        if (request.opponentDiscordId == discordId) {
+        val opponentDiscordId = request.opponentDiscordId.toLong()
+        if (opponentDiscordId == discordId) {
             return@requireMemberForJson ResponseEntity.badRequest().body(
                 ChallengeResponse(false, error = "You can't duel yourself.")
             )
         }
-        if (!economyWebService.isMember(request.opponentDiscordId, guildId)) {
+        if (!economyWebService.isMember(opponentDiscordId, guildId)) {
             return@requireMemberForJson ResponseEntity.badRequest().body(
                 ChallengeResponse(false, error = "Pick someone from this server.")
             )
         }
 
-        duelWebService.ensureOpponent(request.opponentDiscordId, guildId)
+        duelWebService.ensureOpponent(opponentDiscordId, guildId)
 
         val start = duelService.startDuel(
             initiatorDiscordId = discordId,
-            opponentDiscordId = request.opponentDiscordId,
+            opponentDiscordId = opponentDiscordId,
             guildId = guildId,
             stake = request.stake
         )
@@ -159,7 +155,7 @@ class DuelController(
         val offer = pendingDuelRegistry.register(
             guildId = guildId,
             initiatorDiscordId = discordId,
-            opponentDiscordId = request.opponentDiscordId,
+            opponentDiscordId = opponentDiscordId,
             stake = request.stake
         )
         eventPublisher.publishEvent(
@@ -167,7 +163,7 @@ class DuelController(
                 guildId = guildId,
                 duelId = offer.id,
                 initiatorDiscordId = discordId,
-                opponentDiscordId = request.opponentDiscordId,
+                opponentDiscordId = opponentDiscordId,
                 stake = request.stake
             )
         )
@@ -295,7 +291,7 @@ class DuelController(
     }
 }
 
-data class ChallengeRequest(val opponentDiscordId: Long = 0, val stake: Long = 0)
+data class ChallengeRequest(val opponentDiscordId: String = "", val stake: Long = 0)
 
 data class ChallengeResponse(
     val ok: Boolean,

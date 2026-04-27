@@ -7,10 +7,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -64,7 +61,7 @@ class TipControllerTest {
             sentTodayAfter = 50L, dailyCap = 500L
         )
 
-        val response = controller.tip(guildId, TipRequest(recipientId, 50L, "thanks"), user)
+        val response = controller.tip(guildId, TipRequest(recipientId.toString(), 50L, "thanks"), user)
 
         assertEquals(200, response.statusCode.value())
         val body = response.body!!
@@ -98,7 +95,7 @@ class TipControllerTest {
             every { getAttribute<String>("id") } returns null
         }
 
-        val response = controller.tip(guildId, TipRequest(recipientId, 50L, null), anon)
+        val response = controller.tip(guildId, TipRequest(recipientId.toString(), 50L, null), anon)
 
         assertEquals(401, response.statusCode.value())
         assertFalse(response.body!!.ok)
@@ -108,7 +105,7 @@ class TipControllerTest {
     fun `tip when not a member returns 403`() {
         every { economyWebService.isMember(discordId, guildId) } returns false
 
-        val response = controller.tip(guildId, TipRequest(recipientId, 50L, null), user)
+        val response = controller.tip(guildId, TipRequest(recipientId.toString(), 50L, null), user)
 
         assertEquals(403, response.statusCode.value())
         assertFalse(response.body!!.ok)
@@ -118,7 +115,7 @@ class TipControllerTest {
     fun `tip to non-member returns 400 without calling service`() {
         every { economyWebService.isMember(recipientId, guildId) } returns false
 
-        val response = controller.tip(guildId, TipRequest(recipientId, 50L, null), user)
+        val response = controller.tip(guildId, TipRequest(recipientId.toString(), 50L, null), user)
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
@@ -128,7 +125,7 @@ class TipControllerTest {
 
     @Test
     fun `tip to self returns 400 before service is called`() {
-        val response = controller.tip(guildId, TipRequest(discordId, 50L, null), user)
+        val response = controller.tip(guildId, TipRequest(discordId.toString(), 50L, null), user)
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
@@ -147,7 +144,7 @@ class TipControllerTest {
         )
         outcomes.forEach { variant ->
             every { tipService.tip(discordId, recipientId, guildId, 50L, null, any(), any()) } returns variant
-            val response = controller.tip(guildId, TipRequest(recipientId, 50L, null), user)
+            val response = controller.tip(guildId, TipRequest(recipientId.toString(), 50L, null), user)
             assertEquals(400, response.statusCode.value(), "outcome $variant should be 400")
             assertFalse(response.body!!.ok)
             assertNull(response.body!!.amount)

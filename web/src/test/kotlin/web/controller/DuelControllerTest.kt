@@ -9,9 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -78,7 +76,7 @@ class DuelControllerTest {
             stake = 50L, createdAt = Instant.now()
         )
 
-        val response = controller.challenge(guildId, ChallengeRequest(opponentId, 50L), user)
+        val response = controller.challenge(guildId, ChallengeRequest(opponentId.toString(), 50L), user)
 
         assertEquals(200, response.statusCode.value())
         assertTrue(response.body!!.ok)
@@ -99,7 +97,7 @@ class DuelControllerTest {
 
     @Test
     fun `challenge to self returns 400 without registering`() {
-        val response = controller.challenge(guildId, ChallengeRequest(discordId, 50L), user)
+        val response = controller.challenge(guildId, ChallengeRequest(discordId.toString(), 50L), user)
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
@@ -112,7 +110,7 @@ class DuelControllerTest {
     fun `challenge of non-member opponent returns 400 without registering`() {
         every { economyWebService.isMember(opponentId, guildId) } returns false
 
-        val response = controller.challenge(guildId, ChallengeRequest(opponentId, 50L), user)
+        val response = controller.challenge(guildId, ChallengeRequest(opponentId.toString(), 50L), user)
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
@@ -127,7 +125,7 @@ class DuelControllerTest {
             duelService.startDuel(discordId, opponentId, guildId, 50L)
         } returns StartOutcome.InitiatorInsufficient(have = 5L, needed = 50L)
 
-        val response = controller.challenge(guildId, ChallengeRequest(opponentId, 50L), user)
+        val response = controller.challenge(guildId, ChallengeRequest(opponentId.toString(), 50L), user)
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
