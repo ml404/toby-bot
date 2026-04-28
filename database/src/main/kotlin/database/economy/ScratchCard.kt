@@ -1,5 +1,7 @@
 package database.economy
 
+import database.economy.ScratchCard.Companion.expectedRtp
+import kotlin.math.pow
 import kotlin.random.Random
 
 /**
@@ -89,16 +91,21 @@ class ScratchCard(
         }
 
         /**
-         * Closed-form RTP given [reel], [basePayouts], and the card
-         * geometry. For each symbol s, sums the binomial probability of
-         * exactly k matches across [cellCount] independent draws (with
-         * p_s = reel.count(s) / reel.size) times [multiplierFor]`(s, k)`,
-         * over k ∈ [threshold..cellCount]. Two symbols both reaching
-         * threshold is impossible when threshold > cellCount/2, so the
-         * per-symbol sums don't double-count.
+         * Closed-form RTP computation based on [reel], [basePayouts], and the card geometry.
          *
-         * Pure function — used by tests as the RTP source of truth so any
-         * tuning that drifts the house edge fails CI loudly.
+         * For each symbol `s`, computes the expected value using a binomial model:
+         * the probability of exactly `k` matches across [cellCount] independent draws, where
+         * `p_s = reel.count(s) / reel.size`.
+         *
+         * The contribution for each symbol is the sum over k in the range
+         * threshold..cellCount of:
+         * `P(X = k) * multiplierFor(s, k)`.
+         *
+         * Two different symbols cannot both reach the threshold when
+         * `threshold > cellCount / 2`, so per-symbol expectations do not double-count outcomes.
+         *
+         * This function is pure and serves as the RTP source of truth in tests.
+         * Any change affecting house edge must be reflected in test expectations.
          */
         fun expectedRtp(
             reel: List<SlotMachine.Symbol> = SlotMachine.DEFAULT_REEL,
@@ -119,13 +126,13 @@ class ScratchCard(
         }
 
         private fun binomialPmf(n: Int, k: Int, p: Double): Double {
-            if (k < 0 || k > n) return 0.0
+            if (k !in 0..n) return 0.0
             // C(n, k) computed iteratively to avoid factorial overflow on
             // moderate n; n=9 here so this is overkill, but it keeps the
             // helper safe to reuse for larger geometries.
-            var coeff = 1.0
-            for (i in 1..k) coeff = coeff * (n - i + 1) / i
-            return coeff * Math.pow(p, k.toDouble()) * Math.pow(1.0 - p, (n - k).toDouble())
+            var coefficiency = 1.0
+            for (i in 1..k) coefficiency = coefficiency * (n - i + 1) / i
+            return coefficiency * p.pow(k.toDouble()) * (1.0 - p).pow((n - k).toDouble())
         }
     }
 }
