@@ -30,10 +30,6 @@
     const btnStart = document.getElementById('poker-action-start');
     const btnCashout = document.getElementById('poker-action-cashout');
 
-    function showToast(level, msg) {
-        if (window.TobyToasts && window.TobyToasts[level]) window.TobyToasts[level](msg);
-    }
-
     function renderCard(c, faceDown) {
         const span = document.createElement('span');
         span.className = 'poker-card-face';

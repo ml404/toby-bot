@@ -25,14 +25,6 @@ function renderDiceResult(resultEl, body) {
     const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
-    function toast(msg, type) {
-        if (window.TobyToast && typeof window.TobyToast.show === 'function') {
-            window.TobyToast.show(msg, { type: type || 'info' });
-        } else {
-            console.log('[' + (type || 'info') + '] ' + msg);
-        }
-    }
-
     const die = document.getElementById('dice-die');
     const dieFace = document.getElementById('dice-die-face');
     const stakeInput = document.getElementById('dice-stake');

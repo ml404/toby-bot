@@ -12,14 +12,6 @@
             .then(r => r.json().catch(() => ({ ok: r.ok })));
     };
 
-    function toast(msg, type) {
-        if (window.TobyToast && typeof window.TobyToast.show === 'function') {
-            window.TobyToast.show(msg, { type: type || 'info' });
-        } else {
-            console.log('[' + (type || 'info') + '] ' + msg);
-        }
-    }
-
     document.querySelectorAll('.title-buy').forEach(btn => {
         btn.addEventListener('click', () => {
             const row = btn.closest('tr');
