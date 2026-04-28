@@ -27,14 +27,6 @@ function renderCoinflipResult(resultEl, body) {
     const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
-    function toast(msg, type) {
-        if (window.TobyToast && typeof window.TobyToast.show === 'function') {
-            window.TobyToast.show(msg, { type: type || 'info' });
-        } else {
-            console.log('[' + (type || 'info') + '] ' + msg);
-        }
-    }
-
     const coin = document.getElementById('coinflip-coin');
     const coinFace = document.getElementById('coinflip-coin-face');
     const stakeInput = document.getElementById('coinflip-stake');

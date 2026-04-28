@@ -52,14 +52,6 @@ function renderHighlowResult(resultEl, body) {
     const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
-    function toast(msg, type) {
-        if (window.TobyToast && typeof window.TobyToast.show === 'function') {
-            window.TobyToast.show(msg, { type: type || 'info' });
-        } else {
-            console.log('[' + (type || 'info') + '] ' + msg);
-        }
-    }
-
     const anchorFace = document.getElementById('highlow-anchor-face');
     const nextFace = document.getElementById('highlow-next-face');
     const anchorCard = document.getElementById('highlow-anchor');

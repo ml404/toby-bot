@@ -14,10 +14,6 @@
     const pendingList = document.getElementById('duel-pending-list');
     const outgoingList = document.getElementById('duel-outgoing-list');
 
-    function showToast(level, msg) {
-        if (window.TobyToasts && window.TobyToasts[level]) window.TobyToasts[level](msg);
-    }
-
     function renderPending(rows) {
         if (!pendingList) return;
         pendingList.innerHTML = '';
@@ -94,11 +90,11 @@
             const opponent = document.getElementById('duel-opponent').value;
             const stake = parseInt(document.getElementById('duel-stake').value, 10);
             if (!opponent) {
-                showToast('error', 'Pick someone from the list.');
+                toast('error', 'Pick someone from the list.');
                 return;
             }
             if (!stake) {
-                showToast('error', 'Stake is required.');
+                toast('error', 'Stake is required.');
                 return;
             }
             window.TobyApi.postJson('/duel/' + guildId + '/challenge', {
@@ -106,12 +102,12 @@
                 stake: stake
             }).then(function (resp) {
                 if (!resp || !resp.ok) {
-                    showToast('error', (resp && resp.error) || 'Challenge failed.');
+                    toast('error', (resp && resp.error) || 'Challenge failed.');
                     return;
                 }
-                showToast('success', 'Challenge sent. Waiting for them to accept.');
+                toast('success', 'Challenge sent. Waiting for them to accept.');
                 refreshOutgoing();
-            }).catch(function () { showToast('error', 'Network error sending challenge.'); });
+            }).catch(function () { toast('error', 'Network error sending challenge.'); });
         });
     }
 
@@ -130,13 +126,13 @@
             const path = '/duel/' + guildId + '/' + duelId + (isAccept ? '/accept' : '/decline');
             window.TobyApi.postJson(path, {}).then(function (resp) {
                 if (!resp || !resp.ok) {
-                    showToast('error', (resp && resp.error) || 'Action failed.');
+                    toast('error', (resp && resp.error) || 'Action failed.');
                     refreshAll();
                     return;
                 }
                 if (isAccept && resp.winnerDiscordId) {
                     const youWon = resp.winnerNewBalance != null && resp.loserNewBalance != null;
-                    showToast('success',
+                    toast('success',
                         'Resolved: <@' + resp.winnerDiscordId + '> won the ' + resp.pot +
                         ' pot (' + resp.lossTribute + ' to jackpot).');
                     if (balanceEl) {
@@ -144,10 +140,10 @@
                         // page will refresh the next poll cycle.
                     }
                 } else if (isDecline) {
-                    showToast('success', 'Declined.');
+                    toast('success', 'Declined.');
                 }
                 refreshAll();
-            }).catch(function () { showToast('error', 'Network error.'); });
+            }).catch(function () { toast('error', 'Network error.'); });
         });
     }
 
@@ -162,13 +158,13 @@
             window.TobyApi.postJson('/duel/' + guildId + '/' + duelId + '/cancel', {})
                 .then(function (resp) {
                     if (!resp || !resp.ok) {
-                        showToast('error', (resp && resp.error) || 'Cancel failed.');
+                        toast('error', (resp && resp.error) || 'Cancel failed.');
                     } else {
-                        showToast('success', 'Cancelled.');
+                        toast('success', 'Cancelled.');
                     }
                     refreshOutgoing();
                 })
-                .catch(function () { showToast('error', 'Network error.'); });
+                .catch(function () { toast('error', 'Network error.'); });
         });
     }
 

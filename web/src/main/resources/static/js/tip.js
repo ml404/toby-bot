@@ -1,6 +1,3 @@
-// /tip — JSON POST to /tip/{guildId} via the shared CSRF-aware fetch
-// wrapper. Updates balance + daily-tipped counters in place; surfaces
-// service errors as toasts.
 (function () {
     'use strict';
 
@@ -19,38 +16,48 @@
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
+
         const recipient = document.getElementById('tip-recipient').value;
         const amount = parseInt(document.getElementById('tip-amount').value, 10);
         const note = (document.getElementById('tip-note').value || '').trim() || null;
+
         if (!recipient) {
-            window.TobyToasts && window.TobyToasts.error('Pick someone from the list.');
+            toast('Pick someone from the list.', 'error');
             return;
         }
+
         if (!amount) {
-            window.TobyToasts && window.TobyToasts.error('Amount is required.');
+            toast('Amount is required.', 'error');
             return;
         }
+
         window.TobyApi.postJson('/tip/' + guildId, {
             recipientDiscordId: recipient,
             amount: amount,
             note: note
         }).then(function (resp) {
             if (!resp || !resp.ok) {
-                window.TobyToasts && window.TobyToasts.error((resp && resp.error) || 'Tip failed.');
+                toast((resp && resp.error) || 'Tip failed.', 'error');
                 return;
             }
+
             if (balanceEl) balanceEl.textContent = String(resp.senderNewBalance);
             if (sentEl) sentEl.textContent = String(resp.sentTodayAfter);
+
             if (headroomEl) {
                 const cap = resp.dailyCap || dailyCap;
                 headroomEl.textContent = String(Math.max(0, cap - resp.sentTodayAfter));
             }
+
             const noteSuffix = resp.note ? ' (' + resp.note + ')' : '';
-            window.TobyToasts && window.TobyToasts.success(
-                'Sent ' + resp.amount + ' credits' + noteSuffix + '.'
+
+            toast(
+                'Sent ' + resp.amount + ' credits' + noteSuffix + '.',
+                'success'
             );
+
         }).catch(function () {
-            window.TobyToasts && window.TobyToasts.error('Network error sending tip.');
+            toast('Network error sending tip.', 'error');
         });
     });
 })();

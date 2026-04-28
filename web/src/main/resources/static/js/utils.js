@@ -2,10 +2,12 @@
     'use strict';
 
     function toast(msg, type) {
-        if (window.TobyToast && typeof window.TobyToast.show === 'function') {
-            window.TobyToast.show(msg, { type: type || 'info' });
+        const level = type || 'info';
+
+        if (window.TobyToasts && typeof window.TobyToasts[level] === 'function') {
+            window.TobyToasts[level](msg);
         } else {
-            console.log('[' + (type || 'info') + '] ' + msg);
+            console.log('[' + level + '] ' + msg);
         }
     }
 

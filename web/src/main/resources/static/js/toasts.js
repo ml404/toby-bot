@@ -47,7 +47,7 @@
         close.className = 'toast-close';
         close.setAttribute('aria-label', 'Dismiss');
         close.innerHTML = '&times;';
-        close.addEventListener('click', remove);
+        close.addEventListener('click', () => el.remove());
         el.appendChild(close);
 
         stack.appendChild(el);
@@ -63,9 +63,18 @@
         return { dismiss: remove };
     }
 
-    window.TobyToast = { show: showToast };
-
-    if (typeof module !== 'undefined') {
-        module.exports = { showToast: showToast };
+    // single unified API
+    function toast(msg, type) {
+        showToast(msg, { type: type || 'info' });
     }
+
+    window.TobyToasts = {
+        show: showToast,
+        success: (m) => toast(m, 'success'),
+        error: (m) => toast(m, 'error'),
+        info: (m) => toast(m, 'info')
+    };
+
+    // GLOBAL SHORTCUT (this is what your other files should use)
+    window.toast = toast;
 })();
