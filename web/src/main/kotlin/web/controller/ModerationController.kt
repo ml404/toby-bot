@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.ModerationWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
 import web.util.displayName
@@ -56,25 +57,21 @@ class ModerationController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/moderation/guilds"
-
-        if (!moderationWebService.canModerate(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not allowed to moderate that server.")
-            return "redirect:/moderation/guilds"
-        }
-
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/moderation/guilds",
+        check = moderationWebService::canModerate,
+        deniedMessage = "You are not allowed to moderate that server.",
+    ) { discordId ->
         val overview = moderationWebService.getGuildOverview(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/moderation/guilds"
+            return@requireForPage "redirect:/moderation/guilds"
         }
 
         model.addAttribute("overview", overview)
         model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
         model.addAttribute("username", user.displayName())
         model.addAttribute("actorDiscordId", discordId.toString())
-        return "moderation"
+        "moderation"
     }
 
     @PostMapping("/{guildId}/user/{targetDiscordId}/permission", consumes = ["application/json"])
@@ -84,13 +81,11 @@ class ModerationController(
         @PathVariable targetDiscordId: Long,
         @RequestBody body: PermissionRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = withSignedInActor(user, ::ApiResult) { actor ->
         val perm = runCatching { UserDto.Permissions.valueOf(body.permission.uppercase()) }.getOrNull()
-            ?: return ResponseEntity.badRequest().body(ApiResult(false, "Unknown permission."))
+            ?: return@withSignedInActor ResponseEntity.badRequest().body(ApiResult(false, "Unknown permission."))
         val error = moderationWebService.togglePermission(actor, guildId, targetDiscordId, perm)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -101,11 +96,9 @@ class ModerationController(
         @PathVariable targetDiscordId: Long,
         @RequestBody body: SocialCreditRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = withSignedInActor(user, ::ApiResult) { actor ->
         val error = moderationWebService.adjustSocialCredit(actor, guildId, targetDiscordId, body.delta)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -115,13 +108,11 @@ class ModerationController(
         @PathVariable guildId: Long,
         @RequestBody body: ConfigRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = withSignedInActor(user, ::ApiResult) { actor ->
         val key = runCatching { ConfigDto.Configurations.valueOf(body.key.uppercase()) }.getOrNull()
-            ?: return ResponseEntity.badRequest().body(ApiResult(false, "Unknown config key."))
+            ?: return@withSignedInActor ResponseEntity.badRequest().body(ApiResult(false, "Unknown config key."))
         val error = moderationWebService.updateConfig(actor, guildId, key, body.value)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -131,11 +122,9 @@ class ModerationController(
         @PathVariable guildId: Long,
         @RequestBody body: KickRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = withSignedInActor(user, ::ApiResult) { actor ->
         val error = moderationWebService.kickMember(actor, guildId, body.targetDiscordId, body.reason)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -145,14 +134,15 @@ class ModerationController(
         @PathVariable guildId: Long,
         @RequestBody body: MoveRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<MoveResponse> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(MoveResponse(false, "Not signed in."))
+    ): ResponseEntity<MoveResponse> = withSignedInActor(
+        user, { ok, err -> MoveResponse(ok, err) }
+    ) { actor ->
         val result = moderationWebService.moveMembers(actor, guildId, body.targetChannelId, body.memberIds)
         if (result.error != null) {
-            return ResponseEntity.badRequest().body(MoveResponse(false, result.error, result.moved, result.skipped))
+            ResponseEntity.badRequest().body(MoveResponse(false, result.error, result.moved, result.skipped))
+        } else {
+            ResponseEntity.ok(MoveResponse(true, null, result.moved, result.skipped))
         }
-        return ResponseEntity.ok(MoveResponse(true, null, result.moved, result.skipped))
     }
 
     @PostMapping("/{guildId}/voice/{channelId}/mute", consumes = ["application/json"])
@@ -162,14 +152,15 @@ class ModerationController(
         @PathVariable channelId: Long,
         @RequestBody body: MuteRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<MuteResponse> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(MuteResponse(false, "Not signed in."))
+    ): ResponseEntity<MuteResponse> = withSignedInActor(
+        user, { ok, err -> MuteResponse(ok, err) }
+    ) { actor ->
         val result = moderationWebService.muteVoiceChannel(actor, guildId, channelId, body.mute)
         if (result.error != null) {
-            return ResponseEntity.badRequest().body(MuteResponse(false, result.error, result.changed, result.skipped))
+            ResponseEntity.badRequest().body(MuteResponse(false, result.error, result.changed, result.skipped))
+        } else {
+            ResponseEntity.ok(MuteResponse(true, null, result.changed, result.skipped))
         }
-        return ResponseEntity.ok(MuteResponse(true, null, result.changed, result.skipped))
     }
 
     @PostMapping("/{guildId}/poll", consumes = ["application/json"])
@@ -178,12 +169,27 @@ class ModerationController(
         @PathVariable guildId: Long,
         @RequestBody body: PollRequest,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = withSignedInActor(user, ::ApiResult) { actor ->
         val error = moderationWebService.createPoll(actor, guildId, body.channelId, body.question, body.options)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    /**
+     * Per-action JSON endpoints don't re-check membership — the service
+     * does its own permission audit on the actor — so all the controller
+     * needs is "401 if not signed in." This collapses 6 copies of the
+     * same `discordIdOrNull() ?: return ResponseEntity.status(401)…`
+     * into one place.
+     */
+    private inline fun <T : Any> withSignedInActor(
+        user: OAuth2User,
+        noinline notSignedInBuilder: (ok: Boolean, error: String) -> T,
+        block: (actor: Long) -> ResponseEntity<T>,
+    ): ResponseEntity<T> {
+        val actor = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(notSignedInBuilder(false, "Not signed in."))
+        return block(actor)
     }
 }
 

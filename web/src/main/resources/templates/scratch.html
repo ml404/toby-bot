@@ -18,7 +18,7 @@
             <span th:text="${minStake}">10</span>-<span th:text="${maxStake}">500</span> credits.</p>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section class="scratch-table">
         <div class="scratch-cells" id="scratch-cells">
@@ -51,11 +51,7 @@
         <div class="scratch-balance">
             Balance: <strong id="scratch-balance" th:text="${balance}">0</strong> credits
         </div>
-        <div class="casino-jackpot-banner">
-            🎰 Jackpot pool:
-            <strong th:text="${jackpotPool}">0</strong> credits
-            <span class="muted">— win any minigame for a 1% chance to bank the pool.</span>
-        </div>
+        <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
     </section>
 
     <section class="scratch-rules">
@@ -94,6 +90,7 @@
 <script th:src="@{/js/casino-jackpot.js}"></script>
 <script th:src="@{/js/casino-topup.js}"></script>
 <script th:src="@{/js/casino-result.js}"></script>
+<script th:src="@{/js/casino-game.js}"></script>
 <script th:src="@{/js/scratch.js}"></script>
 </body>
 </html>

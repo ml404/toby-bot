@@ -3,14 +3,10 @@ package web.controller
 import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
-import database.service.JackpotService
-import database.service.TobyCoinMarketService
-import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import jakarta.servlet.http.HttpSession
-import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -21,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.ConcurrentModel
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
+import web.casino.CasinoPageContext
 import web.service.EconomyWebService
 
 class HighlowControllerTest {
@@ -33,10 +30,7 @@ class HighlowControllerTest {
 
     private lateinit var highlowService: HighlowService
     private lateinit var economyWebService: EconomyWebService
-    private lateinit var userService: UserService
-    private lateinit var jackpotService: JackpotService
-    private lateinit var marketService: TobyCoinMarketService
-    private lateinit var jda: JDA
+    private lateinit var pageContext: CasinoPageContext
     private lateinit var user: OAuth2User
     private lateinit var session: HttpSession
     private lateinit var controller: HighlowController
@@ -45,10 +39,7 @@ class HighlowControllerTest {
     fun setup() {
         highlowService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
-        userService = mockk(relaxed = true)
-        jackpotService = mockk(relaxed = true)
-        marketService = mockk(relaxed = true)
-        jda = mockk(relaxed = true)
+        pageContext = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -59,9 +50,9 @@ class HighlowControllerTest {
         val guild = mockk<Guild>(relaxed = true).also {
             every { it.name } returns "Test Guild"
         }
-        every { jda.getGuildById(guildId) } returns guild
+        every { pageContext.populate(any(), guildId, discordId, user) } returns guild
 
-        controller = HighlowController(highlowService, economyWebService, userService, jackpotService, marketService, jda)
+        controller = HighlowController(highlowService, economyWebService, pageContext)
     }
 
     @Test

@@ -428,7 +428,7 @@ function initIntroPage() {
                 }
             };
         }
-        window.TobyToast.show(msg, opts);
+        window.TobyToasts.show(msg, opts);
         el.remove();
     });
 
@@ -951,7 +951,7 @@ function initIntroPage() {
             apiCall(buildUrl('/update-volume'), { introId: introId, volume: value }, {
                 onSuccess: () => {
                     lastSaved = String(value);
-                    window.TobyToast.show('Volume updated.', { type: 'success', duration: 2000 });
+                    window.TobyToasts.show('Volume updated.', { type: 'success', duration: 2000 });
                     // Keep row-level play button in sync for volume-aware preview
                     const playBtn = document.querySelector('button.btn-play[data-audio-id="audio-' + introId + '"]');
                     if (playBtn) playBtn.dataset.volume = String(value);
@@ -960,7 +960,7 @@ function initIntroPage() {
                     slider.value = lastSaved;
                     if (valueEl) valueEl.textContent = lastSaved + '%';
                     const msg = r ? (r.error || 'Failed to update volume.') : 'Network error.';
-                    window.TobyToast.show(msg, { type: 'error' });
+                    window.TobyToasts.show(msg, { type: 'error' });
                 }
             });
         });
@@ -1016,7 +1016,7 @@ function initIntroPage() {
                     if (rangeLabel) {
                         rangeLabel.textContent = (startMs == null && endMs == null) ? 'full track' : 'clip set';
                     }
-                    window.TobyToast.show('Clip updated.', { type: 'success', duration: 2000 });
+                    window.TobyToasts.show('Clip updated.', { type: 'success', duration: 2000 });
                     closeOpenRowEditor();
                 },
                 onError: (r) => {
@@ -1087,12 +1087,12 @@ function initIntroPage() {
                 apiCall(buildUrl('/update-name'), { introId: introId, name: value }, {
                     onSuccess: () => {
                         finish(value);
-                        window.TobyToast.show('Renamed.', { type: 'success', duration: 2000 });
+                        window.TobyToasts.show('Renamed.', { type: 'success', duration: 2000 });
                     },
                     onError: (r) => {
                         finish(current);
                         const msg = r ? (r.error || 'Rename failed.') : 'Network error.';
-                        window.TobyToast.show(msg, { type: 'error' });
+                        window.TobyToasts.show(msg, { type: 'error' });
                     }
                 });
             }
@@ -1148,7 +1148,7 @@ function initIntroPage() {
                 .map(r => r.dataset.introId);
             apiCall(buildUrl('/reorder'), { orderedIds: orderedIds }, {
                 onSuccess: () => {
-                    window.TobyToast.show('Order saved.', { type: 'success', duration: 2000 });
+                    window.TobyToasts.show('Order saved.', { type: 'success', duration: 2000 });
                     // Update slot numbers in first column
                     tbody.querySelectorAll('tr[data-intro-id]').forEach((r, i) => {
                         const idx = r.querySelector('.slot-index');
@@ -1157,7 +1157,7 @@ function initIntroPage() {
                 },
                 onError: (r) => {
                     const msg = r ? (r.error || 'Reorder failed. Reloading.') : 'Network error. Reloading.';
-                    window.TobyToast.show(msg, { type: 'error' });
+                    window.TobyToasts.show(msg, { type: 'error' });
                     setTimeout(() => location.reload(), 800);
                 }
             });

@@ -20,7 +20,7 @@
         </p>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section class="poker-card">
         <h2>Create a new table</h2>

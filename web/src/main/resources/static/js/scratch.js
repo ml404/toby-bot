@@ -27,8 +27,6 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
     const guildId = main.dataset.guildId;
     const matchThreshold = parseInt(main.dataset.matchThreshold, 10) || 5;
     const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
-    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
-    const postJson = window.TobyApi && window.TobyApi.postJson;
 
     const cellsContainer = document.getElementById('scratch-cells');
     const cellButtons = Array.from(cellsContainer ? cellsContainer.querySelectorAll('.scratch-cell') : []);
@@ -42,22 +40,11 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
     if (!form || !buyBtn || !stakeInput || cellButtons.length === 0) return;
 
-    const topUp = (window.TobyTopUp && buyTobyBtn) ? window.TobyTopUp.init({
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: buyBtn,
-        tobyBtn: buyTobyBtn,
-        balanceEl: balanceEl,
-        tobyCoins: initialTobyCoins,
-        marketPrice: initialMarketPrice,
-        onSubmit: function (autoTopUp) { runBuy(autoTopUp); },
-    }) : null;
-
-    let busy = false;
     // Latest active card. Server returns the symbols up front; cells are
     // hidden until the user scratches each one. Once all are revealed (or
     // they hit "Reveal all") the result is shown.
     let activeCard = null;
+    let game;
 
     function resetCells() {
         cellButtons.forEach(function (btn) {
@@ -83,7 +70,10 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
             highlightWinCells(activeCard);
-            showResult(activeCard);
+            renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl);
+            // Now the credits visibly drop and the topup-coin recompute
+            // catches up too — see autoApplyBalance: false in the helper.
+            if (game) game.applyTobyDelta(activeCard);
             // Card consumed — next "Buy ticket" starts a fresh one.
             activeCard = null;
             if (revealBtn) revealBtn.hidden = true;
@@ -108,10 +98,6 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         });
     }
 
-    function showResult(body) {
-        renderScratchResult(resultEl, body, matchThreshold, balanceEl);
-    }
-
     cellButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
             const idx = parseInt(btn.dataset.index, 10);
@@ -121,67 +107,40 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
     if (revealBtn) revealBtn.addEventListener('click', revealAll);
 
-    function runBuy(autoTopUp) {
-        if (busy) return;
-
-        const stake = parseInt(stakeInput.value, 10);
-        if (!stake || stake <= 0) {
-            toast('Enter a positive stake.', 'error');
-            return;
-        }
-
-        busy = true;
-        buyBtn.disabled = true;
-        if (buyTobyBtn) buyTobyBtn.disabled = true;
-        if (resultEl) resultEl.hidden = true;
-        resetCells();
-
-        if (!postJson) {
-            buyBtn.disabled = false;
-            if (buyTobyBtn) buyTobyBtn.disabled = false;
-            busy = false;
-            toast('API helper missing — refresh the page.', 'error');
-            return;
-        }
-
-        postJson('/casino/' + guildId + '/scratch/scratch', { stake: stake, autoTopUp: !!autoTopUp })
-            .then(function (body) {
-                buyBtn.disabled = false;
-                if (buyTobyBtn) buyTobyBtn.disabled = false;
-                busy = false;
-                if (body && body.ok) {
-                    activeCard = body;
-                    if (revealBtn) revealBtn.hidden = false;
-                    if (topUp) {
-                        if (typeof body.soldTobyCoins === 'number') {
-                            topUp.setTobyCoins(Math.max(0, initialTobyCoins - body.soldTobyCoins));
-                        }
-                        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
-                    }
-                    // Don't auto-reveal — the user clicks each cell. The
-                    // result and balance only apply when all cells are
-                    // scratched (or "Reveal all" is hit), so the player
-                    // gets the suspense beat.
-                } else {
-                    activeCard = null;
-                    if (revealBtn) revealBtn.hidden = true;
-                    toast((body && body.error) || 'Buy failed.', 'error');
-                }
-            })
-            .catch(function () {
-                buyBtn.disabled = false;
-                if (buyTobyBtn) buyTobyBtn.disabled = false;
-                busy = false;
-                toast('Network error.', 'error');
-            });
-    }
-
-    if (!topUp) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            runBuy(false);
-        });
-    }
+    game = window.TobyCasinoGame.init({
+        guildId: guildId,
+        endpoint: '/casino/' + guildId + '/scratch/scratch',
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: buyBtn,
+        tobyBtn: buyTobyBtn,
+        balanceEl: balanceEl,
+        resultEl: resultEl,
+        tobyCoins: initialTobyCoins,
+        marketPrice: Number(main.dataset.marketPrice) || 0,
+        failureMessage: 'Buy failed.',
+        // Scratch shows the result only after every cell has been
+        // revealed, so the helper must NOT auto-update balance/coins on
+        // response. revealCell() does it once the suspense is over.
+        autoApplyBalance: false,
+        startAnimation: function () {
+            if (resultEl) resultEl.hidden = true;
+            resetCells();
+            return null;
+        },
+        stopAnimation: function (_handle, body) {
+            if (body && body.ok) {
+                activeCard = body;
+                if (revealBtn) revealBtn.hidden = false;
+            } else {
+                activeCard = null;
+                if (revealBtn) revealBtn.hidden = true;
+            }
+        },
+        renderResult: function () {
+            // Deliberately a no-op — see revealCell.
+        },
+    });
 })();
 
 if (typeof module !== 'undefined' && module.exports) {

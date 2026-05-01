@@ -22,8 +22,19 @@ import web.service.EconomyWebService
  *   - Each endpoint shrinks to one call + the actual logic, so the
  *     interesting code is no longer buried under five lines of guard
  *     scaffolding.
+ *
+ * Two flavours of membership check are supported:
+ *   - The common case (`isMember`) — controller passes
+ *     [EconomyWebService] and the helper calls
+ *     `economyWebService.isMember(...)`.
+ *   - A custom check (e.g. `canModerate`, a stricter ACL) — controller
+ *     passes a `(discordId, guildId) -> Boolean` lambda plus the
+ *     access-denied message that should appear in the redirect flash.
  */
 object WebGuildAccess {
+
+    @PublishedApi
+    internal const val NOT_A_MEMBER = "You are not a member of that server."
 
     /**
      * Page wrapper: validates auth + guild membership; on either failure
@@ -37,12 +48,35 @@ object WebGuildAccess {
         economyWebService: EconomyWebService,
         ra: RedirectAttributes,
         lobbyPath: String,
-        block: (discordId: Long) -> String
+        block: (discordId: Long) -> String,
+    ): String = requireForPage(
+        user = user,
+        guildId = guildId,
+        ra = ra,
+        lobbyPath = lobbyPath,
+        check = economyWebService::isMember,
+        deniedMessage = NOT_A_MEMBER,
+        block = block,
+    )
+
+    /**
+     * Page wrapper that takes any `(discordId, guildId) -> Boolean`
+     * check. Use when the access predicate isn't plain "is a guild
+     * member" — e.g. ModerationController's `canModerate`.
+     */
+    inline fun requireForPage(
+        user: OAuth2User?,
+        guildId: Long,
+        ra: RedirectAttributes,
+        lobbyPath: String,
+        check: (discordId: Long, guildId: Long) -> Boolean,
+        deniedMessage: String = NOT_A_MEMBER,
+        block: (discordId: Long) -> String,
     ): String {
         val discordId = user?.discordIdOrNull()
             ?: return "redirect:$lobbyPath"
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
+        if (!check(discordId, guildId)) {
+            ra.addFlashAttribute("error", deniedMessage)
             return "redirect:$lobbyPath"
         }
         return block(discordId)
@@ -58,10 +92,27 @@ object WebGuildAccess {
         guildId: Long,
         economyWebService: EconomyWebService,
         errorBuilder: (httpStatus: Int) -> ResponseEntity<T>,
-        block: (discordId: Long) -> ResponseEntity<T>
+        block: (discordId: Long) -> ResponseEntity<T>,
+    ): ResponseEntity<T> = requireForJson(
+        user = user,
+        guildId = guildId,
+        check = economyWebService::isMember,
+        errorBuilder = errorBuilder,
+        block = block,
+    )
+
+    /**
+     * JSON wrapper variant taking any membership predicate.
+     */
+    inline fun <T : Any> requireForJson(
+        user: OAuth2User?,
+        guildId: Long,
+        check: (discordId: Long, guildId: Long) -> Boolean,
+        errorBuilder: (httpStatus: Int) -> ResponseEntity<T>,
+        block: (discordId: Long) -> ResponseEntity<T>,
     ): ResponseEntity<T> {
         val discordId = user?.discordIdOrNull() ?: return errorBuilder(401)
-        if (!economyWebService.isMember(discordId, guildId)) return errorBuilder(403)
+        if (!check(discordId, guildId)) return errorBuilder(403)
         return block(discordId)
     }
 
@@ -74,7 +125,7 @@ object WebGuildAccess {
         user: OAuth2User?,
         guildId: Long,
         economyWebService: EconomyWebService,
-        block: (discordId: Long) -> ResponseEntity<T>
+        block: (discordId: Long) -> ResponseEntity<T>,
     ): ResponseEntity<T> {
         val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
         if (!economyWebService.isMember(discordId, guildId)) return ResponseEntity.status(403).build()

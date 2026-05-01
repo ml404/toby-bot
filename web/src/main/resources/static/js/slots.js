@@ -21,10 +21,6 @@ function renderSlotsResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
-    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
-    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
-    const postJson = window.TobyApi && window.TobyApi.postJson;
-
     const reels = [
         document.getElementById('slots-reel-0'),
         document.getElementById('slots-reel-1'),
@@ -39,25 +35,11 @@ function renderSlotsResult(resultEl, body) {
 
     if (!form || !spinBtn || !stakeInput || reels.some(function (r) { return !r; })) return;
 
-    const topUp = (window.TobyTopUp && spinTobyBtn) ? window.TobyTopUp.init({
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: spinBtn,
-        tobyBtn: spinTobyBtn,
-        balanceEl: balanceEl,
-        tobyCoins: initialTobyCoins,
-        marketPrice: initialMarketPrice,
-        onSubmit: function (autoTopUp) { runSpin(autoTopUp); },
-    }) : null;
-
     const SPIN_SYMBOLS = ['🍒', '🍋', '🔔', '⭐'];
     const SPIN_INTERVAL_MS = 60;
     const SPIN_DURATION_MS = 800;
 
-    let spinning = false;
-
     function startSpinAnimation() {
-        spinning = true;
         reels.forEach(function (reel) { reel.classList.add('spinning'); });
         return setInterval(function () {
             reels.forEach(function (reel) {
@@ -66,89 +48,32 @@ function renderSlotsResult(resultEl, body) {
         }, SPIN_INTERVAL_MS);
     }
 
-    function stopSpinAnimation(intervalId, finalSymbols) {
+    function stopSpinAnimation(intervalId, body) {
         clearInterval(intervalId);
-        spinning = false;
+        const finalSymbols = body && body.symbols;
         reels.forEach(function (reel, i) {
             reel.classList.remove('spinning');
             if (finalSymbols && finalSymbols[i]) reel.textContent = finalSymbols[i];
         });
     }
 
-    function applyBalance(newBalance) {
-        if (typeof newBalance !== 'number') return;
-        if (balanceEl) balanceEl.textContent = newBalance;
-    }
-
-    function applyTobyDelta(body) {
-        // After a successful spin (top-up or otherwise) refresh the
-        // helper's tobyCoins so the second-button state reflects the
-        // post-sale wallet.
-        if (!topUp) return;
-        if (typeof body.soldTobyCoins === 'number') {
-            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
-            topUp.setTobyCoins(remaining);
-        }
-        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
-    }
-
-    function runSpin(autoTopUp) {
-        if (spinning) return;
-
-        const stake = parseInt(stakeInput.value, 10);
-        if (!stake || stake <= 0) {
-            toast('Enter a positive stake.', 'error');
-            return;
-        }
-
-        spinBtn.disabled = true;
-        if (spinTobyBtn) spinTobyBtn.disabled = true;
-        const intervalId = startSpinAnimation();
-        const requestStart = Date.now();
-
-        if (!postJson) {
-            stopSpinAnimation(intervalId);
-            spinBtn.disabled = false;
-            if (spinTobyBtn) spinTobyBtn.disabled = false;
-            toast('API helper missing — refresh the page.', 'error');
-            return;
-        }
-
-        postJson('/casino/' + guildId + '/slots/spin', { stake: stake, autoTopUp: !!autoTopUp })
-            .then(function (body) {
-                const elapsed = Date.now() - requestStart;
-                const remaining = Math.max(0, SPIN_DURATION_MS - elapsed);
-                setTimeout(function () {
-                    stopSpinAnimation(intervalId, body && body.symbols);
-                    spinBtn.disabled = false;
-                    if (spinTobyBtn) spinTobyBtn.disabled = false;
-                    if (body && body.ok) {
-                        renderSlotsResult(resultEl, body);
-                        applyBalance(body.newBalance);
-                        applyTobyDelta(body);
-                    } else {
-                        if (resultEl) resultEl.hidden = true;
-                        toast((body && body.error) || 'Spin failed.', 'error');
-                    }
-                }, remaining);
-            })
-            .catch(function () {
-                stopSpinAnimation(intervalId);
-                spinBtn.disabled = false;
-                if (spinTobyBtn) spinTobyBtn.disabled = false;
-                if (resultEl) resultEl.hidden = true;
-                toast('Network error.', 'error');
-            });
-    }
-
-    if (!topUp) {
-        // No TobyTopUp helper loaded — the page still works without
-        // the auto-topup flow, plain submit posts a normal spin.
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            runSpin(false);
-        });
-    }
+    window.TobyCasinoGame.init({
+        guildId: guildId,
+        endpoint: '/casino/' + guildId + '/slots/spin',
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: spinBtn,
+        tobyBtn: spinTobyBtn,
+        balanceEl: balanceEl,
+        resultEl: resultEl,
+        tobyCoins: Number(main.dataset.tobyCoins) || 0,
+        marketPrice: Number(main.dataset.marketPrice) || 0,
+        minSettleMs: SPIN_DURATION_MS,
+        failureMessage: 'Spin failed.',
+        startAnimation: startSpinAnimation,
+        stopAnimation: stopSpinAnimation,
+        renderResult: function (body) { renderSlotsResult(resultEl, body); },
+    });
 })();
 
 if (typeof module !== 'undefined' && module.exports) {

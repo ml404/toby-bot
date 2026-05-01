@@ -12,7 +12,7 @@
         <p class="muted">Social credit standings &middot; current totals with this month's earnings highlighted</p>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section class="lb-stats" aria-label="Server stats for this month">
         <div class="lb-stat">

@@ -1,12 +1,8 @@
 package web.controller
 
 import database.economy.SlotMachine
-import database.service.JackpotService
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
-import database.service.TobyCoinMarketService
-import database.service.UserService
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -19,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
+import web.casino.CasinoResponseLike
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
-import web.util.displayName
 
 /**
  * Web surface for the `/slots` minigame. GET renders the reel UI with the
@@ -37,11 +35,10 @@ import web.util.displayName
 class SlotsController(
     private val slotsService: SlotsService,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val marketService: TobyCoinMarketService,
-    private val jda: JDA
+    private val pageContext: CasinoPageContext,
 ) {
+
+    private val errors = CasinoOutcomeMapper { msg -> SpinResponse(false, msg) }
 
     @GetMapping
     fun page(
@@ -52,26 +49,13 @@ class SlotsController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/leaderboards"
     ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
+        pageContext.populate(model, guildId, discordId, user) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/leaderboards"
         }
-
-        val profile = userService.getUserById(discordId, guildId)
-        val balance = profile?.socialCredit ?: 0L
-        val tobyCoins = profile?.tobyCoins ?: 0L
-        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
-
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", balance)
-        model.addAttribute("tobyCoins", tobyCoins)
-        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", SlotMachine.MIN_STAKE)
         model.addAttribute("maxStake", SlotMachine.MAX_STAKE)
         model.addAttribute("payoutTable", payoutRows())
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("username", user.displayName())
         "slots"
     }
 
@@ -82,15 +66,7 @@ class SlotsController(
         @RequestBody request: SpinRequest,
         @AuthenticationPrincipal user: OAuth2User
     ): ResponseEntity<SpinResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                SpinResponse(
-                    false,
-                    if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = slotsService.spin(discordId, guildId, request.stake, request.autoTopUp)) {
             is SpinOutcome.Win -> ResponseEntity.ok(
@@ -123,21 +99,10 @@ class SlotsController(
                 )
             )
 
-            is SpinOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
-                SpinResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
-            )
-
-            is SpinOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
-                SpinResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
-            )
-
-            is SpinOutcome.InvalidStake -> ResponseEntity.badRequest().body(
-                SpinResponse(false, "Stake must be between ${outcome.min} and ${outcome.max} credits.")
-            )
-
-            SpinOutcome.UnknownUser -> ResponseEntity.badRequest().body(
-                SpinResponse(false, "No user record yet. Try another TobyBot command first.")
-            )
+            is SpinOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is SpinOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            is SpinOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
+            SpinOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 
@@ -159,8 +124,8 @@ class SlotsController(
 data class SpinRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class SpinResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val symbols: List<String>? = null,
     val multiplier: Long? = null,
     val payout: Long? = null,
@@ -171,6 +136,6 @@ data class SpinResponse(
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null
-)
+) : CasinoResponseLike
 
 data class PayoutRow(val symbols: String, val multiplier: String)
