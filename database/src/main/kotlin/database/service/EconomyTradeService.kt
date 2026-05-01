@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.TobyCoinTradeDto
@@ -42,7 +43,8 @@ import kotlin.math.floor
 class EconomyTradeService(
     private val userService: UserService,
     private val marketService: TobyCoinMarketService,
-    private val jackpotService: JackpotService
+    private val jackpotService: JackpotService,
+    private val configService: ConfigService
 ) {
 
     sealed interface TradeOutcome {
@@ -97,7 +99,7 @@ class EconomyTradeService(
         // Buyer pays the midpoint price plus the fee on top — the fee
         // lives in the jackpot pool, not on the user's coin allotment.
         val gross = ceil(executionPrice * amount).toLong()
-        val fee = ceil(gross * TobyCoinEngine.TRADE_FEE).toLong()
+        val fee = ceil(gross * buyFeeRate(guildId)).toLong()
         val cost = gross + fee
         val credits = user.socialCredit ?: 0L
         if (credits < cost) return TradeOutcome.InsufficientCredits(cost, credits)
@@ -140,7 +142,7 @@ class EconomyTradeService(
         // Seller's fee is taken off the midpoint proceeds before they
         // hit the wallet — the fee feeds the jackpot pool.
         val gross = floor(executionPrice * amount).toLong()
-        val fee = floor(gross * TobyCoinEngine.TRADE_FEE).toLong()
+        val fee = floor(gross * sellFeeRate(guildId)).toLong()
         val proceeds = gross - fee
         user.tobyCoins -= amount
         user.socialCredit = (user.socialCredit ?: 0L) + proceeds
@@ -158,6 +160,27 @@ class EconomyTradeService(
             newPrice = newPrice,
             fee = fee
         )
+    }
+
+    /**
+     * Resolve the per-guild buy fee rate from config, falling back to
+     * [TobyCoinEngine.TRADE_FEE] (1 %) when unset, unparseable, NaN,
+     * infinite, or negative. Clamps anything above
+     * [TobyCoinEngine.MAX_TRADE_FEE] (25 %) to the cap. The stored
+     * config value is a decimal percent (`1.0` means 1 %).
+     */
+    fun buyFeeRate(guildId: Long): Double =
+        readFeeConfig(guildId, ConfigDto.Configurations.TRADE_BUY_FEE_PCT)
+
+    /** Per-guild sell fee rate. See [buyFeeRate] — same semantics. */
+    fun sellFeeRate(guildId: Long): Double =
+        readFeeConfig(guildId, ConfigDto.Configurations.TRADE_SELL_FEE_PCT)
+
+    private fun readFeeConfig(guildId: Long, key: ConfigDto.Configurations): Double {
+        val cfg = configService.getConfigByName(key.configValue, guildId.toString())
+        val pct = cfg?.value?.toDoubleOrNull() ?: return TobyCoinEngine.TRADE_FEE
+        if (pct.isNaN() || pct.isInfinite() || pct < 0.0) return TobyCoinEngine.TRADE_FEE
+        return (pct / 100.0).coerceAtMost(TobyCoinEngine.MAX_TRADE_FEE)
     }
 
     companion object {

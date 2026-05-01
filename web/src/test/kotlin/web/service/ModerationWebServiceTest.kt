@@ -764,6 +764,50 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig TRADE_BUY_FEE_PCT persists a decimal value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.TRADE_BUY_FEE_PCT, "0.5")
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("TRADE_BUY_FEE_PCT", "0.5", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig TRADE_SELL_FEE_PCT persists a decimal value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.TRADE_SELL_FEE_PCT, "2.5")
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("TRADE_SELL_FEE_PCT", "2.5", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig TRADE_BUY_FEE_PCT rejects out-of-range value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.TRADE_BUY_FEE_PCT, "30")
+
+        assertEquals("Value must be a number between 0 and 25 (decimals allowed; default 1).", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
+    fun `updateConfig TRADE_SELL_FEE_PCT rejects unparseable value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.TRADE_SELL_FEE_PCT, "abc")
+
+        assertEquals("Value must be a number between 0 and 25 (decimals allowed; default 1).", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
     fun `updateConfig UBI_DAILY_AMOUNT persists valid value`() {
         mockMember(ownerId, isOwner = true)
 

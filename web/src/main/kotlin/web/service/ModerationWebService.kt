@@ -298,6 +298,15 @@ class ModerationWebService(
                 }
                 n.toString()
             }
+            ConfigDto.Configurations.TRADE_BUY_FEE_PCT,
+            ConfigDto.Configurations.TRADE_SELL_FEE_PCT -> {
+                val n = rawValue.trim().toDoubleOrNull()
+                    ?: return "Value must be a number between 0 and 25 (decimals allowed; default 1)."
+                if (n.isNaN() || n.isInfinite() || n < 0.0 || n > 25.0) {
+                    return "Value must be a number between 0 and 25 (decimals allowed; default 1)."
+                }
+                n.toString()
+            }
             ConfigDto.Configurations.POKER_RAKE_PCT -> {
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number percentage (0-20)."

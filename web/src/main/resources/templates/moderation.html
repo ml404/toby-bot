@@ -252,6 +252,22 @@
                            th:disabled="${!isOwner}">
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
+                <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
+                    <label>Toby Coin BUY fee (% per leg, routed to jackpot pool)</label>
+                    <input type="number" min="0" max="25" step="0.01"
+                           th:value="${overview.config['TRADE_BUY_FEE_PCT']}"
+                           placeholder="1"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="TRADE_SELL_FEE_PCT">
+                    <label>Toby Coin SELL fee (% per leg, routed to jackpot pool)</label>
+                    <input type="number" min="0" max="25" step="0.01"
+                           th:value="${overview.config['TRADE_SELL_FEE_PCT']}"
+                           placeholder="1"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
                 <div class="config-row" data-key="POKER_RAKE_PCT">
                     <label>Poker rake (% of every settled pot)</label>
                     <input type="number" min="0" max="20"

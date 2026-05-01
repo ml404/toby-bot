@@ -57,7 +57,9 @@ internal object CasinoTopUpHelper {
             ?: return TopUpResult.MarketUnavailable
         if (market.price <= 0.0) return TopUpResult.MarketUnavailable
 
-        val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(shortfall, market.price)
+        val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(
+            shortfall, market.price, feeRate = tradeService.sellFeeRate(guildId)
+        )
         if (user.tobyCoins < coinsNeeded) {
             return TopUpResult.InsufficientCoins(needed = coinsNeeded, have = user.tobyCoins)
         }

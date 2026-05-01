@@ -61,6 +61,14 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED -> Unit
                 ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> setJackpotLossTribute(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.JACKPOT_WIN_PCT -> setJackpotWinPct(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.TRADE_BUY_FEE_PCT -> setTradeFeePct(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.TRADE_BUY_FEE_PCT, label = "buy"
+                )
+                ConfigDto.Configurations.TRADE_SELL_FEE_PCT -> setTradeFeePct(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.TRADE_SELL_FEE_PCT, label = "sell"
+                )
                 ConfigDto.Configurations.POKER_RAKE_PCT -> setPokerRake(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.POKER_SMALL_BLIND -> setPokerLong(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.POKER_SMALL_BLIND, label = "small blind", min = 1L)
@@ -172,6 +180,25 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
         event.hook.sendMessage("Jackpot loss-tribute set to $pct % of every lost casino stake.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setTradeFeePct(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        label: String
+    ) {
+        val pct = optionMapping.asDouble
+        if (pct.isNaN() || pct.isInfinite() || pct < 0.0 || pct > 25.0) {
+            event.hook.sendMessage("Trade $label fee percent must be between 0 and 25 (default 1).")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, pct.toString(), guildId)
+        event.hook.sendMessage("Toby Coin $label fee set to $pct % per leg (routed into the jackpot pool).")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
@@ -372,7 +399,19 @@ class SetConfigCommand @Autowired constructor(
             OptionData(
                 OptionType.NUMBER,
                 ConfigDto.Configurations.JACKPOT_WIN_PCT.name.lowercase(Locale.getDefault()),
-                "Percent (0-50, decimals allowed e.g. 0.5) chance every casino-game win triggers the jackpot. Default 1.",
+                "Percent (0-50, decimals e.g. 0.5) chance any casino-game win triggers the jackpot. Default 1.",
+                false
+            ),
+            OptionData(
+                OptionType.NUMBER,
+                ConfigDto.Configurations.TRADE_BUY_FEE_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-25, decimals allowed) skimmed off every Toby Coin BUY into the jackpot pool. Default 1.",
+                false
+            ),
+            OptionData(
+                OptionType.NUMBER,
+                ConfigDto.Configurations.TRADE_SELL_FEE_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-25, decimals allowed) skimmed off every Toby Coin SELL into the jackpot pool. Default 1.",
                 false
             ),
             OptionData(

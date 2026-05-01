@@ -56,4 +56,24 @@ class TobyCoinEngineTopUpTest {
     fun `coinsNeededForShortfall is zero on a zero shortfall`() {
         assertEquals(0L, TobyCoinEngine.coinsNeededForShortfall(0L, 100.0))
     }
+
+    @Test
+    fun `proceedsForSell honours an admin-overridden fee rate`() {
+        // P=2.5, N=205, default 1% fee → 502 (covered above).
+        // With a 5% override: gross still 507, fee = floor(507 * 0.05) = 25,
+        // proceeds = 482.
+        assertEquals(482L, TobyCoinEngine.proceedsForSell(2.5, 205, feeRate = 0.05))
+    }
+
+    @Test
+    fun `coinsNeededForShortfall bumps further when fee rate is higher`() {
+        // Same shortfall as the 1% test (500 credits, P=2.5) but at 5% fee
+        // — the helper must size up beyond 205 to cover the extra fee load.
+        val needed = TobyCoinEngine.coinsNeededForShortfall(500L, 2.5, feeRate = 0.05)
+        assertTrue(needed > 205L, "5% fee should require more coins than the 1% baseline of 205 (was $needed)")
+        assertTrue(
+            TobyCoinEngine.proceedsForSell(2.5, needed, feeRate = 0.05) >= 500L,
+            "chosen N must actually cover the shortfall under the elevated fee"
+        )
+    }
 }
