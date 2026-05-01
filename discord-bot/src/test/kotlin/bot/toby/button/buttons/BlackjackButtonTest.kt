@@ -67,7 +67,9 @@ class BlackjackButtonTest : ButtonTest {
         every { replyAction.setEphemeral(any()) } returns replyAction
         every { replyAction.queue() } just Runs
         every { event.reply(any<String>()) } returns replyAction
-        every { event.replyEmbeds(any<MessageEmbed>()) } returns replyAction
+        // JDA's replyEmbeds takes a (MessageEmbed, vararg MessageEmbed) so
+        // we have to match the vararg form even when the call sends one.
+        every { event.replyEmbeds(any<MessageEmbed>(), *anyVararg()) } returns replyAction
     }
 
     @AfterEach
@@ -194,7 +196,7 @@ class BlackjackButtonTest : ButtonTest {
         verify(exactly = 0) {
             service.applyMultiAction(any(), any(), any(), any())
         }
-        verify { event.replyEmbeds(any<MessageEmbed>()) }
+        verify { event.replyEmbeds(any<MessageEmbed>(), *anyVararg()) }
         verify { replyAction.setEphemeral(true) }
     }
 
