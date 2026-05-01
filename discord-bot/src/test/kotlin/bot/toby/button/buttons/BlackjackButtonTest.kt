@@ -17,7 +17,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.requests.restaction.interactions.MessageEditCallbackAction
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -29,7 +29,7 @@ class BlackjackButtonTest : ButtonTest {
     private lateinit var service: BlackjackService
     private lateinit var registry: BlackjackTableRegistry
     private lateinit var button: BlackjackButton
-    private lateinit var editAction: MessageEditCallbackAction
+    private lateinit var editAction: MessageEditAction
     private lateinit var replyAction: ReplyCallbackAction
 
     private val ownerId = 6L
@@ -48,7 +48,9 @@ class BlackjackButtonTest : ButtonTest {
         every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
         every { editAction.setComponents(*anyVararg<MessageTopLevelComponent>()) } returns editAction
         every { editAction.queue() } just Runs
-        every { event.editMessageEmbeds(any<MessageEmbed>()) } returns editAction
+        // BlackjackButton edits via event.message.editMessageEmbeds(...) which
+        // returns the JDA Message-level MessageEditAction (not the interaction-
+        // level MessageEditCallbackAction).
         every { event.message.editMessageEmbeds(any<MessageEmbed>()) } returns editAction
         every { event.deferEdit().queue() } just Runs
 
