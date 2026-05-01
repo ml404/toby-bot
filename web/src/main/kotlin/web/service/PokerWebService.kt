@@ -69,6 +69,13 @@ class PokerWebService(
          */
         val shotClockSeconds: Int = 0,
         val currentActorDeadlineEpochMillis: Long? = null,
+        /**
+         * v2-7: free-play flag from [PokerTable.isFreePlay]. The
+         * frontend renders a "🆓 Free play" badge and hides
+         * jackpot-related affordances when set; service-side wallet
+         * mutations are already short-circuited.
+         */
+        val isFreePlay: Boolean = false,
     )
 
     data class SeatView(
@@ -195,6 +202,7 @@ class PokerWebService(
                 raiseAmount = owe + betUnit,
                 shotClockSeconds = table.shotClockSeconds,
                 currentActorDeadlineEpochMillis = table.currentActorDeadline?.toEpochMilli(),
+                isFreePlay = table.isFreePlay,
                 lastResult = table.lastResult?.let { result ->
                     HandResultView(
                         handNumber = result.handNumber,

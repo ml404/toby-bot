@@ -47,6 +47,7 @@ class PokerCommand @Autowired constructor(
     companion object {
         private const val OPT_BUYIN = "chips"
         private const val OPT_TABLE = "table"
+        private const val OPT_FREE = "free"
 
         private const val SUB_CREATE = "create"
         private const val SUB_JOIN = "join"
@@ -65,7 +66,8 @@ class PokerCommand @Autowired constructor(
             .addOptions(
                 OptionData(OptionType.INTEGER, OPT_BUYIN, "Chips to buy in for", true)
                     .setMinValue(PokerService.MIN_BUY_IN)
-                    .setMaxValue(PokerService.MAX_BUY_IN)
+                    .setMaxValue(PokerService.MAX_BUY_IN),
+                OptionData(OptionType.BOOLEAN, OPT_FREE, "Free play (no credits debited, no payouts).", false)
             ),
         SubcommandData(SUB_JOIN, "Join an existing table with a buy-in.")
             .addOptions(
@@ -134,8 +136,9 @@ class PokerCommand @Autowired constructor(
         val buyIn = event.getOption(OPT_BUYIN)?.asLong ?: run {
             replyError(event, "Buy-in is required.", deleteDelay); return
         }
+        val free = event.getOption(OPT_FREE)?.asBoolean ?: false
         userDtoHelper.calculateUserDto(userDto.discordId, guildId)
-        when (val outcome = pokerService.createTable(userDto.discordId, guildId, buyIn)) {
+        when (val outcome = pokerService.createTable(userDto.discordId, guildId, buyIn, free = free)) {
             is CreateOutcome.Ok -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)

@@ -94,7 +94,7 @@ class PokerControllerTest {
 
     @Test
     fun `create happy path returns table id`() {
-        every { pokerService.createTable(discordId, guildId, 200L, any()) } returns CreateOutcome.Ok(tableId = 42L)
+        every { pokerService.createTable(discordId, guildId, 200L, any(), any()) } returns CreateOutcome.Ok(tableId = 42L)
 
         val response = controller.create(guildId, CreateRequest(buyIn = 200L), user)
 
@@ -105,7 +105,7 @@ class PokerControllerTest {
 
     @Test
     fun `create propagates invalid buy-in as 400`() {
-        every { pokerService.createTable(discordId, guildId, 1L, any()) } returns CreateOutcome.InvalidBuyIn(100L, 5000L)
+        every { pokerService.createTable(discordId, guildId, 1L, any(), any()) } returns CreateOutcome.InvalidBuyIn(100L, 5000L)
 
         val response = controller.create(guildId, CreateRequest(buyIn = 1L), user)
 
@@ -120,7 +120,7 @@ class PokerControllerTest {
         val response = controller.create(guildId, CreateRequest(buyIn = 200L), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { pokerService.createTable(any(), any(), any(), any()) }
+        verify(exactly = 0) { pokerService.createTable(any(), any(), any(), any(), any()) }
     }
 
     @Test
