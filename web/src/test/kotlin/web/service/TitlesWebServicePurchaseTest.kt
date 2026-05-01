@@ -3,6 +3,7 @@ package web.service
 import database.dto.TitleDto
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
+import database.economy.TobyCoinEngine
 import database.service.EconomyTradeService
 import database.service.EconomyTradeService.TradeOutcome
 import database.service.TitleService
@@ -46,6 +47,10 @@ class TitlesWebServicePurchaseTest {
         titleService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         tradeService = mockk(relaxed = true)
+        // Default the per-guild sell fee to the engine's 1% fallback so
+        // the slippage/fee maths in these tests match the historical
+        // hardcoded behaviour. Individual tests can override.
+        every { tradeService.sellFeeRate(guildId) } returns TobyCoinEngine.TRADE_FEE
         every { jda.getGuildById(guildId) } returns guild
 
         service = TitlesWebService(
