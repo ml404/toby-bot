@@ -38,7 +38,21 @@ class BlackjackTable(
     var actorIndex: Int = 0,
     var handNumber: Long = 0L,
     var lastActivityAt: Instant = Instant.now(),
-    var lastResult: HandResult? = null
+    var lastResult: HandResult? = null,
+    /**
+     * Per-actor decision deadline snapshotted by the registry when the
+     * shot clock arms. `null` outside a player's turn (waiting / dealer /
+     * resolved) and on tables whose `shotClockSeconds` is `0`. Exists so
+     * the embed/web projection can render a countdown without touching
+     * the scheduler internals.
+     */
+    var currentActorDeadline: Instant? = null,
+    /**
+     * Seconds the actor has to act before the registry auto-stands them
+     * on their behalf. `0` disables the clock — the table only ever
+     * closes via the idle sweeper.
+     */
+    val shotClockSeconds: Int = 0
 ) {
 
     enum class Mode { SOLO, MULTI }
@@ -67,7 +81,16 @@ class BlackjackTable(
         /** Current at-risk stake — equals [ante] unless the seat doubled. */
         var stake: Long = 0L,
         var doubled: Boolean = false,
-        var status: SeatStatus = SeatStatus.ACTIVE
+        var status: SeatStatus = SeatStatus.ACTIVE,
+        /**
+         * Set when a seated player asks to leave during a hand (multi
+         * mode only). Honoured by [database.service.BlackjackService] —
+         * the seat is auto-stood on its turn during the in-flight hand,
+         * then dropped from the table as soon as the hand resolves.
+         * Stays `false` for between-hand `/blackjack leave`, which goes
+         * through the immediate-removal path.
+         */
+        var pendingLeave: Boolean = false
     ) {
         /** True once the seat can no longer take an action this hand. */
         val isFinished: Boolean

@@ -14,6 +14,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -358,40 +359,109 @@ class BlackjackServiceTest {
     }
 
     @Test
-    fun `multi hand resolves with split pot on player wins and rake to jackpot`() {
-        // Two-seat table: both players win.
+    fun `multi hand with all winners refunds stakes only — no losers means no bonus`() {
+        // Two-seat table where both players win against the dealer. With
+        // no losers contributing to the pot, each winner just gets their
+        // stake back; nothing rakes to the jackpot.
         val host = userWithBalance(1_000L)
         val joiner = userWithBalance(1_000L, id = otherDiscordId)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
         every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
-        // Note: lockUsersInAscendingOrder is a top-level extension that
-        // dispatches to getUserByIdForUpdate per id — the mocks above
-        // already cover the per-id calls that flow through it.
-
         every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_WIN
 
         val create = service.createMultiTable(discordId, guildId, ante = 100L)
             as BlackjackService.MultiCreateOutcome.Ok
         service.joinMultiTable(otherDiscordId, guildId, create.tableId)
-        // Each create/join debited 100; both at 900.
         assertEquals(900L, host.socialCredit)
         assertEquals(900L, joiner.socialCredit)
 
         service.startMultiHand(discordId, guildId, create.tableId) as BlackjackService.MultiStartOutcome.Ok
-        // Each player: STAND in turn.
-        val first = service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
-        assertInstanceOf(BlackjackService.MultiActionOutcome.Continued::class.java, first)
-        val second = service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
-        val resolved = assertInstanceOf(BlackjackService.MultiActionOutcome.HandResolved::class.java, second)
+        service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        val resolved = service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+            as BlackjackService.MultiActionOutcome.HandResolved
 
-        // Pot = 200. Both win → 5% rake = 10 → jackpot. Remaining 190
-        // splits → 95 each. Host had 900 → 995. Joiner 900 → 995.
-        verify { jackpotService.addToPool(guildId, 10L) }
-        assertEquals(995L, host.socialCredit)
-        assertEquals(995L, joiner.socialCredit)
-        assertEquals(2, resolved.result.seatResults.size)
-        assertEquals(200L, resolved.result.pot)
-        assertEquals(10L, resolved.result.rake)
+        // Both at the table win → losers' pool is 0 → each winner just
+        // gets their 100 stake refunded. No rake (no pool to skim).
+        assertEquals(1_000L, host.socialCredit)
+        assertEquals(1_000L, joiner.socialCredit)
+        assertEquals(0L, resolved.result.rake)
+        verify(exactly = 0) { jackpotService.addToPool(guildId, any()) }
+    }
+
+    @Test
+    fun `multi hand pays winner from loser's stake with 5pct rake`() {
+        val host = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+        // Host wins, joiner busts.
+        every { blackjack.evaluate(any(), any()) } answers {
+            // Order isn't deterministic per call — pin off who's playing.
+            // We rely on the order winners are listed via seat order.
+            Blackjack.Result.PLAYER_WIN
+        }
+        // Stub per-seat by capturing the player hand reference.
+        // Simpler: just stub differently via answers cycle.
+        var n = 0
+        every { blackjack.evaluate(any(), any()) } answers {
+            n++
+            if (n == 1) Blackjack.Result.PLAYER_WIN else Blackjack.Result.DEALER_WIN
+        }
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        service.startMultiHand(discordId, guildId, create.tableId)
+        service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        val resolved = service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+            as BlackjackService.MultiActionOutcome.HandResolved
+
+        // Pot=200, losersPool=100, baseRake=5, payable=95, host entitled to 100.
+        // 95 < 100 → scaled: host gets 95. Plus stake refund 100 → +95 net.
+        // Host: 900 + 100 (refund) + 95 (share) = 1095. Joiner: 900 (lost stake).
+        assertEquals(1_095L, host.socialCredit)
+        assertEquals(900L, joiner.socialCredit)
+        assertEquals(5L, resolved.result.rake)
+        verify { jackpotService.addToPool(guildId, 5L) }
+    }
+
+    @Test
+    fun `multi hand BJ winner takes 1_5x premium plus stake refund from losers pool`() {
+        // 3-seat table so the losers' pool (200) can cover the host's
+        // BJ premium (150) with surplus to spare. Everyone stands so the
+        // resolution path is deterministic regardless of which cards the
+        // real Deck dealt — outcomes are pinned by the evaluate stub.
+        val host = userWithBalance(1_000L)
+        val a = userWithBalance(1_000L, id = otherDiscordId)
+        val b = userWithBalance(1_000L, id = 102L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns a
+        every { userService.getUserByIdForUpdate(102L, guildId) } returns b
+        every { blackjack.evaluate(any(), any()) } returnsMany listOf(
+            Blackjack.Result.PLAYER_BLACKJACK,
+            Blackjack.Result.DEALER_WIN,
+            Blackjack.Result.DEALER_WIN
+        )
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        service.joinMultiTable(102L, guildId, create.tableId)
+        service.startMultiHand(discordId, guildId, create.tableId)
+        service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+        val resolved = service.applyMultiAction(102L, guildId, create.tableId, Blackjack.Action.STAND)
+            as BlackjackService.MultiActionOutcome.HandResolved
+
+        // Pot=300, losersPool=200, baseRake=10, payable=190.
+        // BJ entitled = 100*1.5 = 150. Total entitled 150 ≤ 190 → full
+        // bonus. Surplus 40 → jackpot. Total rake = 10 + 40 = 50.
+        // Host payout: 100 (refund) + 150 (premium) = 250 → 900+250 = 1150.
+        assertEquals(1_150L, host.socialCredit)
+        assertEquals(900L, a.socialCredit)
+        assertEquals(900L, b.socialCredit)
+        assertEquals(50L, resolved.result.rake)
+        verify { jackpotService.addToPool(guildId, 50L) }
     }
 
     @Test
@@ -477,6 +547,168 @@ class BlackjackServiceTest {
         // 10% of 100 = 10 to jackpot pool.
         assertEquals(10L, resolved.lossTribute)
         verify { jackpotService.addToPool(guildId, 10L) }
+    }
+
+    // -------------------------------------------------------------------------
+    // FOLLOW-UP BEHAVIOUR
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `multi seats persist across hands and re-ante on the next start`() {
+        val host = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_WIN
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        // First hand: starts and resolves with both winning (no-loser refund path).
+        service.startMultiHand(discordId, guildId, create.tableId)
+        service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+
+        // Table should still exist with both seats kept around for next hand.
+        val tableAfter = registry.get(create.tableId)
+        assertNotNull(tableAfter, "table kept between hands")
+        assertEquals(2, tableAfter!!.seats.size)
+        assertEquals(0L, tableAfter.seats[0].stake, "stake reset between hands")
+        assertEquals(0L, tableAfter.seats[1].stake)
+        assertEquals(1_000L, host.socialCredit)
+        assertEquals(1_000L, joiner.socialCredit)
+
+        // Second hand: re-debit each seat's ante.
+        service.startMultiHand(discordId, guildId, create.tableId) as BlackjackService.MultiStartOutcome.Ok
+        assertEquals(900L, host.socialCredit, "ante re-debited")
+        assertEquals(900L, joiner.socialCredit)
+    }
+
+    @Test
+    fun `mid-hand leave queues for end of hand and auto-stands the actor`() {
+        val host = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PUSH
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        service.startMultiHand(discordId, guildId, create.tableId)
+
+        // Host (current actor) issues /blackjack leave mid-hand.
+        val outcome = service.leaveMultiTable(discordId, guildId, create.tableId)
+        val queued = assertInstanceOf(BlackjackService.MultiLeaveOutcome.QueuedForEndOfHand::class.java, outcome)
+        assertEquals(100L, queued.stakeHeld)
+        // Auto-stand drove actor advance — actor should now be the joiner.
+        val live = registry.get(create.tableId)!!
+        assertEquals(otherDiscordId, live.seats[live.actorIndex].discordId)
+
+        // Finish the hand: joiner stands → both push → both refunded.
+        service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+
+        // Host (leaving) refunded their pushed ante; seat is dropped.
+        assertEquals(1_000L, host.socialCredit)
+        val final = registry.get(create.tableId)
+        assertNotNull(final)
+        assertEquals(1, final!!.seats.size, "leaving seat dropped post-hand")
+        assertEquals(otherDiscordId, final.seats[0].discordId)
+    }
+
+    @Test
+    fun `mid-hand leave second click is idempotent`() {
+        val host = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        service.startMultiHand(discordId, guildId, create.tableId)
+
+        service.leaveMultiTable(discordId, guildId, create.tableId)
+        val second = service.leaveMultiTable(discordId, guildId, create.tableId)
+        assertEquals(BlackjackService.MultiLeaveOutcome.AlreadyLeaving, second)
+    }
+
+    @Test
+    fun `applyMultiAction cascades past pendingLeave seats`() {
+        val host = userWithBalance(1_000L)
+        val a = userWithBalance(1_000L, id = otherDiscordId)
+        val b = userWithBalance(1_000L, id = 102L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns a
+        every { userService.getUserByIdForUpdate(102L, guildId) } returns b
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_WIN
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        service.joinMultiTable(102L, guildId, create.tableId)
+        service.startMultiHand(discordId, guildId, create.tableId)
+
+        // Middle seat asks to leave (not the current actor).
+        val mid = service.leaveMultiTable(otherDiscordId, guildId, create.tableId)
+        assertInstanceOf(BlackjackService.MultiLeaveOutcome.QueuedForEndOfHand::class.java, mid)
+
+        // Host stands. Cascade should auto-stand the leaving seat and
+        // advance to seat #2 (id 102) without seat #1 (otherDiscordId)
+        // ever taking its turn.
+        service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        val live = registry.get(create.tableId)!!
+        assertEquals(102L, live.seats[live.actorIndex].discordId)
+    }
+
+    @Test
+    fun `multi tables get a shot clock deadline armed on start`() {
+        // Clock is on by default for multi tables.
+        val host = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        service.startMultiHand(discordId, guildId, create.tableId)
+
+        val table = registry.get(create.tableId)!!
+        assertNotNull(table.currentActorDeadline, "shot clock armed on start")
+        assertEquals(Blackjack.MULTI_SHOT_CLOCK_SECONDS, table.shotClockSeconds)
+    }
+
+    @Test
+    fun `startMultiHand drops seats that can't afford the next hand`() {
+        val host = userWithBalance(1_000L)
+        val poor = userWithBalance(150L, id = otherDiscordId)  // can pay 1st but not 2nd
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns poor
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_BUST
+        every { blackjack.hit(any(), any()) } answers {
+            firstArg<MutableList<Card>>().add(c(Rank.KING, Suit.HEARTS))
+        }
+
+        val create = service.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        service.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        // Both at: host 900, poor 50.
+
+        // First hand both bust → losers' pool to jackpot, balances unchanged.
+        service.startMultiHand(discordId, guildId, create.tableId)
+        service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.HIT)
+        service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.HIT)
+
+        // Try a second hand — `poor` has 50 credits, can't cover the 100 ante.
+        // Single seat can pay → falls below MIN_SEATS → NotEnoughPlayers,
+        // unfunded seat dropped from table.
+        val outcome = service.startMultiHand(discordId, guildId, create.tableId)
+        assertEquals(BlackjackService.MultiStartOutcome.NotEnoughPlayers, outcome)
+        val live = registry.get(create.tableId)!!
+        assertEquals(1, live.seats.size)
+        assertEquals(discordId, live.seats[0].discordId, "host kept; poor dropped")
+        assertEquals(900L, host.socialCredit, "host not debited when start aborted")
     }
 
     @Test

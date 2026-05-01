@@ -250,8 +250,14 @@ class BlackjackCommand @Autowired constructor(
                         "Balance: ${outcome.newBalance}."
                 )
             ).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            MultiLeaveOutcome.HandInProgress ->
-                replyError(event, "Can't leave during a hand — finish playing it out first.", deleteDelay)
+            is MultiLeaveOutcome.QueuedForEndOfHand -> event.hook.sendMessageEmbeds(
+                BlackjackEmbeds.infoEmbed(
+                    "<@${userDto.discordId}> is leaving — auto-standing for the rest of this hand. " +
+                        "Your **${outcome.stakeHeld}** credits at risk settle when the hand resolves."
+                )
+            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            MultiLeaveOutcome.AlreadyLeaving ->
+                replyError(event, "You've already asked to leave this hand.", deleteDelay)
             MultiLeaveOutcome.NotSeated ->
                 replyError(event, "You're not seated at this table.", deleteDelay)
             MultiLeaveOutcome.TableNotFound ->

@@ -16,8 +16,10 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
+import net.dv8tion.jda.api.requests.restaction.interactions.MessageEditCallbackAction
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -29,7 +31,9 @@ class BlackjackButtonTest : ButtonTest {
     private lateinit var service: BlackjackService
     private lateinit var registry: BlackjackTableRegistry
     private lateinit var button: BlackjackButton
+    private lateinit var message: Message
     private lateinit var editAction: MessageEditAction
+    private lateinit var deferEdit: MessageEditCallbackAction
     private lateinit var replyAction: ReplyCallbackAction
 
     private val ownerId = 6L
@@ -44,15 +48,20 @@ class BlackjackButtonTest : ButtonTest {
         registry = mockk(relaxed = true)
         button = BlackjackButton(service, registry)
 
+        // Explicit message + edit-action chain to avoid relying on
+        // ButtonTest's relaxed event.message returning a usable mock.
+        message = mockk(relaxed = true)
+        every { event.message } returns message
+
         editAction = mockk(relaxed = true)
+        every { message.editMessageEmbeds(any<MessageEmbed>()) } returns editAction
         every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
         every { editAction.setComponents(*anyVararg<MessageTopLevelComponent>()) } returns editAction
         every { editAction.queue() } just Runs
-        // BlackjackButton edits via event.message.editMessageEmbeds(...) which
-        // returns the JDA Message-level MessageEditAction (not the interaction-
-        // level MessageEditCallbackAction).
-        every { event.message.editMessageEmbeds(any<MessageEmbed>()) } returns editAction
-        every { event.deferEdit().queue() } just Runs
+
+        deferEdit = mockk(relaxed = true)
+        every { event.deferEdit() } returns deferEdit
+        every { deferEdit.queue() } just Runs
 
         replyAction = mockk(relaxed = true)
         every { replyAction.setEphemeral(any()) } returns replyAction
@@ -108,7 +117,7 @@ class BlackjackButtonTest : ButtonTest {
         verify(exactly = 1) {
             service.applySoloAction(ownerId, guildId, table.id, Blackjack.Action.HIT)
         }
-        verify { event.message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
@@ -138,7 +147,7 @@ class BlackjackButtonTest : ButtonTest {
 
         button.handle(DefaultButtonContext(event), UserDto(ownerId, guildId), 0)
 
-        verify { event.message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify { message.editMessageEmbeds(any<MessageEmbed>()) }
         verify { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) }
         verify { service.closeSoloTable(table.id) }
     }

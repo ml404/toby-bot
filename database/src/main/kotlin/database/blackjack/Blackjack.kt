@@ -129,5 +129,13 @@ class Blackjack(private val random: Random = Random.Default) {
 
         /** Fraction of a multiplayer pot routed to the jackpot pool. */
         const val MULTI_RAKE: Double = 0.05
+
+        /**
+         * Per-actor decision deadline for multi tables. Auto-stands the
+         * actor on their behalf when the clock fires. `0` disables the
+         * clock entirely; the table only ever closes via the idle
+         * sweeper.
+         */
+        const val MULTI_SHOT_CLOCK_SECONDS: Int = 30
     }
 }
