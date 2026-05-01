@@ -243,14 +243,84 @@ class PokerServiceTest {
     }
 
     @Test
-    fun `cashOut while hand in progress is rejected`() {
-        seed(host, 1000L); seed(joiner, 1000L)
+    fun `cashOut mid-hand queues leave and auto-folds the leaver if it's their turn`() {
+        seed(host, 1000L); seed(joiner, 1000L); seed(third, 1000L)
         val tableId = (service.createTable(host, guildId, buyIn = 500L) as PokerService.CreateOutcome.Ok).tableId
         service.buyIn(joiner, guildId, tableId, buyIn = 500L)
+        service.buyIn(third, guildId, tableId, buyIn = 500L)
         service.startHand(host, guildId, tableId)
 
-        val outcome = service.cashOut(host, guildId, tableId)
-        assertEquals(PokerService.CashOutOutcome.HandInProgress, outcome)
+        val table = registry.get(tableId)!!
+        val firstActorId = table.seats[table.actorIndex].discordId
+
+        // Whoever is first to act asks to leave. Should: mark pendingLeave,
+        // auto-fold them, and the table progresses to the next actor.
+        val outcome = service.cashOut(firstActorId, guildId, tableId)
+
+        assertTrue(outcome is PokerService.CashOutOutcome.QueuedForEndOfHand)
+        outcome as PokerService.CashOutOutcome.QueuedForEndOfHand
+        // Forced blind (5 or 10) may have been posted — chipsHeld captures
+        // post-blind stack. Just assert it's >0 and <buyIn.
+        assertTrue(outcome.chipsHeld in 1..500L, "chipsHeld snapshot from when leave queued: ${outcome.chipsHeld}")
+        // Seat still present (not removed until hand resolves) but folded.
+        val seat = registry.get(tableId)!!.seats.first { it.discordId == firstActorId }
+        assertTrue(seat.pendingLeave, "pendingLeave flag set")
+        assertEquals(PokerTable.SeatStatus.FOLDED, seat.status, "auto-folded since it was their turn")
+    }
+
+    @Test
+    fun `cashOut mid-hand returns chips when the hand later resolves`() {
+        seed(host, 1000L); seed(joiner, 1000L); seed(third, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 500L) as PokerService.CreateOutcome.Ok).tableId
+        service.buyIn(joiner, guildId, tableId, buyIn = 500L)
+        service.buyIn(third, guildId, tableId, buyIn = 500L)
+        service.startHand(host, guildId, tableId)
+
+        val table = registry.get(tableId)!!
+        // Pick a non-actor leaver: someone whose turn ISN'T up yet so we
+        // exercise the cascade path (fold-on-their-turn) rather than the
+        // immediate-fold path tested above.
+        val nonActorId = table.seats.first { table.seats.indexOf(it) != table.actorIndex }.discordId
+        service.cashOut(nonActorId, guildId, tableId)
+
+        // Drive the hand to completion: keep folding until a winner.
+        // Actors not in pendingLeave remain free to act normally; the
+        // cascade will auto-fold the leaver when their turn comes.
+        var safety = 12
+        while (registry.get(tableId)?.phase != PokerTable.Phase.WAITING && safety-- > 0) {
+            val live = registry.get(tableId) ?: break
+            val actor = live.seats.getOrNull(live.actorIndex) ?: break
+            service.applyAction(actor.discordId, guildId, tableId, PokerEngine.PokerAction.Fold)
+        }
+
+        // Leaver's seat should be gone (post-hand sweep removed it),
+        // their balance refunded.
+        val tableAfter = registry.get(tableId)
+        if (tableAfter != null) {
+            assertFalse(tableAfter.seats.any { it.discordId == nonActorId }, "leaver's seat removed")
+        }
+        // Their chip balance should have been refunded (1000 buy-in 500
+        // → 500 wallet at table start; refund brings them back ≥500
+        // since chips bled only via blinds at most).
+        val finalBalance = userService.current(nonActorId)?.socialCredit ?: 0L
+        assertTrue(finalBalance >= 490L, "leaver got their chips back, balance=$finalBalance")
+    }
+
+    @Test
+    fun `cashOut mid-hand twice returns AlreadyLeaving`() {
+        seed(host, 1000L); seed(joiner, 1000L); seed(third, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 500L) as PokerService.CreateOutcome.Ok).tableId
+        service.buyIn(joiner, guildId, tableId, buyIn = 500L)
+        service.buyIn(third, guildId, tableId, buyIn = 500L)
+        service.startHand(host, guildId, tableId)
+
+        val table = registry.get(tableId)!!
+        val nonActorId = table.seats.first { table.seats.indexOf(it) != table.actorIndex }.discordId
+        val first = service.cashOut(nonActorId, guildId, tableId)
+        assertTrue(first is PokerService.CashOutOutcome.QueuedForEndOfHand)
+
+        val second = service.cashOut(nonActorId, guildId, tableId)
+        assertEquals(PokerService.CashOutOutcome.AlreadyLeaving, second)
     }
 
     @Test

@@ -275,6 +275,12 @@ class PokerController(
             is CashOutOutcome.Ok -> ResponseEntity.ok(
                 TableActionResponse(ok = true, chipsReturned = outcome.chipsReturned, newBalance = outcome.newBalance)
             )
+            is CashOutOutcome.QueuedForEndOfHand -> ResponseEntity.ok(
+                TableActionResponse(ok = true, chipsReturned = outcome.chipsHeld, queued = true)
+            )
+            CashOutOutcome.AlreadyLeaving -> ResponseEntity.badRequest().body(
+                TableActionResponse(false, error = "You've already asked to leave this hand.")
+            )
             CashOutOutcome.HandInProgress -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "Hand in progress — fold first if you don't want to play it out.")
             )
@@ -347,4 +353,12 @@ data class TableActionResponse(
     val pot: Long? = null,
     val rake: Long? = null,
     val chipsReturned: Long? = null,
+    /**
+     * v2-3: set when /poker leave is queued mid-hand. The seat hasn't
+     * actually been cashed out yet — the engine will auto-fold the
+     * leaver, refund chips, and remove the seat once the hand resolves.
+     * Frontend uses this to render "leaving — chips return at end of
+     * hand" instead of the regular cash-out toast.
+     */
+    val queued: Boolean? = null,
 )

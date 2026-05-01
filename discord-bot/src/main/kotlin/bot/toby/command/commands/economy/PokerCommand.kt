@@ -218,6 +218,14 @@ class PokerCommand @Autowired constructor(
                         "New balance: ${outcome.newBalance} credits."
                 )
             ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            is CashOutOutcome.QueuedForEndOfHand -> event.hook.sendMessageEmbeds(
+                PokerEmbeds.infoEmbed(
+                    "<@${userDto.discordId}> is leaving — auto-folding for the rest of this hand. " +
+                        "Your **${outcome.chipsHeld}** chips will return to your balance once the hand resolves."
+                )
+            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            CashOutOutcome.AlreadyLeaving ->
+                replyError(event, "You've already asked to leave this hand.", deleteDelay)
             CashOutOutcome.HandInProgress ->
                 replyError(event, "Wait for the current hand to end before leaving (fold first if you don't want to play it out).", deleteDelay)
             CashOutOutcome.NotSeated ->

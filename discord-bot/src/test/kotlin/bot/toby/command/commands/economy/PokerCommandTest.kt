@@ -160,6 +160,18 @@ internal class PokerCommandTest : CommandTest {
     }
 
     @Test
+    fun `leave subcommand surfaces queued-for-end-of-hand outcome`() {
+        every { event.subcommandName } returns "leave"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { pokerService.cashOut(hostId, guildId, 7L) } returns
+            CashOutOutcome.QueuedForEndOfHand(chipsHeld = 480L)
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.cashOut(hostId, guildId, 7L) }
+    }
+
+    @Test
     fun `tables subcommand renders registry list`() {
         every { event.subcommandName } returns "tables"
         every { tableRegistry.listForGuild(guildId) } returns listOf(stubTable(7L), stubTable(8L))
