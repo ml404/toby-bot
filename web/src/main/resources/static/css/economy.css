@@ -119,6 +119,46 @@
 
 .economy-trade-actions .btn { flex: 1; }
 
+.economy-max-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--muted, #a0a0b0);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.btn-ghost:hover {
+    background: var(--surface-hover, rgba(255, 255, 255, 0.04));
+    color: var(--text, #e0e0e0);
+}
+
+.economy-trade-preview {
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: 8px;
+    background: var(--surface-elevated, rgba(255, 255, 255, 0.02));
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+
+.economy-trade-preview-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 2px 0;
+}
+
+.economy-preview-value { font-variant-numeric: tabular-nums; }
+.economy-preview-value.insufficient { color: #ED4245; }
+
 .economy-chart-legend {
     margin-top: var(--space-2);
     font-size: 0.85rem;
