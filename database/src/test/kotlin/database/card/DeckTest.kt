@@ -1,4 +1,4 @@
-package database.poker
+package database.card
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
