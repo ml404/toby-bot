@@ -73,6 +73,28 @@ class EconomyWebServiceTest {
     }
 
     @Test
+    fun `getEconomyView surfaces per-guild buy and sell fee rates`() {
+        val guild = mockk<Guild>(relaxed = true)
+        every { guild.name } returns "Test Guild"
+        every { jda.getGuildById(guildId) } returns guild
+        every { tradeService.loadOrCreateMarket(guildId) } returns TobyCoinMarketDto(
+            guildId = guildId, price = 100.0, lastTickAt = Instant.now()
+        )
+        every { tradeService.buyFeeRate(guildId) } returns 0.005   // 0.5 %
+        every { tradeService.sellFeeRate(guildId) } returns 0.025  // 2.5 %
+        every { userService.getUserById(discordId, guildId) } returns UserDto(discordId, guildId)
+
+        val view = service.getEconomyView(guildId, discordId)
+
+        assertNotNull(view)
+        assertEquals(0.005, view!!.buyFeeRate, 1e-9)
+        assertEquals(0.025, view.sellFeeRate, 1e-9)
+        // tradeImpact is a public engine constant — sanity-check it's
+        // exposed at all so the page can do client-side slippage math.
+        assertTrue(view.tradeImpact > 0.0)
+    }
+
+    @Test
     fun `getHistory maps samples to t, price pairs`() {
         val now = Instant.now()
         every { marketService.listHistory(guildId, any()) } returns listOf(

@@ -7,6 +7,22 @@
     const guildId = main.dataset.guildId;
     const postJson = window.TobyApi.postJson;
 
+    // Trade-math state. The page is rendered with the live values from
+    // EconomyView; we mutate them client-side as trades land so the preview
+    // and Max buttons stay accurate without a round-trip.
+    const state = {
+        price: parseFloat(main.dataset.price) || 0,
+        coins: parseInt(main.dataset.coins, 10) || 0,
+        credits: parseInt(main.dataset.credits, 10) || 0,
+        buyFeeRate: parseFloat(main.dataset.buyFeeRate) || 0,
+        sellFeeRate: parseFloat(main.dataset.sellFeeRate) || 0,
+        tradeImpact: parseFloat(main.dataset.tradeImpact) || 0
+    };
+
+    // Trade math is in economy-quote.js so the JS unit tests can hit it
+    // directly; this page just wires the quote helpers into the DOM.
+    const Quote = window.TobyEconomyQuote;
+
     // Toasts go through the global window.toast / window.TobyToasts API
     // (see static/js/toasts.js). Earlier this file shipped a private
     // shim referencing window.TobyToast (singular, no 's') which never
@@ -256,10 +272,37 @@
     const amountInput = document.getElementById('economy-amount');
     const buyBtn = document.getElementById('economy-buy');
     const sellBtn = document.getElementById('economy-sell');
+    const maxBuyBtn = document.getElementById('economy-max-buy');
+    const maxSellBtn = document.getElementById('economy-max-sell');
     const coinsEl = document.getElementById('economy-coins');
     const creditsEl = document.getElementById('economy-credits');
     const portfolioEl = document.getElementById('economy-portfolio');
     const priceEl = document.getElementById('economy-price');
+    const previewBuyEl = document.getElementById('economy-preview-buy');
+    const previewSellEl = document.getElementById('economy-preview-sell');
+
+    function updatePreview() {
+        if (!previewBuyEl || !previewSellEl) return;
+        const n = parseInt(amountInput && amountInput.value, 10);
+        if (!n || n <= 0) {
+            previewBuyEl.textContent = '—';
+            previewSellEl.textContent = '—';
+            previewBuyEl.classList.remove('insufficient');
+            previewSellEl.classList.remove('insufficient');
+            return;
+        }
+        const buy = Quote.quoteBuy(state, n);
+        const sell = Quote.quoteSell(state, n);
+        const buyFeeNote = buy.fee > 0 ? ' (incl. ' + buy.fee + ' fee, ' + Quote.pctLabel(state.buyFeeRate) + ')' : '';
+        const sellFeeNote = sell.fee > 0 ? ' (after ' + sell.fee + ' fee, ' + Quote.pctLabel(state.sellFeeRate) + ')' : '';
+        previewBuyEl.textContent = buy.cost + ' credits' + buyFeeNote;
+        previewSellEl.textContent = sell.proceeds + ' credits' + sellFeeNote;
+        // Soft warning when the preview wouldn't go through. The server
+        // still authoritatively rejects on submit; the badge is purely UX
+        // so the user knows before clicking.
+        previewBuyEl.classList.toggle('insufficient', buy.cost > state.credits);
+        previewSellEl.classList.toggle('insufficient', n > state.coins);
+    }
 
     function formatTradeMessage(kind, amount, r) {
         const verb = kind === 'buy' ? 'Bought' : 'Sold';
@@ -267,19 +310,30 @@
         if (r.transactedCredits == null) return head + '.';
         const base = head + ' for ' + r.transactedCredits + ' credits';
         if (!r.fee) return base + '.';
+        const rate = kind === 'buy' ? state.buyFeeRate : state.sellFeeRate;
         const note = kind === 'buy'
-            ? ' (incl. ' + r.fee + ' fee, 1%)'
-            : ' (after ' + r.fee + ' fee, 1%)';
+            ? ' (incl. ' + r.fee + ' fee, ' + Quote.pctLabel(rate) + ')'
+            : ' (after ' + r.fee + ' fee, ' + Quote.pctLabel(rate) + ')';
         return base + note + '.';
     }
 
     function applyTradeResult(r) {
-        if (r.newCoins !== null && coinsEl) coinsEl.textContent = r.newCoins + ' TOBY';
-        if (r.newCredits !== null && creditsEl) creditsEl.textContent = r.newCredits + ' credits';
-        if (r.newPrice !== null && priceEl) priceEl.textContent = r.newPrice.toFixed(2);
+        if (r.newCoins !== null) {
+            state.coins = r.newCoins;
+            if (coinsEl) coinsEl.textContent = r.newCoins + ' TOBY';
+        }
+        if (r.newCredits !== null) {
+            state.credits = r.newCredits;
+            if (creditsEl) creditsEl.textContent = r.newCredits + ' credits';
+        }
+        if (r.newPrice !== null) {
+            state.price = r.newPrice;
+            if (priceEl) priceEl.textContent = r.newPrice.toFixed(2);
+        }
         if (r.newCoins !== null && r.newPrice !== null && portfolioEl) {
             portfolioEl.textContent = Math.floor(r.newCoins * r.newPrice) + ' credits';
         }
+        updatePreview();
     }
 
     function trade(kind, btn) {
@@ -302,4 +356,17 @@
 
     if (buyBtn) buyBtn.addEventListener('click', function () { trade('buy', buyBtn); });
     if (sellBtn) sellBtn.addEventListener('click', function () { trade('sell', sellBtn); });
+
+    if (amountInput) amountInput.addEventListener('input', updatePreview);
+    if (maxBuyBtn) maxBuyBtn.addEventListener('click', function () {
+        const n = Quote.maxAffordableBuy(state);
+        if (amountInput) amountInput.value = String(n);
+        updatePreview();
+    });
+    if (maxSellBtn) maxSellBtn.addEventListener('click', function () {
+        if (amountInput) amountInput.value = String(state.coins);
+        updatePreview();
+    });
+
+    updatePreview();
 })();

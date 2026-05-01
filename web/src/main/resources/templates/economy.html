@@ -5,7 +5,14 @@
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-<main id="main" class="container-wide" th:attr="data-guild-id=${guildId}">
+<main id="main" class="container-wide"
+      th:attr="data-guild-id=${guildId},
+               data-price=${view.price},
+               data-coins=${view.coins},
+               data-credits=${view.credits},
+               data-buy-fee-rate=${view.buyFeeRate},
+               data-sell-fee-rate=${view.sellFeeRate},
+               data-trade-impact=${view.tradeImpact}">
 
     <div class="economy-header">
         <div>
@@ -17,7 +24,12 @@
                  th:text="${#numbers.formatDecimal(view.price, 1, 2)}">0.00</div>
             <!-- Populated by economy.js once /history responds; tracks the active chart window. -->
             <div class="economy-price-change">&nbsp;</div>
-            <div class="economy-price-fee muted">+ 1% fee on buys &amp; sells</div>
+            <div class="economy-price-fee muted">
+                <span th:text="'+ ' + ${#numbers.formatDecimal(view.buyFeeRate * 100.0, 1, 2)} + '% buy / '
+                              + ${#numbers.formatDecimal(view.sellFeeRate * 100.0, 1, 2)} + '% sell fee'">
+                    + 1% buy / 1% sell fee
+                </span>
+            </div>
         </div>
     </div>
 
@@ -77,6 +89,26 @@
             <div class="form-group">
                 <label for="economy-amount">Amount (coins)</label>
                 <input id="economy-amount" type="number" min="1" step="1" value="1">
+                <div class="economy-max-actions">
+                    <button type="button" class="btn-ghost" id="economy-max-buy"
+                            title="Fill in the most coins you can buy with your current credits">
+                        Max buy
+                    </button>
+                    <button type="button" class="btn-ghost" id="economy-max-sell"
+                            title="Fill in your full TOBY balance">
+                        Max sell
+                    </button>
+                </div>
+            </div>
+            <div class="economy-trade-preview" id="economy-trade-preview" aria-live="polite">
+                <div class="economy-trade-preview-row">
+                    <span class="muted">Buy</span>
+                    <span id="economy-preview-buy" class="economy-preview-value">&mdash;</span>
+                </div>
+                <div class="economy-trade-preview-row">
+                    <span class="muted">Sell</span>
+                    <span id="economy-preview-sell" class="economy-preview-value">&mdash;</span>
+                </div>
             </div>
             <div class="economy-trade-actions">
                 <button type="button" class="btn" id="economy-buy">Buy</button>
@@ -84,8 +116,8 @@
             </div>
             <p class="hint">
                 Buys push the price up, sells push it down. The market also
-                drifts on its own every few minutes. Every trade pays a 1%
-                fee into the server jackpot pool.
+                drifts on its own every few minutes. Every trade pays a per-leg
+                fee into the server jackpot pool (rates above the chart).
             </p>
         </section>
     </div>
@@ -97,6 +129,7 @@
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/economy-change.js}"></script>
+<script th:src="@{/js/economy-quote.js}"></script>
 <script th:src="@{/js/economy.js}"></script>
 </body>
 </html>

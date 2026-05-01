@@ -1,5 +1,6 @@
 package web.service
 
+import database.economy.TobyCoinEngine
 import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
 import database.service.UserService
@@ -58,7 +59,12 @@ class EconomyWebService(
             lastTickAt = market.lastTickAt,
             coins = user?.tobyCoins ?: 0L,
             credits = user?.socialCredit ?: 0L,
-            portfolioCredits = ((user?.tobyCoins ?: 0L).toDouble() * market.price).toLong()
+            portfolioCredits = ((user?.tobyCoins ?: 0L).toDouble() * market.price).toLong(),
+            // Raw rates (1 % == 0.01) so the JS preview math can use them
+            // directly. Templates multiply by 100 for the percent label.
+            buyFeeRate = tradeService.buyFeeRate(guildId),
+            sellFeeRate = tradeService.sellFeeRate(guildId),
+            tradeImpact = TobyCoinEngine.TRADE_IMPACT
         )
     }
 
@@ -129,7 +135,13 @@ data class EconomyView(
     val lastTickAt: Instant,
     val coins: Long,
     val credits: Long,
-    val portfolioCredits: Long
+    val portfolioCredits: Long,
+    /** Raw buy fee rate (1 % == 0.01) — used by the page's preview math. */
+    val buyFeeRate: Double = 0.01,
+    /** Raw sell fee rate. */
+    val sellFeeRate: Double = 0.01,
+    /** [TobyCoinEngine.TRADE_IMPACT] copy so the page can compute slippage client-side. */
+    val tradeImpact: Double = 0.0001
 )
 
 data class PricePoint(
