@@ -22,6 +22,8 @@
     const statusEl = document.getElementById('poker-status');
     const resultEl = document.getElementById('poker-result');
     const potsEl = document.getElementById('poker-pots');
+    const shotClockEl = document.getElementById('poker-shot-clock');
+    let shotClockTicker = null;
     const balanceEl = document.getElementById('poker-balance');
     const joinCard = document.getElementById('poker-join-card');
 
@@ -117,6 +119,37 @@
         btnCashout.disabled = state.phase !== 'WAITING';
     }
 
+    /**
+     * Render the per-actor shot-clock countdown. The server sends a
+     * deadline epoch-millis instead of a "seconds remaining" so the
+     * client can drive a smooth 1Hz tick without depending on the 2s
+     * polling cadence — otherwise the visible countdown would jump in
+     * 2-second steps and feel laggy. When no clock is armed, the
+     * element is hidden and any running ticker is stopped.
+     */
+    function renderShotClock(state) {
+        if (!shotClockEl) return;
+        if (shotClockTicker) { clearInterval(shotClockTicker); shotClockTicker = null; }
+        const deadline = state.currentActorDeadlineEpochMillis;
+        if (!state.shotClockSeconds || !deadline || state.phase === 'WAITING') {
+            shotClockEl.hidden = true;
+            shotClockEl.textContent = '';
+            return;
+        }
+        function tick() {
+            const remainingMs = deadline - Date.now();
+            if (remainingMs <= 0) {
+                shotClockEl.textContent = 'Time!';
+                if (shotClockTicker) { clearInterval(shotClockTicker); shotClockTicker = null; }
+                return;
+            }
+            shotClockEl.textContent = Math.ceil(remainingMs / 1000) + 's';
+        }
+        shotClockEl.hidden = false;
+        tick();
+        shotClockTicker = setInterval(tick, 1000);
+    }
+
     function renderResult(result) {
         if (!result) {
             resultEl.textContent = '';
@@ -166,6 +199,7 @@
                 renderBoard(state.community);
                 renderSeats(state);
                 renderActions(state);
+                renderShotClock(state);
                 renderResult(state.lastResult);
             })
             .catch(function () { /* keep last known state */ });

@@ -59,6 +59,16 @@ class PokerWebService(
         val callAmount: Long,
         val raiseAmount: Long,
         val lastResult: HandResultView?,
+        /**
+         * v2 (PR #v2-2): shot-clock visibility for the polling JS.
+         * `shotClockSeconds = 0` → clock is disabled for this table.
+         * `currentActorDeadlineEpochMillis = null` → no actor decision
+         * is pending right now (waiting for next hand). The client
+         * computes the live remaining seconds so a slow poll cycle
+         * doesn't stall the countdown.
+         */
+        val shotClockSeconds: Int = 0,
+        val currentActorDeadlineEpochMillis: Long? = null,
     )
 
     data class SeatView(
@@ -183,6 +193,8 @@ class PokerWebService(
                 canRaise = canRaise,
                 callAmount = owe,
                 raiseAmount = owe + betUnit,
+                shotClockSeconds = table.shotClockSeconds,
+                currentActorDeadlineEpochMillis = table.currentActorDeadline?.toEpochMilli(),
                 lastResult = table.lastResult?.let { result ->
                     HandResultView(
                         handNumber = result.handNumber,

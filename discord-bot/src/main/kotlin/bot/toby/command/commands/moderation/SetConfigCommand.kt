@@ -61,6 +61,23 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED -> Unit
                 ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> setJackpotLossTribute(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.POKER_RAKE_PCT -> setPokerRake(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.POKER_SMALL_BLIND -> setPokerLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_SMALL_BLIND, label = "small blind", min = 1L)
+                ConfigDto.Configurations.POKER_BIG_BLIND -> setPokerLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_BIG_BLIND, label = "big blind", min = 1L)
+                ConfigDto.Configurations.POKER_SMALL_BET -> setPokerLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_SMALL_BET, label = "small bet", min = 1L)
+                ConfigDto.Configurations.POKER_BIG_BET -> setPokerLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_BIG_BET, label = "big bet", min = 1L)
+                ConfigDto.Configurations.POKER_MIN_BUY_IN -> setPokerLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_MIN_BUY_IN, label = "minimum buy-in", min = 1L)
+                ConfigDto.Configurations.POKER_MAX_BUY_IN -> setPokerLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_MAX_BUY_IN, label = "maximum buy-in", min = 1L)
+                ConfigDto.Configurations.POKER_MAX_SEATS -> setPokerInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_MAX_SEATS, label = "max seats", range = 2..9)
+                ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS -> setPokerInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
+                    label = "shot-clock seconds", range = 0..600)
             }
         }
     }
@@ -173,6 +190,57 @@ class SetConfigCommand @Autowired constructor(
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
+    /**
+     * Shared "validate a non-negative whole-number poker config value
+     * within [[min], [Long.MAX_VALUE]] and persist it" helper. Each
+     * specific table-shape config (blind / bet / buy-in) only differs
+     * in the human-readable [label] and the floor; the message and
+     * upsert plumbing is the same.
+     */
+    private fun setPokerLong(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        label: String,
+        min: Long
+    ) {
+        val value = optionMapping.asLong
+        if (value < min) {
+            event.hook.sendMessage("Poker $label must be at least $min.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        event.hook.sendMessage("Poker $label set to $value chips for new tables.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    /**
+     * As [setPokerLong] but for integer-bounded knobs (max seats,
+     * shot-clock seconds). The range is inclusive on both ends.
+     */
+    private fun setPokerInt(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        label: String,
+        range: IntRange
+    ) {
+        val value = optionMapping.asInt
+        if (value !in range) {
+            event.hook.sendMessage("Poker $label must be between ${range.first} and ${range.last}.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        event.hook.sendMessage("Poker $label set to $value for new tables.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val movePropertyName = ConfigDto.Configurations.MOVE.configValue
         val guildId = event.guild?.id ?: return
@@ -243,6 +311,54 @@ class SetConfigCommand @Autowired constructor(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.POKER_RAKE_PCT.name.lowercase(Locale.getDefault()),
                 "Percent (0-20) of every settled poker pot routed into the per-guild jackpot pool. Default 5.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_SMALL_BLIND.name.lowercase(Locale.getDefault()),
+                "Per-guild poker small blind for new tables. Default 5.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_BIG_BLIND.name.lowercase(Locale.getDefault()),
+                "Per-guild poker big blind for new tables. Default 10.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_SMALL_BET.name.lowercase(Locale.getDefault()),
+                "Per-guild fixed-limit small bet (pre-flop / flop). Default 10.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_BIG_BET.name.lowercase(Locale.getDefault()),
+                "Per-guild fixed-limit big bet (turn / river). Default 20.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_MIN_BUY_IN.name.lowercase(Locale.getDefault()),
+                "Per-guild minimum poker buy-in. Default 100.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_MAX_BUY_IN.name.lowercase(Locale.getDefault()),
+                "Per-guild maximum poker buy-in. Default 5000.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_MAX_SEATS.name.lowercase(Locale.getDefault()),
+                "Maximum players per poker table (2-9). Default 6.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS.name.lowercase(Locale.getDefault()),
+                "Per-actor decision deadline in seconds (0 disables). Default 30.",
                 false
             )
         )
