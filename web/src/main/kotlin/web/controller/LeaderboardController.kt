@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.LeaderboardSort
 import web.service.LeaderboardWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -43,23 +44,18 @@ class LeaderboardController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/leaderboards"
-
-        if (!leaderboardWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/leaderboards"
-        }
-
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/leaderboards",
+        check = leaderboardWebService::isMember,
+    ) { _ ->
         val view = leaderboardWebService.getGuildView(guildId, LeaderboardSort.fromQuery(sort)) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/leaderboards"
+            return@requireForPage "redirect:/leaderboards"
         }
 
         model.addAttribute("view", view)
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("username", user.displayName())
-        return "leaderboard"
+        "leaderboard"
     }
 }

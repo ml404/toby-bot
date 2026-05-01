@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section>
         <p class="muted mb-4">

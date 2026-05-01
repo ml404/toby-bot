@@ -13,7 +13,7 @@
         per-server jackpot.
     </p>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
         <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">

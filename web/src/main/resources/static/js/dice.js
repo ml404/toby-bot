@@ -21,10 +21,6 @@ function renderDiceResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
-    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
-    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
-    const postJson = window.TobyApi && window.TobyApi.postJson;
-
     const die = document.getElementById('dice-die');
     const dieFace = document.getElementById('dice-die-face');
     const stakeInput = document.getElementById('dice-stake');
@@ -36,22 +32,9 @@ function renderDiceResult(resultEl, body) {
 
     if (!form || !rollBtn || !stakeInput || !die || !dieFace) return;
 
-    const topUp = (window.TobyTopUp && rollTobyBtn) ? window.TobyTopUp.init({
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: rollBtn,
-        tobyBtn: rollTobyBtn,
-        balanceEl: balanceEl,
-        tobyCoins: initialTobyCoins,
-        marketPrice: initialMarketPrice,
-        onSubmit: function (autoTopUp) { runRoll(autoTopUp); },
-    }) : null;
-
     const FACES = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
     const ROLL_DURATION_MS = 800;
     const ROLL_INTERVAL_MS = 70;
-
-    let rolling = false;
 
     function selectedPrediction() {
         const checked = form.querySelector('input[name="prediction"]:checked');
@@ -59,7 +42,6 @@ function renderDiceResult(resultEl, body) {
     }
 
     function startRollAnimation() {
-        rolling = true;
         die.classList.add('rolling');
         return setInterval(function () {
             const n = 1 + Math.floor(Math.random() * 6);
@@ -67,10 +49,10 @@ function renderDiceResult(resultEl, body) {
         }, ROLL_INTERVAL_MS);
     }
 
-    function stopRollAnimation(intervalId, landed) {
+    function stopRollAnimation(intervalId, body) {
         clearInterval(intervalId);
-        rolling = false;
         die.classList.remove('rolling');
+        const landed = body && body.landed;
         if (landed && FACES[landed]) {
             dieFace.textContent = FACES[landed];
             die.dataset.landed = String(landed);
@@ -80,83 +62,34 @@ function renderDiceResult(resultEl, body) {
         }
     }
 
-
-    function applyBalance(newBalance) {
-        if (typeof newBalance !== 'number') return;
-        if (balanceEl) balanceEl.textContent = newBalance;
-    }
-
-    function applyTobyDelta(body) {
-        if (!topUp) return;
-        if (typeof body.soldTobyCoins === 'number') {
-            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
-            topUp.setTobyCoins(remaining);
-        }
-        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
-    }
-
-    function runRoll(autoTopUp) {
-        if (rolling) return;
-
-        const prediction = selectedPrediction();
-        if (!prediction) {
-            toast('Pick a number first.', 'error');
-            return;
-        }
-        const stake = parseInt(stakeInput.value, 10);
-        if (!stake || stake <= 0) {
-            toast('Enter a positive stake.', 'error');
-            return;
-        }
-
-        rollBtn.disabled = true;
-        if (rollTobyBtn) rollTobyBtn.disabled = true;
-        const intervalId = startRollAnimation();
-        const requestStart = Date.now();
-
-        if (!postJson) {
-            stopRollAnimation(intervalId);
-            rollBtn.disabled = false;
-            if (rollTobyBtn) rollTobyBtn.disabled = false;
-            toast('API helper missing — refresh the page.', 'error');
-            return;
-        }
-
-        postJson('/casino/' + guildId + '/dice/roll', {
-            prediction: prediction, stake: stake, autoTopUp: !!autoTopUp,
-        })
-            .then(function (body) {
-                const elapsed = Date.now() - requestStart;
-                const remaining = Math.max(0, ROLL_DURATION_MS - elapsed);
-                setTimeout(function () {
-                    stopRollAnimation(intervalId, body && body.landed);
-                    rollBtn.disabled = false;
-                    if (rollTobyBtn) rollTobyBtn.disabled = false;
-                    if (body && body.ok) {
-                        renderDiceResult(resultEl, body);
-                        applyBalance(body.newBalance);
-                        applyTobyDelta(body);
-                    } else {
-                        if (resultEl) resultEl.hidden = true;
-                        toast((body && body.error) || 'Roll failed.', 'error');
-                    }
-                }, remaining);
-            })
-            .catch(function () {
-                stopRollAnimation(intervalId);
-                rollBtn.disabled = false;
-                if (rollTobyBtn) rollTobyBtn.disabled = false;
-                if (resultEl) resultEl.hidden = true;
-                toast('Network error.', 'error');
-            });
-    }
-
-    if (!topUp) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            runRoll(false);
-        });
-    }
+    window.TobyCasinoGame.init({
+        guildId: guildId,
+        endpoint: '/casino/' + guildId + '/dice/roll',
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: rollBtn,
+        tobyBtn: rollTobyBtn,
+        balanceEl: balanceEl,
+        resultEl: resultEl,
+        tobyCoins: Number(main.dataset.tobyCoins) || 0,
+        marketPrice: Number(main.dataset.marketPrice) || 0,
+        minSettleMs: ROLL_DURATION_MS,
+        failureMessage: 'Roll failed.',
+        validate: function () {
+            if (!selectedPrediction()) return 'Pick a number first.';
+            return null;
+        },
+        buildPayload: function (state) {
+            return {
+                prediction: selectedPrediction(),
+                stake: state.stake,
+                autoTopUp: state.autoTopUp,
+            };
+        },
+        startAnimation: startRollAnimation,
+        stopAnimation: stopRollAnimation,
+        renderResult: function (body) { renderDiceResult(resultEl, body); },
+    });
 })();
 
 if (typeof module !== 'undefined' && module.exports) {

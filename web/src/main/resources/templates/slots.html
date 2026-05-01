@@ -16,7 +16,7 @@
             <span th:text="${maxStake}">500</span> credits per pull.</p>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section class="slots-machine">
         <div class="slots-reels" id="slots-reels" aria-live="polite">
@@ -46,11 +46,7 @@
             Balance: <strong id="slots-balance" th:text="${balance}">0</strong> credits
         </div>
 
-        <div class="casino-jackpot-banner">
-            🎰 Jackpot pool:
-            <strong th:text="${jackpotPool}">0</strong> credits
-            <span class="muted">— win any minigame for a 1% chance to bank the pool.</span>
-        </div>
+        <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
     </section>
 
     <section class="slots-payouts">
@@ -78,6 +74,7 @@
 <script th:src="@{/js/casino-jackpot.js}"></script>
 <script th:src="@{/js/casino-topup.js}"></script>
 <script th:src="@{/js/casino-result.js}"></script>
+<script th:src="@{/js/casino-game.js}"></script>
 <script th:src="@{/js/slots.js}"></script>
 </body>
 </html>

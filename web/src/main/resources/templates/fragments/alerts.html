@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Inline server-rendered flash banners. Used for redirect-flow
+    feedback (`ra.addFlashAttribute("error", …)`) where the JS toast
+    system isn't available because we haven't reached the page yet.
+    Keeps the per-template scaffolding to one line:
+        <div th:replace="~{fragments/alerts :: error}"></div>
+-->
+<div th:fragment="error" th:if="${error}"
+     class="alert alert-error" role="alert" th:text="${error}"></div>
+<div th:fragment="success" th:if="${success}"
+     class="alert alert-success" role="status" th:text="${success}"></div>
+</body>
+</html>

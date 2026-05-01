@@ -48,8 +48,6 @@ function renderHighlowResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
-    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
-    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     const anchorFace = document.getElementById('highlow-anchor-face');
@@ -71,6 +69,14 @@ function renderHighlowResult(resultEl, body) {
     if (!form || !dealBtn || !stakeInput || !anchorFace || !nextFace) return;
     if (!directionPicker || !higherBtn || !lowerBtn) return;
 
+    const NEXT_DEAL_MS = 900;
+    const SHUFFLE_INTERVAL_MS = 70;
+    const ROUND_RESET_MS = 1500;
+
+    let playing = false;
+
+    const cardLabel = highlowCardLabel;
+
     function setMultiplierLabels(higher, lower) {
         if (higherMultEl) higherMultEl.textContent = highlowFormatMultiplier(higher);
         if (lowerMultEl) lowerMultEl.textContent = highlowFormatMultiplier(lower);
@@ -79,28 +85,6 @@ function renderHighlowResult(resultEl, body) {
     function clearMultiplierLabels() {
         setMultiplierLabels(null, null);
     }
-
-    const topUp = (window.TobyTopUp && dealTobyBtn) ? window.TobyTopUp.init({
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: dealBtn,
-        tobyBtn: dealTobyBtn,
-        balanceEl: balanceEl,
-        tobyCoins: initialTobyCoins,
-        marketPrice: initialMarketPrice,
-        onSubmit: function (autoTopUp) { runStart(autoTopUp); },
-    }) : null;
-
-    const NEXT_DEAL_MS = 900;
-    const SHUFFLE_INTERVAL_MS = 70;
-    const ROUND_RESET_MS = 1500;
-
-    let dealing = false;
-    // Tracks which lock variant the player picked so we can pass autoTopUp
-    // through to /play if they hit the shortfall on the actual wager.
-    let pendingAutoTopUp = false;
-
-    const cardLabel = highlowCardLabel;
 
     function showLockMode() {
         directionPicker.hidden = true;
@@ -132,7 +116,6 @@ function renderHighlowResult(resultEl, body) {
     }
 
     function startNextShuffle() {
-        dealing = true;
         nextCard.classList.add('shuffling');
         return setInterval(function () {
             nextFace.textContent = cardLabel(1 + Math.floor(Math.random() * 13));
@@ -141,7 +124,6 @@ function renderHighlowResult(resultEl, body) {
 
     function stopNextShuffle(intervalId, value) {
         clearInterval(intervalId);
-        dealing = false;
         nextCard.classList.remove('shuffling');
         if (typeof value === 'number') {
             nextFace.textContent = cardLabel(value);
@@ -152,81 +134,57 @@ function renderHighlowResult(resultEl, body) {
         }
     }
 
-    function applyBalance(newBalance) {
-        if (typeof newBalance !== 'number') return;
-        if (balanceEl) balanceEl.textContent = newBalance;
-    }
-
-    function applyTobyDelta(body) {
-        if (!topUp) return;
-        if (typeof body.soldTobyCoins === 'number') {
-            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
-            topUp.setTobyCoins(remaining);
-        }
-        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
-    }
-
-    function runStart(autoTopUp) {
-        if (dealing) return;
-
-        const stake = parseInt(stakeInput.value, 10);
-        if (!stake || stake <= 0) {
-            toast('Enter a positive stake.', 'error');
-            return;
-        }
-
-        if (!postJson) {
-            toast('API helper missing — refresh the page.', 'error');
-            return;
-        }
-
-        dealBtn.disabled = true;
-        if (dealTobyBtn) dealTobyBtn.disabled = true;
-        pendingAutoTopUp = !!autoTopUp;
-
-        postJson('/casino/' + guildId + '/highlow/start', {
-            stake: stake, autoTopUp: pendingAutoTopUp,
-        })
-            .then(function (body) {
-                if (body && body.ok && typeof body.anchor === 'number') {
-                    showCallMode(body.anchor, body.higherMultiplier, body.lowerMultiplier);
-                } else {
-                    dealBtn.disabled = false;
-                    if (dealTobyBtn) dealTobyBtn.disabled = false;
-                    toast((body && body.error) || 'Could not lock the round.', 'error');
-                }
-            })
-            .catch(function () {
-                dealBtn.disabled = false;
-                if (dealTobyBtn) dealTobyBtn.disabled = false;
-                toast('Network error.', 'error');
-            });
-    }
+    // /start uses the shared form + TOBY-topup scaffolding. /play has
+    // its own button pair below — different lifecycle, kept manual.
+    const game = window.TobyCasinoGame.init({
+        guildId: guildId,
+        endpoint: '/casino/' + guildId + '/highlow/start',
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: dealBtn,
+        tobyBtn: dealTobyBtn,
+        balanceEl: balanceEl,
+        resultEl: resultEl,
+        tobyCoins: Number(main.dataset.tobyCoins) || 0,
+        marketPrice: Number(main.dataset.marketPrice) || 0,
+        failureMessage: 'Could not lock the round.',
+        // /start doesn't settle credit/coin movement — it just locks
+        // the stake and deals the anchor. Balance updates land via
+        // /play's response instead.
+        autoApplyBalance: false,
+        renderResult: function (body) {
+            if (typeof body.anchor === 'number') {
+                showCallMode(body.anchor, body.higherMultiplier, body.lowerMultiplier);
+            }
+        },
+    });
 
     function runPlay(direction) {
-        if (dealing) return;
+        if (playing) return;
         if (!postJson) {
-            toast('API helper missing — refresh the page.', 'error');
+            window.toast('API helper missing — refresh the page.', 'error');
             return;
         }
 
+        playing = true;
         higherBtn.disabled = true;
         lowerBtn.disabled = true;
         const intervalId = startNextShuffle();
         const requestStart = Date.now();
 
-        postJson('/casino/' + guildId + '/highlow/play', {
-            direction: direction,
-        })
+        postJson('/casino/' + guildId + '/highlow/play', { direction: direction })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
                 const remaining = Math.max(0, NEXT_DEAL_MS - elapsed);
                 setTimeout(function () {
+                    playing = false;
                     if (body && body.ok) {
                         stopNextShuffle(intervalId, body.next);
                         renderHighlowResult(resultEl, body);
-                        applyBalance(body.newBalance);
-                        applyTobyDelta(body);
+                        if (game) {
+                            game.applyBalance(body.newBalance);
+                            game.applyTobyDelta(body);
+                        }
                         // Round consumed → reset to lock mode after the
                         // player has had a moment to read the result.
                         setTimeout(showLockMode, ROUND_RESET_MS);
@@ -234,23 +192,17 @@ function renderHighlowResult(resultEl, body) {
                         stopNextShuffle(intervalId);
                         higherBtn.disabled = false;
                         lowerBtn.disabled = false;
-                        toast((body && body.error) || 'Deal failed.', 'error');
+                        window.toast((body && body.error) || 'Deal failed.', 'error');
                     }
                 }, remaining);
             })
             .catch(function () {
                 stopNextShuffle(intervalId);
+                playing = false;
                 higherBtn.disabled = false;
                 lowerBtn.disabled = false;
-                toast('Network error.', 'error');
+                window.toast('Network error.', 'error');
             });
-    }
-
-    if (!topUp) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            runStart(false);
-        });
     }
 
     higherBtn.addEventListener('click', function () { runPlay('HIGHER'); });

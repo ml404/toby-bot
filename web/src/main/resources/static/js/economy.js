@@ -7,13 +7,10 @@
     const guildId = main.dataset.guildId;
     const postJson = window.TobyApi.postJson;
 
-    function toast(msg, type) {
-        if (window.TobyToast && typeof window.TobyToast.show === 'function') {
-            window.TobyToast.show(msg, { type: type || 'info' });
-        } else {
-            console.log('[' + (type || 'info') + '] ' + msg);
-        }
-    }
+    // Toasts go through the global window.toast / window.TobyToasts API
+    // (see static/js/toasts.js). Earlier this file shipped a private
+    // shim referencing window.TobyToast (singular, no 's') which never
+    // existed, so trade-flow toasts silently fell through to console.log.
 
     // -- Chart --------------------------------------------------------------
     const canvas = document.getElementById('economy-chart');

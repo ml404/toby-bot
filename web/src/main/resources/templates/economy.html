@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section class="economy-chart-card">
         <div class="economy-chart-header">

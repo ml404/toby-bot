@@ -3,10 +3,6 @@ package web.controller
 import database.economy.Dice
 import database.service.DiceService
 import database.service.DiceService.RollOutcome
-import database.service.JackpotService
-import database.service.TobyCoinMarketService
-import database.service.UserService
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -19,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
+import web.casino.CasinoResponseLike
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
-import web.util.displayName
 
 /**
  * Web surface for the `/dice` minigame. GET renders the picker UI;
@@ -35,11 +33,10 @@ import web.util.displayName
 class DiceController(
     private val diceService: DiceService,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val marketService: TobyCoinMarketService,
-    private val jda: JDA
+    private val pageContext: CasinoPageContext,
 ) {
+
+    private val errors = CasinoOutcomeMapper { msg -> RollResponse(false, msg) }
 
     @GetMapping
     fun page(
@@ -50,27 +47,14 @@ class DiceController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
     ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
+        pageContext.populate(model, guildId, discordId, user) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/casino/guilds"
         }
-
-        val profile = userService.getUserById(discordId, guildId)
-        val balance = profile?.socialCredit ?: 0L
-        val tobyCoins = profile?.tobyCoins ?: 0L
-        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
-
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", balance)
-        model.addAttribute("tobyCoins", tobyCoins)
-        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", Dice.MIN_STAKE)
         model.addAttribute("maxStake", Dice.MAX_STAKE)
         model.addAttribute("sides", Dice.DEFAULT_SIDES)
         model.addAttribute("multiplier", Dice.DEFAULT_MULTIPLIER)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("username", user.displayName())
         "dice"
     }
 
@@ -81,15 +65,7 @@ class DiceController(
         @RequestBody request: RollRequest,
         @AuthenticationPrincipal user: OAuth2User
     ): ResponseEntity<RollResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                RollResponse(
-                    false,
-                    if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = diceService.roll(discordId, guildId, request.stake, request.prediction, request.autoTopUp)) {
             is RollOutcome.Win -> ResponseEntity.ok(
@@ -122,25 +98,13 @@ class DiceController(
                 )
             )
 
-            is RollOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
-                RollResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
-            )
+            is RollOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is RollOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            is RollOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
+            is RollOutcome.InvalidPrediction ->
+                errors.badRequest("Pick a number between ${outcome.min} and ${outcome.max}.")
 
-            is RollOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
-                RollResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
-            )
-
-            is RollOutcome.InvalidStake -> ResponseEntity.badRequest().body(
-                RollResponse(false, "Stake must be between ${outcome.min} and ${outcome.max} credits.")
-            )
-
-            is RollOutcome.InvalidPrediction -> ResponseEntity.badRequest().body(
-                RollResponse(false, "Pick a number between ${outcome.min} and ${outcome.max}.")
-            )
-
-            RollOutcome.UnknownUser -> ResponseEntity.badRequest().body(
-                RollResponse(false, "No user record yet. Try another TobyBot command first.")
-            )
+            RollOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 }
@@ -148,8 +112,8 @@ class DiceController(
 data class RollRequest(val prediction: Int = 0, val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class RollResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val landed: Int? = null,
     val predicted: Int? = null,
     val net: Long? = null,
@@ -160,4 +124,4 @@ data class RollResponse(
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null
-)
+) : CasinoResponseLike

@@ -2,12 +2,8 @@ package web.controller
 
 import database.economy.ScratchCard
 import database.economy.SlotMachine
-import database.service.JackpotService
 import database.service.ScratchService
 import database.service.ScratchService.ScratchOutcome
-import database.service.TobyCoinMarketService
-import database.service.UserService
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -20,20 +16,21 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
+import web.casino.CasinoResponseLike
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
-import web.util.displayName
 
 @Controller
 @RequestMapping("/casino/{guildId}/scratch")
 class ScratchController(
     private val scratchService: ScratchService,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val marketService: TobyCoinMarketService,
-    private val jda: JDA
+    private val pageContext: CasinoPageContext,
 ) {
+
+    private val errors = CasinoOutcomeMapper { msg -> ScratchResponse(false, msg) }
 
     @GetMapping
     fun page(
@@ -44,29 +41,16 @@ class ScratchController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
     ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
+        pageContext.populate(model, guildId, discordId, user) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/casino/guilds"
         }
-
-        val profile = userService.getUserById(discordId, guildId)
-        val balance = profile?.socialCredit ?: 0L
-        val tobyCoins = profile?.tobyCoins ?: 0L
-        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
-
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", balance)
-        model.addAttribute("tobyCoins", tobyCoins)
-        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", ScratchCard.MIN_STAKE)
         model.addAttribute("maxStake", ScratchCard.MAX_STAKE)
         model.addAttribute("cellCount", ScratchCard.CELL_COUNT)
         model.addAttribute("matchThreshold", ScratchCard.MATCH_THRESHOLD)
         model.addAttribute("matchCounts", (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).toList())
         model.addAttribute("payoutTable", scratchPayoutRows())
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("username", user.displayName())
         "scratch"
     }
 
@@ -91,15 +75,7 @@ class ScratchController(
         @RequestBody request: ScratchRequest,
         @AuthenticationPrincipal user: OAuth2User
     ): ResponseEntity<ScratchResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                ScratchResponse(
-                    false,
-                    if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = scratchService.scratch(discordId, guildId, request.stake, request.autoTopUp)) {
             is ScratchOutcome.Win -> ResponseEntity.ok(
@@ -132,21 +108,10 @@ class ScratchController(
                 )
             )
 
-            is ScratchOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
-                ScratchResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
-            )
-
-            is ScratchOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
-                ScratchResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
-            )
-
-            is ScratchOutcome.InvalidStake -> ResponseEntity.badRequest().body(
-                ScratchResponse(false, "Stake must be between ${outcome.min} and ${outcome.max} credits.")
-            )
-
-            ScratchOutcome.UnknownUser -> ResponseEntity.badRequest().body(
-                ScratchResponse(false, "No user record yet. Try another TobyBot command first.")
-            )
+            is ScratchOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is ScratchOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            is ScratchOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
+            ScratchOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 }
@@ -156,8 +121,8 @@ data class ScratchPayoutRow(val symbol: String, val multipliers: List<String>)
 data class ScratchRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class ScratchResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val cells: List<String>? = null,
     val winningSymbol: String? = null,
     val matchCount: Int? = null,
@@ -169,4 +134,4 @@ data class ScratchResponse(
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null
-)
+) : CasinoResponseLike

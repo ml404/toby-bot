@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Shared building blocks for the casino-game pages (dice, coinflip,
+    slots, scratch, highlow). Each game's page used to inline this
+    HTML; centralising it means a copy/styling change ripples to every
+    game in one edit.
+-->
+<div th:fragment="jackpotBanner" class="casino-jackpot-banner">
+    🎰 Jackpot pool:
+    <strong th:text="${jackpotPool}">0</strong> credits
+    <span class="muted">— win any minigame for a 1% chance to bank the pool.</span>
+</div>
+</body>
+</html>

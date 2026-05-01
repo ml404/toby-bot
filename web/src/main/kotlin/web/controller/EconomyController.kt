@@ -20,6 +20,7 @@ import database.service.EconomyTradeService.TradeOutcome
 import database.service.SocialCreditAwardService
 import web.service.PricePoint
 import web.service.TradeMarker
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -57,24 +58,18 @@ class EconomyController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/economy/guilds"
-
-        if (!economyWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/economy/guilds"
-        }
-
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/economy/guilds"
+    ) { discordId ->
         val view = economyWebService.getEconomyView(guildId, discordId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/economy/guilds"
+            return@requireMemberForPage "redirect:/economy/guilds"
         }
 
         model.addAttribute("view", view)
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("username", user.displayName())
-        return "economy"
+        "economy"
     }
 
     @GetMapping("/{guildId}/history")
@@ -83,13 +78,10 @@ class EconomyController(
         @PathVariable guildId: Long,
         @RequestParam(defaultValue = "1d") window: String,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<HistoryResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).build()
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).build()
-        }
-        return ResponseEntity.ok(
+    ): ResponseEntity<HistoryResponse> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { _ ->
+        ResponseEntity.ok(
             HistoryResponse(
                 points = economyWebService.getHistory(guildId, window),
                 trades = economyWebService.getTrades(guildId, window)
@@ -122,16 +114,23 @@ class EconomyController(
         guildId: Long,
         request: TradeRequest,
         action: (Long) -> TradeOutcome
-    ): ResponseEntity<TradeResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TradeResponse(false, "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TradeResponse(false, "You are not a member of that server."))
+    ): ResponseEntity<TradeResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                TradeResponse(
+                    false,
+                    if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
         }
+    ) { discordId ->
         if (request.amount <= 0) {
-            return ResponseEntity.badRequest().body(TradeResponse(false, "Amount must be positive."))
+            return@requireMemberForJson ResponseEntity.badRequest().body(
+                TradeResponse(false, "Amount must be positive.")
+            )
         }
-        return when (val outcome = action(discordId)) {
+        when (val outcome = action(discordId)) {
             is TradeOutcome.Ok -> {
                 val granted = awardService.award(
                     discordId = discordId,

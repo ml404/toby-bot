@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.BuyWithTobyOutcome
 import web.service.TitlesWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -24,6 +25,24 @@ import web.util.displayName
 class TitlesController(
     private val titlesWebService: TitlesWebService
 ) {
+
+    private val apiErrorBuilder: (Int) -> ResponseEntity<ApiResult> = { status ->
+        ResponseEntity.status(status).body(
+            ApiResult(
+                false,
+                if (status == 401) "Not signed in." else "You are not a member of that server."
+            )
+        )
+    }
+
+    private val buyWithTobyErrorBuilder: (Int) -> ResponseEntity<BuyWithTobyResponse> = { status ->
+        ResponseEntity.status(status).body(
+            BuyWithTobyResponse(
+                false,
+                if (status == 401) "Not signed in." else "You are not a member of that server."
+            )
+        )
+    }
 
     @GetMapping("/guilds")
     fun guildList(
@@ -47,20 +66,15 @@ class TitlesController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/titles/guilds"
-
-        if (!titlesWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/titles/guilds"
-        }
-
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/titles/guilds",
+        check = titlesWebService::isMember,
+    ) { discordId ->
         val titleShop = titlesWebService.getTitlesForGuild(guildId, discordId)
         model.addAttribute("titleShop", titleShop)
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("username", user.displayName())
-        return "titles"
+        "titles"
     }
 
     @PostMapping("/{guildId}/{titleId}/buy")
@@ -69,14 +83,11 @@ class TitlesController(
         @PathVariable guildId: Long,
         @PathVariable titleId: Long,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
-        if (!titlesWebService.isMember(actor, guildId)) {
-            return ResponseEntity.status(403).body(ApiResult(false, "You are not a member of that server."))
-        }
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireForJson(
+        user, guildId, check = titlesWebService::isMember, errorBuilder = apiErrorBuilder
+    ) { actor ->
         val error = titlesWebService.buyTitle(actor, guildId, titleId)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -86,13 +97,10 @@ class TitlesController(
         @PathVariable guildId: Long,
         @PathVariable titleId: Long,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<BuyWithTobyResponse> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(BuyWithTobyResponse(false, "Not signed in."))
-        if (!titlesWebService.isMember(actor, guildId)) {
-            return ResponseEntity.status(403).body(BuyWithTobyResponse(false, "You are not a member of that server."))
-        }
-        return when (val outcome = titlesWebService.buyTitleWithTobyCoin(actor, guildId, titleId)) {
+    ): ResponseEntity<BuyWithTobyResponse> = WebGuildAccess.requireForJson(
+        user, guildId, check = titlesWebService::isMember, errorBuilder = buyWithTobyErrorBuilder
+    ) { actor ->
+        when (val outcome = titlesWebService.buyTitleWithTobyCoin(actor, guildId, titleId)) {
             is BuyWithTobyOutcome.Ok -> ResponseEntity.ok(
                 BuyWithTobyResponse(
                     ok = true,
@@ -121,14 +129,11 @@ class TitlesController(
         @PathVariable guildId: Long,
         @PathVariable titleId: Long,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
-        if (!titlesWebService.isMember(actor, guildId)) {
-            return ResponseEntity.status(403).body(ApiResult(false, "You are not a member of that server."))
-        }
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireForJson(
+        user, guildId, check = titlesWebService::isMember, errorBuilder = apiErrorBuilder
+    ) { actor ->
         val error = titlesWebService.equipTitle(actor, guildId, titleId)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -137,14 +142,11 @@ class TitlesController(
     fun unequip(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<ApiResult> {
-        val actor = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
-        if (!titlesWebService.isMember(actor, guildId)) {
-            return ResponseEntity.status(403).body(ApiResult(false, "You are not a member of that server."))
-        }
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireForJson(
+        user, guildId, check = titlesWebService::isMember, errorBuilder = apiErrorBuilder
+    ) { actor ->
         val error = titlesWebService.unequipTitle(actor, guildId)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 }

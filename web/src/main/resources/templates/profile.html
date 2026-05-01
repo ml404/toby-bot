@@ -11,7 +11,7 @@
         <h1 th:text="${profile.guildName}">Guild</h1>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <div class="profile-grid">
         <section class="profile-card">

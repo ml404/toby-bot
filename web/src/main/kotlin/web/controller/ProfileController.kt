@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.ProfileWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -42,22 +43,17 @@ class ProfileController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/profile/guilds"
-
-        if (!profileWebService.isMember(discordId, guildId)) {
-            ra.addFlashAttribute("error", "You are not a member of that server.")
-            return "redirect:/profile/guilds"
-        }
-
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/profile/guilds",
+        check = profileWebService::isMember,
+    ) { discordId ->
         val profile = profileWebService.getProfile(discordId, guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/profile/guilds"
+            return@requireForPage "redirect:/profile/guilds"
         }
 
         model.addAttribute("profile", profile)
         model.addAttribute("username", user.displayName())
-        return "profile"
+        "profile"
     }
 }

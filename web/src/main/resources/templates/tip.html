@@ -18,7 +18,7 @@
         </p>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <section class="tip-card">
         <form id="tip-form" autocomplete="off">

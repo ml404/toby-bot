@@ -3,10 +3,6 @@ package web.controller
 import database.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
-import database.service.JackpotService
-import database.service.TobyCoinMarketService
-import database.service.UserService
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -19,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
+import web.casino.CasinoResponseLike
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
-import web.util.displayName
 
 /**
  * Web surface for the `/coinflip` minigame. GET renders the picker UI
@@ -37,11 +35,10 @@ import web.util.displayName
 class CoinflipController(
     private val coinflipService: CoinflipService,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val marketService: TobyCoinMarketService,
-    private val jda: JDA
+    private val pageContext: CasinoPageContext,
 ) {
+
+    private val errors = CasinoOutcomeMapper { msg -> FlipResponse(false, msg) }
 
     @GetMapping
     fun page(
@@ -52,26 +49,13 @@ class CoinflipController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
     ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
+        pageContext.populate(model, guildId, discordId, user) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/casino/guilds"
         }
-
-        val profile = userService.getUserById(discordId, guildId)
-        val balance = profile?.socialCredit ?: 0L
-        val tobyCoins = profile?.tobyCoins ?: 0L
-        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
-
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", balance)
-        model.addAttribute("tobyCoins", tobyCoins)
-        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", Coinflip.MIN_STAKE)
         model.addAttribute("maxStake", Coinflip.MAX_STAKE)
         model.addAttribute("multiplier", Coinflip.DEFAULT_MULTIPLIER)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("username", user.displayName())
         "coinflip"
     }
 
@@ -82,20 +66,10 @@ class CoinflipController(
         @RequestBody request: FlipRequest,
         @AuthenticationPrincipal user: OAuth2User
     ): ResponseEntity<FlipResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                FlipResponse(
-                    false,
-                    if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         val side = parseSide(request.side)
-            ?: return@requireMemberForJson ResponseEntity.badRequest().body(
-                FlipResponse(false, "Pick a side: HEADS or TAILS.")
-            )
+            ?: return@requireMemberForJson errors.badRequest("Pick a side: HEADS or TAILS.")
 
         when (val outcome = coinflipService.flip(discordId, guildId, request.stake, side, request.autoTopUp)) {
             is FlipOutcome.Win -> ResponseEntity.ok(
@@ -128,21 +102,10 @@ class CoinflipController(
                 )
             )
 
-            is FlipOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
-                FlipResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
-            )
-
-            is FlipOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
-                FlipResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
-            )
-
-            is FlipOutcome.InvalidStake -> ResponseEntity.badRequest().body(
-                FlipResponse(false, "Stake must be between ${outcome.min} and ${outcome.max} credits.")
-            )
-
-            FlipOutcome.UnknownUser -> ResponseEntity.badRequest().body(
-                FlipResponse(false, "No user record yet. Try another TobyBot command first.")
-            )
+            is FlipOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is FlipOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            is FlipOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
+            FlipOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 
@@ -156,8 +119,8 @@ class CoinflipController(
 data class FlipRequest(val side: String = "", val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class FlipResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val landed: String? = null,
     val predicted: String? = null,
     val net: Long? = null,
@@ -168,4 +131,4 @@ data class FlipResponse(
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null
-)
+) : CasinoResponseLike

@@ -3,11 +3,7 @@ package web.controller
 import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
-import database.service.JackpotService
-import database.service.TobyCoinMarketService
-import database.service.UserService
 import jakarta.servlet.http.HttpSession
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -20,20 +16,22 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
+import web.casino.CasinoResponseLike
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
-import web.util.displayName
 
 @Controller
 @RequestMapping("/casino/{guildId}/highlow")
 class HighlowController(
     private val highlowService: HighlowService,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val marketService: TobyCoinMarketService,
-    private val jda: JDA
+    private val pageContext: CasinoPageContext,
 ) {
+
+    private val startErrors = CasinoOutcomeMapper { msg -> StartResponse(false, msg) }
+    private val playErrors = CasinoOutcomeMapper { msg -> PlayResponse(false, msg) }
 
     @GetMapping
     fun page(
@@ -45,15 +43,10 @@ class HighlowController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
     ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
+        pageContext.populate(model, guildId, discordId, user) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/casino/guilds"
         }
-
-        val profile = userService.getUserById(discordId, guildId)
-        val balance = profile?.socialCredit ?: 0L
-        val tobyCoins = profile?.tobyCoins ?: 0L
-        val marketPrice = marketService.getMarket(guildId)?.price ?: 0.0
 
         // Stake commits first, anchor is dealt after the player locks it.
         // If a round is already locked in this session, surface it so the
@@ -61,11 +54,6 @@ class HighlowController(
         val activeAnchor = activeAnchor(session, guildId)
         val activeStake = activeStake(session, guildId)
 
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", balance)
-        model.addAttribute("tobyCoins", tobyCoins)
-        model.addAttribute("marketPrice", marketPrice)
         model.addAttribute("minStake", Highlow.MIN_STAKE)
         model.addAttribute("maxStake", Highlow.MAX_STAKE)
         model.addAttribute("anchor", activeAnchor)
@@ -77,8 +65,6 @@ class HighlowController(
             highlowService.payoutMultiplier(it, Highlow.Direction.LOWER)
         })
         model.addAttribute("activeStake", activeStake)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("username", user.displayName())
         "highlow"
     }
 
@@ -90,20 +76,10 @@ class HighlowController(
         @AuthenticationPrincipal user: OAuth2User,
         session: HttpSession
     ): ResponseEntity<StartResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                StartResponse(
-                    false,
-                    if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
+        user, guildId, economyWebService, errorBuilder = startErrors.errorBuilder
     ) { _ ->
         if (request.stake < Highlow.MIN_STAKE || request.stake > Highlow.MAX_STAKE) {
-            return@requireMemberForJson ResponseEntity.badRequest().body(
-                StartResponse(false, "Stake must be between ${Highlow.MIN_STAKE} and ${Highlow.MAX_STAKE} credits.")
-            )
+            return@requireMemberForJson startErrors.invalidStake(Highlow.MIN_STAKE, Highlow.MAX_STAKE)
         }
 
         val anchor = highlowService.dealAnchor()
@@ -130,27 +106,15 @@ class HighlowController(
         @AuthenticationPrincipal user: OAuth2User,
         session: HttpSession
     ): ResponseEntity<PlayResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                PlayResponse(
-                    false,
-                    if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
+        user, guildId, economyWebService, errorBuilder = playErrors.errorBuilder
     ) { discordId ->
         val direction = parseDirection(request.direction)
-            ?: return@requireMemberForJson ResponseEntity.badRequest().body(
-                PlayResponse(false, "Pick a direction: HIGHER or LOWER.")
-            )
+            ?: return@requireMemberForJson playErrors.badRequest("Pick a direction: HIGHER or LOWER.")
 
         val anchor = activeAnchor(session, guildId)
         val stake = activeStake(session, guildId)
         if (anchor == null || stake == null) {
-            return@requireMemberForJson ResponseEntity.badRequest().body(
-                PlayResponse(false, "No active round — lock a stake first.")
-            )
+            return@requireMemberForJson playErrors.badRequest("No active round — lock a stake first.")
         }
         val autoTopUp = activeAutoTopUp(session, guildId)
 
@@ -199,21 +163,10 @@ class HighlowController(
                 )
             )
 
-            is PlayOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
-                PlayResponse(false, "Need ${outcome.stake} credits, you have ${outcome.have}.")
-            )
-
-            is PlayOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
-                PlayResponse(false, "Need ${outcome.needed} TOBY to cover the shortfall, you have ${outcome.have}.")
-            )
-
-            is PlayOutcome.InvalidStake -> ResponseEntity.badRequest().body(
-                PlayResponse(false, "Stake must be between ${outcome.min} and ${outcome.max} credits.")
-            )
-
-            PlayOutcome.UnknownUser -> ResponseEntity.badRequest().body(
-                PlayResponse(false, "No user record yet. Try another TobyBot command first.")
-            )
+            is PlayOutcome.InsufficientCredits -> playErrors.insufficientCredits(outcome.stake, outcome.have)
+            is PlayOutcome.InsufficientCoinsForTopUp -> playErrors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            is PlayOutcome.InvalidStake -> playErrors.invalidStake(outcome.min, outcome.max)
+            PlayOutcome.UnknownUser -> playErrors.unknownUser()
         }
     }
 
@@ -266,19 +219,19 @@ class HighlowController(
 data class StartRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
 
 data class StartResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val anchor: Int? = null,
     val anchorLabel: String? = null,
     val higherMultiplier: Double? = null,
     val lowerMultiplier: Double? = null
-)
+) : CasinoResponseLike
 
 data class PlayRequest(val direction: String = "")
 
 data class PlayResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val anchor: Int? = null,
     val next: Int? = null,
     val direction: String? = null,
@@ -291,4 +244,4 @@ data class PlayResponse(
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null
-)
+) : CasinoResponseLike

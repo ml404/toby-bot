@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <div class="tabs" role="tablist">
         <button class="tab-btn active" data-tab="users" role="tab" aria-selected="true">Users</button>

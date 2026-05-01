@@ -82,7 +82,7 @@
     <h1 class="mb-3">Select a Server</h1>
     <p class="muted mb-5">Servers where both you and TobyBot are present.</p>
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:replace="~{fragments/alerts :: error}"></div>
 
     <div class="search-row" th:if="${not #lists.isEmpty(guilds)}">
         <input type="search" id="guildSearch" placeholder="Search servers…"

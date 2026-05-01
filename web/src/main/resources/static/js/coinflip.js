@@ -23,10 +23,6 @@ function renderCoinflipResult(resultEl, body) {
     if (!main) return;
 
     const guildId = main.dataset.guildId;
-    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
-    const initialMarketPrice = Number(main.dataset.marketPrice) || 0;
-    const postJson = window.TobyApi && window.TobyApi.postJson;
-
     const coin = document.getElementById('coinflip-coin');
     const coinFace = document.getElementById('coinflip-coin-face');
     const stakeInput = document.getElementById('coinflip-stake');
@@ -38,24 +34,10 @@ function renderCoinflipResult(resultEl, body) {
 
     if (!form || !flipBtn || !stakeInput || !coin || !coinFace) return;
 
-    const topUp = (window.TobyTopUp && flipTobyBtn) ? window.TobyTopUp.init({
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: flipBtn,
-        tobyBtn: flipTobyBtn,
-        balanceEl: balanceEl,
-        tobyCoins: initialTobyCoins,
-        marketPrice: initialMarketPrice,
-        onSubmit: function (autoTopUp) { runFlip(autoTopUp); },
-    }) : null;
-
     const FLIP_DURATION_MS = 800;
     const FLIP_INTERVAL_MS = 80;
-    // Faces shown during the flip animation. Final face comes from the
-    // server response.
+    // Faces shown during the flip animation. Final face comes from the server.
     const FLIP_FACES = ['🪙', '🟡'];
-
-    let flipping = false;
 
     function selectedSide() {
         const checked = form.querySelector('input[name="side"]:checked');
@@ -63,7 +45,6 @@ function renderCoinflipResult(resultEl, body) {
     }
 
     function startFlipAnimation() {
-        flipping = true;
         coin.classList.add('flipping');
         let i = 0;
         return setInterval(function () {
@@ -72,10 +53,10 @@ function renderCoinflipResult(resultEl, body) {
         }, FLIP_INTERVAL_MS);
     }
 
-    function stopFlipAnimation(intervalId, landedSide) {
+    function stopFlipAnimation(intervalId, body) {
         clearInterval(intervalId);
-        flipping = false;
         coin.classList.remove('flipping');
+        const landedSide = body && body.landed;
         if (landedSide === 'HEADS') {
             coinFace.textContent = 'H';
             coin.dataset.landed = 'heads';
@@ -88,82 +69,30 @@ function renderCoinflipResult(resultEl, body) {
         }
     }
 
-    function applyBalance(newBalance) {
-        if (typeof newBalance !== 'number') return;
-        if (balanceEl) balanceEl.textContent = newBalance;
-    }
-
-    function applyTobyDelta(body) {
-        if (!topUp) return;
-        if (typeof body.soldTobyCoins === 'number') {
-            const remaining = Math.max(0, initialTobyCoins - body.soldTobyCoins);
-            topUp.setTobyCoins(remaining);
-        }
-        if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
-    }
-
-    function runFlip(autoTopUp) {
-        if (flipping) return;
-
-        const side = selectedSide();
-        if (!side) {
-            toast('Pick a side first.', 'error');
-            return;
-        }
-        const stake = parseInt(stakeInput.value, 10);
-        if (!stake || stake <= 0) {
-            toast('Enter a positive stake.', 'error');
-            return;
-        }
-
-        flipBtn.disabled = true;
-        if (flipTobyBtn) flipTobyBtn.disabled = true;
-        const intervalId = startFlipAnimation();
-        const requestStart = Date.now();
-
-        if (!postJson) {
-            stopFlipAnimation(intervalId);
-            flipBtn.disabled = false;
-            if (flipTobyBtn) flipTobyBtn.disabled = false;
-            toast('API helper missing — refresh the page.', 'error');
-            return;
-        }
-
-        postJson('/casino/' + guildId + '/coinflip/flip', {
-            side: side, stake: stake, autoTopUp: !!autoTopUp,
-        })
-            .then(function (body) {
-                const elapsed = Date.now() - requestStart;
-                const remaining = Math.max(0, FLIP_DURATION_MS - elapsed);
-                setTimeout(function () {
-                    stopFlipAnimation(intervalId, body && body.landed);
-                    flipBtn.disabled = false;
-                    if (flipTobyBtn) flipTobyBtn.disabled = false;
-                    if (body && body.ok) {
-                        renderCoinflipResult(resultEl, body);
-                        applyBalance(body.newBalance);
-                        applyTobyDelta(body);
-                    } else {
-                        if (resultEl) resultEl.hidden = true;
-                        toast((body && body.error) || 'Flip failed.', 'error');
-                    }
-                }, remaining);
-            })
-            .catch(function () {
-                stopFlipAnimation(intervalId);
-                flipBtn.disabled = false;
-                if (flipTobyBtn) flipTobyBtn.disabled = false;
-                if (resultEl) resultEl.hidden = true;
-                toast('Network error.', 'error');
-            });
-    }
-
-    if (!topUp) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            runFlip(false);
-        });
-    }
+    window.TobyCasinoGame.init({
+        guildId: guildId,
+        endpoint: '/casino/' + guildId + '/coinflip/flip',
+        form: form,
+        stakeInput: stakeInput,
+        primaryBtn: flipBtn,
+        tobyBtn: flipTobyBtn,
+        balanceEl: balanceEl,
+        resultEl: resultEl,
+        tobyCoins: Number(main.dataset.tobyCoins) || 0,
+        marketPrice: Number(main.dataset.marketPrice) || 0,
+        minSettleMs: FLIP_DURATION_MS,
+        failureMessage: 'Flip failed.',
+        validate: function () {
+            if (!selectedSide()) return 'Pick a side first.';
+            return null;
+        },
+        buildPayload: function (state) {
+            return { side: selectedSide(), stake: state.stake, autoTopUp: state.autoTopUp };
+        },
+        startAnimation: startFlipAnimation,
+        stopAnimation: stopFlipAnimation,
+        renderResult: function (body) { renderCoinflipResult(resultEl, body); },
+    });
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
