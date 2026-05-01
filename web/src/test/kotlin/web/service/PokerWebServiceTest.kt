@@ -151,5 +151,59 @@ class PokerWebServiceTest {
         assertEquals(5L, lastResult.rake)
         assertEquals(listOf("A♠", "K♥"), lastResult.board)
         assertEquals(listOf("Q♠"), lastResult.revealedHoleCards["1"])
+        // Pre-v2 HandResult constructions default `pots` to empty and
+        // `refundedByDiscordId` to empty — projection must surface those
+        // shapes without crashing on missing fields.
+        assertEquals(emptyList<PokerWebService.PotResultView>(), lastResult.pots)
+        assertEquals(emptyMap<String, Long>(), lastResult.refundedByDiscordId)
+    }
+
+    @Test
+    fun `multi-tier pots are projected in order with masked discord-id keys`() {
+        val table = makeTable()
+        // 3-way side-pot scenario: A all-in 50 wins main, B wins side
+        // over C. The HandResultView should mirror the engine's pot
+        // tier list one-for-one so the JS layer can render it.
+        table.lastResult = PokerTable.HandResult(
+            handNumber = 7L,
+            winners = listOf(1L, 2L),
+            payoutByDiscordId = mapOf(1L to 150L, 2L to 300L),
+            pot = 450L,
+            rake = 0L,
+            board = listOf(Card(Rank.TWO, Suit.CLUBS)),
+            revealedHoleCards = emptyMap(),
+            resolvedAt = Instant.now(),
+            pots = listOf(
+                PokerTable.PotResult(
+                    cap = 50L,
+                    eligibleDiscordIds = listOf(1L, 2L, 3L),
+                    amount = 150L,
+                    winners = listOf(1L),
+                    payoutByDiscordId = mapOf(1L to 150L),
+                ),
+                PokerTable.PotResult(
+                    cap = 200L,
+                    eligibleDiscordIds = listOf(2L, 3L),
+                    amount = 300L,
+                    winners = listOf(2L),
+                    payoutByDiscordId = mapOf(2L to 300L),
+                ),
+            ),
+            refundedByDiscordId = mapOf(3L to 25L),
+        )
+        val view = service.snapshot(table.id, viewerDiscordId = 1L)!!
+        val lastResult = view.lastResult!!
+        val pots = lastResult.pots
+        assertEquals(2, pots.size)
+        assertEquals(50L, pots[0].cap)
+        assertEquals(150L, pots[0].amount)
+        assertEquals(listOf(1L, 2L, 3L), pots[0].eligibleDiscordIds)
+        assertEquals(listOf(1L), pots[0].winners)
+        assertEquals(150L, pots[0].payoutByDiscordId["1"])
+        assertEquals(200L, pots[1].cap)
+        assertEquals(listOf(2L, 3L), pots[1].eligibleDiscordIds)
+        assertEquals(listOf(2L), pots[1].winners)
+        assertEquals(300L, pots[1].payoutByDiscordId["2"])
+        assertEquals(25L, lastResult.refundedByDiscordId["3"])
     }
 }

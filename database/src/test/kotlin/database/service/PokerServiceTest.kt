@@ -2,8 +2,10 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.PokerHandLogDto
+import database.dto.PokerHandPotDto
 import database.dto.UserDto
 import database.persistence.PokerHandLogPersistence
+import database.persistence.PokerHandPotPersistence
 import database.poker.PokerEngine
 import database.poker.PokerTable
 import database.poker.PokerTableRegistry
@@ -32,6 +34,7 @@ class PokerServiceTest {
     private lateinit var configService: ConfigService
     private lateinit var registry: PokerTableRegistry
     private lateinit var handLog: RecordingPokerHandLogPersistence
+    private lateinit var handPot: RecordingPokerHandPotPersistence
     private lateinit var service: PokerService
 
     @BeforeEach
@@ -44,6 +47,7 @@ class PokerServiceTest {
             sweepInterval = Duration.ofHours(1)
         )
         handLog = RecordingPokerHandLogPersistence()
+        handPot = RecordingPokerHandPotPersistence()
         // Default config — fall back to 5% rake.
         every {
             configService.getConfigByName(
@@ -57,6 +61,7 @@ class PokerServiceTest {
             configService = configService,
             tableRegistry = registry,
             handLogPersistence = handLog,
+            handPotPersistence = handPot,
             random = Random(42)
         )
     }
@@ -230,6 +235,14 @@ class PokerServiceTest {
         assertEquals(1, handLog.inserted.size)
         assertEquals(100L, handLog.inserted[0].pot)
         assertEquals(5L, handLog.inserted[0].rake)
+        // v2: single-pot hand still produces exactly one pot-tier row
+        // joined to the hand log so the audit table is consistent
+        // whether or not side pots formed.
+        val handLogId = handLog.inserted[0].id!!
+        val tiers = handPot.findByHandLogId(handLogId)
+        assertEquals(1, tiers.size, "single-pot hand → single audit tier row")
+        assertEquals(0, tiers[0].tierIndex)
+        assertEquals(95L, tiers[0].amount, "tier amount net of rake (100 - 5)")
     }
 
     @Test
@@ -355,8 +368,21 @@ class PokerServiceTest {
 
     private class RecordingPokerHandLogPersistence : PokerHandLogPersistence {
         val inserted = mutableListOf<PokerHandLogDto>()
+        private var nextId = 1L
         override fun insert(row: PokerHandLogDto): PokerHandLogDto {
+            // Production assigns id via @GeneratedValue + flush. Stub it
+            // here so persistResult can pass it on to the pot rows.
+            if (row.id == null) row.id = nextId++
             inserted.add(row); return row
         }
+    }
+
+    private class RecordingPokerHandPotPersistence : PokerHandPotPersistence {
+        val inserted = mutableListOf<PokerHandPotDto>()
+        override fun insert(row: PokerHandPotDto): PokerHandPotDto {
+            inserted.add(row); return row
+        }
+        override fun findByHandLogId(handLogId: Long): List<PokerHandPotDto> =
+            inserted.filter { it.handLogId == handLogId }.sortedBy { it.tierIndex }
     }
 }

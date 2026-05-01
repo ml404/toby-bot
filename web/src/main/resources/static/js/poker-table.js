@@ -21,6 +21,7 @@
     const seatsEl = document.getElementById('poker-seats');
     const statusEl = document.getElementById('poker-status');
     const resultEl = document.getElementById('poker-result');
+    const potsEl = document.getElementById('poker-pots');
     const balanceEl = document.getElementById('poker-balance');
     const joinCard = document.getElementById('poker-join-card');
 
@@ -117,7 +118,11 @@
     }
 
     function renderResult(result) {
-        if (!result) { resultEl.textContent = ''; return; }
+        if (!result) {
+            resultEl.textContent = '';
+            if (potsEl) { potsEl.innerHTML = ''; potsEl.hidden = true; }
+            return;
+        }
         const winners = (result.winners || []).map(function (id) { return String(id); }).join(', ');
         const reveals = result.revealedHoleCards || {};
         const lines = [];
@@ -128,6 +133,13 @@
             ' resolved. Winners: ' + winners +
             ' · pot ' + result.pot + ' (rake ' + result.rake + ' → jackpot)' +
             (lines.length ? ' · showdown: ' + lines.join(' | ') : '');
+        if (potsEl && window.TobyPokerPots) {
+            window.TobyPokerPots.render({
+                containerEl: potsEl,
+                pots: result.pots || [],
+                refundedByDiscordId: result.refundedByDiscordId || {},
+            });
+        }
     }
 
     function refresh() {
