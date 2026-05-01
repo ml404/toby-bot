@@ -680,6 +680,50 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig UBI_DAILY_AMOUNT persists valid value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.UBI_DAILY_AMOUNT, "50")
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("UBI_DAILY_AMOUNT", "50", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig UBI_DAILY_AMOUNT rejects out-of-range value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.UBI_DAILY_AMOUNT, "5000")
+
+        assertEquals("Value must be between 0 and 1000 (0 disables UBI).", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
+    fun `updateConfig DAILY_CREDIT_CAP persists valid value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.DAILY_CREDIT_CAP, "200")
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("DAILY_CREDIT_CAP", "200", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig DAILY_CREDIT_CAP rejects negative value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.DAILY_CREDIT_CAP, "-5")
+
+        assertEquals("Value must be between 0 and 10000 (default 90).", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
     fun `getLeaderboard queries voice for the CURRENT month, not the previous one`() {
         // Regression: the old code passed [prevMonthStart, thisMonthStart),
         // which is the just-finished month — copy-paste from

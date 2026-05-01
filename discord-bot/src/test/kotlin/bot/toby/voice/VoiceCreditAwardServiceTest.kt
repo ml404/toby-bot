@@ -49,8 +49,7 @@ class VoiceCreditAwardServiceTest {
                 amount = 5L,
                 reason = "voice-session",
                 countsAgainstDailyCap = any(),
-                at = any(),
-                dailyCap = VoiceCreditConfig.DAILY_CREDIT_CAP
+                at = any()
             )
         } returns 5L
 
@@ -69,8 +68,7 @@ class VoiceCreditAwardServiceTest {
                 amount = 5L,
                 reason = "voice-session",
                 countsAgainstDailyCap = any(),
-                at = any(),
-                dailyCap = VoiceCreditConfig.DAILY_CREDIT_CAP
+                at = any()
             )
         }
     }
@@ -80,7 +78,7 @@ class VoiceCreditAwardServiceTest {
         val t0 = Instant.parse("2026-04-10T10:00:00Z")
         every {
             awardService.award(
-                any(), any(), amount = 0L, any(), any(), any(), any()
+                any(), any(), amount = 0L, any(), any(), any()
             )
         } returns 0L
 
@@ -104,8 +102,7 @@ class VoiceCreditAwardServiceTest {
                 amount = 90L,
                 reason = "voice-session",
                 countsAgainstDailyCap = any(),
-                at = any(),
-                dailyCap = VoiceCreditConfig.DAILY_CREDIT_CAP
+                at = any()
             )
         } returns 5L
 
@@ -121,7 +118,7 @@ class VoiceCreditAwardServiceTest {
     @Test
     fun `closeSessionAndAward clamps counted seconds to raw duration`() {
         val t0 = Instant.parse("2026-04-10T10:00:00Z")
-        every { awardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        every { awardService.award(any(), any(), any(), any(), any(), any()) } returns 0L
         val closed = slot<VoiceSessionDto>()
         every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
 
@@ -134,7 +131,7 @@ class VoiceCreditAwardServiceTest {
     @Test
     fun `closeRecoveredSession caps duration at max recovered seconds`() {
         val t0 = Instant.parse("2026-04-01T00:00:00Z")
-        every { awardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        every { awardService.award(any(), any(), any(), any(), any(), any()) } returns 0L
         val closed = slot<VoiceSessionDto>()
         every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
 
@@ -148,7 +145,7 @@ class VoiceCreditAwardServiceTest {
     @Test
     fun `closeSessionAtShutdown awards full raw seconds without the recovery cap`() {
         val t0 = Instant.parse("2026-04-10T10:00:00Z")
-        every { awardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        every { awardService.award(any(), any(), any(), any(), any(), any()) } returns 0L
         val closed = slot<VoiceSessionDto>()
         every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
 
@@ -166,7 +163,7 @@ class VoiceCreditAwardServiceTest {
     fun `closeSessionAtShutdown treats a negative duration as zero`() {
         // Clock skew / backwards-moving Instant.now — shouldn't produce negative credits.
         val t0 = Instant.parse("2026-04-10T10:00:00Z")
-        every { awardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        every { awardService.award(any(), any(), any(), any(), any(), any()) } returns 0L
         val closed = slot<VoiceSessionDto>()
         every { voiceSessionService.closeSession(capture(closed)) } answers { closed.captured }
 
@@ -186,8 +183,7 @@ class VoiceCreditAwardServiceTest {
                 amount = 5L,
                 reason = "voice-session",
                 countsAgainstDailyCap = any(),
-                at = any(),
-                dailyCap = VoiceCreditConfig.DAILY_CREDIT_CAP
+                at = any()
             )
         } returns 0L
         val closed = slot<VoiceSessionDto>()

@@ -308,6 +308,18 @@ class ModerationWebService(
                 if (n !in 0..600) return "Value must be between 0 and 600 seconds."
                 n.toString()
             }
+            ConfigDto.Configurations.UBI_DAILY_AMOUNT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-1000)."
+                if (n !in 0..1000) return "Value must be between 0 and 1000 (0 disables UBI)."
+                n.toString()
+            }
+            ConfigDto.Configurations.DAILY_CREDIT_CAP -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-10000)."
+                if (n !in 0..10000) return "Value must be between 0 and 10000 (default 90)."
+                n.toString()
+            }
         }
 
         val guildIdString = guild.id

@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.VoiceCreditDailyDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,13 +18,17 @@ import java.time.ZoneOffset
 @Transactional
 class SocialCreditAwardService(
     private val userService: UserService,
-    private val voiceCreditDailyService: VoiceCreditDailyService
+    private val voiceCreditDailyService: VoiceCreditDailyService,
+    private val configService: ConfigService
 ) {
     /**
      * Add [amount] credits to the user, respecting the daily cap when
      * [countsAgainstDailyCap] is true. Returns the amount that was actually
      * granted (clamped to remaining daily headroom). No-ops and returns 0 for
      * non-positive [amount] or unknown users.
+     *
+     * The daily cap is resolved per-guild from the [ConfigDto.Configurations.DAILY_CREDIT_CAP]
+     * config, falling back to [DEFAULT_DAILY_CAP] when unset or unparseable.
      */
     fun award(
         discordId: Long,
@@ -32,7 +37,6 @@ class SocialCreditAwardService(
         reason: String,
         countsAgainstDailyCap: Boolean = true,
         at: Instant = Instant.now(),
-        dailyCap: Long = DEFAULT_DAILY_CAP,
     ): Long {
         if (amount <= 0L) return 0L
 
@@ -41,7 +45,7 @@ class SocialCreditAwardService(
         val user = userService.getUserById(discordId, guildId) ?: return 0L
 
         val granted = if (countsAgainstDailyCap) {
-            clampToDailyCap(discordId, guildId, amount, at, dailyCap)
+            clampToDailyCap(discordId, guildId, amount, at)
         } else {
             amount
         }
@@ -56,12 +60,12 @@ class SocialCreditAwardService(
         discordId: Long,
         guildId: Long,
         requested: Long,
-        at: Instant,
-        dailyCap: Long
+        at: Instant
     ): Long {
         val today = LocalDate.ofInstant(at, ZoneOffset.UTC)
         val existing = voiceCreditDailyService.get(discordId, guildId, today)
         val usedToday = existing?.credits ?: 0L
+        val dailyCap = resolveDailyCap(guildId)
         val headroom = (dailyCap - usedToday).coerceAtLeast(0L)
         val granted = requested.coerceAtMost(headroom)
         if (granted > 0L) {
@@ -77,8 +81,17 @@ class SocialCreditAwardService(
         return granted
     }
 
+    private fun resolveDailyCap(guildId: Long): Long {
+        val raw = configService.getConfigByName(
+            ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue,
+            guildId.toString()
+        )?.value
+        val parsed = raw?.toLongOrNull()
+        return if (parsed != null && parsed >= 0L) parsed else DEFAULT_DAILY_CAP
+    }
+
     companion object {
-        // Matches the voice credit cap so all daily-capped sources share one bucket.
+        // Fallback when DAILY_CREDIT_CAP config is unset or unparseable for the guild.
         const val DEFAULT_DAILY_CAP: Long = 90L
     }
 }

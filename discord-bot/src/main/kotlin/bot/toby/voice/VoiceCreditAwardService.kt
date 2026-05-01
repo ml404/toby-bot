@@ -30,8 +30,7 @@ class VoiceCreditAwardService @Autowired constructor(
             guildId = session.guildId,
             amount = rawCredits,
             reason = "voice-session",
-            at = closedAt,
-            dailyCap = VoiceCreditConfig.DAILY_CREDIT_CAP
+            at = closedAt
         )
 
         session.leftAt = closedAt

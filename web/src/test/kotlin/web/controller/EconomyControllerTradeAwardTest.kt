@@ -38,7 +38,7 @@ class EconomyControllerTradeAwardTest {
         every { economyWebService.isMember(discordId, guildId) } returns true
         // Match the full signature including defaulted args via any().
         every {
-            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any(), any())
+            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any())
         } returns EconomyController.UI_TRADE_CREDIT
         controller = EconomyController(economyWebService, awardService)
     }
@@ -60,7 +60,7 @@ class EconomyControllerTradeAwardTest {
         assertEquals(true, response.body?.ok)
         assertEquals(500L + EconomyController.UI_TRADE_CREDIT, response.body?.newCredits)
         verify(exactly = 1) {
-            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any(), any())
+            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any())
         }
     }
 
@@ -78,7 +78,7 @@ class EconomyControllerTradeAwardTest {
         controller.sell(guildId, TradeRequest(amount = 3L), user)
 
         verify(exactly = 1) {
-            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any(), any())
+            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any())
         }
     }
 
@@ -89,7 +89,7 @@ class EconomyControllerTradeAwardTest {
 
         controller.buy(guildId, TradeRequest(amount = 5L), user)
 
-        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -99,7 +99,7 @@ class EconomyControllerTradeAwardTest {
 
         controller.sell(guildId, TradeRequest(amount = 5L), user)
 
-        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -108,7 +108,7 @@ class EconomyControllerTradeAwardTest {
 
         controller.buy(guildId, TradeRequest(amount = 5L), user)
 
-        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -117,7 +117,7 @@ class EconomyControllerTradeAwardTest {
 
         assertEquals(400, response.statusCode.value())
         verify(exactly = 0) { economyWebService.buy(any(), any(), any()) }
-        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { awardService.award(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -131,7 +131,7 @@ class EconomyControllerTradeAwardTest {
         )
         every { economyWebService.buy(discordId, guildId, 1L) } returns outcome
         every {
-            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any(), any())
+            awardService.award(discordId, guildId, EconomyController.UI_TRADE_CREDIT, "ui-trade", any(), any())
         } returns 0L // daily cap reached
 
         val response = controller.buy(guildId, TradeRequest(amount = 1L), user)

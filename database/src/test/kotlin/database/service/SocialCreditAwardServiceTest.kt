@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.UserDto
 import database.dto.VoiceCreditDailyDto
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,13 +19,15 @@ class SocialCreditAwardServiceTest {
 
     private lateinit var userService: RecordingUserService
     private lateinit var dailyService: InMemoryVoiceCreditDailyService
+    private lateinit var configService: InMemoryConfigService
     private lateinit var service: SocialCreditAwardService
 
     @BeforeEach
     fun setup() {
         userService = RecordingUserService()
         dailyService = InMemoryVoiceCreditDailyService()
-        service = SocialCreditAwardService(userService, dailyService)
+        configService = InMemoryConfigService()
+        service = SocialCreditAwardService(userService, dailyService, configService)
     }
 
     @Test
@@ -91,14 +94,25 @@ class SocialCreditAwardServiceTest {
     }
 
     @Test
-    fun `award with a custom dailyCap overrides the default`() {
+    fun `award reads the per-guild DAILY_CREDIT_CAP override from config`() {
         userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L })
+        configService.set(ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue, guildId.toString(), "7")
 
-        val granted = service.award(discordId, guildId, amount = 100L, reason = "test", at = now, dailyCap = 7L)
+        val granted = service.award(discordId, guildId, amount = 100L, reason = "test", at = now)
 
         assertEquals(7L, granted)
         assertEquals(7L, userService.current(discordId, guildId)?.socialCredit)
         assertEquals(7L, dailyService.get(discordId, guildId, today)?.credits)
+    }
+
+    @Test
+    fun `award falls back to DEFAULT_DAILY_CAP when config value is unparseable`() {
+        userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L })
+        configService.set(ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue, guildId.toString(), "not-a-number")
+
+        val granted = service.award(discordId, guildId, amount = 200L, reason = "test", at = now)
+
+        assertEquals(SocialCreditAwardService.DEFAULT_DAILY_CAP, granted)
     }
 
     private class RecordingUserService : UserService {
@@ -144,6 +158,39 @@ class SocialCreditAwardServiceTest {
         override fun upsert(row: VoiceCreditDailyDto): VoiceCreditDailyDto {
             rows[Triple(row.discordId, row.guildId, row.earnDate)] = row
             return row
+        }
+    }
+
+    private class InMemoryConfigService : ConfigService {
+        private val rows = mutableMapOf<Pair<String, String>, ConfigDto>()
+
+        fun set(name: String, guildId: String, value: String) {
+            rows[name to guildId] = ConfigDto(name = name, value = value, guildId = guildId)
+        }
+
+        override fun listAllConfig(): List<ConfigDto?>? = rows.values.toList()
+        override fun listGuildConfig(guildId: String?): List<ConfigDto?>? =
+            rows.values.filter { it.guildId == guildId }
+        override fun getConfigByName(name: String?, guildId: String?): ConfigDto? =
+            rows[name to guildId] ?: rows[(name ?: "") to "all"]
+        override fun createNewConfig(configDto: ConfigDto): ConfigDto? = configDto.also {
+            rows[(it.name ?: "") to (it.guildId ?: "")] = it
+        }
+        override fun updateConfig(configDto: ConfigDto?): ConfigDto? = configDto?.also {
+            rows[(it.name ?: "") to (it.guildId ?: "")] = it
+        }
+        override fun deleteAll(guildId: String?) { rows.entries.removeIf { it.key.second == guildId } }
+        override fun deleteConfig(guildId: String?, name: String?) { rows.remove((name ?: "") to (guildId ?: "")) }
+        override fun clearCache() {}
+        override fun upsertConfig(name: String, value: String, guildId: String): ConfigService.UpsertResult {
+            val key = name to guildId
+            val existing = rows[key]
+            rows[key] = ConfigDto(name = name, value = value, guildId = guildId)
+            return if (existing == null) {
+                ConfigService.UpsertResult.Created(rows[key]!!)
+            } else {
+                ConfigService.UpsertResult.Updated(rows[key]!!, previousValue = existing.value)
+            }
         }
     }
 }
