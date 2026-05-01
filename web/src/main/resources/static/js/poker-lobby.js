@@ -24,7 +24,9 @@
                 showToast('error', 'Buy-in is required.');
                 return;
             }
-            window.TobyApi.postJson('/poker/' + guildId + '/create', { buyIn: buyIn })
+            const freeCheckbox = document.getElementById('poker-create-free');
+            const free = !!(freeCheckbox && freeCheckbox.checked);
+            window.TobyApi.postJson('/poker/' + guildId + '/create', { buyIn: buyIn, free: free })
                 .then(function (resp) {
                     if (!resp || !resp.ok) {
                         showToast('error', (resp && resp.error) || 'Could not create table.');
