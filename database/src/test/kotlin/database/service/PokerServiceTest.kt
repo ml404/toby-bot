@@ -9,6 +9,7 @@ import database.persistence.PokerHandPotPersistence
 import database.poker.PokerEngine
 import database.poker.PokerTable
 import database.poker.PokerTableRegistry
+import database.service.EconomyTradeService.TradeOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -589,6 +590,203 @@ class PokerServiceTest {
         val outcome = service.buyIn(joiner, guildId = 999L, tableId = tableId, buyIn = 200L)
         assertEquals(PokerService.BuyInOutcome.TableNotFound, outcome)
         assertFalse(registry.get(tableId)!!.seats.any { it.discordId == joiner })
+    }
+
+    // -- v2-4: autoTopUp wiring -----------------------------------------
+
+    /**
+     * Build a [PokerService] with the optional trade/market collaborators
+     * stubbed to a happy-path sell that lifts balance from [startingBalance]
+     * to `startingBalance + creditsDelivered`. Returns the service plus
+     * the trade/market mocks for test-side verification.
+     */
+    private data class TopUpHarness(
+        val service: PokerService,
+        val tradeService: EconomyTradeService,
+        val marketService: TobyCoinMarketService,
+        val coinsSold: Long,
+        val newPrice: Double
+    )
+    private fun harnessWithTopUp(
+        seedUser: UserDto,
+        startingBalance: Long,
+        creditsDelivered: Long,
+        coinsSold: Long = 50L,
+        newPrice: Double = 2.5
+    ): TopUpHarness {
+        val tradeService = mockk<EconomyTradeService>(relaxed = true)
+        val marketService = mockk<TobyCoinMarketService>(relaxed = true)
+        // Market is online with a positive price.
+        every { marketService.getMarketForUpdate(seedUser.guildId) } returns
+            database.dto.TobyCoinMarketDto(
+                guildId = seedUser.guildId,
+                price = newPrice,
+                lastTickAt = java.time.Instant.now()
+            )
+        // Seller mutates the seeded user — RecordingUserService re-reads
+        // by id after sell, so the post-sell balance reflects whatever
+        // we credited here.
+        every {
+            tradeService.sell(seedUser.discordId, seedUser.guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
+        } answers {
+            seedUser.tobyCoins -= coinsSold
+            seedUser.socialCredit = startingBalance + creditsDelivered
+            TradeOutcome.Ok(
+                amount = thirdArg(),
+                transactedCredits = creditsDelivered,
+                newCoins = seedUser.tobyCoins,
+                newCredits = seedUser.socialCredit ?: 0L,
+                newPrice = newPrice,
+                fee = 0L
+            )
+        }
+        val service = PokerService(
+            userService = userService,
+            jackpotService = jackpotService,
+            configService = configService,
+            tableRegistry = registry,
+            handLogPersistence = handLog,
+            handPotPersistence = handPot,
+            tradeService = tradeService,
+            marketService = marketService,
+            random = Random(42)
+        )
+        return TopUpHarness(service, tradeService, marketService, coinsSold, newPrice)
+    }
+
+    @Test
+    fun `createTable autoTopUp=false with insufficient credits keeps existing behaviour`() {
+        seed(host, 50L)
+        // Default service has no trade/market collaborators — autoTopUp
+        // path is unavailable regardless of the flag.
+        val outcome = service.createTable(host, guildId, buyIn = 200L, autoTopUp = false)
+        assertTrue(outcome is PokerService.CreateOutcome.InsufficientCredits)
+    }
+
+    @Test
+    fun `createTable autoTopUp=true degrades to InsufficientCredits when collaborators absent`() {
+        seed(host, 50L)
+        val outcome = service.createTable(host, guildId, buyIn = 200L, autoTopUp = true)
+        assertTrue(outcome is PokerService.CreateOutcome.InsufficientCredits, "no trade/market wiring → no topup")
+    }
+
+    @Test
+    fun `createTable autoTopUp=true sells TOBY then seats the host with chip escrow`() {
+        val user = UserDto(host, guildId).apply {
+            socialCredit = 50L
+            tobyCoins = 1_000L
+        }
+        userService.seed(user)
+        val harness = harnessWithTopUp(
+            seedUser = user, startingBalance = 50L, creditsDelivered = 200L,
+            coinsSold = 80L, newPrice = 2.5
+        )
+
+        val outcome = harness.service.createTable(host, guildId, buyIn = 200L, autoTopUp = true)
+
+        assertTrue(outcome is PokerService.CreateOutcome.Ok)
+        outcome as PokerService.CreateOutcome.Ok
+        // soldTobyCoins is the engine's computation of "coins needed for
+        // shortfall under midpoint slippage + jackpot fee" — its exact
+        // value lives in TobyCoinEngineTopUpTest, here we just check it
+        // surfaced.
+        assert(outcome.soldTobyCoins > 0L) { "soldTobyCoins propagates to outcome: ${outcome.soldTobyCoins}" }
+        assertEquals(2.5, outcome.newPrice)
+        // After topup (50 + 200 = 250) and 200-buy-in debit, balance is 50.
+        assertEquals(50L, userService.current(host)?.socialCredit)
+        verify(exactly = 1) {
+            harness.tradeService.sell(host, guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
+        }
+        val table = registry.get(outcome.tableId)!!
+        assertEquals(200L, table.seats[0].chips, "seat funded with the full buy-in")
+    }
+
+    @Test
+    fun `buyIn autoTopUp=true tops up when joining an existing table`() {
+        seed(host, 1000L)
+        val joinerUser = UserDto(joiner, guildId).apply { socialCredit = 0L; tobyCoins = 1_000L }
+        userService.seed(joinerUser)
+        val harness = harnessWithTopUp(
+            seedUser = joinerUser, startingBalance = 0L, creditsDelivered = 300L
+        )
+        val tableId = (harness.service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+
+        val outcome = harness.service.buyIn(joiner, guildId, tableId, buyIn = 300L, autoTopUp = true)
+
+        assertTrue(outcome is PokerService.BuyInOutcome.Ok)
+        outcome as PokerService.BuyInOutcome.Ok
+        assert(outcome.soldTobyCoins > 0L)
+        // After topup (0 + 300) and 300-buy-in debit, balance is 0.
+        assertEquals(0L, userService.current(joiner)?.socialCredit)
+        assertEquals(2, registry.get(tableId)!!.seats.size)
+    }
+
+    @Test
+    fun `buyIn autoTopUp does NOT sell when seat is already taken`() {
+        seed(host, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+        val joinerUser = UserDto(joiner, guildId).apply { socialCredit = 0L; tobyCoins = 1_000L }
+        userService.seed(joinerUser)
+        val harness = harnessWithTopUp(
+            seedUser = joinerUser, startingBalance = 0L, creditsDelivered = 300L
+        )
+        // First seating succeeds.
+        harness.service.buyIn(joiner, guildId, tableId, buyIn = 300L, autoTopUp = true)
+        // Reset stub to count fresh calls.
+        io.mockk.clearMocks(harness.tradeService, answers = false)
+
+        val outcome = harness.service.buyIn(joiner, guildId, tableId, buyIn = 300L, autoTopUp = true)
+        assertEquals(PokerService.BuyInOutcome.AlreadySeated, outcome)
+        verify(exactly = 0) {
+            harness.tradeService.sell(any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `rebuy autoTopUp=true tops up a seated player between hands`() {
+        val user = UserDto(host, guildId).apply { socialCredit = 200L; tobyCoins = 1_000L }
+        userService.seed(user)
+        val harness = harnessWithTopUp(
+            seedUser = user, startingBalance = 0L, creditsDelivered = 300L
+        )
+        val tableId = (harness.service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+        // Balance is 0 after createTable. Now rebuy 300 with autoTopUp.
+        // The harness mock sets balance to startingBalance + creditsDelivered = 300.
+        io.mockk.clearMocks(harness.tradeService, answers = false)
+        every {
+            harness.tradeService.sell(host, guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
+        } answers {
+            user.tobyCoins -= 80L
+            user.socialCredit = 300L
+            TradeOutcome.Ok(thirdArg(), 300L, user.tobyCoins, 300L, 2.5, 0L)
+        }
+
+        val outcome = harness.service.rebuy(host, guildId, tableId, amount = 300L, autoTopUp = true)
+
+        assertTrue(outcome is PokerService.RebuyOutcome.Ok)
+        outcome as PokerService.RebuyOutcome.Ok
+        assertEquals(500L, outcome.seatChips, "200 createTable + 300 rebuy")
+        assert(outcome.soldTobyCoins > 0L)
+        assertEquals(0L, outcome.newBalance, "300 topup → 300 debit → 0 balance")
+    }
+
+    @Test
+    fun `rebuy autoTopUp does NOT sell when stack would breach maxBuyIn`() {
+        val user = UserDto(host, guildId).apply { socialCredit = 4_500L; tobyCoins = 1_000L }
+        userService.seed(user)
+        val harness = harnessWithTopUp(
+            seedUser = user, startingBalance = 0L, creditsDelivered = 300L
+        )
+        val tableId = (harness.service.createTable(host, guildId, buyIn = 4_500L) as PokerService.CreateOutcome.Ok).tableId
+        io.mockk.clearMocks(harness.tradeService, answers = false)
+
+        // 1_000 rebuy on top of 4_500 would push to 5_500 > MAX_BUY_IN (5_000).
+        val outcome = harness.service.rebuy(host, guildId, tableId, amount = 1_000L, autoTopUp = true)
+
+        assertTrue(outcome is PokerService.RebuyOutcome.StackCapped)
+        verify(exactly = 0) {
+            harness.tradeService.sell(any(), any(), any(), any())
+        }
     }
 
     private class RecordingUserService : UserService {

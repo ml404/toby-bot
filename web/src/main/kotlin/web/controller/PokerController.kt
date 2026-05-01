@@ -146,13 +146,23 @@ class PokerController(
         user, guildId, economyWebService,
         errorBuilder = { status -> tableErrorResponse(status) }
     ) { discordId ->
-        when (val outcome = pokerService.createTable(discordId, guildId, request.buyIn)) {
-            is CreateOutcome.Ok -> ResponseEntity.ok(TableActionResponse(ok = true, tableId = outcome.tableId))
+        when (val outcome = pokerService.createTable(discordId, guildId, request.buyIn, request.autoTopUp)) {
+            is CreateOutcome.Ok -> ResponseEntity.ok(
+                TableActionResponse(
+                    ok = true,
+                    tableId = outcome.tableId,
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
+                )
+            )
             is CreateOutcome.InvalidBuyIn -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "Buy-in must be between ${outcome.min} and ${outcome.max}.")
             )
             is CreateOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "Need ${outcome.needed} credits, you have ${outcome.have}.")
+            )
+            is CreateOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
+                TableActionResponse(false, error = "Auto-topup needs ${outcome.needed} TOBY, you have ${outcome.have}.")
             )
             CreateOutcome.UnknownUser -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "No user record yet — try another TobyBot command first.")
@@ -171,9 +181,15 @@ class PokerController(
         user, guildId, economyWebService,
         errorBuilder = { status -> tableErrorResponse(status) }
     ) { discordId ->
-        when (val outcome = pokerService.buyIn(discordId, guildId, tableId, request.buyIn)) {
+        when (val outcome = pokerService.buyIn(discordId, guildId, tableId, request.buyIn, request.autoTopUp)) {
             is BuyInOutcome.Ok -> ResponseEntity.ok(
-                TableActionResponse(ok = true, tableId = tableId, newBalance = outcome.newBalance)
+                TableActionResponse(
+                    ok = true,
+                    tableId = tableId,
+                    newBalance = outcome.newBalance,
+                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    newPrice = outcome.newPrice
+                )
             )
             BuyInOutcome.AlreadySeated -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "You're already at this table.")
@@ -189,6 +205,9 @@ class PokerController(
             )
             is BuyInOutcome.InsufficientCredits -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "Need ${outcome.needed} credits, you have ${outcome.have}.")
+            )
+            is BuyInOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest().body(
+                TableActionResponse(false, error = "Auto-topup needs ${outcome.needed} TOBY, you have ${outcome.have}.")
             )
             BuyInOutcome.UnknownUser -> ResponseEntity.badRequest().body(
                 TableActionResponse(false, error = "No user record yet — try another TobyBot command first.")
@@ -339,8 +358,8 @@ class PokerController(
     }
 }
 
-data class CreateRequest(val buyIn: Long = 0)
-data class JoinRequest(val buyIn: Long = 0)
+data class CreateRequest(val buyIn: Long = 0, val autoTopUp: Boolean = false)
+data class JoinRequest(val buyIn: Long = 0, val autoTopUp: Boolean = false)
 data class ActionRequest(val action: String = "")
 
 data class TableActionResponse(
@@ -361,4 +380,12 @@ data class TableActionResponse(
      * hand" instead of the regular cash-out toast.
      */
     val queued: Boolean? = null,
+    /**
+     * v2-4: set when an autoTopUp create / join sold TOBY to cover the
+     * buy-in shortfall. Null when no sell happened (caller didn't ask
+     * for autoTopUp, or balance already covered the buy-in).
+     */
+    val soldTobyCoins: Long? = null,
+    /** v2-4: post-sell market price, paired with [soldTobyCoins]. */
+    val newPrice: Double? = null,
 )

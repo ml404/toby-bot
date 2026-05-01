@@ -146,6 +146,12 @@ class PokerCommand @Autowired constructor(
                 replyError(event, "Buy-in must be between ${outcome.min} and ${outcome.max} credits.", deleteDelay)
             is CreateOutcome.InsufficientCredits ->
                 replyError(event, "You need ${outcome.needed} credits but only have ${outcome.have}.", deleteDelay)
+            // v2-4: Discord doesn't pass autoTopUp today (only the web
+            // layer does), so this branch is theoretically unreachable
+            // from a slash command — kept for `when` exhaustiveness so a
+            // future Discord-side autoTopUp toggle is a one-line change.
+            is CreateOutcome.InsufficientCoinsForTopUp ->
+                replyError(event, "Auto-topup needs ${outcome.needed} TOBY but you only have ${outcome.have}.", deleteDelay)
             CreateOutcome.UnknownUser ->
                 replyError(event, "No user record yet. Try another TobyBot command first.", deleteDelay)
         }
@@ -182,6 +188,9 @@ class PokerCommand @Autowired constructor(
                 replyError(event, "Buy-in must be between ${outcome.min} and ${outcome.max} credits.", deleteDelay)
             is BuyInOutcome.InsufficientCredits ->
                 replyError(event, "You need ${outcome.needed} credits but only have ${outcome.have}.", deleteDelay)
+            // v2-4: see CreateOutcome.InsufficientCoinsForTopUp note.
+            is BuyInOutcome.InsufficientCoinsForTopUp ->
+                replyError(event, "Auto-topup needs ${outcome.needed} TOBY but you only have ${outcome.have}.", deleteDelay)
             BuyInOutcome.UnknownUser ->
                 replyError(event, "No user record yet. Try another TobyBot command first.", deleteDelay)
         }
@@ -278,6 +287,9 @@ class PokerCommand @Autowired constructor(
                 )
             is RebuyOutcome.InsufficientCredits ->
                 replyError(event, "You need ${outcome.needed} credits but only have ${outcome.have}.", deleteDelay)
+            // v2-4: see CreateOutcome.InsufficientCoinsForTopUp note.
+            is RebuyOutcome.InsufficientCoinsForTopUp ->
+                replyError(event, "Auto-topup needs ${outcome.needed} TOBY but you only have ${outcome.have}.", deleteDelay)
             RebuyOutcome.HandInProgress ->
                 replyError(event, "Wait for the current hand to end before rebuying.", deleteDelay)
             RebuyOutcome.NotSeated ->

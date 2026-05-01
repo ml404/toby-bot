@@ -3,6 +3,7 @@ package database.service
 import database.dto.ConfigDto
 import database.dto.PokerHandLogDto
 import database.dto.PokerHandPotDto
+import database.dto.UserDto
 import database.persistence.PokerHandLogPersistence
 import database.persistence.PokerHandPotPersistence
 import database.poker.PokerEngine
@@ -65,23 +66,51 @@ class PokerService @Autowired constructor(
     private val tableRegistry: PokerTableRegistry,
     private val handLogPersistence: PokerHandLogPersistence,
     private val handPotPersistence: PokerHandPotPersistence,
+    /**
+     * v2-4: optional sell-to-cover wiring. When null (test-only path
+     * with no Spring context), [autoTopUp] requests degrade gracefully
+     * to plain [CreateOutcome.InsufficientCredits] /
+     * [BuyInOutcome.InsufficientCredits] /
+     * [RebuyOutcome.InsufficientCredits] so existing constructors
+     * without these collaborators keep working unchanged.
+     */
+    @Autowired(required = false) private val tradeService: EconomyTradeService? = null,
+    @Autowired(required = false) private val marketService: TobyCoinMarketService? = null,
     private val random: Random = Random.Default
 ) {
 
     sealed interface CreateOutcome {
-        data class Ok(val tableId: Long) : CreateOutcome
+        data class Ok(
+            val tableId: Long,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
+        ) : CreateOutcome
         data class InvalidBuyIn(val min: Long, val max: Long) : CreateOutcome
         data class InsufficientCredits(val have: Long, val needed: Long) : CreateOutcome
+        /**
+         * v2-4: caller passed `autoTopUp=true` but the player's TOBY
+         * holdings can't cover the credit shortfall at the live market
+         * price. [needed] is the coin count required, [have] is what
+         * they hold.
+         */
+        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : CreateOutcome
         data object UnknownUser : CreateOutcome
     }
 
     sealed interface BuyInOutcome {
-        data class Ok(val seatIndex: Int, val newBalance: Long) : BuyInOutcome
+        data class Ok(
+            val seatIndex: Int,
+            val newBalance: Long,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
+        ) : BuyInOutcome
         data object TableNotFound : BuyInOutcome
         data object TableFull : BuyInOutcome
         data object AlreadySeated : BuyInOutcome
         data class InvalidBuyIn(val min: Long, val max: Long) : BuyInOutcome
         data class InsufficientCredits(val have: Long, val needed: Long) : BuyInOutcome
+        /** v2-4: see [CreateOutcome.InsufficientCoinsForTopUp]. */
+        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : BuyInOutcome
         data object UnknownUser : BuyInOutcome
     }
 
@@ -115,13 +144,20 @@ class PokerService @Autowired constructor(
     }
 
     sealed interface RebuyOutcome {
-        data class Ok(val seatChips: Long, val newBalance: Long) : RebuyOutcome
+        data class Ok(
+            val seatChips: Long,
+            val newBalance: Long,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
+        ) : RebuyOutcome
         data object TableNotFound : RebuyOutcome
         data object NotSeated : RebuyOutcome
         data object HandInProgress : RebuyOutcome
         data class InvalidAmount(val min: Long, val max: Long) : RebuyOutcome
         data class StackCapped(val cap: Long, val current: Long) : RebuyOutcome
         data class InsufficientCredits(val have: Long, val needed: Long) : RebuyOutcome
+        /** v2-4: see [CreateOutcome.InsufficientCoinsForTopUp]. */
+        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : RebuyOutcome
         data object UnknownUser : RebuyOutcome
     }
 
@@ -193,7 +229,8 @@ class PokerService @Autowired constructor(
     fun createTable(
         hostDiscordId: Long,
         guildId: Long,
-        buyIn: Long
+        buyIn: Long,
+        autoTopUp: Boolean = false
     ): CreateOutcome {
         // v2 (PR #v2-2): each table snapshots the guild's poker config
         // at creation. Mid-hand admin tweaks don't affect the in-flight
@@ -204,9 +241,11 @@ class PokerService @Autowired constructor(
         }
         val user = userService.getUserByIdForUpdate(hostDiscordId, guildId)
             ?: return CreateOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < buyIn) {
-            return CreateOutcome.InsufficientCredits(have = balance, needed = buyIn)
+        val initialBalance = user.socialCredit ?: 0L
+        val resolved = when (val r = resolveBalanceWithOptionalTopUp(user, guildId, initialBalance, buyIn, autoTopUp)) {
+            is TopUpResolution.Ok -> r
+            is TopUpResolution.CreditsShort -> return CreateOutcome.InsufficientCredits(have = r.have, needed = r.needed)
+            is TopUpResolution.CoinsShort -> return CreateOutcome.InsufficientCoinsForTopUp(needed = r.needed, have = r.have)
         }
         val table = tableRegistry.create(
             guildId = guildId,
@@ -222,13 +261,19 @@ class PokerService @Autowired constructor(
             shotClockSeconds = params.shotClockSeconds
         )
         // Debit and seat under the same lock so we can't end up with an
-        // empty table after a credit-debit failure.
-        user.socialCredit = balance - buyIn
-        userService.updateUser(user)
+        // empty table after a credit-debit failure. Use the post-topup
+        // user / balance reference so the debit reflects whatever the
+        // sell delivered.
+        resolved.user.socialCredit = resolved.balance - buyIn
+        userService.updateUser(resolved.user)
         synchronized(table) {
             table.seats.add(PokerTable.Seat(discordId = hostDiscordId, chips = buyIn))
         }
-        return CreateOutcome.Ok(table.id)
+        return CreateOutcome.Ok(
+            tableId = table.id,
+            soldTobyCoins = resolved.soldCoins,
+            newPrice = resolved.newPrice
+        )
     }
 
     /**
@@ -277,7 +322,8 @@ class PokerService @Autowired constructor(
         discordId: Long,
         guildId: Long,
         tableId: Long,
-        buyIn: Long
+        buyIn: Long,
+        autoTopUp: Boolean = false
     ): BuyInOutcome {
         val table = tableRegistry.get(tableId) ?: return BuyInOutcome.TableNotFound
         if (table.guildId != guildId) return BuyInOutcome.TableNotFound
@@ -285,11 +331,29 @@ class PokerService @Autowired constructor(
             return BuyInOutcome.InvalidBuyIn(table.minBuyIn, table.maxBuyIn)
         }
 
+        // Peek seat availability before touching the wallet so an
+        // autoTopUp caller doesn't sell TOBY only to bounce off
+        // AlreadySeated / TableFull. The atomic add below re-checks
+        // under the same monitor — peek can race with another join,
+        // but the worst case is a topped-up caller who keeps their
+        // credits without a seat (no chip leak).
+        val seatPreflight = synchronized(table) {
+            when {
+                table.seats.any { it.discordId == discordId } -> -1
+                table.seats.size >= table.maxSeats -> -2
+                else -> 0
+            }
+        }
+        if (seatPreflight == -1) return BuyInOutcome.AlreadySeated
+        if (seatPreflight == -2) return BuyInOutcome.TableFull
+
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return BuyInOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < buyIn) {
-            return BuyInOutcome.InsufficientCredits(have = balance, needed = buyIn)
+        val initialBalance = user.socialCredit ?: 0L
+        val resolved = when (val r = resolveBalanceWithOptionalTopUp(user, guildId, initialBalance, buyIn, autoTopUp)) {
+            is TopUpResolution.Ok -> r
+            is TopUpResolution.CreditsShort -> return BuyInOutcome.InsufficientCredits(have = r.have, needed = r.needed)
+            is TopUpResolution.CoinsShort -> return BuyInOutcome.InsufficientCoinsForTopUp(needed = r.needed, have = r.have)
         }
 
         val seatIndex = synchronized(table) {
@@ -301,9 +365,14 @@ class PokerService @Autowired constructor(
         if (seatIndex == -1) return BuyInOutcome.AlreadySeated
         if (seatIndex == -2) return BuyInOutcome.TableFull
 
-        user.socialCredit = balance - buyIn
-        userService.updateUser(user)
-        return BuyInOutcome.Ok(seatIndex = seatIndex, newBalance = user.socialCredit ?: 0L)
+        resolved.user.socialCredit = resolved.balance - buyIn
+        userService.updateUser(resolved.user)
+        return BuyInOutcome.Ok(
+            seatIndex = seatIndex,
+            newBalance = resolved.user.socialCredit ?: 0L,
+            soldTobyCoins = resolved.soldCoins,
+            newPrice = resolved.newPrice
+        )
     }
 
     /**
@@ -324,7 +393,8 @@ class PokerService @Autowired constructor(
         discordId: Long,
         guildId: Long,
         tableId: Long,
-        amount: Long
+        amount: Long,
+        autoTopUp: Boolean = false
     ): RebuyOutcome {
         val table = tableRegistry.get(tableId) ?: return RebuyOutcome.TableNotFound
         if (table.guildId != guildId) return RebuyOutcome.TableNotFound
@@ -332,11 +402,33 @@ class PokerService @Autowired constructor(
             return RebuyOutcome.InvalidAmount(table.minBuyIn, table.maxBuyIn)
         }
 
+        // Pre-flight the table-side conditions before the wallet so an
+        // autoTopUp caller doesn't sell TOBY only to bounce off
+        // HandInProgress / NotSeated / StackCapped. The atomic chip
+        // bump below re-checks under the same monitor.
+        val seatPreflight: RebuyOutcome? = synchronized(table) {
+            when {
+                table.phase != PokerTable.Phase.WAITING -> RebuyOutcome.HandInProgress
+                else -> {
+                    val seat = table.seats.firstOrNull { it.discordId == discordId }
+                    when {
+                        seat == null -> RebuyOutcome.NotSeated
+                        seat.chips + amount > table.maxBuyIn ->
+                            RebuyOutcome.StackCapped(cap = table.maxBuyIn, current = seat.chips)
+                        else -> null
+                    }
+                }
+            }
+        }
+        if (seatPreflight != null) return seatPreflight
+
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return RebuyOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
-        if (balance < amount) {
-            return RebuyOutcome.InsufficientCredits(have = balance, needed = amount)
+        val initialBalance = user.socialCredit ?: 0L
+        val resolved = when (val r = resolveBalanceWithOptionalTopUp(user, guildId, initialBalance, amount, autoTopUp)) {
+            is TopUpResolution.Ok -> r
+            is TopUpResolution.CreditsShort -> return RebuyOutcome.InsufficientCredits(have = r.have, needed = r.needed)
+            is TopUpResolution.CoinsShort -> return RebuyOutcome.InsufficientCoinsForTopUp(needed = r.needed, have = r.have)
         }
 
         val rebuyResult = synchronized(table) {
@@ -358,11 +450,13 @@ class PokerService @Autowired constructor(
         }
         if (rebuyResult !is RebuyOutcome.Ok) return rebuyResult
 
-        user.socialCredit = balance - amount
-        userService.updateUser(user)
+        resolved.user.socialCredit = resolved.balance - amount
+        userService.updateUser(resolved.user)
         return RebuyOutcome.Ok(
             seatChips = rebuyResult.seatChips,
-            newBalance = user.socialCredit ?: 0L
+            newBalance = resolved.user.socialCredit ?: 0L,
+            soldTobyCoins = resolved.soldCoins,
+            newPrice = resolved.newPrice
         )
     }
 
@@ -704,6 +798,59 @@ class PokerService @Autowired constructor(
             user.socialCredit = (user.socialCredit ?: 0L) + amount
             userService.updateUser(user)
         }
+    }
+
+    /**
+     * v2-4 shared between [createTable], [buyIn] and [rebuy]. If
+     * [currentBalance] already covers [target] this is a no-op (Ok
+     * with `soldCoins=0`). Otherwise, when [autoTopUp] is on AND the
+     * trade/market collaborators are present, sells the smallest
+     * TOBY amount that lifts the player above [target] via
+     * [CasinoTopUpHelper.ensureCreditsForWager]. Failures map back to
+     * the per-method `InsufficientCredits` / `InsufficientCoinsForTopUp`
+     * variants — caller decides which sealed type to construct.
+     */
+    private fun resolveBalanceWithOptionalTopUp(
+        user: UserDto,
+        guildId: Long,
+        currentBalance: Long,
+        target: Long,
+        autoTopUp: Boolean
+    ): TopUpResolution {
+        if (currentBalance >= target) {
+            return TopUpResolution.Ok(user = user, balance = currentBalance, soldCoins = 0L, newPrice = null)
+        }
+        // No collaborators (test path), or caller didn't opt-in: surface
+        // the regular credit-shortfall outcome unchanged.
+        val safeTrade = tradeService
+        val safeMarket = marketService
+        if (!autoTopUp || safeTrade == null || safeMarket == null) {
+            return TopUpResolution.CreditsShort(have = currentBalance, needed = target)
+        }
+        return when (val r = CasinoTopUpHelper.ensureCreditsForWager(
+            safeTrade, safeMarket, userService,
+            user, guildId, currentBalance, target
+        )) {
+            is TopUpResult.ToppedUp ->
+                TopUpResolution.Ok(user = r.user, balance = r.balance, soldCoins = r.soldCoins, newPrice = r.newPrice)
+            // Market degraded — same surfacing as a plain credit shortfall
+            // so the player gets the same retry experience.
+            TopUpResult.MarketUnavailable ->
+                TopUpResolution.CreditsShort(have = currentBalance, needed = target)
+            is TopUpResult.InsufficientCoins ->
+                TopUpResolution.CoinsShort(needed = r.needed, have = r.have)
+        }
+    }
+
+    private sealed interface TopUpResolution {
+        data class Ok(
+            val user: UserDto,
+            val balance: Long,
+            val soldCoins: Long,
+            val newPrice: Double?
+        ) : TopUpResolution
+        data class CreditsShort(val have: Long, val needed: Long) : TopUpResolution
+        data class CoinsShort(val needed: Long, val have: Long) : TopUpResolution
     }
 
     companion object {

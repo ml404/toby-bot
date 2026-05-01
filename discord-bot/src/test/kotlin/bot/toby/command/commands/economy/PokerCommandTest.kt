@@ -75,12 +75,12 @@ internal class PokerCommandTest : CommandTest {
     fun `create subcommand happy path delegates to PokerService and posts lobby embed`() {
         every { event.subcommandName } returns "create"
         every { event.getOption("chips") } returns intOpt(200L)
-        every { pokerService.createTable(hostId, guildId, 200L) } returns CreateOutcome.Ok(tableId = 7L)
+        every { pokerService.createTable(hostId, guildId, 200L, any()) } returns CreateOutcome.Ok(tableId = 7L)
         every { tableRegistry.get(7L) } returns stubTable(7L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 1) { pokerService.createTable(hostId, guildId, 200L) }
+        verify(exactly = 1) { pokerService.createTable(hostId, guildId, 200L, any()) }
         verify(exactly = 1) { tableRegistry.get(7L) }
     }
 
@@ -88,7 +88,7 @@ internal class PokerCommandTest : CommandTest {
     fun `create with insufficient credits surfaces error and does not look up table`() {
         every { event.subcommandName } returns "create"
         every { event.getOption("chips") } returns intOpt(200L)
-        every { pokerService.createTable(hostId, guildId, 200L) } returns
+        every { pokerService.createTable(hostId, guildId, 200L, any()) } returns
             CreateOutcome.InsufficientCredits(have = 50L, needed = 200L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
@@ -101,13 +101,13 @@ internal class PokerCommandTest : CommandTest {
         every { event.subcommandName } returns "join"
         every { event.getOption("table") } returns intOpt(7L)
         every { event.getOption("chips") } returns intOpt(300L)
-        every { pokerService.buyIn(hostId, guildId, 7L, 300L) } returns
+        every { pokerService.buyIn(hostId, guildId, 7L, 300L, any()) } returns
             BuyInOutcome.Ok(seatIndex = 1, newBalance = 700L)
         every { tableRegistry.get(7L) } returns stubTable(7L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 1) { pokerService.buyIn(hostId, guildId, 7L, 300L) }
+        verify(exactly = 1) { pokerService.buyIn(hostId, guildId, 7L, 300L, any()) }
     }
 
     @Test
@@ -115,7 +115,7 @@ internal class PokerCommandTest : CommandTest {
         every { event.subcommandName } returns "join"
         every { event.getOption("table") } returns intOpt(7L)
         every { event.getOption("chips") } returns intOpt(300L)
-        every { pokerService.buyIn(hostId, guildId, 7L, 300L) } returns BuyInOutcome.AlreadySeated
+        every { pokerService.buyIn(hostId, guildId, 7L, 300L, any()) } returns BuyInOutcome.AlreadySeated
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
@@ -200,12 +200,12 @@ internal class PokerCommandTest : CommandTest {
         every { event.subcommandName } returns "rebuy"
         every { event.getOption("table") } returns intOpt(7L)
         every { event.getOption("chips") } returns intOpt(300L)
-        every { pokerService.rebuy(hostId, guildId, 7L, 300L) } returns
+        every { pokerService.rebuy(hostId, guildId, 7L, 300L, any()) } returns
             RebuyOutcome.Ok(seatChips = 500L, newBalance = 700L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 1) { pokerService.rebuy(hostId, guildId, 7L, 300L) }
+        verify(exactly = 1) { pokerService.rebuy(hostId, guildId, 7L, 300L, any()) }
         // Happy path renders an info embed; no need to look up the table.
         verify(exactly = 0) { tableRegistry.get(any()) }
     }
@@ -215,7 +215,7 @@ internal class PokerCommandTest : CommandTest {
         every { event.subcommandName } returns "rebuy"
         every { event.getOption("table") } returns intOpt(7L)
         every { event.getOption("chips") } returns intOpt(2000L)
-        every { pokerService.rebuy(hostId, guildId, 7L, 2000L) } returns
+        every { pokerService.rebuy(hostId, guildId, 7L, 2000L, any()) } returns
             RebuyOutcome.StackCapped(cap = 5000L, current = 4500L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
@@ -255,8 +255,8 @@ internal class PokerCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 0) { pokerService.createTable(any(), any(), any()) }
-        verify(exactly = 0) { pokerService.buyIn(any(), any(), any(), any()) }
+        verify(exactly = 0) { pokerService.createTable(any(), any(), any(), any()) }
+        verify(exactly = 0) { pokerService.buyIn(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { pokerService.startHand(any(), any(), any(), any()) }
     }
 }
