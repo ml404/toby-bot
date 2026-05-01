@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Blackjack solo', '/css/blackjack.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}, data-my-discord-id=${myDiscordId}">
+
+    <div class="bj-header">
+        <a class="back-link" th:href="@{/blackjack/guilds}">&larr; All servers</a>
+        <h1>🂡 Solo blackjack</h1>
+        <p class="muted">
+            Bet between <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">500</span> credits per hand.
+            Dealer stands on all 17. Natural blackjack pays 3:2.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <section class="bj-card">
+        <h2>Place your bet</h2>
+        <form id="bj-deal" autocomplete="off">
+            <label for="bj-stake">Stake (credits)</label>
+            <input id="bj-stake" name="stake" type="number"
+                   th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+            <button type="submit" class="btn-primary">Deal</button>
+        </form>
+        <div class="bj-balance">
+            Wallet: <strong id="bj-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="bj-card bj-table" id="bj-table" hidden>
+        <div class="bj-row">
+            <h3>Dealer <span class="muted" id="bj-dealer-total"></span></h3>
+            <div id="bj-dealer-cards" class="bj-cards"></div>
+        </div>
+        <div class="bj-row">
+            <h3>You <span class="muted" id="bj-player-total"></span></h3>
+            <div id="bj-player-cards" class="bj-cards"></div>
+        </div>
+
+        <div class="bj-actions">
+            <button id="bj-action-hit" class="btn-primary" type="button" disabled>Hit</button>
+            <button id="bj-action-stand" class="btn-success" type="button" disabled>Stand</button>
+            <button id="bj-action-double" class="btn-secondary" type="button" disabled>Double down</button>
+        </div>
+
+        <div id="bj-result" class="bj-result muted"></div>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/blackjack-solo.js}"></script>
+</body>
+</html>

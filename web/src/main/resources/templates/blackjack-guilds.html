@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Casino', '/css/leaderboard.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Blackjack', '/css/leaderboard.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <main id="main" class="container">
-    <h1 class="mb-3">🎰 Casino</h1>
+    <h1 class="mb-3">🂡 Blackjack</h1>
     <p class="muted mb-5">
-        Wager social credit on the reels. Each server has its own slots room —
-        balances are per-guild. Pick a server below to spin.
+        Solo against the dealer or join a multiplayer table with friends.
+        Dealer stands on all 17, naturals pay 3:2, doubles allowed on the
+        first two cards. 5% rake on each multi pot feeds the per-server
+        jackpot.
     </p>
 
     <div th:replace="~{fragments/alerts :: error}"></div>
@@ -33,29 +35,17 @@
                 <span th:text="${g.credits} + ' credits'">0 credits</span>
             </div>
             <div class="lb-guild-games">
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/slots(id=${g.id})}">🎰 Slots</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/coinflip(id=${g.id})}">🪙 Coinflip</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/dice(id=${g.id})}">🎲 Dice</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/highlow(id=${g.id})}">🃏 High-Low</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/scratch(id=${g.id})}">🎟️ Scratch</a>
-                <a class="btn-secondary"
-                   th:href="@{/poker/{id}(id=${g.id})}">🎴 Poker</a>
-                <a class="btn-secondary"
-                   th:href="@{/blackjack/{id}/solo(id=${g.id})}">🂡 Blackjack</a>
+                <a class="btn-secondary" th:href="@{/blackjack/{id}/solo(id=${g.id})}">Solo hand</a>
+                <a class="btn-secondary" th:href="@{/blackjack/{id}(id=${g.id})}">Multi tables</a>
             </div>
         </div>
     </div>
 
     <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
-        <span class="emoji" aria-hidden="true">🎰</span>
-        <h2>No servers to play in yet</h2>
+        <span class="emoji" aria-hidden="true">🂡</span>
+        <h2>No servers to play blackjack in yet</h2>
         <p class="mb-5">
-            You need to share at least one server with TobyBot to use the casino.
+            You need to share at least one server with TobyBot to play.
         </p>
     </div>
 </main>

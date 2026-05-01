@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Blackjack lobby', '/css/blackjack.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-min-ante=${minAnte}, data-max-ante=${maxAnte}">
+
+    <div class="bj-header">
+        <a class="back-link" th:href="@{/blackjack/guilds}">&larr; All servers</a>
+        <h1 th:text="'🂡 Blackjack • ' + ${guildName}">🂡 Blackjack</h1>
+        <p class="muted">
+            Players vs. shared dealer. Each seat antes the same amount per hand.
+            Up to <span th:text="${maxSeats}">5</span> seats. 5% rake on each pot
+            feeds the per-server jackpot. Natural blackjack pays 3:2.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <section class="bj-card">
+        <h2>Create a new table</h2>
+        <form id="bj-create" autocomplete="off">
+            <label for="bj-create-ante">Ante (credits)</label>
+            <input id="bj-create-ante" name="ante" type="number"
+                   th:attr="min=${minAnte}, max=${maxAnte}" th:value="${minAnte}" step="1" required>
+            <button type="submit" class="btn-primary">Create table</button>
+        </form>
+        <div class="bj-balance">
+            Wallet: <strong id="bj-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="bj-card">
+        <h2>Open tables</h2>
+        <div id="bj-table-list" class="bj-table-list">
+            <div th:if="${#lists.isEmpty(tables)}" class="muted">
+                No active blackjack tables yet. Create one above.
+            </div>
+            <div class="bj-table-row" th:each="t : ${tables}"
+                 th:attr="data-table-id=${t.tableId}">
+                <div>
+                    <div>Table #<strong th:text="${t.tableId}">1</strong>
+                        — <span th:text="${t.seats}">0</span>/<span th:text="${t.maxSeats}">5</span> seats</div>
+                    <div class="muted">Host: <span th:text="${t.hostDiscordId}">000</span> ·
+                        Phase: <span th:text="${t.phase}">LOBBY</span> ·
+                        Ante: <span th:text="${t.ante}">100</span> ·
+                        Hand #<span th:text="${t.handNumber}">0</span></div>
+                </div>
+                <div>
+                    <a class="btn-primary" th:href="@{/blackjack/{g}/{t}(g=${guildId}, t=${t.tableId})}">Open table</a>
+                </div>
+            </div>
+        </div>
+        <p class="muted">Refreshes automatically.</p>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/blackjack-lobby.js}"></script>
+</body>
+</html>
