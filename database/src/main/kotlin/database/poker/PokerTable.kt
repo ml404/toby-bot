@@ -56,6 +56,14 @@ class PokerTable(
      * netted from the pot (the slice they were credited as chips, after
      * the rake came off). Seat-level chip mutations have already been
      * applied to [seats] when this is returned.
+     *
+     * As of v2 (PR #v2-1), the hand splits into [pots] tiers when
+     * players go all-in for different amounts. `pot` and
+     * `payoutByDiscordId` remain the across-all-tiers totals for
+     * back-compat with v1 callers; `pots` exposes the per-tier breakdown
+     * for richer rendering and the side-pot audit log. `refundedByDiscordId`
+     * captures uncontested over-commits returned to the over-committer
+     * (no rake applied).
      */
     data class HandResult(
         val handNumber: Long,
@@ -65,6 +73,36 @@ class PokerTable(
         val rake: Long,
         val board: List<Card>,
         val revealedHoleCards: Map<Long, List<Card>>,
-        val resolvedAt: Instant
+        val resolvedAt: Instant,
+        val pots: List<PotResult> = emptyList(),
+        val refundedByDiscordId: Map<Long, Long> = emptyMap()
+    )
+
+    /**
+     * One side-pot tier from a multi-way all-in resolution.
+     *
+     *   - [cap] — the per-seat commitment level that this tier was
+     *     peeled at (every contributor put in `cap - previousCap` to
+     *     reach this tier).
+     *   - [eligibleDiscordIds] — the contenders eligible to win this
+     *     tier (anyone whose total commitment matched `cap`). FOLDED
+     *     players are NOT eligible even if they contributed.
+     *   - [amount] — chips in this tier AFTER its share of the rake.
+     *   - [winners] — discord ids of the seat(s) that took this tier
+     *     after hand evaluation against [eligibleDiscordIds].
+     *   - [payoutByDiscordId] — chip credit each winner received from
+     *     this tier specifically.
+     *
+     * For a hand with no all-ins (everyone matches the same final bet),
+     * there is exactly one [PotResult] whose `eligibleDiscordIds`
+     * equals the full contender list. Tracking it as a list either way
+     * keeps the rendering layer agnostic.
+     */
+    data class PotResult(
+        val cap: Long,
+        val eligibleDiscordIds: List<Long>,
+        val amount: Long,
+        val winners: List<Long>,
+        val payoutByDiscordId: Map<Long, Long>
     )
 }

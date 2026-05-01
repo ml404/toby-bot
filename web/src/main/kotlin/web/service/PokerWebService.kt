@@ -79,6 +79,28 @@ class PokerWebService(
         val rake: Long,
         val board: List<String>,
         val revealedHoleCards: Map<String, List<String>>,
+        /**
+         * v2 (PR #v2-1): per-tier breakdown of the pot. For a hand with
+         * no all-ins this is exactly one entry covering the full pot.
+         * Multi-way all-ins at different stack sizes split into a main
+         * pot + N side pots so the renderer can label each tier with
+         * its eligible-player set.
+         */
+        val pots: List<PotResultView> = emptyList(),
+        /**
+         * Discord IDs to chips that came back unraked because no other
+         * seat could match the over-commitment (standard "uncalled bet
+         * returned" rule).
+         */
+        val refundedByDiscordId: Map<String, Long> = emptyMap(),
+    )
+
+    data class PotResultView(
+        val cap: Long,
+        val amount: Long,
+        val eligibleDiscordIds: List<Long>,
+        val winners: List<Long>,
+        val payoutByDiscordId: Map<String, Long>,
     )
 
     fun listGuildTables(guildId: Long): List<TableSummaryView> =
@@ -171,7 +193,17 @@ class PokerWebService(
                         board = result.board.map(Card::toString),
                         revealedHoleCards = result.revealedHoleCards
                             .mapKeys { it.key.toString() }
-                            .mapValues { e -> e.value.map(Card::toString) }
+                            .mapValues { e -> e.value.map(Card::toString) },
+                        pots = result.pots.map { p ->
+                            PotResultView(
+                                cap = p.cap,
+                                amount = p.amount,
+                                eligibleDiscordIds = p.eligibleDiscordIds,
+                                winners = p.winners,
+                                payoutByDiscordId = p.payoutByDiscordId.mapKeys { it.key.toString() },
+                            )
+                        },
+                        refundedByDiscordId = result.refundedByDiscordId.mapKeys { it.key.toString() },
                     )
                 }
             )

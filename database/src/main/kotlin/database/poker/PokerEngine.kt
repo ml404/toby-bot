@@ -15,12 +15,15 @@ import kotlin.random.Random
  * size is `smallBet` pre-flop/flop and `bigBet` turn/river. Raises are
  * capped per street.
  *
- * v1 simplifications (see docstring on [PokerService]):
- *   - Single pot, no side pots. An all-in short stack can win the whole
- *     pot at showdown, which is incorrect poker but acceptable for a
- *     casual cash table.
- *   - "Call for less" is rejected; the player must fold instead. This
- *     keeps the pot trivially divisible and avoids partial calls.
+ * v2 (PR #v2-1) — proper poker correctness:
+ *   - Side pots. When players go all-in for different amounts, the pot
+ *     splits into tiers; each tier is awarded to the best hand among
+ *     the contributors who could match that tier. An all-in short
+ *     stack can no longer scoop chips they didn't match.
+ *   - Call-for-less. A player who can't cover the current bet pushes
+ *     all-in for whatever they have. The remaining seats keep betting
+ *     against each other on top — those over-bets become side pot
+ *     contributions, or are refunded if no one can match them.
  */
 object PokerEngine {
 
@@ -167,10 +170,15 @@ object PokerEngine {
             PokerAction.Call -> {
                 val owe = table.currentBet - seat.committedThisRound
                 if (owe <= 0L) return ApplyResult.Rejected(RejectReason.ILLEGAL_CALL)
-                if (seat.chips < owe) {
+                // Call-for-less: a seat with fewer chips than `owe` pushes
+                // all-in for whatever they have rather than being forced to
+                // fold. Side-pot resolution at showdown sorts out who can
+                // win which tier of chips.
+                if (seat.chips == 0L) {
                     return ApplyResult.Rejected(RejectReason.INSUFFICIENT_CHIPS_TO_CALL)
                 }
-                commit(table, seat, owe)
+                val toPay = minOf(seat.chips, owe)
+                commit(table, seat, toPay)
                 if (seat.chips == 0L) seat.status = SeatStatus.ALL_IN
                 table.seatsToAct = (table.seatsToAct - 1).coerceAtLeast(0)
             }
@@ -260,53 +268,169 @@ object PokerEngine {
         return ApplyResult.Applied(ActionEvent.StreetAdvanced(nextPhase, table.community.toList()))
     }
 
-    private fun resolveHand(
+    /**
+     * `internal` (not `private`) so the side-pot tests in
+     * `PokerEngineSidePotTest` can drive showdown scenarios without
+     * having to play out an entire pre-constructed betting sequence.
+     * Production callers go through [applyAction]; only the engine
+     * itself and same-module tests should call this directly.
+     */
+    internal fun resolveHand(
         table: PokerTable,
         rakeRate: Double,
         now: Instant
     ): PokerTable.HandResult {
-        val pot = table.pot
-        val rake = (pot * rakeRate).toLong().coerceAtLeast(0L).coerceAtMost(pot)
-        val distributable = pot - rake
-
+        val totalCommitted = table.pot
         val contenders = table.seats.filter {
             it.status == SeatStatus.ACTIVE || it.status == SeatStatus.ALL_IN
         }
 
-        val winners: List<PokerTable.Seat> = when {
-            contenders.size == 1 -> listOf(contenders.single())
-            else -> {
-                val ranked = contenders.map { it to HandEvaluator.bestHand(it.holeCards, table.community) }
+        // Step 1 — compute each contender's effective commitment as
+        // `min(self.totalCommit, max(others' totalCommit))`. Anything
+        // above that level was uncalled (no other seat — contender
+        // OR folded — committed enough to match it) and is refunded
+        // unraked. This is standard "uncalled-bet returned" poker.
+        //
+        // Skip the refund pass when only one contender remains
+        // (everyone else folded around to them): they take the whole
+        // pot uncontested, including the forced-blind portion no one
+        // ever matched. The arithmetic of "win the matched part +
+        // refund the rest" is chip-equivalent to "win it all", and
+        // v1 callers expect `payoutByDiscordId` to reflect the pot
+        // total in that uncontested case.
+        val refunds = mutableMapOf<Long, Long>()
+        val effectiveByDiscordId = mutableMapOf<Long, Long>()
+        if (contenders.size >= 2) {
+            for (c in contenders) {
+                val maxOther = table.seats
+                    .filter { it !== c }
+                    .maxOfOrNull { it.totalCommittedThisHand } ?: 0L
+                val effective = minOf(c.totalCommittedThisHand, maxOther)
+                effectiveByDiscordId[c.discordId] = effective
+                val excess = c.totalCommittedThisHand - effective
+                if (excess > 0L) {
+                    c.chips += excess
+                    refunds[c.discordId] = excess
+                }
+            }
+        } else {
+            for (c in contenders) {
+                effectiveByDiscordId[c.discordId] = c.totalCommittedThisHand
+            }
+        }
+
+        // Folded seats' committed chips are dead money that goes into
+        // whichever tier they fall into — but never above the highest
+        // contender level (you can't pay into a tier nobody can win).
+        // In legal play this clamp is a no-op; it only matters if a
+        // test constructs a pathological commitment shape.
+        val maxContenderLevel = effectiveByDiscordId.values.maxOrNull() ?: 0L
+        fun effectiveCommit(seat: PokerTable.Seat): Long =
+            effectiveByDiscordId[seat.discordId]
+                ?: minOf(seat.totalCommittedThisHand, maxContenderLevel)
+
+        // Step 2 — build pot tiers from the distinct contender levels.
+        data class Tier(val cap: Long, val eligible: List<PokerTable.Seat>, val amount: Long)
+        val contenderLevels = effectiveByDiscordId.values
+            .filter { it > 0L }
+            .distinct()
+            .sorted()
+        val tiers = mutableListOf<Tier>()
+        var prevCap = 0L
+        for (level in contenderLevels) {
+            val tierAmount = table.seats.sumOf { seat ->
+                val effective = effectiveCommit(seat)
+                val capped = minOf(effective, level)
+                val prevCapped = minOf(effective, prevCap)
+                (capped - prevCapped).coerceAtLeast(0L)
+            }
+            if (tierAmount > 0L) {
+                val eligible = contenders.filter { effectiveCommit(it) >= level }
+                tiers.add(Tier(cap = level, eligible = eligible, amount = tierAmount))
+            }
+            prevCap = level
+        }
+
+        // Step 3 — rake the contested portion only. Refunds are unraked.
+        // Pull from the smallest tier first so the truly-contested upper
+        // tiers stay closer to par (heads-up scenarios bear the cut on
+        // the only tier they've got).
+        val contestedTotal = tiers.sumOf { it.amount }
+        val rake = (contestedTotal * rakeRate).toLong()
+            .coerceAtLeast(0L).coerceAtMost(contestedTotal)
+        val rakedTiers = run {
+            var rakeRemaining = rake
+            tiers.map { tier ->
+                val take = minOf(rakeRemaining, tier.amount)
+                rakeRemaining -= take
+                tier to (tier.amount - take)
+            }
+        }
+
+        // Step 4 — award each tier to its best hand among eligibles.
+        val payouts = mutableMapOf<Long, Long>()
+        val potResults = mutableListOf<PokerTable.PotResult>()
+        for ((tier, postRakeAmount) in rakedTiers) {
+            if (postRakeAmount <= 0L) {
+                potResults.add(
+                    PokerTable.PotResult(
+                        cap = tier.cap,
+                        eligibleDiscordIds = tier.eligible.map { it.discordId },
+                        amount = 0L,
+                        winners = emptyList(),
+                        payoutByDiscordId = emptyMap()
+                    )
+                )
+                continue
+            }
+            val tierWinners: List<PokerTable.Seat> = if (tier.eligible.size == 1) {
+                listOf(tier.eligible.single())
+            } else {
+                val ranked = tier.eligible.map { it to HandEvaluator.bestHand(it.holeCards, table.community) }
                 val best = ranked.maxOf { it.second }
                 ranked.filter { it.second.compareTo(best) == 0 }.map { it.first }
             }
-        }
-
-        // Even split, with the remainder going to the first listed winner so
-        // total chip count is preserved exactly.
-        val payouts = mutableMapOf<Long, Long>()
-        if (winners.isNotEmpty()) {
-            val share = distributable / winners.size
-            val remainder = distributable - share * winners.size
-            for ((i, winner) in winners.withIndex()) {
+            val share = postRakeAmount / tierWinners.size
+            val remainder = postRakeAmount - share * tierWinners.size
+            val tierPayouts = mutableMapOf<Long, Long>()
+            for ((i, winner) in tierWinners.withIndex()) {
                 val take = share + if (i == 0) remainder else 0L
                 winner.chips += take
-                payouts[winner.discordId] = take
+                tierPayouts[winner.discordId] = take
+                payouts.merge(winner.discordId, take, Long::plus)
             }
+            potResults.add(
+                PokerTable.PotResult(
+                    cap = tier.cap,
+                    eligibleDiscordIds = tier.eligible.map { it.discordId },
+                    amount = postRakeAmount,
+                    winners = tierWinners.map { it.discordId },
+                    payoutByDiscordId = tierPayouts.toMap()
+                )
+            )
         }
 
+        // Aggregate winners across all pots (smallest tier first so the
+        // main-pot winner appears first if multiple seats win).
+        val allWinners: List<Long> = potResults.flatMap { it.winners }.distinct()
+
+        // Reveal hole cards only when there's a real showdown — i.e. more
+        // than one contender. Single-contender (everyone folded) keeps
+        // everyone's cards private.
         val revealedHoleCards: Map<Long, List<Card>> =
             if (contenders.size > 1) contenders.associate { it.discordId to it.holeCards } else emptyMap()
 
         val result = PokerTable.HandResult(
             handNumber = table.handNumber,
-            winners = winners.map { it.discordId },
+            winners = allWinners,
             payoutByDiscordId = payouts.toMap(),
-            pot = pot,
+            pot = totalCommitted,
             rake = rake,
             board = table.community.toList(),
             revealedHoleCards = revealedHoleCards,
-            resolvedAt = now
+            resolvedAt = now,
+            pots = potResults.toList(),
+            refundedByDiscordId = refunds.toMap()
         )
 
         // Reset table for the next hand.

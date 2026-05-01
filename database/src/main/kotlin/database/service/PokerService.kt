@@ -2,7 +2,9 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.PokerHandLogDto
+import database.dto.PokerHandPotDto
 import database.persistence.PokerHandLogPersistence
+import database.persistence.PokerHandPotPersistence
 import database.poker.PokerEngine
 import database.poker.PokerEngine.PokerAction
 import database.poker.PokerTable
@@ -35,9 +37,14 @@ import kotlin.random.Random
  * `/duel` and the slot machines feed it. A row is appended to
  * `poker_hand_log` for audit/leaderboard purposes.
  *
- * v1 simplifications:
- *   - Single pot per hand, no side pots. An all-in short stack can
- *     win the entire pot at showdown — incorrect poker, fine for v1.
+ * v2 (PR #v2-1) — proper side pots and call-for-less. When players
+ * go all-in for different amounts, [PokerTable.HandResult.pots]
+ * splits the pot into tiers. A short stack can no longer scoop chips
+ * they didn't match. Each tier is persisted as its own row in
+ * `poker_hand_pot` for audit; `poker_hand_log.pot` stays the
+ * across-tiers aggregate for v1 readers.
+ *
+ * Remaining v1 simplifications (slated for later v2 PRs):
  *   - Buy-in / cash-out only allowed when the table isn't mid-hand.
  *     If a player wants to leave during a hand, they fold and wait.
  *   - Auto-topup (sell TOBY to make rent like the other casinos do via
@@ -51,6 +58,7 @@ class PokerService @Autowired constructor(
     private val configService: ConfigService,
     private val tableRegistry: PokerTableRegistry,
     private val handLogPersistence: PokerHandLogPersistence,
+    private val handPotPersistence: PokerHandPotPersistence,
     private val random: Random = Random.Default
 ) {
 
@@ -297,7 +305,7 @@ class PokerService @Autowired constructor(
         val playerIds = table.seats.joinToString(",") { it.discordId.toString() }
         val winnerIds = result.winners.joinToString(",")
         val board = result.board.joinToString(",") { it.toString() }
-        handLogPersistence.insert(
+        val log = handLogPersistence.insert(
             PokerHandLogDto(
                 guildId = table.guildId,
                 tableId = table.id,
@@ -310,6 +318,24 @@ class PokerService @Autowired constructor(
                 resolvedAt = result.resolvedAt
             )
         )
+        // v2: persist the per-tier breakdown alongside the aggregate
+        // log row. Older hands (pre-v2 or single-pot resolutions) just
+        // produce one tier row.
+        val handLogId = log.id ?: return
+        for ((idx, tier) in result.pots.withIndex()) {
+            handPotPersistence.insert(
+                PokerHandPotDto(
+                    handLogId = handLogId,
+                    tierIndex = idx,
+                    cap = tier.cap,
+                    amount = tier.amount,
+                    eligible = tier.eligibleDiscordIds.joinToString(",") { it.toString() },
+                    winners = tier.winners.joinToString(",") { it.toString() },
+                    payouts = tier.payoutByDiscordId.entries
+                        .joinToString(",") { (id, amt) -> "$id:$amt" }
+                )
+            )
+        }
     }
 
     /**
