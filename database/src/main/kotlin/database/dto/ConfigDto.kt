@@ -62,7 +62,18 @@ class ConfigDto(
         // Per-actor decision deadline in seconds. 0 disables the clock
         // entirely; otherwise the table registry auto-folds whoever is
         // up if they don't act in time. Default 30s when unset.
-        POKER_SHOT_CLOCK_SECONDS("POKER_SHOT_CLOCK_SECONDS");
+        POKER_SHOT_CLOCK_SECONDS("POKER_SHOT_CLOCK_SECONDS"),
+
+        // Whole-number social credits granted to every known user in the
+        // guild once per UTC day, regardless of voice activity. 0 (or unset)
+        // disables UBI. Bypasses DAILY_CREDIT_CAP — the whole point is to
+        // let non-voice users participate in casino/coin features.
+        UBI_DAILY_AMOUNT("UBI_DAILY_AMOUNT"),
+
+        // Per-guild override of the social-credit daily cap that applies to
+        // voice, command, intro, and UI-trade earnings. Falls back to 90
+        // (SocialCreditAwardService.DEFAULT_DAILY_CAP) when unset or invalid.
+        DAILY_CREDIT_CAP("DAILY_CREDIT_CAP");
     }
 
     override fun toString(): String {

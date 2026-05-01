@@ -138,85 +138,122 @@
             the server owner to change these, or take ownership of the server
             first.
         </div>
-        <div class="config-grid">
-            <div class="config-row" data-key="VOLUME">
-                <label>Default volume</label>
-                <input type="number" min="0" max="200"
-                       th:value="${overview.config['VOLUME']}"
-                       th:disabled="${!isOwner}">
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+        <details class="config-section" open>
+            <summary>Audio &amp; moves</summary>
+            <div class="config-grid">
+                <div class="config-row" data-key="VOLUME">
+                    <label>Default volume</label>
+                    <input type="number" min="0" max="200"
+                           th:value="${overview.config['VOLUME']}"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="INTRO_VOLUME">
+                    <label>Default intro volume</label>
+                    <input type="number" min="0" max="200"
+                           th:value="${overview.config['INTRO_VOLUME']}"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="MOVE">
+                    <label>Default move channel</label>
+                    <select th:disabled="${!isOwner}">
+                        <option value="">&mdash; none &mdash;</option>
+                        <option th:each="vc : ${overview.voiceChannels}"
+                                th:value="${vc.name}"
+                                th:text="${vc.name}"
+                                th:selected="${overview.config['MOVE'] == vc.name}"></option>
+                    </select>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
             </div>
-            <div class="config-row" data-key="INTRO_VOLUME">
-                <label>Default intro volume</label>
-                <input type="number" min="0" max="200"
-                       th:value="${overview.config['INTRO_VOLUME']}"
-                       th:disabled="${!isOwner}">
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+        </details>
+
+        <details class="config-section">
+            <summary>Messages &amp; leaderboards</summary>
+            <div class="config-grid">
+                <div class="config-row" data-key="DELETE_DELAY">
+                    <label>Message delete delay (seconds)</label>
+                    <input type="number" min="0" max="600"
+                           th:value="${overview.config['DELETE_DELAY']}"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="LEADERBOARD_CHANNEL">
+                    <label>Monthly leaderboard channel</label>
+                    <select th:disabled="${!isOwner}">
+                        <option value="">&mdash; system channel &mdash;</option>
+                        <option th:each="tc : ${overview.textChannels}"
+                                th:value="${tc.id}"
+                                th:text="'#' + ${tc.name}"
+                                th:selected="${overview.config['LEADERBOARD_CHANNEL'] == tc.id}"></option>
+                    </select>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
             </div>
-            <div class="config-row" data-key="DELETE_DELAY">
-                <label>Message delete delay (seconds)</label>
-                <input type="number" min="0" max="600"
-                       th:value="${overview.config['DELETE_DELAY']}"
-                       th:disabled="${!isOwner}">
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+        </details>
+
+        <details class="config-section">
+            <summary>Activity tracking</summary>
+            <div class="config-grid">
+                <!-- Saving "true" here kicks an ActivityTrackingEnabled event that
+                     fires the first-enable DM flow, matching the Discord
+                     /setconfig behaviour. Default value is "false" when no row
+                     exists yet — matches ActivityTrackingService's read default. -->
+                <div class="config-row" data-key="ACTIVITY_TRACKING">
+                    <label>Game-activity tracking</label>
+                    <select th:disabled="${!isOwner}">
+                        <option value="false"
+                                th:selected="${overview.config['ACTIVITY_TRACKING'] == null or overview.config['ACTIVITY_TRACKING'] == 'false'}">
+                            Disabled
+                        </option>
+                        <option value="true"
+                                th:selected="${overview.config['ACTIVITY_TRACKING'] == 'true'}">
+                            Enabled
+                        </option>
+                    </select>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
             </div>
-            <div class="config-row" data-key="MOVE">
-                <label>Default move channel</label>
-                <select th:disabled="${!isOwner}">
-                    <option value="">&mdash; none &mdash;</option>
-                    <option th:each="vc : ${overview.voiceChannels}"
-                            th:value="${vc.name}"
-                            th:text="${vc.name}"
-                            th:selected="${overview.config['MOVE'] == vc.name}"></option>
-                </select>
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+        </details>
+
+        <details class="config-section">
+            <summary>Economy &amp; casino</summary>
+            <div class="config-grid">
+                <div class="config-row" data-key="UBI_DAILY_AMOUNT">
+                    <label>UBI daily amount (credits granted to every user once per UTC day; 0 disables)</label>
+                    <input type="number" min="0" max="1000"
+                           th:value="${overview.config['UBI_DAILY_AMOUNT']}"
+                           placeholder="0"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="DAILY_CREDIT_CAP">
+                    <label>Daily credit cap (voice/command/intro earnings ceiling; default 90)</label>
+                    <input type="number" min="0" max="10000"
+                           th:value="${overview.config['DAILY_CREDIT_CAP']}"
+                           placeholder="90"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
+                    <label>Jackpot loss tribute (% of every lost casino stake)</label>
+                    <input type="number" min="0" max="50"
+                           th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_RAKE_PCT">
+                    <label>Poker rake (% of every settled pot)</label>
+                    <input type="number" min="0" max="20"
+                           th:value="${overview.config['POKER_RAKE_PCT']}"
+                           placeholder="5"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
             </div>
-            <div class="config-row" data-key="LEADERBOARD_CHANNEL">
-                <label>Monthly leaderboard channel</label>
-                <select th:disabled="${!isOwner}">
-                    <option value="">&mdash; system channel &mdash;</option>
-                    <option th:each="tc : ${overview.textChannels}"
-                            th:value="${tc.id}"
-                            th:text="'#' + ${tc.name}"
-                            th:selected="${overview.config['LEADERBOARD_CHANNEL'] == tc.id}"></option>
-                </select>
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-            </div>
-            <!-- Saving "true" here kicks an ActivityTrackingEnabled event that
-                 fires the first-enable DM flow, matching the Discord
-                 /setconfig behaviour. Default value is "false" when no row
-                 exists yet — matches ActivityTrackingService's read default. -->
-            <div class="config-row" data-key="ACTIVITY_TRACKING">
-                <label>Game-activity tracking</label>
-                <select th:disabled="${!isOwner}">
-                    <option value="false"
-                            th:selected="${overview.config['ACTIVITY_TRACKING'] == null or overview.config['ACTIVITY_TRACKING'] == 'false'}">
-                        Disabled
-                    </option>
-                    <option value="true"
-                            th:selected="${overview.config['ACTIVITY_TRACKING'] == 'true'}">
-                        Enabled
-                    </option>
-                </select>
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-            </div>
-            <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
-                <label>Jackpot loss tribute (% of every lost casino stake)</label>
-                <input type="number" min="0" max="50"
-                       th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
-                       placeholder="10"
-                       th:disabled="${!isOwner}">
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-            </div>
-            <div class="config-row" data-key="POKER_RAKE_PCT">
-                <label>Poker rake (% of every settled pot)</label>
-                <input type="number" min="0" max="20"
-                       th:value="${overview.config['POKER_RAKE_PCT']}"
-                       placeholder="5"
-                       th:disabled="${!isOwner}">
-                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-            </div>
-        </div>
+        </details>
     </section>
 
     <!-- VOICE TAB -->

@@ -556,7 +556,7 @@ class VoiceEventHandlerTest {
         handler.onGuildVoiceUpdate(event)
 
         verify(exactly = 1) {
-            awardService.award(1L, 7L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any(), any())
+            awardService.award(1L, 7L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
         }
 
         unmockkObject(PlayerManager)
@@ -604,7 +604,7 @@ class VoiceEventHandlerTest {
         handler.onGuildVoiceUpdate(event)
 
         verify(exactly = 0) {
-            awardService.award(any(), any(), VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any(), any())
+            awardService.award(any(), any(), VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
         }
 
         unmockkObject(PlayerManager)

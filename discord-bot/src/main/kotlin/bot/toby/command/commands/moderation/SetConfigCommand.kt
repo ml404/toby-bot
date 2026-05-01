@@ -78,6 +78,8 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS -> setPokerInt(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
                     label = "shot-clock seconds", range = 0..600)
+                ConfigDto.Configurations.UBI_DAILY_AMOUNT -> setUbiDailyAmount(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.DAILY_CREDIT_CAP -> setDailyCreditCap(event, optionMapping, deleteDelay)
             }
         }
     }
@@ -241,6 +243,47 @@ class SetConfigCommand @Autowired constructor(
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
+    private fun setUbiDailyAmount(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val amount = optionMapping.asInt
+        if (amount !in 0..1000) {
+            event.hook.sendMessage("UBI daily amount must be between 0 and 1000 (0 disables UBI).")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val configValue = ConfigDto.Configurations.UBI_DAILY_AMOUNT.configValue
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(configValue, amount.toString(), guildId)
+        val message = if (amount == 0) {
+            "UBI disabled — no automatic daily credits will be granted."
+        } else {
+            "UBI set to $amount credits per user per day. The grant runs at 00:00 UTC and bypasses the daily cap."
+        }
+        event.hook.sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setDailyCreditCap(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val cap = optionMapping.asInt
+        if (cap !in 0..10000) {
+            event.hook.sendMessage("Daily credit cap must be between 0 and 10000 (default 90).")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val configValue = ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(configValue, cap.toString(), guildId)
+        event.hook.sendMessage(
+            "Daily social-credit cap set to $cap credits (covers voice, command, intro, and UI-trade earnings)."
+        ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val movePropertyName = ConfigDto.Configurations.MOVE.configValue
         val guildId = event.guild?.id ?: return
@@ -359,6 +402,18 @@ class SetConfigCommand @Autowired constructor(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS.name.lowercase(Locale.getDefault()),
                 "Per-actor decision deadline in seconds (0 disables). Default 30.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.UBI_DAILY_AMOUNT.name.lowercase(Locale.getDefault()),
+                "Credits granted to every known user once per UTC day, regardless of voice. 0 disables UBI.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.DAILY_CREDIT_CAP.name.lowercase(Locale.getDefault()),
+                "Override for the daily social-credit cap that applies to voice/command/intro earnings. Default 90.",
                 false
             )
         )
