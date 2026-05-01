@@ -22,6 +22,14 @@ class PokerTable(
     val bigBet: Long,
     val maxRaisesPerStreet: Int,
     val maxSeats: Int,
+    /**
+     * v2 (PR #v2-2): per-actor decision deadline snapshotted at table
+     * creation. `0` means the shot clock is disabled and the table
+     * only ever closes via the idle sweeper. Snapshotted (not read
+     * live) so a guild admin can't shorten the clock under a player
+     * who is actively thinking about a decision.
+     */
+    val shotClockSeconds: Int = 0,
     var phase: Phase = Phase.WAITING,
     val seats: MutableList<Seat> = mutableListOf(),
     val community: MutableList<Card> = mutableListOf(),
@@ -34,7 +42,16 @@ class PokerTable(
     var deck: Deck? = null,
     var handNumber: Long = 0L,
     var lastActivityAt: Instant = Instant.now(),
-    var lastResult: HandResult? = null
+    var lastResult: HandResult? = null,
+    /**
+     * v2: when the current actor's shot clock fires, or null if no
+     * hand is in progress, the clock is disabled, or the deadline
+     * has not yet been armed for this actor. The registry's
+     * scheduled future does the actual auto-fold; this field exists
+     * so the [database.service.PokerService] / web projection can
+     * render a countdown without touching scheduler internals.
+     */
+    var currentActorDeadline: Instant? = null
 ) {
 
     enum class Phase { WAITING, PRE_FLOP, FLOP, TURN, RIVER }

@@ -252,6 +252,69 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig accepts POKER chip-amount keys when value is a positive long`() {
+        mockMember(ownerId, isOwner = true)
+        val keys = listOf(
+            ConfigDto.Configurations.POKER_SMALL_BLIND,
+            ConfigDto.Configurations.POKER_BIG_BLIND,
+            ConfigDto.Configurations.POKER_SMALL_BET,
+            ConfigDto.Configurations.POKER_BIG_BET,
+            ConfigDto.Configurations.POKER_MIN_BUY_IN,
+            ConfigDto.Configurations.POKER_MAX_BUY_IN,
+        )
+        for (key in keys) {
+            val err = service.updateConfig(ownerId, guildId, key, "250")
+            assertNull(err, "expected $key to accept 250")
+            verify { configService.upsertConfig(key.configValue, "250", guildId.toString()) }
+        }
+    }
+
+    @Test
+    fun `updateConfig rejects POKER chip-amount keys when value is non-numeric or below 1`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.POKER_SMALL_BLIND
+
+        val nonNumeric = service.updateConfig(ownerId, guildId, key, "abc")
+        assertNotNull(nonNumeric)
+        val zero = service.updateConfig(ownerId, guildId, key, "0")
+        assertNotNull(zero)
+        val negative = service.updateConfig(ownerId, guildId, key, "-5")
+        assertNotNull(negative)
+        verify(exactly = 0) { configService.upsertConfig(key.configValue, any(), any()) }
+    }
+
+    @Test
+    fun `updateConfig accepts POKER_MAX_SEATS only within 2 to 9`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.POKER_MAX_SEATS
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "2"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "9"))
+        verify { configService.upsertConfig(key.configValue, "2", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "9", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "10"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "n/a"))
+    }
+
+    @Test
+    fun `updateConfig accepts POKER_SHOT_CLOCK_SECONDS in 0 to 600 (0 disables)`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "30"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "600"))
+        verify { configService.upsertConfig(key.configValue, "0", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "30", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "601"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "asdf"))
+    }
+
+    @Test
     fun `updateConfig accepts MOVE when channel name exists`() {
         mockMember(ownerId, isOwner = true)
         val vc = mockk<VoiceChannel>(relaxed = true)

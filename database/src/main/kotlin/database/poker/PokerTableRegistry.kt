@@ -7,6 +7,7 @@ import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -40,6 +41,14 @@ class PokerTableRegistry(
     private val seq = AtomicLong()
     private var onIdleEvict: ((PokerTable) -> Unit)? = null
 
+    /**
+     * Per-table pending shot-clock task. Keyed by tableId; value is
+     * the scheduled future that will fire [shotClockExpired] if the
+     * actor doesn't act in time.
+     */
+    private val shotClocks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
+    private var onShotClockExpired: ((PokerTable) -> Unit)? = null
+
     init {
         scheduler.scheduleAtFixedRate(
             { runCatching { sweepIdle(Instant.now()) } },
@@ -58,6 +67,16 @@ class PokerTableRegistry(
         this.onIdleEvict = callback
     }
 
+    /**
+     * Register a callback invoked when a table's shot clock expires
+     * before the actor has acted. [database.service.PokerService] wires
+     * this to its auto-fold path so the registry stays free of
+     * Spring-managed dependencies.
+     */
+    fun setOnShotClockExpired(callback: (PokerTable) -> Unit) {
+        this.onShotClockExpired = callback
+    }
+
     fun create(
         guildId: Long,
         hostDiscordId: Long,
@@ -69,6 +88,7 @@ class PokerTableRegistry(
         bigBet: Long,
         maxRaisesPerStreet: Int,
         maxSeats: Int,
+        shotClockSeconds: Int = 0,
         now: Instant = Instant.now()
     ): PokerTable {
         val id = seq.incrementAndGet()
@@ -84,10 +104,65 @@ class PokerTableRegistry(
             bigBet = bigBet,
             maxRaisesPerStreet = maxRaisesPerStreet,
             maxSeats = maxSeats,
+            shotClockSeconds = shotClockSeconds,
             lastActivityAt = now
         )
         tables[id] = table
         return table
+    }
+
+    /**
+     * Cancel the pending shot-clock task for [tableId] (if any) and
+     * arm a fresh one for the table's current actor. No-op when the
+     * table's [PokerTable.shotClockSeconds] is `0` (clock disabled).
+     *
+     * Called by [database.service.PokerService.applyAction] /
+     * [startHand] / [advanceStreet] every time the actor changes,
+     * keyed off `(tableId, handNumber, actorIndex)` so a stale fire
+     * (one whose actor has already acted) is harmless.
+     */
+    fun rearmShotClock(tableId: Long, now: Instant = Instant.now()) {
+        val table = tables[tableId] ?: return
+        cancelShotClock(tableId)
+        val seconds = table.shotClockSeconds
+        if (seconds <= 0 || table.phase == PokerTable.Phase.WAITING) {
+            table.currentActorDeadline = null
+            return
+        }
+        val deadline = now.plusSeconds(seconds.toLong())
+        table.currentActorDeadline = deadline
+        val expectedHand = table.handNumber
+        val expectedActor = table.actorIndex
+        val future = scheduler.schedule(
+            {
+                runCatching {
+                    val live = tables[tableId] ?: return@runCatching
+                    synchronized(live) {
+                        // If the actor moved on or the hand ended, the fire
+                        // is stale — drop it. Production callers cancel the
+                        // task explicitly, but a near-deadline action could
+                        // still race the scheduler.
+                        if (live.handNumber != expectedHand ||
+                            live.actorIndex != expectedActor ||
+                            live.phase == PokerTable.Phase.WAITING
+                        ) return@synchronized
+                        onShotClockExpired?.invoke(live)
+                    }
+                }
+            },
+            seconds.toLong(),
+            TimeUnit.SECONDS
+        )
+        shotClocks[tableId] = future
+    }
+
+    /**
+     * Cancel any pending shot-clock task for [tableId]. Idempotent.
+     * Used between hands and at table-evict time.
+     */
+    fun cancelShotClock(tableId: Long) {
+        val task = shotClocks.remove(tableId) ?: return
+        task.cancel(false)
     }
 
     fun get(tableId: Long): PokerTable? = tables[tableId]
@@ -123,6 +198,7 @@ class PokerTableRegistry(
             synchronized(table) {
                 if (table.lastActivityAt.isBefore(cutoff)) {
                     val evicted = tables.remove(id)
+                    cancelShotClock(id)
                     if (evicted != null) runCatching { onIdleEvict?.invoke(evicted) }
                 }
             }

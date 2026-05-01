@@ -11,6 +11,7 @@ import database.poker.PokerTable
 import database.poker.PokerTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -102,9 +103,46 @@ class PokerService @Autowired constructor(
         data object TableNotFound : ActionOutcome
     }
 
+    /**
+     * Self-injection so registry callbacks (which are invoked from a
+     * scheduler thread holding `this`, not the Spring proxy) still
+     * route `@Transactional` methods through the proxy. Without this,
+     * `applyAction` and `evictAllSeats` would bypass their tx advice
+     * when called from the idle-evict / shot-clock paths.
+     *
+     * Nullable + `@Lazy` so a test that constructs the service
+     * directly (no Spring) doesn't hit a `lateinit` NPE; in that case
+     * [transactionalSelf] falls back to `this`. Production is always
+     * Spring-managed so the field is non-null at first use.
+     */
+    @Autowired
+    @Lazy
+    private var self: PokerService? = null
+
+    private val transactionalSelf: PokerService get() = self ?: this
+
     @PostConstruct
     fun wireRegistry() {
-        tableRegistry.setOnIdleEvict { table -> evictAllSeats(table) }
+        tableRegistry.setOnIdleEvict { table -> transactionalSelf.evictAllSeats(table) }
+        tableRegistry.setOnShotClockExpired { table -> autoFoldOnTimeout(table) }
+    }
+
+    /**
+     * Invoked by [PokerTableRegistry] when an actor's shot clock fires
+     * before they've acted. Folds them on their behalf and pushes the
+     * action through the same engine path a manual fold would take, so
+     * the rest of the table sees a normal "actor folded" event.
+     *
+     * Calls `self.applyAction` (not `this.applyAction`) so the
+     * `@Transactional` boundary on the action handler is honoured —
+     * scheduler-thread callbacks otherwise bypass the proxy.
+     */
+    private fun autoFoldOnTimeout(table: PokerTable) {
+        val timedOut = synchronized(table) {
+            if (table.phase == PokerTable.Phase.WAITING) return
+            table.seats.getOrNull(table.actorIndex)?.discordId
+        } ?: return
+        transactionalSelf.applyAction(timedOut, table.guildId, table.id, PokerAction.Fold)
     }
 
     /**
@@ -119,8 +157,12 @@ class PokerService @Autowired constructor(
         guildId: Long,
         buyIn: Long
     ): CreateOutcome {
-        if (buyIn !in MIN_BUY_IN..MAX_BUY_IN) {
-            return CreateOutcome.InvalidBuyIn(MIN_BUY_IN, MAX_BUY_IN)
+        // v2 (PR #v2-2): each table snapshots the guild's poker config
+        // at creation. Mid-hand admin tweaks don't affect the in-flight
+        // table — they take effect on the next [createTable] call.
+        val params = readTableParams(guildId)
+        if (buyIn !in params.minBuyIn..params.maxBuyIn) {
+            return CreateOutcome.InvalidBuyIn(params.minBuyIn, params.maxBuyIn)
         }
         val user = userService.getUserByIdForUpdate(hostDiscordId, guildId)
             ?: return CreateOutcome.UnknownUser
@@ -131,14 +173,15 @@ class PokerService @Autowired constructor(
         val table = tableRegistry.create(
             guildId = guildId,
             hostDiscordId = hostDiscordId,
-            minBuyIn = MIN_BUY_IN,
-            maxBuyIn = MAX_BUY_IN,
-            smallBlind = SMALL_BLIND,
-            bigBlind = BIG_BLIND,
-            smallBet = SMALL_BET,
-            bigBet = BIG_BET,
+            minBuyIn = params.minBuyIn,
+            maxBuyIn = params.maxBuyIn,
+            smallBlind = params.smallBlind,
+            bigBlind = params.bigBlind,
+            smallBet = params.smallBet,
+            bigBet = params.bigBet,
             maxRaisesPerStreet = MAX_RAISES_PER_STREET,
-            maxSeats = MAX_SEATS
+            maxSeats = params.maxSeats,
+            shotClockSeconds = params.shotClockSeconds
         )
         // Debit and seat under the same lock so we can't end up with an
         // empty table after a credit-debit failure.
@@ -148,6 +191,47 @@ class PokerService @Autowired constructor(
             table.seats.add(PokerTable.Seat(discordId = hostDiscordId, chips = buyIn))
         }
         return CreateOutcome.Ok(table.id)
+    }
+
+    /**
+     * Snapshot of every per-guild poker table parameter, populated
+     * from [ConfigService] with each value falling back to the
+     * `PokerService.companion` default if unset or unparseable.
+     */
+    data class TableParams(
+        val smallBlind: Long,
+        val bigBlind: Long,
+        val smallBet: Long,
+        val bigBet: Long,
+        val minBuyIn: Long,
+        val maxBuyIn: Long,
+        val maxSeats: Int,
+        val shotClockSeconds: Int
+    )
+
+    fun readTableParams(guildId: Long): TableParams {
+        fun cfgLong(key: ConfigDto.Configurations, default: Long, min: Long): Long {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
+            return raw?.toLongOrNull()?.coerceAtLeast(min) ?: default
+        }
+        fun cfgInt(key: ConfigDto.Configurations, default: Int, range: IntRange): Int {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
+            return raw?.toIntOrNull()?.coerceIn(range) ?: default
+        }
+        return TableParams(
+            smallBlind = cfgLong(ConfigDto.Configurations.POKER_SMALL_BLIND, SMALL_BLIND, 1L),
+            bigBlind = cfgLong(ConfigDto.Configurations.POKER_BIG_BLIND, BIG_BLIND, 1L),
+            smallBet = cfgLong(ConfigDto.Configurations.POKER_SMALL_BET, SMALL_BET, 1L),
+            bigBet = cfgLong(ConfigDto.Configurations.POKER_BIG_BET, BIG_BET, 1L),
+            minBuyIn = cfgLong(ConfigDto.Configurations.POKER_MIN_BUY_IN, MIN_BUY_IN, 1L),
+            maxBuyIn = cfgLong(ConfigDto.Configurations.POKER_MAX_BUY_IN, MAX_BUY_IN, 1L),
+            maxSeats = cfgInt(ConfigDto.Configurations.POKER_MAX_SEATS, MAX_SEATS, 2..9),
+            shotClockSeconds = cfgInt(
+                ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
+                DEFAULT_SHOT_CLOCK_SECONDS,
+                0..600
+            )
+        )
     }
 
     @Transactional
@@ -239,13 +323,15 @@ class PokerService @Autowired constructor(
         val table = tableRegistry.get(tableId) ?: return StartHandOutcome.TableNotFound
         if (table.guildId != guildId) return StartHandOutcome.TableNotFound
         if (table.hostDiscordId != hostDiscordId) return StartHandOutcome.NotHost
-        return synchronized(table) {
+        val started = synchronized(table) {
             when (val r = PokerEngine.startHand(table, random, now)) {
                 is PokerEngine.StartResult.Started -> StartHandOutcome.Ok(r.handNumber)
                 PokerEngine.StartResult.HandAlreadyInProgress -> StartHandOutcome.HandAlreadyInProgress
                 PokerEngine.StartResult.NotEnoughPlayers -> StartHandOutcome.NotEnoughPlayers
             }
         }
+        if (started is StartHandOutcome.Ok) tableRegistry.rearmShotClock(tableId, now)
+        return started
     }
 
     /**
@@ -268,6 +354,19 @@ class PokerService @Autowired constructor(
         val rakeRate = rakeRate(guildId)
         val outcome = synchronized(table) {
             PokerEngine.applyAction(table, discordId, action, rakeRate, now)
+        }
+        // Reset the per-actor clock based on what the engine produced:
+        // a continuing or street-advancing event puts a fresh decision
+        // on a different (or same) actor; a resolved hand stops the
+        // clock entirely until [startHand] arms it again.
+        when (outcome) {
+            is PokerEngine.ApplyResult.Applied -> when (outcome.event) {
+                is PokerEngine.ActionEvent.Continued,
+                is PokerEngine.ActionEvent.StreetAdvanced ->
+                    tableRegistry.rearmShotClock(tableId, now)
+                is PokerEngine.ActionEvent.HandResolved -> tableRegistry.cancelShotClock(tableId)
+            }
+            is PokerEngine.ApplyResult.Rejected -> Unit
         }
         return when (outcome) {
             is PokerEngine.ApplyResult.Rejected -> ActionOutcome.Rejected(outcome.reason)
@@ -375,6 +474,9 @@ class PokerService @Autowired constructor(
         const val BIG_BET: Long = 20L
         const val MAX_RAISES_PER_STREET: Int = 4
         const val MAX_SEATS: Int = 6
+        // 30s shot clock by default; 0 disables auto-fold and the table
+        // only ever closes via the 10-minute idle sweeper.
+        const val DEFAULT_SHOT_CLOCK_SECONDS: Int = 30
 
         const val DEFAULT_RAKE: Double = 0.05
         const val MAX_RAKE: Double = 0.20

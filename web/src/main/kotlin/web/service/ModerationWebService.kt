@@ -285,6 +285,29 @@ class ModerationWebService(
                 if (n !in 0..20) return "Value must be between 0 and 20 (capped server-side)."
                 n.toString()
             }
+            ConfigDto.Configurations.POKER_SMALL_BLIND,
+            ConfigDto.Configurations.POKER_BIG_BLIND,
+            ConfigDto.Configurations.POKER_SMALL_BET,
+            ConfigDto.Configurations.POKER_BIG_BET,
+            ConfigDto.Configurations.POKER_MIN_BUY_IN,
+            ConfigDto.Configurations.POKER_MAX_BUY_IN -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of chips."
+                if (n < 1L) return "Value must be at least 1 chip."
+                n.toString()
+            }
+            ConfigDto.Configurations.POKER_MAX_SEATS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number."
+                if (n !in 2..9) return "Value must be between 2 and 9 seats."
+                n.toString()
+            }
+            ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number of seconds."
+                if (n !in 0..600) return "Value must be between 0 and 600 seconds."
+                n.toString()
+            }
         }
 
         val guildIdString = guild.id
