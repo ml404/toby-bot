@@ -26,31 +26,36 @@ import kotlin.random.Random
  *     [UserService.getUserByIdForUpdate], identical to the casino
  *     minigame services.
  *   - [PokerEngine] mutates seat chip counts as hands play out.
- *   - [cashOut] — only allowed between hands ([PokerTable.Phase.WAITING]) —
- *     credits the seat's remaining chips back into `socialCredit` and
- *     removes the seat. The idle-table sweeper does the same thing
- *     automatically when a table goes quiet for [PokerTableRegistry.DEFAULT_IDLE_TTL].
+ *   - [rebuy] (v2-3) — top up an already-seated player's stack between
+ *     hands, capped at the table's `maxBuyIn`.
+ *   - [cashOut] — credits the seat's remaining chips back into
+ *     `socialCredit` and removes the seat. Between hands the cash-out
+ *     is immediate; mid-hand (v2-3) the seat is flagged `pendingLeave`,
+ *     auto-folded on its turn, and chips return to the wallet as soon
+ *     as the hand resolves. The idle-table sweeper does an analogous
+ *     refund automatically when a table goes quiet for
+ *     [PokerTableRegistry.DEFAULT_IDLE_TTL].
  *
  * Hand resolution flows back through [applyAction] / [startHand]; on a
  * resolved hand the rake (default 5 %, configurable per guild via
  * [ConfigDto.Configurations.POKER_RAKE_PCT]) is routed to the existing
  * per-guild jackpot pool via [JackpotService.addToPool], matching how
  * `/duel` and the slot machines feed it. A row is appended to
- * `poker_hand_log` for audit/leaderboard purposes.
+ * `poker_hand_log` (and per-tier rows to `poker_hand_pot`) for audit
+ * and the [recentHandsForTable] / [recentHandsForGuild] reads behind
+ * `/poker history`.
  *
- * v2 (PR #v2-1) — proper side pots and call-for-less. When players
- * go all-in for different amounts, [PokerTable.HandResult.pots]
- * splits the pot into tiers. A short stack can no longer scoop chips
- * they didn't match. Each tier is persisted as its own row in
- * `poker_hand_pot` for audit; `poker_hand_log.pot` stays the
- * across-tiers aggregate for v1 readers.
+ * v2 PRs delivered so far:
+ *   - v2-1: side pots and call-for-less at showdown.
+ *   - v2-2: per-guild config (blinds / bets / seat cap / shot clock)
+ *     snapshotted at table creation, plus a per-actor shot clock that
+ *     auto-folds on timeout via [PokerTableRegistry.rearmShotClock].
+ *   - v2-3: `/poker rebuy`, mid-hand `/poker leave`, `/poker history`.
  *
- * Remaining v1 simplifications (slated for later v2 PRs):
- *   - Buy-in / cash-out only allowed when the table isn't mid-hand.
- *     If a player wants to leave during a hand, they fold and wait.
- *   - Auto-topup (sell TOBY to make rent like the other casinos do via
- *     [CasinoTopUpHelper]) is available at buy-in time only — the chips
- *     are escrowed once and aren't refilled mid-table.
+ * Outstanding v1 simplification:
+ *   - No auto-topup (sell TOBY to make rent like the other casinos do
+ *     via [CasinoTopUpHelper]) on buy-in / rebuy. Players must hold
+ *     enough `socialCredit` directly. Slated for v2-4.
  */
 @Service
 class PokerService @Autowired constructor(
