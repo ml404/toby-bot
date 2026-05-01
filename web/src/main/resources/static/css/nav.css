@@ -48,8 +48,16 @@ nav {
 }
 
 /* Dropdown menus (Economy, Casino, ...). Trigger looks like a regular nav
-   link; menu absolutely positioned below on desktop, inlined on mobile. */
-.nav-dropdown { position: relative; }
+   link; menu absolutely positioned below on desktop, inlined on mobile.
+   The dropdown's hoverable box extends 8px below the toggle (via
+   padding-bottom + a negative margin-bottom that hides the visual size
+   change) so the gap between toggle and menu items is part of the
+   dropdown itself — no risk of dropping :hover mid-traverse. */
+.nav-dropdown {
+    position: relative;
+    padding-bottom: 8px;
+    margin-bottom: -8px;
+}
 .nav-dropdown-toggle {
     background: transparent;
     border: none;
@@ -73,7 +81,7 @@ nav {
     position: absolute;
     top: 100%;
     left: 0;
-    margin-top: 8px;
+    margin-top: 0;
     background: #16213e;
     border: 1px solid #2a2a4a;
     border-radius: 6px;
@@ -85,16 +93,6 @@ nav {
 }
 .nav-dropdown:hover .nav-dropdown-menu,
 .nav-dropdown.open .nav-dropdown-menu { display: flex; }
-/* Transparent bridge across the 8px gap between toggle and menu so the
-   cursor can travel from button to menu items without dropping :hover. */
-.nav-dropdown-menu::before {
-    content: "";
-    position: absolute;
-    top: -8px;
-    left: 0;
-    right: 0;
-    height: 8px;
-}
 .nav-dropdown-menu a,
 .nav-dropdown-menu .nav-dropdown-coming-soon {
     padding: 8px 16px;
@@ -115,8 +113,10 @@ nav {
     .nav-links .btn-discord, .nav-links .btn-logout { align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; }
 
     /* On mobile, dropdown items render inline under the trigger so the
-       whole menu is one vertical scroll — no second tap required. */
-    .nav-dropdown { width: 100%; }
+       whole menu is one vertical scroll — no second tap required. The
+       desktop hover-bridge padding is also neutralised so it doesn't
+       push items apart. */
+    .nav-dropdown { width: 100%; padding-bottom: 0; margin-bottom: 0; }
     .nav-dropdown-toggle { padding: 10px 4px; min-height: 40px; width: 100%; justify-content: flex-start; }
     .nav-dropdown-menu {
         position: static;
@@ -128,8 +128,6 @@ nav {
         box-shadow: none;
         min-width: 0;
     }
-    /* No gap to bridge in the inline mobile layout. */
-    .nav-dropdown-menu::before { content: none; }
     .nav-dropdown-menu a, .nav-dropdown-menu .nav-dropdown-coming-soon {
         padding: 8px 4px;
         min-height: 36px;

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import web.util.GuildMembership
 import java.time.Instant
 
 class EconomyWebServiceTest {
@@ -41,7 +42,7 @@ class EconomyWebServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
-        service = EconomyWebService(jda, introWebService, tradeService, marketService, userService)
+        service = EconomyWebService(jda, introWebService, tradeService, marketService, userService, GuildMembership(jda))
     }
 
     @Test

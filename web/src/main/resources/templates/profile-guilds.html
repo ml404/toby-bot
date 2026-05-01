@@ -17,18 +17,7 @@
         <a class="lb-guild-card"
            th:each="g : ${guilds}"
            th:href="@{/profile/{id}(id=${g.id})}">
-            <div class="lb-guild-card-header">
-                <img th:if="${g.iconUrl != null}"
-                     th:src="${g.iconUrl}"
-                     th:alt="${g.name} + ' icon'"
-                     class="lb-guild-icon"
-                     onerror="this.style.display='none'">
-                <div th:unless="${g.iconUrl != null}"
-                     class="lb-guild-icon-placeholder"
-                     aria-hidden="true"
-                     th:text="${#strings.substring(g.name, 0, 1).toUpperCase()}">G</div>
-                <div class="lb-guild-name" th:text="${g.name}" th:title="${g.name}">Guild</div>
-            </div>
+            <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
             <div class="lb-guild-top">
                 <span class="muted">Balance:</span>
                 <span th:text="${g.balance} + ' credits'">0 credits</span>

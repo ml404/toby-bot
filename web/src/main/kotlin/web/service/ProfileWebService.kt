@@ -5,13 +5,15 @@ import database.service.TitleService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import web.util.GuildMembership
 
 @Service
 class ProfileWebService(
     private val jda: JDA,
     private val userService: UserService,
     private val titleService: TitleService,
-    private val introWebService: IntroWebService
+    private val introWebService: IntroWebService,
+    private val membership: GuildMembership,
 ) {
 
     fun getMemberGuilds(accessToken: String, discordId: Long): List<ProfileGuildCard> {
@@ -29,10 +31,7 @@ class ProfileWebService(
         }.sortedBy { it.name.lowercase() }
     }
 
-    fun isMember(discordId: Long, guildId: Long): Boolean {
-        val guild = jda.getGuildById(guildId) ?: return false
-        return guild.getMemberById(discordId) != null
-    }
+    fun isMember(discordId: Long, guildId: Long): Boolean = membership.isMember(discordId, guildId)
 
     fun getProfile(discordId: Long, guildId: Long): ProfileView? {
         val guild = jda.getGuildById(guildId) ?: return null

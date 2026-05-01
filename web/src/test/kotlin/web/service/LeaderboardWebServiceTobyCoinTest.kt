@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import web.util.GuildMembership
 import java.time.Instant
 
 class LeaderboardWebServiceTobyCoinTest {
@@ -52,7 +53,8 @@ class LeaderboardWebServiceTobyCoinTest {
             userService = userService,
             marketService = marketService,
             titleService = titleService,
-            snapshotService = snapshotService
+            snapshotService = snapshotService,
+            membership = GuildMembership(jda),
         )
     }
 

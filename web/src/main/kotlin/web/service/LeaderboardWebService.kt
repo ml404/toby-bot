@@ -6,6 +6,7 @@ import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import web.util.GuildMembership
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.math.floor
@@ -18,7 +19,8 @@ class LeaderboardWebService(
     private val userService: UserService,
     private val marketService: TobyCoinMarketService,
     private val titleService: TitleService,
-    private val snapshotService: MonthlyCreditSnapshotService
+    private val snapshotService: MonthlyCreditSnapshotService,
+    private val membership: GuildMembership,
 ) {
 
     companion object {
@@ -52,10 +54,7 @@ class LeaderboardWebService(
         }.sortedBy { it.name.lowercase() }
     }
 
-    fun isMember(discordId: Long, guildId: Long): Boolean {
-        val guild = jda.getGuildById(guildId) ?: return false
-        return guild.getMemberById(discordId) != null
-    }
+    fun isMember(discordId: Long, guildId: Long): Boolean = membership.isMember(discordId, guildId)
 
     fun getGuildView(
         guildId: Long,

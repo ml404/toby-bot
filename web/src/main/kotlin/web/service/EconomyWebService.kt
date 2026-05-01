@@ -6,6 +6,7 @@ import database.service.TobyCoinMarketService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import web.util.GuildMembership
 import java.time.Duration
 import java.time.Instant
 
@@ -15,13 +16,11 @@ class EconomyWebService(
     private val introWebService: IntroWebService,
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
-    private val userService: UserService
+    private val userService: UserService,
+    private val membership: GuildMembership,
 ) {
 
-    fun isMember(discordId: Long, guildId: Long): Boolean {
-        val guild = jda.getGuildById(guildId) ?: return false
-        return guild.getMemberById(discordId) != null
-    }
+    fun isMember(discordId: Long, guildId: Long): Boolean = membership.isMember(discordId, guildId)
 
     fun getGuildMembers(guildId: Long): List<MemberInfo> {
         val guild = jda.getGuildById(guildId) ?: return emptyList()
