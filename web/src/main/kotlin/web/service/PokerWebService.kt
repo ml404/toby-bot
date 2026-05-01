@@ -1,6 +1,6 @@
 package web.service
 
-import database.poker.Card
+import database.card.Card
 import database.poker.PokerTable
 import database.poker.PokerTableRegistry
 import org.springframework.stereotype.Service

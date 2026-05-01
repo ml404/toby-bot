@@ -1,5 +1,8 @@
 package database.poker
 
+import database.card.Card
+import database.card.Rank
+
 /**
  * Pure 5-from-7 Texas Hold'em hand evaluator. Given a player's two hole
  * cards plus up to five community cards, returns the best 5-card

@@ -1,5 +1,7 @@
 package database.poker
 
+import database.card.Card
+import database.card.Deck
 import java.time.Instant
 
 /**

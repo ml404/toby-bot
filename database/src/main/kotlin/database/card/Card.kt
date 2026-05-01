@@ -1,4 +1,4 @@
-package database.poker
+package database.card
 
 enum class Suit(val symbol: Char) {
     CLUBS('♣'), DIAMONDS('♦'), HEARTS('♥'), SPADES('♠');

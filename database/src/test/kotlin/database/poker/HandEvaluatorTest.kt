@@ -1,5 +1,8 @@
 package database.poker
 
+import database.card.Card
+import database.card.Rank
+import database.card.Suit
 import database.poker.HandEvaluator.Category
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -1,5 +1,8 @@
 package database.poker
 
+import database.card.Card
+import database.card.Rank
+import database.card.Suit
 import database.poker.PokerEngine.PokerAction
 import database.poker.PokerTable.Phase
 import database.poker.PokerTable.SeatStatus

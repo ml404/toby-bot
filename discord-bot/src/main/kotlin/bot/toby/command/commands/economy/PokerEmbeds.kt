@@ -1,7 +1,7 @@
 package bot.toby.command.commands.economy
 
 import database.dto.PokerHandLogDto
-import database.poker.Card
+import database.card.Card
 import database.poker.PokerTable
 import database.poker.PokerTable.Phase
 import database.service.PokerService

@@ -1,4 +1,4 @@
-package database.poker
+package database.card
 
 import kotlin.random.Random
 
