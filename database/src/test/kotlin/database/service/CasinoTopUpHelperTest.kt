@@ -2,6 +2,7 @@ package database.service
 
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
+import database.economy.TobyCoinEngine
 import database.service.EconomyTradeService.TradeOutcome
 import io.mockk.every
 import io.mockk.mockk
@@ -26,6 +27,10 @@ class CasinoTopUpHelperTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        // Default the per-guild sell fee to the engine's 1% fallback so
+        // the slippage/fee maths in these tests match the historical
+        // hardcoded behaviour. Individual tests can override.
+        every { tradeService.sellFeeRate(guildId) } returns TobyCoinEngine.TRADE_FEE
     }
 
     private fun userWith(balance: Long, coins: Long): UserDto =

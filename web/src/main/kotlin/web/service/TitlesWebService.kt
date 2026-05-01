@@ -139,7 +139,9 @@ class TitlesWebService(
             // TRADE_FEE off the proceeds for the jackpot pool. Naive
             // ceil(shortfall / price) under-counts; ask the engine for
             // the right N.
-            val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(shortfall, market.price)
+            val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(
+                shortfall, market.price, feeRate = tradeService.sellFeeRate(guildId)
+            )
             if (actor.tobyCoins < coinsNeeded) {
                 return BuyWithTobyOutcome.InsufficientCoins(needed = coinsNeeded, have = actor.tobyCoins)
             }

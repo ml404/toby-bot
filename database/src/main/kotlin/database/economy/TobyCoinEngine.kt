@@ -49,14 +49,24 @@ object TobyCoinEngine {
     const val TRADE_IMPACT = 0.0001
 
     /**
-     * Flat fee charged on each trade leg. The fee is skimmed off the
-     * trader's payment (or proceeds) and routed into the per-guild
-     * jackpot pool, which casino minigame wins can hit for a payout.
-     * 1 % per leg means a buy-then-sell round trip pays ~2 % to the
-     * pool, which together with midpoint pricing makes the
-     * round-trip exploit unprofitable at any size and seeds gameplay.
+     * Default flat fee charged on each trade leg when the per-guild
+     * `TRADE_BUY_FEE_PCT` / `TRADE_SELL_FEE_PCT` config entries are
+     * unset. The fee is skimmed off the trader's payment (or proceeds)
+     * and routed into the per-guild jackpot pool, which casino
+     * minigame wins can hit for a payout. 1 % per leg means a
+     * buy-then-sell round trip pays ~2 % to the pool, which together
+     * with midpoint pricing makes the round-trip exploit unprofitable
+     * at any size and seeds gameplay.
      */
     const val TRADE_FEE = 0.01
+
+    /**
+     * Hard cap on the configurable per-guild trade fee. 25 % keeps
+     * trading viable even with the most aggressive admin setting —
+     * any higher and a buy-sell round trip costs over half the
+     * principal, which would effectively disable the economy.
+     */
+    const val MAX_TRADE_FEE = 0.25
 
     private const val SECONDS_PER_YEAR = 365.0 * 24.0 * 60.0 * 60.0
 
@@ -90,12 +100,12 @@ object TobyCoinEngine {
      *
      * = floor(midpoint × N) − floor(floor(midpoint × N) × TRADE_FEE)
      */
-    fun proceedsForSell(price: Double, coins: Long): Long {
+    fun proceedsForSell(price: Double, coins: Long, feeRate: Double = TRADE_FEE): Long {
         if (coins <= 0L || price <= 0.0) return 0L
         val newPrice = applySellPressure(price, coins)
         val midpoint = (price + newPrice) / 2.0
         val gross = kotlin.math.floor(midpoint * coins).toLong()
-        val fee = kotlin.math.floor(gross * TRADE_FEE).toLong()
+        val fee = kotlin.math.floor(gross * feeRate).toLong()
         return gross - fee
     }
 
@@ -110,13 +120,13 @@ object TobyCoinEngine {
      * user actually holds — callers compare against the balance and
      * surface "insufficient coins" themselves.
      */
-    fun coinsNeededForShortfall(shortfall: Long, price: Double): Long {
+    fun coinsNeededForShortfall(shortfall: Long, price: Double, feeRate: Double = TRADE_FEE): Long {
         if (shortfall <= 0L || price <= 0.0) return 0L
         var n = kotlin.math.ceil(shortfall.toDouble() / price).toLong().coerceAtLeast(1L)
         // 16 iterations: empirically the loop converges in 1–2 for sane
         // shortfalls. The cap is just paranoia for adversarial inputs.
         repeat(16) {
-            if (proceedsForSell(price, n) >= shortfall) return n
+            if (proceedsForSell(price, n, feeRate) >= shortfall) return n
             n += 1L
         }
         return n

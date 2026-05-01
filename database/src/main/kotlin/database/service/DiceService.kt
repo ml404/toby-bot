@@ -101,7 +101,7 @@ class DiceService(
         val roll = dice.roll(predicted, random)
         val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, roll.multiplier)
         return if (roll.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             RollOutcome.Win(
                 stake = stake,
                 payout = r.payout,

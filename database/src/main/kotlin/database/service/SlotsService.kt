@@ -103,7 +103,7 @@ class SlotsService(
         val pull = machine.pull(random)
         val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, pull.multiplier)
         return if (pull.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             SpinOutcome.Win(
                 stake = stake,
                 multiplier = pull.multiplier,

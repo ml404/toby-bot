@@ -29,8 +29,19 @@ import kotlin.random.Random
  */
 internal object JackpotHelper {
 
-    /** 1% chance to hit the jackpot per minigame win. Tuned alongside the trade fee. */
-    const val WIN_PROBABILITY: Double = 0.01
+    /**
+     * Default fraction of a winning casino-game roll that triggers the
+     * jackpot payout when the server hasn't overridden the rate via
+     * the `JACKPOT_WIN_PCT` config entry. Tuned alongside the trade fee.
+     */
+    const val DEFAULT_WIN_PROBABILITY: Double = 0.01
+
+    /**
+     * Hard cap on the configurable win probability. 50 % keeps the
+     * "growing pool" tension meaningful — without it an admin could
+     * empty the pool on virtually every win.
+     */
+    const val MAX_WIN_PROBABILITY: Double = 0.50
 
     /**
      * Default fraction of a lost stake that feeds the per-guild
@@ -51,21 +62,41 @@ internal object JackpotHelper {
      * If the random roll hits and the pool is non-empty, atomically
      * pull the entire pool, credit it to [user] (already locked by
      * [WagerHelper.checkAndLock]), persist, and return the amount
-     * awarded. Returns `0L` on miss or empty pool.
+     * awarded. Returns `0L` on miss or empty pool. The hit probability
+     * is per-guild configurable via `JACKPOT_WIN_PCT`; defaults to
+     * [DEFAULT_WIN_PROBABILITY].
      */
     fun rollOnWin(
         jackpotService: JackpotService,
+        configService: ConfigService,
         userService: UserService,
         user: UserDto,
         guildId: Long,
         random: Random
     ): Long {
-        if (random.nextDouble() >= WIN_PROBABILITY) return 0L
+        val probability = winProbability(configService, guildId)
+        if (random.nextDouble() >= probability) return 0L
         val won = jackpotService.awardJackpot(guildId)
         if (won == 0L) return 0L
         user.socialCredit = (user.socialCredit ?: 0L) + won
         userService.updateUser(user)
         return won
+    }
+
+    /**
+     * Live win probability for [guildId] — admin-set decimal percent
+     * (0-50, decimals allowed) parsed from the `JACKPOT_WIN_PCT` config
+     * entry. Returns [DEFAULT_WIN_PROBABILITY] when unset, unparseable,
+     * or negative; clamps anything above [MAX_WIN_PROBABILITY].
+     */
+    fun winProbability(configService: ConfigService, guildId: Long): Double {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            guildId.toString()
+        )
+        val pct = cfg?.value?.toDoubleOrNull() ?: return DEFAULT_WIN_PROBABILITY
+        if (pct.isNaN() || pct.isInfinite() || pct < 0.0) return DEFAULT_WIN_PROBABILITY
+        return (pct / 100.0).coerceAtMost(MAX_WIN_PROBABILITY)
     }
 
     /**
