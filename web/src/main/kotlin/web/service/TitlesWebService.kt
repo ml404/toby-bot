@@ -11,6 +11,7 @@ import database.economy.TobyCoinEngine
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import web.util.GuildMembership
 
 @Service
 class TitlesWebService(
@@ -20,7 +21,8 @@ class TitlesWebService(
     private val titleRoleService: TitleRoleService,
     private val introWebService: IntroWebService,
     private val marketService: TobyCoinMarketService,
-    private val tradeService: EconomyTradeService
+    private val tradeService: EconomyTradeService,
+    private val membership: GuildMembership,
 ) {
     companion object {
         private val logger = DiscordLogger(TitlesWebService::class.java)
@@ -49,10 +51,7 @@ class TitlesWebService(
         }.sortedBy { it.name.lowercase() }
     }
 
-    fun isMember(discordId: Long, guildId: Long): Boolean {
-        val guild = jda.getGuildById(guildId) ?: return false
-        return guild.getMemberById(discordId) != null
-    }
+    fun isMember(discordId: Long, guildId: Long): Boolean = membership.isMember(discordId, guildId)
 
     fun getTitlesForGuild(guildId: Long, actorDiscordId: Long): TitleShopView {
         val catalog = safely("title catalog", emptyList()) {

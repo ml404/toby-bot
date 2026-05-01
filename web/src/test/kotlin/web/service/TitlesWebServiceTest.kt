@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import web.util.GuildMembership
 
 class TitlesWebServiceTest {
 
@@ -55,7 +56,8 @@ class TitlesWebServiceTest {
             titleRoleService,
             introWebService,
             marketService,
-            tradeService
+            tradeService,
+            GuildMembership(jda),
         )
 
         every { jda.getGuildById(guildId) } returns guild

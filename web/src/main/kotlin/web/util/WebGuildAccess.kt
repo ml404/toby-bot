@@ -131,4 +131,43 @@ object WebGuildAccess {
         if (!economyWebService.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
         return block(discordId)
     }
+
+    /**
+     * Auth-only wrapper for page handlers that don't need a guild
+     * membership check — e.g. CampaignController where membership is
+     * implicit in the campaign service, or IntroWebController where the
+     * superuser branch needs to bypass the standard member guard.
+     * Anonymous callers redirect to [lobbyPath]; signed-in callers
+     * invoke [block] with their resolved Discord id.
+     */
+    inline fun requireSignedInForPage(
+        user: OAuth2User?,
+        lobbyPath: String,
+        block: (discordId: Long) -> String,
+    ): String {
+        val discordId = user?.discordIdOrNull() ?: return "redirect:$lobbyPath"
+        return block(discordId)
+    }
+
+    /**
+     * Auth-only wrapper for JSON endpoints that don't need a guild
+     * membership check — the service does its own permission audit on
+     * the actor (e.g. ModerationController, IntroWebController).
+     * Collapses the repeated `discordIdOrNull() ?: return 401(...)`
+     * pattern into one call.
+     *
+     * Callers supply a [notSignedInBody] factory so the 401 body matches
+     * the endpoint's response shape. Returns 401 with that body when
+     * the principal isn't a real Discord user, otherwise invokes
+     * [block] with the resolved id.
+     */
+    inline fun <T : Any> requireSignedInForJson(
+        user: OAuth2User?,
+        notSignedInBody: () -> T,
+        block: (discordId: Long) -> ResponseEntity<T>,
+    ): ResponseEntity<T> {
+        val discordId = user?.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(notSignedInBody())
+        return block(discordId)
+    }
 }

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Shared header for the guild-card grid that fronts every per-area
+    landing page (casino-guilds, economy-guilds, leaderboards, …).
+    Renders the guild's Discord icon when available, otherwise a single-
+    letter placeholder, plus the guild name.
+
+    Usage:
+        <div class="lb-guild-card-header"
+             th:replace="~{fragments/guildCard :: header(${g})}"></div>
+
+    The 9 guild-list templates each used to inline ~10 lines of
+    img/onerror/placeholder/name HTML — centralising it means a tweak
+    (e.g. dropping onerror once Discord icons stop 404ing, swapping the
+    placeholder strategy) is one edit instead of nine.
+-->
+<div th:fragment="header(g)" class="lb-guild-card-header">
+    <img th:if="${g.iconUrl != null}"
+         th:src="${g.iconUrl}"
+         th:alt="${g.name} + ' icon'"
+         class="lb-guild-icon"
+         onerror="this.style.display='none'">
+    <div th:unless="${g.iconUrl != null}"
+         class="lb-guild-icon-placeholder"
+         aria-hidden="true"
+         th:text="${#strings.substring(g.name, 0, 1).toUpperCase()}">G</div>
+    <div class="lb-guild-name" th:text="${g.name}" th:title="${g.name}">Guild</div>
+</div>
+</body>
+</html>

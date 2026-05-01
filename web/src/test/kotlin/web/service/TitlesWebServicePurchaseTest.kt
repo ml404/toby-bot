@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import web.util.GuildMembership
 import java.time.Instant
 
 /**
@@ -60,7 +61,8 @@ class TitlesWebServicePurchaseTest {
             titleRoleService = mockk(relaxed = true),
             introWebService = mockk(relaxed = true),
             marketService = marketService,
-            tradeService = tradeService
+            tradeService = tradeService,
+            membership = GuildMembership(jda),
         )
     }
 

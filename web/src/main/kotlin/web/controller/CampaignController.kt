@@ -42,6 +42,7 @@ import web.service.SaveTemplateResult
 import web.service.SessionEventView
 import web.service.SetAliveResult
 import web.service.SetCharacterResult
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -73,13 +74,10 @@ class CampaignController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/dnd/campaign") { discordId ->
         val guildName = campaignWebService.getGuildName(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/dnd/campaign"
+            return@requireSignedInForPage "redirect:/dnd/campaign"
         }
 
         val campaignDetail = campaignWebService.getCampaignDetail(guildId, discordId)
@@ -100,7 +98,7 @@ class CampaignController(
         model.addAttribute("freshEventIds", campaignDetail?.freshEventIds ?: emptyList<Long>())
         model.addAttribute("username", user.displayName())
 
-        return "campaignDetail"
+        "campaignDetail"
     }
 
     @GetMapping("/campaign/{guildId}/events")
@@ -140,19 +138,17 @@ class CampaignController(
         @RequestParam name: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/dnd/campaign") { discordId ->
+        // Special-cased vs. the helper because "Bot not in server" needs to
+        // bounce to the campaign list, not the (non-existent) detail page.
         campaignWebService.getGuildName(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/dnd/campaign"
+            return@requireSignedInForPage "redirect:/dnd/campaign"
         }
-
         if (campaignWebService.createCampaign(guildId, discordId, name) == null) {
             ra.addFlashAttribute("error", "A campaign is already active in this server.")
         }
-        return "redirect:/dnd/campaign/$guildId"
+        "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/join")
@@ -160,17 +156,13 @@ class CampaignController(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.joinCampaign(guildId, discordId)) {
-            JoinResult.JOINED -> {}
-            JoinResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            JoinResult.ALREADY_JOINED -> ra.addFlashAttribute("error", "You are already in this campaign.")
-            JoinResult.IS_DM -> ra.addFlashAttribute("error", "You are the DM and cannot join as a player.")
+            JoinResult.JOINED -> null
+            JoinResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            JoinResult.ALREADY_JOINED -> "You are already in this campaign."
+            JoinResult.IS_DM -> "You are the DM and cannot join as a player."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/leave")
@@ -178,16 +170,12 @@ class CampaignController(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.leaveCampaign(guildId, discordId)) {
-            LeaveResult.LEFT -> {}
-            LeaveResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            LeaveResult.NOT_A_PLAYER -> ra.addFlashAttribute("error", "You are not in this campaign.")
+            LeaveResult.LEFT -> null
+            LeaveResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            LeaveResult.NOT_A_PLAYER -> "You are not in this campaign."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/character")
@@ -196,18 +184,11 @@ class CampaignController(
         @RequestParam(name = "characterInput", required = false, defaultValue = "") characterInput: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.setLinkedCharacter(guildId, discordId, characterInput)) {
-            SetCharacterResult.UPDATED, SetCharacterResult.CLEARED -> {}
-            SetCharacterResult.INVALID -> ra.addFlashAttribute(
-                "error",
-                "Could not extract a valid character ID. Paste a D&D Beyond URL or numeric ID."
-            )
+            SetCharacterResult.UPDATED, SetCharacterResult.CLEARED -> null
+            SetCharacterResult.INVALID -> "Could not extract a valid character ID. Paste a D&D Beyond URL or numeric ID."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/end")
@@ -215,16 +196,12 @@ class CampaignController(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.endCampaign(guildId, discordId)) {
-            EndResult.ENDED -> {}
-            EndResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            EndResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can end the campaign.")
+            EndResult.ENDED -> null
+            EndResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            EndResult.NOT_DM -> "Only the Dungeon Master can end the campaign."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/players/{targetDiscordId}/kick")
@@ -233,18 +210,14 @@ class CampaignController(
         @PathVariable targetDiscordId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.kickPlayer(guildId, discordId, targetDiscordId)) {
-            KickResult.KICKED -> {}
-            KickResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            KickResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can kick players.")
-            KickResult.NOT_A_PLAYER -> ra.addFlashAttribute("error", "That user isn't in the campaign.")
-            KickResult.CANNOT_KICK_DM -> ra.addFlashAttribute("error", "The DM can't be kicked.")
+            KickResult.KICKED -> null
+            KickResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            KickResult.NOT_DM -> "Only the Dungeon Master can kick players."
+            KickResult.NOT_A_PLAYER -> "That user isn't in the campaign."
+            KickResult.CANNOT_KICK_DM -> "The DM can't be kicked."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/players/{targetDiscordId}/alive")
@@ -254,17 +227,13 @@ class CampaignController(
         @RequestParam alive: Boolean,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.setPlayerAlive(guildId, discordId, targetDiscordId, alive)) {
-            SetAliveResult.UPDATED -> {}
-            SetAliveResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            SetAliveResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can change player status.")
-            SetAliveResult.NOT_A_PLAYER -> ra.addFlashAttribute("error", "That user isn't in the campaign.")
+            SetAliveResult.UPDATED -> null
+            SetAliveResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            SetAliveResult.NOT_DM -> "Only the Dungeon Master can change player status."
+            SetAliveResult.NOT_A_PLAYER -> "That user isn't in the campaign."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/notes")
@@ -273,24 +242,14 @@ class CampaignController(
         @RequestParam body: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.addNote(guildId, discordId, body)) {
-            AddNoteResult.ADDED -> {}
-            AddNoteResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            AddNoteResult.NOT_PARTICIPANT -> ra.addFlashAttribute(
-                "error",
-                "Only the DM and campaign players can add notes."
-            )
-            AddNoteResult.EMPTY_BODY -> ra.addFlashAttribute("error", "Note body can't be empty.")
-            AddNoteResult.BODY_TOO_LONG -> ra.addFlashAttribute(
-                "error",
-                "Note is too long (max 2000 characters)."
-            )
+            AddNoteResult.ADDED -> null
+            AddNoteResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            AddNoteResult.NOT_PARTICIPANT -> "Only the DM and campaign players can add notes."
+            AddNoteResult.EMPTY_BODY -> "Note body can't be empty."
+            AddNoteResult.BODY_TOO_LONG -> "Note is too long (max 2000 characters)."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/notes/{noteId}/delete")
@@ -299,20 +258,13 @@ class CampaignController(
         @PathVariable noteId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.deleteNote(guildId, discordId, noteId)) {
-            DeleteNoteResult.DELETED -> {}
-            DeleteNoteResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            DeleteNoteResult.NOT_FOUND -> ra.addFlashAttribute("error", "That note doesn't exist.")
-            DeleteNoteResult.NOT_ALLOWED -> ra.addFlashAttribute(
-                "error",
-                "You can only delete your own notes (or any note if you're the DM)."
-            )
+            DeleteNoteResult.DELETED -> null
+            DeleteNoteResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            DeleteNoteResult.NOT_FOUND -> "That note doesn't exist."
+            DeleteNoteResult.NOT_ALLOWED -> "You can only delete your own notes (or any note if you're the DM)."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/events/{eventId}/annotate")
@@ -323,19 +275,15 @@ class CampaignController(
         @RequestParam(name = "target", required = false) target: String?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.annotateRoll(guildId, discordId, eventId, kind, target)) {
-            AnnotateRollResult.ANNOTATED -> {}
-            AnnotateRollResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            AnnotateRollResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can annotate rolls.")
-            AnnotateRollResult.NOT_FOUND -> ra.addFlashAttribute("error", "That roll doesn't exist in this campaign.")
-            AnnotateRollResult.NOT_A_ROLL -> ra.addFlashAttribute("error", "You can only mark Hit/Miss on a roll.")
-            AnnotateRollResult.INVALID_KIND -> ra.addFlashAttribute("error", "Annotation kind must be HIT or MISS.")
+            AnnotateRollResult.ANNOTATED -> null
+            AnnotateRollResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            AnnotateRollResult.NOT_DM -> "Only the Dungeon Master can annotate rolls."
+            AnnotateRollResult.NOT_FOUND -> "That roll doesn't exist in this campaign."
+            AnnotateRollResult.NOT_A_ROLL -> "You can only mark Hit/Miss on a roll."
+            AnnotateRollResult.INVALID_KIND -> "Annotation kind must be HIT or MISS."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/narrate")
@@ -344,21 +292,14 @@ class CampaignController(
         @RequestParam body: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.narrate(guildId, discordId, body)) {
-            NarrateResult.NARRATED -> {}
-            NarrateResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            NarrateResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can narrate.")
-            NarrateResult.EMPTY_BODY -> ra.addFlashAttribute("error", "Narration can't be empty.")
-            NarrateResult.BODY_TOO_LONG -> ra.addFlashAttribute(
-                "error",
-                "Narration is too long (max ${CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
-            )
+            NarrateResult.NARRATED -> null
+            NarrateResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            NarrateResult.NOT_DM -> "Only the Dungeon Master can narrate."
+            NarrateResult.EMPTY_BODY -> "Narration can't be empty."
+            NarrateResult.BODY_TOO_LONG -> "Narration is too long (max ${CampaignWebService.MAX_NARRATE_BODY_LENGTH} characters)."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @GetMapping("/monsters/templates")
@@ -380,25 +321,16 @@ class CampaignController(
         @RequestParam(name = "ac", required = false) ac: Int?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.saveTemplate(discordId, id, name, initiativeModifier, hpExpression, ac)) {
-            SaveTemplateResult.SAVED -> {}
-            SaveTemplateResult.NAME_BLANK -> ra.addFlashAttribute("error", "Monster name can't be empty.")
-            SaveTemplateResult.NAME_TOO_LONG -> ra.addFlashAttribute(
-                "error",
+            SaveTemplateResult.SAVED -> null
+            SaveTemplateResult.NAME_BLANK -> "Monster name can't be empty."
+            SaveTemplateResult.NAME_TOO_LONG ->
                 "Monster name is too long (max ${CampaignWebService.MAX_TEMPLATE_NAME_LENGTH} characters)."
-            )
-            SaveTemplateResult.INVALID_HP -> ra.addFlashAttribute(
-                "error",
-                "HP must be a number or a dice expression like '3d20+30'."
-            )
-            SaveTemplateResult.NOT_FOUND -> ra.addFlashAttribute("error", "That template doesn't exist.")
-            SaveTemplateResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own templates.")
+            SaveTemplateResult.INVALID_HP -> "HP must be a number or a dice expression like '3d20+30'."
+            SaveTemplateResult.NOT_FOUND -> "That template doesn't exist."
+            SaveTemplateResult.NOT_OWNER -> "You can only edit your own templates."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/monsters/templates/{templateId}/delete")
@@ -407,16 +339,12 @@ class CampaignController(
         @PathVariable templateId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.deleteTemplate(discordId, templateId)) {
-            DeleteTemplateResult.DELETED -> {}
-            DeleteTemplateResult.NOT_FOUND -> ra.addFlashAttribute("error", "That template doesn't exist.")
-            DeleteTemplateResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only delete your own templates.")
+            DeleteTemplateResult.DELETED -> null
+            DeleteTemplateResult.NOT_FOUND -> "That template doesn't exist."
+            DeleteTemplateResult.NOT_OWNER -> "You can only delete your own templates."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/monsters/templates/{templateId}/attacks")
@@ -429,38 +357,22 @@ class CampaignController(
         @RequestParam("damageExpression") damageExpression: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.saveAttack(discordId, templateId, attackId, name, toHitModifier, damageExpression)) {
-            SaveAttackResult.SAVED -> {}
-            SaveAttackResult.NAME_BLANK -> ra.addFlashAttribute("error", "Attack name can't be empty.")
-            SaveAttackResult.NAME_TOO_LONG -> ra.addFlashAttribute(
-                "error",
+            SaveAttackResult.SAVED -> null
+            SaveAttackResult.NAME_BLANK -> "Attack name can't be empty."
+            SaveAttackResult.NAME_TOO_LONG ->
                 "Attack name is too long (max ${CampaignWebService.MAX_ATTACK_NAME_LENGTH} characters)."
-            )
-            SaveAttackResult.INVALID_MODIFIER -> ra.addFlashAttribute(
-                "error",
+            SaveAttackResult.INVALID_MODIFIER ->
                 "To-hit modifier must be between -${CampaignWebService.MAX_ATTACK_MODIFIER} and ${CampaignWebService.MAX_ATTACK_MODIFIER}."
-            )
-            SaveAttackResult.INVALID_DAMAGE -> ra.addFlashAttribute(
-                "error",
-                "Damage must be a number or a dice expression like '2d6+3'."
-            )
-            SaveAttackResult.TOO_MANY -> ra.addFlashAttribute(
-                "error",
+            SaveAttackResult.INVALID_DAMAGE -> "Damage must be a number or a dice expression like '2d6+3'."
+            SaveAttackResult.TOO_MANY ->
                 "This monster already has the maximum of ${CampaignWebService.MAX_ATTACKS_PER_TEMPLATE} attacks."
-            )
-            SaveAttackResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute("error", "That monster template doesn't exist.")
-            SaveAttackResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own monsters.")
-            SaveAttackResult.ATTACK_NOT_FOUND -> ra.addFlashAttribute("error", "That attack doesn't exist.")
-            SaveAttackResult.ATTACK_TEMPLATE_MISMATCH -> ra.addFlashAttribute(
-                "error",
-                "That attack belongs to a different monster."
-            )
+            SaveAttackResult.TEMPLATE_NOT_FOUND -> "That monster template doesn't exist."
+            SaveAttackResult.NOT_OWNER -> "You can only edit your own monsters."
+            SaveAttackResult.ATTACK_NOT_FOUND -> "That attack doesn't exist."
+            SaveAttackResult.ATTACK_TEMPLATE_MISMATCH -> "That attack belongs to a different monster."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/monsters/templates/{templateId}/attacks/{attackId}/delete")
@@ -470,20 +382,13 @@ class CampaignController(
         @PathVariable attackId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.deleteAttack(discordId, templateId, attackId)) {
-            DeleteAttackResult.DELETED -> {}
-            DeleteAttackResult.ATTACK_NOT_FOUND -> ra.addFlashAttribute("error", "That attack doesn't exist.")
-            DeleteAttackResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only delete your own monsters' attacks.")
-            DeleteAttackResult.ATTACK_TEMPLATE_MISMATCH -> ra.addFlashAttribute(
-                "error",
-                "That attack belongs to a different monster."
-            )
+            DeleteAttackResult.DELETED -> null
+            DeleteAttackResult.ATTACK_NOT_FOUND -> "That attack doesn't exist."
+            DeleteAttackResult.NOT_OWNER -> "You can only delete your own monsters' attacks."
+            DeleteAttackResult.ATTACK_TEMPLATE_MISMATCH -> "That attack belongs to a different monster."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     // ----------------------------------------------------------------------
@@ -520,25 +425,17 @@ class CampaignController(
         @RequestParam(name = "notes", required = false) notes: String?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.saveEncounter(discordId, id, name, notes)) {
-            SaveEncounterResult.SAVED -> {}
-            SaveEncounterResult.NAME_BLANK -> ra.addFlashAttribute("error", "Encounter name can't be empty.")
-            SaveEncounterResult.NAME_TOO_LONG -> ra.addFlashAttribute(
-                "error",
+            SaveEncounterResult.SAVED -> null
+            SaveEncounterResult.NAME_BLANK -> "Encounter name can't be empty."
+            SaveEncounterResult.NAME_TOO_LONG ->
                 "Encounter name is too long (max ${CampaignWebService.MAX_ENCOUNTER_NAME_LENGTH} characters)."
-            )
-            SaveEncounterResult.NOTES_TOO_LONG -> ra.addFlashAttribute(
-                "error",
+            SaveEncounterResult.NOTES_TOO_LONG ->
                 "Encounter notes are too long (max ${CampaignWebService.MAX_ENCOUNTER_NOTES_LENGTH} characters)."
-            )
-            SaveEncounterResult.NOT_FOUND -> ra.addFlashAttribute("error", "That encounter doesn't exist.")
-            SaveEncounterResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only edit your own encounters.")
+            SaveEncounterResult.NOT_FOUND -> "That encounter doesn't exist."
+            SaveEncounterResult.NOT_OWNER -> "You can only edit your own encounters."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/encounters/{encounterId}/delete")
@@ -547,16 +444,12 @@ class CampaignController(
         @PathVariable encounterId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.deleteEncounter(discordId, encounterId)) {
-            DeleteEncounterResult.DELETED -> {}
-            DeleteEncounterResult.NOT_FOUND -> ra.addFlashAttribute("error", "That encounter doesn't exist.")
-            DeleteEncounterResult.NOT_OWNER -> ra.addFlashAttribute("error", "You can only delete your own encounters.")
+            DeleteEncounterResult.DELETED -> null
+            DeleteEncounterResult.NOT_FOUND -> "That encounter doesn't exist."
+            DeleteEncounterResult.NOT_OWNER -> "You can only delete your own encounters."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/encounters/{encounterId}/entries")
@@ -572,54 +465,28 @@ class CampaignController(
         @RequestParam(name = "adhocAc", required = false) adhocAc: Int?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.saveEncounterEntry(
             discordId, encounterId, entryId,
             monsterTemplateId, quantity,
             adhocName, adhocInitiativeModifier, adhocHpExpression, adhocAc
         )) {
-            SaveEncounterEntryResult.SAVED -> {}
-            SaveEncounterEntryResult.ENCOUNTER_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "That encounter doesn't exist."
-            )
-            SaveEncounterEntryResult.NOT_OWNER -> ra.addFlashAttribute(
-                "error", "You can only edit your own encounters."
-            )
-            SaveEncounterEntryResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "That monster template doesn't exist."
-            )
-            SaveEncounterEntryResult.TEMPLATE_NOT_OWNED -> ra.addFlashAttribute(
-                "error", "You can only use your own monster templates."
-            )
-            SaveEncounterEntryResult.NAME_TOO_LONG -> ra.addFlashAttribute(
-                "error",
+            SaveEncounterEntryResult.SAVED -> null
+            SaveEncounterEntryResult.ENCOUNTER_NOT_FOUND -> "That encounter doesn't exist."
+            SaveEncounterEntryResult.NOT_OWNER -> "You can only edit your own encounters."
+            SaveEncounterEntryResult.TEMPLATE_NOT_FOUND -> "That monster template doesn't exist."
+            SaveEncounterEntryResult.TEMPLATE_NOT_OWNED -> "You can only use your own monster templates."
+            SaveEncounterEntryResult.NAME_TOO_LONG ->
                 "Ad-hoc monster name is too long (max ${CampaignWebService.MAX_ENCOUNTER_NAME_LENGTH} characters)."
-            )
-            SaveEncounterEntryResult.INVALID_HP -> ra.addFlashAttribute(
-                "error", "HP must be a number or a dice expression like '3d20+30'."
-            )
-            SaveEncounterEntryResult.INVALID_QUANTITY -> ra.addFlashAttribute(
-                "error",
+            SaveEncounterEntryResult.INVALID_HP -> "HP must be a number or a dice expression like '3d20+30'."
+            SaveEncounterEntryResult.INVALID_QUANTITY ->
                 "Quantity must be between 1 and ${CampaignWebService.MAX_QUANTITY_PER_ENTRY}."
-            )
-            SaveEncounterEntryResult.TOO_MANY_ENTRIES -> ra.addFlashAttribute(
-                "error",
+            SaveEncounterEntryResult.TOO_MANY_ENTRIES ->
                 "This encounter already has the maximum of ${CampaignWebService.MAX_ENTRIES_PER_ENCOUNTER} rows."
-            )
-            SaveEncounterEntryResult.MISSING_SOURCE -> ra.addFlashAttribute(
-                "error", "Pick a monster from the library or fill in an ad-hoc name."
-            )
-            SaveEncounterEntryResult.ENTRY_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "That entry doesn't exist."
-            )
-            SaveEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH -> ra.addFlashAttribute(
-                "error", "That entry belongs to a different encounter."
-            )
+            SaveEncounterEntryResult.MISSING_SOURCE -> "Pick a monster from the library or fill in an ad-hoc name."
+            SaveEncounterEntryResult.ENTRY_NOT_FOUND -> "That entry doesn't exist."
+            SaveEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH -> "That entry belongs to a different encounter."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/encounters/{encounterId}/entries/{entryId}/delete")
@@ -629,26 +496,14 @@ class CampaignController(
         @PathVariable entryId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.deleteEncounterEntry(discordId, encounterId, entryId)) {
-            DeleteEncounterEntryResult.DELETED -> {}
-            DeleteEncounterEntryResult.ENCOUNTER_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "That encounter doesn't exist."
-            )
-            DeleteEncounterEntryResult.NOT_OWNER -> ra.addFlashAttribute(
-                "error", "You can only edit your own encounters."
-            )
-            DeleteEncounterEntryResult.ENTRY_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "That entry doesn't exist."
-            )
-            DeleteEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH -> ra.addFlashAttribute(
-                "error", "That entry belongs to a different encounter."
-            )
+            DeleteEncounterEntryResult.DELETED -> null
+            DeleteEncounterEntryResult.ENCOUNTER_NOT_FOUND -> "That encounter doesn't exist."
+            DeleteEncounterEntryResult.NOT_OWNER -> "You can only edit your own encounters."
+            DeleteEncounterEntryResult.ENTRY_NOT_FOUND -> "That entry doesn't exist."
+            DeleteEncounterEntryResult.ENTRY_ENCOUNTER_MISMATCH -> "That entry belongs to a different encounter."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     data class ReorderEntriesBody(val orderedIds: List<Long> = emptyList())
@@ -685,34 +540,16 @@ class CampaignController(
         @RequestParam(name = "playerDiscordIds", required = false) playerDiscordIds: List<Long>?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
-        when (campaignWebService.rollEncounter(
-            guildId, discordId, encounterId, playerDiscordIds.orEmpty()
-        )) {
-            RollEncounterResult.ROLLED -> {}
-            RollEncounterResult.ENCOUNTER_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "That encounter doesn't exist."
-            )
-            RollEncounterResult.NOT_OWNER -> ra.addFlashAttribute(
-                "error", "You can only roll your own encounters."
-            )
-            RollEncounterResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute(
-                "error", "No active campaign in this server."
-            )
-            RollEncounterResult.NOT_DM -> ra.addFlashAttribute(
-                "error", "Only the Dungeon Master can roll an encounter."
-            )
-            RollEncounterResult.EMPTY_ROSTER -> ra.addFlashAttribute(
-                "error", "This encounter has no monsters yet."
-            )
-            RollEncounterResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
-                "error", "One of the encounter's monster templates couldn't be found."
-            )
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
+        when (campaignWebService.rollEncounter(guildId, discordId, encounterId, playerDiscordIds.orEmpty())) {
+            RollEncounterResult.ROLLED -> null
+            RollEncounterResult.ENCOUNTER_NOT_FOUND -> "That encounter doesn't exist."
+            RollEncounterResult.NOT_OWNER -> "You can only roll your own encounters."
+            RollEncounterResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            RollEncounterResult.NOT_DM -> "Only the Dungeon Master can roll an encounter."
+            RollEncounterResult.EMPTY_ROSTER -> "This encounter has no monsters yet."
+            RollEncounterResult.TEMPLATE_NOT_FOUND -> "One of the encounter's monster templates couldn't be found."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/combat/monster-attack")
@@ -722,38 +559,22 @@ class CampaignController(
         @RequestParam("targetName") targetName: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         val outcome = campaignWebService.monsterAttack(guildId, discordId, attackId, targetName.trim())
         when (outcome.result) {
-            MonsterAttackResult.HIT, MonsterAttackResult.MISS -> {}
-            MonsterAttackResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            MonsterAttackResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "Combat isn't active.")
-            MonsterAttackResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can drive monster attacks.")
-            MonsterAttackResult.CURRENT_NOT_MONSTER -> ra.addFlashAttribute(
-                "error",
-                "It's not a monster's turn right now."
-            )
-            MonsterAttackResult.NO_TEMPLATE -> ra.addFlashAttribute(
-                "error",
-                "This monster has no template — add it to your library first."
-            )
-            MonsterAttackResult.ATTACK_NOT_FOUND -> ra.addFlashAttribute("error", "That attack doesn't exist.")
-            MonsterAttackResult.ATTACK_TEMPLATE_MISMATCH -> ra.addFlashAttribute(
-                "error",
-                "That attack doesn't belong to the current monster."
-            )
-            MonsterAttackResult.INVALID_DAMAGE -> ra.addFlashAttribute(
-                "error",
-                "This attack's damage expression is invalid — please re-save it."
-            )
-            MonsterAttackResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "Target not found in initiative.")
-            MonsterAttackResult.TARGET_DEFEATED -> ra.addFlashAttribute("error", "That target is already defeated.")
-            MonsterAttackResult.CANT_TARGET_SELF -> ra.addFlashAttribute("error", "A monster can't attack itself.")
+            MonsterAttackResult.HIT, MonsterAttackResult.MISS -> null
+            MonsterAttackResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            MonsterAttackResult.NO_ACTIVE_COMBAT -> "Combat isn't active."
+            MonsterAttackResult.NOT_DM -> "Only the Dungeon Master can drive monster attacks."
+            MonsterAttackResult.CURRENT_NOT_MONSTER -> "It's not a monster's turn right now."
+            MonsterAttackResult.NO_TEMPLATE -> "This monster has no template — add it to your library first."
+            MonsterAttackResult.ATTACK_NOT_FOUND -> "That attack doesn't exist."
+            MonsterAttackResult.ATTACK_TEMPLATE_MISMATCH -> "That attack doesn't belong to the current monster."
+            MonsterAttackResult.INVALID_DAMAGE -> "This attack's damage expression is invalid — please re-save it."
+            MonsterAttackResult.TARGET_NOT_FOUND -> "Target not found in initiative."
+            MonsterAttackResult.TARGET_DEFEATED -> "That target is already defeated."
+            MonsterAttackResult.CANT_TARGET_SELF -> "A monster can't attack itself."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/initiative/roll")
@@ -768,10 +589,7 @@ class CampaignController(
         @RequestParam(name = "adhocAc", required = false) adhocAcs: List<String>?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         // The ad-hoc monster rows have optional HP/AC inputs with no default,
         // so empty strings reach us for un-filled rows. Bind as List<String>
         // and parse leniently so empties become null/0 rather than 400/500.
@@ -803,19 +621,12 @@ class CampaignController(
         )
 
         when (campaignWebService.rollInitiative(guildId, discordId, request)) {
-            RollInitiativeResult.ROLLED -> {}
-            RollInitiativeResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            RollInitiativeResult.NOT_DM -> ra.addFlashAttribute("error", "Only the Dungeon Master can roll initiative here.")
-            RollInitiativeResult.EMPTY_ROSTER -> ra.addFlashAttribute(
-                "error",
-                "Pick at least one player or monster before rolling."
-            )
-            RollInitiativeResult.TEMPLATE_NOT_FOUND -> ra.addFlashAttribute(
-                "error",
-                "One of the selected monster templates couldn't be found."
-            )
+            RollInitiativeResult.ROLLED -> null
+            RollInitiativeResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            RollInitiativeResult.NOT_DM -> "Only the Dungeon Master can roll initiative here."
+            RollInitiativeResult.EMPTY_ROSTER -> "Pick at least one player or monster before rolling."
+            RollInitiativeResult.TEMPLATE_NOT_FOUND -> "One of the selected monster templates couldn't be found."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/roll")
@@ -827,35 +638,17 @@ class CampaignController(
         @RequestParam(name = "expression", required = false) expression: String?,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.rollDice(guildId, discordId, count, sides, modifier, expression?.trim())) {
-            RollDiceResult.ROLLED -> {}
-            RollDiceResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            RollDiceResult.NOT_PARTICIPANT -> ra.addFlashAttribute(
-                "error",
-                "Only campaign participants can roll here."
-            )
-            RollDiceResult.INVALID_SIDES -> ra.addFlashAttribute(
-                "error",
-                "Die must be one of d4, d6, d8, d10, d12, d20, or d100."
-            )
-            RollDiceResult.INVALID_COUNT -> ra.addFlashAttribute(
-                "error",
-                "Dice count must be between 1 and ${CampaignWebService.MAX_DICE_COUNT}."
-            )
-            RollDiceResult.INVALID_MODIFIER -> ra.addFlashAttribute(
-                "error",
+            RollDiceResult.ROLLED -> null
+            RollDiceResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            RollDiceResult.NOT_PARTICIPANT -> "Only campaign participants can roll here."
+            RollDiceResult.INVALID_SIDES -> "Die must be one of d4, d6, d8, d10, d12, d20, or d100."
+            RollDiceResult.INVALID_COUNT -> "Dice count must be between 1 and ${CampaignWebService.MAX_DICE_COUNT}."
+            RollDiceResult.INVALID_MODIFIER ->
                 "Modifier must be between -${CampaignWebService.MAX_DICE_MODIFIER} and ${CampaignWebService.MAX_DICE_MODIFIER}."
-            )
-            RollDiceResult.INVALID_EXPRESSION -> ra.addFlashAttribute(
-                "error",
-                "Custom expression must look like '2d6+3' or 'd20-1'."
-            )
+            RollDiceResult.INVALID_EXPRESSION -> "Custom expression must look like '2d6+3' or 'd20-1'."
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/combat/attack")
@@ -865,28 +658,19 @@ class CampaignController(
         @RequestParam(name = "attackModifier", defaultValue = "0") attackModifier: Int,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         val outcome = campaignWebService.attack(guildId, discordId, targetName.trim(), attackModifier)
         when (outcome.result) {
-            AttackResult.HIT, AttackResult.MISS -> {}
-            AttackResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            AttackResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "No active combat — roll initiative first.")
-            AttackResult.NOT_MY_TURN -> ra.addFlashAttribute(
-                "error",
-                "You can only attack on your own turn (or as the DM)."
-            )
-            AttackResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
-            AttackResult.TARGET_DEFEATED -> ra.addFlashAttribute("error", "That target is already defeated.")
-            AttackResult.CANT_TARGET_SELF -> ra.addFlashAttribute("error", "You can't attack yourself.")
-            AttackResult.INVALID_MODIFIER -> ra.addFlashAttribute(
-                "error",
+            AttackResult.HIT, AttackResult.MISS -> null
+            AttackResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            AttackResult.NO_ACTIVE_COMBAT -> "No active combat — roll initiative first."
+            AttackResult.NOT_MY_TURN -> "You can only attack on your own turn (or as the DM)."
+            AttackResult.TARGET_NOT_FOUND -> "That target isn't in the initiative order."
+            AttackResult.TARGET_DEFEATED -> "That target is already defeated."
+            AttackResult.CANT_TARGET_SELF -> "You can't attack yourself."
+            AttackResult.INVALID_MODIFIER ->
                 "Attack modifier must be between -${CampaignWebService.MAX_ATTACK_MODIFIER} and ${CampaignWebService.MAX_ATTACK_MODIFIER}."
-            )
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/combat/damage")
@@ -896,25 +680,16 @@ class CampaignController(
         @RequestParam("amount") amount: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.applyDamage(guildId, discordId, targetName.trim(), amount)) {
-            ApplyDamageResult.APPLIED, ApplyDamageResult.DEFEATED -> {}
-            ApplyDamageResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            ApplyDamageResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "No active combat — roll initiative first.")
-            ApplyDamageResult.NOT_ATTACKER -> ra.addFlashAttribute(
-                "error",
-                "You can only apply damage on your own turn (or as the DM)."
-            )
-            ApplyDamageResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
-            ApplyDamageResult.INVALID_AMOUNT -> ra.addFlashAttribute(
-                "error",
+            ApplyDamageResult.APPLIED, ApplyDamageResult.DEFEATED -> null
+            ApplyDamageResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            ApplyDamageResult.NO_ACTIVE_COMBAT -> "No active combat — roll initiative first."
+            ApplyDamageResult.NOT_ATTACKER -> "You can only apply damage on your own turn (or as the DM)."
+            ApplyDamageResult.TARGET_NOT_FOUND -> "That target isn't in the initiative order."
+            ApplyDamageResult.INVALID_AMOUNT ->
                 "Damage must be a number (0-${CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 2d6+3."
-            )
         }
-        return "redirect:/dnd/campaign/$guildId"
     }
 
     @PostMapping("/campaign/{guildId}/combat/heal")
@@ -924,28 +699,39 @@ class CampaignController(
         @RequestParam("amount") amount: String,
         @AuthenticationPrincipal user: OAuth2User,
         ra: RedirectAttributes
-    ): String {
-        val discordId = user.discordIdOrNull()
-            ?: return "redirect:/dnd/campaign"
-
+    ): String = withCampaignAuth(user, guildId, ra) { discordId ->
         when (campaignWebService.applyHeal(guildId, discordId, targetName.trim(), amount)) {
-            ApplyHealResult.APPLIED, ApplyHealResult.REVIVED -> {}
-            ApplyHealResult.NO_ACTIVE_CAMPAIGN -> ra.addFlashAttribute("error", "No active campaign in this server.")
-            ApplyHealResult.NO_ACTIVE_COMBAT -> ra.addFlashAttribute("error", "No active combat — roll initiative first.")
-            ApplyHealResult.NOT_ATTACKER -> ra.addFlashAttribute(
-                "error",
-                "You can only heal on your own turn (or as the DM)."
-            )
-            ApplyHealResult.TARGET_NOT_FOUND -> ra.addFlashAttribute("error", "That target isn't in the initiative order.")
-            ApplyHealResult.TARGET_HAS_NO_HP -> ra.addFlashAttribute(
-                "error",
-                "That target has no HP tracked — can't heal them."
-            )
-            ApplyHealResult.INVALID_AMOUNT -> ra.addFlashAttribute(
-                "error",
+            ApplyHealResult.APPLIED, ApplyHealResult.REVIVED -> null
+            ApplyHealResult.NO_ACTIVE_CAMPAIGN -> "No active campaign in this server."
+            ApplyHealResult.NO_ACTIVE_COMBAT -> "No active combat — roll initiative first."
+            ApplyHealResult.NOT_ATTACKER -> "You can only heal on your own turn (or as the DM)."
+            ApplyHealResult.TARGET_NOT_FOUND -> "That target isn't in the initiative order."
+            ApplyHealResult.TARGET_HAS_NO_HP -> "That target has no HP tracked — can't heal them."
+            ApplyHealResult.INVALID_AMOUNT ->
                 "Heal must be a number (0-${CampaignWebService.MAX_DAMAGE_AMOUNT}) or a dice expression like 1d8+2."
-            )
         }
-        return "redirect:/dnd/campaign/$guildId"
+    }
+
+    /**
+     * The campaign mutation endpoints all share the same shape:
+     *
+     *   1. Reject anonymous callers back to the campaign list.
+     *   2. Run the service operation.
+     *   3. Translate the result into either success (no flash) or a flash
+     *      `error` message.
+     *   4. Redirect back to the campaign detail page.
+     *
+     * Wrapping that in one place means each endpoint is just the
+     * service call and the result→message map; the auth + flash + redirect
+     * scaffolding stops being duplicated 20+ times.
+     */
+    private inline fun withCampaignAuth(
+        user: OAuth2User,
+        guildId: Long,
+        ra: RedirectAttributes,
+        block: (discordId: Long) -> String?,
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/dnd/campaign") { discordId ->
+        block(discordId)?.let { ra.addFlashAttribute("error", it) }
+        "redirect:/dnd/campaign/$guildId"
     }
 }

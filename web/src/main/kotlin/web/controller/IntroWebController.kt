@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.IntroWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
 import web.util.displayName
@@ -62,13 +63,10 @@ class IntroWebController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return "redirect:/intro/guilds"
-
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/intro/guilds") { authDiscordId ->
         val guildName = introWebService.getGuildName(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return "redirect:/intro/guilds"
+            return@requireSignedInForPage "redirect:/intro/guilds"
         }
 
         val isSuperUser = introWebService.isSuperUser(authDiscordId, guildId)
@@ -90,7 +88,7 @@ class IntroWebController(
         model.addAttribute("targetDiscordId", if (isSuperUser) targetDiscordId else null)
         model.addAttribute("effectiveDiscordId", effectiveDiscordId)
 
-        return "intros"
+        "intros"
     }
 
     @PostMapping("/{guildId}/set")
@@ -106,9 +104,7 @@ class IntroWebController(
         @RequestParam(required = false) startMs: Int?,
         @RequestParam(required = false) endMs: Int?,
         ra: RedirectAttributes
-    ): String {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return "redirect:/intro/guilds"
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/intro/guilds") { authDiscordId ->
         val effectiveDiscordId = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
 
         val clampedVolume = volume.coerceIn(1, 100)
@@ -132,7 +128,7 @@ class IntroWebController(
             ra.addFlashAttribute("success", "Intro saved successfully.")
         }
 
-        return redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
+        redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
     }
 
     @PostMapping("/{guildId}/delete/{introId:.+}")
@@ -143,9 +139,7 @@ class IntroWebController(
         @RequestParam(required = false) targetDiscordId: Long?,
         session: HttpSession,
         ra: RedirectAttributes
-    ): String {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return "redirect:/intro/guilds"
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/intro/guilds") { authDiscordId ->
         val effectiveDiscordId = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
 
         // Snapshot the DTO before deletion so undo can restore it.
@@ -173,7 +167,7 @@ class IntroWebController(
             ra.addFlashAttribute("undoDelete", true)
         }
 
-        return redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
+        redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
     }
 
     @PostMapping("/{guildId}/undo-delete")
@@ -183,9 +177,7 @@ class IntroWebController(
         @RequestParam(required = false) targetDiscordId: Long?,
         session: HttpSession,
         ra: RedirectAttributes
-    ): String {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return "redirect:/intro/guilds"
+    ): String = WebGuildAccess.requireSignedInForPage(user, "/intro/guilds") { authDiscordId ->
         val effectiveDiscordId = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
 
         val key = undoKey(guildId, effectiveDiscordId)
@@ -194,19 +186,19 @@ class IntroWebController(
 
         if (snapshot == null) {
             ra.addFlashAttribute("error", "Nothing to undo.")
-            return redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
+            return@requireSignedInForPage redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
         }
 
         // 10 minute undo window
         if (System.currentTimeMillis() - snapshot.timestampMs > 10 * 60 * 1000) {
             ra.addFlashAttribute("error", "Undo window has expired.")
-            return redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
+            return@requireSignedInForPage redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
         }
 
         val dbUser = introWebService.getOrCreateUser(effectiveDiscordId, guildId)
         if (dbUser.musicDtos.size >= IntroWebService.MAX_INTRO_COUNT) {
             ra.addFlashAttribute("error", "Cannot restore — intro limit already reached.")
-            return redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
+            return@requireSignedInForPage redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
         }
 
         val targetIndex = if (dbUser.musicDtos.none { it.index == snapshot.index }) {
@@ -226,7 +218,7 @@ class IntroWebController(
         musicFileService.createNewMusicFile(restored)
 
         ra.addFlashAttribute("success", "Intro restored.")
-        return redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
+        redirectToIntroPage(guildId, authDiscordId, targetDiscordId)
     }
 
     @PostMapping("/{guildId}/update-volume", consumes = ["application/json"])
@@ -236,12 +228,12 @@ class IntroWebController(
         @RequestBody body: UpdateVolumeRequest,
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
-    ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { authDiscordId ->
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.updateIntroVolume(effective, guildId, body.introId, body.volume)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -252,12 +244,12 @@ class IntroWebController(
         @RequestBody body: UpdateTimestampsRequest,
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
-    ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { authDiscordId ->
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.updateIntroTimestamps(effective, guildId, body.introId, body.startMs, body.endMs)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -268,12 +260,12 @@ class IntroWebController(
         @RequestBody body: UpdateNameRequest,
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
-    ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { authDiscordId ->
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.updateIntroName(effective, guildId, body.introId, body.name)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
@@ -284,14 +276,16 @@ class IntroWebController(
         @RequestBody body: ReorderRequest,
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false) targetDiscordId: Long?
-    ): ResponseEntity<ApiResult> {
-        val authDiscordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(ApiResult(false, "Not signed in."))
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { authDiscordId ->
         val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
         val error = introWebService.reorderIntros(effective, guildId, body.orderedIds)
-        return if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
+
+    private val notSignedInApi: () -> ApiResult = { ApiResult(false, "Not signed in.") }
 
     @GetMapping("/preview")
     @ResponseBody

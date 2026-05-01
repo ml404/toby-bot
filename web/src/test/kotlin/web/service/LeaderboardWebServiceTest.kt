@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import web.util.GuildMembership
 
 class LeaderboardWebServiceTest {
 
@@ -33,7 +34,13 @@ class LeaderboardWebServiceTest {
         moderationWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
-        service = LeaderboardWebService(jda, introWebService, moderationWebService, userService, marketService, mockk(relaxed = true), mockk(relaxed = true))
+        // Real GuildMembership over the mocked JDA — keeps the existing
+        // `isMember` tests black-boxed against JDA, not against the helper.
+        service = LeaderboardWebService(
+            jda, introWebService, moderationWebService, userService, marketService,
+            mockk(relaxed = true), mockk(relaxed = true),
+            GuildMembership(jda)
+        )
     }
 
     @Test
