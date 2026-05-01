@@ -87,6 +87,17 @@ class PokerService @Autowired constructor(
         data object HandInProgress : CashOutOutcome
     }
 
+    sealed interface RebuyOutcome {
+        data class Ok(val seatChips: Long, val newBalance: Long) : RebuyOutcome
+        data object TableNotFound : RebuyOutcome
+        data object NotSeated : RebuyOutcome
+        data object HandInProgress : RebuyOutcome
+        data class InvalidAmount(val min: Long, val max: Long) : RebuyOutcome
+        data class StackCapped(val cap: Long, val current: Long) : RebuyOutcome
+        data class InsufficientCredits(val have: Long, val needed: Long) : RebuyOutcome
+        data object UnknownUser : RebuyOutcome
+    }
+
     sealed interface StartHandOutcome {
         data class Ok(val handNumber: Long) : StartHandOutcome
         data object TableNotFound : StartHandOutcome
@@ -266,6 +277,66 @@ class PokerService @Autowired constructor(
         user.socialCredit = balance - buyIn
         userService.updateUser(user)
         return BuyInOutcome.Ok(seatIndex = seatIndex, newBalance = user.socialCredit ?: 0L)
+    }
+
+    /**
+     * Top up an already-seated player's stack between hands. Mirrors
+     * [buyIn] (debits `socialCredit`, escrows the chips on the seat)
+     * but stacks onto an existing seat instead of adding a new one.
+     *
+     * Constraints:
+     *   - Only between hands ([PokerTable.Phase.WAITING]). Mid-hand
+     *     rebuys would let a busted player rejoin the same hand.
+     *   - Post-rebuy stack capped at [PokerTable.maxBuyIn]. A partial
+     *     top-up that would breach the cap is rejected outright; the
+     *     caller can re-issue with a smaller [amount]. Silent
+     *     truncation would be a footgun for the slash-command UX.
+     */
+    @Transactional
+    fun rebuy(
+        discordId: Long,
+        guildId: Long,
+        tableId: Long,
+        amount: Long
+    ): RebuyOutcome {
+        val table = tableRegistry.get(tableId) ?: return RebuyOutcome.TableNotFound
+        if (table.guildId != guildId) return RebuyOutcome.TableNotFound
+        if (amount < table.minBuyIn || amount > table.maxBuyIn) {
+            return RebuyOutcome.InvalidAmount(table.minBuyIn, table.maxBuyIn)
+        }
+
+        val user = userService.getUserByIdForUpdate(discordId, guildId)
+            ?: return RebuyOutcome.UnknownUser
+        val balance = user.socialCredit ?: 0L
+        if (balance < amount) {
+            return RebuyOutcome.InsufficientCredits(have = balance, needed = amount)
+        }
+
+        val rebuyResult = synchronized(table) {
+            when {
+                table.phase != PokerTable.Phase.WAITING -> RebuyOutcome.HandInProgress
+                else -> {
+                    val seat = table.seats.firstOrNull { it.discordId == discordId }
+                    when {
+                        seat == null -> RebuyOutcome.NotSeated
+                        seat.chips + amount > table.maxBuyIn ->
+                            RebuyOutcome.StackCapped(cap = table.maxBuyIn, current = seat.chips)
+                        else -> {
+                            seat.chips += amount
+                            RebuyOutcome.Ok(seatChips = seat.chips, newBalance = 0L)
+                        }
+                    }
+                }
+            }
+        }
+        if (rebuyResult !is RebuyOutcome.Ok) return rebuyResult
+
+        user.socialCredit = balance - amount
+        userService.updateUser(user)
+        return RebuyOutcome.Ok(
+            seatChips = rebuyResult.seatChips,
+            newBalance = user.socialCredit ?: 0L
+        )
     }
 
     @Transactional

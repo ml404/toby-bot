@@ -12,6 +12,7 @@ import database.service.PokerService
 import database.service.PokerService.BuyInOutcome
 import database.service.PokerService.CashOutOutcome
 import database.service.PokerService.CreateOutcome
+import database.service.PokerService.RebuyOutcome
 import database.service.PokerService.StartHandOutcome
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -180,6 +181,34 @@ internal class PokerCommandTest : CommandTest {
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
         verify(exactly = 0) { pokerService.applyAction(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `rebuy subcommand delegates to PokerService rebuy`() {
+        every { event.subcommandName } returns "rebuy"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { event.getOption("chips") } returns intOpt(300L)
+        every { pokerService.rebuy(hostId, guildId, 7L, 300L) } returns
+            RebuyOutcome.Ok(seatChips = 500L, newBalance = 700L)
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.rebuy(hostId, guildId, 7L, 300L) }
+        // Happy path renders an info embed; no need to look up the table.
+        verify(exactly = 0) { tableRegistry.get(any()) }
+    }
+
+    @Test
+    fun `rebuy with stack-cap rejection still surfaces an embed without table lookup`() {
+        every { event.subcommandName } returns "rebuy"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { event.getOption("chips") } returns intOpt(2000L)
+        every { pokerService.rebuy(hostId, guildId, 7L, 2000L) } returns
+            RebuyOutcome.StackCapped(cap = 5000L, current = 4500L)
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 0) { tableRegistry.get(any()) }
     }
 
     @Test

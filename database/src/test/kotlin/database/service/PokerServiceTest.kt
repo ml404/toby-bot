@@ -134,6 +134,101 @@ class PokerServiceTest {
     }
 
     @Test
+    fun `rebuy adds chips to a seated player and debits balance`() {
+        seed(host, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+
+        val outcome = service.rebuy(host, guildId, tableId, amount = 300L)
+
+        assertTrue(outcome is PokerService.RebuyOutcome.Ok)
+        outcome as PokerService.RebuyOutcome.Ok
+        assertEquals(500L, outcome.seatChips, "200 + 300 stacks onto the seat")
+        assertEquals(500L, outcome.newBalance, "1000 - 200 createTable - 300 rebuy")
+        assertEquals(500L, registry.get(tableId)!!.seats[0].chips)
+    }
+
+    @Test
+    fun `rebuy that would breach max buy-in is rejected without debiting`() {
+        seed(host, 100_000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 4_500L) as PokerService.CreateOutcome.Ok).tableId
+        // MAX_BUY_IN = 5000; seat sitting at 4500. A 1000 top-up would
+        // push to 5500 → reject. Player keeps their balance and stack.
+        val balanceBefore = userService.current(host)!!.socialCredit!!
+
+        val outcome = service.rebuy(host, guildId, tableId, amount = 1_000L)
+
+        assertTrue(outcome is PokerService.RebuyOutcome.StackCapped)
+        outcome as PokerService.RebuyOutcome.StackCapped
+        assertEquals(PokerService.MAX_BUY_IN, outcome.cap)
+        assertEquals(4_500L, outcome.current)
+        assertEquals(balanceBefore, userService.current(host)?.socialCredit, "no debit on cap rejection")
+        assertEquals(4_500L, registry.get(tableId)!!.seats[0].chips, "stack untouched on cap rejection")
+    }
+
+    @Test
+    fun `rebuy mid-hand is rejected`() {
+        seed(host, 1000L); seed(joiner, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 500L) as PokerService.CreateOutcome.Ok).tableId
+        service.buyIn(joiner, guildId, tableId, buyIn = 500L)
+        service.startHand(host, guildId, tableId)
+
+        val outcome = service.rebuy(host, guildId, tableId, amount = 200L)
+        assertEquals(PokerService.RebuyOutcome.HandInProgress, outcome)
+        // No debit, no chip change.
+        assertEquals(500L, userService.current(host)?.socialCredit, "balance untouched on HandInProgress")
+    }
+
+    @Test
+    fun `rebuy by someone not at the table is rejected`() {
+        seed(host, 1000L); seed(joiner, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+
+        val outcome = service.rebuy(joiner, guildId, tableId, amount = 200L)
+        assertEquals(PokerService.RebuyOutcome.NotSeated, outcome)
+    }
+
+    @Test
+    fun `rebuy with insufficient credits is rejected without seat change`() {
+        seed(host, 250L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+        // Balance is now 50 after the createTable debit; 200 rebuy unaffordable.
+
+        val outcome = service.rebuy(host, guildId, tableId, amount = 200L)
+
+        assertTrue(outcome is PokerService.RebuyOutcome.InsufficientCredits)
+        assertEquals(50L, userService.current(host)?.socialCredit, "balance unchanged")
+        assertEquals(200L, registry.get(tableId)!!.seats[0].chips, "seat chips unchanged")
+    }
+
+    @Test
+    fun `rebuy below table min or above table max is rejected`() {
+        seed(host, 100_000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+
+        val tooSmall = service.rebuy(host, guildId, tableId, amount = 10L)
+        assertTrue(tooSmall is PokerService.RebuyOutcome.InvalidAmount)
+
+        val tooBig = service.rebuy(host, guildId, tableId, amount = 99_999L)
+        assertTrue(tooBig is PokerService.RebuyOutcome.InvalidAmount)
+    }
+
+    @Test
+    fun `rebuy on missing table returns TableNotFound`() {
+        val outcome = service.rebuy(host, guildId, tableId = 999L, amount = 200L)
+        assertEquals(PokerService.RebuyOutcome.TableNotFound, outcome)
+    }
+
+    @Test
+    fun `rebuy with mismatched guild returns TableNotFound`() {
+        seed(host, 1000L); seed(joiner, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
+        // Wrong guild — must not let a player from another server top up
+        // a stack at this guild's table.
+        val outcome = service.rebuy(host, guildId = 999L, tableId = tableId, amount = 200L)
+        assertEquals(PokerService.RebuyOutcome.TableNotFound, outcome)
+    }
+
+    @Test
     fun `cashOut credits remaining chips back to balance and removes empty tables`() {
         seed(host, 1000L)
         val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId
