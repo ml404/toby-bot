@@ -290,6 +290,14 @@ class ModerationWebService(
                 if (n !in 0..50) return "Value must be between 0 and 50 (capped server-side)."
                 n.toString()
             }
+            ConfigDto.Configurations.JACKPOT_WIN_PCT -> {
+                val n = rawValue.trim().toDoubleOrNull()
+                    ?: return "Value must be a number between 0 and 50 (decimals allowed; default 1)."
+                if (n.isNaN() || n.isInfinite() || n < 0.0 || n > 50.0) {
+                    return "Value must be a number between 0 and 50 (decimals allowed; default 1)."
+                }
+                n.toString()
+            }
             ConfigDto.Configurations.POKER_RAKE_PCT -> {
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number percentage (0-20)."

@@ -40,6 +40,11 @@ class ConfigDto(
         // routes into the per-guild jackpot pool. Defaults to 10 if unset.
         JACKPOT_LOSS_TRIBUTE_PCT("JACKPOT_LOSS_TRIBUTE_PCT"),
 
+        // Decimal percentage (0-50, decimals allowed e.g. 0.5) chance
+        // that any casino-game win triggers the jackpot payout. Defaults
+        // to 1 if unset. 0 disables jackpot wins entirely.
+        JACKPOT_WIN_PCT("JACKPOT_WIN_PCT"),
+
         // Whole-number percentage (0-20) of every settled poker pot that
         // routes into the per-guild jackpot pool. Defaults to 5 if unset.
         POKER_RAKE_PCT("POKER_RAKE_PCT"),

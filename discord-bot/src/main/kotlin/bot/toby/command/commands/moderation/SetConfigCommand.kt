@@ -60,6 +60,7 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.ACTIVITY_TRACKING -> setActivityTracking(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED -> Unit
                 ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> setJackpotLossTribute(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.JACKPOT_WIN_PCT -> setJackpotWinPct(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.POKER_RAKE_PCT -> setPokerRake(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.POKER_SMALL_BLIND -> setPokerLong(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.POKER_SMALL_BLIND, label = "small blind", min = 1L)
@@ -171,6 +172,24 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
         event.hook.sendMessage("Jackpot loss-tribute set to $pct % of every lost casino stake.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setJackpotWinPct(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val pct = optionMapping.asDouble
+        if (pct.isNaN() || pct.isInfinite() || pct < 0.0 || pct > 50.0) {
+            event.hook.sendMessage("Jackpot win percent must be between 0 and 50 (default 1).")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val configValue = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(configValue, pct.toString(), guildId)
+        event.hook.sendMessage("Jackpot win chance set to $pct % per casino-game win.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
@@ -348,6 +367,12 @@ class SetConfigCommand @Autowired constructor(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.name.lowercase(Locale.getDefault()),
                 "Percent (0-50) of every lost casino stake routed into the per-guild jackpot pool. Default 10.",
+                false
+            ),
+            OptionData(
+                OptionType.NUMBER,
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-50, decimals allowed e.g. 0.5) chance every casino-game win triggers the jackpot. Default 1.",
                 false
             ),
             OptionData(

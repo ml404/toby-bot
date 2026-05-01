@@ -139,7 +139,7 @@ class HighlowService(
         }
         val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
         return if (hand.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             PlayOutcome.Win(
                 stake = stake,
                 payout = r.payout,

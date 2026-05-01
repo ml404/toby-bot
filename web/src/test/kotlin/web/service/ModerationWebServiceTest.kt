@@ -720,6 +720,50 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig JACKPOT_WIN_PCT persists a sub-1 percent decimal`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.JACKPOT_WIN_PCT, "0.5")
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("JACKPOT_WIN_PCT", "0.5", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig JACKPOT_WIN_PCT persists a whole-number percent`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.JACKPOT_WIN_PCT, "5")
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("JACKPOT_WIN_PCT", any(), guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig JACKPOT_WIN_PCT rejects out-of-range value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.JACKPOT_WIN_PCT, "75")
+
+        assertEquals("Value must be a number between 0 and 50 (decimals allowed; default 1).", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
+    fun `updateConfig JACKPOT_WIN_PCT rejects unparseable value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(ownerId, guildId, ConfigDto.Configurations.JACKPOT_WIN_PCT, "abc")
+
+        assertEquals("Value must be a number between 0 and 50 (decimals allowed; default 1).", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
     fun `updateConfig UBI_DAILY_AMOUNT persists valid value`() {
         mockMember(ownerId, isOwner = true)
 

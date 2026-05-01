@@ -98,7 +98,7 @@ class CoinflipService(
         val flip = coinflip.flip(predicted, random)
         val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, flip.multiplier)
         return if (flip.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             FlipOutcome.Win(
                 stake = stake,
                 payout = r.payout,
