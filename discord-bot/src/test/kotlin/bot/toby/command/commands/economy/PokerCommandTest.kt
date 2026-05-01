@@ -12,6 +12,7 @@ import database.service.PokerService
 import database.service.PokerService.BuyInOutcome
 import database.service.PokerService.CashOutOutcome
 import database.service.PokerService.CreateOutcome
+import database.service.PokerService.RebuyOutcome
 import database.service.PokerService.StartHandOutcome
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -159,6 +160,18 @@ internal class PokerCommandTest : CommandTest {
     }
 
     @Test
+    fun `leave subcommand surfaces queued-for-end-of-hand outcome`() {
+        every { event.subcommandName } returns "leave"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { pokerService.cashOut(hostId, guildId, 7L) } returns
+            CashOutOutcome.QueuedForEndOfHand(chipsHeld = 480L)
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.cashOut(hostId, guildId, 7L) }
+    }
+
+    @Test
     fun `tables subcommand renders registry list`() {
         every { event.subcommandName } returns "tables"
         every { tableRegistry.listForGuild(guildId) } returns listOf(stubTable(7L), stubTable(8L))
@@ -180,6 +193,60 @@ internal class PokerCommandTest : CommandTest {
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
         verify(exactly = 0) { pokerService.applyAction(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `rebuy subcommand delegates to PokerService rebuy`() {
+        every { event.subcommandName } returns "rebuy"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { event.getOption("chips") } returns intOpt(300L)
+        every { pokerService.rebuy(hostId, guildId, 7L, 300L) } returns
+            RebuyOutcome.Ok(seatChips = 500L, newBalance = 700L)
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.rebuy(hostId, guildId, 7L, 300L) }
+        // Happy path renders an info embed; no need to look up the table.
+        verify(exactly = 0) { tableRegistry.get(any()) }
+    }
+
+    @Test
+    fun `rebuy with stack-cap rejection still surfaces an embed without table lookup`() {
+        every { event.subcommandName } returns "rebuy"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { event.getOption("chips") } returns intOpt(2000L)
+        every { pokerService.rebuy(hostId, guildId, 7L, 2000L) } returns
+            RebuyOutcome.StackCapped(cap = 5000L, current = 4500L)
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 0) { tableRegistry.get(any()) }
+    }
+
+    @Test
+    fun `history without table option queries guild-wide`() {
+        every { event.subcommandName } returns "history"
+        every { event.getOption("table") } returns null
+        every { event.getOption("limit") } returns null
+        every { pokerService.recentHandsForGuild(guildId, PokerService.HISTORY_DEFAULT_LIMIT) } returns emptyList()
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.recentHandsForGuild(guildId, PokerService.HISTORY_DEFAULT_LIMIT) }
+        verify(exactly = 0) { pokerService.recentHandsForTable(any(), any(), any()) }
+    }
+
+    @Test
+    fun `history with table option scopes the lookup to that table`() {
+        every { event.subcommandName } returns "history"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { event.getOption("limit") } returns intOpt(5L)
+        every { pokerService.recentHandsForTable(guildId, 7L, 5) } returns emptyList()
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.recentHandsForTable(guildId, 7L, 5) }
+        verify(exactly = 0) { pokerService.recentHandsForGuild(any(), any()) }
     }
 
     @Test

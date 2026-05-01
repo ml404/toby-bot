@@ -64,7 +64,17 @@ class PokerTable(
         var holeCards: List<Card> = emptyList(),
         var committedThisRound: Long = 0L,
         var totalCommittedThisHand: Long = 0L,
-        var status: SeatStatus = SeatStatus.SITTING_OUT
+        var status: SeatStatus = SeatStatus.SITTING_OUT,
+        /**
+         * v2 (PR #v2-3): set when a seated player asks to leave during
+         * a hand. Honoured by [PokerEngine] (the seat is excluded from
+         * the next hand's start) and by [database.service.PokerService]
+         * (the seat is folded on its turn during the in-flight hand,
+         * then cashed out as soon as the hand resolves). Stays `false`
+         * for buy-in / between-hand cash-outs — those go through the
+         * synchronous flow that removes the seat directly.
+         */
+        var pendingLeave: Boolean = false
     )
 
     /**

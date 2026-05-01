@@ -84,7 +84,40 @@ class PokerService @Autowired constructor(
         data class Ok(val chipsReturned: Long, val newBalance: Long) : CashOutOutcome
         data object TableNotFound : CashOutOutcome
         data object NotSeated : CashOutOutcome
+        /**
+         * Kept around for backward-compat with v1 callers that may still
+         * surface a "wait for the hand" message. v2-3 routes mid-hand
+         * leaves through [QueuedForEndOfHand] instead, but this remains
+         * a valid outcome for any pre-existing test that pinned to it.
+         */
         data object HandInProgress : CashOutOutcome
+        /**
+         * v2 (PR #v2-3): the player asked to leave during a hand. Their
+         * seat is marked `pendingLeave`; the engine auto-folds them on
+         * their turn, and the chips are returned to their wallet as soon
+         * as the hand resolves. [chipsHeld] is the seat's stack at the
+         * moment the leave was queued — it's NOT the final cash-out
+         * amount (the player can still bleed chips from the auto-fold's
+         * forced blinds if they were already past blinds, but in
+         * practice fold-on-turn after a leave costs nothing extra).
+         */
+        data class QueuedForEndOfHand(val chipsHeld: Long) : CashOutOutcome
+        /**
+         * The player already requested to leave this hand. Idempotent
+         * second click yields this rather than re-folding them.
+         */
+        data object AlreadyLeaving : CashOutOutcome
+    }
+
+    sealed interface RebuyOutcome {
+        data class Ok(val seatChips: Long, val newBalance: Long) : RebuyOutcome
+        data object TableNotFound : RebuyOutcome
+        data object NotSeated : RebuyOutcome
+        data object HandInProgress : RebuyOutcome
+        data class InvalidAmount(val min: Long, val max: Long) : RebuyOutcome
+        data class StackCapped(val cap: Long, val current: Long) : RebuyOutcome
+        data class InsufficientCredits(val have: Long, val needed: Long) : RebuyOutcome
+        data object UnknownUser : RebuyOutcome
     }
 
     sealed interface StartHandOutcome {
@@ -268,16 +301,122 @@ class PokerService @Autowired constructor(
         return BuyInOutcome.Ok(seatIndex = seatIndex, newBalance = user.socialCredit ?: 0L)
     }
 
+    /**
+     * Top up an already-seated player's stack between hands. Mirrors
+     * [buyIn] (debits `socialCredit`, escrows the chips on the seat)
+     * but stacks onto an existing seat instead of adding a new one.
+     *
+     * Constraints:
+     *   - Only between hands ([PokerTable.Phase.WAITING]). Mid-hand
+     *     rebuys would let a busted player rejoin the same hand.
+     *   - Post-rebuy stack capped at [PokerTable.maxBuyIn]. A partial
+     *     top-up that would breach the cap is rejected outright; the
+     *     caller can re-issue with a smaller [amount]. Silent
+     *     truncation would be a footgun for the slash-command UX.
+     */
+    @Transactional
+    fun rebuy(
+        discordId: Long,
+        guildId: Long,
+        tableId: Long,
+        amount: Long
+    ): RebuyOutcome {
+        val table = tableRegistry.get(tableId) ?: return RebuyOutcome.TableNotFound
+        if (table.guildId != guildId) return RebuyOutcome.TableNotFound
+        if (amount < table.minBuyIn || amount > table.maxBuyIn) {
+            return RebuyOutcome.InvalidAmount(table.minBuyIn, table.maxBuyIn)
+        }
+
+        val user = userService.getUserByIdForUpdate(discordId, guildId)
+            ?: return RebuyOutcome.UnknownUser
+        val balance = user.socialCredit ?: 0L
+        if (balance < amount) {
+            return RebuyOutcome.InsufficientCredits(have = balance, needed = amount)
+        }
+
+        val rebuyResult = synchronized(table) {
+            when {
+                table.phase != PokerTable.Phase.WAITING -> RebuyOutcome.HandInProgress
+                else -> {
+                    val seat = table.seats.firstOrNull { it.discordId == discordId }
+                    when {
+                        seat == null -> RebuyOutcome.NotSeated
+                        seat.chips + amount > table.maxBuyIn ->
+                            RebuyOutcome.StackCapped(cap = table.maxBuyIn, current = seat.chips)
+                        else -> {
+                            seat.chips += amount
+                            RebuyOutcome.Ok(seatChips = seat.chips, newBalance = 0L)
+                        }
+                    }
+                }
+            }
+        }
+        if (rebuyResult !is RebuyOutcome.Ok) return rebuyResult
+
+        user.socialCredit = balance - amount
+        userService.updateUser(user)
+        return RebuyOutcome.Ok(
+            seatChips = rebuyResult.seatChips,
+            newBalance = user.socialCredit ?: 0L
+        )
+    }
+
     @Transactional
     fun cashOut(
         discordId: Long,
         guildId: Long,
         tableId: Long
     ): CashOutOutcome {
+        val now = Instant.now()
         val table = tableRegistry.get(tableId) ?: return CashOutOutcome.TableNotFound
         if (table.guildId != guildId) return CashOutOutcome.TableNotFound
 
+        // Mid-hand path: queue the leave instead of removing the seat.
+        // Sentinel-encode the seat-side outcome so we can release the
+        // monitor before deciding whether to drive an immediate fold
+        // (which itself takes the monitor again via [applyAction]).
+        val midHand = synchronized(table) {
+            if (table.phase == PokerTable.Phase.WAITING) {
+                MidHandOutcome.NotApplicable
+            } else {
+                val seatIdx = table.seats.indexOfFirst { it.discordId == discordId }
+                val seat = if (seatIdx >= 0) table.seats[seatIdx] else null
+                when {
+                    seat == null -> MidHandOutcome.NotSeated
+                    seat.pendingLeave -> MidHandOutcome.AlreadyLeaving
+                    else -> {
+                        seat.pendingLeave = true
+                        MidHandOutcome.Queued(
+                            chipsHeld = seat.chips,
+                            isCurrentActor = seatIdx == table.actorIndex &&
+                                seat.status == PokerTable.SeatStatus.ACTIVE
+                        )
+                    }
+                }
+            }
+        }
+        when (midHand) {
+            is MidHandOutcome.NotSeated -> return CashOutOutcome.NotSeated
+            is MidHandOutcome.AlreadyLeaving -> return CashOutOutcome.AlreadyLeaving
+            is MidHandOutcome.Queued -> {
+                // If it's the leaver's turn, drive the fold straight
+                // through the proxy so the @Transactional / shot-clock /
+                // hand-resolution plumbing in [applyAction] runs the same
+                // way it would for any other fold. The fold may resolve
+                // the hand outright, in which case the post-resolution
+                // sweep cashes us out before this method returns.
+                if (midHand.isCurrentActor) {
+                    transactionalSelf.applyAction(discordId, guildId, tableId, PokerAction.Fold, now)
+                }
+                return CashOutOutcome.QueuedForEndOfHand(chipsHeld = midHand.chipsHeld)
+            }
+            is MidHandOutcome.NotApplicable -> Unit // fall through to between-hands path
+        }
+
+        // Between-hands path: existing instant cash-out.
         val chipsToReturn = synchronized(table) {
+            // Re-check the phase under the monitor: a [startHand] could
+            // have raced us between the mid-hand probe and here.
             if (table.phase != PokerTable.Phase.WAITING) return@synchronized -1L
             val idx = table.seats.indexOfFirst { it.discordId == discordId }
             if (idx < 0) return@synchronized -2L
@@ -308,6 +447,13 @@ class PokerService @Autowired constructor(
             if (table.seats.isEmpty()) tableRegistry.remove(tableId)
         }
         return CashOutOutcome.Ok(chipsReturned = chipsToReturn, newBalance = newBalance)
+    }
+
+    private sealed interface MidHandOutcome {
+        data object NotApplicable : MidHandOutcome
+        data object NotSeated : MidHandOutcome
+        data object AlreadyLeaving : MidHandOutcome
+        data class Queued(val chipsHeld: Long, val isCurrentActor: Boolean) : MidHandOutcome
     }
 
     /**
@@ -352,8 +498,25 @@ class PokerService @Autowired constructor(
         if (table.guildId != guildId) return ActionOutcome.TableNotFound
 
         val rakeRate = rakeRate(guildId)
+        // Apply the player's action, then keep folding any subsequent
+        // actor whose seat is `pendingLeave` (v2-3 mid-hand /poker leave)
+        // so the hand never stalls on someone who's already asked to
+        // leave the table. The engine itself stays oblivious to
+        // pendingLeave — we just feed it Folds on those seats' behalf.
         val outcome = synchronized(table) {
-            PokerEngine.applyAction(table, discordId, action, rakeRate, now)
+            var current: PokerEngine.ApplyResult =
+                PokerEngine.applyAction(table, discordId, action, rakeRate, now)
+            cascadeLoop@ while (current is PokerEngine.ApplyResult.Applied) {
+                val ev = (current as PokerEngine.ApplyResult.Applied).event
+                if (ev is PokerEngine.ActionEvent.HandResolved) break@cascadeLoop
+                val nextSeat = table.seats.getOrNull(table.actorIndex) ?: break@cascadeLoop
+                if (!nextSeat.pendingLeave) break@cascadeLoop
+                if (nextSeat.status != PokerTable.SeatStatus.ACTIVE) break@cascadeLoop
+                current = PokerEngine.applyAction(
+                    table, nextSeat.discordId, PokerAction.Fold, rakeRate, now
+                )
+            }
+            current
         }
         // Reset the per-actor clock based on what the engine produced:
         // a continuing or street-advancing event puts a fresh decision
@@ -378,9 +541,60 @@ class PokerService @Autowired constructor(
                     if (ev.result.rake > 0L) {
                         jackpotService.addToPool(guildId, ev.result.rake)
                     }
+                    // v2-3: cash out any seats marked pendingLeave during
+                    // the hand. Done after rake / log so a side-pot
+                    // refund the engine credited to a leaver still gets
+                    // returned to their wallet on the same call.
+                    sweepPendingLeaves(table)
                     ActionOutcome.HandResolved(ev.result)
                 }
             }
+        }
+    }
+
+    /**
+     * Refund chips for every seat whose player asked to leave during
+     * the just-resolved hand. Called from [applyAction] right after
+     * [PokerEngine] reports `HandResolved`. Mirrors [evictAllSeats] but
+     * filtered to the pendingLeave subset and with seat removal from
+     * the table once the wallet credit lands.
+     */
+    private fun sweepPendingLeaves(table: PokerTable) {
+        val refunds: Map<Long, Long> = synchronized(table) {
+            val targets = table.seats.filter { it.pendingLeave }
+            if (targets.isEmpty()) return@synchronized emptyMap()
+            val out = targets.associate { it.discordId to it.chips }
+            // Remove leavers from the seat list. Adjust the dealer index
+            // so the next hand starts in a consistent spot, mirroring
+            // the between-hands cashOut.
+            for (target in targets) {
+                val idx = table.seats.indexOf(target)
+                table.seats.removeAt(idx)
+                if (table.seats.isEmpty()) {
+                    table.dealerIndex = 0
+                } else if (idx <= table.dealerIndex) {
+                    table.dealerIndex =
+                        (table.dealerIndex - 1).coerceAtLeast(0) % table.seats.size
+                }
+            }
+            out
+        }
+        if (refunds.isEmpty()) return
+
+        // Lock all refund recipients in ascending discord-id order to
+        // avoid cycles with concurrent /tip, /duel, /coinflip, etc.
+        // transactions touching the same users.
+        val locked = userService.lockUsersInAscendingOrder(refunds.keys, table.guildId)
+        for ((discordId, amount) in refunds) {
+            if (amount <= 0L) continue
+            val user = locked[discordId] ?: continue
+            user.socialCredit = (user.socialCredit ?: 0L) + amount
+            userService.updateUser(user)
+        }
+
+        // Drop the table if everyone left mid-hand.
+        synchronized(table) {
+            if (table.seats.isEmpty()) tableRegistry.remove(table.id)
         }
     }
 
@@ -389,6 +603,28 @@ class PokerService @Autowired constructor(
      * (does not mutate; safe to call without [PokerTableRegistry.lockTable]).
      */
     fun snapshot(tableId: Long): PokerTable? = tableRegistry.get(tableId)
+
+    /**
+     * Most recent settled hands for [tableId] within [guildId], newest
+     * first. Returns at most [limit] rows; passing a non-positive limit
+     * yields an empty list. Used by `/poker history` and the web
+     * audit panel.
+     */
+    fun recentHandsForTable(guildId: Long, tableId: Long, limit: Int = HISTORY_DEFAULT_LIMIT): List<PokerHandLogDto> =
+        if (limit <= 0) emptyList()
+        else handLogPersistence.findRecentByTable(
+            guildId, tableId, limit.coerceAtMost(HISTORY_MAX_LIMIT)
+        )
+
+    /**
+     * Most recent settled hands across the entire guild, newest first.
+     * Used when `/poker history` is invoked without a table id.
+     */
+    fun recentHandsForGuild(guildId: Long, limit: Int = HISTORY_DEFAULT_LIMIT): List<PokerHandLogDto> =
+        if (limit <= 0) emptyList()
+        else handLogPersistence.findRecentByGuild(
+            guildId, limit.coerceAtMost(HISTORY_MAX_LIMIT)
+        )
 
     /** Pure helper exposed for the embeds layer. */
     fun rakeRate(guildId: Long): Double {
@@ -480,5 +716,12 @@ class PokerService @Autowired constructor(
 
         const val DEFAULT_RAKE: Double = 0.05
         const val MAX_RAKE: Double = 0.20
+
+        // /poker history defaults — matched to a single Discord embed
+        // that fits comfortably in the 4096-char description budget.
+        // The hard ceiling protects against a caller asking for so many
+        // rows that the JPA query gets pathological.
+        const val HISTORY_DEFAULT_LIMIT: Int = 10
+        const val HISTORY_MAX_LIMIT: Int = 25
     }
 }

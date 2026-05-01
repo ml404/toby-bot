@@ -10,6 +10,7 @@ import database.service.PokerService
 import database.service.PokerService.BuyInOutcome
 import database.service.PokerService.CashOutOutcome
 import database.service.PokerService.CreateOutcome
+import database.service.PokerService.RebuyOutcome
 import database.service.PokerService.StartHandOutcome
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -53,6 +54,10 @@ class PokerCommand @Autowired constructor(
         private const val SUB_LEAVE = "leave"
         private const val SUB_TABLES = "tables"
         private const val SUB_PEEK = "peek"
+        private const val SUB_REBUY = "rebuy"
+        private const val SUB_HISTORY = "history"
+
+        private const val OPT_LIMIT = "limit"
     }
 
     override val subCommands: List<SubcommandData> = listOf(
@@ -82,6 +87,21 @@ class PokerCommand @Autowired constructor(
             .addOptions(
                 OptionData(OptionType.INTEGER, OPT_TABLE, "Table id", true).setMinValue(1)
             ),
+        SubcommandData(SUB_REBUY, "Top up your stack between hands (capped at the table's max buy-in).")
+            .addOptions(
+                OptionData(OptionType.INTEGER, OPT_TABLE, "Table id", true).setMinValue(1),
+                OptionData(OptionType.INTEGER, OPT_BUYIN, "Chips to add", true)
+                    .setMinValue(PokerService.MIN_BUY_IN)
+                    .setMaxValue(PokerService.MAX_BUY_IN)
+            ),
+        SubcommandData(SUB_HISTORY, "Show recent settled hands. Pass a table id to scope to one table.")
+            .addOptions(
+                OptionData(OptionType.INTEGER, OPT_TABLE, "Table id (optional — omit for server-wide history)", false)
+                    .setMinValue(1),
+                OptionData(OptionType.INTEGER, OPT_LIMIT, "How many hands to show (default ${PokerService.HISTORY_DEFAULT_LIMIT})", false)
+                    .setMinValue(1)
+                    .setMaxValue(PokerService.HISTORY_MAX_LIMIT.toLong())
+            ),
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -99,6 +119,8 @@ class PokerCommand @Autowired constructor(
             SUB_LEAVE -> handleLeave(event, requestingUserDto, guild.idLong, deleteDelay)
             SUB_TABLES -> handleTables(event, guild.idLong, deleteDelay)
             SUB_PEEK -> handlePeek(event, requestingUserDto, guild.idLong)
+            SUB_REBUY -> handleRebuy(event, requestingUserDto, guild.idLong, deleteDelay)
+            SUB_HISTORY -> handleHistory(event, guild.idLong, deleteDelay)
             else -> replyError(event, "Unknown subcommand.", deleteDelay)
         }
     }
@@ -208,6 +230,14 @@ class PokerCommand @Autowired constructor(
                         "New balance: ${outcome.newBalance} credits."
                 )
             ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            is CashOutOutcome.QueuedForEndOfHand -> event.hook.sendMessageEmbeds(
+                PokerEmbeds.infoEmbed(
+                    "<@${userDto.discordId}> is leaving — auto-folding for the rest of this hand. " +
+                        "Your **${outcome.chipsHeld}** chips will return to your balance once the hand resolves."
+                )
+            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            CashOutOutcome.AlreadyLeaving ->
+                replyError(event, "You've already asked to leave this hand.", deleteDelay)
             CashOutOutcome.HandInProgress ->
                 replyError(event, "Wait for the current hand to end before leaving (fold first if you don't want to play it out).", deleteDelay)
             CashOutOutcome.NotSeated ->
@@ -215,6 +245,64 @@ class PokerCommand @Autowired constructor(
             CashOutOutcome.TableNotFound ->
                 replyError(event, "No such table in this server.", deleteDelay)
         }
+    }
+
+    private fun handleRebuy(
+        event: SlashCommandInteractionEvent,
+        userDto: UserDto,
+        guildId: Long,
+        deleteDelay: Int
+    ) {
+        val tableId = event.getOption(OPT_TABLE)?.asLong ?: run {
+            replyError(event, "Table id is required.", deleteDelay); return
+        }
+        val amount = event.getOption(OPT_BUYIN)?.asLong ?: run {
+            replyError(event, "Rebuy amount is required.", deleteDelay); return
+        }
+        userDtoHelper.calculateUserDto(userDto.discordId, guildId)
+        when (val outcome = pokerService.rebuy(userDto.discordId, guildId, tableId, amount)) {
+            is RebuyOutcome.Ok -> event.hook.sendMessageEmbeds(
+                PokerEmbeds.infoEmbed(
+                    "<@${userDto.discordId}> rebought **$amount** chips. " +
+                        "Stack: ${outcome.seatChips} • Balance: ${outcome.newBalance}."
+                )
+            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            is RebuyOutcome.InvalidAmount ->
+                replyError(event, "Rebuy must be between ${outcome.min} and ${outcome.max} credits.", deleteDelay)
+            is RebuyOutcome.StackCapped ->
+                replyError(
+                    event,
+                    "Your stack would exceed this table's max buy-in (${outcome.cap}). " +
+                        "You currently have ${outcome.current} chips — try a smaller rebuy.",
+                    deleteDelay
+                )
+            is RebuyOutcome.InsufficientCredits ->
+                replyError(event, "You need ${outcome.needed} credits but only have ${outcome.have}.", deleteDelay)
+            RebuyOutcome.HandInProgress ->
+                replyError(event, "Wait for the current hand to end before rebuying.", deleteDelay)
+            RebuyOutcome.NotSeated ->
+                replyError(event, "You're not seated at this table.", deleteDelay)
+            RebuyOutcome.TableNotFound ->
+                replyError(event, "No such table in this server.", deleteDelay)
+            RebuyOutcome.UnknownUser ->
+                replyError(event, "No user record yet. Try another TobyBot command first.", deleteDelay)
+        }
+    }
+
+    private fun handleHistory(
+        event: SlashCommandInteractionEvent,
+        guildId: Long,
+        deleteDelay: Int
+    ) {
+        val tableId = event.getOption(OPT_TABLE)?.asLong
+        val limit = event.getOption(OPT_LIMIT)?.asLong?.toInt() ?: PokerService.HISTORY_DEFAULT_LIMIT
+        val (scope, hands) = if (tableId != null) {
+            "Table #$tableId" to pokerService.recentHandsForTable(guildId, tableId, limit)
+        } else {
+            "Server" to pokerService.recentHandsForGuild(guildId, limit)
+        }
+        event.hook.sendMessageEmbeds(PokerEmbeds.historyEmbed(scope, hands))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun handleTables(

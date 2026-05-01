@@ -181,6 +181,8 @@ class PokerServiceConfigSnapshotTest {
         override fun insert(row: PokerHandLogDto): PokerHandLogDto {
             row.id = 1L; return row
         }
+        override fun findRecentByTable(guildId: Long, tableId: Long, limit: Int): List<PokerHandLogDto> = emptyList()
+        override fun findRecentByGuild(guildId: Long, limit: Int): List<PokerHandLogDto> = emptyList()
     }
 
     private class NoopHandPot : PokerHandPotPersistence {
