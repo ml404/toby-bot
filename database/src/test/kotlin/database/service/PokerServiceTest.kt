@@ -375,6 +375,14 @@ class PokerServiceTest {
             if (row.id == null) row.id = nextId++
             inserted.add(row); return row
         }
+        override fun findRecentByTable(guildId: Long, tableId: Long, limit: Int): List<PokerHandLogDto> =
+            inserted.asReversed()
+                .filter { it.guildId == guildId && it.tableId == tableId }
+                .take(limit.coerceAtLeast(0))
+        override fun findRecentByGuild(guildId: Long, limit: Int): List<PokerHandLogDto> =
+            inserted.asReversed()
+                .filter { it.guildId == guildId }
+                .take(limit.coerceAtLeast(0))
     }
 
     private class RecordingPokerHandPotPersistence : PokerHandPotPersistence {

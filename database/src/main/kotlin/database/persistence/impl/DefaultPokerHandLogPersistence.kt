@@ -19,4 +19,26 @@ class DefaultPokerHandLogPersistence : PokerHandLogPersistence {
         entityManager.flush()
         return row
     }
+
+    override fun findRecentByTable(guildId: Long, tableId: Long, limit: Int): List<PokerHandLogDto> =
+        entityManager.createQuery(
+            "SELECT h FROM PokerHandLogDto h " +
+                "WHERE h.guildId = :guildId AND h.tableId = :tableId " +
+                "ORDER BY h.resolvedAt DESC, h.id DESC",
+            PokerHandLogDto::class.java
+        )
+            .setParameter("guildId", guildId)
+            .setParameter("tableId", tableId)
+            .setMaxResults(limit.coerceAtLeast(0))
+            .resultList
+
+    override fun findRecentByGuild(guildId: Long, limit: Int): List<PokerHandLogDto> =
+        entityManager.createQuery(
+            "SELECT h FROM PokerHandLogDto h WHERE h.guildId = :guildId " +
+                "ORDER BY h.resolvedAt DESC, h.id DESC",
+            PokerHandLogDto::class.java
+        )
+            .setParameter("guildId", guildId)
+            .setMaxResults(limit.coerceAtLeast(0))
+            .resultList
 }
