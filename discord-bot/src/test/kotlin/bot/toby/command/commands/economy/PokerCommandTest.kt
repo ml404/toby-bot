@@ -75,12 +75,12 @@ internal class PokerCommandTest : CommandTest {
     fun `create subcommand happy path delegates to PokerService and posts lobby embed`() {
         every { event.subcommandName } returns "create"
         every { event.getOption("chips") } returns intOpt(200L)
-        every { pokerService.createTable(hostId, guildId, 200L, any()) } returns CreateOutcome.Ok(tableId = 7L)
+        every { pokerService.createTable(hostId, guildId, 200L, any(), any()) } returns CreateOutcome.Ok(tableId = 7L)
         every { tableRegistry.get(7L) } returns stubTable(7L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 1) { pokerService.createTable(hostId, guildId, 200L, any()) }
+        verify(exactly = 1) { pokerService.createTable(hostId, guildId, 200L, any(), any()) }
         verify(exactly = 1) { tableRegistry.get(7L) }
     }
 
@@ -88,7 +88,7 @@ internal class PokerCommandTest : CommandTest {
     fun `create with insufficient credits surfaces error and does not look up table`() {
         every { event.subcommandName } returns "create"
         every { event.getOption("chips") } returns intOpt(200L)
-        every { pokerService.createTable(hostId, guildId, 200L, any()) } returns
+        every { pokerService.createTable(hostId, guildId, 200L, any(), any()) } returns
             CreateOutcome.InsufficientCredits(have = 50L, needed = 200L)
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
@@ -255,7 +255,7 @@ internal class PokerCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), userDto(), 0)
 
-        verify(exactly = 0) { pokerService.createTable(any(), any(), any(), any()) }
+        verify(exactly = 0) { pokerService.createTable(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { pokerService.buyIn(any(), any(), any(), any(), any()) }
         verify(exactly = 0) { pokerService.startHand(any(), any(), any(), any()) }
     }

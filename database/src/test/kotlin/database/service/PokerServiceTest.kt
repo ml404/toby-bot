@@ -789,6 +789,173 @@ class PokerServiceTest {
         }
     }
 
+    // -- v2-7: free-play tables ----------------------------------------
+
+    @Test
+    fun `createTable free=true does NOT debit socialCredit and seats the host with play chips`() {
+        seed(host, 1000L)
+
+        val outcome = service.createTable(host, guildId, buyIn = 200L, free = true)
+
+        assertTrue(outcome is PokerService.CreateOutcome.Ok)
+        val tableId = (outcome as PokerService.CreateOutcome.Ok).tableId
+        val table = registry.get(tableId)!!
+        assertTrue(table.isFreePlay, "table flagged as free-play")
+        assertEquals(1, table.seats.size)
+        assertEquals(200L, table.seats[0].chips, "host seated with the requested play chips")
+        assertEquals(1000L, userService.current(host)?.socialCredit, "wallet untouched")
+        assertEquals(0, userService.updateCount, "no userService.updateUser on a free createTable")
+    }
+
+    @Test
+    fun `createTable free=true with zero balance still succeeds`() {
+        // Free play has no wallet barrier — even a busted player can host.
+        seed(host, 0L)
+        val outcome = service.createTable(host, guildId, buyIn = 200L, free = true)
+        assertTrue(outcome is PokerService.CreateOutcome.Ok)
+        assertEquals(0L, userService.current(host)?.socialCredit, "wallet stays at zero")
+    }
+
+    @Test
+    fun `createTable free=true still validates buyIn against minBuyIn maxBuyIn`() {
+        seed(host, 1_000_000L)
+        val tooSmall = service.createTable(host, guildId, buyIn = 1L, free = true)
+        assertTrue(tooSmall is PokerService.CreateOutcome.InvalidBuyIn)
+        val tooBig = service.createTable(host, guildId, buyIn = 999_999L, free = true)
+        assertTrue(tooBig is PokerService.CreateOutcome.InvalidBuyIn)
+    }
+
+    @Test
+    fun `buyIn on a free-play table does NOT debit socialCredit`() {
+        seed(host, 1000L); seed(joiner, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L, free = true)
+            as PokerService.CreateOutcome.Ok).tableId
+
+        val outcome = service.buyIn(joiner, guildId, tableId, buyIn = 300L)
+
+        assertTrue(outcome is PokerService.BuyInOutcome.Ok)
+        assertEquals(2, registry.get(tableId)!!.seats.size)
+        assertEquals(300L, registry.get(tableId)!!.seats[1].chips)
+        assertEquals(1000L, userService.current(joiner)?.socialCredit, "joiner's wallet untouched")
+    }
+
+    @Test
+    fun `rebuy on a free-play table does NOT debit socialCredit`() {
+        seed(host, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L, free = true)
+            as PokerService.CreateOutcome.Ok).tableId
+
+        val outcome = service.rebuy(host, guildId, tableId, amount = 300L)
+
+        assertTrue(outcome is PokerService.RebuyOutcome.Ok)
+        outcome as PokerService.RebuyOutcome.Ok
+        assertEquals(500L, outcome.seatChips, "200 createTable + 300 rebuy")
+        assertEquals(1000L, userService.current(host)?.socialCredit, "wallet untouched on free rebuy")
+    }
+
+    @Test
+    fun `cashOut on a free-play table removes the seat without crediting socialCredit`() {
+        seed(host, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L, free = true)
+            as PokerService.CreateOutcome.Ok).tableId
+
+        val outcome = service.cashOut(host, guildId, tableId)
+
+        assertTrue(outcome is PokerService.CashOutOutcome.Ok)
+        outcome as PokerService.CashOutOutcome.Ok
+        assertEquals(200L, outcome.chipsReturned, "outcome reports the seat's chip count for parity")
+        assertEquals(1000L, userService.current(host)?.socialCredit, "wallet stays at the original balance")
+        // Empty free table dropped from the registry, same as real-money.
+        assertNull(registry.get(tableId))
+    }
+
+    @Test
+    fun `applyAction HandResolved on a free table skips jackpot route + persistence`() {
+        seed(host, 1000L); seed(joiner, 1000L); seed(third, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 500L, free = true)
+            as PokerService.CreateOutcome.Ok).tableId
+        service.buyIn(joiner, guildId, tableId, buyIn = 500L)
+        service.buyIn(third, guildId, tableId, buyIn = 500L)
+        service.startHand(host, guildId, tableId)
+
+        val table = registry.get(tableId)!!
+        // Drive the hand to HandResolved via two folds (uncontested win).
+        val firstActor = table.seats[table.actorIndex].discordId
+        service.applyAction(firstActor, guildId, tableId, PokerEngine.PokerAction.Fold)
+        val secondActor = table.seats[table.actorIndex].discordId
+        val outcome = service.applyAction(secondActor, guildId, tableId, PokerEngine.PokerAction.Fold)
+
+        assertTrue(outcome is PokerService.ActionOutcome.HandResolved)
+        // Jackpot pool NOT touched on free-play hands.
+        verify(exactly = 0) { jackpotService.addToPool(any(), any()) }
+        // No audit row written.
+        assertEquals(0, handLog.inserted.size, "no poker_hand_log row on a free hand")
+        assertEquals(0, handPot.inserted.size, "no poker_hand_pot rows on a free hand")
+    }
+
+    @Test
+    fun `evictAllSeats on a free-play table clears seats without crediting wallets`() {
+        seed(host, 1000L); seed(joiner, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 200L, free = true)
+            as PokerService.CreateOutcome.Ok).tableId
+        service.buyIn(joiner, guildId, tableId, buyIn = 300L)
+        val table = registry.get(tableId)!!
+        val updateCountBefore = userService.updateCount
+
+        service.evictAllSeats(table)
+
+        assertEquals(0, table.seats.size, "seats cleared")
+        assertEquals(updateCountBefore, userService.updateCount, "no wallet credit pass on free evict")
+        assertEquals(1000L, userService.current(host)?.socialCredit)
+        assertEquals(1000L, userService.current(joiner)?.socialCredit)
+    }
+
+    @Test
+    fun `mid-hand leave on a free table does not credit the wallet at hand resolution`() {
+        seed(host, 1000L); seed(joiner, 1000L); seed(third, 1000L)
+        val tableId = (service.createTable(host, guildId, buyIn = 500L, free = true)
+            as PokerService.CreateOutcome.Ok).tableId
+        service.buyIn(joiner, guildId, tableId, buyIn = 500L)
+        service.buyIn(third, guildId, tableId, buyIn = 500L)
+        service.startHand(host, guildId, tableId)
+
+        val table = registry.get(tableId)!!
+        // Pick a non-actor so we exercise the cascade auto-fold path.
+        val nonActorId = table.seats.first { table.seats.indexOf(it) != table.actorIndex }.discordId
+        service.cashOut(nonActorId, guildId, tableId)
+
+        // Drive to resolution.
+        var safety = 12
+        while (registry.get(tableId)?.phase != PokerTable.Phase.WAITING && safety-- > 0) {
+            val live = registry.get(tableId) ?: break
+            val actor = live.seats.getOrNull(live.actorIndex) ?: break
+            service.applyAction(actor.discordId, guildId, tableId, PokerEngine.PokerAction.Fold)
+        }
+
+        // Leaver's seat removed by sweepPendingLeaves; wallet unchanged.
+        val tableAfter = registry.get(tableId)
+        if (tableAfter != null) {
+            assertFalse(tableAfter.seats.any { it.discordId == nonActorId })
+        }
+        assertEquals(1000L, userService.current(nonActorId)?.socialCredit, "leaver's wallet untouched")
+    }
+
+    @Test
+    fun `autoTopUp=true on a free-play createTable is silently ignored`() {
+        seed(host, 0L)
+        // Even though the wallet is empty and autoTopUp is requested, free
+        // play short-circuits before any tradeService call. The default
+        // service has no trade/market collaborators wired anyway, so this
+        // also confirms the order: free-play check happens before any
+        // wallet-related branching.
+        val outcome = service.createTable(host, guildId, buyIn = 200L, autoTopUp = true, free = true)
+
+        assertTrue(outcome is PokerService.CreateOutcome.Ok)
+        outcome as PokerService.CreateOutcome.Ok
+        assertEquals(0L, outcome.soldTobyCoins, "no TOBY sold on a free table")
+        assertEquals(0L, userService.current(host)?.socialCredit, "wallet stays at zero")
+    }
+
     private class RecordingUserService : UserService {
         private val users = mutableMapOf<Pair<Long, Long>, UserDto>()
         var updateCount = 0

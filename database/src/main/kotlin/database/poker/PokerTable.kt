@@ -8,7 +8,9 @@ import java.time.Instant
  * concurrent button clicks / web POSTs serialise around hand state.
  *
  * `chips` on each [Seat] are escrow — the player's `socialCredit` was
- * debited at buy-in; nothing else touches it until cash-out.
+ * debited at buy-in; nothing else touches it until cash-out. On
+ * free-play tables ([isFreePlay]), the same chip mechanics run but
+ * the wallet is never touched and the chips are play money.
  */
 class PokerTable(
     val id: Long,
@@ -30,6 +32,18 @@ class PokerTable(
      * who is actively thinking about a decision.
      */
     val shotClockSeconds: Int = 0,
+    /**
+     * v2-7: free-play flag snapshotted at create time. When `true`,
+     * [database.service.PokerService] skips every wallet write
+     * (buy-in / rebuy debit, cash-out / sweep / evict credit) and
+     * skips the jackpot route + `poker_hand_log` persistence on hand
+     * resolution. The engine itself stays oblivious — it only cares
+     * about chip counts, which are play money on free tables. Flag
+     * is per-table (not per-guild), set once at construction, and
+     * never mutates so a started hand can never flip into or out of
+     * free-play under a player.
+     */
+    val isFreePlay: Boolean = false,
     var phase: Phase = Phase.WAITING,
     val seats: MutableList<Seat> = mutableListOf(),
     val community: MutableList<Card> = mutableListOf(),

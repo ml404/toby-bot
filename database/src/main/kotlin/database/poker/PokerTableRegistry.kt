@@ -89,6 +89,7 @@ class PokerTableRegistry(
         maxRaisesPerStreet: Int,
         maxSeats: Int,
         shotClockSeconds: Int = 0,
+        isFreePlay: Boolean = false,
         now: Instant = Instant.now()
     ): PokerTable {
         val id = seq.incrementAndGet()
@@ -105,6 +106,7 @@ class PokerTableRegistry(
             maxRaisesPerStreet = maxRaisesPerStreet,
             maxSeats = maxSeats,
             shotClockSeconds = shotClockSeconds,
+            isFreePlay = isFreePlay,
             lastActivityAt = now
         )
         tables[id] = table

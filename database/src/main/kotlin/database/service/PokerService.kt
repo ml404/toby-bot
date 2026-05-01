@@ -230,7 +230,8 @@ class PokerService @Autowired constructor(
         hostDiscordId: Long,
         guildId: Long,
         buyIn: Long,
-        autoTopUp: Boolean = false
+        autoTopUp: Boolean = false,
+        free: Boolean = false
     ): CreateOutcome {
         // v2 (PR #v2-2): each table snapshots the guild's poker config
         // at creation. Mid-hand admin tweaks don't affect the in-flight
@@ -239,6 +240,34 @@ class PokerService @Autowired constructor(
         if (buyIn !in params.minBuyIn..params.maxBuyIn) {
             return CreateOutcome.InvalidBuyIn(params.minBuyIn, params.maxBuyIn)
         }
+
+        // v2-7: free-play tables short-circuit the wallet entirely.
+        // The host's `socialCredit` is never touched, so autoTopUp is
+        // silently irrelevant. We still demand a chip allocation in
+        // [minBuyIn..maxBuyIn] so the table dynamics stay aligned with
+        // the configured stakes — the only difference is that those
+        // chips are play money.
+        if (free) {
+            val table = tableRegistry.create(
+                guildId = guildId,
+                hostDiscordId = hostDiscordId,
+                minBuyIn = params.minBuyIn,
+                maxBuyIn = params.maxBuyIn,
+                smallBlind = params.smallBlind,
+                bigBlind = params.bigBlind,
+                smallBet = params.smallBet,
+                bigBet = params.bigBet,
+                maxRaisesPerStreet = MAX_RAISES_PER_STREET,
+                maxSeats = params.maxSeats,
+                shotClockSeconds = params.shotClockSeconds,
+                isFreePlay = true
+            )
+            synchronized(table) {
+                table.seats.add(PokerTable.Seat(discordId = hostDiscordId, chips = buyIn))
+            }
+            return CreateOutcome.Ok(tableId = table.id)
+        }
+
         val user = userService.getUserByIdForUpdate(hostDiscordId, guildId)
             ?: return CreateOutcome.UnknownUser
         val initialBalance = user.socialCredit ?: 0L
@@ -347,6 +376,25 @@ class PokerService @Autowired constructor(
         if (seatPreflight == -1) return BuyInOutcome.AlreadySeated
         if (seatPreflight == -2) return BuyInOutcome.TableFull
 
+        // v2-7: free-play tables — short-circuit the wallet entirely.
+        // No user lock, no `socialCredit` debit, autoTopUp is silently
+        // irrelevant. The seat-add still re-checks under the monitor.
+        if (table.isFreePlay) {
+            val seatIndex = synchronized(table) {
+                if (table.seats.any { it.discordId == discordId }) return@synchronized -1
+                if (table.seats.size >= table.maxSeats) return@synchronized -2
+                table.seats.add(PokerTable.Seat(discordId = discordId, chips = buyIn))
+                table.seats.size - 1
+            }
+            if (seatIndex == -1) return BuyInOutcome.AlreadySeated
+            if (seatIndex == -2) return BuyInOutcome.TableFull
+            // Surface the player's untouched wallet balance for symmetry
+            // with the real-money path. Look up by id (no for-update
+            // lock — we're not mutating).
+            val newBalance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+            return BuyInOutcome.Ok(seatIndex = seatIndex, newBalance = newBalance)
+        }
+
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return BuyInOutcome.UnknownUser
         val initialBalance = user.socialCredit ?: 0L
@@ -421,6 +469,32 @@ class PokerService @Autowired constructor(
             }
         }
         if (seatPreflight != null) return seatPreflight
+
+        // v2-7: free-play tables — short-circuit the wallet entirely.
+        // The atomic chip bump below stays the same; we just skip the
+        // `socialCredit` debit and any autoTopUp resolution.
+        if (table.isFreePlay) {
+            val rebuyResult = synchronized(table) {
+                when {
+                    table.phase != PokerTable.Phase.WAITING -> RebuyOutcome.HandInProgress
+                    else -> {
+                        val seat = table.seats.firstOrNull { it.discordId == discordId }
+                        when {
+                            seat == null -> RebuyOutcome.NotSeated
+                            seat.chips + amount > table.maxBuyIn ->
+                                RebuyOutcome.StackCapped(cap = table.maxBuyIn, current = seat.chips)
+                            else -> {
+                                seat.chips += amount
+                                RebuyOutcome.Ok(seatChips = seat.chips, newBalance = 0L)
+                            }
+                        }
+                    }
+                }
+            }
+            if (rebuyResult !is RebuyOutcome.Ok) return rebuyResult
+            val newBalance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+            return RebuyOutcome.Ok(seatChips = rebuyResult.seatChips, newBalance = newBalance)
+        }
 
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return RebuyOutcome.UnknownUser
@@ -531,7 +605,13 @@ class PokerService @Autowired constructor(
         if (chipsToReturn == -1L) return CashOutOutcome.HandInProgress
         if (chipsToReturn == -2L) return CashOutOutcome.NotSeated
 
-        val newBalance = if (chipsToReturn > 0L) {
+        // v2-7: free-play tables — chips are play money, never credit
+        // the wallet. Surface the player's existing `socialCredit`
+        // unchanged so the response shape stays uniform with the
+        // real-money path.
+        val newBalance = if (table.isFreePlay) {
+            userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+        } else if (chipsToReturn > 0L) {
             val user = userService.getUserByIdForUpdate(discordId, guildId)
                 ?: return CashOutOutcome.NotSeated
             user.socialCredit = (user.socialCredit ?: 0L) + chipsToReturn
@@ -636,9 +716,16 @@ class PokerService @Autowired constructor(
                 is PokerEngine.ActionEvent.Continued -> ActionOutcome.Continued
                 is PokerEngine.ActionEvent.StreetAdvanced -> ActionOutcome.StreetAdvanced(ev.newPhase)
                 is PokerEngine.ActionEvent.HandResolved -> {
-                    persistResult(table, ev.result)
-                    if (ev.result.rake > 0L) {
-                        jackpotService.addToPool(guildId, ev.result.rake)
+                    // v2-7: free-play hands stay in memory only — no
+                    // audit row in poker_hand_log, no jackpot route.
+                    // sweepPendingLeaves still runs so leavers get
+                    // their seats removed (it short-circuits the
+                    // wallet credit on free tables).
+                    if (!table.isFreePlay) {
+                        persistResult(table, ev.result)
+                        if (ev.result.rake > 0L) {
+                            jackpotService.addToPool(guildId, ev.result.rake)
+                        }
                     }
                     // v2-3: cash out any seats marked pendingLeave during
                     // the hand. Done after rake / log so a side-pot
@@ -680,15 +767,20 @@ class PokerService @Autowired constructor(
         }
         if (refunds.isEmpty()) return
 
-        // Lock all refund recipients in ascending discord-id order to
-        // avoid cycles with concurrent /tip, /duel, /coinflip, etc.
-        // transactions touching the same users.
-        val locked = userService.lockUsersInAscendingOrder(refunds.keys, table.guildId)
-        for ((discordId, amount) in refunds) {
-            if (amount <= 0L) continue
-            val user = locked[discordId] ?: continue
-            user.socialCredit = (user.socialCredit ?: 0L) + amount
-            userService.updateUser(user)
+        // v2-7: free-play tables — chips are play money, never credit
+        // the wallet. The seat removal above already happened; just
+        // skip the user-lock + balance-update pass.
+        if (!table.isFreePlay) {
+            // Lock all refund recipients in ascending discord-id order to
+            // avoid cycles with concurrent /tip, /duel, /coinflip, etc.
+            // transactions touching the same users.
+            val locked = userService.lockUsersInAscendingOrder(refunds.keys, table.guildId)
+            for ((discordId, amount) in refunds) {
+                if (amount <= 0L) continue
+                val user = locked[discordId] ?: continue
+                user.socialCredit = (user.socialCredit ?: 0L) + amount
+                userService.updateUser(user)
+            }
         }
 
         // Drop the table if everyone left mid-hand.
@@ -788,6 +880,11 @@ class PokerService @Autowired constructor(
             out
         }
         if (refunds.isEmpty()) return
+
+        // v2-7: free-play tables — seats already cleared above; the
+        // chip stacks were play money and never came from a wallet,
+        // so there's nothing to refund.
+        if (table.isFreePlay) return
 
         // Lock all refund recipients in ascending discord-id order to avoid
         // cycles with concurrent /tip, /duel, /coinflip, etc. transactions

@@ -146,7 +146,7 @@ class PokerController(
         user, guildId, economyWebService,
         errorBuilder = { status -> tableErrorResponse(status) }
     ) { discordId ->
-        when (val outcome = pokerService.createTable(discordId, guildId, request.buyIn, request.autoTopUp)) {
+        when (val outcome = pokerService.createTable(discordId, guildId, request.buyIn, request.autoTopUp, request.free)) {
             is CreateOutcome.Ok -> ResponseEntity.ok(
                 TableActionResponse(
                     ok = true,
@@ -358,7 +358,7 @@ class PokerController(
     }
 }
 
-data class CreateRequest(val buyIn: Long = 0, val autoTopUp: Boolean = false)
+data class CreateRequest(val buyIn: Long = 0, val autoTopUp: Boolean = false, val free: Boolean = false)
 data class JoinRequest(val buyIn: Long = 0, val autoTopUp: Boolean = false)
 data class ActionRequest(val action: String = "")
 

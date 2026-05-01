@@ -46,23 +46,33 @@ internal object PokerEmbeds {
         return ParsedButtonId(action, tableId)
     }
 
-    fun lobbyEmbed(table: PokerTable): MessageEmbed = EmbedBuilder()
-        .setTitle("🃏 Poker table #${table.id}")
-        .setDescription(
-            "Fixed-limit Texas Hold'em. Buy-in **${table.minBuyIn}–${table.maxBuyIn}** credits. " +
-                "Blinds **${table.smallBlind}/${table.bigBlind}**, bets **${table.smallBet}/${table.bigBet}** " +
-                "(pre-flop & flop / turn & river)."
-        )
-        .addField("Players", playerList(table), false)
-        .addField(
-            "How to join",
-            "Run `/poker join table:${table.id} chips:<amount>`. " +
-                "Host (<@${table.hostDiscordId}>) starts the hand with `/poker start table:${table.id}`.",
-            false
-        )
-        .setFooter("Side pots split the pot when players go all-in for different amounts.")
-        .setColor(TABLE_COLOR)
-        .build()
+    fun lobbyEmbed(table: PokerTable): MessageEmbed {
+        // v2-7: free-play tables prepend a banner to the description so
+        // joiners can see at a glance that no credits are at stake. Same
+        // chip ranges + blinds still apply — only the wallet route is
+        // skipped on the service side.
+        val description = buildString {
+            if (table.isFreePlay) {
+                append("🆓 **Free play** — no credits debited, no payouts.\n")
+            }
+            append("Fixed-limit Texas Hold'em. Buy-in **${table.minBuyIn}–${table.maxBuyIn}** chips. ")
+            append("Blinds **${table.smallBlind}/${table.bigBlind}**, bets **${table.smallBet}/${table.bigBet}** ")
+            append("(pre-flop & flop / turn & river).")
+        }
+        return EmbedBuilder()
+            .setTitle("🃏 Poker table #${table.id}${if (table.isFreePlay) " 🆓" else ""}")
+            .setDescription(description)
+            .addField("Players", playerList(table), false)
+            .addField(
+                "How to join",
+                "Run `/poker join table:${table.id} chips:<amount>`. " +
+                    "Host (<@${table.hostDiscordId}>) starts the hand with `/poker start table:${table.id}`.",
+                false
+            )
+            .setFooter("Side pots split the pot when players go all-in for different amounts.")
+            .setColor(TABLE_COLOR)
+            .build()
+    }
 
     fun handStateEmbed(table: PokerTable): MessageEmbed {
         val community = if (table.community.isEmpty()) "—" else table.community.joinToString(" ") { "`$it`" }
@@ -90,10 +100,17 @@ internal object PokerEmbeds {
                 "<@$id>: ${cards.joinToString(" ") { "`$it`" }}"
             }
         }
+        // v2-7: free-play hands never route rake to the jackpot, so the
+        // pot field drops the "rake → jackpot" suffix.
+        val potField = if (table.isFreePlay) {
+            "${result.pot} (free play — no rake)"
+        } else {
+            "${result.pot} (rake ${result.rake} → jackpot)"
+        }
         return EmbedBuilder()
-            .setTitle("🃏 Hand #${result.handNumber} settled")
+            .setTitle("🃏 Hand #${result.handNumber} settled${if (table.isFreePlay) " 🆓" else ""}")
             .setDescription("Winners: $winners")
-            .addField("Pot", "${result.pot} (rake ${result.rake} → jackpot)", true)
+            .addField("Pot", potField, true)
             .addField("Payouts", payouts.ifEmpty { "—" }, true)
             .addField("Board", board, false)
             .addField("Showdown", reveals, false)
