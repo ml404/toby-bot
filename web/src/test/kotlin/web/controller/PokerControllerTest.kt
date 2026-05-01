@@ -94,7 +94,7 @@ class PokerControllerTest {
 
     @Test
     fun `create happy path returns table id`() {
-        every { pokerService.createTable(discordId, guildId, 200L) } returns CreateOutcome.Ok(tableId = 42L)
+        every { pokerService.createTable(discordId, guildId, 200L, any()) } returns CreateOutcome.Ok(tableId = 42L)
 
         val response = controller.create(guildId, CreateRequest(buyIn = 200L), user)
 
@@ -105,7 +105,7 @@ class PokerControllerTest {
 
     @Test
     fun `create propagates invalid buy-in as 400`() {
-        every { pokerService.createTable(discordId, guildId, 1L) } returns CreateOutcome.InvalidBuyIn(100L, 5000L)
+        every { pokerService.createTable(discordId, guildId, 1L, any()) } returns CreateOutcome.InvalidBuyIn(100L, 5000L)
 
         val response = controller.create(guildId, CreateRequest(buyIn = 1L), user)
 
@@ -120,12 +120,12 @@ class PokerControllerTest {
         val response = controller.create(guildId, CreateRequest(buyIn = 200L), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { pokerService.createTable(any(), any(), any()) }
+        verify(exactly = 0) { pokerService.createTable(any(), any(), any(), any()) }
     }
 
     @Test
     fun `join happy path returns ok with new balance`() {
-        every { pokerService.buyIn(discordId, guildId, tableId, 300L) } returns
+        every { pokerService.buyIn(discordId, guildId, tableId, 300L, any()) } returns
             BuyInOutcome.Ok(seatIndex = 1, newBalance = 700L)
 
         val response = controller.join(guildId, tableId, JoinRequest(buyIn = 300L), user)
@@ -137,14 +137,14 @@ class PokerControllerTest {
 
     @Test
     fun `join already-seated returns 400`() {
-        every { pokerService.buyIn(discordId, guildId, tableId, 300L) } returns BuyInOutcome.AlreadySeated
+        every { pokerService.buyIn(discordId, guildId, tableId, 300L, any()) } returns BuyInOutcome.AlreadySeated
         val response = controller.join(guildId, tableId, JoinRequest(buyIn = 300L), user)
         assertEquals(400, response.statusCode.value())
     }
 
     @Test
     fun `join unknown table returns 404`() {
-        every { pokerService.buyIn(discordId, guildId, tableId, 300L) } returns BuyInOutcome.TableNotFound
+        every { pokerService.buyIn(discordId, guildId, tableId, 300L, any()) } returns BuyInOutcome.TableNotFound
         val response = controller.join(guildId, tableId, JoinRequest(buyIn = 300L), user)
         assertEquals(404, response.statusCode.value())
     }
