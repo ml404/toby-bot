@@ -65,19 +65,23 @@ class MonthlyLeaderboardJob @Autowired constructor(
             previousMonthRange.second
         )
 
-        val rows = users.map { dto ->
-            val current = dto.socialCredit ?: 0L
-            val baseline = priorSnapshots[dto.discordId]?.socialCredit
-            val creditsDelta = if (baseline == null) current else current - baseline
-            MonthlyRow(
-                discordId = dto.discordId,
-                creditsDelta = creditsDelta,
-                voiceSeconds = voiceSecondsByUser[dto.discordId] ?: 0L
-            )
-        }.sortedWith(
-            compareByDescending<MonthlyRow> { it.creditsDelta }
-                .thenByDescending { it.voiceSeconds }
-        ).take(TOP_N)
+        val rows = users
+            .filter { dto -> guild.getMemberById(dto.discordId)?.user?.isBot != true }
+            .map { dto ->
+                val current = dto.socialCredit ?: 0L
+                val baseline = priorSnapshots[dto.discordId]?.socialCredit
+                val creditsDelta = if (baseline == null) current else current - baseline
+                MonthlyRow(
+                    discordId = dto.discordId,
+                    creditsDelta = creditsDelta,
+                    voiceSeconds = voiceSecondsByUser[dto.discordId] ?: 0L
+                )
+            }
+            .filter { it.creditsDelta > 0 || it.voiceSeconds > 0 }
+            .sortedWith(
+                compareByDescending<MonthlyRow> { it.creditsDelta }
+                    .thenByDescending { it.voiceSeconds }
+            ).take(TOP_N)
 
         val channel = resolveChannel(guild)
         if (channel == null) {

@@ -9,16 +9,20 @@ import database.service.UserService
 import database.service.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -59,8 +63,11 @@ class MonthlyLeaderboardJobTest {
         job = MonthlyLeaderboardJob(jda, userService, voiceSessionService, snapshotService, configService)
     }
 
-    private fun member(id: Long, name: String): Member {
+    private fun member(id: Long, name: String, isBot: Boolean = false): Member {
         val m = mockk<Member>(relaxed = true)
+        val user = mockk<User>(relaxed = true)
+        every { user.isBot } returns isBot
+        every { m.user } returns user
         every { m.effectiveName } returns name
         every { guild.getMemberById(id) } returns m
         return m
@@ -173,6 +180,56 @@ class MonthlyLeaderboardJobTest {
 
         // The embed was sent to the system channel
         verify(exactly = 1) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `postMonthlyLeaderboard excludes bots and users without positive activity`() {
+        val tobyBot = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 0L }
+        val fratLayton = UserDto(discordId = 2L, guildId = guildId).apply { socialCredit = 0L }
+        val alice = UserDto(discordId = 3L, guildId = guildId).apply { socialCredit = 100L }
+        every { userService.listGuildUsers(guildId) } returns listOf(tobyBot, fratLayton, alice)
+        member(1L, "TobyBot", isBot = true)
+        member(2L, "FratLayton")
+        member(3L, "Alice")
+        // FratLayton's prior snapshot was 1880 → delta = -1880, no voice → should be filtered out.
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = 2L, guildId = guildId, socialCredit = 1880L)
+        )
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        val embedSlot = slot<MessageEmbed>()
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embedSlot)) } returns createAction
+
+        job.postMonthlyLeaderboard()
+
+        verify(exactly = 1) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+        val description = embedSlot.captured.description ?: ""
+        assertFalse(description.contains("TobyBot"), "Bot users must not appear on the leaderboard")
+        assertFalse(description.contains("FratLayton"), "Users with no positive activity must not appear")
+        assertTrue(description.contains("Alice"), "Users with positive activity should still appear")
+    }
+
+    @Test
+    fun `postMonthlyLeaderboard shows no-activity message when only bots and inactive users exist`() {
+        val tobyBot = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 0L }
+        val fratLayton = UserDto(discordId = 2L, guildId = guildId).apply { socialCredit = 0L }
+        every { userService.listGuildUsers(guildId) } returns listOf(tobyBot, fratLayton)
+        member(1L, "TobyBot", isBot = true)
+        member(2L, "FratLayton")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = 2L, guildId = guildId, socialCredit = 1880L)
+        )
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        val embedSlot = slot<MessageEmbed>()
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embedSlot)) } returns createAction
+
+        job.postMonthlyLeaderboard()
+
+        val description = embedSlot.captured.description ?: ""
+        assertTrue(description.startsWith("No activity recorded"), "Expected no-activity message, got: $description")
     }
 
     @Test
