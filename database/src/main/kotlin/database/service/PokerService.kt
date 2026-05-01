@@ -11,6 +11,7 @@ import database.poker.PokerTable
 import database.poker.PokerTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -102,9 +103,27 @@ class PokerService @Autowired constructor(
         data object TableNotFound : ActionOutcome
     }
 
+    /**
+     * Self-injection so registry callbacks (which are invoked from a
+     * scheduler thread holding `this`, not the Spring proxy) still
+     * route `@Transactional` methods through the proxy. Without this,
+     * `applyAction` and `evictAllSeats` would bypass their tx advice
+     * when called from the idle-evict / shot-clock paths.
+     *
+     * Nullable + `@Lazy` so a test that constructs the service
+     * directly (no Spring) doesn't hit a `lateinit` NPE; in that case
+     * [transactionalSelf] falls back to `this`. Production is always
+     * Spring-managed so the field is non-null at first use.
+     */
+    @Autowired
+    @Lazy
+    private var self: PokerService? = null
+
+    private val transactionalSelf: PokerService get() = self ?: this
+
     @PostConstruct
     fun wireRegistry() {
-        tableRegistry.setOnIdleEvict { table -> evictAllSeats(table) }
+        tableRegistry.setOnIdleEvict { table -> transactionalSelf.evictAllSeats(table) }
         tableRegistry.setOnShotClockExpired { table -> autoFoldOnTimeout(table) }
     }
 
@@ -113,13 +132,17 @@ class PokerService @Autowired constructor(
      * before they've acted. Folds them on their behalf and pushes the
      * action through the same engine path a manual fold would take, so
      * the rest of the table sees a normal "actor folded" event.
+     *
+     * Calls `self.applyAction` (not `this.applyAction`) so the
+     * `@Transactional` boundary on the action handler is honoured —
+     * scheduler-thread callbacks otherwise bypass the proxy.
      */
     private fun autoFoldOnTimeout(table: PokerTable) {
         val timedOut = synchronized(table) {
             if (table.phase == PokerTable.Phase.WAITING) return
             table.seats.getOrNull(table.actorIndex)?.discordId
         } ?: return
-        applyAction(timedOut, table.guildId, table.id, PokerAction.Fold)
+        transactionalSelf.applyAction(timedOut, table.guildId, table.id, PokerAction.Fold)
     }
 
     /**
