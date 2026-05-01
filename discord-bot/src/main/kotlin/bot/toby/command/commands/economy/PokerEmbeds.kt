@@ -60,7 +60,7 @@ internal object PokerEmbeds {
                 "Host (<@${table.hostDiscordId}>) starts the hand with `/poker start table:${table.id}`.",
             false
         )
-        .setFooter("v1: no side pots — short stacks can win the whole pot at showdown.")
+        .setFooter("Side pots split the pot when players go all-in for different amounts.")
         .setColor(TABLE_COLOR)
         .build()
 
