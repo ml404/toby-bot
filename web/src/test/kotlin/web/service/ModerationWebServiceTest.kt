@@ -7,6 +7,7 @@ import database.dto.UserDto
 import database.service.ConfigService
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
+import database.service.UbiDailyService
 import database.service.UserService
 import database.service.VoiceSessionService
 import io.mockk.every
@@ -39,6 +40,7 @@ class ModerationWebServiceTest {
     private lateinit var voiceSessionService: VoiceSessionService
     private lateinit var titleService: TitleService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
+    private lateinit var ubiDailyService: UbiDailyService
     private lateinit var service: ModerationWebService
 
     private lateinit var guild: Guild
@@ -60,6 +62,7 @@ class ModerationWebServiceTest {
         voiceSessionService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
+        ubiDailyService = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         service = ModerationWebService(
@@ -70,6 +73,7 @@ class ModerationWebServiceTest {
             voiceSessionService,
             titleService,
             snapshotService,
+            ubiDailyService,
             eventPublisher
         )
 
@@ -561,6 +565,42 @@ class ModerationWebServiceTest {
         // wrote the baseline, the user earned 50 since then.
         assertEquals(50L, rows.first().creditsEarnedThisMonth)
         verify(exactly = 0) { snapshotService.upsertIfMissing(any()) }
+    }
+
+    @Test
+    fun `getLeaderboard subtracts this-month UBI grants from creditsEarnedThisMonth`() {
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 1_000L }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = plainUserId, guildId = guildId, socialCredit = 200L)
+        )
+        // 600 of the 800-credit raw delta came from UBI; effective earnings = 200.
+        every { ubiDailyService.sumGrantedInRangeByUser(guildId, any(), any()) } returns mapOf(plainUserId to 600L)
+
+        val rows = service.getLeaderboard(guildId)
+
+        assertEquals(200L, rows.first().creditsEarnedThisMonth)
+    }
+
+    @Test
+    fun `getLeaderboard clamps at zero when UBI exceeds raw delta`() {
+        val user = UserDto(discordId = plainUserId, guildId = guildId).apply { socialCredit = 100L }
+        every { userService.listGuildUsers(guildId) } returns listOf(user)
+        mockMember(plainUserId)
+        every { voiceSessionService.sumCountedSecondsLifetimeByUser(guildId) } returns emptyMap()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = plainUserId, guildId = guildId, socialCredit = 50L)
+        )
+        // User spent some on the casino; UBI total exceeds the raw delta.
+        every { ubiDailyService.sumGrantedInRangeByUser(guildId, any(), any()) } returns mapOf(plainUserId to 200L)
+
+        val rows = service.getLeaderboard(guildId)
+
+        assertEquals(0L, rows.first().creditsEarnedThisMonth, "must not go negative")
     }
 
     @Test

@@ -5,6 +5,7 @@ import database.dto.ConfigDto
 import database.dto.MonthlyCreditSnapshotDto
 import database.service.ConfigService
 import database.service.MonthlyCreditSnapshotService
+import database.service.UbiDailyService
 import database.service.UserService
 import database.service.VoiceSessionService
 import net.dv8tion.jda.api.EmbedBuilder
@@ -27,7 +28,8 @@ class MonthlyLeaderboardJob @Autowired constructor(
     private val userService: UserService,
     private val voiceSessionService: VoiceSessionService,
     private val snapshotService: MonthlyCreditSnapshotService,
-    private val configService: ConfigService
+    private val configService: ConfigService,
+    private val ubiDailyService: UbiDailyService
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -64,13 +66,21 @@ class MonthlyLeaderboardJob @Autowired constructor(
             previousMonthRange.first,
             previousMonthRange.second
         )
+        // UBI grants land in socialCredit but are a fixed handout, not earned
+        // activity — subtract them so the leaderboard reflects voice + command
+        // + intro + trade earnings only.
+        val ubiByUser = ubiDailyService.sumGrantedInRangeByUser(
+            guild.idLong, previousMonthStart, thisMonthStart
+        )
 
         val rows = users
             .filter { dto -> guild.getMemberById(dto.discordId)?.user?.isBot != true }
             .map { dto ->
                 val current = dto.socialCredit ?: 0L
                 val baseline = priorSnapshots[dto.discordId]?.socialCredit
-                val creditsDelta = if (baseline == null) current else current - baseline
+                val rawDelta = if (baseline == null) current else current - baseline
+                val ubi = ubiByUser[dto.discordId] ?: 0L
+                val creditsDelta = (rawDelta - ubi).coerceAtLeast(0L)
                 MonthlyRow(
                     discordId = dto.discordId,
                     creditsDelta = creditsDelta,

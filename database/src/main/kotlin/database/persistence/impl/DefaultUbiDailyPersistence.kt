@@ -38,4 +38,16 @@ class DefaultUbiDailyPersistence : UbiDailyPersistence {
             existing
         }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun sumGrantedInRangeByUser(guildId: Long, from: LocalDate, until: LocalDate): Map<Long, Long> {
+        val q = entityManager.createNamedQuery("UbiDailyDto.sumGrantedInRangeByUser")
+        q.setParameter("guildId", guildId)
+        q.setParameter("from", from)
+        q.setParameter("until", until)
+        val rows = q.resultList as List<Array<Any?>>
+        return rows.associate {
+            (it[0] as Number).toLong() to ((it[1] as? Number)?.toLong() ?: 0L)
+        }
+    }
 }

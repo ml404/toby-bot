@@ -5,6 +5,7 @@ import database.dto.MonthlyCreditSnapshotDto
 import database.dto.UserDto
 import database.service.ConfigService
 import database.service.MonthlyCreditSnapshotService
+import database.service.UbiDailyService
 import database.service.UserService
 import database.service.VoiceSessionService
 import io.mockk.every
@@ -33,6 +34,7 @@ class MonthlyLeaderboardJobTest {
     private lateinit var voiceSessionService: VoiceSessionService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var configService: ConfigService
+    private lateinit var ubiDailyService: UbiDailyService
     private lateinit var guild: Guild
     private lateinit var channel: TextChannel
     private lateinit var job: MonthlyLeaderboardJob
@@ -46,6 +48,7 @@ class MonthlyLeaderboardJobTest {
         voiceSessionService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        ubiDailyService = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         channel = mockk(relaxed = true)
 
@@ -60,7 +63,9 @@ class MonthlyLeaderboardJobTest {
         val createAction = mockk<MessageCreateAction>(relaxed = true)
         every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
 
-        job = MonthlyLeaderboardJob(jda, userService, voiceSessionService, snapshotService, configService)
+        job = MonthlyLeaderboardJob(
+            jda, userService, voiceSessionService, snapshotService, configService, ubiDailyService
+        )
     }
 
     private fun member(id: Long, name: String, isBot: Boolean = false): Member {
@@ -230,6 +235,37 @@ class MonthlyLeaderboardJobTest {
 
         val description = embedSlot.captured.description ?: ""
         assertTrue(description.startsWith("No activity recorded"), "Expected no-activity message, got: $description")
+    }
+
+    @Test
+    fun `postMonthlyLeaderboard subtracts UBI grants from the credits delta`() {
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 1000L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        // Prior snapshot: Alice had 0 at start of previous month. Raw delta = 1000.
+        every { snapshotService.listForGuildDate(guildId, any()) } answers {
+            val date = secondArg<java.time.LocalDate>()
+            if (date == java.time.LocalDate.now(java.time.ZoneOffset.UTC).withDayOfMonth(1).minusMonths(1))
+                listOf(MonthlyCreditSnapshotDto(discordId = 1L, guildId = guildId, socialCredit = 0L))
+            else emptyList()
+        }
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        // 750 of those 1000 credits came from UBI.
+        every { ubiDailyService.sumGrantedInRangeByUser(guildId, any(), any()) } returns mapOf(1L to 750L)
+
+        val embedSlot = slot<MessageEmbed>()
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embedSlot)) } returns createAction
+
+        job.postMonthlyLeaderboard()
+
+        verify(exactly = 1) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+        // 1000 raw - 750 UBI = 250 effective earnings.
+        val description = embedSlot.captured.description ?: ""
+        assert(description.contains("250 credits")) {
+            "expected description to show 250 credits after UBI subtraction, got: $description"
+        }
     }
 
     @Test

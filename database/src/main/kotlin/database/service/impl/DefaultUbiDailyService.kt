@@ -15,4 +15,7 @@ class DefaultUbiDailyService @Autowired constructor(
         persistence.get(discordId, guildId, date)
 
     override fun upsert(row: UbiDailyDto): UbiDailyDto = persistence.upsert(row)
+
+    override fun sumGrantedInRangeByUser(guildId: Long, from: LocalDate, until: LocalDate): Map<Long, Long> =
+        persistence.sumGrantedInRangeByUser(guildId, from, until)
 }

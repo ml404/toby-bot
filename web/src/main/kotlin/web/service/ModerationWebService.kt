@@ -7,6 +7,7 @@ import database.dto.UserDto
 import database.service.ConfigService
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
+import database.service.UbiDailyService
 import database.service.UserService
 import database.service.VoiceSessionService
 import net.dv8tion.jda.api.EmbedBuilder
@@ -28,6 +29,7 @@ class ModerationWebService(
     private val voiceSessionService: VoiceSessionService,
     private val titleService: TitleService,
     private val snapshotService: MonthlyCreditSnapshotService,
+    private val ubiDailyService: UbiDailyService,
     private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
@@ -135,6 +137,13 @@ class ModerationWebService(
             snapshotService.listForGuildDate(guildId, thisMonthStart)
         }.associateBy { it.discordId }.toMutableMap()
 
+        // UBI grants land in socialCredit but represent a fixed handout, not
+        // earned activity. Subtract them so the leaderboard reflects voice +
+        // command + intro + trade earnings only.
+        val ubiByUser = safely("this-month UBI", emptyMap()) {
+            ubiDailyService.sumGrantedInRangeByUser(guildId, thisMonthStart, nextMonthStart)
+        }
+
         // Lazy-baseline: if a user has no snapshot row for this month's 1st
         // (fresh deploy, new guild, bot was down on the 1st), the scheduled
         // job hasn't run for them and "this month" delta would report 0
@@ -166,7 +175,9 @@ class ModerationWebService(
                 }
                 val current = dto.socialCredit ?: 0L
                 val baseline = existingBaselines[dto.discordId]?.socialCredit
-                val creditsDelta = if (baseline == null) 0L else current - baseline
+                val rawDelta = if (baseline == null) 0L else current - baseline
+                val ubiThisMonth = ubiByUser[dto.discordId] ?: 0L
+                val creditsDelta = (rawDelta - ubiThisMonth).coerceAtLeast(0L)
                 LeaderboardRow(
                     rank = index + 1,
                     discordId = dto.discordId.toString(),

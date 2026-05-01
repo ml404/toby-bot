@@ -10,6 +10,13 @@ import java.time.LocalDate
         name = "UbiDailyDto.get",
         query = "select d from UbiDailyDto d " +
                 "where d.discordId = :discordId and d.guildId = :guildId and d.grantDate = :grantDate"
+    ),
+    NamedQuery(
+        name = "UbiDailyDto.sumGrantedInRangeByUser",
+        query = "select d.discordId, coalesce(sum(d.creditsGranted), 0) from UbiDailyDto d " +
+                "where d.guildId = :guildId " +
+                "and d.grantDate >= :from and d.grantDate < :until " +
+                "group by d.discordId"
     )
 )
 @Entity
