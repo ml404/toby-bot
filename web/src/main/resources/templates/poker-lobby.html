@@ -28,6 +28,10 @@
             <label for="poker-create-buyin">Buy-in (credits)</label>
             <input id="poker-create-buyin" name="buyIn" type="number"
                    th:attr="min=${minBuyIn}, max=${maxBuyIn}" th:value="${minBuyIn}" step="1" required>
+            <label class="poker-create-free">
+                <input id="poker-create-free" name="free" type="checkbox">
+                Free play <span class="muted">(no credits debited, no payouts)</span>
+            </label>
             <button type="submit" class="btn-primary">Create table</button>
         </form>
         <div>Wallet: <strong id="poker-balance" th:text="${balance}">0</strong> credits</div>
@@ -43,7 +47,8 @@
                  th:attr="data-table-id=${t.tableId}">
                 <div>
                     <div>Table #<strong th:text="${t.tableId}">1</strong>
-                        — <span th:text="${t.seats}">0</span>/<span th:text="${t.maxSeats}">6</span> seats</div>
+                        — <span th:text="${t.seats}">0</span>/<span th:text="${t.maxSeats}">6</span> seats
+                        <span th:if="${t.isFreePlay}" class="poker-free-tag" title="Free play — no credits, no payouts">🆓 Free</span></div>
                     <div class="muted">Host: <span th:text="${t.hostDiscordId}">000</span> ·
                         Phase: <span th:text="${t.phase}">WAITING</span> ·
                         Hand #<span th:text="${t.handNumber}">0</span></div>

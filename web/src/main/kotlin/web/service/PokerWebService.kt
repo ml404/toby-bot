@@ -27,6 +27,8 @@ class PokerWebService(
         val handNumber: Long,
         val minBuyIn: Long,
         val maxBuyIn: Long,
+        /** v2-7: free-play flag. Used by the lobby table list to render a "🆓 Free" tag. */
+        val isFreePlay: Boolean = false,
     )
 
     data class TableStateView(
@@ -131,6 +133,7 @@ class PokerWebService(
                 handNumber = it.handNumber,
                 minBuyIn = it.minBuyIn,
                 maxBuyIn = it.maxBuyIn,
+                isFreePlay = it.isFreePlay,
             )
         }.sortedBy { it.tableId }
 

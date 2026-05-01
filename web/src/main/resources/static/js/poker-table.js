@@ -187,6 +187,8 @@
             })
             .then(function (state) {
                 if (!state) return;
+                const freeBadge = document.getElementById('poker-free-badge');
+                if (freeBadge) freeBadge.hidden = !state.isFreePlay;
                 phaseEl.textContent = state.phase;
                 handNumberEl.textContent = state.handNumber;
                 potEl.textContent = state.pot;

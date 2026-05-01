@@ -14,7 +14,11 @@
 
     <div class="poker-header">
         <a class="back-link" th:href="@{/poker/{g}(g=${guildId})}">&larr; Back to lobby</a>
-        <h1 th:text="'🃏 Table #' + ${tableId}">🃏 Poker table</h1>
+        <h1>
+            <span th:text="'🃏 Table #' + ${tableId}">🃏 Poker table</span>
+            <span id="poker-free-badge" class="poker-free-tag" hidden
+                  title="Free play — no credits debited, no payouts">🆓 Free play</span>
+        </h1>
         <p class="muted">
             Wallet: <strong id="poker-balance" th:text="${balance}">0</strong> credits.
             Buy-in <span th:text="${minBuyIn}">100</span>–<span th:text="${maxBuyIn}">5000</span> credits.
