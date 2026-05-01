@@ -604,6 +604,28 @@ class PokerService @Autowired constructor(
      */
     fun snapshot(tableId: Long): PokerTable? = tableRegistry.get(tableId)
 
+    /**
+     * Most recent settled hands for [tableId] within [guildId], newest
+     * first. Returns at most [limit] rows; passing a non-positive limit
+     * yields an empty list. Used by `/poker history` and the web
+     * audit panel.
+     */
+    fun recentHandsForTable(guildId: Long, tableId: Long, limit: Int = HISTORY_DEFAULT_LIMIT): List<PokerHandLogDto> =
+        if (limit <= 0) emptyList()
+        else handLogPersistence.findRecentByTable(
+            guildId, tableId, limit.coerceAtMost(HISTORY_MAX_LIMIT)
+        )
+
+    /**
+     * Most recent settled hands across the entire guild, newest first.
+     * Used when `/poker history` is invoked without a table id.
+     */
+    fun recentHandsForGuild(guildId: Long, limit: Int = HISTORY_DEFAULT_LIMIT): List<PokerHandLogDto> =
+        if (limit <= 0) emptyList()
+        else handLogPersistence.findRecentByGuild(
+            guildId, limit.coerceAtMost(HISTORY_MAX_LIMIT)
+        )
+
     /** Pure helper exposed for the embeds layer. */
     fun rakeRate(guildId: Long): Double {
         val cfg = configService.getConfigByName(
@@ -694,5 +716,12 @@ class PokerService @Autowired constructor(
 
         const val DEFAULT_RAKE: Double = 0.05
         const val MAX_RAKE: Double = 0.20
+
+        // /poker history defaults — matched to a single Discord embed
+        // that fits comfortably in the 4096-char description budget.
+        // The hard ceiling protects against a caller asking for so many
+        // rows that the JPA query gets pathological.
+        const val HISTORY_DEFAULT_LIMIT: Int = 10
+        const val HISTORY_MAX_LIMIT: Int = 25
     }
 }

@@ -1,5 +1,6 @@
 package bot.toby.command.commands.economy
 
+import database.dto.PokerHandLogDto
 import database.poker.Card
 import database.poker.PokerTable
 import database.poker.PokerTable.Phase
@@ -7,6 +8,8 @@ import database.service.PokerService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 /**
  * Shared embed/component plumbing for the Discord `/poker` flow.
@@ -111,6 +114,35 @@ internal object PokerEmbeds {
         .setDescription(message)
         .setColor(ERROR_COLOR)
         .build()
+
+    /**
+     * v2-3: render up to a screenful of recent settled hands. [scope] is
+     * the title-friendly label (e.g. "Table #7" or "Server"); [hands] are
+     * the rows in the order they should be rendered (caller is expected
+     * to pass them newest-first to match the JPA query). Returns a
+     * compact summary if the list is empty rather than an empty embed.
+     */
+    fun historyEmbed(scope: String, hands: List<PokerHandLogDto>): MessageEmbed {
+        val builder = EmbedBuilder()
+            .setTitle("🃏 Recent hands • $scope")
+            .setColor(NEUTRAL_COLOR)
+        if (hands.isEmpty()) {
+            return builder.setDescription("No settled hands yet.").build()
+        }
+        val lines = hands.map { row ->
+            val winners = row.winners.split(",").filter { it.isNotBlank() }
+                .joinToString(", ") { "<@$it>" }
+                .ifBlank { "—" }
+            val board = if (row.board.isBlank()) "—" else row.board.replace(",", " ")
+            val ts = row.resolvedAt?.let { HISTORY_TIME_FMT.format(it) } ?: "—"
+            "`#${row.handNumber}` `${row.tableId}` • pot **${row.pot}** (rake ${row.rake}) • $winners • $board • _${ts}_"
+        }
+        return builder.setDescription(lines.joinToString("\n")).build()
+    }
+
+    private val HISTORY_TIME_FMT: DateTimeFormatter = DateTimeFormatter
+        .ofPattern("MMM d HH:mm")
+        .withZone(ZoneOffset.UTC)
 
     fun infoEmbed(message: String): MessageEmbed = EmbedBuilder()
         .setTitle("🃏 Poker")

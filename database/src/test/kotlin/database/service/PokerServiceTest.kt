@@ -324,6 +324,85 @@ class PokerServiceTest {
     }
 
     @Test
+    fun `recentHandsForTable returns guild-scoped rows newest-first capped by limit`() {
+        // Three hands at table 7 in our guild, one at table 7 in a different
+        // guild — must NOT leak across guilds.
+        val now = java.time.Instant.parse("2025-01-01T00:00:00Z")
+        handLog.insert(PokerHandLogDto(
+            guildId = guildId, tableId = 7L, handNumber = 1L,
+            players = "1,2", winners = "1", pot = 10, rake = 0, board = "AS",
+            resolvedAt = now
+        ))
+        handLog.insert(PokerHandLogDto(
+            guildId = guildId, tableId = 7L, handNumber = 2L,
+            players = "1,2", winners = "2", pot = 20, rake = 0, board = "AS,KD",
+            resolvedAt = now.plusSeconds(60)
+        ))
+        handLog.insert(PokerHandLogDto(
+            guildId = 999L, tableId = 7L, handNumber = 3L,
+            players = "9,8", winners = "9", pot = 30, rake = 0, board = "TC",
+            resolvedAt = now.plusSeconds(120)
+        ))
+        handLog.insert(PokerHandLogDto(
+            guildId = guildId, tableId = 7L, handNumber = 4L,
+            players = "1,2", winners = "1", pot = 40, rake = 0, board = "AH,KS,QC",
+            resolvedAt = now.plusSeconds(180)
+        ))
+
+        val rows = service.recentHandsForTable(guildId, tableId = 7L, limit = 5)
+
+        assertEquals(3, rows.size, "only this guild's rows for table 7")
+        // Recording stub orders newest-first.
+        assertEquals(listOf(4L, 2L, 1L), rows.map { it.handNumber })
+        assertTrue(rows.all { it.guildId == guildId }, "no cross-guild leakage")
+    }
+
+    @Test
+    fun `recentHandsForGuild returns all tables for the guild capped by limit`() {
+        val now = java.time.Instant.parse("2025-01-01T00:00:00Z")
+        handLog.insert(PokerHandLogDto(
+            guildId = guildId, tableId = 1L, handNumber = 1L,
+            players = "1", winners = "1", pot = 10, rake = 0, board = "",
+            resolvedAt = now
+        ))
+        handLog.insert(PokerHandLogDto(
+            guildId = guildId, tableId = 2L, handNumber = 1L,
+            players = "1", winners = "1", pot = 10, rake = 0, board = "",
+            resolvedAt = now.plusSeconds(30)
+        ))
+        handLog.insert(PokerHandLogDto(
+            guildId = 999L, tableId = 1L, handNumber = 1L,
+            players = "9", winners = "9", pot = 99, rake = 0, board = "",
+            resolvedAt = now.plusSeconds(60)
+        ))
+
+        val rows = service.recentHandsForGuild(guildId, limit = 10)
+
+        assertEquals(2, rows.size, "both this guild's hands across tables")
+        assertTrue(rows.all { it.guildId == guildId })
+    }
+
+    @Test
+    fun `recentHandsForGuild caps limit to HISTORY_MAX_LIMIT`() {
+        repeat(PokerService.HISTORY_MAX_LIMIT + 5) { i ->
+            handLog.insert(PokerHandLogDto(
+                guildId = guildId, tableId = 1L, handNumber = (i + 1).toLong(),
+                players = "1", winners = "1", pot = 10, rake = 0, board = "",
+                resolvedAt = java.time.Instant.now().plusSeconds(i.toLong())
+            ))
+        }
+        val rows = service.recentHandsForGuild(guildId, limit = 1000)
+        assertEquals(PokerService.HISTORY_MAX_LIMIT, rows.size, "limit clamped down to MAX")
+    }
+
+    @Test
+    fun `recentHands with non-positive limit returns empty without hitting persistence`() {
+        assertTrue(service.recentHandsForGuild(guildId, limit = 0).isEmpty())
+        assertTrue(service.recentHandsForGuild(guildId, limit = -3).isEmpty())
+        assertTrue(service.recentHandsForTable(guildId, tableId = 1L, limit = 0).isEmpty())
+    }
+
+    @Test
     fun `cashOut on table you don't sit at is rejected`() {
         seed(host, 1000L); seed(joiner, 1000L)
         val tableId = (service.createTable(host, guildId, buyIn = 200L) as PokerService.CreateOutcome.Ok).tableId

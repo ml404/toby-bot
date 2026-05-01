@@ -224,6 +224,32 @@ internal class PokerCommandTest : CommandTest {
     }
 
     @Test
+    fun `history without table option queries guild-wide`() {
+        every { event.subcommandName } returns "history"
+        every { event.getOption("table") } returns null
+        every { event.getOption("limit") } returns null
+        every { pokerService.recentHandsForGuild(guildId, PokerService.HISTORY_DEFAULT_LIMIT) } returns emptyList()
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.recentHandsForGuild(guildId, PokerService.HISTORY_DEFAULT_LIMIT) }
+        verify(exactly = 0) { pokerService.recentHandsForTable(any(), any(), any()) }
+    }
+
+    @Test
+    fun `history with table option scopes the lookup to that table`() {
+        every { event.subcommandName } returns "history"
+        every { event.getOption("table") } returns intOpt(7L)
+        every { event.getOption("limit") } returns intOpt(5L)
+        every { pokerService.recentHandsForTable(guildId, 7L, 5) } returns emptyList()
+
+        command.handle(DefaultCommandContext(event), userDto(), 0)
+
+        verify(exactly = 1) { pokerService.recentHandsForTable(guildId, 7L, 5) }
+        verify(exactly = 0) { pokerService.recentHandsForGuild(any(), any()) }
+    }
+
+    @Test
     fun `unknown subcommand returns error without dispatching`() {
         every { event.subcommandName } returns "wibble"
 
