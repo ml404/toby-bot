@@ -40,13 +40,17 @@
         </div>
         <div class="bj-row">
             <h3>You <span class="muted" id="bj-player-total"></span></h3>
+            <!-- Single-hand layout for the v1 case; the JS hides this and
+                 populates [bj-player-hands] once a split happens. -->
             <div id="bj-player-cards" class="bj-cards"></div>
+            <div id="bj-player-hands" class="bj-seats" hidden></div>
         </div>
 
         <div class="bj-actions">
             <button id="bj-action-hit" class="btn-primary" type="button" disabled>Hit</button>
             <button id="bj-action-stand" class="btn-success" type="button" disabled>Stand</button>
             <button id="bj-action-double" class="btn-secondary" type="button" disabled>Double down</button>
+            <button id="bj-action-split" class="btn-secondary" type="button" disabled hidden>Split</button>
         </div>
 
         <div id="bj-result" class="bj-result muted"></div>

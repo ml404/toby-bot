@@ -11,10 +11,12 @@
     var dealerCardsEl = document.getElementById("bj-dealer-cards");
     var dealerTotalEl = document.getElementById("bj-dealer-total");
     var playerCardsEl = document.getElementById("bj-player-cards");
+    var playerHandsEl = document.getElementById("bj-player-hands");
     var playerTotalEl = document.getElementById("bj-player-total");
     var hitBtn = document.getElementById("bj-action-hit");
     var standBtn = document.getElementById("bj-action-stand");
     var doubleBtn = document.getElementById("bj-action-double");
+    var splitBtn = document.getElementById("bj-action-split");
     var resultEl = document.getElementById("bj-result");
 
     var pollTimer = null;
@@ -45,19 +47,36 @@
             ? "(" + state.dealerTotalVisible + ")" : "";
 
         var seat = state.seats && state.seats.length ? state.seats[0] : null;
-        renderCards(playerCardsEl, seat ? seat.hand : []);
-        playerTotalEl.textContent = seat ? "(" + seat.total + ")" : "";
+        var slots = (seat && seat.hands && seat.hands.length) ? seat.hands : null;
+        if (slots && slots.length > 1) {
+            // Split flow: render a per-hand block, hide the single-hand
+            // layout, and show the active hand's running total.
+            playerCardsEl.hidden = true;
+            playerHandsEl.hidden = false;
+            renderSplitHands(playerHandsEl, slots, seat.activeHandIndex);
+            var active = slots[seat.activeHandIndex] || slots[0];
+            playerTotalEl.textContent = active ? "(active hand: " + active.total + ")" : "";
+        } else {
+            playerHandsEl.hidden = true;
+            playerCardsEl.hidden = false;
+            renderCards(playerCardsEl, seat ? seat.hand : []);
+            playerTotalEl.textContent = seat ? "(" + seat.total + ")" : "";
+        }
 
         if (state.phase === "PLAYER_TURNS" && state.isMyTurn) {
             hitBtn.disabled = false;
             standBtn.disabled = false;
             doubleBtn.disabled = !state.canDouble;
+            splitBtn.hidden = !state.canSplit;
+            splitBtn.disabled = !state.canSplit;
             resultEl.textContent = "";
             resultEl.className = "bj-result muted";
         } else {
             hitBtn.disabled = true;
             standBtn.disabled = true;
             doubleBtn.disabled = true;
+            splitBtn.disabled = true;
+            splitBtn.hidden = true;
         }
 
         if (state.lastResult && state.phase === "RESOLVED") {
@@ -170,6 +189,36 @@
     hitBtn.addEventListener("click", function () { postAction("hit"); });
     standBtn.addEventListener("click", function () { postAction("stand"); });
     doubleBtn.addEventListener("click", function () { postAction("double"); });
+    splitBtn.addEventListener("click", function () { postAction("split"); });
+
+    function renderSplitHands(container, slots, activeIndex) {
+        container.innerHTML = "";
+        slots.forEach(function (slot, idx) {
+            var div = document.createElement("div");
+            div.className = "bj-seat";
+            if (idx === activeIndex) div.classList.add("bj-seat-active");
+            if (slot.status === "BUSTED") div.classList.add("bj-seat-busted");
+            var header = document.createElement("div");
+            header.className = "bj-seat-header";
+            var label = "Hand " + (idx + 1);
+            var statusBits = [];
+            if (slot.doubled) statusBits.push("Doubled");
+            switch (slot.status) {
+                case "BLACKJACK": statusBits.push("Blackjack"); break;
+                case "BUSTED": statusBits.push("Bust"); break;
+                case "STANDING": statusBits.push("Stand"); break;
+            }
+            header.innerHTML = "<span>" + label + " — stake " + slot.stake + "</span>" +
+                "<span class=\"bj-seat-status\">(" + slot.total + ")" +
+                (statusBits.length ? " " + statusBits.join(" · ") : "") + "</span>";
+            div.appendChild(header);
+            var cards = document.createElement("div");
+            cards.className = "bj-cards";
+            renderCards(cards, slot.cards);
+            div.appendChild(cards);
+            container.appendChild(div);
+        });
+    }
 
     // On page load, see if there's an existing in-flight hand for this user.
     refreshState().then(function () {

@@ -16,6 +16,7 @@
     var hitBtn = document.getElementById("bj-action-hit");
     var standBtn = document.getElementById("bj-action-stand");
     var doubleBtn = document.getElementById("bj-action-double");
+    var splitBtn = document.getElementById("bj-action-split");
     var startBtn = document.getElementById("bj-action-start");
     var leaveBtn = document.getElementById("bj-action-leave");
     var statusEl = document.getElementById("bj-status");
@@ -60,11 +61,26 @@
     function renderSeats(state) {
         seatsEl.innerHTML = "";
         (state.seats || []).forEach(function (seat, idx) {
+            var slots = (seat.hands && seat.hands.length) ? seat.hands : null;
+            var isActorSeat = idx === state.actorIndex && state.phase === "PLAYER_TURNS";
+            if (slots && slots.length > 1) {
+                // Split seat: render the seat header once, then a sub-block per hand.
+                var groupHeader = document.createElement("div");
+                groupHeader.className = "bj-seat-header";
+                groupHeader.innerHTML = "<span>" +
+                    (seat.discordId === parseInt(myId, 10) ? "You" : "@" + seat.discordId) +
+                    " — " + slots.length + " hands</span>" +
+                    (seat.pendingLeave ? "<span class=\"bj-seat-status\">leaving</span>" : "");
+                seatsEl.appendChild(groupHeader);
+                slots.forEach(function (slot, slotIdx) {
+                    seatsEl.appendChild(renderSlot(seat, slot, slotIdx, isActorSeat && slotIdx === seat.activeHandIndex));
+                });
+                return;
+            }
+            // Single-hand path (back-compat with v1 seat shape).
             var div = document.createElement("div");
             div.className = "bj-seat";
-            if (idx === state.actorIndex && state.phase === "PLAYER_TURNS") {
-                div.classList.add("bj-seat-active");
-            }
+            if (isActorSeat) div.classList.add("bj-seat-active");
             if (seat.status === "BUSTED") div.classList.add("bj-seat-busted");
             var header = document.createElement("div");
             header.className = "bj-seat-header";
@@ -78,6 +94,24 @@
             div.appendChild(cards);
             seatsEl.appendChild(div);
         });
+    }
+
+    function renderSlot(seat, slot, slotIdx, isActiveSlot) {
+        var div = document.createElement("div");
+        div.className = "bj-seat";
+        if (isActiveSlot) div.classList.add("bj-seat-active");
+        if (slot.status === "BUSTED") div.classList.add("bj-seat-busted");
+        var header = document.createElement("div");
+        header.className = "bj-seat-header";
+        header.innerHTML = "<span>  Hand " + (slotIdx + 1) +
+            " — stake " + slot.stake + (slot.doubled ? " (doubled)" : "") + "</span>" +
+            "<span class=\"bj-seat-status\">(" + slot.total + ") " + statusBadge(slot.status, false) + "</span>";
+        div.appendChild(header);
+        var cards = document.createElement("div");
+        cards.className = "bj-cards";
+        renderCards(cards, slot.cards);
+        div.appendChild(cards);
+        return div;
     }
 
     function renderState(state) {
@@ -104,10 +138,14 @@
             hitBtn.disabled = false;
             standBtn.disabled = false;
             doubleBtn.disabled = !state.canDouble;
+            splitBtn.disabled = !state.canSplit;
+            splitBtn.hidden = !state.canSplit;
         } else {
             hitBtn.disabled = true;
             standBtn.disabled = true;
             doubleBtn.disabled = true;
+            splitBtn.disabled = true;
+            splitBtn.hidden = true;
         }
 
         if (state.lastResult && state.phase === "LOBBY") {
@@ -195,6 +233,7 @@
     hitBtn.addEventListener("click", function () { postAction("hit"); });
     standBtn.addEventListener("click", function () { postAction("stand"); });
     doubleBtn.addEventListener("click", function () { postAction("double"); });
+    splitBtn.addEventListener("click", function () { postAction("split"); });
 
     startBtn.addEventListener("click", function () {
         window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/start", {})

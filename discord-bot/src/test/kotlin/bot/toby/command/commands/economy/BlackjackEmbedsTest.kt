@@ -149,15 +149,31 @@ class BlackjackEmbedsTest {
         maxSeats = 5
     )
 
-    private fun result(table: BlackjackTable, r: Blackjack.Result, payout: Long): BlackjackTable.HandResult =
-        BlackjackTable.HandResult(
+    private fun result(table: BlackjackTable, r: Blackjack.Result, payout: Long): BlackjackTable.HandResult {
+        val seat = table.seats.firstOrNull()
+        val perHand = if (seat != null) listOf(
+            BlackjackTable.PerHandResult(
+                discordId = seat.discordId,
+                handIndex = 0,
+                cards = seat.hand.toList(),
+                total = 0,
+                stake = seat.stake,
+                doubled = false,
+                fromSplit = false,
+                result = r,
+                payout = payout,
+            )
+        ) else emptyList()
+        return BlackjackTable.HandResult(
             handNumber = table.handNumber,
             dealer = table.dealer.toList(),
             dealerTotal = 17,
-            seatResults = mapOf(1L to r),
-            payouts = if (payout > 0L) mapOf(1L to payout) else emptyMap(),
+            seatResults = mapOf((seat?.discordId ?: 1L) to r),
+            payouts = if (payout > 0L) mapOf((seat?.discordId ?: 1L) to payout) else emptyMap(),
             pot = 100L,
             rake = 0L,
-            resolvedAt = Instant.now()
+            resolvedAt = Instant.now(),
+            perHandResults = perHand,
         )
+    }
 }

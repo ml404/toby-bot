@@ -80,4 +80,31 @@ class BlackjackHandTest {
         assertFalse(isBlackjack(listOf(c(Rank.SEVEN), c(Rank.SEVEN, Suit.HEARTS), c(Rank.SEVEN, Suit.CLUBS))))
         assertFalse(isBlackjack(listOf(c(Rank.ACE))))
     }
+
+    @Test
+    fun `canSplit true for matching ranks`() {
+        assertTrue(canSplit(listOf(c(Rank.EIGHT), c(Rank.EIGHT, Suit.HEARTS))))
+        assertTrue(canSplit(listOf(c(Rank.ACE), c(Rank.ACE, Suit.HEARTS))))
+    }
+
+    @Test
+    fun `canSplit true for ten-value pairs across face cards`() {
+        // T-J-Q-K all count as 10 in blackjack, so any pair of them is splittable.
+        assertTrue(canSplit(listOf(c(Rank.TEN), c(Rank.JACK))))
+        assertTrue(canSplit(listOf(c(Rank.JACK), c(Rank.QUEEN))))
+        assertTrue(canSplit(listOf(c(Rank.KING), c(Rank.TEN, Suit.HEARTS))))
+    }
+
+    @Test
+    fun `canSplit false for different values`() {
+        assertFalse(canSplit(listOf(c(Rank.NINE), c(Rank.TEN))))
+        assertFalse(canSplit(listOf(c(Rank.ACE), c(Rank.KING))))
+    }
+
+    @Test
+    fun `canSplit false for non-2-card hands`() {
+        assertFalse(canSplit(emptyList()))
+        assertFalse(canSplit(listOf(c(Rank.EIGHT))))
+        assertFalse(canSplit(listOf(c(Rank.EIGHT), c(Rank.EIGHT, Suit.HEARTS), c(Rank.EIGHT, Suit.CLUBS))))
+    }
 }

@@ -27,7 +27,7 @@ import kotlin.random.Random
  */
 class Blackjack(private val random: Random = Random.Default) {
 
-    enum class Action { HIT, STAND, DOUBLE }
+    enum class Action { HIT, STAND, DOUBLE, SPLIT }
 
     enum class Result {
         PLAYER_BLACKJACK,
@@ -89,10 +89,15 @@ class Blackjack(private val random: Random = Random.Default) {
      *   - dealer blackjack alone wins (player loses 1:1)
      *   - dealer bust → player wins 1:1
      *   - else compare totals
+     *
+     * [fromSplit] suppresses the natural-blackjack premium when the
+     * player's hand was created by splitting a pair. Standard rules:
+     * a 21 on a split hand pays 1:1, not 3:2 — even if the cards are
+     * an Ace plus a ten-value (which would otherwise be a natural).
      */
-    fun evaluate(player: List<Card>, dealer: List<Card>): Result {
+    fun evaluate(player: List<Card>, dealer: List<Card>, fromSplit: Boolean = false): Result {
         if (isBust(player)) return Result.PLAYER_BUST
-        val playerBJ = isBlackjack(player)
+        val playerBJ = !fromSplit && isBlackjack(player)
         val dealerBJ = isBlackjack(dealer)
         if (playerBJ && dealerBJ) return Result.PUSH
         if (playerBJ) return Result.PLAYER_BLACKJACK
@@ -139,6 +144,15 @@ class Blackjack(private val random: Random = Random.Default) {
 
         /** Fraction of a multiplayer pot routed to the jackpot pool. */
         const val MULTI_RAKE: Double = 0.05
+
+        /**
+         * Maximum number of hand-slots a single seat can hold after
+         * splitting. The classic blackjack cap is 4 (split → re-split
+         * → re-split again, giving at most 4 parallel hands). Split-aces
+         * specifically can't be re-split here either way; this is the
+         * absolute ceiling enforced by the SPLIT pre-check.
+         */
+        const val MAX_SPLIT_HANDS: Int = 4
 
         /**
          * Per-actor decision deadline for multi tables. Auto-stands the

@@ -6,6 +6,7 @@ import core.button.ButtonContext
 import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
+import database.blackjack.canSplit
 import database.dto.UserDto
 import database.service.BlackjackService
 import database.service.BlackjackService.MultiActionOutcome
@@ -81,9 +82,14 @@ class BlackjackButton @Autowired constructor(
             is SoloActionOutcome.Continued -> {
                 val live = tableRegistry.get(table.id) ?: return
                 val liveSeat = live.seats.firstOrNull()
-                val allowDouble = liveSeat != null && liveSeat.hand.size == 2 && !liveSeat.doubled
+                val active = liveSeat?.activeHand
+                val allowDouble = active != null && active.cards.size == 2 && !active.doubled
+                val allowSplit = active != null &&
+                    !active.doubled &&
+                    canSplit(active.cards) &&
+                    liveSeat.hands.size < Blackjack.MAX_SPLIT_HANDS
                 event.message.editMessageEmbeds(BlackjackEmbeds.soloDealEmbed(live))
-                    .setComponents(soloActionRow(table.id, allowDouble))
+                    .setComponents(soloActionRow(table.id, allowDouble, allowSplit))
                     .queue()
             }
             is SoloActionOutcome.Resolved -> {
@@ -99,6 +105,9 @@ class BlackjackButton @Autowired constructor(
             SoloActionOutcome.IllegalAction -> sendError(event, "You can't do that right now.")
             is SoloActionOutcome.InsufficientCreditsForDouble -> sendError(
                 event, "Need ${outcome.needed} credits to double — you only have ${outcome.have}."
+            )
+            is SoloActionOutcome.InsufficientCreditsForSplit -> sendError(
+                event, "Need ${outcome.needed} credits to split — you only have ${outcome.have}."
             )
         }
     }
@@ -136,6 +145,9 @@ class BlackjackButton @Autowired constructor(
             is MultiActionOutcome.InsufficientCreditsForDouble -> sendError(
                 event, "Need ${outcome.needed} credits to double — you only have ${outcome.have}."
             )
+            is MultiActionOutcome.InsufficientCreditsForSplit -> sendError(
+                event, "Need ${outcome.needed} credits to split — you only have ${outcome.have}."
+            )
         }
     }
 
@@ -156,10 +168,11 @@ class BlackjackButton @Autowired constructor(
         BlackjackEmbeds.Action.HIT -> Blackjack.Action.HIT
         BlackjackEmbeds.Action.STAND -> Blackjack.Action.STAND
         BlackjackEmbeds.Action.DOUBLE -> Blackjack.Action.DOUBLE
+        BlackjackEmbeds.Action.SPLIT -> Blackjack.Action.SPLIT
         BlackjackEmbeds.Action.PEEK -> null
     }
 
-    private fun soloActionRow(tableId: Long, allowDouble: Boolean): List<ActionRow> {
+    private fun soloActionRow(tableId: Long, allowDouble: Boolean, allowSplit: Boolean): List<ActionRow> {
         val buttons = mutableListOf(
             JdaButton.primary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.HIT, tableId), "Hit"),
             JdaButton.success(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.STAND, tableId), "Stand"),
@@ -167,6 +180,11 @@ class BlackjackButton @Autowired constructor(
         if (allowDouble) {
             buttons.add(
                 JdaButton.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.DOUBLE, tableId), "Double Down")
+            )
+        }
+        if (allowSplit) {
+            buttons.add(
+                JdaButton.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.SPLIT, tableId), "Split")
             )
         }
         return listOf(ActionRow.of(buttons))
@@ -177,6 +195,7 @@ class BlackjackButton @Autowired constructor(
             JdaButton.primary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.HIT, tableId), "Hit"),
             JdaButton.success(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.STAND, tableId), "Stand"),
             JdaButton.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.DOUBLE, tableId), "Double Down"),
+            JdaButton.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.SPLIT, tableId), "Split"),
             JdaButton.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.PEEK, tableId), "Peek"),
         )
     )

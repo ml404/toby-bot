@@ -62,3 +62,19 @@ fun isBust(hand: List<Card>): Boolean = bestTotal(hand) > 21
  */
 fun isBlackjack(hand: List<Card>): Boolean =
     hand.size == 2 && bestTotal(hand) == 21
+
+/**
+ * True iff [hand] is a pair eligible for splitting: exactly two cards
+ * with the same blackjack value. Tens, jacks, queens and kings all
+ * count as 10, so K-J is splittable. The seat's `doubled` and split
+ * eligibility (DAS gating, re-split caps) are caller concerns —
+ * this helper is purely about the cards.
+ */
+fun canSplit(hand: List<Card>): Boolean {
+    if (hand.size != 2) return false
+    val a = hand[0]
+    val b = hand[1]
+    val av = if (a.rank == Rank.ACE) 11 else a.blackjackValues().first()
+    val bv = if (b.rank == Rank.ACE) 11 else b.blackjackValues().first()
+    return av == bv
+}

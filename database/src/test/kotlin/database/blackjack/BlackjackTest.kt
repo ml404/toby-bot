@@ -119,6 +119,18 @@ class BlackjackTest {
     }
 
     @Test
+    fun `evaluate fromSplit suppresses the natural-blackjack premium`() {
+        // A two-card 21 reached on a split hand counts as a regular win
+        // (1:1) — never a natural blackjack (3:2). Standard rule: split
+        // aces drawing a ten-value land at 21 but pay 1:1.
+        val bj = Blackjack()
+        val player = listOf(c(Rank.ACE), c(Rank.KING))            // would be BJ in the normal rule
+        val dealer = listOf(c(Rank.NINE), c(Rank.SEVEN))          // 16, dealer plays out
+        assertEquals(Blackjack.Result.PLAYER_BLACKJACK, bj.evaluate(player, dealer))
+        assertEquals(Blackjack.Result.PLAYER_WIN, bj.evaluate(player, dealer, fromSplit = true))
+    }
+
+    @Test
     fun `multiplier matches the documented payout schedule`() {
         val bj = Blackjack()
         assertEquals(2.5, bj.multiplier(Blackjack.Result.PLAYER_BLACKJACK))
