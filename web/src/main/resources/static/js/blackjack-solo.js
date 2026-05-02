@@ -83,9 +83,26 @@
         return div;
     }
 
+    // Stateful dedup for the celebratory chip-stack flourish. The 1.5s
+    // poll fetches the resolved state repeatedly, so we need to fire the
+    // flourish once per hand. Keyed off (tableId, handNumber) — solo
+    // creates a fresh BlackjackTable per hand with handNumber reset to
+    // 1, so handNumber alone collides between sessions.
+    function createFlashDedup() {
+        var lastKey = null;
+        return function shouldFlash(state) {
+            if (!state || !state.lastResult) return false;
+            var key = state.tableId + ":" + state.lastResult.handNumber;
+            if (key === lastKey) return false;
+            lastKey = key;
+            return true;
+        };
+    }
+
     if (typeof window !== "undefined") {
         window.TobyBlackjackSolo = window.TobyBlackjackSolo || {};
         window.TobyBlackjackSolo.renderSplitHands = renderSplitHands;
+        window.TobyBlackjackSolo.createFlashDedup = createFlashDedup;
     }
 
     // ----- Page init. Bail out cleanly if we're loaded without the
@@ -112,13 +129,7 @@
     var playerRowEl = document.getElementById("bj-player-row");
 
     var pollTimer = null;
-    // Tracks the (tableId, handNumber) of the last result we played the
-    // chip-stack flourish on, so the 2s polling doesn't re-trigger the
-    // animation. tableId is part of the key because each solo hand spins
-    // up a fresh BlackjackTable with handNumber reset to 1 — keying on
-    // handNumber alone caused every hand after the first to be silently
-    // de-duped against the previous one.
-    var lastFlashedKey = null;
+    var shouldFlash = createFlashDedup();
 
     function renderState(state) {
         if (!state) return;
@@ -187,9 +198,7 @@
         // survives JS Number's 53-bit precision; lookup keys match exactly.
         var seatResult = (r.seatResults || {})[seat.discordId];
         // Fire the celebratory chip stack once per hand on a winning result.
-        var flashKey = state.tableId + ":" + r.handNumber;
-        if (flashKey !== lastFlashedKey && window.CasinoRender) {
-            lastFlashedKey = flashKey;
+        if (shouldFlash(state) && window.CasinoRender) {
             var payout = (r.payouts || {})[seat.discordId];
             if (payout && payout > 0 && playerRowEl) {
                 window.CasinoRender.flashChipsOn(playerRowEl, payout);
