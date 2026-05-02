@@ -11,11 +11,11 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest(
     classes = [
         Application::class,
-        TestAppConfig::class,
-        TestBotConfig::class,
         TestCachingConfig::class,
         TestDatabaseConfig::class,
-        TestManagerConfig::class
+        TestManagerConfig::class,
+        TestAppConfig::class,
+        TestBotConfig::class,
     ]
 )
 @ActiveProfiles("test")
