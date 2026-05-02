@@ -13,12 +13,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
-class NowPlayingManager {
+class NowPlayingManager(
+    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(10),
+) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()
     private val scheduledTasks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
     private val lock = ReentrantReadWriteLock()
-    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(10)
 
     fun setNowPlayingMessage(guildId: Long, message: Message) {
         lock.write {

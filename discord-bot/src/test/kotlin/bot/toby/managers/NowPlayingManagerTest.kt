@@ -3,6 +3,7 @@ package bot.toby.managers
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import common.testing.DeterministicScheduler
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -17,12 +18,14 @@ import kotlin.concurrent.thread
 class NowPlayingManagerTest {
 
     private lateinit var nowPlayingManager: NowPlayingManager
+    private lateinit var scheduler: DeterministicScheduler
     private lateinit var mockMessage1: Message
     private lateinit var mockMessage2: Message
 
     @BeforeEach
     fun setUp() {
-        nowPlayingManager = NowPlayingManager()
+        scheduler = DeterministicScheduler()
+        nowPlayingManager = NowPlayingManager(scheduler = scheduler)
         mockMessage1 = mockk(relaxed = true)
         mockMessage2 = mockk(relaxed = true)
     }
@@ -185,11 +188,11 @@ class NowPlayingManagerTest {
         // When
         nowPlayingManager.scheduleNowPlayingUpdate(guildId, mockAudioTrack, mockAudioPlayer, delay, period)
 
-        // Sleep to allow the scheduled task to run
-        Thread.sleep(200)
+        // Advance the deterministic scheduler — fires the captured task once.
+        scheduler.runPending()
 
         // Then
-        coVerify(atLeast = 1) {
+        verify(exactly = 1) {
             mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
@@ -223,14 +226,13 @@ class NowPlayingManagerTest {
         nowPlayingManager.scheduleNowPlayingUpdate(guildId1, mockAudioTrack1, mockAudioPlayer1, delay, period)
         nowPlayingManager.scheduleNowPlayingUpdate(guildId2, mockAudioTrack2, mockAudioPlayer2, delay, period)
 
-        // Sleep to allow the scheduled task to run
-        Thread.sleep(200)
+        scheduler.runPending()
 
         // Then
-        coVerify(atLeast = 1) {
+        verify(exactly = 1) {
             mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
-        coVerify(atLeast = 1) {
+        verify(exactly = 1) {
             mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
@@ -253,17 +255,17 @@ class NowPlayingManagerTest {
         nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
         nowPlayingManager.scheduleNowPlayingUpdate(guildId, mockAudioTrack, mockAudioPlayer, delay, period)
 
-        // Sleep to allow the scheduled task to run
-        Thread.sleep(200)
+        // Run the scheduled task once before cancelling.
+        scheduler.runPending()
 
         // When
         nowPlayingManager.cancelScheduledTask(guildId)
 
-        // Sleep to allow any pending tasks to be cancelled
-        Thread.sleep(200)
+        // Any pending tasks left after cancellation must not fire.
+        scheduler.runPending()
 
         // Then
-        coVerify(atMost = 1) {
+        verify(exactly = 1) {
             mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
@@ -286,17 +288,15 @@ class NowPlayingManagerTest {
         nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1)
         nowPlayingManager.scheduleNowPlayingUpdate(guildId, mockAudioTrack, mockAudioPlayer, delay, period)
 
-        // Sleep to allow the scheduled task to run
-        Thread.sleep(200)
+        scheduler.runPending()
 
         // When
         nowPlayingManager.resetNowPlayingMessage(guildId)
 
-        // Sleep to allow any pending tasks to be cancelled
-        Thread.sleep(200)
+        scheduler.runPending()
 
         // Then
-        coVerify(atMost = 1) {
+        verify(exactly = 1) {
             mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
@@ -328,20 +328,18 @@ class NowPlayingManagerTest {
         nowPlayingManager.scheduleNowPlayingUpdate(guildId1, mockAudioTrack1, mockAudioPlayer1, delay, period)
         nowPlayingManager.scheduleNowPlayingUpdate(guildId2, mockAudioTrack2, mockAudioPlayer2, delay, period)
 
-        // Sleep to allow the scheduled task to run
-        Thread.sleep(200)
+        scheduler.runPending()
 
         // When
         nowPlayingManager.clear()
 
-        // Sleep to allow any pending tasks to be cancelled
-        Thread.sleep(200)
+        scheduler.runPending()
 
         // Then
-        coVerify(atMost = 1) {
+        verify(exactly = 1) {
             mockMessage1.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
-        coVerify(atMost = 1) {
+        verify(exactly = 1) {
             mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
