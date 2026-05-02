@@ -45,7 +45,8 @@ class HighlowService(
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val jackpotPool: Long = 0L
         ) : PlayOutcome
 
         data class Lose(
@@ -56,7 +57,8 @@ class HighlowService(
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
-            val lossTribute: Long = 0L
+            val lossTribute: Long = 0L,
+            val jackpotPool: Long = 0L
         ) : PlayOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : PlayOutcome
@@ -151,7 +153,8 @@ class HighlowService(
                 newBalance = r.newBalance + jackpot,
                 jackpotPayout = jackpot,
                 soldTobyCoins = soldCoins,
-                newPrice = soldNewPrice
+                newPrice = soldNewPrice,
+                jackpotPool = jackpotService.getPool(guildId)
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -163,7 +166,8 @@ class HighlowService(
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
                 newPrice = soldNewPrice,
-                lossTribute = tribute
+                lossTribute = tribute,
+                jackpotPool = jackpotService.getPool(guildId)
             )
         }
     }

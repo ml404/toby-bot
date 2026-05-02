@@ -80,7 +80,8 @@ class SlotsController(
                     win = true,
                     jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
-                    newPrice = outcome.newPrice
+                    newPrice = outcome.newPrice,
+                    jackpotPool = outcome.jackpotPool
                 )
             )
 
@@ -95,7 +96,8 @@ class SlotsController(
                     win = false,
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L }
+                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    jackpotPool = outcome.jackpotPool
                 )
             )
 
@@ -135,7 +137,8 @@ data class SpinResponse(
     val jackpotPayout: Long? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
-    val lossTribute: Long? = null
+    val lossTribute: Long? = null,
+    val jackpotPool: Long? = null
 ) : CasinoResponseLike
 
 data class PayoutRow(val symbols: String, val multiplier: String)

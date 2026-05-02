@@ -38,7 +38,8 @@ class CoinflipService(
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val jackpotPool: Long = 0L
         ) : FlipOutcome
 
         data class Lose(
@@ -48,7 +49,8 @@ class CoinflipService(
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
-            val lossTribute: Long = 0L
+            val lossTribute: Long = 0L,
+            val jackpotPool: Long = 0L
         ) : FlipOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : FlipOutcome
@@ -108,7 +110,8 @@ class CoinflipService(
                 newBalance = r.newBalance + jackpot,
                 jackpotPayout = jackpot,
                 soldTobyCoins = soldCoins,
-                newPrice = newPrice
+                newPrice = newPrice,
+                jackpotPool = jackpotService.getPool(guildId)
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -119,7 +122,8 @@ class CoinflipService(
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
                 newPrice = newPrice,
-                lossTribute = tribute
+                lossTribute = tribute,
+                jackpotPool = jackpotService.getPool(guildId)
             )
         }
     }

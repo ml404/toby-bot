@@ -144,7 +144,8 @@ class TipController(
                         sentTodayAfter = outcome.sentTodayAfter,
                         dailyCap = outcome.dailyCap,
                         amount = outcome.amount,
-                        note = outcome.note
+                        note = outcome.note,
+                        jackpotPool = outcome.jackpotPool
                     )
                 )
             }
@@ -191,5 +192,6 @@ data class TipResponse(
     val senderNewBalance: Long? = null,
     val recipientNewBalance: Long? = null,
     val sentTodayAfter: Long? = null,
-    val dailyCap: Long? = null
+    val dailyCap: Long? = null,
+    val jackpotPool: Long? = null
 )

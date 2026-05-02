@@ -211,7 +211,8 @@ class DuelController(
                     pot = outcome.pot,
                     winnerNewBalance = outcome.winnerNewBalance,
                     loserNewBalance = outcome.loserNewBalance,
-                    lossTribute = outcome.lossTribute
+                    lossTribute = outcome.lossTribute,
+                    jackpotPool = outcome.jackpotPool
                 )
             )
             is AcceptOutcome.InitiatorInsufficient -> ResponseEntity.badRequest().body(
@@ -312,5 +313,6 @@ data class DuelActionResponse(
     val pot: Long? = null,
     val winnerNewBalance: Long? = null,
     val loserNewBalance: Long? = null,
-    val lossTribute: Long? = null
+    val lossTribute: Long? = null,
+    val jackpotPool: Long? = null
 )

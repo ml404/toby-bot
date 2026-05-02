@@ -28,6 +28,7 @@ class TipService @Autowired constructor(
     private val userService: UserService,
     private val tipDailyService: TipDailyService,
     private val tipLogPersistence: TipLogPersistence,
+    private val jackpotService: JackpotService,
 ) {
     sealed interface TipOutcome {
         data class Ok(
@@ -38,7 +39,8 @@ class TipService @Autowired constructor(
             val senderNewBalance: Long,
             val recipientNewBalance: Long,
             val sentTodayAfter: Long,
-            val dailyCap: Long
+            val dailyCap: Long,
+            val jackpotPool: Long = 0L
         ) : TipOutcome
 
         data class InvalidAmount(val min: Long, val max: Long) : TipOutcome
@@ -120,7 +122,8 @@ class TipService @Autowired constructor(
             senderNewBalance = senderBalance - amount,
             recipientNewBalance = recipientBalance + amount,
             sentTodayAfter = newDailyTotal,
-            dailyCap = dailyCap
+            dailyCap = dailyCap,
+            jackpotPool = jackpotService.getPool(guildId)
         )
     }
 
