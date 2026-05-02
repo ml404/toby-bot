@@ -87,10 +87,82 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS -> setPokerInt(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
                     label = "shot-clock seconds", range = 0..600)
+                ConfigDto.Configurations.BLACKJACK_RAKE_PCT -> setBlackjackInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_RAKE_PCT, label = "rake percent", range = 0..20)
+                ConfigDto.Configurations.BLACKJACK_MIN_ANTE -> setBlackjackLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_MIN_ANTE, label = "minimum ante", min = 1L)
+                ConfigDto.Configurations.BLACKJACK_MAX_ANTE -> setBlackjackLong(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_MAX_ANTE, label = "maximum ante", min = 1L)
+                ConfigDto.Configurations.BLACKJACK_MAX_SEATS -> setBlackjackInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_MAX_SEATS, label = "max seats", range = 2..7)
+                ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS -> setBlackjackInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS,
+                    label = "shot-clock seconds", range = 0..600)
+                ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17 -> setBlackjackBool(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM -> setBlackjackInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM,
+                    label = "blackjack payout numerator", range = 1..10)
+                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN -> setBlackjackInt(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN,
+                    label = "blackjack payout denominator", range = 1..10)
                 ConfigDto.Configurations.UBI_DAILY_AMOUNT -> setUbiDailyAmount(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.DAILY_CREDIT_CAP -> setDailyCreditCap(event, optionMapping, deleteDelay)
             }
         }
+    }
+
+    private fun setBlackjackInt(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        label: String,
+        range: IntRange
+    ) {
+        val value = optionMapping.asInt
+        if (value !in range) {
+            event.hook.sendMessage("Blackjack $label must be between ${range.first} and ${range.last}.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        event.hook.sendMessage("Blackjack $label set to $value for new tables.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setBlackjackLong(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        label: String,
+        min: Long
+    ) {
+        val value = optionMapping.asLong
+        if (value < min) {
+            event.hook.sendMessage("Blackjack $label must be at least $min.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        event.hook.sendMessage("Blackjack $label set to $value credits for new tables.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setBlackjackBool(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val value = optionMapping.asBoolean
+        val configValue = ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17.configValue
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(configValue, value.toString(), guildId)
+        val rule = if (value) "hit on soft 17 (H17)" else "stand on all 17 (S17)"
+        event.hook.sendMessage("Blackjack dealer will now $rule.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun setLeaderboardChannel(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -466,6 +538,54 @@ class SetConfigCommand @Autowired constructor(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS.name.lowercase(Locale.getDefault()),
                 "Per-actor decision deadline in seconds (0 disables). Default 30.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_RAKE_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-20) of every settled blackjack pot routed into the per-guild jackpot pool. Default 5.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_MIN_ANTE.name.lowercase(Locale.getDefault()),
+                "Per-guild minimum blackjack ante (also the solo stake floor). Default 10.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_MAX_ANTE.name.lowercase(Locale.getDefault()),
+                "Per-guild maximum blackjack ante (also the solo stake ceiling). Default 500.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_MAX_SEATS.name.lowercase(Locale.getDefault()),
+                "Maximum players per blackjack multi table (2-7). Default 5.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS.name.lowercase(Locale.getDefault()),
+                "Per-actor blackjack decision deadline in seconds (0 disables). Default 30.",
+                false
+            ),
+            OptionData(
+                OptionType.BOOLEAN,
+                ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17.name.lowercase(Locale.getDefault()),
+                "True = dealer hits soft 17 (H17). False = stands on all 17 (S17). Default false.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM.name.lowercase(Locale.getDefault()),
+                "Natural blackjack payout numerator. Pair with denominator (e.g. 3 with 2 for 3:2). Default 3.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN.name.lowercase(Locale.getDefault()),
+                "Natural blackjack payout denominator. Pair with numerator (e.g. 5 with 6 for 6:5). Default 2.",
                 false
             ),
             OptionData(
