@@ -17,12 +17,24 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional
 class JackpotService(
-    private val persistence: TobyCoinJackpotPersistence
+    private val persistence: TobyCoinJackpotPersistence,
+    private val configService: ConfigService,
 ) {
 
     /** Current pool size; 0 if no row yet for this guild. */
     fun getPool(guildId: Long): Long =
         persistence.getByGuild(guildId)?.pool ?: 0L
+
+    /**
+     * Live win probability for [guildId] expressed as a percentage
+     * (so 1.0 means "1% chance per casino-game win"). Reads the
+     * admin-set `JACKPOT_WIN_PCT` config and falls back to the
+     * [JackpotHelper.DEFAULT_WIN_PROBABILITY] default. Used by the
+     * casino-page banner so it shows the actual configured chance
+     * instead of a hardcoded "1%".
+     */
+    fun winProbabilityPct(guildId: Long): Double =
+        JackpotHelper.winProbability(configService, guildId) * 100.0
 
     /**
      * Add [amount] credits to the pool. Caller must already be inside a

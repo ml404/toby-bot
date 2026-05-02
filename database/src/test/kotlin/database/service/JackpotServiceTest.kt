@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.TobyCoinJackpotDto
 import database.persistence.TobyCoinJackpotPersistence
 import io.mockk.Runs
@@ -17,12 +18,22 @@ class JackpotServiceTest {
     private val guildId = 42L
 
     private lateinit var persistence: TobyCoinJackpotPersistence
+    private lateinit var configService: ConfigService
     private lateinit var service: JackpotService
 
     @BeforeEach
     fun setup() {
         persistence = mockk(relaxed = true)
-        service = JackpotService(persistence)
+        configService = mockk(relaxed = true)
+        // Default: no `JACKPOT_WIN_PCT` row in the DB → fall through to
+        // [JackpotHelper.DEFAULT_WIN_PROBABILITY] (0.01 → 1.0%).
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns null
+        service = JackpotService(persistence, configService)
     }
 
     @Test
@@ -99,5 +110,75 @@ class JackpotServiceTest {
 
         assertEquals(0L, service.awardJackpot(guildId))
         verify(exactly = 0) { persistence.upsert(any()) }
+    }
+
+    @Test
+    fun `winProbabilityPct returns the default 1 percent when no JACKPOT_WIN_PCT row exists`() {
+        // setup() already stubs configService to return null for this key.
+        // [JackpotHelper.DEFAULT_WIN_PROBABILITY] = 0.01 → 1.0%.
+        assertEquals(1.0, service.winProbabilityPct(guildId), 1e-9)
+    }
+
+    @Test
+    fun `winProbabilityPct echoes the admin-set percent value`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            value = "5",
+            guildId = guildId.toString()
+        )
+        assertEquals(5.0, service.winProbabilityPct(guildId), 1e-9)
+    }
+
+    @Test
+    fun `winProbabilityPct accepts decimal percents like 1·5`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            value = "1.5",
+            guildId = guildId.toString()
+        )
+        assertEquals(1.5, service.winProbabilityPct(guildId), 1e-9)
+    }
+
+    @Test
+    fun `winProbabilityPct clamps absurd admin values to MAX_WIN_PROBABILITY`() {
+        // Validator on the moderation page should already reject anything
+        // above 50, but defend against a stale row from before the cap was
+        // tightened — JackpotHelper clamps at MAX_WIN_PROBABILITY = 0.5.
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            value = "999",
+            guildId = guildId.toString()
+        )
+        assertEquals(50.0, service.winProbabilityPct(guildId), 1e-9)
+    }
+
+    @Test
+    fun `winProbabilityPct falls back to the default when the row is unparseable`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            value = "wibble",
+            guildId = guildId.toString()
+        )
+        assertEquals(1.0, service.winProbabilityPct(guildId), 1e-9)
     }
 }
