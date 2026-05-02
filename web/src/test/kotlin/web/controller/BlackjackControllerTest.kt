@@ -63,12 +63,13 @@ class BlackjackControllerTest {
     }
 
     @Test
-    fun `lobby page wires jackpotPool model attribute so the banner renders`() {
+    fun `lobby page wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
         val guild = mockk<Guild>(relaxed = true).also {
             every { it.name } returns "Test Guild"
         }
         every { jda.getGuildById(guildId) } returns guild
         every { jackpotService.getPool(guildId) } returns 1234L
+        every { jackpotService.winProbabilityPct(guildId) } returns 2.5
         every { blackjackWebService.listMultiTables(guildId) } returns emptyList()
 
         val model = ConcurrentModel()
@@ -76,27 +77,31 @@ class BlackjackControllerTest {
 
         assertEquals("blackjack-lobby", view)
         assertEquals(1234L, model.getAttribute("jackpotPool"))
+        assertEquals(2.5, model.getAttribute("jackpotWinPct"))
     }
 
     @Test
-    fun `soloPage wires jackpotPool model attribute so the banner renders`() {
+    fun `soloPage wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
         every { jackpotService.getPool(guildId) } returns 5555L
+        every { jackpotService.winProbabilityPct(guildId) } returns 1.0
 
         val model = ConcurrentModel()
         val view = controller.soloPage(guildId, user, model, RedirectAttributesModelMap())
 
         assertEquals("blackjack-solo", view)
         assertEquals(5555L, model.getAttribute("jackpotPool"))
+        assertEquals(1.0, model.getAttribute("jackpotWinPct"))
     }
 
     @Test
-    fun `tablePage wires jackpotPool model attribute so the banner renders`() {
+    fun `tablePage wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
         // Snapshot must match the requested guild and be a MULTI table or
         // the controller short-circuits to redirect — match the production
         // shape so we exercise the model-attribute branch.
         val snapshot = sampleSnapshot()
         every { blackjackWebService.snapshot(tableId, discordId) } returns snapshot
         every { jackpotService.getPool(guildId) } returns 9876L
+        every { jackpotService.winProbabilityPct(guildId) } returns 5.0
 
         val model = ConcurrentModel()
         val view = controller.tablePage(
@@ -105,6 +110,7 @@ class BlackjackControllerTest {
 
         assertEquals("blackjack-table", view)
         assertEquals(9876L, model.getAttribute("jackpotPool"))
+        assertEquals(5.0, model.getAttribute("jackpotWinPct"))
     }
 
     private fun sampleSnapshot(): BlackjackWebService.TableStateView =

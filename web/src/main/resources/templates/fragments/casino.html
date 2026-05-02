@@ -10,7 +10,11 @@
 <div th:fragment="jackpotBanner" class="casino-jackpot-banner">
     🎰 Jackpot pool:
     <strong th:text="${jackpotPool}">0</strong> credits
-    <span class="muted">— win any minigame for a 1% chance to bank the pool.</span>
+    <span class="muted">
+        — win any minigame for a
+        <span th:text="${#numbers.formatDecimal(jackpotWinPct, 1, 2)}">1.00</span>%
+        chance to bank the pool.
+    </span>
 </div>
 </body>
 </html>
