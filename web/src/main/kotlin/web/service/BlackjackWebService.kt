@@ -1,8 +1,10 @@
 package web.service
 
+import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.blackjack.bestTotal
+import database.blackjack.canSplit
 import database.blackjack.isSoft
 import database.card.Card
 import org.springframework.stereotype.Service
@@ -36,9 +38,33 @@ class BlackjackWebService(
         val doubled: Boolean,
         val status: String,
         val pendingLeave: Boolean,
+        /**
+         * The seat's currently-active hand cards. For non-split seats
+         * this is just the dealt 2-card (then hit-into-N-card) hand.
+         * For split seats it's whichever sub-hand is being played right
+         * now; the full split breakdown lives on [hands] and
+         * [activeHandIndex].
+         */
         val hand: List<String>,
         val total: Int,
         val soft: Boolean,
+        /**
+         * One entry per split branch (always ≥1). Same shape as the
+         * legacy single-hand view extended per slot, so the JS
+         * renderer can iterate this directly when [hands].size > 1.
+         */
+        val hands: List<HandSlotView> = emptyList(),
+        val activeHandIndex: Int = 0,
+    )
+
+    data class HandSlotView(
+        val cards: List<String>,
+        val total: Int,
+        val soft: Boolean,
+        val stake: Long,
+        val doubled: Boolean,
+        val status: String,
+        val fromSplit: Boolean,
     )
 
     data class TableStateView(
@@ -58,6 +84,8 @@ class BlackjackWebService(
         val mySeatIndex: Int?,
         val isMyTurn: Boolean,
         val canDouble: Boolean,
+        /** True iff the active hand is a 2-card pair the viewer can SPLIT. */
+        val canSplit: Boolean,
         val shotClockSeconds: Int,
         val currentActorDeadlineEpochMillis: Long?,
         val lastResult: HandResultView?,
@@ -71,6 +99,20 @@ class BlackjackWebService(
         val payouts: Map<String, Long>,
         val pot: Long,
         val rake: Long,
+        /** One entry per (seat, split-branch) pair. Empty for v1 callers. */
+        val perHandResults: List<PerHandResultView> = emptyList(),
+    )
+
+    data class PerHandResultView(
+        val discordId: Long,
+        val handIndex: Int,
+        val cards: List<String>,
+        val total: Int,
+        val stake: Long,
+        val doubled: Boolean,
+        val fromSplit: Boolean,
+        val result: String,
+        val payout: Long,
     )
 
     fun listMultiTables(guildId: Long): List<TableSummaryView> =
@@ -102,6 +144,10 @@ class BlackjackWebService(
                 mySeat?.status == BlackjackTable.SeatStatus.ACTIVE
             val canDouble = isMyTurn && mySeat != null &&
                 mySeat.hand.size == 2 && !mySeat.doubled
+            val canSplitNow = isMyTurn && mySeat != null &&
+                !mySeat.doubled &&
+                canSplit(mySeat.hand) &&
+                mySeat.hands.size < Blackjack.MAX_SPLIT_HANDS
 
             // Mask dealer hole card while players are still acting.
             val dealerVisible = if (table.phase == BlackjackTable.Phase.PLAYER_TURNS && table.dealer.size > 1) {
@@ -136,6 +182,18 @@ class BlackjackWebService(
                         hand = seat.hand.map(Card::toString),
                         total = bestTotal(seat.hand),
                         soft = isSoft(seat.hand),
+                        hands = seat.hands.map { slot ->
+                            HandSlotView(
+                                cards = slot.cards.map(Card::toString),
+                                total = bestTotal(slot.cards),
+                                soft = isSoft(slot.cards),
+                                stake = slot.stake,
+                                doubled = slot.doubled,
+                                status = slot.status.name,
+                                fromSplit = slot.fromSplit,
+                            )
+                        },
+                        activeHandIndex = seat.activeHandIndex,
                     )
                 },
                 dealer = dealerVisible,
@@ -143,6 +201,7 @@ class BlackjackWebService(
                 mySeatIndex = mySeatIndex,
                 isMyTurn = isMyTurn,
                 canDouble = canDouble,
+                canSplit = canSplitNow,
                 shotClockSeconds = table.shotClockSeconds,
                 currentActorDeadlineEpochMillis = table.currentActorDeadline?.toEpochMilli(),
                 lastResult = table.lastResult?.let { result ->
@@ -155,6 +214,19 @@ class BlackjackWebService(
                         payouts = result.payouts.mapKeys { it.key.toString() },
                         pot = result.pot,
                         rake = result.rake,
+                        perHandResults = result.perHandResults.map { perHand ->
+                            PerHandResultView(
+                                discordId = perHand.discordId,
+                                handIndex = perHand.handIndex,
+                                cards = perHand.cards.map(Card::toString),
+                                total = perHand.total,
+                                stake = perHand.stake,
+                                doubled = perHand.doubled,
+                                fromSplit = perHand.fromSplit,
+                                result = perHand.result.name,
+                                payout = perHand.payout,
+                            )
+                        },
                     )
                 }
             )

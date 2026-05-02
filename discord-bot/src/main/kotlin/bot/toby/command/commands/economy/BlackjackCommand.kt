@@ -5,6 +5,7 @@ import core.command.CommandContext
 import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
+import database.blackjack.canSplit
 import database.dto.UserDto
 import database.service.BlackjackService
 import database.service.BlackjackService.MultiCreateOutcome
@@ -133,8 +134,10 @@ class BlackjackCommand @Autowired constructor(
             is SoloDealOutcome.Dealt -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Hand vanished.", deleteDelay)
+                val active = table.seats.firstOrNull()?.activeHand
+                val allowSplit = active != null && canSplit(active.cards)
                 event.hook.sendMessageEmbeds(BlackjackEmbeds.soloDealEmbed(table))
-                    .addComponents(soloActionRow(outcome.tableId, allowDouble = true))
+                    .addComponents(soloActionRow(outcome.tableId, allowDouble = true, allowSplit = allowSplit))
                     .queue()
             }
             is SoloDealOutcome.Resolved -> {
@@ -355,7 +358,7 @@ class BlackjackCommand @Autowired constructor(
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
-    private fun soloActionRow(tableId: Long, allowDouble: Boolean): ActionRow {
+    private fun soloActionRow(tableId: Long, allowDouble: Boolean, allowSplit: Boolean): ActionRow {
         val buttons = mutableListOf(
             Button.primary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.HIT, tableId), "Hit"),
             Button.success(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.STAND, tableId), "Stand"),
@@ -365,6 +368,11 @@ class BlackjackCommand @Autowired constructor(
                 Button.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.DOUBLE, tableId), "Double Down")
             )
         }
+        if (allowSplit) {
+            buttons.add(
+                Button.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.SPLIT, tableId), "Split")
+            )
+        }
         return ActionRow.of(buttons)
     }
 
@@ -372,6 +380,7 @@ class BlackjackCommand @Autowired constructor(
         Button.primary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.HIT, tableId), "Hit"),
         Button.success(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.STAND, tableId), "Stand"),
         Button.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.DOUBLE, tableId), "Double Down"),
+        Button.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.SPLIT, tableId), "Split"),
         Button.secondary(BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.PEEK, tableId), "Peek"),
     )
 

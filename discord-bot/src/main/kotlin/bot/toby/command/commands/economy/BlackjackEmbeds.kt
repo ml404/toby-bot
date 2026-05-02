@@ -72,18 +72,40 @@ internal object BlackjackEmbeds {
 
     fun soloDealEmbed(table: BlackjackTable): MessageEmbed {
         val seat = table.seats.firstOrNull()
-        val playerHand = seat?.hand.orEmpty()
-        val title = "$TITLE • ${seat?.stake ?: 0L} credits at risk"
+        val totalAtRisk = seat?.totalStake ?: 0L
+        val title = "$TITLE • $totalAtRisk credits at risk"
         val description = buildString {
-            append("**You:** ").append(handLine(playerHand)).append('\n')
-            append("**Dealer:** ").append(dealerUpLine(table.dealer))
+            append("**Dealer:** ").append(dealerUpLine(table.dealer)).append('\n')
+            if (seat == null || seat.hands.isEmpty()) {
+                append("**You:** —")
+            } else if (seat.hands.size == 1) {
+                append("**You:** ").append(handLine(seat.hands[0].cards))
+            } else {
+                append("**You:**\n")
+                for ((idx, slot) in seat.hands.withIndex()) {
+                    val arrow = if (idx == seat.activeHandIndex) "▶ " else "  "
+                    append("  ").append(arrow).append("Hand ${idx + 1}: ")
+                        .append(handLine(slot.cards))
+                        .append(handStatusBadge(slot.status))
+                        .append('\n')
+                }
+            }
         }
         return EmbedBuilder()
             .setTitle(title)
             .setDescription(description)
             .setColor(TABLE_COLOR)
-            .setFooter("Hit, Stand, or Double Down. Reaching 21 auto-stands.")
+            .setFooter("Hit, Stand, Double, or Split (matching pair). Reaching 21 auto-stands.")
             .build()
+    }
+
+    /** Inline status decoration appended to a hand's cards in the embed. */
+    private fun handStatusBadge(status: BlackjackTable.SeatStatus): String = when (status) {
+        BlackjackTable.SeatStatus.BLACKJACK -> " — **Blackjack!**"
+        BlackjackTable.SeatStatus.BUSTED -> " — **Bust**"
+        BlackjackTable.SeatStatus.STANDING -> " — Stand"
+        BlackjackTable.SeatStatus.DOUBLED -> " — Doubled"
+        BlackjackTable.SeatStatus.ACTIVE -> ""
     }
 
     fun soloResolvedEmbed(
@@ -93,37 +115,86 @@ internal object BlackjackEmbeds {
         jackpotPayout: Long,
         lossTribute: Long
     ): MessageEmbed {
-        val seat = table.seats.firstOrNull()
-        val playerHand = seat?.hand.orEmpty()
-        val playerResult = result.seatResults.values.firstOrNull() ?: Blackjack.Result.PUSH
-        val payout = result.payouts.values.firstOrNull() ?: 0L
-        val stake = seat?.stake ?: result.pot
-        val net = payout - stake
-        val verdict = when (playerResult) {
-            Blackjack.Result.PLAYER_BLACKJACK -> "Blackjack! +$net credits (3:2 payout)."
-            Blackjack.Result.PLAYER_WIN -> "You win! +$net credits."
-            Blackjack.Result.PUSH -> "Push — your $stake credits come back."
-            Blackjack.Result.DEALER_WIN -> "Dealer wins. -$stake credits."
-            Blackjack.Result.PLAYER_BUST -> "Bust. -$stake credits."
-        }
+        val perHand = result.perHandResults
+        val totalPayout = result.payouts.values.sum()
+        val totalStake = result.pot
+        val net = totalPayout - totalStake
         val description = buildString {
-            append("**You:** ").append(handLine(playerHand)).append('\n')
             append("**Dealer:** ").append(handLine(result.dealer)).append('\n')
-            append('\n').append(verdict)
+            if (perHand.size <= 1) {
+                // Classic single-hand flow.
+                val seat = table.seats.firstOrNull()
+                val playerHand = perHand.firstOrNull()?.cards ?: seat?.hand.orEmpty()
+                append("**You:** ").append(handLine(playerHand)).append('\n')
+            } else {
+                append("**You:**\n")
+                for (h in perHand) {
+                    append("  Hand ${h.handIndex + 1}: ").append(handLine(h.cards))
+                        .append(" — ").append(verdictLabel(h.result, h.payout, h.stake))
+                        .append('\n')
+                }
+            }
+            append('\n').append(soloOverallVerdict(perHand, totalStake, net))
             if (jackpotPayout > 0L) append("\n🎰 Jackpot hit! +$jackpotPayout credits.")
             if (lossTribute > 0L) append("\n💰 +$lossTribute credits to the jackpot pool.")
         }
-        val color = when (playerResult) {
-            Blackjack.Result.PLAYER_BLACKJACK, Blackjack.Result.PLAYER_WIN -> WagerCommandColors.WIN
-            Blackjack.Result.PUSH -> NEUTRAL_COLOR
-            Blackjack.Result.DEALER_WIN, Blackjack.Result.PLAYER_BUST -> WagerCommandColors.LOSE
-        }
+        val color = soloOverallColor(perHand, net)
         return EmbedBuilder()
             .setTitle(TITLE)
             .setDescription(description)
             .addField("New balance", "$newBalance credits", true)
             .setColor(color)
             .build()
+    }
+
+    private fun verdictLabel(result: Blackjack.Result, payout: Long, stake: Long): String = when (result) {
+        Blackjack.Result.PLAYER_BLACKJACK -> "🎉 Blackjack +${payout - stake}"
+        Blackjack.Result.PLAYER_WIN -> "✅ Win +${payout - stake}"
+        Blackjack.Result.PUSH -> "🤝 Push (refunded $stake)"
+        Blackjack.Result.DEALER_WIN -> "❌ Lose -$stake"
+        Blackjack.Result.PLAYER_BUST -> "💥 Bust -$stake"
+    }
+
+    private fun soloOverallVerdict(
+        perHand: List<BlackjackTable.PerHandResult>,
+        totalStake: Long,
+        net: Long,
+    ): String {
+        if (perHand.size <= 1) {
+            val r = perHand.firstOrNull()?.result ?: Blackjack.Result.PUSH
+            val stake = perHand.firstOrNull()?.stake ?: totalStake
+            return when (r) {
+                Blackjack.Result.PLAYER_BLACKJACK -> "Blackjack! +$net credits (3:2 payout)."
+                Blackjack.Result.PLAYER_WIN -> "You win! +$net credits."
+                Blackjack.Result.PUSH -> "Push — your $stake credits come back."
+                Blackjack.Result.DEALER_WIN -> "Dealer wins. -$stake credits."
+                Blackjack.Result.PLAYER_BUST -> "Bust. -$stake credits."
+            }
+        }
+        return when {
+            net > 0 -> "Across ${perHand.size} hands: net **+$net credits**."
+            net < 0 -> "Across ${perHand.size} hands: net **$net credits**."
+            else -> "Across ${perHand.size} hands: broke even."
+        }
+    }
+
+    private fun soloOverallColor(
+        perHand: List<BlackjackTable.PerHandResult>,
+        net: Long,
+    ): Color {
+        if (perHand.size <= 1) {
+            val r = perHand.firstOrNull()?.result ?: Blackjack.Result.PUSH
+            return when (r) {
+                Blackjack.Result.PLAYER_BLACKJACK, Blackjack.Result.PLAYER_WIN -> WagerCommandColors.WIN
+                Blackjack.Result.PUSH -> NEUTRAL_COLOR
+                Blackjack.Result.DEALER_WIN, Blackjack.Result.PLAYER_BUST -> WagerCommandColors.LOSE
+            }
+        }
+        return when {
+            net > 0 -> WagerCommandColors.WIN
+            net < 0 -> WagerCommandColors.LOSE
+            else -> NEUTRAL_COLOR
+        }
     }
 
     // --- MULTI ---
@@ -152,28 +223,39 @@ internal object BlackjackEmbeds {
         val description = buildString {
             append("**Dealer:** ").append(dealerUpLine(table.dealer)).append("\n\n")
             for ((i, seat) in table.seats.withIndex()) {
-                val arrow = if (i == table.actorIndex && table.phase == BlackjackTable.Phase.PLAYER_TURNS) "▶ " else "  "
-                val statusBadge = when (seat.status) {
-                    BlackjackTable.SeatStatus.BLACKJACK -> " — **Blackjack!**"
-                    BlackjackTable.SeatStatus.BUSTED -> " — **Bust**"
-                    BlackjackTable.SeatStatus.STANDING -> " — Stand"
-                    BlackjackTable.SeatStatus.DOUBLED -> " — Doubled"
-                    BlackjackTable.SeatStatus.ACTIVE -> ""
+                val isActorSeat = i == table.actorIndex && table.phase == BlackjackTable.Phase.PLAYER_TURNS
+                val seatArrow = if (isActorSeat) "▶ " else "  "
+                if (seat.hands.size <= 1) {
+                    val slot = seat.hands.firstOrNull()
+                    val cards = slot?.cards ?: emptyList()
+                    val status = slot?.status ?: BlackjackTable.SeatStatus.ACTIVE
+                    append(seatArrow).append("<@${seat.discordId}>: ")
+                        .append(handLine(cards))
+                        .append(handStatusBadge(status))
+                        .append('\n')
+                } else {
+                    append(seatArrow).append("<@${seat.discordId}> (${seat.hands.size} hands):\n")
+                    for ((handIdx, slot) in seat.hands.withIndex()) {
+                        val handArrow = if (isActorSeat && handIdx == seat.activeHandIndex) "▶ " else "  "
+                        append("  ").append(handArrow).append("Hand ${handIdx + 1}: ")
+                            .append(handLine(slot.cards))
+                            .append(handStatusBadge(slot.status))
+                            .append('\n')
+                    }
                 }
-                append(arrow).append("<@${seat.discordId}>: ")
-                    .append(handLine(seat.hand))
-                    .append(statusBadge)
-                    .append('\n')
             }
             val actor = table.seats.getOrNull(table.actorIndex)
             if (table.phase == BlackjackTable.Phase.PLAYER_TURNS && actor != null) {
                 append("\nTo act: <@${actor.discordId}>")
+                if (actor.hands.size > 1) {
+                    append(" (Hand ${actor.activeHandIndex + 1} of ${actor.hands.size})")
+                }
             }
         }
         return EmbedBuilder()
             .setTitle("$TITLE • Table #${table.id} • Hand #${table.handNumber}")
             .setDescription(description)
-            .setFooter("Click Hit, Stand, or Double on your turn. Peek to see your cards.")
+            .setFooter("Hit / Stand / Double / Split (matching pair) on your turn. Peek shows your cards.")
             .setColor(TABLE_COLOR)
             .build()
     }
@@ -181,16 +263,34 @@ internal object BlackjackEmbeds {
     fun multiResolvedEmbed(table: BlackjackTable, result: BlackjackTable.HandResult): MessageEmbed {
         val description = buildString {
             append("**Dealer:** ").append(handLine(result.dealer)).append("\n\n")
-            for ((id, r) in result.seatResults) {
-                val payout = result.payouts[id] ?: 0L
-                val verdict = when (r) {
-                    Blackjack.Result.PLAYER_BLACKJACK -> "🎉 Blackjack — +$payout"
-                    Blackjack.Result.PLAYER_WIN -> "✅ Win — +$payout"
-                    Blackjack.Result.PUSH -> "🤝 Push — refunded $payout"
-                    Blackjack.Result.DEALER_WIN -> "❌ Lose"
-                    Blackjack.Result.PLAYER_BUST -> "💥 Bust"
+            if (result.perHandResults.isNotEmpty()) {
+                // Group per-hand outcomes by discordId for readable output.
+                val grouped = result.perHandResults.groupBy { it.discordId }
+                for ((id, hands) in grouped) {
+                    if (hands.size == 1) {
+                        val h = hands[0]
+                        append("<@$id>: ").append(verdictLabel(h.result, h.payout, h.stake)).append('\n')
+                    } else {
+                        append("<@$id>:\n")
+                        for (h in hands) {
+                            append("  Hand ${h.handIndex + 1}: ")
+                                .append(verdictLabel(h.result, h.payout, h.stake))
+                                .append('\n')
+                        }
+                    }
                 }
-                append("<@$id>: ").append(verdict).append('\n')
+            } else {
+                for ((id, r) in result.seatResults) {
+                    val payout = result.payouts[id] ?: 0L
+                    val verdict = when (r) {
+                        Blackjack.Result.PLAYER_BLACKJACK -> "🎉 Blackjack — +$payout"
+                        Blackjack.Result.PLAYER_WIN -> "✅ Win — +$payout"
+                        Blackjack.Result.PUSH -> "🤝 Push — refunded $payout"
+                        Blackjack.Result.DEALER_WIN -> "❌ Lose"
+                        Blackjack.Result.PLAYER_BUST -> "💥 Bust"
+                    }
+                    append("<@$id>: ").append(verdict).append('\n')
+                }
             }
             append("\nPot **${result.pot}** • rake **${result.rake}** → jackpot")
         }

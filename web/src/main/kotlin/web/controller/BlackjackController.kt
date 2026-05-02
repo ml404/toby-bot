@@ -250,6 +250,8 @@ class BlackjackController(
             SoloActionOutcome.IllegalAction -> errors.badRequest("You can't do that right now.")
             is SoloActionOutcome.InsufficientCreditsForDouble ->
                 errors.insufficientCredits(outcome.needed, outcome.have)
+            is SoloActionOutcome.InsufficientCreditsForSplit ->
+                errors.insufficientCredits(outcome.needed, outcome.have)
         }
     }
 
@@ -404,6 +406,8 @@ class BlackjackController(
                 .body(BlackjackActionResponse(false, error = "No such table."))
             is MultiActionOutcome.InsufficientCreditsForDouble ->
                 errors.insufficientCredits(outcome.needed, outcome.have)
+            is MultiActionOutcome.InsufficientCreditsForSplit ->
+                errors.insufficientCredits(outcome.needed, outcome.have)
         }
     }
 
@@ -418,6 +422,7 @@ class BlackjackController(
         "hit" -> Blackjack.Action.HIT
         "stand" -> Blackjack.Action.STAND
         "double" -> Blackjack.Action.DOUBLE
+        "split" -> Blackjack.Action.SPLIT
         else -> null
     }
 
