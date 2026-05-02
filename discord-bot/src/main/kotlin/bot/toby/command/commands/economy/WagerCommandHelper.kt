@@ -61,6 +61,15 @@ internal sealed interface WagerCommandFailure {
 internal object WagerCommandEmbeds {
 
     /**
+     * `"1.95×"`-style label used wherever a per-game payout multiplier
+     * needs to render in button copy or embed prose. Each minigame's
+     * embed file used to carry its own copy; centralised here so the
+     * format stays consistent across `/highlow`, `/baccarat`, and any
+     * future minigame that buttons-up its payout previews.
+     */
+    fun multiplierLabel(multiplier: Double): String = "%.2f×".format(multiplier)
+
+    /**
      * Build an error embed with [title] and [message]. The title is the
      * game-specific prefix (e.g. "🎰 Slots") so the player can tell at a
      * glance which command produced the error.

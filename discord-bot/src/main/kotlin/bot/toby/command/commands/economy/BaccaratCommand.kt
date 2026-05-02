@@ -59,7 +59,7 @@ class BaccaratCommand @Autowired constructor(
         val sideButtons = Baccarat.Side.entries.map { side ->
             Button.primary(
                 BaccaratEmbeds.sideButtonId(side, stake, userId),
-                "${side.display} (${BaccaratEmbeds.multiplierLabel(baccaratService.previewMultiplier(side))})"
+                "${side.display} (${WagerCommandEmbeds.multiplierLabel(baccaratService.previewMultiplier(side))})"
             )
         }
 

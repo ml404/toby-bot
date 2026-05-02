@@ -25,9 +25,6 @@ internal object BaccaratEmbeds {
     private val PROMPT_COLOR = Color(0x2C, 0x3E, 0x50)
     private val NEUTRAL_COLOR = Color(0xA0, 0xA0, 0xB0)
 
-    /** "1.95×"-style label used on side-bet buttons and prompt copy. */
-    fun multiplierLabel(multiplier: Double): String = "%.2f×".format(multiplier)
-
     fun sideButtonId(side: Baccarat.Side, stake: Long, userId: Long): String =
         listOf(BUTTON_NAME, side.name, stake.toString(), userId.toString())
             .joinToString(BUTTON_DELIM)
@@ -71,9 +68,9 @@ internal object BaccaratEmbeds {
         .setTitle("$TITLE • $stake credits")
         .setDescription(
             "Pick a side. Both hands deal automatically.\n\n" +
-                "**Player** pays **${multiplierLabel(Baccarat.PLAYER_WIN_MULT)}**, " +
-                "**Banker** pays **${multiplierLabel(Baccarat.BANKER_WIN_MULT)}** (5% commission), " +
-                "**Tie** pays **${multiplierLabel(Baccarat.TIE_WIN_MULT)}**.\n" +
+                "**Player** pays **${WagerCommandEmbeds.multiplierLabel(Baccarat.PLAYER_WIN_MULT)}**, " +
+                "**Banker** pays **${WagerCommandEmbeds.multiplierLabel(Baccarat.BANKER_WIN_MULT)}** (5% commission), " +
+                "**Tie** pays **${WagerCommandEmbeds.multiplierLabel(Baccarat.TIE_WIN_MULT)}**.\n" +
                 "On a tied game, Player and Banker bets are refunded."
         )
         .setColor(PROMPT_COLOR)
@@ -144,7 +141,7 @@ internal object BaccaratEmbeds {
             Baccarat.Side.BANKER -> "Banker wins (5% commission)"
             Baccarat.Side.TIE -> "Tie!"
         }
-        return "$emoji $flavour — won **+${win.net} credits** at ${multiplierLabel(win.multiplier)}."
+        return "$emoji $flavour — won **+${win.net} credits** at ${WagerCommandEmbeds.multiplierLabel(win.multiplier)}."
     }
 
     private fun jackpotLine(jackpotPayout: Long): String =
