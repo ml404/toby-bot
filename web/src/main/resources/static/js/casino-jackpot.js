@@ -17,10 +17,11 @@
 
     /**
      * Refresh the per-guild jackpot pool banner (`fragments/casino.html`)
-     * from a `body.jackpotPool` field on any balance-mutating response —
-     * casino spins, duels, trades, tips. Noop when the field is absent
-     * or the banner isn't on the current page (so duel/trade/tip pages
-     * silently skip the DOM write).
+     * from a `body.jackpotPool` value. Called centrally by api.js after
+     * every casino POST, fed from the X-Jackpot-Pool response header — so
+     * games never have to remember to mirror the pool themselves. No-ops
+     * when the field is absent or the banner isn't on the current page (so
+     * duel/trade/tip pages silently skip the DOM write).
      */
     function updatePoolBanner(body) {
         if (!body || typeof body.jackpotPool !== 'number') return;
@@ -37,7 +38,6 @@
      *   element.innerHTML = renderWinHtml(resEl, body, 'slots-result-jackpot', winLine)
      */
     function renderWinHtml(resultEl, body, jackpotClassName, winLineHtml) {
-        updatePoolBanner(body);
         if (!isJackpotHit(body)) return winLineHtml;
         if (resultEl && jackpotClassName) resultEl.classList.add(jackpotClassName);
         return jackpotPrefixHtml(body.jackpotPayout) + winLineHtml;
@@ -49,7 +49,6 @@
      * (e.g. tiny stake floored to zero, or admin set tribute to 0 %).
      */
     function lossTributeSuffix(body) {
-        updatePoolBanner(body);
         if (!body || typeof body.lossTribute !== 'number' || body.lossTribute <= 0) return '';
         return ' &middot; <span class="casino-loss-tribute">+' +
             body.lossTribute + ' to jackpot</span>';

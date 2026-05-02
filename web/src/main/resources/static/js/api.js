@@ -25,6 +25,17 @@
             headers: headers,
             body: JSON.stringify(body)
         }).then(function (r) {
+            // Centralised jackpot-pool banner refresh: every casino response
+            // carries the post-action pool size in X-Jackpot-Pool. Pages
+            // without the banner (duel/trade/tip) silently no-op inside
+            // updatePoolBanner.
+            const poolHeader = r.headers.get('X-Jackpot-Pool');
+            if (poolHeader != null && window.TobyJackpot) {
+                const pool = Number(poolHeader);
+                if (!Number.isNaN(pool)) {
+                    window.TobyJackpot.updatePoolBanner({ jackpotPool: pool });
+                }
+            }
             return r.json().catch(function () {
                 return { ok: r.ok, error: r.ok ? null : 'Request failed.' };
             });
