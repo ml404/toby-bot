@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Poker table', '/css/poker.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Poker table', '/css/poker.css', '/css/casino-table.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -35,7 +35,9 @@
         </form>
     </section>
 
-    <section class="poker-table">
+    <section class="poker-table casino-felt">
+        <div id="poker-actor-pill" class="casino-actor-pill" hidden></div>
+
         <div class="poker-info">
             <div>Phase: <strong id="poker-phase">—</strong></div>
             <div>Hand #<strong id="poker-hand-number">0</strong></div>
@@ -43,7 +45,7 @@
             <div>To call: <strong id="poker-current-bet">0</strong></div>
         </div>
 
-        <div class="poker-board" id="poker-board"></div>
+        <div class="poker-board casino-cards" id="poker-board"></div>
 
         <div class="poker-seats" id="poker-seats"></div>
 
@@ -66,6 +68,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-render.js}"></script>
 <script th:src="@{/js/poker-pots.js}"></script>
 <script th:src="@{/js/poker-table.js}"></script>
 </body>

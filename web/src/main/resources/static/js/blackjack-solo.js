@@ -18,10 +18,18 @@
     var doubleBtn = document.getElementById("bj-action-double");
     var splitBtn = document.getElementById("bj-action-split");
     var resultEl = document.getElementById("bj-result");
+    var playerRowEl = document.getElementById("bj-player-row");
 
     var pollTimer = null;
 
     function renderCards(container, cards) {
+        // Delegate to the shared casino renderer so the deal animation only
+        // fires on freshly arrived cards (not every poll re-render). Falls
+        // back to the legacy text glyphs if the shared module didn't load.
+        if (window.CasinoRender) {
+            window.CasinoRender.renderCards(container, cards);
+            return;
+        }
         container.innerHTML = "";
         (cards || []).forEach(function (c) {
             var el = document.createElement("span");
@@ -71,12 +79,14 @@
             splitBtn.disabled = !state.canSplit;
             resultEl.textContent = "";
             resultEl.className = "bj-result muted";
+            if (playerRowEl) playerRowEl.classList.add("is-active");
         } else {
             hitBtn.disabled = true;
             standBtn.disabled = true;
             doubleBtn.disabled = true;
             splitBtn.disabled = true;
             splitBtn.hidden = true;
+            if (playerRowEl) playerRowEl.classList.remove("is-active");
         }
 
         if (state.lastResult && state.phase === "RESOLVED") {
@@ -195,11 +205,11 @@
         container.innerHTML = "";
         slots.forEach(function (slot, idx) {
             var div = document.createElement("div");
-            div.className = "bj-seat";
-            if (idx === activeIndex) div.classList.add("bj-seat-active");
-            if (slot.status === "BUSTED") div.classList.add("bj-seat-busted");
+            div.className = "bj-seat casino-seat";
+            if (idx === activeIndex) div.classList.add("bj-seat-active", "is-active");
+            if (slot.status === "BUSTED") div.classList.add("bj-seat-busted", "is-busted");
             var header = document.createElement("div");
-            header.className = "bj-seat-header";
+            header.className = "bj-seat-header casino-seat-header";
             var label = "Hand " + (idx + 1);
             var statusBits = [];
             if (slot.doubled) statusBits.push("Doubled");
@@ -208,12 +218,17 @@
                 case "BUSTED": statusBits.push("Bust"); break;
                 case "STANDING": statusBits.push("Stand"); break;
             }
-            header.innerHTML = "<span>" + label + " — stake " + slot.stake + "</span>" +
-                "<span class=\"bj-seat-status\">(" + slot.total + ")" +
-                (statusBits.length ? " " + statusBits.join(" · ") : "") + "</span>";
+            var nameEl = document.createElement("span");
+            nameEl.className = "casino-seat-name";
+            nameEl.textContent = label + " — stake " + slot.stake;
+            header.appendChild(nameEl);
+            var meta = document.createElement("span");
+            meta.className = "casino-seat-meta";
+            meta.textContent = "(" + slot.total + ")" + (statusBits.length ? " " + statusBits.join(" · ") : "");
+            header.appendChild(meta);
             div.appendChild(header);
             var cards = document.createElement("div");
-            cards.className = "bj-cards";
+            cards.className = "bj-cards casino-cards";
             renderCards(cards, slot.cards);
             div.appendChild(cards);
             container.appendChild(div);

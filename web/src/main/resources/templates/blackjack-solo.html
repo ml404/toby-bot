@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Blackjack solo', '/css/blackjack.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Blackjack solo', '/css/blackjack.css', '/css/casino-table.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -33,16 +33,16 @@
         </div>
     </section>
 
-    <section class="bj-card bj-table" id="bj-table" hidden>
-        <div class="bj-row">
+    <section class="bj-card bj-table casino-felt" id="bj-table" hidden>
+        <div class="bj-row casino-dealer-zone">
             <h3>Dealer <span class="muted" id="bj-dealer-total"></span></h3>
-            <div id="bj-dealer-cards" class="bj-cards"></div>
+            <div id="bj-dealer-cards" class="bj-cards casino-cards"></div>
         </div>
-        <div class="bj-row">
+        <div class="bj-row casino-seat" id="bj-player-row">
             <h3>You <span class="muted" id="bj-player-total"></span></h3>
             <!-- Single-hand layout for the v1 case; the JS hides this and
                  populates [bj-player-hands] once a split happens. -->
-            <div id="bj-player-cards" class="bj-cards"></div>
+            <div id="bj-player-cards" class="bj-cards casino-cards"></div>
             <div id="bj-player-hands" class="bj-seats" hidden></div>
         </div>
 
@@ -61,6 +61,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-render.js}"></script>
 <script th:src="@{/js/blackjack-solo.js}"></script>
 </body>
 </html>

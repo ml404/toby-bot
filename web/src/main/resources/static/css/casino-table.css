@@ -1,0 +1,270 @@
+/*
+ * Shared "casino table" primitives — used by both /blackjack and /poker
+ * so the two card games look like the same product. Game-specific bits
+ * (split hands, side pots, betting slider, bust labels) live in their
+ * per-game CSS and only override what they truly need.
+ *
+ * Class prefix: `.casino-` for components, `.is-*` modifiers.
+ * Loaded before the per-game stylesheet so per-game rules win on conflict.
+ */
+
+/* ------------------------------------------------------------------- */
+/* Felt table                                                          */
+/* ------------------------------------------------------------------- */
+
+.casino-felt {
+    background:
+        radial-gradient(ellipse at center, #1f4a36 0%, #143324 70%, #0e2418 100%);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    color: #f0f0f0;
+    box-shadow:
+        inset 0 0 60px rgba(0, 0, 0, 0.55),
+        0 6px 24px rgba(0, 0, 0, 0.35);
+    position: relative;
+}
+
+/* Distinct slot above the play area, visually separated from the seats. */
+.casino-dealer-zone {
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.casino-dealer-zone h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ------------------------------------------------------------------- */
+/* Cards                                                                */
+/* ------------------------------------------------------------------- */
+
+.casino-cards {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 4.75rem;
+}
+
+.casino-card-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 4.5rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f1ea 100%);
+    color: #1a1a1a;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    font-family: "Cambria", "Georgia", serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.casino-card-glyph.is-red {
+    color: #c0392b;
+}
+
+/* Hidden hole card — keeps the card silhouette but masks the value. */
+.casino-card-glyph.is-hidden {
+    background:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 16px),
+        linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: rgba(255, 255, 255, 0.65);
+    border-color: rgba(0, 0, 0, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ------------------------------------------------------------------- */
+/* Seats                                                                */
+/* ------------------------------------------------------------------- */
+
+.casino-seat {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.6rem;
+    padding: 0.75rem 1rem;
+    transition: box-shadow 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+}
+
+/* Active actor — gold halo + slow pulse. */
+.casino-seat.is-active {
+    box-shadow:
+        0 0 0 2px #f1c40f,
+        0 0 18px rgba(241, 196, 15, 0.45);
+    animation: casino-pulse 1.6s ease-in-out infinite;
+}
+
+/* Busted seat — desaturated and faded. */
+.casino-seat.is-busted {
+    filter: grayscale(0.7);
+    opacity: 0.6;
+}
+
+/* Folded seat (poker) — a softer fade than busted. */
+.casino-seat.is-folded {
+    opacity: 0.45;
+}
+
+/* Viewer's own seat — secondary border tint to find yourself fast. */
+.casino-seat.is-me {
+    border-color: rgba(88, 101, 242, 0.55);
+}
+
+.casino-seat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.casino-seat-who {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.casino-seat-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.casino-seat-meta {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------- */
+/* Avatars                                                              */
+/* ------------------------------------------------------------------- */
+
+.casino-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.4);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.casino-seat.is-active .casino-avatar {
+    border-color: #f1c40f;
+}
+
+/* No avatarUrl on the seat → CSS-rendered initial circle from data-initial. */
+.casino-avatar.is-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #5865f2, #3a44a3);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+.casino-avatar.is-fallback::before {
+    content: attr(data-initial);
+}
+
+/* ------------------------------------------------------------------- */
+/* "Whose turn" actor pill                                              */
+/* ------------------------------------------------------------------- */
+
+.casino-actor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(241, 196, 15, 0.4);
+    border-radius: 999px;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 14px rgba(241, 196, 15, 0.18);
+}
+
+.casino-actor-pill .casino-avatar {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-color: #f1c40f;
+}
+
+.casino-actor-pill-label {
+    color: rgba(255, 255, 255, 0.75);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+}
+
+.casino-actor-pill-name {
+    font-weight: 600;
+}
+
+.casino-actor-pill-clock {
+    font-variant-numeric: tabular-nums;
+    color: rgba(241, 196, 15, 0.85);
+    margin-left: 0.4rem;
+}
+
+/* ------------------------------------------------------------------- */
+/* Animations                                                           */
+/* ------------------------------------------------------------------- */
+
+@keyframes casino-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 2px #f1c40f,
+            0 0 18px rgba(241, 196, 15, 0.35);
+    }
+    50% {
+        box-shadow:
+            0 0 0 2px #f1c40f,
+            0 0 28px rgba(241, 196, 15, 0.65);
+    }
+}
+
+@keyframes casino-deal {
+    from {
+        transform: translate(-40px, -60px) rotate(-12deg);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+.casino-card-glyph.is-dealt {
+    animation: casino-deal 280ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .casino-seat.is-active {
+        animation: none;
+    }
+    .casino-card-glyph.is-dealt {
+        animation: none;
+    }
+}
