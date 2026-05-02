@@ -6,6 +6,7 @@ import database.service.PokerService
 import database.service.PokerService.ActionOutcome
 import database.service.PokerService.BuyInOutcome
 import database.service.PokerService.CashOutOutcome
+import database.service.JackpotService
 import database.service.PokerService.CreateOutcome
 import database.service.PokerService.StartHandOutcome
 import database.service.UserService
@@ -47,6 +48,7 @@ class PokerController(
     private val pokerWebService: PokerWebService,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA,
 ) {
     @GetMapping("/guilds")
@@ -82,6 +84,7 @@ class PokerController(
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("minBuyIn", PokerService.MIN_BUY_IN)
         model.addAttribute("maxBuyIn", PokerService.MAX_BUY_IN)
         model.addAttribute("smallBlind", PokerService.SMALL_BLIND)
@@ -112,6 +115,7 @@ class PokerController(
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("tableId", tableId.toString())
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("minBuyIn", PokerService.MIN_BUY_IN)
         model.addAttribute("maxBuyIn", PokerService.MAX_BUY_IN)
         model.addAttribute("username", user.displayName())

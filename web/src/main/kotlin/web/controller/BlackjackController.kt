@@ -11,6 +11,7 @@ import database.service.BlackjackService.MultiLeaveOutcome
 import database.service.BlackjackService.MultiStartOutcome
 import database.service.BlackjackService.SoloActionOutcome
 import database.service.BlackjackService.SoloDealOutcome
+import database.service.JackpotService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
@@ -66,6 +67,7 @@ class BlackjackController(
     private val tableRegistry: BlackjackTableRegistry,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
+    private val jackpotService: JackpotService,
     private val jda: JDA,
 ) {
 
@@ -109,6 +111,7 @@ class BlackjackController(
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("minAnte", Blackjack.MULTI_MIN_ANTE)
         model.addAttribute("maxAnte", Blackjack.MULTI_MAX_ANTE)
         model.addAttribute("maxSeats", Blackjack.MULTI_MAX_SEATS)
@@ -129,6 +132,7 @@ class BlackjackController(
         val profile = userService.getUserById(discordId, guildId)
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("minStake", Blackjack.MIN_STAKE)
         model.addAttribute("maxStake", Blackjack.MAX_STAKE)
         model.addAttribute("username", user.displayName())
@@ -155,6 +159,7 @@ class BlackjackController(
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("tableId", tableId.toString())
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
+        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("ante", state.ante)
         model.addAttribute("username", user.displayName())
         model.addAttribute("myDiscordId", discordId.toString())

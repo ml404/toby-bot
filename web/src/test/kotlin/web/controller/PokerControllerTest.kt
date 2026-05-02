@@ -2,6 +2,7 @@ package web.controller
 
 import database.poker.PokerEngine
 import database.poker.PokerTable
+import database.service.JackpotService
 import database.service.PokerService
 import database.service.PokerService.ActionOutcome
 import database.service.PokerService.BuyInOutcome
@@ -33,6 +34,7 @@ class PokerControllerTest {
     private lateinit var pokerWebService: PokerWebService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
+    private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var controller: PokerController
@@ -43,13 +45,16 @@ class PokerControllerTest {
         pokerWebService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = PokerController(pokerService, pokerWebService, economyWebService, userService, jda)
+        controller = PokerController(
+            pokerService, pokerWebService, economyWebService, userService, jackpotService, jda
+        )
     }
 
     @Test
@@ -279,6 +284,43 @@ class PokerControllerTest {
         every { pokerService.cashOut(discordId, guildId, tableId) } returns CashOutOutcome.TableNotFound
         val response = controller.cashOut(guildId, tableId, user)
         assertEquals(404, response.statusCode.value())
+    }
+
+    @Test
+    fun `lobby page wires jackpotPool model attribute so the banner renders`() {
+        // Regression: poker lobby & table pages used to omit `jackpotPool`,
+        // so `~{fragments/casino :: jackpotBanner}` rendered "0 credits"
+        // (or 500'd in dev) — players couldn't see what the rake was
+        // contributing to or what was up for grabs.
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild>(relaxed = true).also {
+            every { it.name } returns "Test Guild"
+        }
+        every { jda.getGuildById(guildId) } returns guild
+        every { jackpotService.getPool(guildId) } returns 1234L
+        every { pokerWebService.listGuildTables(guildId) } returns emptyList()
+
+        val model = org.springframework.ui.ConcurrentModel()
+        val view = controller.lobby(
+            guildId, user, model, org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap()
+        )
+
+        assertEquals("poker-lobby", view)
+        assertEquals(1234L, model.getAttribute("jackpotPool"))
+    }
+
+    @Test
+    fun `tablePage wires jackpotPool model attribute so the banner renders`() {
+        every { pokerWebService.snapshot(tableId, discordId) } returns sampleView()
+        every { jackpotService.getPool(guildId) } returns 9876L
+
+        val model = org.springframework.ui.ConcurrentModel()
+        val view = controller.tablePage(
+            guildId, tableId, user, model,
+            org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap()
+        )
+
+        assertEquals("poker-table", view)
+        assertEquals(9876L, model.getAttribute("jackpotPool"))
     }
 
     private fun sampleView(guildId: Long = this.guildId): PokerWebService.TableStateView =
