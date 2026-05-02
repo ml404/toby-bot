@@ -23,6 +23,7 @@ internal object BaccaratEmbeds {
 
     private const val TITLE = "🎴 Baccarat"
     private val PROMPT_COLOR = Color(0x2C, 0x3E, 0x50)
+    private val NEUTRAL_COLOR = Color(0xA0, 0xA0, 0xB0)
 
     /** "1.95×"-style label used on side-bet buttons and prompt copy. */
     fun multiplierLabel(multiplier: Double): String = "%.2f×".format(multiplier)
@@ -103,7 +104,7 @@ internal object BaccaratEmbeds {
                     "**${outcome.stake} credits** is refunded."
             )
             .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WagerCommandColors.LOSE)
+            .setColor(NEUTRAL_COLOR)
             .build()
 
         is PlayOutcome.Lose -> EmbedBuilder()
