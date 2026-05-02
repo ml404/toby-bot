@@ -156,6 +156,7 @@ class BlackjackButton @Autowired constructor(
         BlackjackEmbeds.Action.HIT -> Blackjack.Action.HIT
         BlackjackEmbeds.Action.STAND -> Blackjack.Action.STAND
         BlackjackEmbeds.Action.DOUBLE -> Blackjack.Action.DOUBLE
+        BlackjackEmbeds.Action.SPLIT -> Blackjack.Action.SPLIT
         BlackjackEmbeds.Action.PEEK -> null
     }
 

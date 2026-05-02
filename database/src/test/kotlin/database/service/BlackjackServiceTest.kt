@@ -718,6 +718,106 @@ class BlackjackServiceTest {
         assertEquals(900L, host.socialCredit, "host not debited when start aborted")
     }
 
+    // -------------------------------------------------------------------------
+    // SPLIT
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `solo SPLIT debits a second ante and creates two hands`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        // 8-8 → splittable pair. Dealer shows a 6 (will play out later).
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.EIGHT), c(Rank.EIGHT, Suit.HEARTS)),
+            mutableListOf(c(Rank.SIX), c(Rank.TEN))
+        )
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+        val tableId = (deal as BlackjackService.SoloDealOutcome.Dealt).tableId
+        assertEquals(900L, user.socialCredit, "first ante debited at deal")
+
+        // SPLIT — service deals one card to each split hand. Stub hit
+        // to drop a non-bust card on each so we end up with two
+        // post-split hands the player can still hit/stand on.
+        every { blackjack.hit(any(), any()) } answers {
+            firstArg<MutableList<Card>>().add(c(Rank.THREE, Suit.HEARTS))
+        }
+        // dealStartingHands returned a fresh deck via newDeck() (relaxed
+        // mock). The split path doesn't go through newDeck(); it deals
+        // off the table's stored deck instance.
+
+        val outcome = service.applySoloAction(discordId, guildId, tableId, Blackjack.Action.SPLIT)
+        assertInstanceOf(BlackjackService.SoloActionOutcome.Continued::class.java, outcome)
+        assertEquals(800L, user.socialCredit, "second ante debited on SPLIT")
+        val live = registry.get(tableId)!!
+        val seat = live.seats[0]
+        assertEquals(2, seat.hands.size, "split produced two hand-slots")
+        assertEquals(0, seat.activeHandIndex, "first split hand active first")
+        assertTrue(seat.hands.all { it.fromSplit }, "both slots flagged fromSplit")
+    }
+
+    @Test
+    fun `solo SPLIT rejected when hand is not a pair`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.EIGHT), c(Rank.NINE)),
+            mutableListOf(c(Rank.SIX), c(Rank.TEN))
+        )
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+        val tableId = (deal as BlackjackService.SoloDealOutcome.Dealt).tableId
+
+        val outcome = service.applySoloAction(discordId, guildId, tableId, Blackjack.Action.SPLIT)
+        assertEquals(BlackjackService.SoloActionOutcome.IllegalAction, outcome)
+        assertEquals(900L, user.socialCredit, "no second-ante debit on rejected SPLIT")
+    }
+
+    @Test
+    fun `solo SPLIT rejected without funds for the second ante`() {
+        val user = userWithBalance(150L) // can pay 100 ante but not another 100
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.EIGHT), c(Rank.EIGHT, Suit.HEARTS)),
+            mutableListOf(c(Rank.SIX), c(Rank.TEN))
+        )
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+        val tableId = (deal as BlackjackService.SoloDealOutcome.Dealt).tableId
+        // After deal: balance is 50.
+        val outcome = service.applySoloAction(discordId, guildId, tableId, Blackjack.Action.SPLIT)
+        val short = assertInstanceOf(
+            BlackjackService.SoloActionOutcome.InsufficientCreditsForSplit::class.java, outcome
+        )
+        assertEquals(100L, short.needed)
+        assertEquals(50L, short.have)
+    }
+
+    @Test
+    fun `solo SPLIT aces auto-stand both hands and play out the dealer`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.ACE), c(Rank.ACE, Suit.HEARTS)),
+            mutableListOf(c(Rank.NINE), c(Rank.SEVEN))
+        )
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+        val tableId = (deal as BlackjackService.SoloDealOutcome.Dealt).tableId
+
+        // Each split hand gets one card dealt (which we stub).
+        every { blackjack.hit(any(), any()) } answers {
+            firstArg<MutableList<Card>>().add(c(Rank.KING, Suit.HEARTS))
+        }
+        // Both split-hand 21s won't claim natural BJ premium; treat as regular wins.
+        every { blackjack.evaluate(any(), any(), any()) } returns Blackjack.Result.PLAYER_WIN
+
+        val outcome = service.applySoloAction(discordId, guildId, tableId, Blackjack.Action.SPLIT)
+        // Aces split auto-stands both hands → resolution happens immediately.
+        val resolved = assertInstanceOf(BlackjackService.SoloActionOutcome.Resolved::class.java, outcome)
+        // Both hands win 1× → balance: 800 (after split) + 100 stake refund * 2 + 100 win * 2 = 1200.
+        assertEquals(1_200L, user.socialCredit)
+        // Two PerHandResult entries.
+        assertEquals(2, resolved.result.perHandResults.size)
+        assertTrue(resolved.result.perHandResults.all { it.fromSplit })
+    }
+
     @Test
     fun `slot capture is harmless`() {
         val s = slot<UserDto>()

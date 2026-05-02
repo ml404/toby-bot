@@ -4,6 +4,7 @@ import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.blackjack.bestTotal
+import database.blackjack.canSplit
 import database.blackjack.isBlackjack
 import database.blackjack.isBust
 import database.dto.BlackjackHandLogDto
@@ -99,6 +100,8 @@ class BlackjackService @Autowired constructor(
         data object NotYourHand : SoloActionOutcome
         data object IllegalAction : SoloActionOutcome
         data class InsufficientCreditsForDouble(val needed: Long, val have: Long) : SoloActionOutcome
+        /** SPLIT requested but the player can't cover the second ante. */
+        data class InsufficientCreditsForSplit(val needed: Long, val have: Long) : SoloActionOutcome
     }
 
     sealed interface MultiCreateOutcome {
@@ -163,6 +166,8 @@ class BlackjackService @Autowired constructor(
         data object NoHandInProgress : MultiActionOutcome
         data object IllegalAction : MultiActionOutcome
         data class InsufficientCreditsForDouble(val needed: Long, val have: Long) : MultiActionOutcome
+        /** SPLIT requested but the player can't cover the second ante. */
+        data class InsufficientCreditsForSplit(val needed: Long, val have: Long) : MultiActionOutcome
     }
 
     /**
@@ -269,9 +274,7 @@ class BlackjackService @Autowired constructor(
             val dealerHasBJ = isBlackjack(t.dealer)
             if (playerHasBJ || dealerHasBJ) {
                 t.phase = BlackjackTable.Phase.RESOLVED
-                val result = blackjack.evaluate(seat.hand, t.dealer)
-                seat.status = statusFor(result, seat.status)
-                ResolveDecision.ResolveImmediately(seat, result)
+                ResolveDecision.ResolveImmediately(seat)
             } else {
                 t.phase = BlackjackTable.Phase.PLAYER_TURNS
                 ResolveDecision.AwaitPlayer
@@ -286,7 +289,7 @@ class BlackjackService @Autowired constructor(
                 newPrice = soldNewPrice
             )
             is ResolveDecision.ResolveImmediately -> {
-                val settlement = settleSolo(table, initial.seat, initial.result, guildId)
+                val settlement = settleSolo(table, initial.seat, guildId)
                 SoloDealOutcome.Resolved(
                     tableId = table.id,
                     result = settlement.handResult,
@@ -302,10 +305,7 @@ class BlackjackService @Autowired constructor(
 
     private sealed interface ResolveDecision {
         data object AwaitPlayer : ResolveDecision
-        data class ResolveImmediately(
-            val seat: BlackjackTable.Seat,
-            val result: Blackjack.Result
-        ) : ResolveDecision
+        data class ResolveImmediately(val seat: BlackjackTable.Seat) : ResolveDecision
     }
 
     @Transactional
@@ -319,32 +319,43 @@ class BlackjackService @Autowired constructor(
         if (table.guildId != guildId) return SoloActionOutcome.HandNotFound
         if (table.mode != BlackjackTable.Mode.SOLO) return SoloActionOutcome.HandNotFound
 
-        // For DOUBLE, debit the additional stake from the wallet BEFORE
-        // taking the table monitor — keeps the credit lock outside the
-        // table lock to match the ordering used elsewhere. The follow-up
-        // action lockTable still re-validates seat ownership and phase
-        // under the monitor before committing the draw.
-        if (action == Blackjack.Action.DOUBLE) {
-            val seatPreview = tableRegistry.lockTable(tableId) { t ->
-                val seat = t.seats.firstOrNull() ?: return@lockTable DoubleCheck.Illegal
-                if (seat.discordId != discordId) return@lockTable DoubleCheck.Illegal
-                if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable DoubleCheck.Illegal
-                if (seat.hand.size != 2 || seat.doubled) return@lockTable DoubleCheck.Illegal
-                DoubleCheck.Ok(seat.ante)
-            } ?: return SoloActionOutcome.HandNotFound
-            when (seatPreview) {
-                is DoubleCheck.Illegal -> return SoloActionOutcome.IllegalAction
-                is DoubleCheck.Ok -> {
-                    val user = userService.getUserByIdForUpdate(discordId, guildId)
-                        ?: return SoloActionOutcome.HandNotFound
-                    val balance = user.socialCredit ?: 0L
-                    if (balance < seatPreview.amount) {
-                        return SoloActionOutcome.InsufficientCreditsForDouble(seatPreview.amount, balance)
+        // DOUBLE / SPLIT both pre-debit the additional stake from the
+        // wallet BEFORE taking the table monitor — keeps the credit lock
+        // outside the table lock to match the ordering used elsewhere.
+        // The follow-up action lockTable still re-validates seat
+        // ownership and phase under the monitor before committing.
+        when (action) {
+            Blackjack.Action.DOUBLE -> {
+                val pre = previewSoloDouble(tableId, discordId) ?: return SoloActionOutcome.HandNotFound
+                when (pre) {
+                    is StakePreCheck.Illegal -> return SoloActionOutcome.IllegalAction
+                    is StakePreCheck.Ok -> {
+                        val (user, balance) = lockUserAndBalance(discordId, guildId)
+                            ?: return SoloActionOutcome.HandNotFound
+                        if (balance < pre.amount) {
+                            return SoloActionOutcome.InsufficientCreditsForDouble(pre.amount, balance)
+                        }
+                        user.socialCredit = balance - pre.amount
+                        userService.updateUser(user)
                     }
-                    user.socialCredit = balance - seatPreview.amount
-                    userService.updateUser(user)
                 }
             }
+            Blackjack.Action.SPLIT -> {
+                val pre = previewSoloSplit(tableId, discordId) ?: return SoloActionOutcome.HandNotFound
+                when (pre) {
+                    is StakePreCheck.Illegal -> return SoloActionOutcome.IllegalAction
+                    is StakePreCheck.Ok -> {
+                        val (user, balance) = lockUserAndBalance(discordId, guildId)
+                            ?: return SoloActionOutcome.HandNotFound
+                        if (balance < pre.amount) {
+                            return SoloActionOutcome.InsufficientCreditsForSplit(pre.amount, balance)
+                        }
+                        user.socialCredit = balance - pre.amount
+                        userService.updateUser(user)
+                    }
+                }
+            }
+            else -> Unit
         }
 
         val transition = tableRegistry.lockTable(tableId) { t ->
@@ -353,41 +364,14 @@ class BlackjackService @Autowired constructor(
             if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable SoloTransition.IllegalAction
             val deck = t.deck ?: return@lockTable SoloTransition.HandNotFound
 
-            when (action) {
-                Blackjack.Action.HIT -> {
-                    blackjack.hit(seat.hand, deck)
-                    if (isBust(seat.hand)) {
-                        seat.status = BlackjackTable.SeatStatus.BUSTED
-                        t.phase = BlackjackTable.Phase.RESOLVED
-                        SoloTransition.Resolve(seat, blackjack.evaluate(seat.hand, t.dealer))
-                    } else if (bestTotal(seat.hand) == 21) {
-                        // 21 from a hit auto-stands — no further decisions.
-                        seat.status = BlackjackTable.SeatStatus.STANDING
-                        playOutAndResolve(t, seat)
-                    } else {
-                        t.lastActivityAt = Instant.now()
-                        SoloTransition.Continue
-                    }
-                }
-                Blackjack.Action.STAND -> {
-                    seat.status = BlackjackTable.SeatStatus.STANDING
-                    playOutAndResolve(t, seat)
-                }
-                Blackjack.Action.DOUBLE -> {
-                    // The debit already happened; mark the seat doubled
-                    // and draw exactly one card, then play out dealer.
-                    seat.doubled = true
-                    seat.stake = seat.ante * 2
-                    blackjack.hit(seat.hand, deck)
-                    seat.status = if (isBust(seat.hand)) BlackjackTable.SeatStatus.BUSTED
-                    else BlackjackTable.SeatStatus.DOUBLED
-                    if (seat.status == BlackjackTable.SeatStatus.BUSTED) {
-                        t.phase = BlackjackTable.Phase.RESOLVED
-                        SoloTransition.Resolve(seat, blackjack.evaluate(seat.hand, t.dealer))
-                    } else {
-                        playOutAndResolve(t, seat)
-                    }
-                }
+            applyActionToActiveHand(t, seat, action, deck)
+            t.lastActivityAt = Instant.now()
+            advanceWithinSeat(seat)
+
+            if (seat.isFinished) {
+                runDealerAndResolve(t, seat)
+            } else {
+                SoloTransition.Continue
             }
         } ?: return SoloActionOutcome.HandNotFound
 
@@ -397,8 +381,7 @@ class BlackjackService @Autowired constructor(
             SoloTransition.IllegalAction -> SoloActionOutcome.IllegalAction
             SoloTransition.Continue -> SoloActionOutcome.Continued(table)
             is SoloTransition.Resolve -> {
-                transition.seat.status = statusFor(transition.result, transition.seat.status)
-                val settlement = settleSolo(table, transition.seat, transition.result, guildId)
+                val settlement = settleSolo(table, transition.seat, guildId)
                 SoloActionOutcome.Resolved(
                     tableId = table.id,
                     result = settlement.handResult,
@@ -411,19 +394,113 @@ class BlackjackService @Autowired constructor(
     }
 
     /**
-     * Helper invoked under the table monitor: dealer plays out then we
-     * evaluate. Mutates [t] and [seat]; returns a [SoloTransition.Resolve]
-     * the caller turns into a settlement.
+     * Apply [action] to the seat's *active* hand-slot (the one
+     * currently being played). HIT / STAND / DOUBLE only touch the
+     * active slot; SPLIT replaces it with two slots, dealing one new
+     * card to each. Caller must have already pre-debited any extra
+     * stake (DOUBLE / SPLIT) outside the table monitor.
      */
-    private fun playOutAndResolve(
+    private fun applyActionToActiveHand(
         t: BlackjackTable,
-        seat: BlackjackTable.Seat
+        seat: BlackjackTable.Seat,
+        action: Blackjack.Action,
+        deck: database.card.Deck,
+    ) {
+        val active = seat.activeHand
+        when (action) {
+            Blackjack.Action.HIT -> {
+                blackjack.hit(active.cards, deck)
+                if (isBust(active.cards)) {
+                    active.status = BlackjackTable.SeatStatus.BUSTED
+                } else if (bestTotal(active.cards) == 21) {
+                    active.status = BlackjackTable.SeatStatus.STANDING
+                }
+            }
+            Blackjack.Action.STAND -> {
+                active.status = BlackjackTable.SeatStatus.STANDING
+            }
+            Blackjack.Action.DOUBLE -> {
+                active.doubled = true
+                active.stake = active.stake * 2
+                blackjack.hit(active.cards, deck)
+                active.status = if (isBust(active.cards)) BlackjackTable.SeatStatus.BUSTED
+                else BlackjackTable.SeatStatus.DOUBLED
+            }
+            Blackjack.Action.SPLIT -> {
+                splitActiveHand(seat, active, deck)
+            }
+        }
+    }
+
+    /**
+     * Split [active] into two single-card hands, deal one card to each
+     * to bring them back to two cards, mark both as `fromSplit`. Aces
+     * additionally auto-stand: classic blackjack rule is a single card
+     * per split-ace hand, no further hits or doubles.
+     */
+    private fun splitActiveHand(
+        seat: BlackjackTable.Seat,
+        active: BlackjackTable.HandSlot,
+        deck: database.card.Deck,
+    ) {
+        val firstCard = active.cards[0]
+        val secondCard = active.cards[1]
+        val acesSplit = firstCard.rank == database.card.Rank.ACE
+        // Reuse [active] as the first split branch. Wallet was pre-debited
+        // by the same amount as the original ante, so total at-risk
+        // doubles across the two slots.
+        val splitStake = active.stake
+        active.cards = mutableListOf(firstCard, deck.deal())
+        active.fromSplit = true
+        active.status = if (acesSplit) BlackjackTable.SeatStatus.STANDING
+        else BlackjackTable.SeatStatus.ACTIVE
+        val newSlot = BlackjackTable.HandSlot(
+            cards = mutableListOf(secondCard, deck.deal()),
+            stake = splitStake,
+            doubled = false,
+            status = if (acesSplit) BlackjackTable.SeatStatus.STANDING
+            else BlackjackTable.SeatStatus.ACTIVE,
+            fromSplit = true,
+        )
+        // Insert right after the active slot so the player plays them in
+        // dealt order.
+        seat.hands.add(seat.activeHandIndex + 1, newSlot)
+    }
+
+    /**
+     * After applying an action, walk forward through [seat]'s remaining
+     * hand-slots, skipping any already-terminal slots (e.g. split aces
+     * that auto-stood on creation, or a slot whose own action just took
+     * it to STANDING/BUSTED/DOUBLED). Stops on the next ACTIVE slot, or
+     * leaves [Seat.activeHandIndex] past the end if every slot is done.
+     */
+    private fun advanceWithinSeat(seat: BlackjackTable.Seat) {
+        if (seat.activeHand.status == BlackjackTable.SeatStatus.ACTIVE) return
+        var idx = seat.activeHandIndex + 1
+        while (idx < seat.hands.size && seat.hands[idx].status != BlackjackTable.SeatStatus.ACTIVE) {
+            idx++
+        }
+        seat.activeHandIndex = idx.coerceAtMost(seat.hands.size - 1)
+    }
+
+    /**
+     * Helper invoked under the table monitor when every hand-slot on
+     * the seat is finished: dealer plays out (skipped if every slot
+     * busted) and the table phase transitions to RESOLVED. Per-hand
+     * evaluation happens in [settleSolo].
+     */
+    private fun runDealerAndResolve(
+        t: BlackjackTable,
+        seat: BlackjackTable.Seat,
     ): SoloTransition {
         val deck = t.deck ?: return SoloTransition.HandNotFound
+        val allBust = seat.hands.all { it.status == BlackjackTable.SeatStatus.BUSTED }
         t.phase = BlackjackTable.Phase.DEALER_TURN
-        blackjack.playOutDealer(t.dealer, deck, hitsSoft17 = t.rules.dealerHitsSoft17)
+        if (!allBust) {
+            blackjack.playOutDealer(t.dealer, deck, hitsSoft17 = t.rules.dealerHitsSoft17)
+        }
         t.phase = BlackjackTable.Phase.RESOLVED
-        return SoloTransition.Resolve(seat, blackjack.evaluate(seat.hand, t.dealer))
+        return SoloTransition.Resolve(seat)
     }
 
     private sealed interface SoloTransition {
@@ -431,15 +508,64 @@ class BlackjackService @Autowired constructor(
         data object NotYourHand : SoloTransition
         data object IllegalAction : SoloTransition
         data object Continue : SoloTransition
-        data class Resolve(
-            val seat: BlackjackTable.Seat,
-            val result: Blackjack.Result
-        ) : SoloTransition
+        data class Resolve(val seat: BlackjackTable.Seat) : SoloTransition
     }
 
-    private sealed interface DoubleCheck {
-        data class Ok(val amount: Long) : DoubleCheck
-        data object Illegal : DoubleCheck
+    private sealed interface StakePreCheck {
+        data class Ok(val amount: Long) : StakePreCheck
+        data object Illegal : StakePreCheck
+    }
+
+    /**
+     * Pre-flight DOUBLE under the table monitor: returns the additional
+     * stake required ([StakePreCheck.Ok]) when the active hand is
+     * exactly 2 cards on a non-doubled active slot, [StakePreCheck.Illegal]
+     * when those preconditions fail, or `null` when the table itself
+     * has vanished. Wallet check + debit happens outside the lock.
+     */
+    private fun previewSoloDouble(tableId: Long, discordId: Long): StakePreCheck? =
+        tableRegistry.lockTable(tableId) { t ->
+            val seat = t.seats.firstOrNull() ?: return@lockTable StakePreCheck.Illegal
+            if (seat.discordId != discordId) return@lockTable StakePreCheck.Illegal
+            if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable StakePreCheck.Illegal
+            val active = seat.activeHand
+            if (active.status != BlackjackTable.SeatStatus.ACTIVE) return@lockTable StakePreCheck.Illegal
+            if (active.cards.size != 2 || active.doubled) return@lockTable StakePreCheck.Illegal
+            // The DOUBLE wallet debit equals the active hand's current
+            // stake (which is `seat.ante` for a non-split hand and
+            // `seat.ante` per split branch — split hands carry their
+            // own pre-double stake of one ante apiece).
+            StakePreCheck.Ok(active.stake)
+        }
+
+    /**
+     * Pre-flight SPLIT: the active slot must be a 2-card pair, on a
+     * non-doubled / non-already-split slot. Re-splitting is allowed up
+     * to [Blackjack.MAX_SPLIT_HANDS] total hands per seat. Split aces
+     * are valid; the resulting two hands auto-stand on creation.
+     */
+    private fun previewSoloSplit(tableId: Long, discordId: Long): StakePreCheck? =
+        tableRegistry.lockTable(tableId) { t ->
+            val seat = t.seats.firstOrNull() ?: return@lockTable StakePreCheck.Illegal
+            if (seat.discordId != discordId) return@lockTable StakePreCheck.Illegal
+            if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable StakePreCheck.Illegal
+            val active = seat.activeHand
+            if (active.status != BlackjackTable.SeatStatus.ACTIVE) return@lockTable StakePreCheck.Illegal
+            if (active.doubled) return@lockTable StakePreCheck.Illegal
+            if (!canSplit(active.cards)) return@lockTable StakePreCheck.Illegal
+            if (seat.hands.size >= Blackjack.MAX_SPLIT_HANDS) return@lockTable StakePreCheck.Illegal
+            // Re-splitting aces is disallowed by classic rules.
+            if (active.fromSplit && active.cards[0].rank == database.card.Rank.ACE) {
+                return@lockTable StakePreCheck.Illegal
+            }
+            // Each split adds exactly one new hand at the same per-hand
+            // ante as the original — wallet must cover one more ante.
+            StakePreCheck.Ok(active.stake)
+        }
+
+    private fun lockUserAndBalance(discordId: Long, guildId: Long): Pair<database.dto.UserDto, Long>? {
+        val user = userService.getUserByIdForUpdate(discordId, guildId) ?: return null
+        return user to (user.socialCredit ?: 0L)
     }
 
     private data class SoloSettlement(
@@ -450,49 +576,88 @@ class BlackjackService @Autowired constructor(
     )
 
     /**
-     * Credit the payout (multiplier × stake) back to the player and
-     * route jackpot win-rolls / loss-tributes. Caller has already
-     * marked the seat status and put the table in RESOLVED.
+     * Iterate every hand-slot on the seat (one per split branch),
+     * evaluate each independently, sum the payouts and route the
+     * resulting jackpot rolls / loss tributes. Each hand-slot acts as
+     * its own wager — splitting effectively turns one bet into N bets.
      */
     private fun settleSolo(
         table: BlackjackTable,
         seat: BlackjackTable.Seat,
-        result: Blackjack.Result,
         guildId: Long
     ): SoloSettlement {
-        val multiplier = blackjack.multiplier(result, table.rules.blackjackPayoutMultiplier)
-        val payout = (seat.stake * multiplier).toLong()
+        val payoutMult = table.rules.blackjackPayoutMultiplier
+        val perHand = mutableListOf<BlackjackTable.PerHandResult>()
+        val firstHandResult = LinkedHashMap<Long, Blackjack.Result>()
+        var totalPayout = 0L
+        for ((idx, slot) in seat.hands.withIndex()) {
+            val result = blackjack.evaluate(slot.cards, table.dealer, fromSplit = slot.fromSplit)
+            slot.status = terminalStatusFor(result, slot.status)
+            val multiplier = blackjack.multiplier(result, payoutMult)
+            val handPayout = (slot.stake * multiplier).toLong()
+            totalPayout += handPayout
+            if (idx == 0) firstHandResult[seat.discordId] = result
+            perHand.add(
+                BlackjackTable.PerHandResult(
+                    discordId = seat.discordId,
+                    handIndex = idx,
+                    cards = slot.cards.toList(),
+                    total = bestTotal(slot.cards),
+                    stake = slot.stake,
+                    doubled = slot.doubled,
+                    fromSplit = slot.fromSplit,
+                    result = result,
+                    payout = handPayout,
+                )
+            )
+        }
 
         val user = userService.getUserByIdForUpdate(seat.discordId, guildId)
         var newBalance: Long = user?.socialCredit ?: 0L
-        if (user != null && payout > 0L) {
-            user.socialCredit = newBalance + payout
+        if (user != null && totalPayout > 0L) {
+            user.socialCredit = newBalance + totalPayout
             userService.updateUser(user)
             newBalance = user.socialCredit ?: newBalance
         }
 
+        // One jackpot roll per winning hand-slot, one loss tribute per
+        // losing hand-slot — split = more wagers, so naturally more
+        // chances at both. Pushes are no-ops on both axes.
         var jackpotPayout = 0L
         var lossTribute = 0L
-        val isWin = result == Blackjack.Result.PLAYER_WIN || result == Blackjack.Result.PLAYER_BLACKJACK
-        val isLoss = result == Blackjack.Result.DEALER_WIN || result == Blackjack.Result.PLAYER_BUST
-        if (isWin && user != null) {
-            jackpotPayout = JackpotHelper.rollOnWin(
-                jackpotService, configService, userService, user, guildId, random
-            )
-            if (jackpotPayout > 0L) newBalance = user.socialCredit ?: newBalance
-        } else if (isLoss) {
-            lossTribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, seat.stake)
+        if (user != null) {
+            for (hand in perHand) {
+                when (hand.result) {
+                    Blackjack.Result.PLAYER_WIN, Blackjack.Result.PLAYER_BLACKJACK -> {
+                        val rolled = JackpotHelper.rollOnWin(
+                            jackpotService, configService, userService, user, guildId, random
+                        )
+                        if (rolled > 0L) {
+                            jackpotPayout += rolled
+                            newBalance = user.socialCredit ?: newBalance
+                        }
+                    }
+                    Blackjack.Result.DEALER_WIN, Blackjack.Result.PLAYER_BUST -> {
+                        lossTribute += JackpotHelper.divertOnLoss(
+                            jackpotService, configService, guildId, hand.stake
+                        )
+                    }
+                    Blackjack.Result.PUSH -> Unit
+                }
+            }
         }
 
+        val totalStake = seat.totalStake
         val handResult = BlackjackTable.HandResult(
             handNumber = table.handNumber,
             dealer = table.dealer.toList(),
             dealerTotal = bestTotal(table.dealer),
-            seatResults = mapOf(seat.discordId to result),
-            payouts = if (payout > 0L) mapOf(seat.discordId to payout) else emptyMap(),
-            pot = seat.stake,
+            seatResults = firstHandResult,
+            payouts = if (totalPayout > 0L) mapOf(seat.discordId to totalPayout) else emptyMap(),
+            pot = totalStake,
             rake = 0L,
-            resolvedAt = Instant.now()
+            resolvedAt = Instant.now(),
+            perHandResults = perHand,
         )
         synchronized(table) {
             table.lastResult = handResult
@@ -500,6 +665,27 @@ class BlackjackService @Autowired constructor(
         }
         persistHandLog(table, handResult)
         return SoloSettlement(handResult, newBalance, jackpotPayout, lossTribute)
+    }
+
+    /**
+     * Map a [Blackjack.Result] to the matching [BlackjackTable.SeatStatus]
+     * for an already-finished hand-slot. Existing terminal flags
+     * (DOUBLED, BUSTED) are preserved — only ACTIVE / STANDING get
+     * overwritten with the result-derived status.
+     */
+    private fun terminalStatusFor(
+        result: Blackjack.Result,
+        current: BlackjackTable.SeatStatus,
+    ): BlackjackTable.SeatStatus {
+        if (current == BlackjackTable.SeatStatus.DOUBLED ||
+            current == BlackjackTable.SeatStatus.BUSTED ||
+            current == BlackjackTable.SeatStatus.BLACKJACK
+        ) return current
+        return when (result) {
+            Blackjack.Result.PLAYER_BLACKJACK -> BlackjackTable.SeatStatus.BLACKJACK
+            Blackjack.Result.PLAYER_BUST -> BlackjackTable.SeatStatus.BUSTED
+            else -> current
+        }
     }
 
     /**
@@ -530,15 +716,6 @@ class BlackjackService @Autowired constructor(
                 )
             )
         }
-    }
-
-    private fun statusFor(
-        result: Blackjack.Result,
-        current: BlackjackTable.SeatStatus
-    ): BlackjackTable.SeatStatus = when (result) {
-        Blackjack.Result.PLAYER_BLACKJACK -> BlackjackTable.SeatStatus.BLACKJACK
-        Blackjack.Result.PLAYER_BUST -> BlackjackTable.SeatStatus.BUSTED
-        else -> current
     }
 
     /** Drop a SOLO table after the player has had a chance to read the result. */
@@ -867,7 +1044,6 @@ class BlackjackService @Autowired constructor(
                 seat.status = BlackjackTable.SeatStatus.ACTIVE
                 if (seat.stake == 0L) {
                     seat.stake = ante
-                    seat.ante = ante
                 }
             }
             t.dealer.clear()
@@ -914,30 +1090,43 @@ class BlackjackService @Autowired constructor(
         if (table.guildId != guildId) return MultiActionOutcome.TableNotFound
         if (table.mode != BlackjackTable.Mode.MULTI) return MultiActionOutcome.TableNotFound
 
-        // For DOUBLE we need to debit the second ante outside the table monitor.
-        if (action == Blackjack.Action.DOUBLE) {
-            val pre = tableRegistry.lockTable(tableId) { t ->
-                if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable MultiDoublePreflight.NoHand
-                val actorSeat = t.seats.getOrNull(t.actorIndex) ?: return@lockTable MultiDoublePreflight.NoHand
-                if (actorSeat.discordId != discordId) return@lockTable MultiDoublePreflight.NotYourTurn
-                if (actorSeat.hand.size != 2 || actorSeat.doubled) return@lockTable MultiDoublePreflight.Illegal
-                MultiDoublePreflight.Ok(actorSeat.ante)
-            } ?: return MultiActionOutcome.TableNotFound
-            when (pre) {
-                MultiDoublePreflight.NoHand -> return MultiActionOutcome.NoHandInProgress
-                MultiDoublePreflight.NotYourTurn -> return MultiActionOutcome.NotYourTurn
-                MultiDoublePreflight.Illegal -> return MultiActionOutcome.IllegalAction
-                is MultiDoublePreflight.Ok -> {
-                    val user = userService.getUserByIdForUpdate(discordId, guildId)
-                        ?: return MultiActionOutcome.NotSeated
-                    val balance = user.socialCredit ?: 0L
-                    if (balance < pre.amount) {
-                        return MultiActionOutcome.InsufficientCreditsForDouble(pre.amount, balance)
+        // DOUBLE / SPLIT pre-debit happens outside the table monitor.
+        when (action) {
+            Blackjack.Action.DOUBLE -> {
+                val pre = previewMultiDouble(tableId, discordId) ?: return MultiActionOutcome.TableNotFound
+                when (pre) {
+                    MultiPreflight.NoHand -> return MultiActionOutcome.NoHandInProgress
+                    MultiPreflight.NotYourTurn -> return MultiActionOutcome.NotYourTurn
+                    MultiPreflight.Illegal -> return MultiActionOutcome.IllegalAction
+                    is MultiPreflight.Ok -> {
+                        val (user, balance) = lockUserAndBalance(discordId, guildId)
+                            ?: return MultiActionOutcome.NotSeated
+                        if (balance < pre.amount) {
+                            return MultiActionOutcome.InsufficientCreditsForDouble(pre.amount, balance)
+                        }
+                        user.socialCredit = balance - pre.amount
+                        userService.updateUser(user)
                     }
-                    user.socialCredit = balance - pre.amount
-                    userService.updateUser(user)
                 }
             }
+            Blackjack.Action.SPLIT -> {
+                val pre = previewMultiSplit(tableId, discordId) ?: return MultiActionOutcome.TableNotFound
+                when (pre) {
+                    MultiPreflight.NoHand -> return MultiActionOutcome.NoHandInProgress
+                    MultiPreflight.NotYourTurn -> return MultiActionOutcome.NotYourTurn
+                    MultiPreflight.Illegal -> return MultiActionOutcome.IllegalAction
+                    is MultiPreflight.Ok -> {
+                        val (user, balance) = lockUserAndBalance(discordId, guildId)
+                            ?: return MultiActionOutcome.NotSeated
+                        if (balance < pre.amount) {
+                            return MultiActionOutcome.InsufficientCreditsForSplit(pre.amount, balance)
+                        }
+                        user.socialCredit = balance - pre.amount
+                        userService.updateUser(user)
+                    }
+                }
+            }
+            else -> Unit
         }
 
         val transition = tableRegistry.lockTable(tableId) { t ->
@@ -947,31 +1136,15 @@ class BlackjackService @Autowired constructor(
             if (actorSeat.discordId != discordId) return@lockTable MultiTransition.NotYourTurn
             val deck = t.deck ?: return@lockTable MultiTransition.NoHand
 
-            when (action) {
-                Blackjack.Action.HIT -> {
-                    blackjack.hit(actorSeat.hand, deck)
-                    if (isBust(actorSeat.hand)) {
-                        actorSeat.status = BlackjackTable.SeatStatus.BUSTED
-                        advanceActor(t)
-                    } else if (bestTotal(actorSeat.hand) == 21) {
-                        actorSeat.status = BlackjackTable.SeatStatus.STANDING
-                        advanceActor(t)
-                    }
-                }
-                Blackjack.Action.STAND -> {
-                    actorSeat.status = BlackjackTable.SeatStatus.STANDING
-                    advanceActor(t)
-                }
-                Blackjack.Action.DOUBLE -> {
-                    actorSeat.doubled = true
-                    actorSeat.stake = actorSeat.ante * 2
-                    blackjack.hit(actorSeat.hand, deck)
-                    actorSeat.status = if (isBust(actorSeat.hand)) BlackjackTable.SeatStatus.BUSTED
-                    else BlackjackTable.SeatStatus.DOUBLED
-                    advanceActor(t)
-                }
-            }
+            applyActionToActiveHand(t, actorSeat, action, deck)
             t.lastActivityAt = Instant.now()
+            advanceWithinSeat(actorSeat)
+            // Once every hand-slot on the seat is finished, the seat
+            // itself is done — advance to the next seat (which may also
+            // get its own split flow on a future click).
+            if (actorSeat.isFinished) {
+                advanceActor(t)
+            }
 
             // Cascade past any subsequent pendingLeave seats — auto-stand
             // them on their behalf so the hand never stalls on someone
@@ -979,9 +1152,10 @@ class BlackjackService @Autowired constructor(
             while (t.phase == BlackjackTable.Phase.PLAYER_TURNS) {
                 val nextActor = t.seats.getOrNull(t.actorIndex) ?: break
                 if (!nextActor.pendingLeave) break
-                if (nextActor.status != BlackjackTable.SeatStatus.ACTIVE) break
-                nextActor.status = BlackjackTable.SeatStatus.STANDING
-                advanceActor(t)
+                if (nextActor.activeHand.status != BlackjackTable.SeatStatus.ACTIVE) break
+                nextActor.activeHand.status = BlackjackTable.SeatStatus.STANDING
+                advanceWithinSeat(nextActor)
+                if (nextActor.isFinished) advanceActor(t)
             }
 
             if (t.phase == BlackjackTable.Phase.PLAYER_TURNS) {
@@ -1009,12 +1183,45 @@ class BlackjackService @Autowired constructor(
         }
     }
 
-    private sealed interface MultiDoublePreflight {
-        data class Ok(val amount: Long) : MultiDoublePreflight
-        data object NoHand : MultiDoublePreflight
-        data object NotYourTurn : MultiDoublePreflight
-        data object Illegal : MultiDoublePreflight
+    /**
+     * Outcome of the multi-table DOUBLE / SPLIT pre-flight: tells the
+     * outer code whether the wallet debit should proceed and, if so,
+     * how much to debit. Wallet locking happens outside the table
+     * monitor (matching the ordering the rest of the service uses).
+     */
+    private sealed interface MultiPreflight {
+        data class Ok(val amount: Long) : MultiPreflight
+        data object NoHand : MultiPreflight
+        data object NotYourTurn : MultiPreflight
+        data object Illegal : MultiPreflight
     }
+
+    private fun previewMultiDouble(tableId: Long, discordId: Long): MultiPreflight? =
+        tableRegistry.lockTable(tableId) { t ->
+            if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable MultiPreflight.NoHand
+            val actorSeat = t.seats.getOrNull(t.actorIndex) ?: return@lockTable MultiPreflight.NoHand
+            if (actorSeat.discordId != discordId) return@lockTable MultiPreflight.NotYourTurn
+            val active = actorSeat.activeHand
+            if (active.status != BlackjackTable.SeatStatus.ACTIVE) return@lockTable MultiPreflight.Illegal
+            if (active.cards.size != 2 || active.doubled) return@lockTable MultiPreflight.Illegal
+            MultiPreflight.Ok(active.stake)
+        }
+
+    private fun previewMultiSplit(tableId: Long, discordId: Long): MultiPreflight? =
+        tableRegistry.lockTable(tableId) { t ->
+            if (t.phase != BlackjackTable.Phase.PLAYER_TURNS) return@lockTable MultiPreflight.NoHand
+            val actorSeat = t.seats.getOrNull(t.actorIndex) ?: return@lockTable MultiPreflight.NoHand
+            if (actorSeat.discordId != discordId) return@lockTable MultiPreflight.NotYourTurn
+            val active = actorSeat.activeHand
+            if (active.status != BlackjackTable.SeatStatus.ACTIVE) return@lockTable MultiPreflight.Illegal
+            if (active.doubled) return@lockTable MultiPreflight.Illegal
+            if (!canSplit(active.cards)) return@lockTable MultiPreflight.Illegal
+            if (actorSeat.hands.size >= Blackjack.MAX_SPLIT_HANDS) return@lockTable MultiPreflight.Illegal
+            if (active.fromSplit && active.cards[0].rank == database.card.Rank.ACE) {
+                return@lockTable MultiPreflight.Illegal
+            }
+            MultiPreflight.Ok(active.stake)
+        }
 
     private sealed interface MultiTransition {
         data object NoHand : MultiTransition
@@ -1066,75 +1273,80 @@ class BlackjackService @Autowired constructor(
      */
     private fun resolveMultiHand(t: BlackjackTable, guildId: Long): BlackjackTable.HandResult {
         val deck = t.deck ?: error("missing deck on resolve")
-        val allBust = t.seats.all { it.status == BlackjackTable.SeatStatus.BUSTED }
+        // Flatten to a single (seat, hand-slot, hand-index) list — each
+        // split branch is its own wager and is settled independently
+        // (loss tribute / jackpot roll / pot share all happen at the
+        // hand-slot level rather than the seat level).
+        data class Entry(
+            val seat: BlackjackTable.Seat,
+            val slot: BlackjackTable.HandSlot,
+            val handIndex: Int,
+        )
+        val entries = t.seats.flatMap { seat ->
+            seat.hands.mapIndexed { idx, slot -> Entry(seat, slot, idx) }
+        }
+        val allBust = entries.all { it.slot.status == BlackjackTable.SeatStatus.BUSTED }
         if (!allBust) {
             blackjack.playOutDealer(t.dealer, deck, hitsSoft17 = t.rules.dealerHitsSoft17)
         }
         t.phase = BlackjackTable.Phase.RESOLVED
 
-        val results = LinkedHashMap<Long, Blackjack.Result>()
-        for (seat in t.seats) {
-            results[seat.discordId] = blackjack.evaluate(seat.hand, t.dealer)
+        // Evaluate each hand-slot, respecting the fromSplit flag so a
+        // split-aces 21 doesn't claim the natural-BJ premium.
+        val perSlotResult = entries.associateWith { entry ->
+            blackjack.evaluate(entry.slot.cards, t.dealer, fromSplit = entry.slot.fromSplit)
+        }
+        // Apply terminal status to each slot for downstream embed
+        // rendering (BUSTED / BLACKJACK markers).
+        for ((entry, result) in perSlotResult) {
+            entry.slot.status = terminalStatusFor(result, entry.slot.status)
         }
 
-        val totalPot = t.seats.sumOf { it.stake }
-        val pushSeats = t.seats.filter { results[it.discordId] == Blackjack.Result.PUSH }
-        val winnerSeats = t.seats.filter {
-            val r = results[it.discordId]
+        val totalPot = entries.sumOf { it.slot.stake }
+        val pushEntries = entries.filter { perSlotResult[it] == Blackjack.Result.PUSH }
+        val winnerEntries = entries.filter {
+            val r = perSlotResult[it]
             r == Blackjack.Result.PLAYER_WIN || r == Blackjack.Result.PLAYER_BLACKJACK
         }
-        val bjWinners = winnerSeats.filter { results[it.discordId] == Blackjack.Result.PLAYER_BLACKJACK }
-        val pushTotal = pushSeats.sumOf { it.stake }
-        val winnerStakeTotal = winnerSeats.sumOf { it.stake }
+        val bjEntries = winnerEntries.filter { perSlotResult[it] == Blackjack.Result.PLAYER_BLACKJACK }
+        val regularEntries = winnerEntries.filter { perSlotResult[it] == Blackjack.Result.PLAYER_WIN }
+        val pushTotal = pushEntries.sumOf { it.slot.stake }
+        val winnerStakeTotal = winnerEntries.sumOf { it.slot.stake }
         val losersPool = (totalPot - pushTotal - winnerStakeTotal).coerceAtLeast(0L)
 
-        val payouts = LinkedHashMap<Long, Long>()
-        for (seat in pushSeats) payouts[seat.discordId] = seat.stake
-        for (seat in winnerSeats) payouts.merge(seat.discordId, seat.stake) { a, b -> a + b }
+        // Per-slot payouts → aggregated per-discordId at the end. Pushed
+        // slots get their own stake refunded; winners get their own
+        // stake refunded plus a share of the losers' pool.
+        val payoutBySlot = HashMap<Entry, Long>()
+        for (e in pushEntries) payoutBySlot[e] = e.slot.stake
+        for (e in winnerEntries) payoutBySlot[e] = e.slot.stake
 
-        // Each winner is entitled to a fixed bonus on top of their stake
-        // refund: 1× their stake for a regular win, 1.5× for a natural
-        // blackjack. We pay these bonuses out of the losers' pool, after
-        // skimming 5% rake. If the pool can't cover the full bonus, we
-        // scale every bonus down proportionally so the pool is consumed
-        // exactly. Any surplus (small entitled amount, big losers' pool)
-        // also routes to the jackpot.
-        val regularWinners = winnerSeats.filter {
-            results[it.discordId] == Blackjack.Result.PLAYER_WIN
-        }
-        // BJ premium = (payoutMultiplier - 1) × stake, e.g. 3:2 → 1.5×, 6:5 → 1.2×.
         val bjPremiumFraction = (t.rules.blackjackPayoutMultiplier - 1.0).coerceAtLeast(0.0)
         var rake = 0L
-        if (winnerSeats.isEmpty()) {
-            // No winners: entire losers' pool routes to the jackpot.
+        if (winnerEntries.isEmpty()) {
             rake = losersPool
         } else if (losersPool > 0L) {
             val baseRake = (losersPool * t.rules.rakeFraction).toLong()
             val payable = losersPool - baseRake
-            val regularEntitled = regularWinners.sumOf { it.stake }
-            val bjEntitled = bjWinners.sumOf { (it.stake * bjPremiumFraction).toLong() }
+            val regularEntitled = regularEntries.sumOf { it.slot.stake }
+            val bjEntitled = bjEntries.sumOf { (it.slot.stake * bjPremiumFraction).toLong() }
             val totalEntitled = regularEntitled + bjEntitled
 
             if (totalEntitled > 0L && payable >= totalEntitled) {
-                // Full bonuses; surplus to jackpot.
-                for (seat in regularWinners) {
-                    payouts.merge(seat.discordId, seat.stake) { a, b -> a + b }
+                for (e in regularEntries) payoutBySlot.merge(e, e.slot.stake) { a, b -> a + b }
+                for (e in bjEntries) {
+                    payoutBySlot.merge(e, (e.slot.stake * bjPremiumFraction).toLong()) { a, b -> a + b }
                 }
-                for (seat in bjWinners) {
-                    payouts.merge(seat.discordId, (seat.stake * bjPremiumFraction).toLong()) { a, b -> a + b }
-                }
-                val surplus = payable - totalEntitled
-                rake = baseRake + surplus
+                rake = baseRake + (payable - totalEntitled)
             } else if (totalEntitled > 0L) {
-                // Scale down: each winner gets `(owed × payable) / totalEntitled`.
-                for (seat in regularWinners) {
-                    val share = (seat.stake * payable) / totalEntitled
-                    payouts.merge(seat.discordId, share) { a, b -> a + b }
+                for (e in regularEntries) {
+                    val share = (e.slot.stake * payable) / totalEntitled
+                    payoutBySlot.merge(e, share) { a, b -> a + b }
                 }
-                for (seat in bjWinners) {
-                    val owed = (seat.stake * bjPremiumFraction).toLong()
+                for (e in bjEntries) {
+                    val owed = (e.slot.stake * bjPremiumFraction).toLong()
                     val share = (owed * payable) / totalEntitled
-                    payouts.merge(seat.discordId, share) { a, b -> a + b }
+                    payoutBySlot.merge(e, share) { a, b -> a + b }
                 }
                 rake = baseRake
             } else {
@@ -1143,14 +1355,42 @@ class BlackjackService @Autowired constructor(
         }
         if (rake > 0L) jackpotService.addToPool(guildId, rake)
 
+        // Roll into per-discordId totals + per-slot result records.
+        val payouts = LinkedHashMap<Long, Long>()
+        for ((entry, amount) in payoutBySlot) {
+            if (amount <= 0L) continue
+            payouts.merge(entry.seat.discordId, amount) { a, b -> a + b }
+        }
         if (payouts.isNotEmpty()) {
             val locked = userService.lockUsersInAscendingOrder(payouts.keys, guildId)
             for ((id, amount) in payouts) {
-                if (amount <= 0L) continue
                 val user = locked[id] ?: continue
                 user.socialCredit = (user.socialCredit ?: 0L) + amount
                 userService.updateUser(user)
             }
+        }
+
+        val perHand = entries.map { entry ->
+            BlackjackTable.PerHandResult(
+                discordId = entry.seat.discordId,
+                handIndex = entry.handIndex,
+                cards = entry.slot.cards.toList(),
+                total = bestTotal(entry.slot.cards),
+                stake = entry.slot.stake,
+                doubled = entry.slot.doubled,
+                fromSplit = entry.slot.fromSplit,
+                result = perSlotResult[entry] ?: Blackjack.Result.PUSH,
+                payout = payoutBySlot[entry] ?: 0L,
+            )
+        }
+        // For back-compat callers reading the per-discordId map, expose
+        // each seat's first-hand result as the representative outcome
+        // (richer per-hand data lives on perHandResults).
+        val results = LinkedHashMap<Long, Blackjack.Result>()
+        for (seat in t.seats) {
+            val firstSlotResult = perSlotResult.entries.firstOrNull { it.key.seat === seat }?.value
+                ?: Blackjack.Result.PUSH
+            results[seat.discordId] = firstSlotResult
         }
 
         val handResult = BlackjackTable.HandResult(
@@ -1161,15 +1401,16 @@ class BlackjackService @Autowired constructor(
             payouts = payouts,
             pot = totalPot,
             rake = rake,
-            resolvedAt = Instant.now()
+            resolvedAt = Instant.now(),
+            perHandResults = perHand,
         )
         t.lastResult = handResult
         t.lastActivityAt = Instant.now()
         persistHandLog(t, handResult)
 
-        // Reset to LOBBY but KEEP seats. Each surviving seat needs to re-
-        // ante on the next [startMultiHand] — set stake=0 to mark "no
-        // escrow held". Drop seats that asked to leave mid-hand.
+        // Reset to LOBBY but KEEP seats. Each surviving seat needs to
+        // re-ante on the next [startMultiHand]; resetForNextHand zeroes
+        // out the per-hand state including any split branches.
         t.phase = BlackjackTable.Phase.LOBBY
         t.actorIndex = 0
         t.dealer.clear()
@@ -1177,11 +1418,7 @@ class BlackjackService @Autowired constructor(
         t.currentActorDeadline = null
         t.seats.removeAll { it.pendingLeave }
         for (seat in t.seats) {
-            seat.hand = mutableListOf()
-            seat.doubled = false
-            seat.stake = 0L
-            seat.status = BlackjackTable.SeatStatus.ACTIVE
-            seat.pendingLeave = false
+            seat.resetForNextHand(stake = 0L)
         }
         if (t.seats.isEmpty()) tableRegistry.remove(t.id)
         return handResult

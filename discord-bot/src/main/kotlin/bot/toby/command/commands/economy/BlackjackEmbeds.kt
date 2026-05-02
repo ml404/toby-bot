@@ -32,7 +32,7 @@ internal object BlackjackEmbeds {
     private val NEUTRAL_COLOR = Color(0xA0, 0xA0, 0xB0)
     private const val HIDDEN = "🂠"
 
-    enum class Action { HIT, STAND, DOUBLE, PEEK }
+    enum class Action { HIT, STAND, DOUBLE, SPLIT, PEEK }
 
     fun buttonId(action: Action, tableId: Long): String =
         listOf(BUTTON_NAME, action.name, tableId.toString()).joinToString(BUTTON_DELIM)
