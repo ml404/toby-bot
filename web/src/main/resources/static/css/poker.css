@@ -1,10 +1,12 @@
 /*
  * Poker-specific styles. The shared "casino table" look (felt, cards,
  * seats, avatars, gold-glow active actor, deal animation) lives in
- * casino-table.css and applies to both /blackjack and /poker. Only
- * poker-specific bits stay here: the lobby form, the free-play tag, the
- * pot/side-pot panels, and layout containers.
+ * casino-table.css and is loaded via the @import below — that way every
+ * poker page picks it up without the head fragment having to juggle a
+ * second optional stylesheet parameter (which broke other 2-arg callers
+ * when the fragment signature added one).
  */
+@import url("./casino-table.css");
 
 .poker-header {
     margin-bottom: 1.5rem;
