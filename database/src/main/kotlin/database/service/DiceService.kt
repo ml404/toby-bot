@@ -37,7 +37,8 @@ class DiceService(
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
             val soldTobyCoins: Long = 0L,
-            val newPrice: Double? = null
+            val newPrice: Double? = null,
+            val jackpotPool: Long = 0L
         ) : RollOutcome
 
         data class Lose(
@@ -47,7 +48,8 @@ class DiceService(
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
-            val lossTribute: Long = 0L
+            val lossTribute: Long = 0L,
+            val jackpotPool: Long = 0L
         ) : RollOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : RollOutcome
@@ -111,7 +113,8 @@ class DiceService(
                 newBalance = r.newBalance + jackpot,
                 jackpotPayout = jackpot,
                 soldTobyCoins = soldCoins,
-                newPrice = newPrice
+                newPrice = newPrice,
+                jackpotPool = jackpotService.getPool(guildId)
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -122,7 +125,8 @@ class DiceService(
                 newBalance = r.newBalance,
                 soldTobyCoins = soldCoins,
                 newPrice = newPrice,
-                lossTribute = tribute
+                lossTribute = tribute,
+                jackpotPool = jackpotService.getPool(guildId)
             )
         }
     }

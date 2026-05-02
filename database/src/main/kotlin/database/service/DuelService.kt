@@ -62,7 +62,8 @@ class DuelService @Autowired constructor(
             val pot: Long,
             val winnerNewBalance: Long,
             val loserNewBalance: Long,
-            val lossTribute: Long
+            val lossTribute: Long,
+            val jackpotPool: Long = 0L
         ) : AcceptOutcome
 
         data class InitiatorInsufficient(val have: Long, val needed: Long) : AcceptOutcome
@@ -163,7 +164,8 @@ class DuelService @Autowired constructor(
             pot = pot,
             winnerNewBalance = winner.socialCredit ?: 0L,
             loserNewBalance = loser.socialCredit ?: 0L,
-            lossTribute = tribute
+            lossTribute = tribute,
+            jackpotPool = jackpotService.getPool(guildId)
         )
     }
 

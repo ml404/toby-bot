@@ -16,6 +16,20 @@
     }
 
     /**
+     * Refresh the per-guild jackpot pool banner (`fragments/casino.html`)
+     * from a `body.jackpotPool` field on any balance-mutating response —
+     * casino spins, duels, trades, tips. Noop when the field is absent
+     * or the banner isn't on the current page (so duel/trade/tip pages
+     * silently skip the DOM write).
+     */
+    function updatePoolBanner(body) {
+        if (!body || typeof body.jackpotPool !== 'number') return;
+        if (typeof document === 'undefined') return;
+        const target = document.querySelector('.casino-jackpot-banner strong');
+        if (target) target.textContent = String(body.jackpotPool);
+    }
+
+    /**
      * Apply jackpot styling + prefix on top of an existing win-line HTML
      * fragment. Returns the HTML the result element should display.
      * Pass the body straight from the server response.
@@ -23,6 +37,7 @@
      *   element.innerHTML = renderWinHtml(resEl, body, 'slots-result-jackpot', winLine)
      */
     function renderWinHtml(resultEl, body, jackpotClassName, winLineHtml) {
+        updatePoolBanner(body);
         if (!isJackpotHit(body)) return winLineHtml;
         if (resultEl && jackpotClassName) resultEl.classList.add(jackpotClassName);
         return jackpotPrefixHtml(body.jackpotPayout) + winLineHtml;
@@ -34,12 +49,13 @@
      * (e.g. tiny stake floored to zero, or admin set tribute to 0 %).
      */
     function lossTributeSuffix(body) {
+        updatePoolBanner(body);
         if (!body || typeof body.lossTribute !== 'number' || body.lossTribute <= 0) return '';
         return ' &middot; <span class="casino-loss-tribute">+' +
             body.lossTribute + ' to jackpot</span>';
     }
 
-    const api = { isJackpotHit, jackpotPrefixHtml, renderWinHtml, lossTributeSuffix };
+    const api = { isJackpotHit, jackpotPrefixHtml, renderWinHtml, lossTributeSuffix, updatePoolBanner };
 
     // Browser global so each game's IIFE-style JS can reach it without
     // bundler plumbing.
