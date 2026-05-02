@@ -319,6 +319,109 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig accepts BLACKJACK_RAKE_PCT in 0 to 20 inclusive`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.BLACKJACK_RAKE_PCT
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "5"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "20"))
+        verify { configService.upsertConfig(key.configValue, "0", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "20", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "21"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "abc"))
+    }
+
+    @Test
+    fun `updateConfig accepts BLACKJACK_MIN_ANTE and MAX_ANTE when value is a positive long`() {
+        mockMember(ownerId, isOwner = true)
+        val keys = listOf(
+            ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
+            ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
+        )
+        for (key in keys) {
+            assertNull(service.updateConfig(ownerId, guildId, key, "10"))
+            assertNull(service.updateConfig(ownerId, guildId, key, "500"))
+            verify { configService.upsertConfig(key.configValue, "10", guildId.toString()) }
+            verify { configService.upsertConfig(key.configValue, "500", guildId.toString()) }
+
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "0"))
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "-5"))
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "wibble"))
+        }
+    }
+
+    @Test
+    fun `updateConfig accepts BLACKJACK_MAX_SEATS only within 2 to 7`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.BLACKJACK_MAX_SEATS
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "2"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "7"))
+        verify { configService.upsertConfig(key.configValue, "2", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "7", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "8"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "n/a"))
+    }
+
+    @Test
+    fun `updateConfig accepts BLACKJACK_SHOT_CLOCK_SECONDS in 0 to 600 (0 disables)`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "30"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "600"))
+        verify { configService.upsertConfig(key.configValue, "0", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "30", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "601"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "asdf"))
+    }
+
+    @Test
+    fun `updateConfig accepts BLACKJACK_DEALER_HITS_SOFT_17 only as a boolean string`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "true"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "false"))
+        // Validator lower-cases the input.
+        assertNull(service.updateConfig(ownerId, guildId, key, "TRUE"))
+        verify { configService.upsertConfig(key.configValue, "true", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "false", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "yes"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, ""))
+    }
+
+    @Test
+    fun `updateConfig accepts BLACKJACK_BJ_PAYOUT_NUM and DEN in 1 to 10`() {
+        mockMember(ownerId, isOwner = true)
+        val keys = listOf(
+            ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM,
+            ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN,
+        )
+        for (key in keys) {
+            assertNull(service.updateConfig(ownerId, guildId, key, "1"))
+            assertNull(service.updateConfig(ownerId, guildId, key, "3"))
+            assertNull(service.updateConfig(ownerId, guildId, key, "10"))
+            verify { configService.upsertConfig(key.configValue, "1", guildId.toString()) }
+            verify { configService.upsertConfig(key.configValue, "10", guildId.toString()) }
+
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "0"))
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "11"))
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "abc"))
+        }
+    }
+
+    @Test
     fun `updateConfig accepts MOVE when channel name exists`() {
         mockMember(ownerId, isOwner = true)
         val vc = mockk<VoiceChannel>(relaxed = true)

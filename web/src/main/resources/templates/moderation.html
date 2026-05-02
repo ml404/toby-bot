@@ -278,6 +278,82 @@
                 </div>
             </div>
         </details>
+
+        <details class="config-section">
+            <summary>Blackjack</summary>
+            <div class="config-grid">
+                <div class="config-row" data-key="BLACKJACK_RAKE_PCT">
+                    <label>Blackjack rake (% of multi-table losers' pool routed to jackpot; default 5)</label>
+                    <input type="number" min="0" max="20" step="1"
+                           th:value="${overview.config['BLACKJACK_RAKE_PCT']}"
+                           placeholder="5"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_MIN_ANTE">
+                    <label>Minimum ante per hand (multi &amp; solo; default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['BLACKJACK_MIN_ANTE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_MAX_ANTE">
+                    <label>Maximum ante per hand (multi &amp; solo; default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['BLACKJACK_MAX_ANTE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_MAX_SEATS">
+                    <label>Max seats per multi table (2-7; default 5)</label>
+                    <input type="number" min="2" max="7"
+                           th:value="${overview.config['BLACKJACK_MAX_SEATS']}"
+                           placeholder="5"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_SHOT_CLOCK_SECONDS">
+                    <label>Decision deadline per actor (seconds; 0 disables; default 30)</label>
+                    <input type="number" min="0" max="600"
+                           th:value="${overview.config['BLACKJACK_SHOT_CLOCK_SECONDS']}"
+                           placeholder="30"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_DEALER_HITS_SOFT_17">
+                    <label>Dealer rule on soft 17</label>
+                    <select th:disabled="${!isOwner}">
+                        <option value="false"
+                                th:selected="${overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == null or overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == 'false'}">
+                            Stand on soft 17 (S17, default — better for the player)
+                        </option>
+                        <option value="true"
+                                th:selected="${overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == 'true'}">
+                            Hit soft 17 (H17 — slightly worse for the player)
+                        </option>
+                    </select>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_BJ_PAYOUT_NUM">
+                    <label>Natural-blackjack payout numerator (e.g. 3 for 3:2; default 3)</label>
+                    <input type="number" min="1" max="10"
+                           th:value="${overview.config['BLACKJACK_BJ_PAYOUT_NUM']}"
+                           placeholder="3"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BLACKJACK_BJ_PAYOUT_DEN">
+                    <label>Natural-blackjack payout denominator (e.g. 2 for 3:2; default 2)</label>
+                    <input type="number" min="1" max="10"
+                           th:value="${overview.config['BLACKJACK_BJ_PAYOUT_DEN']}"
+                           placeholder="2"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+            </div>
+        </details>
     </section>
 
     <!-- VOICE TAB -->
