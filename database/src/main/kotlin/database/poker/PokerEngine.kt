@@ -1,5 +1,7 @@
 package database.poker
 
+import database.card.Card
+import database.card.Deck
 import database.poker.PokerTable.Phase
 import database.poker.PokerTable.SeatStatus
 import java.time.Instant

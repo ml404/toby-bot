@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Blackjack table', '/css/blackjack.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId},
+               data-table-id=${tableId},
+               data-ante=${ante},
+               data-my-discord-id=${myDiscordId}">
+
+    <div class="bj-header">
+        <a class="back-link" th:href="@{/blackjack/{g}(g=${guildId})}">&larr; Back to lobby</a>
+        <h1 th:text="'🂡 Table #' + ${tableId}">🂡 Blackjack table</h1>
+        <p class="muted">
+            Wallet: <strong id="bj-balance" th:text="${balance}">0</strong> credits.
+            Ante <span th:text="${ante}">100</span> credits per hand.
+        </p>
+    </div>
+
+    <section class="bj-card" id="bj-join-card" hidden>
+        <h2>Join this table</h2>
+        <p class="muted">First-hand ante is debited from your wallet immediately.</p>
+        <button id="bj-join" class="btn-primary" type="button">Sit down</button>
+    </section>
+
+    <section class="bj-card bj-table">
+        <div class="bj-info">
+            <div>Phase: <strong id="bj-phase">—</strong></div>
+            <div>Hand #<strong id="bj-hand-number">0</strong></div>
+            <div>To act: <strong id="bj-to-act">—</strong></div>
+            <div id="bj-shot-clock" class="muted bj-shot-clock" hidden></div>
+        </div>
+
+        <div class="bj-row">
+            <h3>Dealer <span class="muted" id="bj-dealer-total"></span></h3>
+            <div id="bj-dealer-cards" class="bj-cards"></div>
+        </div>
+
+        <div class="bj-seats" id="bj-seats"></div>
+
+        <div class="bj-actions">
+            <button id="bj-action-hit" class="btn-primary" type="button" disabled>Hit</button>
+            <button id="bj-action-stand" class="btn-success" type="button" disabled>Stand</button>
+            <button id="bj-action-double" class="btn-secondary" type="button" disabled>Double down</button>
+            <button id="bj-action-start" class="btn-secondary" type="button" hidden>Deal next hand</button>
+            <button id="bj-action-leave" class="btn-secondary" type="button" hidden>Leave table</button>
+        </div>
+
+        <div id="bj-status" class="muted" style="margin-top: 0.75rem;"></div>
+        <div id="bj-result" class="muted" style="margin-top: 0.5rem;"></div>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/blackjack-table.js}"></script>
+</body>
+</html>

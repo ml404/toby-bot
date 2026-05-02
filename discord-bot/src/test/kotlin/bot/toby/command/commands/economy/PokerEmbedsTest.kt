@@ -1,9 +1,9 @@
 package bot.toby.command.commands.economy
 
-import database.poker.Card
+import database.card.Card
 import database.poker.PokerTable
-import database.poker.Rank
-import database.poker.Suit
+import database.card.Rank
+import database.card.Suit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
