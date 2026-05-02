@@ -251,7 +251,12 @@ class DuelControllerTest {
 
     @Test
     fun `outgoingForMe returns the initiator's pending offers`() {
-        val view = DuelWebService.PendingDuelView(duelId, discordId, opponentId, 50L)
+        val view = DuelWebService.PendingDuelView(
+            duelId,
+            discordId.toString(),
+            opponentId.toString(),
+            50L,
+        )
         every { duelWebService.pendingForInitiator(discordId, guildId) } returns listOf(view)
 
         val response = controller.outgoingForMe(guildId, user)

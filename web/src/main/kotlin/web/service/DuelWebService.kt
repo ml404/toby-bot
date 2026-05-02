@@ -17,8 +17,11 @@ class DuelWebService(
 ) {
     data class PendingDuelView(
         val duelId: Long,
-        val initiatorDiscordId: Long,
-        val opponentDiscordId: Long,
+        // Stringified so the 18-digit Discord snowflake survives JS's 53-bit
+        // Number precision. duel.js renders these into the row text directly,
+        // so a numeric round-trip would print a rounded id.
+        val initiatorDiscordId: String,
+        val opponentDiscordId: String,
         val stake: Long
     )
 
@@ -31,8 +34,8 @@ class DuelWebService(
     private fun toView(d: PendingDuelRegistry.PendingDuel): PendingDuelView =
         PendingDuelView(
             duelId = d.id,
-            initiatorDiscordId = d.initiatorDiscordId,
-            opponentDiscordId = d.opponentDiscordId,
+            initiatorDiscordId = d.initiatorDiscordId.toString(),
+            opponentDiscordId = d.opponentDiscordId.toString(),
             stake = d.stake
         )
 

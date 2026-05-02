@@ -224,13 +224,34 @@ class PokerWebServiceTest {
         assertEquals(2, pots.size)
         assertEquals(50L, pots[0].cap)
         assertEquals(150L, pots[0].amount)
-        assertEquals(listOf(1L, 2L, 3L), pots[0].eligibleDiscordIds)
-        assertEquals(listOf(1L), pots[0].winners)
+        assertEquals(listOf("1", "2", "3"), pots[0].eligibleDiscordIds)
+        assertEquals(listOf("1"), pots[0].winners)
         assertEquals(150L, pots[0].payoutByDiscordId["1"])
         assertEquals(200L, pots[1].cap)
-        assertEquals(listOf(2L, 3L), pots[1].eligibleDiscordIds)
-        assertEquals(listOf(2L), pots[1].winners)
+        assertEquals(listOf("2", "3"), pots[1].eligibleDiscordIds)
+        assertEquals(listOf("2"), pots[1].winners)
         assertEquals(300L, pots[1].payoutByDiscordId["2"])
         assertEquals(25L, lastResult.refundedByDiscordId["3"])
+        // top-level winners are stringified too — the JS uses these to look
+        // up display names in nameById, which is keyed by the seat's
+        // (also-stringified) discordId.
+        assertEquals(listOf("1", "2"), lastResult.winners)
+    }
+
+    @Test
+    fun `seat discordId and host discordId are stringified to survive JS Number precision`() {
+        // 18-digit Discord snowflake — past JS Number.MAX_SAFE_INTEGER (2^53).
+        // Numeric serialization would round the last few digits and the JS
+        // "am I the host?" / "did I win this pot?" compares would silently
+        // miss. Lock the projection to String so JSON.parse keeps every digit.
+        val snowflake = 553658039266443264L
+        val table = makeTable(seatChips = listOf(snowflake to 1000L, 2L to 1000L))
+        val view = service.snapshot(table.id, viewerDiscordId = snowflake)!!
+        assertEquals(snowflake.toString(), view.hostDiscordId)
+        assertEquals(snowflake.toString(), view.seats[0].discordId)
+        assertEquals("2", view.seats[1].discordId)
+
+        val rows = service.listGuildTables(guildId = 42L)
+        assertEquals(snowflake.toString(), rows[0].hostDiscordId)
     }
 }

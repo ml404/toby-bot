@@ -72,7 +72,9 @@
         state.seats.forEach(function (s, idx) {
             const node = document.createElement('div');
             node.className = 'poker-seat casino-seat';
-            node.dataset.discordId = String(s.discordId);
+            // s.discordId is already a string from the server projection
+            // (Long → String in PokerWebService.SeatView); no JS rounding.
+            node.dataset.discordId = s.discordId;
             const isMe = idx === meIdx;
             if (isMe) node.classList.add('poker-seat-me', 'is-me');
             if (idx === state.actorIndex && state.phase !== 'WAITING') node.classList.add('poker-seat-active', 'is-active');
@@ -135,7 +137,9 @@
         btnRaise.textContent = 'Raise (+' + (state.raiseAmount - state.callAmount) + ')';
         btnFold.disabled = !state.isMyTurn;
 
-        const isHost = String(state.hostDiscordId) === String(myDiscordId);
+        // hostDiscordId comes through as a string (see PokerWebService);
+        // myDiscordId is read from the data-my-discord-id attribute, also a string.
+        const isHost = state.hostDiscordId === myDiscordId;
         const canStart = isHost && state.phase === 'WAITING' && state.seats.length >= 2;
         btnStart.hidden = !isHost;
         btnStart.disabled = !canStart;
@@ -185,9 +189,9 @@
         // labels show real Discord names instead of raw ids.
         const nameById = {};
         ((state && state.seats) || []).forEach(function (s) {
-            nameById[String(s.discordId)] = s.displayName || ('Player ' + s.discordId);
+            nameById[s.discordId] = s.displayName || ('Player ' + s.discordId);
         });
-        const labelFor = function (id) { return nameById[String(id)] || String(id); };
+        const labelFor = function (id) { return nameById[id] || String(id); };
         const winners = (result.winners || []).map(labelFor).join(', ');
         const reveals = result.revealedHoleCards || {};
         const lines = [];
@@ -219,7 +223,7 @@
                 if (!amount || amount <= 0) return;
                 const seatEl = seatsEl.querySelector('[data-discord-id="' + id + '"]');
                 if (seatEl) window.CasinoRender.flashChipsOn(seatEl, amount);
-                if (String(id) === String(myDiscordId)) myPaid = true;
+                if (id === myDiscordId) myPaid = true;
             });
             // Sound cue keyed off the viewer's outcome — a win is a win
             // for the player even if a side pot went elsewhere.

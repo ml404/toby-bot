@@ -95,4 +95,15 @@ class BlackjackWebServiceTest {
         assertEquals("Player 9999", view.seats[0].displayName)
         assertNull(view.seats[0].avatarUrl)
     }
+
+    @Test
+    fun `listMultiTables stringifies hostDiscordId so it survives JS Number precision`() {
+        // 18-digit Discord snowflake — past JS Number.MAX_SAFE_INTEGER (2^53).
+        // Numeric serialization would round the last few digits.
+        val snowflake = 553658039266443264L
+        makeTable(seatIds = listOf(snowflake, 2L))
+        val rows = service.listMultiTables(guildId = 42L)
+        assertEquals(1, rows.size)
+        assertEquals(snowflake.toString(), rows[0].hostDiscordId)
+    }
 }
