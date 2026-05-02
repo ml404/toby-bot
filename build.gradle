@@ -91,14 +91,6 @@ subprojects {
 
         tasks.withType(Test).configureEach {
             failOnNoDiscoveredTests = false
-            // Default: single fork per module. The discord-bot and
-            // application suites have latent test-class-order
-            // dependencies (mockkStatic leakage, shared Spring context
-            // state) that break when classes are sharded across forks
-            // — see PR #358 second CI run. Modules that proved safe
-            // (common, core-api, database, web) opt in to multi-fork
-            // execution from their own build.gradle.
-            maxParallelForks = 1
         }
     }
 }

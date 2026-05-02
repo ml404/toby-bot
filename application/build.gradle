@@ -177,12 +177,6 @@ tasks.withType(KotlinCompile).configureEach {
 
 test {
     useJUnitPlatform()
-    // Override the root subprojects { maxParallelForks } default for this
-    // module: integration tests share state through the seeded Postgres
-    // testcontainer + Spring TestContext, and splitting test classes across
-    // forks exposes data-isolation bugs (see PR #358 first CI run). Keep
-    // this module on a single fork until those tests are made independent.
-    maxParallelForks = 1
 }
 
 kotlin {
