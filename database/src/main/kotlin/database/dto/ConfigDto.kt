@@ -79,6 +79,31 @@ class ConfigDto(
         // up if they don't act in time. Default 30s when unset.
         POKER_SHOT_CLOCK_SECONDS("POKER_SHOT_CLOCK_SECONDS"),
 
+        // Per-guild blackjack table parameters. All defaults come from
+        // `Blackjack.companion` constants if unset. Each table snapshots
+        // these values at creation time so a mid-hand admin tweak doesn't
+        // break invariants for the in-flight hand.
+        // Whole-number percentage (0-20) of the multi-table losers' pool
+        // routed to the jackpot pool. Default 5 if unset.
+        BLACKJACK_RAKE_PCT("BLACKJACK_RAKE_PCT"),
+        // Min/max ante per multi hand (also bounds for /blackjack solo
+        // stakes). Defaults to 10 / 500.
+        BLACKJACK_MIN_ANTE("BLACKJACK_MIN_ANTE"),
+        BLACKJACK_MAX_ANTE("BLACKJACK_MAX_ANTE"),
+        // 2-7 seats per multi table. Default 5.
+        BLACKJACK_MAX_SEATS("BLACKJACK_MAX_SEATS"),
+        // Per-actor shot clock for multi tables. Default 30s; 0 disables.
+        BLACKJACK_SHOT_CLOCK_SECONDS("BLACKJACK_SHOT_CLOCK_SECONDS"),
+        // "true" = dealer hits soft 17 (H17, slightly worse for player).
+        // Anything else = stands on all 17 (S17, default).
+        BLACKJACK_DEALER_HITS_SOFT_17("BLACKJACK_DEALER_HITS_SOFT_17"),
+        // Natural-blackjack payout numerator/denominator. Defaults to
+        // 3/2 (i.e. classic 3:2 payout). Set to 6/5 for a stingier room
+        // (typical Vegas low-limit table). Total payout multiplier =
+        // 1 + (num/den), e.g. 3:2 → 2.5×, 6:5 → 2.2×.
+        BLACKJACK_BJ_PAYOUT_NUM("BLACKJACK_BJ_PAYOUT_NUM"),
+        BLACKJACK_BJ_PAYOUT_DEN("BLACKJACK_BJ_PAYOUT_DEN"),
+
         // Whole-number social credits granted to every known user in the
         // guild once per UTC day, regardless of voice activity. 0 (or unset)
         // disables UBI. Bypasses DAILY_CREDIT_CAP — the whole point is to

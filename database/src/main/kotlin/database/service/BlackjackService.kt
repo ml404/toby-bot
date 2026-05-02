@@ -6,6 +6,9 @@ import database.blackjack.BlackjackTableRegistry
 import database.blackjack.bestTotal
 import database.blackjack.isBlackjack
 import database.blackjack.isBust
+import database.dto.BlackjackHandLogDto
+import database.dto.ConfigDto
+import database.persistence.BlackjackHandLogPersistence
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
@@ -41,22 +44,45 @@ class BlackjackService @Autowired constructor(
     private val configService: ConfigService,
     private val tableRegistry: BlackjackTableRegistry,
     private val blackjack: Blackjack = Blackjack(),
+    /**
+     * Optional sell-to-cover wiring (mirrors [PokerService]). When
+     * either is null (test path with no Spring context), `autoTopUp`
+     * requests degrade gracefully to plain `InsufficientCredits` so
+     * existing constructors without these collaborators keep working.
+     */
+    @Autowired(required = false) private val tradeService: EconomyTradeService? = null,
+    @Autowired(required = false) private val marketService: TobyCoinMarketService? = null,
+    /**
+     * Optional hand-log persistence. When null (test path with no
+     * Spring context), settled hands are not logged — service still
+     * pays out correctly, the audit row just doesn't appear.
+     */
+    @Autowired(required = false) private val handLogPersistence: BlackjackHandLogPersistence? = null,
     private val random: Random = Random.Default
 ) {
 
     sealed interface SoloDealOutcome {
         /** Hand dealt; player must act. [snapshot] is a live reference — embeds should read it under [BlackjackTableRegistry.lockTable] if precise consistency is needed. */
-        data class Dealt(val tableId: Long, val snapshot: BlackjackTable) : SoloDealOutcome
+        data class Dealt(
+            val tableId: Long,
+            val snapshot: BlackjackTable,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
+        ) : SoloDealOutcome
         /** Natural blackjack short-circuit (player BJ vs non-BJ dealer, or both BJ → push). */
         data class Resolved(
             val tableId: Long,
             val result: BlackjackTable.HandResult,
             val newBalance: Long,
             val jackpotPayout: Long,
-            val lossTribute: Long
+            val lossTribute: Long,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
         ) : SoloDealOutcome
         data class InvalidStake(val min: Long, val max: Long) : SoloDealOutcome
         data class InsufficientCredits(val stake: Long, val have: Long) : SoloDealOutcome
+        /** [autoTopUp] = true but the player's TOBY can't cover the credit shortfall. */
+        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : SoloDealOutcome
         data object UnknownUser : SoloDealOutcome
     }
 
@@ -76,19 +102,30 @@ class BlackjackService @Autowired constructor(
     }
 
     sealed interface MultiCreateOutcome {
-        data class Ok(val tableId: Long) : MultiCreateOutcome
+        data class Ok(
+            val tableId: Long,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
+        ) : MultiCreateOutcome
         data class InvalidAnte(val min: Long, val max: Long) : MultiCreateOutcome
         data class InsufficientCredits(val stake: Long, val have: Long) : MultiCreateOutcome
+        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : MultiCreateOutcome
         data object UnknownUser : MultiCreateOutcome
     }
 
     sealed interface MultiJoinOutcome {
-        data class Ok(val seatIndex: Int, val newBalance: Long) : MultiJoinOutcome
+        data class Ok(
+            val seatIndex: Int,
+            val newBalance: Long,
+            val soldTobyCoins: Long = 0L,
+            val newPrice: Double? = null
+        ) : MultiJoinOutcome
         data object TableNotFound : MultiJoinOutcome
         data object TableFull : MultiJoinOutcome
         data object AlreadySeated : MultiJoinOutcome
         data object HandInProgress : MultiJoinOutcome
         data class InsufficientCredits(val stake: Long, val have: Long) : MultiJoinOutcome
+        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : MultiJoinOutcome
         data object UnknownUser : MultiJoinOutcome
     }
 
@@ -167,26 +204,48 @@ class BlackjackService @Autowired constructor(
     // -------------------------------------------------------------------------
 
     @Transactional
-    fun dealSolo(discordId: Long, guildId: Long, stake: Long): SoloDealOutcome {
+    fun dealSolo(
+        discordId: Long,
+        guildId: Long,
+        stake: Long,
+        autoTopUp: Boolean = false
+    ): SoloDealOutcome {
+        val params = readMultiTableParams(guildId)
         val check = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, Blackjack.MIN_STAKE, Blackjack.MAX_STAKE
+            userService, discordId, guildId, stake, params.minAnte, params.maxAnte
         )
-        val ok = when (check) {
+        var soldCoins = 0L
+        var soldNewPrice: Double? = null
+        val resolved = when (check) {
             is BalanceCheck.InvalidStake -> return SoloDealOutcome.InvalidStake(check.min, check.max)
             BalanceCheck.UnknownUser -> return SoloDealOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> return SoloDealOutcome.InsufficientCredits(check.stake, check.have)
+            is BalanceCheck.Insufficient -> {
+                if (!autoTopUp) return SoloDealOutcome.InsufficientCredits(check.stake, check.have)
+                val user = userService.getUserByIdForUpdate(discordId, guildId)
+                    ?: return SoloDealOutcome.UnknownUser
+                when (val r = resolveBalanceWithOptionalTopUp(user, guildId, check.have, stake)) {
+                    is TopUpResolution.Ok -> {
+                        soldCoins = r.soldCoins
+                        soldNewPrice = r.newPrice
+                        BalanceCheck.Ok(r.user, r.balance)
+                    }
+                    is TopUpResolution.CreditsShort -> return SoloDealOutcome.InsufficientCredits(stake, r.have)
+                    is TopUpResolution.CoinsShort -> return SoloDealOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+                }
+            }
             is BalanceCheck.Ok -> check
         }
         // Debit stake into seat escrow.
-        ok.user.socialCredit = ok.balance - stake
-        userService.updateUser(ok.user)
+        resolved.user.socialCredit = resolved.balance - stake
+        userService.updateUser(resolved.user)
 
         val table = tableRegistry.create(
             guildId = guildId,
             mode = BlackjackTable.Mode.SOLO,
             hostDiscordId = discordId,
             ante = stake,
-            maxSeats = 1
+            maxSeats = 1,
+            rules = params.rules
         )
         val initial = tableRegistry.lockTable(table.id) { t ->
             val deck = blackjack.newDeck()
@@ -222,7 +281,9 @@ class BlackjackService @Autowired constructor(
         return when (initial) {
             ResolveDecision.AwaitPlayer -> SoloDealOutcome.Dealt(
                 tableId = table.id,
-                snapshot = table
+                snapshot = table,
+                soldTobyCoins = soldCoins,
+                newPrice = soldNewPrice
             )
             is ResolveDecision.ResolveImmediately -> {
                 val settlement = settleSolo(table, initial.seat, initial.result, guildId)
@@ -231,7 +292,9 @@ class BlackjackService @Autowired constructor(
                     result = settlement.handResult,
                     newBalance = settlement.newBalance,
                     jackpotPayout = settlement.jackpotPayout,
-                    lossTribute = settlement.lossTribute
+                    lossTribute = settlement.lossTribute,
+                    soldTobyCoins = soldCoins,
+                    newPrice = soldNewPrice
                 )
             }
         }
@@ -358,7 +421,7 @@ class BlackjackService @Autowired constructor(
     ): SoloTransition {
         val deck = t.deck ?: return SoloTransition.HandNotFound
         t.phase = BlackjackTable.Phase.DEALER_TURN
-        blackjack.playOutDealer(t.dealer, deck)
+        blackjack.playOutDealer(t.dealer, deck, hitsSoft17 = t.rules.dealerHitsSoft17)
         t.phase = BlackjackTable.Phase.RESOLVED
         return SoloTransition.Resolve(seat, blackjack.evaluate(seat.hand, t.dealer))
     }
@@ -397,7 +460,7 @@ class BlackjackService @Autowired constructor(
         result: Blackjack.Result,
         guildId: Long
     ): SoloSettlement {
-        val multiplier = blackjack.multiplier(result)
+        val multiplier = blackjack.multiplier(result, table.rules.blackjackPayoutMultiplier)
         val payout = (seat.stake * multiplier).toLong()
 
         val user = userService.getUserByIdForUpdate(seat.discordId, guildId)
@@ -435,7 +498,38 @@ class BlackjackService @Autowired constructor(
             table.lastResult = handResult
             table.lastActivityAt = Instant.now()
         }
+        persistHandLog(table, handResult)
         return SoloSettlement(handResult, newBalance, jackpotPayout, lossTribute)
+    }
+
+    /**
+     * Append the resolved hand to `blackjack_hand_log` if persistence
+     * is wired. Compact card glyphs match what the embed renders.
+     */
+    private fun persistHandLog(table: BlackjackTable, result: BlackjackTable.HandResult) {
+        val persistence = handLogPersistence ?: return
+        val players = result.seatResults.keys.joinToString(",")
+        val seatResultsStr = result.seatResults.entries.joinToString(",") { (id, r) -> "$id:${r.name}" }
+        val payoutsStr = result.payouts.entries.joinToString(",") { (id, amt) -> "$id:$amt" }
+        val dealerStr = result.dealer.joinToString(",") { it.toString() }
+        runCatching {
+            persistence.insert(
+                BlackjackHandLogDto(
+                    guildId = table.guildId,
+                    tableId = table.id,
+                    handNumber = result.handNumber,
+                    mode = table.mode.name,
+                    players = players,
+                    dealer = dealerStr,
+                    dealerTotal = result.dealerTotal,
+                    seatResults = seatResultsStr,
+                    payouts = payoutsStr,
+                    pot = result.pot,
+                    rake = result.rake,
+                    resolvedAt = result.resolvedAt
+                )
+            )
+        }
     }
 
     private fun statusFor(
@@ -464,27 +558,44 @@ class BlackjackService @Autowired constructor(
     fun createMultiTable(
         hostDiscordId: Long,
         guildId: Long,
-        ante: Long
+        ante: Long,
+        autoTopUp: Boolean = false
     ): MultiCreateOutcome {
+        val params = readMultiTableParams(guildId)
         val check = WagerHelper.checkAndLock(
-            userService, hostDiscordId, guildId, ante,
-            Blackjack.MULTI_MIN_ANTE, Blackjack.MULTI_MAX_ANTE
+            userService, hostDiscordId, guildId, ante, params.minAnte, params.maxAnte
         )
-        val ok = when (check) {
+        var soldCoins = 0L
+        var soldNewPrice: Double? = null
+        val resolved = when (check) {
             is BalanceCheck.InvalidStake -> return MultiCreateOutcome.InvalidAnte(check.min, check.max)
             BalanceCheck.UnknownUser -> return MultiCreateOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> return MultiCreateOutcome.InsufficientCredits(check.stake, check.have)
+            is BalanceCheck.Insufficient -> {
+                if (!autoTopUp) return MultiCreateOutcome.InsufficientCredits(check.stake, check.have)
+                val user = userService.getUserByIdForUpdate(hostDiscordId, guildId)
+                    ?: return MultiCreateOutcome.UnknownUser
+                when (val r = resolveBalanceWithOptionalTopUp(user, guildId, check.have, ante)) {
+                    is TopUpResolution.Ok -> {
+                        soldCoins = r.soldCoins
+                        soldNewPrice = r.newPrice
+                        BalanceCheck.Ok(r.user, r.balance)
+                    }
+                    is TopUpResolution.CreditsShort -> return MultiCreateOutcome.InsufficientCredits(ante, r.have)
+                    is TopUpResolution.CoinsShort -> return MultiCreateOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+                }
+            }
             is BalanceCheck.Ok -> check
         }
-        ok.user.socialCredit = ok.balance - ante
-        userService.updateUser(ok.user)
+        resolved.user.socialCredit = resolved.balance - ante
+        userService.updateUser(resolved.user)
         val table = tableRegistry.create(
             guildId = guildId,
             mode = BlackjackTable.Mode.MULTI,
             hostDiscordId = hostDiscordId,
             ante = ante,
-            maxSeats = Blackjack.MULTI_MAX_SEATS,
-            shotClockSeconds = Blackjack.MULTI_SHOT_CLOCK_SECONDS
+            maxSeats = params.maxSeats,
+            shotClockSeconds = params.shotClockSeconds,
+            rules = params.rules
         )
         synchronized(table) {
             table.seats.add(
@@ -495,14 +606,19 @@ class BlackjackService @Autowired constructor(
                 )
             )
         }
-        return MultiCreateOutcome.Ok(table.id)
+        return MultiCreateOutcome.Ok(
+            tableId = table.id,
+            soldTobyCoins = soldCoins,
+            newPrice = soldNewPrice
+        )
     }
 
     @Transactional
     fun joinMultiTable(
         discordId: Long,
         guildId: Long,
-        tableId: Long
+        tableId: Long,
+        autoTopUp: Boolean = false
     ): MultiJoinOutcome {
         val table = tableRegistry.get(tableId) ?: return MultiJoinOutcome.TableNotFound
         if (table.guildId != guildId) return MultiJoinOutcome.TableNotFound
@@ -527,7 +643,26 @@ class BlackjackService @Autowired constructor(
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return MultiJoinOutcome.UnknownUser
         val balance = user.socialCredit ?: 0L
-        if (balance < ante) return MultiJoinOutcome.InsufficientCredits(ante, balance)
+        var soldCoins = 0L
+        var soldNewPrice: Double? = null
+        val payerBalance: Long
+        val payerUser: database.dto.UserDto
+        if (balance < ante) {
+            if (!autoTopUp) return MultiJoinOutcome.InsufficientCredits(ante, balance)
+            when (val r = resolveBalanceWithOptionalTopUp(user, guildId, balance, ante)) {
+                is TopUpResolution.Ok -> {
+                    soldCoins = r.soldCoins
+                    soldNewPrice = r.newPrice
+                    payerUser = r.user
+                    payerBalance = r.balance
+                }
+                is TopUpResolution.CreditsShort -> return MultiJoinOutcome.InsufficientCredits(ante, r.have)
+                is TopUpResolution.CoinsShort -> return MultiJoinOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            }
+        } else {
+            payerUser = user
+            payerBalance = balance
+        }
 
         val seatIndex = synchronized(table) {
             if (table.phase != BlackjackTable.Phase.LOBBY) return@synchronized -3
@@ -547,9 +682,14 @@ class BlackjackService @Autowired constructor(
         if (seatIndex == -2) return MultiJoinOutcome.TableFull
         if (seatIndex == -3) return MultiJoinOutcome.HandInProgress
 
-        user.socialCredit = balance - ante
-        userService.updateUser(user)
-        return MultiJoinOutcome.Ok(seatIndex = seatIndex, newBalance = user.socialCredit ?: 0L)
+        payerUser.socialCredit = payerBalance - ante
+        userService.updateUser(payerUser)
+        return MultiJoinOutcome.Ok(
+            seatIndex = seatIndex,
+            newBalance = payerUser.socialCredit ?: 0L,
+            soldTobyCoins = soldCoins,
+            newPrice = soldNewPrice
+        )
     }
 
     @Transactional
@@ -928,7 +1068,7 @@ class BlackjackService @Autowired constructor(
         val deck = t.deck ?: error("missing deck on resolve")
         val allBust = t.seats.all { it.status == BlackjackTable.SeatStatus.BUSTED }
         if (!allBust) {
-            blackjack.playOutDealer(t.dealer, deck)
+            blackjack.playOutDealer(t.dealer, deck, hitsSoft17 = t.rules.dealerHitsSoft17)
         }
         t.phase = BlackjackTable.Phase.RESOLVED
 
@@ -962,15 +1102,17 @@ class BlackjackService @Autowired constructor(
         val regularWinners = winnerSeats.filter {
             results[it.discordId] == Blackjack.Result.PLAYER_WIN
         }
+        // BJ premium = (payoutMultiplier - 1) × stake, e.g. 3:2 → 1.5×, 6:5 → 1.2×.
+        val bjPremiumFraction = (t.rules.blackjackPayoutMultiplier - 1.0).coerceAtLeast(0.0)
         var rake = 0L
         if (winnerSeats.isEmpty()) {
             // No winners: entire losers' pool routes to the jackpot.
             rake = losersPool
         } else if (losersPool > 0L) {
-            val baseRake = (losersPool * Blackjack.MULTI_RAKE).toLong()
+            val baseRake = (losersPool * t.rules.rakeFraction).toLong()
             val payable = losersPool - baseRake
             val regularEntitled = regularWinners.sumOf { it.stake }
-            val bjEntitled = bjWinners.sumOf { (it.stake * 3L) / 2L }
+            val bjEntitled = bjWinners.sumOf { (it.stake * bjPremiumFraction).toLong() }
             val totalEntitled = regularEntitled + bjEntitled
 
             if (totalEntitled > 0L && payable >= totalEntitled) {
@@ -979,7 +1121,7 @@ class BlackjackService @Autowired constructor(
                     payouts.merge(seat.discordId, seat.stake) { a, b -> a + b }
                 }
                 for (seat in bjWinners) {
-                    payouts.merge(seat.discordId, (seat.stake * 3L) / 2L) { a, b -> a + b }
+                    payouts.merge(seat.discordId, (seat.stake * bjPremiumFraction).toLong()) { a, b -> a + b }
                 }
                 val surplus = payable - totalEntitled
                 rake = baseRake + surplus
@@ -990,7 +1132,7 @@ class BlackjackService @Autowired constructor(
                     payouts.merge(seat.discordId, share) { a, b -> a + b }
                 }
                 for (seat in bjWinners) {
-                    val owed = (seat.stake * 3L) / 2L
+                    val owed = (seat.stake * bjPremiumFraction).toLong()
                     val share = (owed * payable) / totalEntitled
                     payouts.merge(seat.discordId, share) { a, b -> a + b }
                 }
@@ -1023,6 +1165,7 @@ class BlackjackService @Autowired constructor(
         )
         t.lastResult = handResult
         t.lastActivityAt = Instant.now()
+        persistHandLog(t, handResult)
 
         // Reset to LOBBY but KEEP seats. Each surviving seat needs to re-
         // ante on the next [startMultiHand] — set stake=0 to mark "no
@@ -1073,4 +1216,161 @@ class BlackjackService @Autowired constructor(
     private enum class JoinPreflight { Ok, AlreadySeated, TableFull, HandInProgress }
 
     fun snapshot(tableId: Long): BlackjackTable? = tableRegistry.get(tableId)
+
+    // -------------------------------------------------------------------------
+    // HISTORY
+    // -------------------------------------------------------------------------
+
+    /**
+     * Most recent settled hands for [tableId] within [guildId], newest
+     * first. At most [limit] rows; non-positive limits yield empty.
+     * Returns empty when persistence isn't wired (test path).
+     */
+    fun recentHandsForTable(
+        guildId: Long,
+        tableId: Long,
+        limit: Int = HISTORY_DEFAULT_LIMIT
+    ): List<BlackjackHandLogDto> {
+        if (limit <= 0) return emptyList()
+        val persistence = handLogPersistence ?: return emptyList()
+        return persistence.findRecentByTable(guildId, tableId, limit.coerceAtMost(HISTORY_MAX_LIMIT))
+    }
+
+    /**
+     * Most recent settled hands across the entire guild, newest first.
+     * Used when `/blackjack history` is invoked without a table id.
+     */
+    fun recentHandsForGuild(
+        guildId: Long,
+        limit: Int = HISTORY_DEFAULT_LIMIT
+    ): List<BlackjackHandLogDto> {
+        if (limit <= 0) return emptyList()
+        val persistence = handLogPersistence ?: return emptyList()
+        return persistence.findRecentByGuild(guildId, limit.coerceAtMost(HISTORY_MAX_LIMIT))
+    }
+
+    // -------------------------------------------------------------------------
+    // CONFIG SNAPSHOT + AUTO-TOPUP
+    // -------------------------------------------------------------------------
+
+    /**
+     * Snapshot of every per-guild blackjack table parameter. Each value
+     * falls back to the [Blackjack.companion] default if unset or
+     * unparseable. Read once per table at create time, never live, so a
+     * mid-hand admin tweak can't change the rules under an in-flight game.
+     */
+    data class TableParams(
+        val minAnte: Long,
+        val maxAnte: Long,
+        val maxSeats: Int,
+        val shotClockSeconds: Int,
+        val rules: BlackjackTable.TableRules,
+    )
+
+    fun readMultiTableParams(guildId: Long): TableParams {
+        fun cfgLong(key: ConfigDto.Configurations, default: Long, min: Long): Long {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
+            return raw?.toLongOrNull()?.coerceAtLeast(min) ?: default
+        }
+        fun cfgInt(key: ConfigDto.Configurations, default: Int, range: IntRange): Int {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
+            return raw?.toIntOrNull()?.coerceIn(range) ?: default
+        }
+        fun cfgBool(key: ConfigDto.Configurations, default: Boolean): Boolean {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
+            return raw?.lowercase()?.let { it == "true" || it == "1" || it == "yes" } ?: default
+        }
+        fun cfgPctFraction(key: ConfigDto.Configurations, default: Double, max: Double): Double {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
+            val pct = raw?.toDoubleOrNull() ?: return default
+            if (pct.isNaN() || pct.isInfinite() || pct < 0.0) return default
+            return (pct / 100.0).coerceAtMost(max)
+        }
+        val minAnte = cfgLong(ConfigDto.Configurations.BLACKJACK_MIN_ANTE, Blackjack.MULTI_MIN_ANTE, 1L)
+        val maxAnte = cfgLong(ConfigDto.Configurations.BLACKJACK_MAX_ANTE, Blackjack.MULTI_MAX_ANTE, minAnte)
+        val maxSeats = cfgInt(ConfigDto.Configurations.BLACKJACK_MAX_SEATS, Blackjack.MULTI_MAX_SEATS, 2..7)
+        val shotClock = cfgInt(
+            ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS,
+            Blackjack.MULTI_SHOT_CLOCK_SECONDS,
+            0..600
+        )
+        val hitsSoft17 = cfgBool(ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17, default = false)
+        val rake = cfgPctFraction(ConfigDto.Configurations.BLACKJACK_RAKE_PCT, default = Blackjack.MULTI_RAKE, max = 0.20)
+        // BJ payout num/den → multiplier = 1 + num/den. Fall back to 3:2.
+        val numRaw = configService.getConfigByName(
+            ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM.configValue, guildId.toString()
+        )?.value?.toIntOrNull()?.coerceAtLeast(1)
+        val denRaw = configService.getConfigByName(
+            ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN.configValue, guildId.toString()
+        )?.value?.toIntOrNull()?.coerceAtLeast(1)
+        val payoutMult: Double = if (numRaw != null && denRaw != null) {
+            1.0 + numRaw.toDouble() / denRaw.toDouble()
+        } else {
+            Blackjack.BLACKJACK_MULT
+        }
+        return TableParams(
+            minAnte = minAnte,
+            maxAnte = maxAnte,
+            maxSeats = maxSeats,
+            shotClockSeconds = shotClock,
+            rules = BlackjackTable.TableRules(
+                dealerHitsSoft17 = hitsSoft17,
+                blackjackPayoutMultiplier = payoutMult,
+                rakeFraction = rake,
+            )
+        )
+    }
+
+    /**
+     * v2-4 (auto-topup) shared between [dealSolo], [createMultiTable]
+     * and [joinMultiTable]. If [currentBalance] already covers [target]
+     * this is a no-op (Ok with `soldCoins=0`). Otherwise sells just
+     * enough TOBY via [CasinoTopUpHelper.ensureCreditsForWager].
+     * Failures map back to the per-method `InsufficientCredits` /
+     * `InsufficientCoinsForTopUp` variants.
+     */
+    private fun resolveBalanceWithOptionalTopUp(
+        user: database.dto.UserDto,
+        guildId: Long,
+        currentBalance: Long,
+        target: Long,
+    ): TopUpResolution {
+        if (currentBalance >= target) {
+            return TopUpResolution.Ok(user = user, balance = currentBalance, soldCoins = 0L, newPrice = null)
+        }
+        val safeTrade = tradeService
+        val safeMarket = marketService
+        if (safeTrade == null || safeMarket == null) {
+            return TopUpResolution.CreditsShort(have = currentBalance, needed = target)
+        }
+        return when (val r = CasinoTopUpHelper.ensureCreditsForWager(
+            safeTrade, safeMarket, userService, user, guildId, currentBalance, target
+        )) {
+            is TopUpResult.ToppedUp ->
+                TopUpResolution.Ok(user = r.user, balance = r.balance, soldCoins = r.soldCoins, newPrice = r.newPrice)
+            TopUpResult.MarketUnavailable ->
+                TopUpResolution.CreditsShort(have = currentBalance, needed = target)
+            is TopUpResult.InsufficientCoins ->
+                TopUpResolution.CoinsShort(needed = r.needed, have = r.have)
+        }
+    }
+
+    private sealed interface TopUpResolution {
+        data class Ok(
+            val user: database.dto.UserDto,
+            val balance: Long,
+            val soldCoins: Long,
+            val newPrice: Double?,
+        ) : TopUpResolution
+        data class CreditsShort(val have: Long, val needed: Long) : TopUpResolution
+        data class CoinsShort(val needed: Long, val have: Long) : TopUpResolution
+    }
+
+    companion object {
+        // Default and ceiling for /blackjack history depth. Matched to a
+        // single Discord embed that fits in the 4096-char description
+        // budget; the cap protects against pathological queries.
+        const val HISTORY_DEFAULT_LIMIT: Int = 10
+        const val HISTORY_MAX_LIMIT: Int = 25
+    }
 }

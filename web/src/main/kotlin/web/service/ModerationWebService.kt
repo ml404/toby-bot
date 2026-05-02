@@ -336,6 +336,43 @@ class ModerationWebService(
                 if (n !in 0..600) return "Value must be between 0 and 600 seconds."
                 n.toString()
             }
+            ConfigDto.Configurations.BLACKJACK_RAKE_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (0-20)."
+                if (n !in 0..20) return "Value must be between 0 and 20 (capped server-side)."
+                n.toString()
+            }
+            ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
+            ConfigDto.Configurations.BLACKJACK_MAX_ANTE -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of credits."
+                if (n < 1L) return "Value must be at least 1 credit."
+                n.toString()
+            }
+            ConfigDto.Configurations.BLACKJACK_MAX_SEATS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number."
+                if (n !in 2..7) return "Value must be between 2 and 7 seats."
+                n.toString()
+            }
+            ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number of seconds."
+                if (n !in 0..600) return "Value must be between 0 and 600 seconds."
+                n.toString()
+            }
+            ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17 -> {
+                val v = rawValue.trim().lowercase()
+                if (v !in setOf("true", "false")) return "Value must be true or false."
+                v
+            }
+            ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM,
+            ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (1-10)."
+                if (n !in 1..10) return "Value must be between 1 and 10."
+                n.toString()
+            }
             ConfigDto.Configurations.UBI_DAILY_AMOUNT -> {
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number (0-1000)."

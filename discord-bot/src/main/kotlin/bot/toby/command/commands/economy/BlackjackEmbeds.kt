@@ -5,9 +5,12 @@ import database.blackjack.BlackjackTable
 import database.blackjack.bestTotal
 import database.blackjack.isSoft
 import database.card.Card
+import database.dto.BlackjackHandLogDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 /**
  * Shared embed/component plumbing for the Discord `/blackjack` flow.
@@ -212,4 +215,43 @@ internal object BlackjackEmbeds {
         .build()
 
     fun errorEmbed(message: String): MessageEmbed = WagerCommandEmbeds.errorEmbed(TITLE, message)
+
+    /**
+     * Render up to a screenful of recent settled hands, mirroring
+     * `PokerEmbeds.historyEmbed`. [scope] is the title-friendly label
+     * ("Server" or "Table #7"); [hands] are the rows in the order they
+     * should be rendered (caller passes them newest-first to match the
+     * JPA query). Falls back to a compact "no hands yet" line if empty.
+     */
+    fun historyEmbed(scope: String, hands: List<BlackjackHandLogDto>): MessageEmbed {
+        val builder = EmbedBuilder()
+            .setTitle("$TITLE • Recent hands • $scope")
+            .setColor(NEUTRAL_COLOR)
+        if (hands.isEmpty()) {
+            return builder.setDescription("No settled hands yet.").build()
+        }
+        val lines = hands.map { row ->
+            val dealer = if (row.dealer.isBlank()) "—" else row.dealer.replace(",", " ")
+            val results = row.seatResults.split(",").filter { it.isNotBlank() }.joinToString(" · ") { entry ->
+                val parts = entry.split(":", limit = 2)
+                if (parts.size == 2) "<@${parts[0]}> ${shortResult(parts[1])}" else entry
+            }
+            val ts = row.resolvedAt.let { HISTORY_TIME_FMT.format(it) }
+            "`#${row.handNumber}` `${row.tableId}` ${row.mode} • dealer $dealer (${row.dealerTotal}) • $results • pot **${row.pot}** (rake ${row.rake}) • _${ts}_"
+        }
+        return builder.setDescription(lines.joinToString("\n")).build()
+    }
+
+    private fun shortResult(name: String): String = when (name) {
+        "PLAYER_BLACKJACK" -> "🎉BJ"
+        "PLAYER_WIN" -> "✅"
+        "PUSH" -> "🤝"
+        "DEALER_WIN" -> "❌"
+        "PLAYER_BUST" -> "💥"
+        else -> name
+    }
+
+    private val HISTORY_TIME_FMT: DateTimeFormatter = DateTimeFormatter
+        .ofPattern("MMM d HH:mm")
+        .withZone(ZoneOffset.UTC)
 }

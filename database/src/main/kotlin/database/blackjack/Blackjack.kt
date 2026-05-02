@@ -59,12 +59,21 @@ class Blackjack(private val random: Random = Random.Default) {
 
     /**
      * Dealer's mechanical play-out: draw until the best total is at
-     * least 17. Stands on soft 17 (S17). Mutates [dealer].
+     * least [DEALER_STAND_VALUE] (17). When [hitsSoft17] is true the
+     * dealer also hits a soft 17 (H17 rule, slightly worse for the
+     * player). Default is S17. Mutates [dealer].
      */
-    fun playOutDealer(dealer: MutableList<Card>, deck: Deck) {
-        while (bestTotal(dealer) < DEALER_STAND_VALUE) {
+    fun playOutDealer(dealer: MutableList<Card>, deck: Deck, hitsSoft17: Boolean = false) {
+        while (shouldDealerHit(dealer, hitsSoft17)) {
             dealer.add(deck.deal())
         }
+    }
+
+    private fun shouldDealerHit(dealer: List<Card>, hitsSoft17: Boolean): Boolean {
+        val total = bestTotal(dealer)
+        if (total < DEALER_STAND_VALUE) return true
+        if (total == DEALER_STAND_VALUE && hitsSoft17 && isSoft(dealer)) return true
+        return false
     }
 
     /**
@@ -102,10 +111,11 @@ class Blackjack(private val random: Random = Random.Default) {
      * Payout multiplier on the player's (possibly doubled) stake for
      * the given [result]. Same shape as [database.economy.Highlow] —
      * fed straight to [database.service.WagerHelper.applyMultiplier]
-     * for solo settlement.
+     * for solo settlement. [blackjackPayoutMult] overrides the natural
+     * blackjack multiplier (default 2.5 i.e. 3:2; set to 2.2 for 6:5).
      */
-    fun multiplier(result: Result): Double = when (result) {
-        Result.PLAYER_BLACKJACK -> BLACKJACK_MULT
+    fun multiplier(result: Result, blackjackPayoutMult: Double = BLACKJACK_MULT): Double = when (result) {
+        Result.PLAYER_BLACKJACK -> blackjackPayoutMult
         Result.PLAYER_WIN -> WIN_MULT
         Result.PUSH -> PUSH_MULT
         Result.DEALER_WIN, Result.PLAYER_BUST -> 0.0
