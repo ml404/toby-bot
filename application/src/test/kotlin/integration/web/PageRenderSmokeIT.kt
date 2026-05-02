@@ -73,7 +73,7 @@ class PageRenderSmokeIT {
 
     /** Synthetic OAuth2User with the Discord-shaped attributes our controllers read. */
     private val authUser = oauth2Login()
-        .attributes { attrs ->
+        .attributes { attrs: MutableMap<String, Any> ->
             attrs["id"] = "1234567890"
             attrs["username"] = "test-user"
         }
