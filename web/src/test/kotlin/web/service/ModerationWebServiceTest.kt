@@ -256,6 +256,22 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig accepts POKER_RAKE_PCT in 0 to 20 inclusive`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.POKER_RAKE_PCT
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "5"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "20"))
+        verify { configService.upsertConfig(key.configValue, "0", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "20", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "21"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "wibble"))
+    }
+
+    @Test
     fun `updateConfig accepts POKER chip-amount keys when value is a positive long`() {
         mockMember(ownerId, isOwner = true)
         val keys = listOf(
