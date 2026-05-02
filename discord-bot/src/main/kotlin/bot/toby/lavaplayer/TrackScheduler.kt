@@ -14,6 +14,7 @@ import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
 class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var deleteDelay: Int = 5) : AudioEventAdapter() {
@@ -22,6 +23,7 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
     var event: SlashCommandInteractionEvent? = null
     private var previousVolume: Int? = null
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+    private val trackClipBounds = ConcurrentHashMap<AudioTrack, Pair<Long, Long>>()
 
     fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
@@ -32,12 +34,14 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
         track.position = startPosition
         track.userData = volume
         if (endPosition != null && endPosition > startPosition) {
+            trackClipBounds[track] = startPosition to endPosition
             track.setMarker(TrackMarker(endPosition) { state ->
-                // Stop the clipped track on reaching the end marker. onTrackEnd then
-                // advances the queue and restores the previous volume.
+                // Stop the clipped track on reaching the end marker via the player so
+                // onTrackEnd reliably fires; that handler tears down the now-playing
+                // embed and advances the queue / restores the previous volume.
                 if (state == TrackMarkerHandler.MarkerState.REACHED) {
                     logger.info("Clip end marker reached at $endPosition ms for ${track.info.title}, stopping track.")
-                    track.stop()
+                    player.stopTrack()
                 }
             })
         }
@@ -77,10 +81,12 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
         logger.info { "${track.info.title} by ${track.info.author} started for guild $guildId" }
         super.onTrackStart(player, track)
         player.volume = track.userData as Int
-        event?.let { nowPlaying(it, PlayerManager.instance, deriveDeleteDelayFromTrack(track)) }
+        val (clipStart, clipEnd) = trackClipBounds[track]?.let { it.first to it.second } ?: (null to null)
+        event?.let { nowPlaying(it, PlayerManager.instance, deriveDeleteDelayFromTrack(track), clipStart, clipEnd) }
     }
 
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
+        trackClipBounds.remove(track)
         event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         if (endReason.mayStartNext) {

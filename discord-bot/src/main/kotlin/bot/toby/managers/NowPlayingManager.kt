@@ -64,12 +64,14 @@ class NowPlayingManager {
         track: AudioTrack,
         audioPlayer: AudioPlayer,
         delay: Long,
-        period: Long
+        period: Long,
+        clipStart: Long? = null,
+        clipEnd: Long? = null
     ) {
         cancelScheduledTask(guildId)
         val scheduledTask = scheduler.scheduleAtFixedRate({
             try {
-                updateNowPlayingMessage(guildId, track, audioPlayer)
+                updateNowPlayingMessage(guildId, track, audioPlayer, clipStart, clipEnd)
             } catch (e: Exception) {
                 logger.error{ "Error occurred while updating now playing message" }
             }
@@ -78,30 +80,49 @@ class NowPlayingManager {
         scheduledTasks[guildId] = scheduledTask
     }
 
-    private fun updateNowPlayingMessage(guildId: Long, track: AudioTrack, audioPlayer: AudioPlayer) {
+    private fun updateNowPlayingMessage(
+        guildId: Long,
+        track: AudioTrack,
+        audioPlayer: AudioPlayer,
+        clipStart: Long?,
+        clipEnd: Long?
+    ) {
         lock.read {
             val message = guildLastNowPlayingMessage[guildId]
             message?.let {
-                val embed = buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)
+                val embed = buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused, clipStart, clipEnd)
                 message.editMessageEmbeds(embed).queue()
                 logger.info { "Updated now playing message ${message.idLong}" }
             }
         }
     }
 
-    fun buildNowPlayingMessageData(track: AudioTrack, audioPlayer: AudioPlayer): MessageEmbed {
-        return buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused)
+    fun buildNowPlayingMessageData(
+        track: AudioTrack,
+        audioPlayer: AudioPlayer,
+        clipStart: Long? = null,
+        clipEnd: Long? = null
+    ): MessageEmbed {
+        return buildNowPlayingMessageData(track, audioPlayer.volume, audioPlayer.isPaused, clipStart, clipEnd)
     }
 
-    private fun buildNowPlayingMessageData(track: AudioTrack, volume: Int, isPaused: Boolean): MessageEmbed {
+    private fun buildNowPlayingMessageData(
+        track: AudioTrack,
+        volume: Int,
+        isPaused: Boolean,
+        clipStart: Long? = null,
+        clipEnd: Long? = null
+    ): MessageEmbed {
         val info = track.info
         val descriptionBuilder = StringBuilder()
 
         descriptionBuilder.append("**Title**: `${info.title}`\n").append("**Author**: `${info.author}`\n")
 
         if (!info.isStream) {
-            val songPosition = formatTime(track.position)
-            val songDuration = formatTime(track.duration)
+            val effectiveStart = clipStart ?: 0L
+            val effectiveEnd = clipEnd ?: track.duration
+            val songPosition = formatTime((track.position - effectiveStart).coerceAtLeast(0L))
+            val songDuration = formatTime((effectiveEnd - effectiveStart).coerceAtLeast(0L))
             descriptionBuilder.append("**Progress**: `$songPosition / $songDuration`\n")
         } else {
             descriptionBuilder.append("**Stream**: `Live`\n")

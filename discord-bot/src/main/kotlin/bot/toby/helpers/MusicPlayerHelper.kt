@@ -60,7 +60,13 @@ object MusicPlayerHelper {
         }
     }
 
-    fun nowPlaying(event: IReplyCallback, playerManager: PlayerManager, deleteDelay: Int) {
+    fun nowPlaying(
+        event: IReplyCallback,
+        playerManager: PlayerManager,
+        deleteDelay: Int,
+        clipStart: Long? = null,
+        clipEnd: Long? = null
+    ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         val musicManager = playerManager.getMusicManager(event.guild!!)
         val audioPlayer = musicManager.audioPlayer
@@ -69,7 +75,7 @@ object MusicPlayerHelper {
 
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
 
-        val embed = nowPlayingManager.buildNowPlayingMessageData(track, audioPlayer)
+        val embed = nowPlayingManager.buildNowPlayingMessageData(track, audioPlayer, clipStart, clipEnd)
         val (pausePlayButton, stopButton) = generateButtons()
         val guildId = event.guild!!.idLong
         val nowPlayingInfo = nowPlayingManager.getLastNowPlayingMessage(guildId)
@@ -90,7 +96,7 @@ object MusicPlayerHelper {
                     nowPlayingManager.setNowPlayingMessage(guildId, it)
                 }
         }
-        nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L)
+        nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L, clipStart, clipEnd)
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int): Boolean {
