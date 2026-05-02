@@ -77,44 +77,35 @@ internal object BaccaratEmbeds {
         .build()
 
     fun outcomeEmbed(outcome: PlayOutcome): MessageEmbed = when (outcome) {
-        is PlayOutcome.Win -> {
-            val verdict = winVerdict(outcome)
-            EmbedBuilder()
-                .setTitle("$TITLE • ${outcome.side.display}")
-                .setDescription(
-                    "**Player:** ${handLine(outcome.playerCards, outcome.playerTotal, outcome.isPlayerNatural)}\n" +
-                        "**Banker:** ${handLine(outcome.bankerCards, outcome.bankerTotal, outcome.isBankerNatural)}\n\n" +
-                        verdict +
-                        jackpotLine(outcome.jackpotPayout)
-                )
-                .addField("New balance", "${outcome.newBalance} credits", true)
-                .setColor(WagerCommandColors.WIN)
-                .build()
-        }
+        is PlayOutcome.Win -> WagerCommandEmbeds.outcomeEmbed(
+            title = "$TITLE • ${outcome.side.display}",
+            description = "**Player:** ${handLine(outcome.playerCards, outcome.playerTotal, outcome.isPlayerNatural)}\n" +
+                "**Banker:** ${handLine(outcome.bankerCards, outcome.bankerTotal, outcome.isBankerNatural)}\n\n" +
+                winVerdict(outcome) +
+                jackpotLine(outcome.jackpotPayout),
+            newBalance = outcome.newBalance,
+            color = WagerCommandColors.WIN
+        )
 
-        is PlayOutcome.Push -> EmbedBuilder()
-            .setTitle("$TITLE • ${outcome.side.display}")
-            .setDescription(
-                "**Player:** ${handLine(outcome.playerCards, outcome.playerTotal, outcome.isPlayerNatural)}\n" +
-                    "**Banker:** ${handLine(outcome.bankerCards, outcome.bankerTotal, outcome.isBankerNatural)}\n\n" +
-                    "🤝 Tie game — your **${outcome.side.display}** stake of " +
-                    "**${outcome.stake} credits** is refunded."
-            )
-            .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(NEUTRAL_COLOR)
-            .build()
+        is PlayOutcome.Push -> WagerCommandEmbeds.outcomeEmbed(
+            title = "$TITLE • ${outcome.side.display}",
+            description = "**Player:** ${handLine(outcome.playerCards, outcome.playerTotal, outcome.isPlayerNatural)}\n" +
+                "**Banker:** ${handLine(outcome.bankerCards, outcome.bankerTotal, outcome.isBankerNatural)}\n\n" +
+                "🤝 Tie game — your **${outcome.side.display}** stake of " +
+                "**${outcome.stake} credits** is refunded.",
+            newBalance = outcome.newBalance,
+            color = NEUTRAL_COLOR
+        )
 
-        is PlayOutcome.Lose -> EmbedBuilder()
-            .setTitle("$TITLE • ${outcome.side.display}")
-            .setDescription(
-                "**Player:** ${handLine(outcome.playerCards, outcome.playerTotal, outcome.isPlayerNatural)}\n" +
-                    "**Banker:** ${handLine(outcome.bankerCards, outcome.bankerTotal, outcome.isBankerNatural)}\n\n" +
-                    "❌ ${outcome.winner.display} wins. Lost **${outcome.stake} credits**." +
-                    tributeLine(outcome.lossTribute)
-            )
-            .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WagerCommandColors.LOSE)
-            .build()
+        is PlayOutcome.Lose -> WagerCommandEmbeds.outcomeEmbed(
+            title = "$TITLE • ${outcome.side.display}",
+            description = "**Player:** ${handLine(outcome.playerCards, outcome.playerTotal, outcome.isPlayerNatural)}\n" +
+                "**Banker:** ${handLine(outcome.bankerCards, outcome.bankerTotal, outcome.isBankerNatural)}\n\n" +
+                "❌ ${outcome.winner.display} wins. Lost **${outcome.stake} credits**." +
+                tributeLine(outcome.lossTribute),
+            newBalance = outcome.newBalance,
+            color = WagerCommandColors.LOSE
+        )
 
         is PlayOutcome.InsufficientCredits -> WagerCommandEmbeds.failureEmbed(
             TITLE, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have)
