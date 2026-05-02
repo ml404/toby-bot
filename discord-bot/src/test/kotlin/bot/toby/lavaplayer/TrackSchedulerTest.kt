@@ -27,14 +27,14 @@ class TrackSchedulerTest {
     @BeforeEach
     fun setUp() {
         scheduler = TrackScheduler(player, guildId = 1L, deleteDelay = 5)
-        mockkObject(PlayerManager.Companion)
+        mockkObject(PlayerManager)
         every { PlayerManager.instance } returns mockk(relaxed = true)
     }
 
     @AfterEach
     fun tearDown() {
         clearAllMocks()
-        unmockkObject(PlayerManager.Companion)
+        unmockkObject(PlayerManager)
     }
 
     @Test

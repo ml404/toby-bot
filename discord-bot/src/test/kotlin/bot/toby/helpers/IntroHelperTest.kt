@@ -74,7 +74,6 @@ class IntroHelperTest {
     @AfterEach
     fun tearDown() {
         unmockkAll()
-        unmockkObject(URLHelper)
     }
 
     @Test

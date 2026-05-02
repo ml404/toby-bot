@@ -28,7 +28,7 @@ interface ButtonTest {
         introHelper = mockk()
         dndHelper = mockk()
         buttonManager = mockk()
-        mockkStatic(PlayerManager::class)
+        mockkObject(PlayerManager)
         mockkObject(MusicPlayerHelper)
 
         mockGuild = mockk<Guild> {
