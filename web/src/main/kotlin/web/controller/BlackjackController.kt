@@ -27,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoResponseLike
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -66,6 +68,14 @@ class BlackjackController(
     private val userService: UserService,
     private val jda: JDA,
 ) {
+
+    /**
+     * Shared mapper from auth/guard rejections (401 / 403) and casino-
+     * style failure outcomes (insufficient credits / coins / invalid
+     * stake / unknown user) into [BlackjackActionResponse]. Mirrors the
+     * pattern HighlowController / SlotsController / etc. already use.
+     */
+    private val errors = CasinoOutcomeMapper { msg -> BlackjackActionResponse(ok = false, error = msg) }
 
     @GetMapping("/guilds")
     fun guildList(
@@ -177,7 +187,7 @@ class BlackjackController(
         @RequestBody request: BlackjackSoloDealRequest,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = blackjackService.dealSolo(discordId, guildId, request.stake, request.autoTopUp)) {
             is SoloDealOutcome.Dealt -> ResponseEntity.ok(
@@ -198,14 +208,10 @@ class BlackjackController(
                     newPrice = outcome.newPrice
                 )
             )
-            is SoloDealOutcome.InvalidStake -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Stake must be between ${outcome.min} and ${outcome.max}."))
-            is SoloDealOutcome.InsufficientCredits -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Need ${outcome.stake} credits, you have ${outcome.have}."))
-            is SoloDealOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Auto-topup needs ${outcome.needed} TOBY, you have ${outcome.have}."))
-            SoloDealOutcome.UnknownUser -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "No user record yet — try another TobyBot command first."))
+            is SoloDealOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
+            is SoloDealOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is SoloDealOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            SoloDealOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 
@@ -216,14 +222,13 @@ class BlackjackController(
         @RequestBody request: BlackjackActionRequest,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         val tableId = findActiveSoloTable(guildId, discordId)
             ?: return@requireMemberForJson ResponseEntity.status(404)
                 .body(BlackjackActionResponse(false, error = "No active solo hand. Click Deal first."))
         val action = parseAction(request.action)
-            ?: return@requireMemberForJson ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Unknown action: ${request.action}"))
+            ?: return@requireMemberForJson errors.badRequest("Unknown action: ${request.action}")
 
         when (val outcome = blackjackService.applySoloAction(discordId, guildId, tableId, action)) {
             is SoloActionOutcome.Continued -> ResponseEntity.ok(BlackjackActionResponse(ok = true, tableId = tableId))
@@ -242,10 +247,9 @@ class BlackjackController(
                 .body(BlackjackActionResponse(false, error = "Hand no longer exists."))
             SoloActionOutcome.NotYourHand -> ResponseEntity.status(403)
                 .body(BlackjackActionResponse(false, error = "This isn't your hand."))
-            SoloActionOutcome.IllegalAction -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "You can't do that right now."))
-            is SoloActionOutcome.InsufficientCreditsForDouble -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Need ${outcome.needed} credits to double — you have ${outcome.have}."))
+            SoloActionOutcome.IllegalAction -> errors.badRequest("You can't do that right now.")
+            is SoloActionOutcome.InsufficientCreditsForDouble ->
+                errors.insufficientCredits(outcome.needed, outcome.have)
         }
     }
 
@@ -275,7 +279,7 @@ class BlackjackController(
         @RequestBody request: BlackjackCreateRequest,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = blackjackService.createMultiTable(discordId, guildId, request.ante, request.autoTopUp)) {
             is MultiCreateOutcome.Ok -> ResponseEntity.ok(
@@ -286,14 +290,11 @@ class BlackjackController(
                     newPrice = outcome.newPrice
                 )
             )
-            is MultiCreateOutcome.InvalidAnte -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Ante must be between ${outcome.min} and ${outcome.max}."))
-            is MultiCreateOutcome.InsufficientCredits -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Need ${outcome.stake} credits, you have ${outcome.have}."))
-            is MultiCreateOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Auto-topup needs ${outcome.needed} TOBY, you have ${outcome.have}."))
-            MultiCreateOutcome.UnknownUser -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "No user record yet — try another TobyBot command first."))
+            is MultiCreateOutcome.InvalidAnte ->
+                errors.badRequest("Ante must be between ${outcome.min} and ${outcome.max}.")
+            is MultiCreateOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is MultiCreateOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            MultiCreateOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 
@@ -305,7 +306,7 @@ class BlackjackController(
         @RequestBody(required = false) request: BlackjackJoinRequest? = null,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         val autoTopUp = request?.autoTopUp ?: false
         when (val outcome = blackjackService.joinMultiTable(discordId, guildId, tableId, autoTopUp)) {
@@ -316,20 +317,15 @@ class BlackjackController(
                     newPrice = outcome.newPrice
                 )
             )
-            MultiJoinOutcome.AlreadySeated -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "You're already at this table."))
-            MultiJoinOutcome.TableFull -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Table is full."))
+            MultiJoinOutcome.AlreadySeated -> errors.badRequest("You're already at this table.")
+            MultiJoinOutcome.TableFull -> errors.badRequest("Table is full.")
             MultiJoinOutcome.TableNotFound -> ResponseEntity.status(404)
                 .body(BlackjackActionResponse(false, error = "No such table."))
-            MultiJoinOutcome.HandInProgress -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Wait for the current hand to end before joining."))
-            is MultiJoinOutcome.InsufficientCredits -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Need ${outcome.stake} credits, you have ${outcome.have}."))
-            is MultiJoinOutcome.InsufficientCoinsForTopUp -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Auto-topup needs ${outcome.needed} TOBY, you have ${outcome.have}."))
-            MultiJoinOutcome.UnknownUser -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "No user record yet — try another TobyBot command first."))
+            MultiJoinOutcome.HandInProgress ->
+                errors.badRequest("Wait for the current hand to end before joining.")
+            is MultiJoinOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
+            is MultiJoinOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            MultiJoinOutcome.UnknownUser -> errors.unknownUser()
         }
     }
 
@@ -340,16 +336,16 @@ class BlackjackController(
         @PathVariable tableId: Long,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = blackjackService.startMultiHand(discordId, guildId, tableId)) {
             is MultiStartOutcome.Ok -> ResponseEntity.ok(
                 BlackjackActionResponse(ok = true, tableId = tableId, handNumber = outcome.handNumber)
             )
-            MultiStartOutcome.NotEnoughPlayers -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Need at least ${Blackjack.MULTI_MIN_SEATS} seated players who can afford the ante."))
-            MultiStartOutcome.HandAlreadyInProgress -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "A hand is already in progress."))
+            MultiStartOutcome.NotEnoughPlayers ->
+                errors.badRequest("Need at least ${Blackjack.MULTI_MIN_SEATS} seated players who can afford the ante.")
+            MultiStartOutcome.HandAlreadyInProgress ->
+                errors.badRequest("A hand is already in progress.")
             MultiStartOutcome.NotHost -> ResponseEntity.status(403)
                 .body(BlackjackActionResponse(false, error = "Only the table host can deal hands."))
             MultiStartOutcome.TableNotFound -> ResponseEntity.status(404)
@@ -364,7 +360,7 @@ class BlackjackController(
         @PathVariable tableId: Long,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         when (val outcome = blackjackService.leaveMultiTable(discordId, guildId, tableId)) {
             is MultiLeaveOutcome.Ok -> ResponseEntity.ok(
@@ -373,10 +369,10 @@ class BlackjackController(
             is MultiLeaveOutcome.QueuedForEndOfHand -> ResponseEntity.ok(
                 BlackjackActionResponse(ok = true, tableId = tableId, refund = outcome.stakeHeld, queued = true)
             )
-            MultiLeaveOutcome.AlreadyLeaving -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "You've already asked to leave this hand."))
-            MultiLeaveOutcome.NotSeated -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "You're not seated at this table."))
+            MultiLeaveOutcome.AlreadyLeaving ->
+                errors.badRequest("You've already asked to leave this hand.")
+            MultiLeaveOutcome.NotSeated ->
+                errors.badRequest("You're not seated at this table.")
             MultiLeaveOutcome.TableNotFound -> ResponseEntity.status(404)
                 .body(BlackjackActionResponse(false, error = "No such table."))
         }
@@ -390,29 +386,24 @@ class BlackjackController(
         @RequestBody request: BlackjackActionRequest,
         @AuthenticationPrincipal user: OAuth2User,
     ): ResponseEntity<BlackjackActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService, errorBuilder = { errResp(it) }
+        user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
         val action = parseAction(request.action)
-            ?: return@requireMemberForJson ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Unknown action: ${request.action}"))
+            ?: return@requireMemberForJson errors.badRequest("Unknown action: ${request.action}")
 
         when (val outcome = blackjackService.applyMultiAction(discordId, guildId, tableId, action)) {
             is MultiActionOutcome.Continued -> ResponseEntity.ok(BlackjackActionResponse(ok = true, tableId = tableId))
             is MultiActionOutcome.HandResolved -> ResponseEntity.ok(
                 BlackjackActionResponse(ok = true, tableId = tableId, resolved = true, handNumber = outcome.result.handNumber)
             )
-            MultiActionOutcome.NotYourTurn -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "It isn't your turn yet."))
-            MultiActionOutcome.NotSeated -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "You aren't seated at this table."))
-            MultiActionOutcome.NoHandInProgress -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "No hand in progress on this table."))
-            MultiActionOutcome.IllegalAction -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "You can't do that right now."))
+            MultiActionOutcome.NotYourTurn -> errors.badRequest("It isn't your turn yet.")
+            MultiActionOutcome.NotSeated -> errors.badRequest("You aren't seated at this table.")
+            MultiActionOutcome.NoHandInProgress -> errors.badRequest("No hand in progress on this table.")
+            MultiActionOutcome.IllegalAction -> errors.badRequest("You can't do that right now.")
             MultiActionOutcome.TableNotFound -> ResponseEntity.status(404)
                 .body(BlackjackActionResponse(false, error = "No such table."))
-            is MultiActionOutcome.InsufficientCreditsForDouble -> ResponseEntity.badRequest()
-                .body(BlackjackActionResponse(false, error = "Need ${outcome.needed} credits to double — you have ${outcome.have}."))
+            is MultiActionOutcome.InsufficientCreditsForDouble ->
+                errors.insufficientCredits(outcome.needed, outcome.have)
         }
     }
 
@@ -430,13 +421,6 @@ class BlackjackController(
         else -> null
     }
 
-    private fun errResp(status: Int): ResponseEntity<BlackjackActionResponse> =
-        ResponseEntity.status(status).body(
-            BlackjackActionResponse(
-                false,
-                error = if (status == 401) "Not signed in." else "You are not a member of that server."
-            )
-        )
 }
 
 data class BlackjackSoloDealRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
@@ -445,8 +429,8 @@ data class BlackjackJoinRequest(val autoTopUp: Boolean = false)
 data class BlackjackActionRequest(val action: String = "")
 
 data class BlackjackActionResponse(
-    val ok: Boolean,
-    val error: String? = null,
+    override val ok: Boolean,
+    override val error: String? = null,
     val tableId: Long? = null,
     val resolved: Boolean? = null,
     val handNumber: Long? = null,
@@ -457,4 +441,4 @@ data class BlackjackActionResponse(
     val lossTribute: Long? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
-)
+) : CasinoResponseLike
