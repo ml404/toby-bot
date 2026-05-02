@@ -1,29 +1,10 @@
 (function () {
     "use strict";
 
-    var main = document.getElementById("main");
-    var guildId = main.dataset.guildId;
-
-    var dealForm = document.getElementById("bj-deal");
-    var stakeInput = document.getElementById("bj-stake");
-    var balanceEl = document.getElementById("bj-balance");
-    var tableEl = document.getElementById("bj-table");
-    var dealerCardsEl = document.getElementById("bj-dealer-cards");
-    var dealerTotalEl = document.getElementById("bj-dealer-total");
-    var playerCardsEl = document.getElementById("bj-player-cards");
-    var playerHandsEl = document.getElementById("bj-player-hands");
-    var playerTotalEl = document.getElementById("bj-player-total");
-    var hitBtn = document.getElementById("bj-action-hit");
-    var standBtn = document.getElementById("bj-action-stand");
-    var doubleBtn = document.getElementById("bj-action-double");
-    var splitBtn = document.getElementById("bj-action-split");
-    var resultEl = document.getElementById("bj-result");
-    var playerRowEl = document.getElementById("bj-player-row");
-
-    var pollTimer = null;
-    // Tracks the handNumber of the last result we played the chip-stack
-    // flourish on, so the 2s polling doesn't re-trigger the animation.
-    var lastFlashedHand = null;
+    // ----- DOM-agnostic helpers (defined first so jest can require the
+    // module under jsdom and exercise them via `window.TobyBlackjackSolo`
+    // even though the page-init code below early-returns when the
+    // blackjack-solo template isn't present). -----
 
     function renderCards(container, cards) {
         // Delegate to the shared casino renderer so the deal animation only
@@ -49,6 +30,91 @@
             container.appendChild(el);
         });
     }
+
+    function renderSplitHands(container, slots, activeIndex) {
+        // Reuse the per-slot DOM across polls so casino-render.js's
+        // WeakMap of "cards already dealt into this container" actually
+        // matches across renders. Wiping innerHTML every 1500ms made the
+        // inner .bj-cards container a new DOM node each time, so the
+        // freshly-arrived detection always saw `prev = 0` and re-animated
+        // every card with the deal sound — the table looked and sounded
+        // like cards were being dealt over and over.
+        if (container.children.length !== slots.length) {
+            container.innerHTML = "";
+        }
+        slots.forEach(function (slot, idx) {
+            var div = container.children[idx] || createSplitHandSlotEl(container);
+            div.className = "bj-seat casino-seat";
+            if (idx === activeIndex) div.classList.add("bj-seat-active", "is-active");
+            if (slot.status === "BUSTED") div.classList.add("bj-seat-busted", "is-busted");
+
+            var label = "Hand " + (idx + 1);
+            var statusBits = [];
+            if (slot.doubled) statusBits.push("Doubled");
+            switch (slot.status) {
+                case "BLACKJACK": statusBits.push("Blackjack"); break;
+                case "BUSTED": statusBits.push("Bust"); break;
+                case "STANDING": statusBits.push("Stand"); break;
+            }
+            div.querySelector(".casino-seat-name").textContent =
+                label + " — stake " + slot.stake;
+            div.querySelector(".casino-seat-meta").textContent =
+                "(" + slot.total + ")" + (statusBits.length ? " " + statusBits.join(" · ") : "");
+
+            renderCards(div.querySelector(".bj-cards"), slot.cards);
+        });
+    }
+
+    function createSplitHandSlotEl(container) {
+        var div = document.createElement("div");
+        var header = document.createElement("div");
+        header.className = "bj-seat-header casino-seat-header";
+        var nameEl = document.createElement("span");
+        nameEl.className = "casino-seat-name";
+        header.appendChild(nameEl);
+        var meta = document.createElement("span");
+        meta.className = "casino-seat-meta";
+        header.appendChild(meta);
+        div.appendChild(header);
+        var cards = document.createElement("div");
+        cards.className = "bj-cards casino-cards";
+        div.appendChild(cards);
+        container.appendChild(div);
+        return div;
+    }
+
+    if (typeof window !== "undefined") {
+        window.TobyBlackjackSolo = window.TobyBlackjackSolo || {};
+        window.TobyBlackjackSolo.renderSplitHands = renderSplitHands;
+    }
+
+    // ----- Page init. Bail out cleanly if we're loaded without the
+    // blackjack-solo template (jest tests, server error pages, etc.).
+
+    var main = document.getElementById("main");
+    if (!main) return;
+    var guildId = main.dataset.guildId;
+
+    var dealForm = document.getElementById("bj-deal");
+    var stakeInput = document.getElementById("bj-stake");
+    var balanceEl = document.getElementById("bj-balance");
+    var tableEl = document.getElementById("bj-table");
+    var dealerCardsEl = document.getElementById("bj-dealer-cards");
+    var dealerTotalEl = document.getElementById("bj-dealer-total");
+    var playerCardsEl = document.getElementById("bj-player-cards");
+    var playerHandsEl = document.getElementById("bj-player-hands");
+    var playerTotalEl = document.getElementById("bj-player-total");
+    var hitBtn = document.getElementById("bj-action-hit");
+    var standBtn = document.getElementById("bj-action-stand");
+    var doubleBtn = document.getElementById("bj-action-double");
+    var splitBtn = document.getElementById("bj-action-split");
+    var resultEl = document.getElementById("bj-result");
+    var playerRowEl = document.getElementById("bj-player-row");
+
+    var pollTimer = null;
+    // Tracks the handNumber of the last result we played the chip-stack
+    // flourish on, so the 2s polling doesn't re-trigger the animation.
+    var lastFlashedHand = null;
 
     function renderState(state) {
         if (!state) return;
@@ -216,40 +282,6 @@
     standBtn.addEventListener("click", function () { postAction("stand"); });
     doubleBtn.addEventListener("click", function () { postAction("double"); });
     splitBtn.addEventListener("click", function () { postAction("split"); });
-
-    function renderSplitHands(container, slots, activeIndex) {
-        container.innerHTML = "";
-        slots.forEach(function (slot, idx) {
-            var div = document.createElement("div");
-            div.className = "bj-seat casino-seat";
-            if (idx === activeIndex) div.classList.add("bj-seat-active", "is-active");
-            if (slot.status === "BUSTED") div.classList.add("bj-seat-busted", "is-busted");
-            var header = document.createElement("div");
-            header.className = "bj-seat-header casino-seat-header";
-            var label = "Hand " + (idx + 1);
-            var statusBits = [];
-            if (slot.doubled) statusBits.push("Doubled");
-            switch (slot.status) {
-                case "BLACKJACK": statusBits.push("Blackjack"); break;
-                case "BUSTED": statusBits.push("Bust"); break;
-                case "STANDING": statusBits.push("Stand"); break;
-            }
-            var nameEl = document.createElement("span");
-            nameEl.className = "casino-seat-name";
-            nameEl.textContent = label + " — stake " + slot.stake;
-            header.appendChild(nameEl);
-            var meta = document.createElement("span");
-            meta.className = "casino-seat-meta";
-            meta.textContent = "(" + slot.total + ")" + (statusBits.length ? " " + statusBits.join(" · ") : "");
-            header.appendChild(meta);
-            div.appendChild(header);
-            var cards = document.createElement("div");
-            cards.className = "bj-cards casino-cards";
-            renderCards(cards, slot.cards);
-            div.appendChild(cards);
-            container.appendChild(div);
-        });
-    }
 
     // On page load, see if there's an existing in-flight hand for this user.
     refreshState().then(function () {
