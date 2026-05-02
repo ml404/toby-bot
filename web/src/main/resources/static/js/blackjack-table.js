@@ -77,7 +77,7 @@
         (state.seats || []).forEach(function (seat, idx) {
             var slots = (seat.hands && seat.hands.length) ? seat.hands : null;
             var isActorSeat = idx === state.actorIndex && state.phase === "PLAYER_TURNS";
-            var isMe = seat.discordId === parseInt(myId, 10);
+            var isMe = seat.discordId === myId;
             if (slots && slots.length > 1) {
                 // Split seat: render the seat header once, then a sub-block per hand.
                 var groupHeader = window.CasinoRender.makeSeatHeader(seat, {
@@ -146,21 +146,21 @@
 
         var actorSeat = (state.seats || [])[state.actorIndex];
         toActEl.textContent = actorSeat
-            ? (actorSeat.discordId === parseInt(myId, 10) ? "You" : (actorSeat.displayName || ("@" + actorSeat.discordId)))
+            ? (actorSeat.discordId === myId ? "You" : (actorSeat.displayName || ("@" + actorSeat.discordId)))
             : "—";
 
         // Top-of-felt actor pill — only meaningful during PLAYER_TURNS.
         var pillSeat = (state.phase === "PLAYER_TURNS") ? actorSeat : null;
         if (window.CasinoRender) {
             window.CasinoRender.renderActorPill(actorPillEl, pillSeat, {
-                label: pillSeat && pillSeat.discordId === parseInt(myId, 10) ? "Your turn" : "Acting",
+                label: pillSeat && pillSeat.discordId === myId ? "Your turn" : "Acting",
             });
         }
 
         var seated = state.mySeatIndex != null;
         joinCard.hidden = seated || state.phase !== "LOBBY";
 
-        var iAmHost = state.hostDiscordId != null && state.hostDiscordId === parseInt(myId, 10);
+        var iAmHost = state.hostDiscordId != null && state.hostDiscordId === myId;
         startBtn.hidden = !(iAmHost && state.phase === "LOBBY");
         leaveBtn.hidden = !seated;
 
@@ -209,7 +209,7 @@
                 default: label = r.seatResults[id];
             }
             var payout = r.payouts && r.payouts[id] ? " (+" + r.payouts[id] + ")" : "";
-            var who = parseInt(id, 10) === parseInt(myId, 10) ? "You" : (nameById[id] || ("@" + id));
+            var who = id === myId ? "You" : (nameById[id] || ("@" + id));
             lines.push(who + ": " + label + payout);
         });
         resultEl.textContent = "Hand #" + r.handNumber + " — " + lines.join(" · ") +
@@ -226,7 +226,7 @@
                 if (!amount || amount <= 0) return;
                 var seatEl = seatsEl.querySelector('[data-discord-id="' + id + '"]');
                 if (seatEl) window.CasinoRender.flashChipsOn(seatEl, amount);
-                if (parseInt(id, 10) === parseInt(myId, 10)) myPaid = true;
+                if (id === myId) myPaid = true;
             });
             // Sound cue keyed off the viewer's outcome — winning a hand
             // should sound like a win, even if other seats lost.

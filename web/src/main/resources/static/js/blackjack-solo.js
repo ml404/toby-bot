@@ -100,11 +100,13 @@
 
     function renderResult(state, seat) {
         var r = state.lastResult;
-        var seatResult = (r.seatResults || {})[seat.discordId.toString()];
+        // seat.discordId is a string from the projection so the snowflake
+        // survives JS Number's 53-bit precision; lookup keys match exactly.
+        var seatResult = (r.seatResults || {})[seat.discordId];
         // Fire the celebratory chip stack once per hand on a winning result.
         if (r.handNumber !== lastFlashedHand && window.CasinoRender) {
             lastFlashedHand = r.handNumber;
-            var payout = (r.payouts || {})[seat.discordId.toString()];
+            var payout = (r.payouts || {})[seat.discordId];
             if (payout && payout > 0 && playerRowEl) {
                 window.CasinoRender.flashChipsOn(playerRowEl, payout);
             }

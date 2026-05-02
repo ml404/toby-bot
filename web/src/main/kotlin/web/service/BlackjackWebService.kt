@@ -35,7 +35,11 @@ class BlackjackWebService(
     )
 
     data class SeatView(
-        val discordId: Long,
+        // Stringified so the 18-digit Discord snowflake survives JS's 53-bit
+        // Number precision. Numeric serialization rounds the last few digits,
+        // breaking string-keyed lookups in [HandResultView.seatResults] /
+        // [HandResultView.payouts] and the seat → "is this me?" compare.
+        val discordId: String,
         /** Discord display name (server nickname or username), or fallback when not in guild. */
         val displayName: String,
         /** CDN avatar URL, null when the bot can't resolve the member or they've left. */
@@ -78,7 +82,8 @@ class BlackjackWebService(
         val tableId: Long,
         val guildId: Long,
         val mode: String,
-        val hostDiscordId: Long?,
+        // Stringified — see [SeatView.discordId].
+        val hostDiscordId: String?,
         val phase: String,
         val handNumber: Long,
         val ante: Long,
@@ -111,7 +116,8 @@ class BlackjackWebService(
     )
 
     data class PerHandResultView(
-        val discordId: Long,
+        // Stringified — see [SeatView.discordId].
+        val discordId: String,
         val handIndex: Int,
         val cards: List<String>,
         val total: Int,
@@ -185,7 +191,7 @@ class BlackjackWebService(
                 tableId = table.id,
                 guildId = table.guildId,
                 mode = table.mode.name,
-                hostDiscordId = table.hostDiscordId,
+                hostDiscordId = table.hostDiscordId?.toString(),
                 phase = table.phase.name,
                 handNumber = table.handNumber,
                 ante = table.ante,
@@ -194,7 +200,7 @@ class BlackjackWebService(
                 seats = table.seats.map { seat ->
                     val member = members[seat.discordId]
                     SeatView(
-                        discordId = seat.discordId,
+                        discordId = seat.discordId.toString(),
                         displayName = member?.name ?: memberLookup.fallbackName(seat.discordId),
                         avatarUrl = member?.avatarUrl,
                         ante = seat.ante,
@@ -239,7 +245,7 @@ class BlackjackWebService(
                         rake = result.rake,
                         perHandResults = result.perHandResults.map { perHand ->
                             PerHandResultView(
-                                discordId = perHand.discordId,
+                                discordId = perHand.discordId.toString(),
                                 handIndex = perHand.handIndex,
                                 cards = perHand.cards.map(Card::toString),
                                 total = perHand.total,
