@@ -268,11 +268,81 @@
                            th:disabled="${!isOwner}">
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
+            </div>
+        </details>
+
+        <details class="config-section">
+            <summary>Poker</summary>
+            <div class="config-grid">
                 <div class="config-row" data-key="POKER_RAKE_PCT">
-                    <label>Poker rake (% of every settled pot)</label>
-                    <input type="number" min="0" max="20"
+                    <label>Poker rake (% of every settled pot routed to jackpot; default 5)</label>
+                    <input type="number" min="0" max="20" step="1"
                            th:value="${overview.config['POKER_RAKE_PCT']}"
                            placeholder="5"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_SMALL_BLIND">
+                    <label>Small blind (chips posted by SB seat each hand; default 5)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['POKER_SMALL_BLIND']}"
+                           placeholder="5"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_BIG_BLIND">
+                    <label>Big blind (chips posted by BB seat each hand; default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['POKER_BIG_BLIND']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_SMALL_BET">
+                    <label>Small bet (fixed-limit bet pre-flop &amp; flop; default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['POKER_SMALL_BET']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_BIG_BET">
+                    <label>Big bet (fixed-limit bet on turn &amp; river; default 20)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['POKER_BIG_BET']}"
+                           placeholder="20"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_MIN_BUY_IN">
+                    <label>Minimum buy-in per seat (chips; default 100)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['POKER_MIN_BUY_IN']}"
+                           placeholder="100"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_MAX_BUY_IN">
+                    <label>Maximum buy-in per seat (chips; default 5000)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['POKER_MAX_BUY_IN']}"
+                           placeholder="5000"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_MAX_SEATS">
+                    <label>Max seats per table (2-9; default 6)</label>
+                    <input type="number" min="2" max="9"
+                           th:value="${overview.config['POKER_MAX_SEATS']}"
+                           placeholder="6"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="POKER_SHOT_CLOCK_SECONDS">
+                    <label>Decision deadline per actor (seconds; 0 disables; default 30)</label>
+                    <input type="number" min="0" max="600"
+                           th:value="${overview.config['POKER_SHOT_CLOCK_SECONDS']}"
+                           placeholder="30"
                            th:disabled="${!isOwner}">
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>

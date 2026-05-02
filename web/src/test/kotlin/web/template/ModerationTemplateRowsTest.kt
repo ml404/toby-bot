@@ -46,6 +46,31 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
+    fun `moderation template surfaces every poker config key as an editable row`() {
+        // Same regression class as blackjack — `POKER_RAKE_PCT` was the only
+        // poker key with a UI row before; the per-table parameters
+        // (blinds, bets, buy-in range, max seats, shot clock) were defined
+        // and validated server-side but admins had no form for them.
+        val keys = listOf(
+            ConfigDto.Configurations.POKER_RAKE_PCT,
+            ConfigDto.Configurations.POKER_SMALL_BLIND,
+            ConfigDto.Configurations.POKER_BIG_BLIND,
+            ConfigDto.Configurations.POKER_SMALL_BET,
+            ConfigDto.Configurations.POKER_BIG_BET,
+            ConfigDto.Configurations.POKER_MIN_BUY_IN,
+            ConfigDto.Configurations.POKER_MAX_BUY_IN,
+            ConfigDto.Configurations.POKER_MAX_SEATS,
+            ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
+        )
+        for (key in keys) {
+            assertTrue(
+                html.contains("data-key=\"${key.name}\""),
+                "moderation.html should have a config-row for ${key.name} so admins can edit it from the UI"
+            )
+        }
+    }
+
+    @Test
     fun `blackjack section in moderation template has its own collapsed details block`() {
         // The page wraps each game's keys in a `<details><summary>Game</summary>`
         // block so admins can scan to the right section. Without this wrapper
@@ -54,6 +79,14 @@ class ModerationTemplateRowsTest {
         assertTrue(
             html.contains("<summary>Blackjack</summary>"),
             "expected a <details><summary>Blackjack</summary> wrapper around the blackjack rows"
+        )
+    }
+
+    @Test
+    fun `poker section in moderation template has its own collapsed details block`() {
+        assertTrue(
+            html.contains("<summary>Poker</summary>"),
+            "expected a <details><summary>Poker</summary> wrapper around the poker rows"
         )
     }
 }
