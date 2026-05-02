@@ -49,7 +49,6 @@ class SlotsService(
             val jackpotPayout: Long = 0L,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
-            val jackpotPool: Long = 0L
         ) : SpinOutcome
 
         data class Lose(
@@ -59,7 +58,6 @@ class SlotsService(
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
             val lossTribute: Long = 0L,
-            val jackpotPool: Long = 0L
         ) : SpinOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : SpinOutcome
@@ -116,7 +114,6 @@ class SlotsService(
                 jackpotPayout = jackpot,
                 soldTobyCoins = soldCoins,
                 newPrice = newPrice,
-                jackpotPool = jackpotService.getPool(guildId)
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -127,7 +124,6 @@ class SlotsService(
                 soldTobyCoins = soldCoins,
                 newPrice = newPrice,
                 lossTribute = tribute,
-                jackpotPool = jackpotService.getPool(guildId)
             )
         }
     }

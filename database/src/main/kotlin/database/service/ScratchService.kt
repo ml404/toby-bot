@@ -37,7 +37,6 @@ class ScratchService(
             val jackpotPayout: Long = 0L,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
-            val jackpotPool: Long = 0L
         ) : ScratchOutcome
 
         data class Lose(
@@ -47,7 +46,6 @@ class ScratchService(
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
             val lossTribute: Long = 0L,
-            val jackpotPool: Long = 0L
         ) : ScratchOutcome
 
         data class InsufficientCredits(val stake: Long, val have: Long) : ScratchOutcome
@@ -103,7 +101,6 @@ class ScratchService(
                 jackpotPayout = jackpot,
                 soldTobyCoins = soldCoins,
                 newPrice = newPrice,
-                jackpotPool = jackpotService.getPool(guildId)
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -114,7 +111,6 @@ class ScratchService(
                 soldTobyCoins = soldCoins,
                 newPrice = newPrice,
                 lossTribute = tribute,
-                jackpotPool = jackpotService.getPool(guildId)
             )
         }
     }

@@ -4,7 +4,6 @@ import database.dto.TipDailyDto
 import database.dto.TipLogDto
 import database.dto.UserDto
 import database.persistence.TipLogPersistence
-import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -33,7 +32,7 @@ class TipServiceTest {
         userService = RecordingUserService()
         tipDailyService = InMemoryTipDailyService()
         tipLogPersistence = RecordingTipLogPersistence()
-        service = TipService(userService, tipDailyService, tipLogPersistence, mockk(relaxed = true))
+        service = TipService(userService, tipDailyService, tipLogPersistence)
     }
 
     @Test

@@ -91,7 +91,6 @@ class ScratchController(
                     jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice,
-                    jackpotPool = outcome.jackpotPool
                 )
             )
 
@@ -106,7 +105,6 @@ class ScratchController(
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice,
                     lossTribute = outcome.lossTribute.takeIf { it > 0L },
-                    jackpotPool = outcome.jackpotPool
                 )
             )
 
@@ -136,5 +134,4 @@ data class ScratchResponse(
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null,
-    val jackpotPool: Long? = null
 ) : CasinoResponseLike

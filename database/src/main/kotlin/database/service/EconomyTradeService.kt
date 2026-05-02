@@ -57,7 +57,6 @@ class EconomyTradeService(
             // Fee skimmed off this trade and routed to the jackpot pool.
             // Defaulted so existing test fixtures keep compiling.
             val fee: Long = 0L,
-            val jackpotPool: Long = 0L
         ) : TradeOutcome
 
         data class InsufficientCredits(val needed: Long, val have: Long) : TradeOutcome
@@ -120,7 +119,6 @@ class EconomyTradeService(
             newCredits = user.socialCredit ?: 0L,
             newPrice = newPrice,
             fee = fee,
-            jackpotPool = jackpotService.getPool(guildId)
         )
     }
 
@@ -161,7 +159,6 @@ class EconomyTradeService(
             newCredits = user.socialCredit ?: 0L,
             newPrice = newPrice,
             fee = fee,
-            jackpotPool = jackpotService.getPool(guildId)
         )
     }
 
