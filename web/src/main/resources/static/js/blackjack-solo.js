@@ -140,6 +140,7 @@
             playerTotalEl.textContent = seat ? "(" + seat.total + ")" : "";
         }
 
+        var becomingInactive = false;
         if (state.phase === "PLAYER_TURNS" && state.isMyTurn) {
             hitBtn.disabled = false;
             standBtn.disabled = false;
@@ -155,12 +156,24 @@
             doubleBtn.disabled = true;
             splitBtn.disabled = true;
             splitBtn.hidden = true;
-            if (playerRowEl) playerRowEl.classList.remove("is-active");
+            // Defer the .is-active drop to the next frame so it doesn't tear
+            // down the seat's compositing layer in the same paint as the
+            // chip-stack flourish below — mobile WebKit drops the chip
+            // animations otherwise. The `casino-pulse` halo lingers for one
+            // extra frame, which is invisible to the eye.
+            becomingInactive = !!playerRowEl &&
+                playerRowEl.classList.contains("is-active");
         }
 
         if (state.lastResult && state.phase === "RESOLVED") {
             renderResult(state, seat);
             stopPoll();
+        }
+
+        if (becomingInactive) {
+            var raf = window.requestAnimationFrame ||
+                function (fn) { return setTimeout(fn, 0); };
+            raf(function () { playerRowEl.classList.remove("is-active"); });
         }
     }
 

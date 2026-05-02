@@ -149,8 +149,18 @@
     // Drop a small celebratory chip stack onto a seat element. Used by the
     // game JS the moment a hand resolves with a positive payout — the stack
     // animates in (one chip popping every 80ms), the payout label floats up,
-    // and the whole thing removes itself after ~1.6s so it doesn't pile up
-    // on subsequent polls.
+    // and the whole thing cleans itself up when the float animation ends.
+    //
+    // Mobile robustness: the chips are inserted inside a requestAnimationFrame
+    // callback so the empty stack commits to layout before the children with
+    // their staggered `animation-delay` are attached. iOS Safari and several
+    // Chromium versions drop child animations whose positioned ancestor is
+    // being recomposited in the same paint frame the children land — splitting
+    // the work across two frames sidesteps that. Cleanup keys off
+    // `animationend` on the longest-running child (payout-float = 1.6s) so a
+    // tab that was throttled mid-animation still tears the stack down at the
+    // right moment, with a 2.5s safety timer for prefers-reduced-motion (no
+    // animationend ever fires) and missed-event paranoia.
     function flashChipsOn(seatEl, payoutAmount, chipCount) {
         if (!seatEl || !payoutAmount || payoutAmount <= 0) return;
         // De-dupe: if a previous flash for the same hand is still on screen,
@@ -166,25 +176,52 @@
         label.textContent = "+" + payoutAmount;
         stack.appendChild(label);
 
-        // Cap chip count so a "+10000" payout doesn't draw 100 chips.
-        var n = Math.max(1, Math.min(chipCount || 5, 7));
-        for (var i = 0; i < n; i++) {
-            var chip = document.createElement("span");
-            chip.className = "casino-chip";
-            chip.style.animationDelay = (i * 80) + "ms";
-            stack.appendChild(chip);
-            // Synchronise the audible chip-clink with each chip's pop —
-            // gives the animation real weight.
-            if (window.CasinoSounds) {
-                (function (delay) {
-                    setTimeout(function () { window.CasinoSounds.play("chip"); }, delay);
-                })(i * 80);
-            }
-        }
         seatEl.appendChild(stack);
 
-        // Clean up after the longest animation (payout-float = 1.6s).
-        setTimeout(function () { if (stack.parentNode) stack.remove(); }, 1700);
+        // Cap chip count so a "+10000" payout doesn't draw 100 chips.
+        var n = Math.max(1, Math.min(chipCount || 5, 7));
+
+        // Idempotent removal: animationend wins the race in normal flow,
+        // safety timer covers the reduced-motion path where animationend
+        // never fires because the CSS sets `animation: none`.
+        var safetyTimer = null;
+        function cleanup() {
+            if (safetyTimer) {
+                clearTimeout(safetyTimer);
+                safetyTimer = null;
+            }
+            if (stack.parentNode) stack.remove();
+        }
+        label.addEventListener("animationend", cleanup, { once: true });
+        safetyTimer = setTimeout(cleanup, 2500);
+
+        var insertChips = function () {
+            // Bail if the stack got torn down between frames (rapid re-deal).
+            if (!stack.parentNode) return;
+            for (var i = 0; i < n; i++) {
+                var chip = document.createElement("span");
+                chip.className = "casino-chip";
+                chip.style.animationDelay = (i * 80) + "ms";
+                stack.appendChild(chip);
+                // Synchronise the audible chip-clink with each chip's pop —
+                // gives the animation real weight.
+                if (window.CasinoSounds) {
+                    (function (delay) {
+                        setTimeout(function () { window.CasinoSounds.play("chip"); }, delay);
+                    })(i * 80);
+                }
+            }
+        };
+
+        // requestAnimationFrame defers insertion to the next frame, after the
+        // empty stack has committed to layout. jsdom and very old browsers
+        // don't have rAF — fall back to a 0-ms timeout there so the unit
+        // tests still see the chips.
+        if (typeof window.requestAnimationFrame === "function") {
+            window.requestAnimationFrame(insertChips);
+        } else {
+            setTimeout(insertChips, 0);
+        }
     }
 
     window.CasinoRender = {
