@@ -9,10 +9,12 @@ import kotlinx.coroutines.test.runTest
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Isolated
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@Isolated("Uses real Thread.sleep(200) to wait for a coroutine timeout — flakes under CPU contention")
 class EventWaiterTest {
 
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -13,7 +13,13 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonInteraction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.parallel.ResourceLock
+import org.junit.jupiter.api.parallel.ResourceLocks
 
+@ResourceLocks(
+    ResourceLock("playerManager"),
+    ResourceLock("musicPlayerHelper")
+)
 interface ButtonTest {
 
     @BeforeEach
