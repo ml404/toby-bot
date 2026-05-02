@@ -127,10 +127,45 @@
         }
     }
 
+    // Drop a small celebratory chip stack onto a seat element. Used by the
+    // game JS the moment a hand resolves with a positive payout — the stack
+    // animates in (one chip popping every 80ms), the payout label floats up,
+    // and the whole thing removes itself after ~1.6s so it doesn't pile up
+    // on subsequent polls.
+    function flashChipsOn(seatEl, payoutAmount, chipCount) {
+        if (!seatEl || !payoutAmount || payoutAmount <= 0) return;
+        // De-dupe: if a previous flash for the same hand is still on screen,
+        // strip it before starting a new one.
+        var existing = seatEl.querySelector(".casino-chip-stack");
+        if (existing) existing.remove();
+
+        var stack = document.createElement("div");
+        stack.className = "casino-chip-stack";
+
+        var label = document.createElement("div");
+        label.className = "casino-chip-payout";
+        label.textContent = "+" + payoutAmount;
+        stack.appendChild(label);
+
+        // Cap chip count so a "+10000" payout doesn't draw 100 chips.
+        var n = Math.max(1, Math.min(chipCount || 5, 7));
+        for (var i = 0; i < n; i++) {
+            var chip = document.createElement("span");
+            chip.className = "casino-chip";
+            chip.style.animationDelay = (i * 80) + "ms";
+            stack.appendChild(chip);
+        }
+        seatEl.appendChild(stack);
+
+        // Clean up after the longest animation (payout-float = 1.6s).
+        setTimeout(function () { if (stack.parentNode) stack.remove(); }, 1700);
+    }
+
     window.CasinoRender = {
         renderCards: renderCards,
         makeAvatar: makeAvatar,
         makeSeatHeader: makeSeatHeader,
         renderActorPill: renderActorPill,
+        flashChipsOn: flashChipsOn,
     };
 })();

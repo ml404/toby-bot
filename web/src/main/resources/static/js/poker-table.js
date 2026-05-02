@@ -24,6 +24,9 @@
     const potsEl = document.getElementById('poker-pots');
     const shotClockEl = document.getElementById('poker-shot-clock');
     let shotClockTicker = null;
+    // Tracks the handNumber of the last result we played the chip-stack
+    // flourish on, so the 2s polling doesn't re-trigger the animation.
+    let lastFlashedHand = null;
     const balanceEl = document.getElementById('poker-balance');
     const joinCard = document.getElementById('poker-join-card');
 
@@ -69,6 +72,7 @@
         state.seats.forEach(function (s, idx) {
             const node = document.createElement('div');
             node.className = 'poker-seat casino-seat';
+            node.dataset.discordId = String(s.discordId);
             const isMe = idx === meIdx;
             if (isMe) node.classList.add('poker-seat-me', 'is-me');
             if (idx === state.actorIndex && state.phase !== 'WAITING') node.classList.add('poker-seat-active', 'is-active');
@@ -199,6 +203,21 @@
                 containerEl: potsEl,
                 pots: result.pots || [],
                 refundedByDiscordId: result.refundedByDiscordId || {},
+            });
+        }
+
+        // Fire the celebratory chip stack once per hand on each seat that
+        // received a positive payout. The 2s polling would otherwise
+        // re-trigger every cycle while the result is on screen, so we
+        // key off handNumber.
+        if (result.handNumber !== lastFlashedHand && window.CasinoRender) {
+            lastFlashedHand = result.handNumber;
+            const payouts = result.payoutByDiscordId || {};
+            Object.keys(payouts).forEach(function (id) {
+                const amount = payouts[id];
+                if (!amount || amount <= 0) return;
+                const seatEl = seatsEl.querySelector('[data-discord-id="' + id + '"]');
+                if (seatEl) window.CasinoRender.flashChipsOn(seatEl, amount);
             });
         }
     }

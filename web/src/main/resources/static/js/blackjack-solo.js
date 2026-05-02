@@ -21,6 +21,9 @@
     var playerRowEl = document.getElementById("bj-player-row");
 
     var pollTimer = null;
+    // Tracks the handNumber of the last result we played the chip-stack
+    // flourish on, so the 2s polling doesn't re-trigger the animation.
+    var lastFlashedHand = null;
 
     function renderCards(container, cards) {
         // Delegate to the shared casino renderer so the deal animation only
@@ -98,6 +101,14 @@
     function renderResult(state, seat) {
         var r = state.lastResult;
         var seatResult = (r.seatResults || {})[seat.discordId.toString()];
+        // Fire the celebratory chip stack once per hand on a winning result.
+        if (r.handNumber !== lastFlashedHand && window.CasinoRender) {
+            lastFlashedHand = r.handNumber;
+            var payout = (r.payouts || {})[seat.discordId.toString()];
+            if (payout && payout > 0 && playerRowEl) {
+                window.CasinoRender.flashChipsOn(playerRowEl, payout);
+            }
+        }
         var label;
         var cls = "muted";
         switch (seatResult) {

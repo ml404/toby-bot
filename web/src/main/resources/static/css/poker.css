@@ -142,3 +142,52 @@
     border-radius: 0.5rem;
     background: var(--surface-2, #16181d);
 }
+
+/* ------------------------------------------------------------------- */
+/* Responsive — phones                                                  */
+/* ------------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+    .poker-card {
+        padding: 1rem;
+        max-width: 100%;
+    }
+    .poker-header h1 {
+        font-size: 1.4rem;
+    }
+    /* Single-column seats on phones — the auto-fit minmax was forcing
+       seats wider than the viewport at minmax(15rem, ...). */
+    .poker-seats {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    .poker-info {
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .poker-info > div {
+        flex: 1 1 calc(50% - 0.5rem);
+    }
+    /* Centred-flex board still wraps; tighten spacing so 5 community
+       cards fit a portrait phone without horizontal scroll. */
+    .poker-board {
+        gap: 0.35rem;
+        min-height: 3.8rem;
+    }
+    .poker-actions {
+        gap: 0.4rem;
+    }
+    .poker-actions button {
+        flex: 1 1 calc(50% - 0.4rem);
+        min-height: 2.75rem;
+    }
+    .poker-table-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    .poker-table-row .btn-primary {
+        width: 100%;
+        min-height: 2.75rem;
+    }
+}

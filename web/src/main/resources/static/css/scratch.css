@@ -216,4 +216,13 @@
 @media (max-width: 600px) {
     .scratch-cells { max-width: 300px; }
     .scratch-cell-cover, .scratch-cell-face { font-size: 1.4rem; }
+    .scratch-bet { max-width: 100%; }
+}
+
+@media (max-width: 380px) {
+    /* Cells stay 3-wide (a 3x3 grid is the whole game), but tighten gaps
+       so the grid fits a 320px viewport. Touch targets remain large
+       enough since each cell is square-aspect. */
+    .scratch-cells { max-width: 100%; gap: 0.4rem; }
+    .scratch-cell-cover, .scratch-cell-face { font-size: 1.15rem; }
 }

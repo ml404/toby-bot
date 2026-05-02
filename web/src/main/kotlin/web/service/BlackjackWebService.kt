@@ -24,6 +24,8 @@ class BlackjackWebService(
     data class TableSummaryView(
         val tableId: Long,
         val hostDiscordId: Long?,
+        /** Resolved Discord display name of the host, or fallback when not resolvable. */
+        val hostName: String,
         val mode: String,
         val seats: Int,
         val maxSeats: Int,
@@ -120,22 +122,30 @@ class BlackjackWebService(
         val payout: Long,
     )
 
-    fun listMultiTables(guildId: Long): List<TableSummaryView> =
-        tableRegistry.listForGuild(guildId)
+    fun listMultiTables(guildId: Long): List<TableSummaryView> {
+        val tables = tableRegistry.listForGuild(guildId)
             .filter { it.mode == BlackjackTable.Mode.MULTI }
-            .map { table ->
-                TableSummaryView(
-                    tableId = table.id,
-                    hostDiscordId = table.hostDiscordId,
-                    mode = table.mode.name,
-                    seats = table.seats.size,
-                    maxSeats = table.maxSeats,
-                    phase = table.phase.name,
-                    handNumber = table.handNumber,
-                    ante = table.ante,
-                )
-            }
-            .sortedBy { it.tableId }
+        // Batch-resolve every host's display name once so the lobby doesn't
+        // hit JDA per row.
+        val hostIds = tables.mapNotNull { it.hostDiscordId }.toSet()
+        val hosts = memberLookup.resolveAll(guildId, hostIds)
+        return tables.map { table ->
+            val host = table.hostDiscordId?.let { hosts[it] }
+            TableSummaryView(
+                tableId = table.id,
+                hostDiscordId = table.hostDiscordId,
+                hostName = host?.name
+                    ?: table.hostDiscordId?.let { memberLookup.fallbackName(it) }
+                    ?: "—",
+                mode = table.mode.name,
+                seats = table.seats.size,
+                maxSeats = table.maxSeats,
+                phase = table.phase.name,
+                handNumber = table.handNumber,
+                ante = table.ante,
+            )
+        }.sortedBy { it.tableId }
+    }
 
     fun snapshot(tableId: Long, viewerDiscordId: Long): TableStateView? {
         val table = tableRegistry.get(tableId) ?: return null

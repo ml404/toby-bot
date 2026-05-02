@@ -49,7 +49,7 @@
                     <div>Table #<strong th:text="${t.tableId}">1</strong>
                         — <span th:text="${t.seats}">0</span>/<span th:text="${t.maxSeats}">6</span> seats
                         <span th:if="${t.isFreePlay}" class="poker-free-tag" title="Free play — no credits, no payouts">🆓 Free</span></div>
-                    <div class="muted">Host: <span th:text="${t.hostDiscordId}">000</span> ·
+                    <div class="muted">Host: <span th:text="${t.hostName}">Host</span> ·
                         Phase: <span th:text="${t.phase}">WAITING</span> ·
                         Hand #<span th:text="${t.handNumber}">0</span></div>
                 </div>

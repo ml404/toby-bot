@@ -22,6 +22,8 @@ class PokerWebService(
     data class TableSummaryView(
         val tableId: Long,
         val hostDiscordId: Long,
+        /** Resolved Discord display name of the host, or fallback when not resolvable. */
+        val hostName: String,
         val seats: Int,
         val maxSeats: Int,
         val phase: String,
@@ -127,20 +129,27 @@ class PokerWebService(
         val payoutByDiscordId: Map<String, Long>,
     )
 
-    fun listGuildTables(guildId: Long): List<TableSummaryView> =
-        tableRegistry.listForGuild(guildId).map {
+    fun listGuildTables(guildId: Long): List<TableSummaryView> {
+        val tables = tableRegistry.listForGuild(guildId)
+        // Batch-resolve every host's display name once so the lobby doesn't
+        // hit JDA per row.
+        val hosts = memberLookup.resolveAll(guildId, tables.map { it.hostDiscordId }.toSet())
+        return tables.map { t ->
+            val host = hosts[t.hostDiscordId]
             TableSummaryView(
-                tableId = it.id,
-                hostDiscordId = it.hostDiscordId,
-                seats = it.seats.size,
-                maxSeats = it.maxSeats,
-                phase = it.phase.name,
-                handNumber = it.handNumber,
-                minBuyIn = it.minBuyIn,
-                maxBuyIn = it.maxBuyIn,
-                isFreePlay = it.isFreePlay,
+                tableId = t.id,
+                hostDiscordId = t.hostDiscordId,
+                hostName = host?.name ?: memberLookup.fallbackName(t.hostDiscordId),
+                seats = t.seats.size,
+                maxSeats = t.maxSeats,
+                phase = t.phase.name,
+                handNumber = t.handNumber,
+                minBuyIn = t.minBuyIn,
+                maxBuyIn = t.maxBuyIn,
+                isFreePlay = t.isFreePlay,
             )
         }.sortedBy { it.tableId }
+    }
 
     fun snapshot(tableId: Long, viewerDiscordId: Long): TableStateView? {
         val table = tableRegistry.get(tableId) ?: return null

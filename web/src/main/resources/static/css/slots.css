@@ -129,4 +129,13 @@
     .slots-reel { width: 72px; height: 72px; font-size: 2.4rem; }
     .slots-bet { flex-direction: column; align-items: stretch; }
     .slots-bet input[type="number"] { width: 100%; }
+    .slots-bet button { min-height: 2.75rem; }
+}
+
+@media (max-width: 380px) {
+    /* Three reels need to fit a 320px screen with a small gutter, so the
+       reels shrink again. Payouts table compresses font-size to keep
+       columns aligned without horizontal scroll. */
+    .slots-reel { width: 60px; height: 60px; font-size: 2rem; }
+    .slots-payouts { font-size: 0.85rem; }
 }
