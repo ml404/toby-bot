@@ -205,8 +205,8 @@ class DuelController(
             is AcceptOutcome.Win -> ResponseEntity.ok(
                 DuelActionResponse(
                     ok = true,
-                    winnerDiscordId = outcome.winnerDiscordId,
-                    loserDiscordId = outcome.loserDiscordId,
+                    winnerDiscordId = outcome.winnerDiscordId.toString(),
+                    loserDiscordId = outcome.loserDiscordId.toString(),
                     stake = outcome.stake,
                     pot = outcome.pot,
                     winnerNewBalance = outcome.winnerNewBalance,
@@ -303,8 +303,11 @@ data class ChallengeResponse(
 data class DuelActionResponse(
     val ok: Boolean,
     val error: String? = null,
-    val winnerDiscordId: Long? = null,
-    val loserDiscordId: Long? = null,
+    // Stringified — JS renders [winnerDiscordId] into a `<@…>` mention, and a
+    // numeric round-trip on a 18-digit Discord snowflake would produce the
+    // wrong id (rounded past JS Number.MAX_SAFE_INTEGER).
+    val winnerDiscordId: String? = null,
+    val loserDiscordId: String? = null,
     val stake: Long? = null,
     val pot: Long? = null,
     val winnerNewBalance: Long? = null,

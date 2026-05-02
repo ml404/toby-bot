@@ -23,7 +23,10 @@ class BlackjackWebService(
 
     data class TableSummaryView(
         val tableId: Long,
-        val hostDiscordId: Long?,
+        // Stringified — see [SeatView.discordId]. Matches the parallel field
+        // on [TableStateView] so a lobby host id and the in-table host id
+        // both round-trip through JSON without losing precision.
+        val hostDiscordId: String?,
         /** Resolved Discord display name of the host, or fallback when not resolvable. */
         val hostName: String,
         val mode: String,
@@ -139,7 +142,7 @@ class BlackjackWebService(
             val host = table.hostDiscordId?.let { hosts[it] }
             TableSummaryView(
                 tableId = table.id,
-                hostDiscordId = table.hostDiscordId,
+                hostDiscordId = table.hostDiscordId?.toString(),
                 hostName = host?.name
                     ?: table.hostDiscordId?.let { memberLookup.fallbackName(it) }
                     ?: "—",

@@ -46,7 +46,11 @@ class DuelWebServiceTest {
         val rows = service.pendingForOpponent(opponentId, guildId)
 
         assertEquals(2, rows.size)
-        assertTrue(rows.all { it.opponentDiscordId == opponentId })
+        // Stringified to survive 18-digit Discord-snowflake JSON round-trips
+        // through JS (numeric serialization rounds past 2^53).
+        assertTrue(rows.all { it.opponentDiscordId == opponentId.toString() })
+        assertEquals("100", rows[0].initiatorDiscordId)
+        assertEquals("101", rows[1].initiatorDiscordId)
         assertEquals(50L, rows[0].stake)
         assertEquals(75L, rows[1].stake)
     }

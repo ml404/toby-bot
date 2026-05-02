@@ -285,7 +285,7 @@ class PokerControllerTest {
         PokerWebService.TableStateView(
             tableId = tableId,
             guildId = guildId,
-            hostDiscordId = discordId,
+            hostDiscordId = discordId.toString(),
             phase = "WAITING",
             handNumber = 0L,
             pot = 0L,

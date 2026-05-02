@@ -21,7 +21,10 @@ class PokerWebService(
 
     data class TableSummaryView(
         val tableId: Long,
-        val hostDiscordId: Long,
+        // Stringified so the 18-digit Discord snowflake survives JS's 53-bit
+        // Number precision. Numeric serialization rounds the last few digits,
+        // breaking the "am I the host?" compare in poker-table.js.
+        val hostDiscordId: String,
         /** Resolved Discord display name of the host, or fallback when not resolvable. */
         val hostName: String,
         val seats: Int,
@@ -37,7 +40,8 @@ class PokerWebService(
     data class TableStateView(
         val tableId: Long,
         val guildId: Long,
-        val hostDiscordId: Long,
+        // Stringified — see [TableSummaryView.hostDiscordId].
+        val hostDiscordId: String,
         val phase: String,
         val handNumber: Long,
         val pot: Long,
@@ -84,7 +88,11 @@ class PokerWebService(
     )
 
     data class SeatView(
-        val discordId: Long,
+        // Stringified — see [TableSummaryView.hostDiscordId]. Used as the
+        // [data-discord-id] selector on the seat element so it must match
+        // the [HandResultView.payoutByDiscordId] keys exactly for the
+        // chip-flash flourish to find the right seat.
+        val discordId: String,
         /** Discord display name (server nickname or username), or fallback when not in guild. */
         val displayName: String,
         /** CDN avatar URL, null when the bot can't resolve the member or they've left. */
@@ -99,7 +107,10 @@ class PokerWebService(
 
     data class HandResultView(
         val handNumber: Long,
-        val winners: List<Long>,
+        // Stringified — see [SeatView.discordId]. The JS looks each winner up
+        // in the seat's `nameById` map (built from the stringified seat ids),
+        // so these have to match those exactly.
+        val winners: List<String>,
         val payoutByDiscordId: Map<String, Long>,
         val pot: Long,
         val rake: Long,
@@ -124,8 +135,9 @@ class PokerWebService(
     data class PotResultView(
         val cap: Long,
         val amount: Long,
-        val eligibleDiscordIds: List<Long>,
-        val winners: List<Long>,
+        // Stringified — see [SeatView.discordId].
+        val eligibleDiscordIds: List<String>,
+        val winners: List<String>,
         val payoutByDiscordId: Map<String, Long>,
     )
 
@@ -138,7 +150,7 @@ class PokerWebService(
             val host = hosts[t.hostDiscordId]
             TableSummaryView(
                 tableId = t.id,
-                hostDiscordId = t.hostDiscordId,
+                hostDiscordId = t.hostDiscordId.toString(),
                 hostName = host?.name ?: memberLookup.fallbackName(t.hostDiscordId),
                 seats = t.seats.size,
                 maxSeats = t.maxSeats,
@@ -181,7 +193,7 @@ class PokerWebService(
             return TableStateView(
                 tableId = table.id,
                 guildId = table.guildId,
-                hostDiscordId = table.hostDiscordId,
+                hostDiscordId = table.hostDiscordId.toString(),
                 phase = table.phase.name,
                 handNumber = table.handNumber,
                 pot = table.pot,
@@ -205,7 +217,7 @@ class PokerWebService(
                     table.seats.mapIndexed { idx, seat ->
                         val member = members[seat.discordId]
                         SeatView(
-                            discordId = seat.discordId,
+                            discordId = seat.discordId.toString(),
                             displayName = member?.name ?: memberLookup.fallbackName(seat.discordId),
                             avatarUrl = member?.avatarUrl,
                             chips = seat.chips,
@@ -231,7 +243,7 @@ class PokerWebService(
                 lastResult = table.lastResult?.let { result ->
                     HandResultView(
                         handNumber = result.handNumber,
-                        winners = result.winners,
+                        winners = result.winners.map { it.toString() },
                         payoutByDiscordId = result.payoutByDiscordId.mapKeys { it.key.toString() },
                         pot = result.pot,
                         rake = result.rake,
@@ -243,8 +255,8 @@ class PokerWebService(
                             PotResultView(
                                 cap = p.cap,
                                 amount = p.amount,
-                                eligibleDiscordIds = p.eligibleDiscordIds,
-                                winners = p.winners,
+                                eligibleDiscordIds = p.eligibleDiscordIds.map { it.toString() },
+                                winners = p.winners.map { it.toString() },
                                 payoutByDiscordId = p.payoutByDiscordId.mapKeys { it.key.toString() },
                             )
                         },
