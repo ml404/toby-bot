@@ -147,4 +147,16 @@
 @media (max-width: 600px) {
     .coinflip-coin { width: 96px; height: 96px; }
     .coinflip-coin-face { font-size: 2.4rem; }
+    .coinflip-bet { max-width: 100%; }
+    /* Side picker buttons fill the row at ≥44px so they're easy to tap. */
+    .coinflip-side-picker { gap: 0.5rem; }
+    .coinflip-side-picker button {
+        flex: 1 1 0;
+        min-height: 2.75rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .coinflip-coin { width: 80px; height: 80px; }
+    .coinflip-coin-face { font-size: 2rem; }
 }

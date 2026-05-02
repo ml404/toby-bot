@@ -150,3 +150,15 @@
     .dice-die-face { font-size: 4rem; }
     .dice-prediction-picker { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* Compact phone — die shrinks again, prediction grid keeps 3 cols
+   (going to 2 makes "predict 1-6" feel uneven). Form items stretch to
+   fill so the touch target stays at 44px+. */
+@media (max-width: 380px) {
+    .dice-bet { max-width: 100%; }
+    .dice-die { width: 80px; height: 80px; }
+    .dice-die-face { font-size: 3.2rem; }
+    .dice-prediction-picker .dice-prediction-cell {
+        min-height: 2.75rem;
+    }
+}

@@ -260,11 +260,131 @@
     animation: casino-deal 280ms ease-out;
 }
 
+/* ------------------------------------------------------------------- */
+/* Win chip-stack flourish                                              */
+/* ------------------------------------------------------------------- */
+
+/* Anchored to the seat so JS can drop a stack inside without leaking
+   into the page flow. The seat's other content stays untouched. */
+.casino-seat {
+    position: relative;
+}
+
+.casino-chip-stack {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.casino-chip {
+    width: 1.6rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 30% 30%, #fef08a 0%, #fcd34d 45%, #b45309 100%);
+    border: 1px solid rgba(0, 0, 0, 0.55);
+    box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.55),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.15);
+    margin-top: -0.32rem;
+    animation: casino-chip-pop 520ms cubic-bezier(.18, .89, .32, 1.28) both;
+}
+
+.casino-chip-payout {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #fde68a;
+    text-shadow: 0 0 8px rgba(252, 211, 77, 0.65);
+    margin-bottom: 0.4rem;
+    animation: casino-payout-float 1.6s ease-out both;
+}
+
+@keyframes casino-chip-pop {
+    0%   { transform: translateY(40px) scale(0.5); opacity: 0; }
+    55%  { transform: translateY(-6px) scale(1.06); opacity: 1; }
+    100% { transform: none; opacity: 1; }
+}
+
+@keyframes casino-payout-float {
+    0%   { transform: translateY(20px); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translateY(-30px); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .casino-seat.is-active {
         animation: none;
     }
     .casino-card-glyph.is-dealt {
         animation: none;
+    }
+    .casino-chip,
+    .casino-chip-payout {
+        animation: none;
+    }
+}
+
+/* ------------------------------------------------------------------- */
+/* Responsive — phones                                                  */
+/* ------------------------------------------------------------------- */
+
+/* Tablet / large phone — felt and cards tighten so a 5-card hand fits a
+   standard portrait viewport without horizontal scroll. */
+@media (max-width: 600px) {
+    .casino-felt {
+        padding: 1.25rem 1rem;
+        border-radius: 0.9rem;
+    }
+    .casino-card-glyph {
+        width: 2.4rem;
+        height: 3.6rem;
+        font-size: 1.1rem;
+        border-radius: 0.4rem;
+    }
+    .casino-cards {
+        gap: 0.35rem;
+        min-height: 3.8rem;
+    }
+    .casino-seat {
+        padding: 0.6rem 0.75rem;
+    }
+    .casino-actor-pill {
+        font-size: 0.82rem;
+        padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+    }
+    .casino-actor-pill .casino-avatar {
+        width: 1.4rem;
+        height: 1.4rem;
+    }
+}
+
+/* Compact phone — only what's needed to keep a 5-card hand + dealer
+   visible above the fold without breaking the table metaphor. */
+@media (max-width: 380px) {
+    .casino-felt {
+        padding: 1rem 0.75rem;
+    }
+    .casino-card-glyph {
+        width: 2rem;
+        height: 3rem;
+        font-size: 0.95rem;
+    }
+    .casino-cards {
+        gap: 0.3rem;
+        min-height: 3.2rem;
+    }
+    .casino-avatar {
+        width: 1.7rem;
+        height: 1.7rem;
+    }
+    .casino-actor-pill-label {
+        /* On 320px the "Acting" tag is the first thing to drop — name +
+           avatar are still informative without it. */
+        display: none;
     }
 }

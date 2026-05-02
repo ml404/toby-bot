@@ -29,6 +29,9 @@
     var pollTimer = null;
     var clockTimer = null;
     var deadlineMs = null;
+    // Tracks the handNumber of the last result we played the chip-stack
+    // flourish on, so the 2s polling doesn't re-trigger the animation.
+    var lastFlashedHand = null;
 
     function renderCards(container, cards) {
         // Delegate to the shared renderer so the per-container deal animation
@@ -81,15 +84,19 @@
                     isMe: isMe,
                     metaText: slots.length + " hands" + (seat.pendingLeave ? " · leaving" : ""),
                 });
+                groupHeader.dataset.discordId = String(seat.discordId);
                 seatsEl.appendChild(groupHeader);
                 slots.forEach(function (slot, slotIdx) {
-                    seatsEl.appendChild(renderSlot(seat, slot, slotIdx, isActorSeat && slotIdx === seat.activeHandIndex));
+                    var slotEl = renderSlot(seat, slot, slotIdx, isActorSeat && slotIdx === seat.activeHandIndex);
+                    slotEl.dataset.discordId = String(seat.discordId);
+                    seatsEl.appendChild(slotEl);
                 });
                 return;
             }
             // Single-hand path (back-compat with v1 seat shape).
             var div = document.createElement("div");
             div.className = "bj-seat casino-seat";
+            div.dataset.discordId = String(seat.discordId);
             if (isMe) div.classList.add("is-me");
             if (isActorSeat) div.classList.add("bj-seat-active", "is-active");
             if (seat.status === "BUSTED") div.classList.add("bj-seat-busted", "is-busted");
@@ -207,6 +214,19 @@
         });
         resultEl.textContent = "Hand #" + r.handNumber + " — " + lines.join(" · ") +
             ". Pot " + r.pot + " (rake " + r.rake + " → jackpot).";
+
+        // Fire the celebratory chip stack once per hand. The 2s polling
+        // would otherwise re-trigger every cycle while the result is on
+        // screen, so we key off handNumber.
+        if (r.handNumber !== lastFlashedHand && window.CasinoRender) {
+            lastFlashedHand = r.handNumber;
+            Object.keys(r.payouts || {}).forEach(function (id) {
+                var amount = r.payouts[id];
+                if (!amount || amount <= 0) return;
+                var seatEl = seatsEl.querySelector('[data-discord-id="' + id + '"]');
+                if (seatEl) window.CasinoRender.flashChipsOn(seatEl, amount);
+            });
+        }
     }
 
     function renderShotClock() {

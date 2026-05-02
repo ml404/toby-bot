@@ -177,4 +177,17 @@
     .highlow-card { width: 76px; height: 110px; }
     .highlow-card-face { font-size: 2rem; }
     .highlow-arrow { font-size: 1.5rem; }
+    .highlow-bet { max-width: 100%; }
+    /* Direction picker fills the row so Higher / Lower stay at ≥44px. */
+    .highlow-direction-picker { gap: 0.5rem; }
+    .highlow-direction-picker button {
+        flex: 1 1 0;
+        min-height: 2.75rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .highlow-card { width: 64px; height: 92px; }
+    .highlow-card-face { font-size: 1.6rem; }
+    .highlow-arrow { font-size: 1.2rem; }
 }
