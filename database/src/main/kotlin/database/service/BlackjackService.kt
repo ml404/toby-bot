@@ -239,6 +239,11 @@ class BlackjackService @Autowired constructor(
         resolved.user.socialCredit = resolved.balance - stake
         userService.updateUser(resolved.user)
 
+        // Sweep any resolved solo table left behind by this user's previous
+        // hand — the action handler now leaves them in registry so the JS
+        // poll can render the result, but they shouldn't accumulate.
+        sweepResolvedSoloTablesFor(guildId, discordId)
+
         val table = tableRegistry.create(
             guildId = guildId,
             mode = BlackjackTable.Mode.SOLO,
@@ -548,6 +553,23 @@ class BlackjackService @Autowired constructor(
         if (table.phase == BlackjackTable.Phase.RESOLVED) {
             tableRegistry.remove(tableId)
         }
+    }
+
+    /**
+     * Drop every RESOLVED SOLO table this user is still seated at in [guildId].
+     * The action handler intentionally leaves a resolved table behind so the
+     * web JS can poll `/state` once more, render the result, and disable
+     * buttons; this method runs on the next deal to clear that residue before
+     * a fresh table is registered.
+     */
+    private fun sweepResolvedSoloTablesFor(guildId: Long, discordId: Long) {
+        tableRegistry.listForGuild(guildId)
+            .filter { t ->
+                t.mode == BlackjackTable.Mode.SOLO &&
+                    t.phase == BlackjackTable.Phase.RESOLVED &&
+                    t.seats.any { it.discordId == discordId }
+            }
+            .forEach { tableRegistry.remove(it.id) }
     }
 
     // -------------------------------------------------------------------------

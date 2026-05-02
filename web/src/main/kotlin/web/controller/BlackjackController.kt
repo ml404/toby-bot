@@ -233,7 +233,10 @@ class BlackjackController(
         when (val outcome = blackjackService.applySoloAction(discordId, guildId, tableId, action)) {
             is SoloActionOutcome.Continued -> ResponseEntity.ok(BlackjackActionResponse(ok = true, tableId = tableId))
             is SoloActionOutcome.Resolved -> {
-                blackjackService.closeSoloTable(tableId)
+                // Leave the resolved table in the registry so the JS poll can read the
+                // final state (cards / dealer total / lastResult) and disable buttons.
+                // [BlackjackService.dealSolo] sweeps it on the next deal; the idle
+                // sweeper handles abandoned ones after [BlackjackTableRegistry.idleTtl].
                 ResponseEntity.ok(
                     BlackjackActionResponse(
                         ok = true, tableId = tableId, resolved = true,
@@ -407,12 +410,19 @@ class BlackjackController(
         }
     }
 
-    private fun findActiveSoloTable(guildId: Long, discordId: Long): Long? =
-        tableRegistry.listForGuild(guildId)
-            .firstOrNull { table ->
-                table.mode == BlackjackTable.Mode.SOLO &&
-                    table.seats.any { it.discordId == discordId }
-            }?.id
+    private fun findActiveSoloTable(guildId: Long, discordId: Long): Long? {
+        val mine = tableRegistry.listForGuild(guildId).filter { table ->
+            table.mode == BlackjackTable.Mode.SOLO &&
+                table.seats.any { it.discordId == discordId }
+        }
+        // Prefer a still-in-flight hand. After a hand resolves, the table now
+        // sticks around (so /state can render the result + disable buttons)
+        // until the next deal sweeps it — without this filter, an action POST
+        // arriving right after a fresh deal could land on the stale RESOLVED
+        // table instead of the new live one.
+        return (mine.firstOrNull { it.phase != BlackjackTable.Phase.RESOLVED }
+            ?: mine.firstOrNull())?.id
+    }
 
     private fun parseAction(raw: String): Blackjack.Action? = when (raw.lowercase()) {
         "hit" -> Blackjack.Action.HIT
