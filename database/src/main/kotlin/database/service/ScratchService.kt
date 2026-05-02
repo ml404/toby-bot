@@ -55,61 +55,43 @@ class ScratchService(
     }
 
     fun scratch(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): ScratchOutcome {
-        val initial = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, ScratchCard.MIN_STAKE, ScratchCard.MAX_STAKE
-        )
-        var soldCoins = 0L
-        var newPrice: Double? = null
-        val resolved = when (initial) {
-            is BalanceCheck.InvalidStake -> return ScratchOutcome.InvalidStake(initial.min, initial.max)
-            BalanceCheck.UnknownUser -> return ScratchOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> {
-                if (!autoTopUp) return ScratchOutcome.InsufficientCredits(initial.stake, initial.have)
-                val user = userService.getUserByIdForUpdate(discordId, guildId)
-                    ?: return ScratchOutcome.UnknownUser
-                val topUp = CasinoTopUpHelper.ensureCreditsForWager(
-                    tradeService, marketService, userService,
-                    user, guildId, currentBalance = initial.have, stake = stake
-                )
-                when (topUp) {
-                    is TopUpResult.InsufficientCoins ->
-                        return ScratchOutcome.InsufficientCoinsForTopUp(topUp.needed, topUp.have)
-                    TopUpResult.MarketUnavailable ->
-                        return ScratchOutcome.InsufficientCredits(initial.stake, initial.have)
-                    is TopUpResult.ToppedUp -> {
-                        soldCoins = topUp.soldCoins
-                        newPrice = topUp.newPrice
-                        BalanceCheck.Ok(topUp.user, topUp.balance)
-                    }
-                }
-            }
-            is BalanceCheck.Ok -> initial
+        val resolved = when (val r = WagerHelper.checkLockOrTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, ScratchCard.MIN_STAKE, ScratchCard.MAX_STAKE, autoTopUp
+        )) {
+            is TopUpResolution.InvalidStake -> return ScratchOutcome.InvalidStake(r.min, r.max)
+            TopUpResolution.UnknownUser -> return ScratchOutcome.UnknownUser
+            is TopUpResolution.StillInsufficientCredits ->
+                return ScratchOutcome.InsufficientCredits(r.stake, r.have)
+            is TopUpResolution.InsufficientCoinsForTopUp ->
+                return ScratchOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.Ok -> r
         }
 
         val result = card.scratch(random)
-        val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, result.multiplier)
+        val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, result.multiplier)
         return if (result.isWin && result.winningSymbol != null) {
             val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             ScratchOutcome.Win(
                 stake = stake,
-                payout = r.payout,
-                net = r.net,
+                payout = wager.payout,
+                net = wager.net,
                 cells = result.cells,
                 winningSymbol = result.winningSymbol,
                 matchCount = result.matchCount,
-                newBalance = r.newBalance + jackpot,
+                newBalance = wager.newBalance + jackpot,
                 jackpotPayout = jackpot,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
             ScratchOutcome.Lose(
                 stake = stake,
                 cells = result.cells,
-                newBalance = r.newBalance,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                newBalance = wager.newBalance,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
                 lossTribute = tribute,
             )
         }

@@ -102,39 +102,21 @@ class BaccaratService(
         side: Baccarat.Side,
         autoTopUp: Boolean = false
     ): PlayOutcome {
-        val initial = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, Baccarat.MIN_STAKE, Baccarat.MAX_STAKE
-        )
-        var soldCoins = 0L
-        var soldNewPrice: Double? = null
-        val resolved = when (initial) {
-            is BalanceCheck.InvalidStake -> return PlayOutcome.InvalidStake(initial.min, initial.max)
-            BalanceCheck.UnknownUser -> return PlayOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> {
-                if (!autoTopUp) return PlayOutcome.InsufficientCredits(initial.stake, initial.have)
-                val user = userService.getUserByIdForUpdate(discordId, guildId)
-                    ?: return PlayOutcome.UnknownUser
-                val topUp = CasinoTopUpHelper.ensureCreditsForWager(
-                    tradeService, marketService, userService,
-                    user, guildId, currentBalance = initial.have, stake = stake
-                )
-                when (topUp) {
-                    is TopUpResult.InsufficientCoins ->
-                        return PlayOutcome.InsufficientCoinsForTopUp(topUp.needed, topUp.have)
-                    TopUpResult.MarketUnavailable ->
-                        return PlayOutcome.InsufficientCredits(initial.stake, initial.have)
-                    is TopUpResult.ToppedUp -> {
-                        soldCoins = topUp.soldCoins
-                        soldNewPrice = topUp.newPrice
-                        BalanceCheck.Ok(topUp.user, topUp.balance)
-                    }
-                }
-            }
-            is BalanceCheck.Ok -> initial
+        val resolved = when (val r = WagerHelper.checkLockOrTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, Baccarat.MIN_STAKE, Baccarat.MAX_STAKE, autoTopUp
+        )) {
+            is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
+            TopUpResolution.UnknownUser -> return PlayOutcome.UnknownUser
+            is TopUpResolution.StillInsufficientCredits ->
+                return PlayOutcome.InsufficientCredits(r.stake, r.have)
+            is TopUpResolution.InsufficientCoinsForTopUp ->
+                return PlayOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.Ok -> r
         }
 
         val hand = baccarat.play(side, Deck(random))
-        val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
+        val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
         return when {
             hand.isWin -> {
                 val jackpot = JackpotHelper.rollOnWin(
@@ -142,8 +124,8 @@ class BaccaratService(
                 )
                 PlayOutcome.Win(
                     stake = stake,
-                    payout = r.payout,
-                    net = r.net,
+                    payout = wager.payout,
+                    net = wager.net,
                     side = side,
                     winner = hand.winner,
                     playerCards = hand.playerCards,
@@ -153,10 +135,10 @@ class BaccaratService(
                     isPlayerNatural = hand.isPlayerNatural,
                     isBankerNatural = hand.isBankerNatural,
                     multiplier = hand.multiplier,
-                    newBalance = r.newBalance + jackpot,
+                    newBalance = wager.newBalance + jackpot,
                     jackpotPayout = jackpot,
-                    soldTobyCoins = soldCoins,
-                    newPrice = soldNewPrice
+                    soldTobyCoins = resolved.soldCoins,
+                    newPrice = resolved.newPrice
                 )
             }
             hand.isPush -> PlayOutcome.Push(
@@ -168,9 +150,9 @@ class BaccaratService(
                 bankerTotal = hand.bankerTotal,
                 isPlayerNatural = hand.isPlayerNatural,
                 isBankerNatural = hand.isBankerNatural,
-                newBalance = r.newBalance,
-                soldTobyCoins = soldCoins,
-                newPrice = soldNewPrice
+                newBalance = wager.newBalance,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice
             )
             else -> {
                 val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -184,9 +166,9 @@ class BaccaratService(
                     bankerTotal = hand.bankerTotal,
                     isPlayerNatural = hand.isPlayerNatural,
                     isBankerNatural = hand.isBankerNatural,
-                    newBalance = r.newBalance,
-                    soldTobyCoins = soldCoins,
-                    newPrice = soldNewPrice,
+                    newBalance = wager.newBalance,
+                    soldTobyCoins = resolved.soldCoins,
+                    newPrice = resolved.newPrice,
                     lossTribute = tribute
                 )
             }
