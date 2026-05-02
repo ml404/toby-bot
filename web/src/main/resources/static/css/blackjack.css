@@ -74,18 +74,6 @@
     min-height: 4.5rem;
 }
 
-/* Author display rules above (.bj-cards / .bj-seats) override the user-agent
-   `[hidden] { display: none }` at equal specificity, which silently breaks
-   `el.hidden = true` from JS — the element keeps its declared display value.
-   blackjack-solo.js relies on toggling `hidden` on `#bj-player-cards` /
-   `#bj-player-hands` to switch between the single-hand and split layouts;
-   without these explicit overrides, the previous round's split sub-hands
-   stay on screen after a fresh deal. Specificity (0,2,0) wins. */
-.bj-cards[hidden],
-.bj-seats[hidden] {
-    display: none;
-}
-
 .bj-info {
     display: flex;
     flex-wrap: wrap;
@@ -140,6 +128,20 @@
     display: grid;
     gap: 0.5rem;
     margin: 1rem 0;
+}
+
+/* The two class rules above (.bj-cards / .bj-seats) declare an explicit
+   `display`, which overrides the user-agent `[hidden] { display: none }` at
+   equal specificity and silently breaks `el.hidden = true` from JS — the
+   element keeps its declared display value. blackjack-solo.js relies on
+   toggling `hidden` on `#bj-player-cards` / `#bj-player-hands` to switch
+   between the single-hand and split layouts; without these overrides, the
+   previous round's split sub-hands stay on screen after a fresh deal.
+   Sits AFTER both class rules so source order also lands on it (jsdom's
+   CSS cascade is source-order-biased even when specificity should win). */
+.bj-cards[hidden],
+.bj-seats[hidden] {
+    display: none;
 }
 
 .bj-shot-clock {
