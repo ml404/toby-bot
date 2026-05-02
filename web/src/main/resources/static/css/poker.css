@@ -146,6 +146,33 @@
 }
 
 /* ------------------------------------------------------------------- */
+/* Rules / how-to-play block (mirrors .highlow-rules, .dice-rules, etc.) */
+/* ------------------------------------------------------------------- */
+
+.poker-rules {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.poker-rules h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.poker-rules ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.poker-rules strong { color: #fff; }
+
+/* ------------------------------------------------------------------- */
 /* Responsive — phones                                                  */
 /* ------------------------------------------------------------------- */
 
