@@ -9,6 +9,7 @@ import bot.toby.command.commands.dnd.InitiativeCommand
 import bot.toby.command.commands.dnd.LinkCharacterCommand
 import bot.toby.command.commands.dnd.RefreshCharacterCommand
 import bot.toby.command.commands.dnd.RollCommand
+import bot.toby.command.commands.economy.BaccaratCommand
 import bot.toby.command.commands.economy.BlackjackCommand
 import bot.toby.command.commands.economy.CoinflipCommand
 import bot.toby.command.commands.economy.DiceCommand
@@ -146,12 +147,13 @@ class CommandManagerTest {
             TipCommand::class.java,
             DuelCommand::class.java,
             PokerCommand::class.java,
-            BlackjackCommand::class.java
+            BlackjackCommand::class.java,
+            BaccaratCommand::class.java
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(55, commandManager.allCommands.size)
-        Assertions.assertEquals(55, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(56, commandManager.allCommands.size)
+        Assertions.assertEquals(56, commandManager.allSlashCommands.size)
     }
 
     @Test
