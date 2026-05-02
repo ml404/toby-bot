@@ -41,6 +41,7 @@ function renderSlotsResult(resultEl, body) {
 
     function startSpinAnimation() {
         reels.forEach(function (reel) { reel.classList.add('spinning'); });
+        if (window.CasinoSounds) window.CasinoSounds.play('deal');
         return setInterval(function () {
             reels.forEach(function (reel) {
                 reel.textContent = SPIN_SYMBOLS[Math.floor(Math.random() * SPIN_SYMBOLS.length)];
@@ -51,10 +52,20 @@ function renderSlotsResult(resultEl, body) {
     function stopSpinAnimation(intervalId, body) {
         clearInterval(intervalId);
         const finalSymbols = body && body.symbols;
+        // Stagger the reel-stop click cues so each reel locking in is
+        // audible — like a slot machine's individual reel ticks.
         reels.forEach(function (reel, i) {
             reel.classList.remove('spinning');
             if (finalSymbols && finalSymbols[i]) reel.textContent = finalSymbols[i];
+            if (window.CasinoSounds) {
+                setTimeout(function () { window.CasinoSounds.play('click'); }, i * 110);
+            }
         });
+        if (body && window.CasinoSounds) {
+            setTimeout(function () {
+                window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
+            }, reels.length * 110 + 80);
+        }
     }
 
     window.TobyCasinoGame.init({

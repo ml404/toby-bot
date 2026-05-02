@@ -22,7 +22,11 @@
         if (!container) return;
         var prev = dealtCounts.get(container) || 0;
         var list = cards || [];
+        // Card count went DOWN — that's a fresh deal, not an in-place
+        // update. Reset so every card animates in.
+        if (list.length < prev) prev = 0;
         container.innerHTML = "";
+        var firstFreshIndex = prev;
         for (var i = 0; i < list.length; i++) {
             var c = list[i];
             var el = document.createElement("span");
@@ -36,10 +40,25 @@
                     el.classList.add("is-red");
                 }
             }
-            // Only animate cards that weren't there last render. When the
-            // hand shrinks (new deal) we treat all of them as fresh.
-            if (i >= prev) el.classList.add("is-dealt");
+            // Only animate cards that weren't there last render. Stagger
+            // each new card by 90ms so a 2-card initial deal fans in
+            // instead of arriving simultaneously.
+            if (i >= prev) {
+                el.classList.add("is-dealt");
+                el.style.animationDelay = ((i - firstFreshIndex) * 90) + "ms";
+            }
             container.appendChild(el);
+        }
+        // Notify listeners (e.g. sounds module) about how many cards
+        // just landed. Stagger the deal cue once per arriving card so
+        // the click matches the visual.
+        var freshCount = Math.max(0, list.length - firstFreshIndex);
+        if (freshCount > 0 && window.CasinoSounds) {
+            for (var k = 0; k < freshCount; k++) {
+                (function (idx) {
+                    setTimeout(function () { window.CasinoSounds.play("deal"); }, idx * 90);
+                })(k);
+            }
         }
         dealtCounts.set(container, list.length);
     }
@@ -154,6 +173,13 @@
             chip.className = "casino-chip";
             chip.style.animationDelay = (i * 80) + "ms";
             stack.appendChild(chip);
+            // Synchronise the audible chip-clink with each chip's pop —
+            // gives the animation real weight.
+            if (window.CasinoSounds) {
+                (function (delay) {
+                    setTimeout(function () { window.CasinoSounds.play("chip"); }, delay);
+                })(i * 80);
+            }
         }
         seatEl.appendChild(stack);
 

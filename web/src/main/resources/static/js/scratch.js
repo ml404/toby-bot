@@ -65,12 +65,16 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         btn.disabled = true;
         const face = btn.querySelector('.scratch-cell-face');
         if (face) face.textContent = activeCard.cells[index] || '?';
+        if (window.CasinoSounds) window.CasinoSounds.play('click');
         // Don't paint the winning cells green yet — that would spoil the
         // outcome before the user has finished scratching. We tag the
         // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
             highlightWinCells(activeCard);
             renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl);
+            if (window.CasinoSounds) {
+                window.CasinoSounds.play((activeCard.net || 0) > 0 ? 'win' : 'lose');
+            }
             // Now the credits visibly drop and the topup-coin recompute
             // catches up too — see autoApplyBalance: false in the helper.
             if (game) game.applyTobyDelta(activeCard);

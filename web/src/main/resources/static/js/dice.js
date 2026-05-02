@@ -43,6 +43,7 @@ function renderDiceResult(resultEl, body) {
 
     function startRollAnimation() {
         die.classList.add('rolling');
+        if (window.CasinoSounds) window.CasinoSounds.play('deal');
         return setInterval(function () {
             const n = 1 + Math.floor(Math.random() * 6);
             dieFace.textContent = FACES[n] || String(n);
@@ -59,6 +60,12 @@ function renderDiceResult(resultEl, body) {
         } else {
             dieFace.textContent = '⚀';
             delete die.dataset.landed;
+        }
+        if (body && window.CasinoSounds) {
+            window.CasinoSounds.play('click');
+            setTimeout(function () {
+                window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
+            }, 80);
         }
     }
 
