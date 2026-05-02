@@ -564,30 +564,12 @@ class SetConfigCommand @Autowired constructor(
                 "Maximum players per blackjack multi table (2-7). Default 5.",
                 false
             ),
-            OptionData(
-                OptionType.INTEGER,
-                ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS.name.lowercase(Locale.getDefault()),
-                "Per-actor blackjack decision deadline in seconds (0 disables). Default 30.",
-                false
-            ),
-            OptionData(
-                OptionType.BOOLEAN,
-                ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17.name.lowercase(Locale.getDefault()),
-                "True = dealer hits soft 17 (H17). False = stands on all 17 (S17). Default false.",
-                false
-            ),
-            OptionData(
-                OptionType.INTEGER,
-                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM.name.lowercase(Locale.getDefault()),
-                "Natural blackjack payout numerator. Pair with denominator (e.g. 3 with 2 for 3:2). Default 3.",
-                false
-            ),
-            OptionData(
-                OptionType.INTEGER,
-                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN.name.lowercase(Locale.getDefault()),
-                "Natural blackjack payout denominator. Pair with numerator (e.g. 5 with 6 for 6:5). Default 2.",
-                false
-            ),
+            // BLACKJACK_SHOT_CLOCK_SECONDS, BLACKJACK_DEALER_HITS_SOFT_17,
+            // BLACKJACK_BJ_PAYOUT_NUM/DEN are intentionally NOT registered
+            // as /setconfig options because Discord caps a single slash
+            // command at 25 options total. They're still settable via the
+            // /moderation web tab (ModerationWebService.updateConfig) and
+            // their `when` validation in this file stays exhaustive.
             OptionData(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.UBI_DAILY_AMOUNT.name.lowercase(Locale.getDefault()),
