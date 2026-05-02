@@ -6,8 +6,11 @@ import database.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.card.Rank
 import database.card.Suit
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -19,6 +22,7 @@ import kotlin.random.Random
 class PokerWebServiceTest {
 
     private lateinit var registry: PokerTableRegistry
+    private lateinit var memberLookup: MemberLookupHelper
     private lateinit var service: PokerWebService
 
     @BeforeEach
@@ -27,7 +31,14 @@ class PokerWebServiceTest {
             idleTtl = Duration.ofMinutes(5),
             sweepInterval = Duration.ofHours(1)
         )
-        service = PokerWebService(registry)
+        memberLookup = mockk<MemberLookupHelper>(relaxed = true).apply {
+            // Default to "no Discord guild membership" so the seat falls back
+            // through MemberLookupHelper.fallbackName — every existing test
+            // case here cares about engine state, not display strings.
+            every { resolveAll(any(), any()) } returns emptyMap()
+            every { fallbackName(any()) } answers { "Player ${(it.invocation.args[0] as Long).toString().takeLast(4)}" }
+        }
+        service = PokerWebService(registry, memberLookup)
     }
 
     private fun makeTable(seatChips: List<Pair<Long, Long>> = listOf(1L to 1000L, 2L to 1000L)): PokerTable {
@@ -66,6 +77,22 @@ class PokerWebServiceTest {
         assertFalse(view.canCheck)
         assertFalse(view.canCall)
         assertFalse(view.canRaise)
+    }
+
+    @Test
+    fun `snapshot enriches each seat with displayName and avatarUrl from MemberLookupHelper`() {
+        val table = makeTable(seatChips = listOf(1L to 1000L, 2L to 1000L))
+        every { memberLookup.resolveAll(42L, listOf(1L, 2L)) } returns mapOf(
+            1L to MemberLookupHelper.MemberDisplay(name = "Alice", avatarUrl = "alice.png"),
+            // 2L deliberately omitted to exercise the fallback path
+        )
+
+        val view = service.snapshot(table.id, viewerDiscordId = 1L)!!
+        assertEquals("Alice", view.seats[0].displayName)
+        assertEquals("alice.png", view.seats[0].avatarUrl)
+        // Seat 2: helper returned no entry → fallbackName, no avatar
+        assertEquals("Player 2", view.seats[1].displayName)
+        assertNull(view.seats[1].avatarUrl)
     }
 
     @Test

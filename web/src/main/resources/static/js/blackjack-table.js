@@ -24,11 +24,22 @@
     var joinCard = document.getElementById("bj-join-card");
     var joinBtn = document.getElementById("bj-join");
 
+    var actorPillEl = document.getElementById("bj-actor-pill");
+
     var pollTimer = null;
     var clockTimer = null;
     var deadlineMs = null;
 
     function renderCards(container, cards) {
+        // Delegate to the shared renderer so the per-container deal animation
+        // book-keeping is consistent with poker. The shared renderer applies
+        // .casino-card-glyph and the .is-dealt animation only on freshly arrived
+        // cards.
+        if (window.CasinoRender) {
+            window.CasinoRender.renderCards(container, cards);
+            return;
+        }
+        // Fallback (loaded out of order) — keep the legacy text-glyph render.
         container.innerHTML = "";
         (cards || []).forEach(function (c) {
             var el = document.createElement("span");
@@ -63,14 +74,13 @@
         (state.seats || []).forEach(function (seat, idx) {
             var slots = (seat.hands && seat.hands.length) ? seat.hands : null;
             var isActorSeat = idx === state.actorIndex && state.phase === "PLAYER_TURNS";
+            var isMe = seat.discordId === parseInt(myId, 10);
             if (slots && slots.length > 1) {
                 // Split seat: render the seat header once, then a sub-block per hand.
-                var groupHeader = document.createElement("div");
-                groupHeader.className = "bj-seat-header";
-                groupHeader.innerHTML = "<span>" +
-                    (seat.discordId === parseInt(myId, 10) ? "You" : "@" + seat.discordId) +
-                    " — " + slots.length + " hands</span>" +
-                    (seat.pendingLeave ? "<span class=\"bj-seat-status\">leaving</span>" : "");
+                var groupHeader = window.CasinoRender.makeSeatHeader(seat, {
+                    isMe: isMe,
+                    metaText: slots.length + " hands" + (seat.pendingLeave ? " · leaving" : ""),
+                });
                 seatsEl.appendChild(groupHeader);
                 slots.forEach(function (slot, slotIdx) {
                     seatsEl.appendChild(renderSlot(seat, slot, slotIdx, isActorSeat && slotIdx === seat.activeHandIndex));
@@ -79,17 +89,16 @@
             }
             // Single-hand path (back-compat with v1 seat shape).
             var div = document.createElement("div");
-            div.className = "bj-seat";
-            if (isActorSeat) div.classList.add("bj-seat-active");
-            if (seat.status === "BUSTED") div.classList.add("bj-seat-busted");
-            var header = document.createElement("div");
-            header.className = "bj-seat-header";
-            header.innerHTML = "<span>" + (seat.discordId === parseInt(myId, 10) ? "You" : "@" + seat.discordId) +
-                " — stake " + seat.stake + (seat.doubled ? " (doubled)" : "") + "</span>" +
-                "<span class=\"bj-seat-status\">(" + seat.total + ") " + statusBadge(seat.status, seat.pendingLeave) + "</span>";
-            div.appendChild(header);
+            div.className = "bj-seat casino-seat";
+            if (isMe) div.classList.add("is-me");
+            if (isActorSeat) div.classList.add("bj-seat-active", "is-active");
+            if (seat.status === "BUSTED") div.classList.add("bj-seat-busted", "is-busted");
+            var meta = "(" + seat.total + ") stake " + seat.stake +
+                (seat.doubled ? " (doubled)" : "") +
+                (statusBadge(seat.status, seat.pendingLeave) ? " · " + statusBadge(seat.status, seat.pendingLeave) : "");
+            div.appendChild(window.CasinoRender.makeSeatHeader(seat, { isMe: isMe, metaText: meta }));
             var cards = document.createElement("div");
-            cards.className = "bj-cards";
+            cards.className = "bj-cards casino-cards";
             renderCards(cards, seat.hand);
             div.appendChild(cards);
             seatsEl.appendChild(div);
@@ -98,17 +107,23 @@
 
     function renderSlot(seat, slot, slotIdx, isActiveSlot) {
         var div = document.createElement("div");
-        div.className = "bj-seat";
-        if (isActiveSlot) div.classList.add("bj-seat-active");
-        if (slot.status === "BUSTED") div.classList.add("bj-seat-busted");
+        div.className = "bj-seat casino-seat";
+        if (isActiveSlot) div.classList.add("bj-seat-active", "is-active");
+        if (slot.status === "BUSTED") div.classList.add("bj-seat-busted", "is-busted");
         var header = document.createElement("div");
-        header.className = "bj-seat-header";
-        header.innerHTML = "<span>  Hand " + (slotIdx + 1) +
-            " — stake " + slot.stake + (slot.doubled ? " (doubled)" : "") + "</span>" +
-            "<span class=\"bj-seat-status\">(" + slot.total + ") " + statusBadge(slot.status, false) + "</span>";
+        header.className = "bj-seat-header casino-seat-header";
+        var label = document.createElement("span");
+        label.className = "casino-seat-name";
+        label.textContent = "  Hand " + (slotIdx + 1) +
+            " — stake " + slot.stake + (slot.doubled ? " (doubled)" : "");
+        header.appendChild(label);
+        var meta = document.createElement("span");
+        meta.className = "casino-seat-meta";
+        meta.textContent = "(" + slot.total + ") " + statusBadge(slot.status, false);
+        header.appendChild(meta);
         div.appendChild(header);
         var cards = document.createElement("div");
-        cards.className = "bj-cards";
+        cards.className = "bj-cards casino-cards";
         renderCards(cards, slot.cards);
         div.appendChild(cards);
         return div;
@@ -124,8 +139,16 @@
 
         var actorSeat = (state.seats || [])[state.actorIndex];
         toActEl.textContent = actorSeat
-            ? (actorSeat.discordId === parseInt(myId, 10) ? "You" : "@" + actorSeat.discordId)
+            ? (actorSeat.discordId === parseInt(myId, 10) ? "You" : (actorSeat.displayName || ("@" + actorSeat.discordId)))
             : "—";
+
+        // Top-of-felt actor pill — only meaningful during PLAYER_TURNS.
+        var pillSeat = (state.phase === "PLAYER_TURNS") ? actorSeat : null;
+        if (window.CasinoRender) {
+            window.CasinoRender.renderActorPill(actorPillEl, pillSeat, {
+                label: pillSeat && pillSeat.discordId === parseInt(myId, 10) ? "Your turn" : "Acting",
+            });
+        }
 
         var seated = state.mySeatIndex != null;
         joinCard.hidden = seated || state.phase !== "LOBBY";
@@ -160,6 +183,13 @@
 
     function renderResult(state) {
         var r = state.lastResult;
+        // Build a quick id→displayName map from the live seats so the result
+        // line uses real Discord names (the lastResult payload is keyed by
+        // string id; the seats have the canonical name from the snapshot).
+        var nameById = {};
+        (state.seats || []).forEach(function (s) {
+            nameById[String(s.discordId)] = s.displayName;
+        });
         var lines = [];
         Object.keys(r.seatResults || {}).forEach(function (id) {
             var label;
@@ -172,7 +202,7 @@
                 default: label = r.seatResults[id];
             }
             var payout = r.payouts && r.payouts[id] ? " (+" + r.payouts[id] + ")" : "";
-            var who = parseInt(id, 10) === parseInt(myId, 10) ? "You" : "@" + id;
+            var who = parseInt(id, 10) === parseInt(myId, 10) ? "You" : (nameById[id] || ("@" + id));
             lines.push(who + ": " + label + payout);
         });
         resultEl.textContent = "Hand #" + r.handNumber + " — " + lines.join(" · ") +

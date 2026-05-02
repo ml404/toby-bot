@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Blackjack table', '/css/blackjack.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Blackjack table', '/css/blackjack.css', '/css/casino-table.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -26,7 +26,9 @@
         <button id="bj-join" class="btn-primary" type="button">Sit down</button>
     </section>
 
-    <section class="bj-card bj-table">
+    <section class="bj-card bj-table casino-felt">
+        <div id="bj-actor-pill" class="casino-actor-pill" hidden></div>
+
         <div class="bj-info">
             <div>Phase: <strong id="bj-phase">—</strong></div>
             <div>Hand #<strong id="bj-hand-number">0</strong></div>
@@ -34,9 +36,9 @@
             <div id="bj-shot-clock" class="muted bj-shot-clock" hidden></div>
         </div>
 
-        <div class="bj-row">
+        <div class="bj-row casino-dealer-zone">
             <h3>Dealer <span class="muted" id="bj-dealer-total"></span></h3>
-            <div id="bj-dealer-cards" class="bj-cards"></div>
+            <div id="bj-dealer-cards" class="bj-cards casino-cards"></div>
         </div>
 
         <div class="bj-seats" id="bj-seats"></div>
@@ -59,6 +61,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-render.js}"></script>
 <script th:src="@{/js/blackjack-table.js}"></script>
 </body>
 </html>

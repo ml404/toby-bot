@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service
 @Service
 class BlackjackWebService(
     private val tableRegistry: BlackjackTableRegistry,
+    private val memberLookup: MemberLookupHelper,
 ) {
 
     data class TableSummaryView(
@@ -33,6 +34,10 @@ class BlackjackWebService(
 
     data class SeatView(
         val discordId: Long,
+        /** Discord display name (server nickname or username), or fallback when not in guild. */
+        val displayName: String,
+        /** CDN avatar URL, null when the bot can't resolve the member or they've left. */
+        val avatarUrl: String?,
         val ante: Long,
         val stake: Long,
         val doubled: Boolean,
@@ -161,6 +166,11 @@ class BlackjackWebService(
                 bestTotal(table.dealer)
             }
 
+            // Batch-resolve every seat's Discord display info up front so the per-seat
+            // map below is a pure projection (and so we hit JDA once per snapshot,
+            // not once per seat).
+            val members = memberLookup.resolveAll(table.guildId, table.seats.map { it.discordId })
+
             return TableStateView(
                 tableId = table.id,
                 guildId = table.guildId,
@@ -172,8 +182,11 @@ class BlackjackWebService(
                 maxSeats = table.maxSeats,
                 actorIndex = table.actorIndex,
                 seats = table.seats.map { seat ->
+                    val member = members[seat.discordId]
                     SeatView(
                         discordId = seat.discordId,
+                        displayName = member?.name ?: memberLookup.fallbackName(seat.discordId),
+                        avatarUrl = member?.avatarUrl,
                         ante = seat.ante,
                         stake = seat.stake,
                         doubled = seat.doubled,

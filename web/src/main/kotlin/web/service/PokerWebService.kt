@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service
 @Service
 class PokerWebService(
     private val tableRegistry: PokerTableRegistry,
+    private val memberLookup: MemberLookupHelper,
 ) {
 
     data class TableSummaryView(
@@ -82,6 +83,10 @@ class PokerWebService(
 
     data class SeatView(
         val discordId: Long,
+        /** Discord display name (server nickname or username), or fallback when not in guild. */
+        val displayName: String,
+        /** CDN avatar URL, null when the bot can't resolve the member or they've left. */
+        val avatarUrl: String?,
         val chips: Long,
         val committedThisRound: Long,
         val totalCommittedThisHand: Long,
@@ -184,16 +189,24 @@ class PokerWebService(
                 dealerIndex = table.dealerIndex,
                 actorIndex = table.actorIndex,
                 community = table.community.map(Card::toString),
-                seats = table.seats.mapIndexed { idx, seat ->
-                    SeatView(
-                        discordId = seat.discordId,
-                        chips = seat.chips,
-                        committedThisRound = seat.committedThisRound,
-                        totalCommittedThisHand = seat.totalCommittedThisHand,
-                        status = seat.status.name,
-                        // Server-side mask: only the viewer's own cards are returned.
-                        holeCards = if (idx == mySeatIndex) seat.holeCards.map(Card::toString) else emptyList()
-                    )
+                seats = run {
+                    // Batch-resolve every seat's Discord display info up front so the
+                    // per-seat map below is a pure projection (one JDA call per snapshot).
+                    val members = memberLookup.resolveAll(table.guildId, table.seats.map { it.discordId })
+                    table.seats.mapIndexed { idx, seat ->
+                        val member = members[seat.discordId]
+                        SeatView(
+                            discordId = seat.discordId,
+                            displayName = member?.name ?: memberLookup.fallbackName(seat.discordId),
+                            avatarUrl = member?.avatarUrl,
+                            chips = seat.chips,
+                            committedThisRound = seat.committedThisRound,
+                            totalCommittedThisHand = seat.totalCommittedThisHand,
+                            status = seat.status.name,
+                            // Server-side mask: only the viewer's own cards are returned.
+                            holeCards = if (idx == mySeatIndex) seat.holeCards.map(Card::toString) else emptyList()
+                        )
+                    }
                 },
                 mySeatIndex = mySeatIndex,
                 myHoleCards = mySeat?.holeCards?.map(Card::toString) ?: emptyList(),

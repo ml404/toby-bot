@@ -32,18 +32,21 @@
     const btnFold = document.getElementById('poker-action-fold');
     const btnStart = document.getElementById('poker-action-start');
     const btnCashout = document.getElementById('poker-action-cashout');
+    const actorPillEl = document.getElementById('poker-actor-pill');
 
+    // A single rendered card — uses the shared casino-card-glyph styles so
+    // poker and blackjack render cards identically.
     function renderCard(c, faceDown) {
         const span = document.createElement('span');
-        span.className = 'poker-card-face';
+        span.className = 'casino-card-glyph';
         if (faceDown) {
-            span.classList.add('poker-card-back');
-            span.textContent = '?';
+            span.classList.add('is-hidden');
+            span.textContent = '🂠';
             return span;
         }
         // Card strings look like "A♠", "T♥", "9♦", "K♣"
         const suit = c.charAt(c.length - 1);
-        if (suit === '♥' || suit === '♦') span.classList.add('poker-card-red');
+        if (suit === '♥' || suit === '♦') span.classList.add('is-red');
         span.textContent = c;
         return span;
     }
@@ -65,27 +68,36 @@
         const meIdx = state.mySeatIndex;
         state.seats.forEach(function (s, idx) {
             const node = document.createElement('div');
-            node.className = 'poker-seat';
-            if (idx === meIdx) node.classList.add('poker-seat-me');
-            if (idx === state.actorIndex && state.phase !== 'WAITING') node.classList.add('poker-seat-active');
-            if (s.status === 'FOLDED') node.classList.add('poker-seat-folded');
+            node.className = 'poker-seat casino-seat';
+            const isMe = idx === meIdx;
+            if (isMe) node.classList.add('poker-seat-me', 'is-me');
+            if (idx === state.actorIndex && state.phase !== 'WAITING') node.classList.add('poker-seat-active', 'is-active');
+            if (s.status === 'FOLDED') node.classList.add('poker-seat-folded', 'is-folded');
 
-            const name = document.createElement('div');
-            name.className = 'poker-seat-name';
-            name.textContent = (idx === meIdx ? 'You' : 'Player ' + s.discordId) +
-                (idx === state.dealerIndex ? ' (D)' : '');
-            node.appendChild(name);
-
-            const meta = document.createElement('div');
-            meta.className = 'poker-seat-meta';
-            meta.textContent = s.chips + ' chips · ' + s.status +
-                (s.committedThisRound > 0 ? ' · in: ' + s.committedThisRound : '');
-            node.appendChild(meta);
+            // Avatar + display-name header — built by the shared CasinoRender so
+            // blackjack and poker get the same look. Dealer button suffix is
+            // tucked into the meta column on the right.
+            const dealerSuffix = idx === state.dealerIndex ? ' (D)' : '';
+            const meta = s.chips + ' chips · ' + s.status +
+                (s.committedThisRound > 0 ? ' · in: ' + s.committedThisRound : '') +
+                dealerSuffix;
+            if (window.CasinoRender) {
+                node.appendChild(window.CasinoRender.makeSeatHeader(s, { isMe: isMe, metaText: meta }));
+            } else {
+                const name = document.createElement('div');
+                name.className = 'poker-seat-name';
+                name.textContent = (isMe ? 'You' : (s.displayName || ('Player ' + s.discordId))) + dealerSuffix;
+                node.appendChild(name);
+                const metaEl = document.createElement('div');
+                metaEl.className = 'poker-seat-meta';
+                metaEl.textContent = meta;
+                node.appendChild(metaEl);
+            }
 
             if (state.phase !== 'WAITING') {
                 const cards = document.createElement('div');
-                cards.className = 'poker-seat-cards';
-                if (idx === meIdx && s.holeCards && s.holeCards.length > 0) {
+                cards.className = 'poker-seat-cards casino-cards';
+                if (isMe && s.holeCards && s.holeCards.length > 0) {
                     s.holeCards.forEach(function (c) { cards.appendChild(renderCard(c, false)); });
                 } else if (s.status !== 'FOLDED' && s.status !== 'SITTING_OUT') {
                     // Server returns empty list for masked seats; render two backs.
@@ -95,6 +107,15 @@
                 node.appendChild(cards);
             }
             seatsEl.appendChild(node);
+        });
+    }
+
+    function renderActorPill(state) {
+        if (!actorPillEl || !window.CasinoRender) return;
+        const acting = state.phase !== 'WAITING' ? state.seats[state.actorIndex] : null;
+        const isMe = acting && state.mySeatIndex !== null && state.actorIndex === state.mySeatIndex;
+        window.CasinoRender.renderActorPill(actorPillEl, acting, {
+            label: isMe ? 'Your turn' : 'Acting',
         });
     }
 
@@ -150,17 +171,24 @@
         shotClockTicker = setInterval(tick, 1000);
     }
 
-    function renderResult(result) {
+    function renderResult(result, state) {
         if (!result) {
             resultEl.textContent = '';
             if (potsEl) { potsEl.innerHTML = ''; potsEl.hidden = true; }
             return;
         }
-        const winners = (result.winners || []).map(function (id) { return String(id); }).join(', ');
+        // Map id → displayName from the live snapshot so winner / showdown
+        // labels show real Discord names instead of raw ids.
+        const nameById = {};
+        ((state && state.seats) || []).forEach(function (s) {
+            nameById[String(s.discordId)] = s.displayName || ('Player ' + s.discordId);
+        });
+        const labelFor = function (id) { return nameById[String(id)] || String(id); };
+        const winners = (result.winners || []).map(labelFor).join(', ');
         const reveals = result.revealedHoleCards || {};
         const lines = [];
         Object.keys(reveals).forEach(function (id) {
-            lines.push(id + ': ' + (reveals[id] || []).join(' '));
+            lines.push(labelFor(id) + ': ' + (reveals[id] || []).join(' '));
         });
         resultEl.textContent = 'Hand #' + result.handNumber +
             ' resolved. Winners: ' + winners +
@@ -193,16 +221,19 @@
                 handNumberEl.textContent = state.handNumber;
                 potEl.textContent = state.pot;
                 currentBetEl.textContent = state.currentBet;
+                const actorSeat = state.seats[state.actorIndex] || {};
+                const actorName = actorSeat.displayName || ('player ' + actorSeat.discordId);
                 statusEl.textContent = state.isMyTurn
                     ? 'Your turn.'
                     : (state.phase === 'WAITING'
                         ? 'Waiting for the host to deal.'
-                        : 'Waiting for player ' + (state.seats[state.actorIndex] || {}).discordId + '.');
+                        : 'Waiting for ' + actorName + '.');
                 renderBoard(state.community);
                 renderSeats(state);
+                renderActorPill(state);
                 renderActions(state);
                 renderShotClock(state);
-                renderResult(state.lastResult);
+                renderResult(state.lastResult, state);
             })
             .catch(function () { /* keep last known state */ });
     }

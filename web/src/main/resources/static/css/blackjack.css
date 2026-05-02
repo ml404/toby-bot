@@ -1,3 +1,11 @@
+/*
+ * Blackjack-specific styles. The shared "casino table" look (felt, cards,
+ * seats, avatars, gold-glow active actor, deal animation) lives in
+ * casino-table.css and applies to both /blackjack and /poker. Only
+ * blackjack-specific bits stay here: the betting form, the lobby table
+ * list rows, layout containers, and result-line variants.
+ */
+
 .bj-header {
     margin-bottom: 1.5rem;
 }
@@ -6,6 +14,8 @@
     margin: 0.25rem 0 0.5rem;
 }
 
+/* Generic "card panel" for forms and lobby/seat lists — distinct from
+   `.casino-felt` (the green table), this is just an elevated surface. */
 .bj-card {
     background: var(--surface, #1f2128);
     border-radius: 0.75rem;
@@ -53,6 +63,8 @@
     font-weight: 600;
 }
 
+/* Cards container — flex layout. Card glyph styling itself is in
+   casino-table.css under `.casino-card-glyph`. */
 .bj-cards {
     display: flex;
     gap: 0.5rem;
@@ -60,32 +72,11 @@
     min-height: 4.5rem;
 }
 
-.bj-card-glyph {
-    background: var(--surface-2, #16181d);
-    border: 1px solid var(--border, #2a2d35);
-    border-radius: 0.4rem;
-    padding: 0.5rem 0.75rem;
-    min-width: 2.5rem;
-    text-align: center;
-    font-size: 1.25rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-}
-
-.bj-card-glyph.bj-card-red {
-    color: #e15957;
-}
-
-.bj-card-glyph.bj-card-hidden {
-    color: var(--muted, #a0a0b0);
-    font-size: 1.5rem;
-}
-
 .bj-info {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem 1.5rem;
-    color: var(--muted, #a0a0b0);
+    color: rgba(255, 255, 255, 0.78);
     margin-bottom: 1rem;
 }
 
@@ -129,39 +120,12 @@
     border-radius: 0.4rem;
 }
 
+/* Seat container — outer grid; per-seat panel & active/busted states are
+   in casino-table.css under `.casino-seat`. */
 .bj-seats {
     display: grid;
     gap: 0.5rem;
     margin: 1rem 0;
-}
-
-.bj-seat {
-    background: var(--surface-2, #16181d);
-    border-radius: 0.4rem;
-    padding: 0.75rem 1rem;
-    border-left: 3px solid transparent;
-}
-
-.bj-seat.bj-seat-active {
-    border-left-color: var(--accent, #5865f2);
-}
-
-.bj-seat.bj-seat-busted {
-    opacity: 0.6;
-}
-
-.bj-seat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.bj-seat-status {
-    font-size: 0.85rem;
-    color: var(--muted, #a0a0b0);
-    font-weight: 400;
 }
 
 .bj-shot-clock {
