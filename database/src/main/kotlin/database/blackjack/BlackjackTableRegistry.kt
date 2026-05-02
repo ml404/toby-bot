@@ -70,6 +70,7 @@ class BlackjackTableRegistry(
         ante: Long,
         maxSeats: Int,
         shotClockSeconds: Int = 0,
+        rules: BlackjackTable.TableRules = BlackjackTable.TableRules(),
         now: Instant = Instant.now()
     ): BlackjackTable {
         val id = seq.incrementAndGet()
@@ -81,6 +82,7 @@ class BlackjackTableRegistry(
             ante = ante,
             maxSeats = maxSeats,
             shotClockSeconds = shotClockSeconds,
+            rules = rules,
             lastActivityAt = now
         )
         tables[id] = table

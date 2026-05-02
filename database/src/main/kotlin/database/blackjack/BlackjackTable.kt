@@ -52,8 +52,28 @@ class BlackjackTable(
      * on their behalf. `0` disables the clock — the table only ever
      * closes via the idle sweeper.
      */
-    val shotClockSeconds: Int = 0
+    val shotClockSeconds: Int = 0,
+    /**
+     * Per-guild rule snapshot taken at table creation. Held on the table
+     * (not read live) so an admin retuning `BLACKJACK_BJ_PAYOUT_NUM` etc.
+     * mid-hand can't change the payout schedule for an in-flight hand.
+     */
+    val rules: TableRules = TableRules()
 ) {
+
+    /**
+     * Snapshot of the configurable house rules for a single table. All
+     * defaults match the v1 hardcoded behaviour so callers that don't
+     * thread the rules through still get the original semantics.
+     */
+    data class TableRules(
+        /** True for H17 (dealer hits soft 17), false for S17 (default). */
+        val dealerHitsSoft17: Boolean = false,
+        /** Natural-blackjack multiplier on the player's stake. 2.5 = 3:2 (default), 2.2 = 6:5. */
+        val blackjackPayoutMultiplier: Double = 2.5,
+        /** Fraction of the multi losers' pool routed to the jackpot pool. */
+        val rakeFraction: Double = 0.05,
+    )
 
     enum class Mode { SOLO, MULTI }
 

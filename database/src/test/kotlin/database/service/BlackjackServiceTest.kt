@@ -48,8 +48,15 @@ class BlackjackServiceTest {
         // Default: deck creation always succeeds; service code calls newDeck()
         // and stashes the result on the table — we don't care which deck it is.
         every { blackjack.newDeck() } returns Deck(Random(0))
-        every { blackjack.multiplier(any()) } answers { realMultiplier(arg(0)) }
-        service = BlackjackService(userService, jackpotService, configService, registry, blackjack, Random(0))
+        every { blackjack.multiplier(any(), any()) } answers { realMultiplier(arg(0)) }
+        service = BlackjackService(
+            userService = userService,
+            jackpotService = jackpotService,
+            configService = configService,
+            tableRegistry = registry,
+            blackjack = blackjack,
+            random = Random(0)
+        )
     }
 
     private fun userWithBalance(balance: Long, id: Long = discordId): UserDto =

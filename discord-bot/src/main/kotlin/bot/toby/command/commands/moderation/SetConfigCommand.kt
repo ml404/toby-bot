@@ -70,27 +70,115 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.TRADE_SELL_FEE_PCT, label = "sell"
                 )
                 ConfigDto.Configurations.POKER_RAKE_PCT -> setPokerRake(event, optionMapping, deleteDelay)
-                ConfigDto.Configurations.POKER_SMALL_BLIND -> setPokerLong(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_SMALL_BLIND, label = "small blind", min = 1L)
-                ConfigDto.Configurations.POKER_BIG_BLIND -> setPokerLong(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_BIG_BLIND, label = "big blind", min = 1L)
-                ConfigDto.Configurations.POKER_SMALL_BET -> setPokerLong(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_SMALL_BET, label = "small bet", min = 1L)
-                ConfigDto.Configurations.POKER_BIG_BET -> setPokerLong(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_BIG_BET, label = "big bet", min = 1L)
-                ConfigDto.Configurations.POKER_MIN_BUY_IN -> setPokerLong(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_MIN_BUY_IN, label = "minimum buy-in", min = 1L)
-                ConfigDto.Configurations.POKER_MAX_BUY_IN -> setPokerLong(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_MAX_BUY_IN, label = "maximum buy-in", min = 1L)
-                ConfigDto.Configurations.POKER_MAX_SEATS -> setPokerInt(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_MAX_SEATS, label = "max seats", range = 2..9)
-                ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS -> setPokerInt(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
+                ConfigDto.Configurations.POKER_SMALL_BLIND -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_SMALL_BLIND, gameLabel = "Poker", label = "small blind", min = 1L, unit = "chips")
+                ConfigDto.Configurations.POKER_BIG_BLIND -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_BIG_BLIND, gameLabel = "Poker", label = "big blind", min = 1L, unit = "chips")
+                ConfigDto.Configurations.POKER_SMALL_BET -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_SMALL_BET, gameLabel = "Poker", label = "small bet", min = 1L, unit = "chips")
+                ConfigDto.Configurations.POKER_BIG_BET -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_BIG_BET, gameLabel = "Poker", label = "big bet", min = 1L, unit = "chips")
+                ConfigDto.Configurations.POKER_MIN_BUY_IN -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_MIN_BUY_IN, gameLabel = "Poker", label = "minimum buy-in", min = 1L, unit = "chips")
+                ConfigDto.Configurations.POKER_MAX_BUY_IN -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_MAX_BUY_IN, gameLabel = "Poker", label = "maximum buy-in", min = 1L, unit = "chips")
+                ConfigDto.Configurations.POKER_MAX_SEATS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_MAX_SEATS, gameLabel = "Poker", label = "max seats", range = 2..9)
+                ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS, gameLabel = "Poker",
                     label = "shot-clock seconds", range = 0..600)
+                ConfigDto.Configurations.BLACKJACK_RAKE_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_RAKE_PCT, gameLabel = "Blackjack", label = "rake percent", range = 0..20)
+                ConfigDto.Configurations.BLACKJACK_MIN_ANTE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_MIN_ANTE, gameLabel = "Blackjack", label = "minimum ante", min = 1L, unit = "credits")
+                ConfigDto.Configurations.BLACKJACK_MAX_ANTE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_MAX_ANTE, gameLabel = "Blackjack", label = "maximum ante", min = 1L, unit = "credits")
+                ConfigDto.Configurations.BLACKJACK_MAX_SEATS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_MAX_SEATS, gameLabel = "Blackjack", label = "max seats", range = 2..7)
+                ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS, gameLabel = "Blackjack",
+                    label = "shot-clock seconds", range = 0..600)
+                ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17 -> setBlackjackBool(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_NUM, gameLabel = "Blackjack",
+                    label = "blackjack payout numerator", range = 1..10)
+                ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BLACKJACK_BJ_PAYOUT_DEN, gameLabel = "Blackjack",
+                    label = "blackjack payout denominator", range = 1..10)
                 ConfigDto.Configurations.UBI_DAILY_AMOUNT -> setUbiDailyAmount(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.DAILY_CREDIT_CAP -> setDailyCreditCap(event, optionMapping, deleteDelay)
             }
         }
+    }
+
+    /**
+     * Validate an integer config knob within an inclusive [range],
+     * persist it, and reply with a uniform "$gameLabel $label set to $value
+     * for new tables." message. Generic across the per-game integer
+     * settings (poker max seats, poker shot clock, blackjack max seats,
+     * blackjack rake percent, blackjack BJ payout num/den, etc.).
+     */
+    private fun setRangedIntConfig(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        gameLabel: String,
+        label: String,
+        range: IntRange,
+    ) {
+        val value = optionMapping.asInt
+        if (value !in range) {
+            event.hook.sendMessage("$gameLabel $label must be between ${range.first} and ${range.last}.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        event.hook.sendMessage("$gameLabel $label set to $value for new tables.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    /**
+     * Validate a non-negative whole-number config knob with a floor of
+     * [min], persist it, and reply with a "$gameLabel $label set to
+     * $value $unit for new tables." message. Generic across poker chip
+     * thresholds (chips) and blackjack ante bounds (credits).
+     */
+    private fun setMinimumLongConfig(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        gameLabel: String,
+        label: String,
+        min: Long,
+        unit: String,
+    ) {
+        val value = optionMapping.asLong
+        if (value < min) {
+            event.hook.sendMessage("$gameLabel $label must be at least $min.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        event.hook.sendMessage("$gameLabel $label set to $value $unit for new tables.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setBlackjackBool(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int
+    ) {
+        val value = optionMapping.asBoolean
+        val configValue = ConfigDto.Configurations.BLACKJACK_DEALER_HITS_SOFT_17.configValue
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(configValue, value.toString(), guildId)
+        val rule = if (value) "hit on soft 17 (H17)" else "stand on all 17 (S17)"
+        event.hook.sendMessage("Blackjack dealer will now $rule.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun setLeaderboardChannel(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -235,57 +323,6 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
         event.hook.sendMessage("Poker rake set to $pct % of every settled pot.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
-    }
-
-    /**
-     * Shared "validate a non-negative whole-number poker config value
-     * within [[min], [Long.MAX_VALUE]] and persist it" helper. Each
-     * specific table-shape config (blind / bet / buy-in) only differs
-     * in the human-readable [label] and the floor; the message and
-     * upsert plumbing is the same.
-     */
-    private fun setPokerLong(
-        event: SlashCommandInteractionEvent,
-        optionMapping: OptionMapping,
-        deleteDelay: Int,
-        config: ConfigDto.Configurations,
-        label: String,
-        min: Long
-    ) {
-        val value = optionMapping.asLong
-        if (value < min) {
-            event.hook.sendMessage("Poker $label must be at least $min.")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            return
-        }
-        val guildId = event.guild?.id ?: return
-        configService.upsertConfig(config.configValue, value.toString(), guildId)
-        event.hook.sendMessage("Poker $label set to $value chips for new tables.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
-    }
-
-    /**
-     * As [setPokerLong] but for integer-bounded knobs (max seats,
-     * shot-clock seconds). The range is inclusive on both ends.
-     */
-    private fun setPokerInt(
-        event: SlashCommandInteractionEvent,
-        optionMapping: OptionMapping,
-        deleteDelay: Int,
-        config: ConfigDto.Configurations,
-        label: String,
-        range: IntRange
-    ) {
-        val value = optionMapping.asInt
-        if (value !in range) {
-            event.hook.sendMessage("Poker $label must be between ${range.first} and ${range.last}.")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            return
-        }
-        val guildId = event.guild?.id ?: return
-        configService.upsertConfig(config.configValue, value.toString(), guildId)
-        event.hook.sendMessage("Poker $label set to $value for new tables.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
@@ -468,6 +505,36 @@ class SetConfigCommand @Autowired constructor(
                 "Per-actor decision deadline in seconds (0 disables). Default 30.",
                 false
             ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_RAKE_PCT.name.lowercase(Locale.getDefault()),
+                "Percent (0-20) of every settled blackjack pot routed into the per-guild jackpot pool. Default 5.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_MIN_ANTE.name.lowercase(Locale.getDefault()),
+                "Per-guild minimum blackjack ante (also the solo stake floor). Default 10.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_MAX_ANTE.name.lowercase(Locale.getDefault()),
+                "Per-guild maximum blackjack ante (also the solo stake ceiling). Default 500.",
+                false
+            ),
+            OptionData(
+                OptionType.INTEGER,
+                ConfigDto.Configurations.BLACKJACK_MAX_SEATS.name.lowercase(Locale.getDefault()),
+                "Maximum players per blackjack multi table (2-7). Default 5.",
+                false
+            ),
+            // BLACKJACK_SHOT_CLOCK_SECONDS, BLACKJACK_DEALER_HITS_SOFT_17,
+            // BLACKJACK_BJ_PAYOUT_NUM/DEN are intentionally NOT registered
+            // as /setconfig options because Discord caps a single slash
+            // command at 25 options total. They're still settable via the
+            // /moderation web tab (ModerationWebService.updateConfig) and
+            // their `when` validation in this file stays exhaustive.
             OptionData(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.UBI_DAILY_AMOUNT.name.lowercase(Locale.getDefault()),

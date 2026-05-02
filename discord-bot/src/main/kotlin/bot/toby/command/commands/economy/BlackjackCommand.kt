@@ -47,10 +47,13 @@ class BlackjackCommand @Autowired constructor(
         private const val SUB_LEAVE = "leave"
         private const val SUB_TABLES = "tables"
         private const val SUB_PEEK = "peek"
+        private const val SUB_HISTORY = "history"
 
         private const val OPT_STAKE = "stake"
         private const val OPT_ANTE = "ante"
         private const val OPT_TABLE = "table"
+        private const val OPT_LIMIT = "limit"
+        private const val OPT_AUTO_TOPUP = "auto_topup"
     }
 
     override val subCommands: List<SubcommandData> = listOf(
@@ -58,17 +61,20 @@ class BlackjackCommand @Autowired constructor(
             .addOptions(
                 OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (${Blackjack.MIN_STAKE}-${Blackjack.MAX_STAKE})", true)
                     .setMinValue(Blackjack.MIN_STAKE)
-                    .setMaxValue(Blackjack.MAX_STAKE)
+                    .setMaxValue(Blackjack.MAX_STAKE),
+                OptionData(OptionType.BOOLEAN, OPT_AUTO_TOPUP, "Sell TOBY at market to cover any credit shortfall", false)
             ),
         SubcommandData(SUB_CREATE, "Create a multiplayer blackjack table and seat yourself.")
             .addOptions(
                 OptionData(OptionType.INTEGER, OPT_ANTE, "Per-hand ante (${Blackjack.MULTI_MIN_ANTE}-${Blackjack.MULTI_MAX_ANTE})", true)
                     .setMinValue(Blackjack.MULTI_MIN_ANTE)
-                    .setMaxValue(Blackjack.MULTI_MAX_ANTE)
+                    .setMaxValue(Blackjack.MULTI_MAX_ANTE),
+                OptionData(OptionType.BOOLEAN, OPT_AUTO_TOPUP, "Sell TOBY at market to cover any credit shortfall", false)
             ),
         SubcommandData(SUB_JOIN, "Join an existing blackjack table at its ante.")
             .addOptions(
-                OptionData(OptionType.INTEGER, OPT_TABLE, "Table id", true).setMinValue(1)
+                OptionData(OptionType.INTEGER, OPT_TABLE, "Table id", true).setMinValue(1),
+                OptionData(OptionType.BOOLEAN, OPT_AUTO_TOPUP, "Sell TOBY at market to cover any credit shortfall", false)
             ),
         SubcommandData(SUB_START, "Deal the next hand on a table you host.")
             .addOptions(
@@ -82,6 +88,14 @@ class BlackjackCommand @Autowired constructor(
         SubcommandData(SUB_PEEK, "Show your hand mid-round (only visible to you).")
             .addOptions(
                 OptionData(OptionType.INTEGER, OPT_TABLE, "Table id", true).setMinValue(1)
+            ),
+        SubcommandData(SUB_HISTORY, "Show recent settled blackjack hands.")
+            .addOptions(
+                OptionData(OptionType.INTEGER, OPT_TABLE, "Table id (optional — omit for server-wide history)", false)
+                    .setMinValue(1),
+                OptionData(OptionType.INTEGER, OPT_LIMIT, "How many hands to show (default ${BlackjackService.HISTORY_DEFAULT_LIMIT})", false)
+                    .setMinValue(1)
+                    .setMaxValue(BlackjackService.HISTORY_MAX_LIMIT.toLong())
             ),
     )
 
@@ -100,6 +114,7 @@ class BlackjackCommand @Autowired constructor(
             SUB_LEAVE -> handleLeave(event, requestingUserDto, guild.idLong, deleteDelay)
             SUB_TABLES -> handleTables(event, guild.idLong, deleteDelay)
             SUB_PEEK -> handlePeek(event, requestingUserDto, guild.idLong)
+            SUB_HISTORY -> handleHistory(event, guild.idLong, deleteDelay)
             else -> replyError(event, "Unknown subcommand.", deleteDelay)
         }
     }
@@ -113,7 +128,8 @@ class BlackjackCommand @Autowired constructor(
         val stake = event.getOption(OPT_STAKE)?.asLong ?: run {
             replyError(event, "You must specify a stake.", deleteDelay); return
         }
-        when (val outcome = blackjackService.dealSolo(userDto.discordId, guildId, stake)) {
+        val autoTopUp = event.getOption(OPT_AUTO_TOPUP)?.asBoolean ?: false
+        when (val outcome = blackjackService.dealSolo(userDto.discordId, guildId, stake, autoTopUp)) {
             is SoloDealOutcome.Dealt -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Hand vanished.", deleteDelay)
@@ -137,6 +153,9 @@ class BlackjackCommand @Autowired constructor(
             is SoloDealOutcome.InsufficientCredits -> replyFailure(
                 event, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have), deleteDelay
             )
+            is SoloDealOutcome.InsufficientCoinsForTopUp -> replyFailure(
+                event, WagerCommandFailure.InsufficientCoinsForTopUp(outcome.needed, outcome.have), deleteDelay
+            )
             SoloDealOutcome.UnknownUser -> replyFailure(
                 event, WagerCommandFailure.UnknownUser, deleteDelay
             )
@@ -152,7 +171,8 @@ class BlackjackCommand @Autowired constructor(
         val ante = event.getOption(OPT_ANTE)?.asLong ?: run {
             replyError(event, "Ante is required.", deleteDelay); return
         }
-        when (val outcome = blackjackService.createMultiTable(userDto.discordId, guildId, ante)) {
+        val autoTopUp = event.getOption(OPT_AUTO_TOPUP)?.asBoolean ?: false
+        when (val outcome = blackjackService.createMultiTable(userDto.discordId, guildId, ante, autoTopUp)) {
             is MultiCreateOutcome.Ok -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)
@@ -164,6 +184,9 @@ class BlackjackCommand @Autowired constructor(
             )
             is MultiCreateOutcome.InsufficientCredits -> replyFailure(
                 event, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have), deleteDelay
+            )
+            is MultiCreateOutcome.InsufficientCoinsForTopUp -> replyFailure(
+                event, WagerCommandFailure.InsufficientCoinsForTopUp(outcome.needed, outcome.have), deleteDelay
             )
             MultiCreateOutcome.UnknownUser -> replyFailure(
                 event, WagerCommandFailure.UnknownUser, deleteDelay
@@ -180,7 +203,8 @@ class BlackjackCommand @Autowired constructor(
         val tableId = event.getOption(OPT_TABLE)?.asLong ?: run {
             replyError(event, "Table id is required.", deleteDelay); return
         }
-        when (val outcome = blackjackService.joinMultiTable(userDto.discordId, guildId, tableId)) {
+        val autoTopUp = event.getOption(OPT_AUTO_TOPUP)?.asBoolean ?: false
+        when (val outcome = blackjackService.joinMultiTable(userDto.discordId, guildId, tableId, autoTopUp)) {
             is MultiJoinOutcome.Ok -> {
                 val table = tableRegistry.get(tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)
@@ -199,6 +223,9 @@ class BlackjackCommand @Autowired constructor(
                 replyError(event, "Wait for the current hand to end before joining.", deleteDelay)
             is MultiJoinOutcome.InsufficientCredits -> replyFailure(
                 event, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have), deleteDelay
+            )
+            is MultiJoinOutcome.InsufficientCoinsForTopUp -> replyFailure(
+                event, WagerCommandFailure.InsufficientCoinsForTopUp(outcome.needed, outcome.have), deleteDelay
             )
             MultiJoinOutcome.UnknownUser -> replyFailure(
                 event, WagerCommandFailure.UnknownUser, deleteDelay
@@ -310,6 +337,22 @@ class BlackjackCommand @Autowired constructor(
         }
         event.hook.sendMessageEmbeds(BlackjackEmbeds.peekEmbed(seat.hand))
             .setEphemeral(true).queue()
+    }
+
+    private fun handleHistory(
+        event: SlashCommandInteractionEvent,
+        guildId: Long,
+        deleteDelay: Int
+    ) {
+        val tableId = event.getOption(OPT_TABLE)?.asLong
+        val limit = event.getOption(OPT_LIMIT)?.asLong?.toInt() ?: BlackjackService.HISTORY_DEFAULT_LIMIT
+        val (scope, hands) = if (tableId != null) {
+            "Table #$tableId" to blackjackService.recentHandsForTable(guildId, tableId, limit)
+        } else {
+            "Server" to blackjackService.recentHandsForGuild(guildId, limit)
+        }
+        event.hook.sendMessageEmbeds(BlackjackEmbeds.historyEmbed(scope, hands))
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun soloActionRow(tableId: Long, allowDouble: Boolean): ActionRow {
