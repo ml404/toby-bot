@@ -3,6 +3,7 @@ package database.service
 import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
+import database.blackjack.bestTotal
 import database.card.Card
 import database.card.Deck
 import database.card.Rank
@@ -234,6 +235,44 @@ class BlackjackServiceTest {
         // After deal: 900. After double debit: 800. Win 2× on doubled stake (200) → +400 → 1200.
         assertEquals(1_200L, user.socialCredit)
         assertEquals(1_200L, resolved.newBalance)
+    }
+
+    @Test
+    fun `applySoloAction STAND credits player when dealer plays out and busts`() {
+        // Regression for the freeze where STAND-then-dealer-bust paid no
+        // winnings. Real evaluate() so the dealer-bust → PLAYER_WIN branch
+        // is actually exercised (the win-on-stand test above stubs evaluate
+        // and never sees the bust path).
+        val realBj = Blackjack()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.KING), c(Rank.NINE)),                // 19
+            mutableListOf(c(Rank.SIX), c(Rank.SEVEN, Suit.HEARTS))    // 13 — must hit
+        )
+        // Dealer at 13 must hit; drop a 10 → 23 → bust.
+        every { blackjack.playOutDealer(any(), any(), any()) } answers {
+            firstArg<MutableList<Card>>().add(c(Rank.TEN, Suit.HEARTS))
+        }
+        every { blackjack.evaluate(any(), any(), any()) } answers {
+            realBj.evaluate(arg(0), arg(1), arg(2))
+        }
+
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)  // -100 → 900
+        val tableId = (deal as BlackjackService.SoloDealOutcome.Dealt).tableId
+
+        val outcome = service.applySoloAction(discordId, guildId, tableId, Blackjack.Action.STAND)
+        val resolved = assertInstanceOf(BlackjackService.SoloActionOutcome.Resolved::class.java, outcome)
+
+        assertEquals(1_100L, user.socialCredit, "win pays 2× stake net +100")
+        assertEquals(1_100L, resolved.newBalance)
+        assertEquals(Blackjack.Result.PLAYER_WIN, resolved.result.seatResults[discordId])
+        assertEquals(200L, resolved.result.payouts[discordId])
+
+        val live = registry.get(tableId)!!
+        assertEquals(BlackjackTable.Phase.RESOLVED, live.phase)
+        assertNotNull(live.lastResult, "lastResult must be set so /state can render the verdict")
+        assertTrue(bestTotal(live.dealer) > 21, "sanity: dealer actually busted")
     }
 
     @Test
