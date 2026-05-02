@@ -1,10 +1,12 @@
 /*
  * Blackjack-specific styles. The shared "casino table" look (felt, cards,
  * seats, avatars, gold-glow active actor, deal animation) lives in
- * casino-table.css and applies to both /blackjack and /poker. Only
- * blackjack-specific bits stay here: the betting form, the lobby table
- * list rows, layout containers, and result-line variants.
+ * casino-table.css and is loaded via the @import below — that way every
+ * blackjack page picks it up without the head fragment having to juggle
+ * a second optional stylesheet parameter (which broke other 2-arg
+ * callers when the fragment signature added one).
  */
+@import url("./casino-table.css");
 
 .bj-header {
     margin-bottom: 1.5rem;

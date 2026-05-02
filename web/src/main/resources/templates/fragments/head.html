@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:fragment="head(pageTitle, extraCss, extraCss2)">
+<head th:fragment="head(pageTitle, extraCss)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
@@ -10,10 +10,6 @@
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="stylesheet" th:href="@{/css/base.css}">
     <link rel="stylesheet" th:href="@{/css/nav.css}">
-    <!-- extraCss2 loads BEFORE extraCss so per-page overrides win on conflict
-         (e.g. blackjack/poker pull in casino-table.css as the shared base, then
-         their own stylesheet specialises). -->
-    <link rel="stylesheet" th:if="${extraCss2 != null}" th:href="@{${extraCss2}}">
     <link rel="stylesheet" th:if="${extraCss != null}" th:href="@{${extraCss}}">
 </head>
 </html>
