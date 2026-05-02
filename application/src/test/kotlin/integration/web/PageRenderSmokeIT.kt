@@ -14,7 +14,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 
@@ -60,12 +59,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 )
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(
-    properties = [
-        "spring.security.oauth2.client.registration.discord.client-id=test-client-id",
-        "spring.security.oauth2.client.registration.discord.client-secret=test-client-secret",
-    ]
-)
 class PageRenderSmokeIT {
 
     @Autowired

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.cache.CacheManager
@@ -34,6 +36,10 @@ private const val CACHE_EVICTION_TEST_PROFILE = "cache-eviction-unit-test"
 @ContextConfiguration(classes = [DefaultUserServiceCacheTest.TestContext::class])
 @ActiveProfiles(CACHE_EVICTION_TEST_PROFILE)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+// Forces serial execution: this test rebuilds the Spring context after every
+// method via @DirtiesContext, which would race other tests under JUnit's
+// concurrent execution mode (enabled in junit-platform.properties).
+@Execution(ExecutionMode.SAME_THREAD)
 class DefaultUserServiceCacheTest {
 
     @Autowired

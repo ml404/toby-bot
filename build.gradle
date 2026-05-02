@@ -91,6 +91,13 @@ subprojects {
 
         tasks.withType(Test).configureEach {
             failOnNoDiscoveredTests = false
+            // Run multiple JVM forks in parallel per Test task. Half the
+            // available cores leaves headroom for the Gradle daemon and
+            // other parallel project test tasks (parallel=true).
+            maxParallelForks = Math.max(1, Runtime.runtime.availableProcessors().intdiv(2))
+            // Recycle each fork after 100 test classes to bound peak heap
+            // (mockk + Spring contexts accumulate fast in long-lived JVMs).
+            forkEvery = 100
         }
     }
 }
