@@ -133,44 +133,38 @@
         e.preventDefault();
         var stake = parseInt(stakeInput.value, 10);
         if (!stake) return;
-        fetch("/blackjack/" + guildId + "/solo/deal", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stake: stake })
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Deal failed.");
-                  return;
-              }
-              if (rb.b.resolved) {
-                  setBalance(rb.b.newBalance);
-                  refreshState();
-              } else {
-                  refreshState();
-                  startPoll();
-              }
-          });
+        // POSTs go via TobyApi.postJson so the Spring Security CSRF
+        // header (read off the <meta name="_csrf"> tag in the head
+        // fragment) is included — without it Spring rejects the request
+        // with 403.
+        window.TobyApi.postJson("/blackjack/" + guildId + "/solo/deal", { stake: stake })
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Deal failed.");
+                    return;
+                }
+                if (b.resolved) {
+                    setBalance(b.newBalance);
+                    refreshState();
+                } else {
+                    refreshState();
+                    startPoll();
+                }
+            });
     });
 
     function postAction(action) {
-        return fetch("/blackjack/" + guildId + "/solo/action", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: action })
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Action failed.");
-                  return;
-              }
-              if (rb.b.resolved) {
-                  setBalance(rb.b.newBalance);
-              }
-              refreshState();
-          });
+        return window.TobyApi.postJson("/blackjack/" + guildId + "/solo/action", { action: action })
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Action failed.");
+                    return;
+                }
+                if (b.resolved) {
+                    setBalance(b.newBalance);
+                }
+                refreshState();
+            });
     }
 
     hitBtn.addEventListener("click", function () { postAction("hit"); });

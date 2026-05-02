@@ -18,18 +18,16 @@
     createForm.addEventListener("submit", function (e) {
         e.preventDefault();
         var ante = parseInt(anteInput.value, 10);
-        fetch("/blackjack/" + guildId + "/create", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ante: ante })
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Create failed.");
-                  return;
-              }
-              window.location.href = "/blackjack/" + guildId + "/" + rb.b.tableId;
-          });
+        // POSTs go via TobyApi.postJson so the Spring Security CSRF
+        // header (read off the <meta name="_csrf"> tag in the head
+        // fragment) is included — without it Spring rejects with 403.
+        window.TobyApi.postJson("/blackjack/" + guildId + "/create", { ante: ante })
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Create failed.");
+                    return;
+                }
+                window.location.href = "/blackjack/" + guildId + "/" + b.tableId;
+            });
     });
 })();

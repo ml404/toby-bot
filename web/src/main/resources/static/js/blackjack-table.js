@@ -178,20 +178,18 @@
             .catch(function (e) { console.warn("state poll failed", e); });
     }
 
+    // POSTs go via TobyApi.postJson so the Spring Security CSRF header
+    // (read off the <meta name="_csrf"> tag in the head fragment) is
+    // included — without it Spring rejects the request with 403.
     function postAction(action) {
-        return fetch("/blackjack/" + guildId + "/" + tableId + "/action", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: action })
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Action failed.");
-                  return;
-              }
-              refreshState();
-          });
+        return window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/action", { action: action })
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Action failed.");
+                    return;
+                }
+                refreshState();
+            });
     }
 
     hitBtn.addEventListener("click", function () { postAction("hit"); });
@@ -199,48 +197,42 @@
     doubleBtn.addEventListener("click", function () { postAction("double"); });
 
     startBtn.addEventListener("click", function () {
-        fetch("/blackjack/" + guildId + "/" + tableId + "/start", {
-            method: "POST", credentials: "same-origin"
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Start failed.");
-                  return;
-              }
-              refreshState();
-          });
+        window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/start", {})
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Start failed.");
+                    return;
+                }
+                refreshState();
+            });
     });
 
     joinBtn.addEventListener("click", function () {
-        fetch("/blackjack/" + guildId + "/" + tableId + "/join", {
-            method: "POST", credentials: "same-origin"
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Join failed.");
-                  return;
-              }
-              refreshState();
-          });
+        window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/join", {})
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Join failed.");
+                    return;
+                }
+                refreshState();
+            });
     });
 
     leaveBtn.addEventListener("click", function () {
-        fetch("/blackjack/" + guildId + "/" + tableId + "/leave", {
-            method: "POST", credentials: "same-origin"
-        }).then(function (r) { return r.json().then(function (b) { return { r: r, b: b }; }); })
-          .then(function (rb) {
-              if (!rb.r.ok || !rb.b.ok) {
-                  window.toasts && window.toasts.error(rb.b.error || "Leave failed.");
-                  return;
-              }
-              if (rb.b.queued) {
-                  window.toasts && window.toasts.info("Leaving — you'll auto-stand and be removed at end of hand.");
-              } else {
-                  window.toasts && window.toasts.info("Cashed out " + rb.b.refund + " credits.");
-                  setTimeout(function () { window.location.href = "/blackjack/" + guildId; }, 800);
-              }
-              refreshState();
-          });
+        window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/leave", {})
+            .then(function (b) {
+                if (!b.ok) {
+                    window.toasts && window.toasts.error(b.error || "Leave failed.");
+                    return;
+                }
+                if (b.queued) {
+                    window.toasts && window.toasts.info("Leaving — you'll auto-stand and be removed at end of hand.");
+                } else {
+                    window.toasts && window.toasts.info("Cashed out " + b.refund + " credits.");
+                    setTimeout(function () { window.location.href = "/blackjack/" + guildId; }, 800);
+                }
+                refreshState();
+            });
     });
 
     refreshState();
