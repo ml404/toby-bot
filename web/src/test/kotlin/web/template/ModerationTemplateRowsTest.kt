@@ -89,4 +89,38 @@ class ModerationTemplateRowsTest {
             "expected a <details><summary>Poker</summary> wrapper around the poker rows"
         )
     }
+
+    @Test
+    fun `every percent config row carries a visible suffix marker`() {
+        // Admins editing a percent config used to see a bare number input
+        // with no unit indicator. Each *_PCT row now wraps the input in
+        // a `.config-input-group` with a trailing `<span class="config-suffix">%</span>`
+        // so the unit is obvious without reading the label. This test
+        // pins the wiring for every percent key — losing the suffix
+        // (e.g. someone removing the wrapper during a refactor) means
+        // admins lose the visual cue again.
+        val percentKeys = listOf(
+            ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT,
+            ConfigDto.Configurations.JACKPOT_WIN_PCT,
+            ConfigDto.Configurations.TRADE_BUY_FEE_PCT,
+            ConfigDto.Configurations.TRADE_SELL_FEE_PCT,
+            ConfigDto.Configurations.POKER_RAKE_PCT,
+            ConfigDto.Configurations.BLACKJACK_RAKE_PCT,
+        )
+        for (key in percentKeys) {
+            // Slice the document at the `data-key="..."` row marker and
+            // look forward to the closing `</div>` of that row. The
+            // suffix span must appear inside that range.
+            val marker = "data-key=\"${key.name}\""
+            val rowStart = html.indexOf(marker)
+            assertTrue(rowStart >= 0, "row for ${key.name} not found")
+            val rowEnd = html.indexOf("</div>", rowStart)
+            assertTrue(rowEnd > rowStart, "row for ${key.name} not terminated")
+            val rowHtml = html.substring(rowStart, rowEnd)
+            assertTrue(
+                rowHtml.contains("config-suffix") && rowHtml.contains(">%<"),
+                "row for ${key.name} should include a `<span class=\"config-suffix\">%</span>` marker"
+            )
+        }
+    }
 }

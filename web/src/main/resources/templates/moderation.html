@@ -238,34 +238,46 @@
                 </div>
                 <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
                     <label>Jackpot loss tribute (% of every lost casino stake)</label>
-                    <input type="number" min="0" max="50"
-                           th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
-                           placeholder="10"
-                           th:disabled="${!isOwner}">
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50"
+                               th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
+                               placeholder="10"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="JACKPOT_WIN_PCT">
                     <label>Jackpot win chance (% per casino-game win, decimals allowed)</label>
-                    <input type="number" min="0" max="50" step="0.01"
-                           th:value="${overview.config['JACKPOT_WIN_PCT']}"
-                           placeholder="1"
-                           th:disabled="${!isOwner}">
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50" step="0.01"
+                               th:value="${overview.config['JACKPOT_WIN_PCT']}"
+                               placeholder="1"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
                     <label>Toby Coin BUY fee (% per leg, routed to jackpot pool)</label>
-                    <input type="number" min="0" max="25" step="0.01"
-                           th:value="${overview.config['TRADE_BUY_FEE_PCT']}"
-                           placeholder="1"
-                           th:disabled="${!isOwner}">
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="25" step="0.01"
+                               th:value="${overview.config['TRADE_BUY_FEE_PCT']}"
+                               placeholder="1"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="TRADE_SELL_FEE_PCT">
                     <label>Toby Coin SELL fee (% per leg, routed to jackpot pool)</label>
-                    <input type="number" min="0" max="25" step="0.01"
-                           th:value="${overview.config['TRADE_SELL_FEE_PCT']}"
-                           placeholder="1"
-                           th:disabled="${!isOwner}">
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="25" step="0.01"
+                               th:value="${overview.config['TRADE_SELL_FEE_PCT']}"
+                               placeholder="1"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
             </div>
@@ -276,10 +288,13 @@
             <div class="config-grid">
                 <div class="config-row" data-key="POKER_RAKE_PCT">
                     <label>Poker rake (% of every settled pot routed to jackpot; default 5)</label>
-                    <input type="number" min="0" max="20" step="1"
-                           th:value="${overview.config['POKER_RAKE_PCT']}"
-                           placeholder="5"
-                           th:disabled="${!isOwner}">
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="20" step="1"
+                               th:value="${overview.config['POKER_RAKE_PCT']}"
+                               placeholder="5"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="POKER_SMALL_BLIND">
@@ -354,10 +369,13 @@
             <div class="config-grid">
                 <div class="config-row" data-key="BLACKJACK_RAKE_PCT">
                     <label>Blackjack rake (% of multi-table losers' pool routed to jackpot; default 5)</label>
-                    <input type="number" min="0" max="20" step="1"
-                           th:value="${overview.config['BLACKJACK_RAKE_PCT']}"
-                           placeholder="5"
-                           th:disabled="${!isOwner}">
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="20" step="1"
+                               th:value="${overview.config['BLACKJACK_RAKE_PCT']}"
+                               placeholder="5"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="BLACKJACK_MIN_ANTE">

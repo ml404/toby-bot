@@ -216,6 +216,19 @@
     border-radius: var(--radius-sm);
     grid-column: 1;
 }
+/* Wrapper for percentage inputs — keeps the input + visible "%" suffix
+   together in column 1 of the .config-row grid, so admins can see the
+   unit at a glance without hunting through the label. */
+.config-row .config-input-group {
+    grid-column: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.config-row .config-input-group .config-suffix {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
 .config-row .save-config { grid-column: 2; }
 
 /* Social credit */
