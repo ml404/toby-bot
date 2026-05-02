@@ -47,7 +47,7 @@
             span.textContent = '🂠';
             return span;
         }
-        // Card strings look like "A♠", "T♥", "9♦", "K♣"
+        // Card strings look like "A♠", "10♥", "9♦", "K♣"
         const suit = c.charAt(c.length - 1);
         if (suit === '♥' || suit === '♦') span.classList.add('is-red');
         span.textContent = c;

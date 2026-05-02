@@ -23,7 +23,7 @@ class CardTest {
     @Test
     fun `Card toString joins rank symbol and suit symbol`() {
         assertEquals("A♠", Card(Rank.ACE, Suit.SPADES).toString())
-        assertEquals("T♥", Card(Rank.TEN, Suit.HEARTS).toString())
+        assertEquals("10♥", Card(Rank.TEN, Suit.HEARTS).toString())
     }
 
     @Test
