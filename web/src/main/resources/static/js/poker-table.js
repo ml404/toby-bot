@@ -213,12 +213,19 @@
         if (result.handNumber !== lastFlashedHand && window.CasinoRender) {
             lastFlashedHand = result.handNumber;
             const payouts = result.payoutByDiscordId || {};
+            let myPaid = false;
             Object.keys(payouts).forEach(function (id) {
                 const amount = payouts[id];
                 if (!amount || amount <= 0) return;
                 const seatEl = seatsEl.querySelector('[data-discord-id="' + id + '"]');
                 if (seatEl) window.CasinoRender.flashChipsOn(seatEl, amount);
+                if (String(id) === String(myDiscordId)) myPaid = true;
             });
+            // Sound cue keyed off the viewer's outcome — a win is a win
+            // for the player even if a side pot went elsewhere.
+            if (window.CasinoSounds) {
+                window.CasinoSounds.play(myPaid ? "win" : "lose");
+            }
         }
     }
 

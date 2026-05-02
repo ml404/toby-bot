@@ -104,6 +104,7 @@ function renderHighlowResult(resultEl, body) {
         if (typeof anchorValue === 'number') {
             anchorFace.textContent = cardLabel(anchorValue);
             if (anchorCard) anchorCard.dataset.value = String(anchorValue);
+            if (window.CasinoSounds) window.CasinoSounds.play('deal');
         }
         nextFace.textContent = '?';
         if (nextCard) delete nextCard.dataset.value;
@@ -128,6 +129,8 @@ function renderHighlowResult(resultEl, body) {
         if (typeof value === 'number') {
             nextFace.textContent = cardLabel(value);
             nextCard.dataset.value = String(value);
+            // Final card snaps into place — sounds the flip cue.
+            if (window.CasinoSounds) window.CasinoSounds.play('flip');
         } else {
             nextFace.textContent = '?';
             delete nextCard.dataset.value;
@@ -181,6 +184,9 @@ function renderHighlowResult(resultEl, body) {
                     if (body && body.ok) {
                         stopNextShuffle(intervalId, body.next);
                         renderHighlowResult(resultEl, body);
+                        if (window.CasinoSounds) {
+                            window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
+                        }
                         if (game) {
                             game.applyBalance(body.newBalance);
                             game.applyTobyDelta(body);

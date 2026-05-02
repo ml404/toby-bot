@@ -108,6 +108,9 @@
             if (payout && payout > 0 && playerRowEl) {
                 window.CasinoRender.flashChipsOn(playerRowEl, payout);
             }
+            if (window.CasinoSounds) {
+                window.CasinoSounds.play(payout && payout > 0 ? "win" : "lose");
+            }
         }
         var label;
         var cls = "muted";

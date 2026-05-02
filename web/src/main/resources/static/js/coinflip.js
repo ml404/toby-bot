@@ -46,6 +46,7 @@ function renderCoinflipResult(resultEl, body) {
 
     function startFlipAnimation() {
         coin.classList.add('flipping');
+        if (window.CasinoSounds) window.CasinoSounds.play('flip');
         let i = 0;
         return setInterval(function () {
             coinFace.textContent = FLIP_FACES[i % FLIP_FACES.length];
@@ -66,6 +67,12 @@ function renderCoinflipResult(resultEl, body) {
         } else {
             coinFace.textContent = '🪙';
             delete coin.dataset.landed;
+        }
+        if (body && window.CasinoSounds) {
+            window.CasinoSounds.play('chip');
+            setTimeout(function () {
+                window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
+            }, 80);
         }
     }
 

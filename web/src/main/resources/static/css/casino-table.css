@@ -316,6 +316,51 @@
     100% { transform: translateY(-30px); opacity: 0; }
 }
 
+/* ------------------------------------------------------------------- */
+/* Sound toggle (created by casino-sounds.js)                           */
+/* ------------------------------------------------------------------- */
+
+.casino-sound-toggle {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: rgba(20, 28, 36, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f0f0f0;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 50;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.casino-sound-toggle:hover {
+    background: rgba(40, 50, 60, 0.95);
+}
+
+.casino-sound-toggle:active {
+    transform: scale(0.94);
+}
+
+.casino-sound-toggle:focus-visible {
+    outline: 2px solid #f1c40f;
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    .casino-sound-toggle {
+        width: 2.25rem;
+        height: 2.25rem;
+        bottom: 0.75rem;
+        right: 0.75rem;
+        font-size: 1rem;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .casino-seat.is-active {
         animation: none;

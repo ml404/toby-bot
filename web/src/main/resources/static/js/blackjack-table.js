@@ -220,12 +220,19 @@
         // screen, so we key off handNumber.
         if (r.handNumber !== lastFlashedHand && window.CasinoRender) {
             lastFlashedHand = r.handNumber;
+            var myPaid = false;
             Object.keys(r.payouts || {}).forEach(function (id) {
                 var amount = r.payouts[id];
                 if (!amount || amount <= 0) return;
                 var seatEl = seatsEl.querySelector('[data-discord-id="' + id + '"]');
                 if (seatEl) window.CasinoRender.flashChipsOn(seatEl, amount);
+                if (parseInt(id, 10) === parseInt(myId, 10)) myPaid = true;
             });
+            // Sound cue keyed off the viewer's outcome — winning a hand
+            // should sound like a win, even if other seats lost.
+            if (window.CasinoSounds) {
+                window.CasinoSounds.play(myPaid ? "win" : "lose");
+            }
         }
     }
 
