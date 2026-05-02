@@ -29,9 +29,12 @@
     var pollTimer = null;
     var clockTimer = null;
     var deadlineMs = null;
-    // Tracks the handNumber of the last result we played the chip-stack
-    // flourish on, so the 2s polling doesn't re-trigger the animation.
-    var lastFlashedHand = null;
+    // Tracks the (tableId, handNumber) of the last result we played the
+    // chip-stack flourish on, so the 2s polling doesn't re-trigger the
+    // animation. Including tableId keeps us symmetric with the solo page
+    // (where handNumber resets per hand) and survives any future table
+    // reuse where handNumber alone could collide.
+    var lastFlashedKey = null;
 
     function renderCards(container, cards) {
         // Delegate to the shared renderer so the per-container deal animation
@@ -217,9 +220,10 @@
 
         // Fire the celebratory chip stack once per hand. The 2s polling
         // would otherwise re-trigger every cycle while the result is on
-        // screen, so we key off handNumber.
-        if (r.handNumber !== lastFlashedHand && window.CasinoRender) {
-            lastFlashedHand = r.handNumber;
+        // screen, so we key off (tableId, handNumber).
+        var flashKey = state.tableId + ":" + r.handNumber;
+        if (flashKey !== lastFlashedKey && window.CasinoRender) {
+            lastFlashedKey = flashKey;
             var myPaid = false;
             Object.keys(r.payouts || {}).forEach(function (id) {
                 var amount = r.payouts[id];

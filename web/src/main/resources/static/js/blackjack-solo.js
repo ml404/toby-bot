@@ -112,9 +112,13 @@
     var playerRowEl = document.getElementById("bj-player-row");
 
     var pollTimer = null;
-    // Tracks the handNumber of the last result we played the chip-stack
-    // flourish on, so the 2s polling doesn't re-trigger the animation.
-    var lastFlashedHand = null;
+    // Tracks the (tableId, handNumber) of the last result we played the
+    // chip-stack flourish on, so the 2s polling doesn't re-trigger the
+    // animation. tableId is part of the key because each solo hand spins
+    // up a fresh BlackjackTable with handNumber reset to 1 — keying on
+    // handNumber alone caused every hand after the first to be silently
+    // de-duped against the previous one.
+    var lastFlashedKey = null;
 
     function renderState(state) {
         if (!state) return;
@@ -183,8 +187,9 @@
         // survives JS Number's 53-bit precision; lookup keys match exactly.
         var seatResult = (r.seatResults || {})[seat.discordId];
         // Fire the celebratory chip stack once per hand on a winning result.
-        if (r.handNumber !== lastFlashedHand && window.CasinoRender) {
-            lastFlashedHand = r.handNumber;
+        var flashKey = state.tableId + ":" + r.handNumber;
+        if (flashKey !== lastFlashedKey && window.CasinoRender) {
+            lastFlashedKey = flashKey;
             var payout = (r.payouts || {})[seat.discordId];
             if (payout && payout > 0 && playerRowEl) {
                 window.CasinoRender.flashChipsOn(playerRowEl, payout);
