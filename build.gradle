@@ -91,13 +91,14 @@ subprojects {
 
         tasks.withType(Test).configureEach {
             failOnNoDiscoveredTests = false
-            // Run multiple JVM forks in parallel per Test task. Half the
-            // available cores leaves headroom for the Gradle daemon and
-            // other parallel project test tasks (parallel=true).
-            maxParallelForks = Math.max(1, Runtime.runtime.availableProcessors().intdiv(2))
-            // Recycle each fork after 100 test classes to bound peak heap
-            // (mockk + Spring contexts accumulate fast in long-lived JVMs).
-            forkEvery = 100
+            // Default: single fork per module. The discord-bot and
+            // application suites have latent test-class-order
+            // dependencies (mockkStatic leakage, shared Spring context
+            // state) that break when classes are sharded across forks
+            // — see PR #358 second CI run. Modules that proved safe
+            // (common, core-api, database, web) opt in to multi-fork
+            // execution from their own build.gradle.
+            maxParallelForks = 1
         }
     }
 }

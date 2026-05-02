@@ -40,6 +40,12 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.test {
     useJUnitPlatform() // Ensure JUnit platform is being used
+    // Opt this module into multi-fork test execution. Tests here are
+    // mockk-only unit tests with no static-mock leakage between classes,
+    // and JUnit 5 in-JVM parallel is enabled via junit-platform.properties.
+    // Splitting classes across forks ~halves wall time on multi-core runners.
+    maxParallelForks = Math.max(1, Runtime.runtime.availableProcessors().intdiv(2))
+    forkEvery = 100
 }
 
 jar {

@@ -52,4 +52,9 @@ java {
 
 test {
     useJUnitPlatform() // Ensure you are using the right testing framework
+    // Opt this module into multi-fork test execution. Tests here are
+    // mockk-only unit tests with no static-mock leakage between classes,
+    // and JUnit 5 in-JVM parallel is enabled via junit-platform.properties.
+    maxParallelForks = Math.max(1, Runtime.runtime.availableProcessors().intdiv(2))
+    forkEvery = 100
 }
