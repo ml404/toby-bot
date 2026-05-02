@@ -59,6 +59,14 @@ configurations {
 tasks.register('testJar', Jar) {
     archiveClassifier = 'tests'
     from sourceSets.test.output
+    // junit-platform.properties is module-local: it tells JUnit 5 to run
+    // THIS module's tests in parallel. Without this exclude, the file
+    // would land at the root of the test jar and `:application:test`,
+    // `:web:test`, `:discord-bot:test` would all pick it up off the
+    // classpath via testArtifacts and try to parallelize their own
+    // suites — which they're not safe for (Spring TestContext + Postgres
+    // in :application, mockkStatic in :discord-bot). See #365.
+    exclude 'junit-platform.properties'
 }
 
 artifacts {
