@@ -1,16 +1,13 @@
 package database.poker
 
+import common.testing.DeterministicScheduler
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Drives the per-table shot-clock plumbing in [PokerTableRegistry]
@@ -18,13 +15,19 @@ import java.util.concurrent.TimeUnit
  * path. The clock is a small piece of scheduler bookkeeping that
  * deserves coverage on its own — the production callback (auto-fold
  * via PokerService) is exercised separately by the service tests.
+ *
+ * Uses [DeterministicScheduler] so the tests don't sleep on a real
+ * wall clock waiting for the executor to fire — they advance work
+ * by calling [DeterministicScheduler.runPending].
  */
 class PokerTableRegistryShotClockTest {
+
+    private val scheduler = DeterministicScheduler()
 
     private fun newRegistry() = PokerTableRegistry(
         idleTtl = Duration.ofMinutes(10),
         sweepInterval = Duration.ofHours(1),
-        scheduler = Executors.newScheduledThreadPool(2)
+        scheduler = scheduler
     )
 
     private fun PokerTableRegistry.createTestTable(shotClockSeconds: Int = 30): PokerTable =
@@ -87,26 +90,25 @@ class PokerTableRegistryShotClockTest {
     @Test
     fun `clock fires onShotClockExpired when the actor doesn't act in time`() {
         val reg = newRegistry()
-        val fired = CountDownLatch(1)
-        var firedTable: PokerTable? = null
-        reg.setOnShotClockExpired { t -> firedTable = t; fired.countDown() }
+        val firedTable = AtomicReference<PokerTable?>(null)
+        reg.setOnShotClockExpired { t -> firedTable.set(t) }
 
         val table = reg.createTestTable(shotClockSeconds = 1)
         table.phase = PokerTable.Phase.PRE_FLOP
         table.handNumber = 1L
         reg.rearmShotClock(table.id)
 
-        val fired2sec = fired.await(3, TimeUnit.SECONDS)
-        assertTrue(fired2sec, "shot clock did not fire within 3s")
-        assertNotNull(firedTable)
-        assertEquals(table.id, firedTable!!.id)
+        scheduler.runPending()
+
+        assertNotNull(firedTable.get(), "shot clock did not fire")
+        assertEquals(table.id, firedTable.get()!!.id)
     }
 
     @Test
     fun `clock does NOT fire if the actor acted before the deadline`() {
         val reg = newRegistry()
-        val fired = CountDownLatch(1)
-        reg.setOnShotClockExpired { _ -> fired.countDown() }
+        val fireCount = java.util.concurrent.atomic.AtomicInteger(0)
+        reg.setOnShotClockExpired { _ -> fireCount.incrementAndGet() }
 
         val table = reg.createTestTable(shotClockSeconds = 1)
         table.phase = PokerTable.Phase.PRE_FLOP
@@ -114,8 +116,9 @@ class PokerTableRegistryShotClockTest {
         reg.rearmShotClock(table.id)
         reg.cancelShotClock(table.id)
 
-        val fired2sec = fired.await(2, TimeUnit.SECONDS)
-        assertFalse(fired2sec, "clock fired despite cancellation")
+        scheduler.runPending()
+
+        assertEquals(0, fireCount.get(), "clock fired despite cancellation")
     }
 
     @Test
@@ -125,8 +128,8 @@ class PokerTableRegistryShotClockTest {
         // The registry must detect the staleness and suppress the
         // callback rather than auto-folding the wrong actor.
         val reg = newRegistry()
-        var fireCount = 0
-        reg.setOnShotClockExpired { _ -> fireCount++ }
+        val fireCount = java.util.concurrent.atomic.AtomicInteger(0)
+        reg.setOnShotClockExpired { _ -> fireCount.incrementAndGet() }
 
         val table = reg.createTestTable(shotClockSeconds = 1)
         table.phase = PokerTable.Phase.PRE_FLOP
@@ -138,11 +141,9 @@ class PokerTableRegistryShotClockTest {
         // cancelling — the in-flight task should detect the change.
         table.actorIndex = 1
 
-        Thread.sleep(1500)
-        // Either the task no-ops (stale-detect path) OR has been
-        // cancelled — either way fireCount stays at 0 because the
-        // current actor is different.
-        assertEquals(0, fireCount, "stale fire was not suppressed (count=$fireCount)")
+        scheduler.runPending()
+
+        assertEquals(0, fireCount.get(), "stale fire was not suppressed (count=${fireCount.get()})")
     }
 
     @Test
@@ -150,10 +151,10 @@ class PokerTableRegistryShotClockTest {
         val reg = PokerTableRegistry(
             idleTtl = Duration.ofMillis(10),
             sweepInterval = Duration.ofHours(1),
-            scheduler = Executors.newScheduledThreadPool(2)
+            scheduler = scheduler
         )
-        val fired = CountDownLatch(1)
-        reg.setOnShotClockExpired { _ -> fired.countDown() }
+        val fireCount = java.util.concurrent.atomic.AtomicInteger(0)
+        reg.setOnShotClockExpired { _ -> fireCount.incrementAndGet() }
 
         val table = reg.create(
             guildId = 1L, hostDiscordId = 7L,
@@ -171,7 +172,8 @@ class PokerTableRegistryShotClockTest {
         // and should cancel the pending shot-clock task.
         reg.sweepIdle(Instant.now())
 
-        val firedAfterSweep = fired.await(2, TimeUnit.SECONDS)
-        assertFalse(firedAfterSweep, "shot clock fired for an evicted table")
+        scheduler.runPending()
+
+        assertEquals(0, fireCount.get(), "shot clock fired for an evicted table")
     }
 }

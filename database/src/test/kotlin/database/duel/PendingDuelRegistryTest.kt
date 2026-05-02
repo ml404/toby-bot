@@ -1,24 +1,17 @@
 package database.duel
 
-import org.junit.jupiter.api.AfterEach
+import common.testing.DeterministicScheduler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class PendingDuelRegistryTest {
 
-    private val scheduler = Executors.newScheduledThreadPool(2)
-
-    @AfterEach
-    fun shutdown() {
-        scheduler.shutdownNow()
-    }
+    private val scheduler = DeterministicScheduler()
 
     private fun newRegistry(ttl: Duration = Duration.ofMillis(50)): PendingDuelRegistry =
         PendingDuelRegistry(ttl = ttl, scheduler = scheduler)
@@ -60,26 +53,28 @@ class PendingDuelRegistryTest {
     }
 
     @Test
-    fun `expiry callback fires after the configured ttl when offer still pending`() {
+    fun `expiry callback fires when the ttl task runs and offer is still pending`() {
         val registry = newRegistry(ttl = Duration.ofMillis(50))
-        val latch = CountDownLatch(1)
-        registry.register(1L, 10L, 20L, 50L) { _ -> latch.countDown() }
+        val fired = AtomicBoolean(false)
+        registry.register(1L, 10L, 20L, 50L) { _ -> fired.set(true) }
 
-        assertTrue(latch.await(2, TimeUnit.SECONDS), "timeout callback should fire within ttl + slack")
+        scheduler.runPending()
+
+        assertTrue(fired.get(), "timeout callback should fire when scheduler advances")
     }
 
     @Test
     fun `expiry is a no-op after consumeForAccept`() {
         val registry = newRegistry(ttl = Duration.ofMillis(50))
-        val callbackFired = java.util.concurrent.atomic.AtomicBoolean(false)
+        val callbackFired = AtomicBoolean(false)
         val offer = registry.register(1L, 10L, 20L, 50L) { _ -> callbackFired.set(true) }
 
-        // Consume immediately so the timer's later remove() returns null and skips the callback.
+        // Consume immediately — the still-pending timer task will run on the
+        // next scheduler advance, see the offer is already gone, and skip
+        // the callback.
         registry.consumeForAccept(offer.id)
-        Thread.sleep(150)
+        scheduler.runPending()
 
-        // Either the timer fired and saw a null offer (callback skipped), or it didn't fire yet.
-        // Either way, callback must not have fired.
         assertEquals(false, callbackFired.get(), "expiry callback must not run after consume")
     }
 
