@@ -1,15 +1,19 @@
 const { renderScratchResult } = require('../../main/resources/static/js/scratch');
 require('../../main/resources/static/js/casino-jackpot');
 require('../../main/resources/static/js/casino-result');
+require('../../main/resources/static/js/casino-render');
 
 describe('renderScratchResult', () => {
     let resultEl;
     let balanceEl;
+    let tableEl;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="r"></div><span id="b">0</span>';
+        document.body.innerHTML =
+            '<div id="r"></div><span id="b">0</span><section id="t"></section>';
         resultEl = document.getElementById('r');
         balanceEl = document.getElementById('b');
+        tableEl = document.getElementById('t');
     });
 
     test('win shows match count, winning symbol, and net', () => {
@@ -57,5 +61,22 @@ describe('renderScratchResult', () => {
         }, 5, balanceEl);
 
         expect(resultEl.innerHTML).toContain('+10 to jackpot');
+    });
+
+    test('positive net flashes a chip stack on the felt; loss leaves it untouched', () => {
+        // Scratch's response has no `win` field — net > 0 is the win
+        // signal, so the render fn synthesises it for the helper.
+        renderScratchResult(resultEl, {
+            matchCount: 5, winningSymbol: '⭐', net: 200, newBalance: 1_200,
+        }, 5, balanceEl, tableEl);
+        const stack = tableEl.querySelector('.casino-chip-stack');
+        expect(stack).not.toBeNull();
+        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+200');
+
+        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
+        renderScratchResult(resultEl, {
+            net: -100, newBalance: 950,
+        }, 5, balanceEl, tableEl);
+        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
     });
 });

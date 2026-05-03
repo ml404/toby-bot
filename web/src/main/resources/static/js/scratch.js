@@ -1,9 +1,9 @@
 // Pure-DOM render for a /scratch response. Hoisted out of the IIFE so
 // the jest test in `scratch.test.js` can drive it without booting the
-// page. matchThreshold and balanceEl are passed in (they live as DOM
-// attributes / element references inside the IIFE) to keep this fully
-// stateless.
-function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
+// page. matchThreshold / balanceEl / flashTargetEl are passed in (they
+// live as DOM attributes / element references inside the IIFE) to keep
+// this fully stateless.
+function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTargetEl) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -16,6 +16,17 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         });
     }
     if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
+    // Scratch's response has no `win` field — net > 0 is the win signal.
+    // Bigger payouts get a taller stack (capped internally at 7).
+    if (typeof window !== 'undefined' && window.CasinoRender) {
+        const payoutEstimate = (body.jackpotPayout > 0 ? body.jackpotPayout : (body.net || 0));
+        const chipCount = Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100)));
+        window.CasinoRender.flashWinPayout(flashTargetEl, {
+            win: (body.net || 0) > 0,
+            net: body.net,
+            jackpotPayout: body.jackpotPayout,
+        }, chipCount);
+    }
 }
 
 (function () {
@@ -72,24 +83,9 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
             highlightWinCells(activeCard);
-            renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl);
+            renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl, tableEl);
             if (window.CasinoSounds) {
                 window.CasinoSounds.play((activeCard.net || 0) > 0 ? 'win' : 'lose');
-            }
-            // Drop the shared chip flourish on the felt for a win, so a
-            // scratchcard payout celebrates the same way every other
-            // casino game does. flashWinPayout treats `win: true` and a
-            // positive net as the trigger; scratch uses `net > 0` as its
-            // win flag so we synthesise that field for the helper.
-            if (window.CasinoRender) {
-                var payoutEstimate = (activeCard.jackpotPayout > 0
-                    ? activeCard.jackpotPayout
-                    : (activeCard.net || 0));
-                window.CasinoRender.flashWinPayout(tableEl, {
-                    win: (activeCard.net || 0) > 0,
-                    net: activeCard.net,
-                    jackpotPayout: activeCard.jackpotPayout,
-                }, Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100))));
             }
             // Now the credits visibly drop and the topup-coin recompute
             // catches up too — see autoApplyBalance: false in the helper.

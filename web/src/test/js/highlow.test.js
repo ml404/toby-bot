@@ -5,6 +5,7 @@ const {
 } = require('../../main/resources/static/js/highlow');
 require('../../main/resources/static/js/casino-jackpot');
 require('../../main/resources/static/js/casino-result');
+require('../../main/resources/static/js/casino-render');
 
 describe('highlowCardLabel', () => {
     test('maps face cards to letters', () => {
@@ -38,10 +39,12 @@ describe('highlowFormatMultiplier', () => {
 
 describe('renderHighlowResult', () => {
     let resultEl;
+    let tableEl;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="r"></div>';
+        document.body.innerHTML = '<div id="r"></div><section id="t"></section>';
         resultEl = document.getElementById('r');
+        tableEl = document.getElementById('t');
     });
 
     test('win on HIGHER renders next > anchor and shows the realised multiplier', () => {
@@ -82,5 +85,22 @@ describe('renderHighlowResult', () => {
         });
 
         expect(resultEl.innerHTML).toContain('+5 to jackpot');
+    });
+
+    test('positive net flashes a chip stack on the felt; tie/loss leaves it untouched', () => {
+        // Highlow has no `win` field on the response — net > 0 is the
+        // win signal, so the render fn synthesises it for the helper.
+        renderHighlowResult(resultEl, {
+            anchor: 5, next: 11, direction: 'HIGHER', net: 100, multiplier: 1.5,
+        }, tableEl);
+        const stack = tableEl.querySelector('.casino-chip-stack');
+        expect(stack).not.toBeNull();
+        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+100');
+
+        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
+        renderHighlowResult(resultEl, {
+            anchor: 7, next: 7, direction: 'HIGHER', net: -50,
+        }, tableEl);
+        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
     });
 });

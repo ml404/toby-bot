@@ -1,6 +1,7 @@
 const { renderBaccaratResult } = require('../../main/resources/static/js/baccarat');
 require('../../main/resources/static/js/casino-jackpot');
 require('../../main/resources/static/js/casino-result');
+require('../../main/resources/static/js/casino-render');
 
 describe('renderBaccaratResult', () => {
     let resultEl;
@@ -214,5 +215,34 @@ describe('renderBaccaratResult', () => {
             resultEl: null, bankerCardsEl: null, playerCardsEl: null,
             tableEl: null, body: { win: true }
         })).not.toThrow();
+    });
+
+    test('win flashes a chip stack on the flash target; loss leaves it untouched', () => {
+        renderBaccaratResult({
+            resultEl, bankerCardsEl, playerCardsEl,
+            bankerTotalEl, playerTotalEl, tableEl,
+            flashTargetEl: tableEl,
+            body: {
+                win: true, push: false, side: 'PLAYER', winner: 'PLAYER',
+                playerCards: ['5♠', '3♥'], bankerCards: ['2♣', '4♦'],
+                playerTotal: 8, bankerTotal: 6, multiplier: 2.0, net: 100,
+            },
+        });
+        expect(tableEl.querySelector('.casino-chip-stack')).not.toBeNull();
+        expect(tableEl.querySelector('.casino-chip-payout').textContent).toBe('+100');
+
+        // Reset the felt for the loss check.
+        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
+        renderBaccaratResult({
+            resultEl, bankerCardsEl, playerCardsEl,
+            bankerTotalEl, playerTotalEl, tableEl,
+            flashTargetEl: tableEl,
+            body: {
+                win: false, push: false, side: 'PLAYER', winner: 'BANKER',
+                playerCards: ['5♠', '2♥'], bankerCards: ['9♣', '8♦'],
+                playerTotal: 7, bankerTotal: 7, net: -50,
+            },
+        });
+        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
     });
 });
