@@ -65,15 +65,21 @@
 /* ------------------------------------------------------------------- */
 
 .casino-felt {
+    /* Stops brightened from the previous "almost-black green" — the old
+       gradient bottomed out at #0e2418 with a 0.55-alpha inset shadow,
+       which on phones read as black with a green tint. New stops keep
+       the dark-mode mood but stay legibly green at the edges; the inset
+       shadow is also softened so the centre actually shows the bright
+       stop. Adjust here once and every casino game inherits the change. */
     background:
-        radial-gradient(ellipse at center, #1f4a36 0%, #143324 70%, #0e2418 100%);
+        radial-gradient(ellipse at center, #2e6b4f 0%, #1f4a36 70%, #143324 100%);
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 1.25rem;
     padding: 2rem;
     margin-bottom: 1.5rem;
     color: #f0f0f0;
     box-shadow:
-        inset 0 0 60px rgba(0, 0, 0, 0.55),
+        inset 0 0 60px rgba(0, 0, 0, 0.25),
         0 6px 24px rgba(0, 0, 0, 0.35);
     position: relative;
 }
