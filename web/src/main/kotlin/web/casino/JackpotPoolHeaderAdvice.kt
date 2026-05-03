@@ -2,6 +2,8 @@ package web.casino
 
 import database.service.JackpotService
 import org.springframework.core.MethodParameter
+import org.springframework.core.ResolvableType
+import org.springframework.http.HttpEntity
 import org.springframework.http.MediaType
 import org.springframework.http.converter.HttpMessageConverter
 import org.springframework.http.server.ServerHttpRequest
@@ -27,10 +29,27 @@ class JackpotPoolHeaderAdvice(
     private val jackpotService: JackpotService,
 ) : ResponseBodyAdvice<CasinoResponseLike> {
 
+    /**
+     * Spring's [org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor]
+     * passes the OUTER [MethodParameter] (whose `parameterType == ResponseEntity::class.java`)
+     * into [ResponseBodyAdvice.supports]. Every casino controller returns
+     * `ResponseEntity<XxxResponse>`, so a naive `isAssignableFrom(parameterType)`
+     * check would always be `false` and the advice would never fire. Unwrap
+     * [HttpEntity] generics first so both `ResponseEntity<CasinoResponseLike>`
+     * and a direct `CasinoResponseLike` return are matched.
+     */
     override fun supports(
         returnType: MethodParameter,
         converterType: Class<out HttpMessageConverter<*>>,
-    ): Boolean = CasinoResponseLike::class.java.isAssignableFrom(returnType.parameterType)
+    ): Boolean {
+        val resolvable = ResolvableType.forMethodParameter(returnType)
+        val payload = if (HttpEntity::class.java.isAssignableFrom(resolvable.toClass())) {
+            resolvable.getGeneric(0).resolve()
+        } else {
+            resolvable.resolve()
+        } ?: return false
+        return CasinoResponseLike::class.java.isAssignableFrom(payload)
+    }
 
     override fun beforeBodyWrite(
         body: CasinoResponseLike?,
