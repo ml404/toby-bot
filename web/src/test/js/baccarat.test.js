@@ -32,7 +32,11 @@ describe('renderBaccaratResult', () => {
     function renderWith(body) {
         renderBaccaratResult({
             resultEl, bankerCardsEl, playerCardsEl,
-            bankerTotalEl, playerTotalEl, tableEl, body,
+            bankerTotalEl, playerTotalEl, tableEl,
+            // Keep these tests synchronous — staging is exercised by the
+            // dedicated "staged path" test below.
+            stagger: false,
+            body,
         });
     }
 
@@ -222,6 +226,7 @@ describe('renderBaccaratResult', () => {
             resultEl, bankerCardsEl, playerCardsEl,
             bankerTotalEl, playerTotalEl, tableEl,
             flashTargetEl: tableEl,
+            stagger: false,
             body: {
                 win: true, push: false, side: 'PLAYER', winner: 'PLAYER',
                 playerCards: ['5♠', '3♥'], bankerCards: ['2♣', '4♦'],
@@ -237,6 +242,7 @@ describe('renderBaccaratResult', () => {
             resultEl, bankerCardsEl, playerCardsEl,
             bankerTotalEl, playerTotalEl, tableEl,
             flashTargetEl: tableEl,
+            stagger: false,
             body: {
                 win: false, push: false, side: 'PLAYER', winner: 'BANKER',
                 playerCards: ['5♠', '2♥'], bankerCards: ['9♣', '8♦'],
@@ -244,5 +250,56 @@ describe('renderBaccaratResult', () => {
             },
         });
         expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
+    });
+
+    test('staged path holds the result line until the deal sequence completes', () => {
+        jest.useFakeTimers();
+        try {
+            renderBaccaratResult({
+                resultEl, bankerCardsEl, playerCardsEl,
+                bankerTotalEl, playerTotalEl, tableEl,
+                flashTargetEl: tableEl,
+                stagger: true,
+                dealMs: 50,
+                body: {
+                    win: true, push: false, side: 'PLAYER', winner: 'PLAYER',
+                    playerCards: ['5♠', '3♥'], bankerCards: ['2♣', '4♦'],
+                    playerTotal: 8, bankerTotal: 6,
+                    isPlayerNatural: true, isBankerNatural: false,
+                    multiplier: 2.0, net: 100,
+                },
+            });
+
+            // Synchronously after the call: cards haven't been dealt yet
+            // (only the t=0 setTimeout is queued), result line is empty,
+            // totals are blanked while the deal plays out.
+            expect(resultEl.classList.contains('bac-result-win')).toBe(false);
+            expect(resultEl.innerHTML).toBe('');
+            expect(playerTotalEl.textContent).toBe('');
+            expect(bankerTotalEl.textContent).toBe('');
+            expect(playerCardsEl.querySelectorAll('.casino-card-glyph').length).toBe(0);
+            expect(bankerCardsEl.querySelectorAll('.casino-card-glyph').length).toBe(0);
+
+            // Halfway through the first interval — only Player's first card.
+            jest.advanceTimersByTime(25);
+            expect(playerCardsEl.querySelectorAll('.casino-card-glyph').length).toBe(1);
+            expect(bankerCardsEl.querySelectorAll('.casino-card-glyph').length).toBe(0);
+            expect(resultEl.classList.contains('bac-result-win')).toBe(false);
+
+            // Advance past the deal sequence (4 * 50ms = 200ms) but stop
+            // before flashChipsOn's 2.5s safety-cleanup timer fires —
+            // otherwise runAllTimers would remove the chip stack we want
+            // to assert.
+            jest.advanceTimersByTime(250);
+            expect(playerCardsEl.querySelectorAll('.casino-card-glyph').length).toBe(2);
+            expect(bankerCardsEl.querySelectorAll('.casino-card-glyph').length).toBe(2);
+            expect(resultEl.classList.contains('bac-result-win')).toBe(true);
+            expect(resultEl.innerHTML).toContain('Player wins');
+            expect(playerTotalEl.textContent).toBe('(8 • Natural)');
+            expect(bankerTotalEl.textContent).toBe('(6)');
+            expect(tableEl.querySelector('.casino-chip-stack')).not.toBeNull();
+        } finally {
+            jest.useRealTimers();
+        }
     });
 });
