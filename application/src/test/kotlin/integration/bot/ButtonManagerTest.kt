@@ -55,7 +55,7 @@ class ButtonManagerTest {
         configService = mockk()
         userDtoHelper = mockk()
         buttonManager = DefaultButtonManager(configService, userDtoHelper, buttons)
-        mockkStatic(PlayerManager::class)
+        mockkObject(PlayerManager)
         mockkObject(MusicPlayerHelper)
 
         every { userDtoHelper.calculateUserDto(1, 1, true) } returns mockk(relaxed = true)

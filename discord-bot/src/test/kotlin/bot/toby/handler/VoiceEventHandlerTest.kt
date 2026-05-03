@@ -31,8 +31,14 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.parallel.ResourceLock
+import org.junit.jupiter.api.parallel.ResourceLocks
 
 @ExtendWith(MockKExtension::class)
+@ResourceLocks(
+    ResourceLock("playerManager"),
+    ResourceLock("musicPlayerHelper")
+)
 class VoiceEventHandlerTest {
 
     private val jda: JDA = mockk()

@@ -108,6 +108,14 @@ configurations {
 tasks.register('testJar', Jar) {
     archiveClassifier = 'tests'  // Naming the JAR with a 'tests' classifier
     from sourceSets.test.output  // Include test classes in the JAR
+    // junit-platform.properties is module-local: it tells JUnit 5 to run
+    // THIS module's tests with `mode.classes.default=concurrent`. Without
+    // this exclude, the file would land at the root of the test jar and
+    // `:application:test` would pick it up off the classpath via
+    // `testArtifacts` and try to parallelize its own ITs — which it isn't
+    // safe for (Spring TestContext + Postgres). Mirror what `:database`
+    // already does.
+    exclude 'junit-platform.properties'
 }
 
 artifacts {

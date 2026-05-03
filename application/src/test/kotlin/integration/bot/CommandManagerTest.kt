@@ -80,7 +80,7 @@ class CommandManagerTest {
         userDtoHelper = mockk()
         awardService = mockk(relaxed = true)
         commandManager = DefaultCommandManager(configService, userDtoHelper, awardService, commands)
-        mockkStatic(PlayerManager::class)
+        mockkObject(PlayerManager)
         mockkObject(MusicPlayerHelper)
     }
 

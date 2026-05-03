@@ -10,7 +10,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.ResourceLock
 
+@ResourceLock("playerManager")
 class TrackSchedulerTest {
 
     private val player: AudioPlayer = mockk(relaxed = true)
@@ -27,14 +29,14 @@ class TrackSchedulerTest {
     @BeforeEach
     fun setUp() {
         scheduler = TrackScheduler(player, guildId = 1L, deleteDelay = 5)
-        mockkObject(PlayerManager.Companion)
+        mockkObject(PlayerManager)
         every { PlayerManager.instance } returns mockk(relaxed = true)
     }
 
     @AfterEach
     fun tearDown() {
         clearAllMocks()
-        unmockkObject(PlayerManager.Companion)
+        unmockkObject(PlayerManager)
     }
 
     @Test
