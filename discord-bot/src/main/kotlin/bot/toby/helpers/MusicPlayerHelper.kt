@@ -7,8 +7,10 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import common.discord.embed
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import database.dto.MusicDto
 import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -102,17 +104,13 @@ object MusicPlayerHelper {
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int): Boolean {
         return if (track == null) {
             logger.warn { "No track is currently playing on guild ${hook.interaction.guild?.idLong}.." }
-            val embed = EmbedBuilder()
-                .setTitle("No Track Playing")
-                .setDescription("There is no track playing currently")
-                .setColor(Color.RED)
-                .build()
-
-            hook.sendMessageEmbeds(embed).setEphemeral(true).queue(
-                invokeDeleteOnMessageResponse(
-                    deleteDelay
-                )
+            val noTrackEmbed = embed(
+                title = "No Track Playing",
+                description = "There is no track playing currently",
+                color = Color.RED,
             )
+            hook.sendMessageEmbeds(noTrackEmbed).setEphemeral(true)
+                .queue(invokeDeleteOnMessageResponse(deleteDelay))
             true
         } else {
             false
@@ -131,14 +129,14 @@ object MusicPlayerHelper {
             }
             musicManager.audioPlayer.isPaused = false
             hook.deleteOriginal().queue()
-            val embed = EmbedBuilder()
-                .setTitle("Player Stopped")
-                .setDescription("The player has been stopped and the queue has been cleared")
-                .setColor(Color.RED)
-                .build()
-
-            hook.sendMessageEmbeds(embed)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyEmbedAndDelete(
+                embed(
+                    title = "Player Stopped",
+                    description = "The player has been stopped and the queue has been cleared",
+                    color = Color.RED,
+                ),
+                deleteDelay,
+            )
             resetMessages(event.guild!!.idLong)
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
@@ -163,13 +161,14 @@ object MusicPlayerHelper {
     ) {
         val track = audioPlayer.playingTrack
         val hook = event.hook
-        val embed = EmbedBuilder()
-            .setTitle("Track Pause/Resume")
-            .setDescription("$content${track?.info?.title}` by `${track?.info?.author}`")
-            .setColor(Color.CYAN)
-            .build()
-
-        hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        hook.replyEmbedAndDelete(
+            embed(
+                title = "Track Pause/Resume",
+                description = "$content${track?.info?.title}` by `${track?.info?.author}`",
+                color = Color.CYAN,
+            ),
+            deleteDelay,
+        )
         audioPlayer.isPaused = paused
     }
 
@@ -187,25 +186,26 @@ object MusicPlayerHelper {
         when {
             audioPlayer.playingTrack == null -> {
                 logger.warn { "Attempted to skip tracks but no track is currently playing ." }
-                val embed = EmbedBuilder()
-                    .setTitle("No Track Playing")
-                    .setDescription("There is no track playing currently")
-                    .setColor(Color.RED)
-                    .build()
-
-                hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                hook.replyEmbedAndDelete(
+                    embed(
+                        title = "No Track Playing",
+                        description = "There is no track playing currently",
+                        color = Color.RED,
+                    ),
+                    deleteDelay,
+                )
                 return
             }
 
             tracksToSkip < 0 -> {
                 logger.warn { "Attempted to skip a negative number of tracks: $tracksToSkip ." }
-                val embed = EmbedBuilder()
-                    .setTitle("Invalid Skip Request")
-                    .setDescription("You're not too bright, but thanks for trying")
-                    .setColor(Color.RED)
-                    .build()
-
-                hook.sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                val invalidSkipEmbed = embed(
+                    title = "Invalid Skip Request",
+                    description = "You're not too bright, but thanks for trying",
+                    color = Color.RED,
+                )
+                hook.sendMessageEmbeds(invalidSkipEmbed).setEphemeral(true)
+                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
                 return
             }
         }
@@ -218,13 +218,14 @@ object MusicPlayerHelper {
             }
             musicManager.scheduler.isLooping = false
 
-            val embed = EmbedBuilder()
-                .setTitle("Tracks Skipped")
-                .setDescription("Skipped $tracksToSkip track(s)")
-                .setColor(Color.CYAN)
-                .build()
-
-            hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyEmbedAndDelete(
+                embed(
+                    title = "Tracks Skipped",
+                    description = "Skipped $tracksToSkip track(s)",
+                    color = Color.CYAN,
+                ),
+                deleteDelay,
+            )
         } else {
             sendDeniedStoppableMessage(hook, musicManager, deleteDelay)
         }

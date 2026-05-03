@@ -56,10 +56,10 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
 (function () {
     'use strict';
 
-    const main = document.querySelector('main[data-guild-id]');
-    if (!main) return;
+    const els = window.TobyCasinoMinigameDom &&
+        window.TobyCasinoMinigameDom.standardElements('highlow', 'deal');
+    if (!els) return;
 
-    const guildId = main.dataset.guildId;
     const postJson = window.TobyApi && window.TobyApi.postJson;
 
     const anchorFace = document.getElementById('highlow-anchor-face');
@@ -67,19 +67,13 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
     const anchorCard = document.getElementById('highlow-anchor');
     const nextCard = document.getElementById('highlow-next');
     const tableEl = document.querySelector('.highlow-table');
-    const stakeInput = document.getElementById('highlow-stake');
-    const dealBtn = document.getElementById('highlow-deal');
-    const dealTobyBtn = document.getElementById('highlow-deal-toby');
-    const balanceEl = document.getElementById('highlow-balance');
-    const resultEl = document.getElementById('highlow-result');
-    const form = document.getElementById('highlow-bet');
     const directionPicker = document.getElementById('highlow-direction-picker');
     const higherBtn = document.getElementById('highlow-call-higher');
     const lowerBtn = document.getElementById('highlow-call-lower');
     const higherMultEl = document.getElementById('highlow-call-higher-mult');
     const lowerMultEl = document.getElementById('highlow-call-lower-mult');
 
-    if (!form || !dealBtn || !stakeInput || !anchorFace || !nextFace) return;
+    if (!els.form || !els.primaryBtn || !els.stakeInput || !anchorFace || !nextFace) return;
     if (!directionPicker || !higherBtn || !lowerBtn) return;
 
     const NEXT_DEAL_MS = 900;
@@ -103,9 +97,9 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         directionPicker.hidden = true;
         higherBtn.disabled = false;
         lowerBtn.disabled = false;
-        form.hidden = false;
-        dealBtn.disabled = false;
-        if (dealTobyBtn) dealTobyBtn.disabled = false;
+        els.form.hidden = false;
+        els.primaryBtn.disabled = false;
+        if (els.tobyBtn) els.tobyBtn.disabled = false;
         anchorFace.textContent = '?';
         if (anchorCard) delete anchorCard.dataset.value;
         nextFace.textContent = '?';
@@ -122,12 +116,12 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         }
         nextFace.textContent = '?';
         if (nextCard) delete nextCard.dataset.value;
-        form.hidden = true;
+        els.form.hidden = true;
         directionPicker.hidden = false;
         higherBtn.disabled = false;
         lowerBtn.disabled = false;
         setMultiplierLabels(higherMult, lowerMult);
-        if (resultEl) resultEl.hidden = true;
+        if (els.resultEl) els.resultEl.hidden = true;
     }
 
     function startNextShuffle() {
@@ -170,16 +164,16 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
     // /start uses the shared form + TOBY-topup scaffolding. /play has
     // its own button pair below — different lifecycle, kept manual.
     const game = window.TobyCasinoGame.init({
-        guildId: guildId,
-        endpoint: '/casino/' + guildId + '/highlow/start',
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: dealBtn,
-        tobyBtn: dealTobyBtn,
-        balanceEl: balanceEl,
-        resultEl: resultEl,
-        tobyCoins: Number(main.dataset.tobyCoins) || 0,
-        marketPrice: Number(main.dataset.marketPrice) || 0,
+        guildId: els.guildId,
+        endpoint: '/casino/' + els.guildId + '/highlow/start',
+        form: els.form,
+        stakeInput: els.stakeInput,
+        primaryBtn: els.primaryBtn,
+        tobyBtn: els.tobyBtn,
+        balanceEl: els.balanceEl,
+        resultEl: els.resultEl,
+        tobyCoins: els.tobyCoins,
+        marketPrice: els.marketPrice,
         failureMessage: 'Could not lock the round.',
         // /start doesn't settle credit/coin movement — it just locks
         // the stake and deals the anchor. Balance updates land via
@@ -205,7 +199,7 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         const intervalId = startNextShuffle();
         const requestStart = Date.now();
 
-        postJson('/casino/' + guildId + '/highlow/play', { direction: direction })
+        postJson('/casino/' + els.guildId + '/highlow/play', { direction: direction })
             .then(function (body) {
                 const elapsed = Date.now() - requestStart;
                 const remaining = Math.max(0, NEXT_DEAL_MS - elapsed);
@@ -213,7 +207,7 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
                     playing = false;
                     if (body && body.ok) {
                         stopNextShuffle(intervalId, body.next);
-                        renderHighlowResult(resultEl, body, tableEl);
+                        renderHighlowResult(els.resultEl, body, tableEl);
                         if (window.CasinoSounds) {
                             window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
                         }
@@ -246,10 +240,10 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
 
     // If the server pre-rendered an active round (page refresh mid-round),
     // jump straight to call mode so the player can finish their bet.
-    const preloadedAnchor = parseInt(main.dataset.activeAnchor || '', 10);
+    const preloadedAnchor = parseInt(els.main.dataset.activeAnchor || '', 10);
     if (Number.isFinite(preloadedAnchor) && preloadedAnchor > 0) {
-        const preloadedHigher = parseFloat(main.dataset.higherMultiplier || '');
-        const preloadedLower = parseFloat(main.dataset.lowerMultiplier || '');
+        const preloadedHigher = parseFloat(els.main.dataset.higherMultiplier || '');
+        const preloadedLower = parseFloat(els.main.dataset.lowerMultiplier || '');
         showCallMode(preloadedAnchor, preloadedHigher, preloadedLower);
     }
 })();

@@ -1,15 +1,15 @@
 package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
+import bot.toby.helpers.intOption
+import common.discord.embed
+import common.discord.field
 import common.events.CampaignEventType
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
-import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.components.actionrow.ActionRow
@@ -18,7 +18,7 @@ import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import web.service.SessionLogPublisher
-import java.util.*
+import java.awt.Color
 
 @Component
 class RollCommand @Autowired constructor(
@@ -32,18 +32,10 @@ class RollCommand @Autowired constructor(
     }
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        val diceValueOptional =
-            Optional.ofNullable(event.getOption(DICE_NUMBER)).map { obj: OptionMapping -> obj.asInt }
-        val diceToRollOptional =
-            Optional.ofNullable(event.getOption(DICE_TO_ROLL)).map { obj: OptionMapping -> obj.asInt }
-        val diceModifierOptional =
-            Optional.ofNullable(event.getOption(MODIFIER)).map { obj: OptionMapping -> obj.asInt }
-        val diceValue = diceValueOptional.orElse(20)
-        val diceToRollInput = diceToRollOptional.orElse(1)
-        val diceToRoll = if (diceToRollInput < 1) 1 else diceToRollInput
-        val modifier = diceModifierOptional.orElse(0)
-        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(invokeDeleteOnMessageResponse(deleteDelay)
-        )
+        val diceValue = event.intOption(DICE_NUMBER, 20)
+        val diceToRoll = event.intOption(DICE_TO_ROLL, 1).coerceAtLeast(1)
+        val modifier = event.intOption(MODIFIER, 0)
+        handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     fun handleDiceRoll(
@@ -55,24 +47,23 @@ class RollCommand @Autowired constructor(
         event.deferReply().queue()
         val rollTotal = dndHelper.rollDice(diceValue, diceToRoll)
         publishRollEvent(event, diceValue, diceToRoll, modifier, rollTotal)
-        val sb = StringBuilder().append(
-            String.format("Your final roll total was '%d' (%d + %d).", rollTotal + modifier, rollTotal, modifier)
+        val rollSummary = String.format(
+            "Your final roll total was '%d' (%d + %d).",
+            rollTotal + modifier, rollTotal, modifier
         )
-        val embedBuilder = EmbedBuilder()
-            .addField(
-                MessageEmbed.Field(
-                    String.format("%dd%d + %d", diceToRoll, diceValue, modifier),
-                    sb.toString(),
-                    true
-                )
+        val rollEmbed = embed(color = Color.GREEN) {
+            field(
+                name = String.format("%dd%d + %d", diceToRoll, diceValue, modifier),
+                value = rollSummary,
+                inline = true,
             )
-            .setColor(0x00FF00) // Green color
+        }
         val rollD20 = Button.primary("$name:20, 1, 0", "Roll D20")
         val rollD10 = Button.primary("$name:10, 1, 0", "Roll D10")
         val rollD6 = Button.primary("$name:6, 1, 0", "Roll D6")
         val rollD4 = Button.primary("$name:4, 1, 0", "Roll D4")
         return event.hook
-            .sendMessageEmbeds(embedBuilder.build())
+            .sendMessageEmbeds(rollEmbed)
             .addComponents(ActionRow.of(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4))
     }
 

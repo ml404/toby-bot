@@ -1,5 +1,6 @@
 package web.controller
 
+import common.casino.CasinoCommonFailure
 import database.economy.Dice
 import database.service.DiceService
 import database.service.DiceService.RollOutcome
@@ -18,8 +19,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
+import web.util.positiveOrNull
 
 /**
  * Web surface for the `/dice` minigame. GET renders the picker UI;
@@ -44,18 +47,13 @@ class DiceController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
-    ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/casino/guilds"
-        }
-        model.addAttribute("minStake", Dice.MIN_STAKE)
-        model.addAttribute("maxStake", Dice.MAX_STAKE)
-        model.addAttribute("sides", Dice.DEFAULT_SIDES)
-        model.addAttribute("multiplier", Dice.DEFAULT_MULTIPLIER)
-        "dice"
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra, template = "dice"
+    ) {
+        addAttribute("minStake", Dice.MIN_STAKE)
+        addAttribute("maxStake", Dice.MAX_STAKE)
+        addAttribute("sides", Dice.DEFAULT_SIDES)
+        addAttribute("multiplier", Dice.DEFAULT_MULTIPLIER)
     }
 
     @PostMapping("/roll")
@@ -77,8 +75,8 @@ class DiceController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -92,19 +90,16 @@ class DiceController(
                     payout = 0L,
                     newBalance = outcome.newBalance,
                     win = false,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    lossTribute = outcome.lossTribute.positiveOrNull(),
                 )
             )
 
-            is RollOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
-            is RollOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
-            is RollOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
             is RollOutcome.InvalidPrediction ->
                 errors.badRequest("Pick a number between ${outcome.min} and ${outcome.max}.")
 
-            RollOutcome.UnknownUser -> errors.unknownUser()
+            is CasinoCommonFailure -> errors.mapCommonFailure(outcome)
         }
     }
 }

@@ -1,5 +1,6 @@
 package database.service
 
+import common.casino.CasinoCommonFailure
 import database.economy.ScratchCard
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -48,10 +49,13 @@ class ScratchService(
             val lossTribute: Long = 0L,
         ) : ScratchOutcome
 
-        data class InsufficientCredits(val stake: Long, val have: Long) : ScratchOutcome
-        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : ScratchOutcome
-        data class InvalidStake(val min: Long, val max: Long) : ScratchOutcome
-        data object UnknownUser : ScratchOutcome
+        data class InsufficientCredits(override val stake: Long, override val have: Long) :
+            ScratchOutcome, CasinoCommonFailure.InsufficientCredits
+        data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
+            ScratchOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
+        data class InvalidStake(override val min: Long, override val max: Long) :
+            ScratchOutcome, CasinoCommonFailure.InvalidStake
+        data object UnknownUser : ScratchOutcome, CasinoCommonFailure.UnknownUser
     }
 
     fun scratch(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): ScratchOutcome {

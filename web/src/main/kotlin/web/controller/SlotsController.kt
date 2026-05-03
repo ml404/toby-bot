@@ -1,5 +1,6 @@
 package web.controller
 
+import common.casino.CasinoCommonFailure
 import database.economy.SlotMachine
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
@@ -18,8 +19,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
+import web.util.positiveOrNull
 
 /**
  * Web surface for the `/slots` minigame. GET renders the reel UI with the
@@ -46,17 +49,13 @@ class SlotsController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/leaderboards"
-    ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/leaderboards"
-        }
-        model.addAttribute("minStake", SlotMachine.MIN_STAKE)
-        model.addAttribute("maxStake", SlotMachine.MAX_STAKE)
-        model.addAttribute("payoutTable", payoutRows())
-        "slots"
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra,
+        template = "slots", lobbyPath = "/leaderboards"
+    ) {
+        addAttribute("minStake", SlotMachine.MIN_STAKE)
+        addAttribute("maxStake", SlotMachine.MAX_STAKE)
+        addAttribute("payoutTable", payoutRows())
     }
 
     @PostMapping("/spin")
@@ -78,8 +77,8 @@ class SlotsController(
                     net = outcome.net,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -93,16 +92,13 @@ class SlotsController(
                     net = -outcome.stake,
                     newBalance = outcome.newBalance,
                     win = false,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    lossTribute = outcome.lossTribute.positiveOrNull(),
                 )
             )
 
-            is SpinOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
-            is SpinOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
-            is SpinOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
-            SpinOutcome.UnknownUser -> errors.unknownUser()
+            is CasinoCommonFailure -> errors.mapCommonFailure(outcome)
         }
     }
 

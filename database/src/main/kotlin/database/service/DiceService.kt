@@ -1,5 +1,6 @@
 package database.service
 
+import common.casino.CasinoCommonFailure
 import database.economy.Dice
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -50,11 +51,14 @@ class DiceService(
             val lossTribute: Long = 0L,
         ) : RollOutcome
 
-        data class InsufficientCredits(val stake: Long, val have: Long) : RollOutcome
-        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : RollOutcome
-        data class InvalidStake(val min: Long, val max: Long) : RollOutcome
+        data class InsufficientCredits(override val stake: Long, override val have: Long) :
+            RollOutcome, CasinoCommonFailure.InsufficientCredits
+        data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
+            RollOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
+        data class InvalidStake(override val min: Long, override val max: Long) :
+            RollOutcome, CasinoCommonFailure.InvalidStake
         data class InvalidPrediction(val min: Int, val max: Int) : RollOutcome
-        data object UnknownUser : RollOutcome
+        data object UnknownUser : RollOutcome, CasinoCommonFailure.UnknownUser
     }
 
     fun roll(

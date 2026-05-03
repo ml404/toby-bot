@@ -1,5 +1,6 @@
 package web.controller
 
+import common.casino.CasinoCommonFailure
 import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
@@ -19,8 +20,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
+import web.util.positiveOrNull
 
 @Controller
 @RequestMapping("/casino/{guildId}/highlow")
@@ -40,32 +43,26 @@ class HighlowController(
         session: HttpSession,
         model: Model,
         ra: RedirectAttributes
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
-    ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/casino/guilds"
-        }
-
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra, template = "highlow"
+    ) {
         // Stake commits first, anchor is dealt after the player locks it.
         // If a round is already locked in this session, surface it so the
         // player isn't asked to lock again on refresh.
         val activeAnchor = activeAnchor(session, guildId)
         val activeStake = activeStake(session, guildId)
 
-        model.addAttribute("minStake", Highlow.MIN_STAKE)
-        model.addAttribute("maxStake", Highlow.MAX_STAKE)
-        model.addAttribute("anchor", activeAnchor)
-        model.addAttribute("anchorLabel", activeAnchor?.let { cardLabel(it) } ?: "?")
-        model.addAttribute("higherMultiplier", activeAnchor?.let {
+        addAttribute("minStake", Highlow.MIN_STAKE)
+        addAttribute("maxStake", Highlow.MAX_STAKE)
+        addAttribute("anchor", activeAnchor)
+        addAttribute("anchorLabel", activeAnchor?.let { cardLabel(it) } ?: "?")
+        addAttribute("higherMultiplier", activeAnchor?.let {
             highlowService.payoutMultiplier(it, Highlow.Direction.HIGHER)
         })
-        model.addAttribute("lowerMultiplier", activeAnchor?.let {
+        addAttribute("lowerMultiplier", activeAnchor?.let {
             highlowService.payoutMultiplier(it, Highlow.Direction.LOWER)
         })
-        model.addAttribute("activeStake", activeStake)
-        "highlow"
+        addAttribute("activeStake", activeStake)
     }
 
     @PostMapping("/start")
@@ -141,8 +138,8 @@ class HighlowController(
                     multiplier = outcome.multiplier,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -157,16 +154,13 @@ class HighlowController(
                     payout = 0L,
                     newBalance = outcome.newBalance,
                     win = false,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    lossTribute = outcome.lossTribute.positiveOrNull(),
                 )
             )
 
-            is PlayOutcome.InsufficientCredits -> playErrors.insufficientCredits(outcome.stake, outcome.have)
-            is PlayOutcome.InsufficientCoinsForTopUp -> playErrors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
-            is PlayOutcome.InvalidStake -> playErrors.invalidStake(outcome.min, outcome.max)
-            PlayOutcome.UnknownUser -> playErrors.unknownUser()
+            is CasinoCommonFailure -> playErrors.mapCommonFailure(outcome)
         }
     }
 

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Shared scaffolding fragments used by every minigame template
+    (dice, coinflip, slots, scratch, highlow, baccarat). Each used
+    to repeat the same `data-*` attribute trio on `<main>` and the
+    same 7-script footer block; centralising both means a tweak to
+    the topup contract or a new shared script is one edit.
+-->
+
+<!--
+    Standard data-attribute triple every minigame `<main>` carries:
+    guildId, the user's TOBY balance, and the live market price. The
+    JS scaffolding (`casino-minigame-dom.js`, `casino-topup.js`) reads
+    these via `main.dataset` so the same selectors work on every page.
+
+    Game-specific data attributes (e.g. highlow's `data-anchor`,
+    `data-active-stake`, `data-higher-multiplier`) still belong inline
+    on the `<main>` element — this fragment only covers what's truly
+    universal.
+
+    Used as `th:attr="${#fragments.replace(...)}"` won't help for attrs;
+    instead the page renders this as an inline include and the attrs
+    are merged onto the surrounding element via Thymeleaf's th:attr.
+-->
+
+<!--
+    Shared script block for every minigame page. Order matters:
+      api       — fetch wrapper / CSRF
+      toasts    — toast notifications
+      sounds    — audio cues
+      jackpot   — jackpot pool banner mirroring
+      topup     — TOBY shortfall sell button
+      result    — win/lose class toggling + balance refresh
+      game      — TobyCasinoGame.init scaffolding
+      dom       — standard `{prefix}-X` element selectors
+      resultLine — win/lose HTML factory used by per-game JS
+    Each per-game template adds its own `<script th:src="@{/js/{game}.js}">`
+    after this block.
+-->
+<th:block th:fragment="scripts">
+    <script th:src="@{/js/api.js}"></script>
+    <script th:src="@{/js/toasts.js}"></script>
+    <script th:src="@{/js/casino-sounds.js}"></script>
+    <script th:src="@{/js/casino-jackpot.js}"></script>
+    <script th:src="@{/js/casino-topup.js}"></script>
+    <script th:src="@{/js/casino-result.js}"></script>
+    <script th:src="@{/js/casino-game.js}"></script>
+    <script th:src="@{/js/casino-minigame-dom.js}"></script>
+    <script th:src="@{/js/casino-result-line.js}"></script>
+</th:block>
+
+</body>
+</html>

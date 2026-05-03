@@ -181,41 +181,35 @@ function loseLineHtml(body, sideLabel, winnerLabel) {
 (function () {
     'use strict';
 
-    var main = document.querySelector('main[data-guild-id]');
-    if (!main) return;
+    var els = window.TobyCasinoMinigameDom &&
+        window.TobyCasinoMinigameDom.standardElements('bac', 'deal');
+    if (!els) return;
 
-    var guildId = main.dataset.guildId;
-    var stakeInput = document.getElementById('bac-stake');
-    var dealBtn = document.getElementById('bac-deal');
-    var dealTobyBtn = document.getElementById('bac-deal-toby');
-    var balanceEl = document.getElementById('bac-balance');
-    var resultEl = document.getElementById('bac-result');
-    var form = document.getElementById('bac-bet');
     var tableEl = document.getElementById('bac-table');
     var bankerCardsEl = document.getElementById('bac-banker-cards');
     var playerCardsEl = document.getElementById('bac-player-cards');
     var bankerTotalEl = document.getElementById('bac-banker-total');
     var playerTotalEl = document.getElementById('bac-player-total');
 
-    if (!form || !dealBtn || !stakeInput) return;
+    if (!els.form || !els.primaryBtn || !els.stakeInput) return;
 
     function selectedSide() {
-        var checked = form.querySelector('input[name="side"]:checked');
+        var checked = els.form.querySelector('input[name="side"]:checked');
         return checked ? checked.value : null;
     }
 
     if (window.TobyCasinoGame) {
         window.TobyCasinoGame.init({
-            guildId: guildId,
-            endpoint: '/casino/' + guildId + '/baccarat/play',
-            form: form,
-            stakeInput: stakeInput,
-            primaryBtn: dealBtn,
-            tobyBtn: dealTobyBtn,
-            balanceEl: balanceEl,
-            resultEl: resultEl,
-            tobyCoins: Number(main.dataset.tobyCoins) || 0,
-            marketPrice: Number(main.dataset.marketPrice) || 0,
+            guildId: els.guildId,
+            endpoint: '/casino/' + els.guildId + '/baccarat/play',
+            form: els.form,
+            stakeInput: els.stakeInput,
+            primaryBtn: els.primaryBtn,
+            tobyBtn: els.tobyBtn,
+            balanceEl: els.balanceEl,
+            resultEl: els.resultEl,
+            tobyCoins: els.tobyCoins,
+            marketPrice: els.marketPrice,
             failureMessage: 'Deal failed.',
             validate: function () {
                 if (!selectedSide()) return 'Pick a side first.';
@@ -226,7 +220,7 @@ function loseLineHtml(body, sideLabel, winnerLabel) {
             },
             renderResult: function (body) {
                 renderBaccaratResult({
-                    resultEl: resultEl,
+                    resultEl: els.resultEl,
                     bankerCardsEl: bankerCardsEl,
                     playerCardsEl: playerCardsEl,
                     bankerTotalEl: bankerTotalEl,

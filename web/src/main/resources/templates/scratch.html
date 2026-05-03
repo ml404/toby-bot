@@ -85,13 +85,7 @@
 
 <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
-<script th:src="@{/js/api.js}"></script>
-<script th:src="@{/js/toasts.js}"></script>
-<script th:src="@{/js/casino-sounds.js}"></script>
-<script th:src="@{/js/casino-jackpot.js}"></script>
-<script th:src="@{/js/casino-topup.js}"></script>
-<script th:src="@{/js/casino-result.js}"></script>
-<script th:src="@{/js/casino-game.js}"></script>
+<th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
 <script th:src="@{/js/scratch.js}"></script>
 </body>
 </html>
