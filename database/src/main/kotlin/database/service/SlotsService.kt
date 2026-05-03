@@ -67,62 +67,42 @@ class SlotsService(
     }
 
     fun spin(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): SpinOutcome {
-        val initial = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE
-        )
-        var soldCoins = 0L
-        var newPrice: Double? = null
-        val resolved = when (initial) {
-            is BalanceCheck.InvalidStake -> return SpinOutcome.InvalidStake(initial.min, initial.max)
-            BalanceCheck.UnknownUser -> return SpinOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> {
-                if (!autoTopUp) return SpinOutcome.InsufficientCredits(initial.stake, initial.have)
-                // Lock the user row to feed the helper. WagerHelper already
-                // returned Insufficient — re-acquire to get the managed entity.
-                val user = userService.getUserByIdForUpdate(discordId, guildId)
-                    ?: return SpinOutcome.UnknownUser
-                val topUp = CasinoTopUpHelper.ensureCreditsForWager(
-                    tradeService, marketService, userService,
-                    user, guildId, currentBalance = initial.have, stake = stake
-                )
-                when (topUp) {
-                    is TopUpResult.InsufficientCoins ->
-                        return SpinOutcome.InsufficientCoinsForTopUp(topUp.needed, topUp.have)
-                    TopUpResult.MarketUnavailable ->
-                        return SpinOutcome.InsufficientCredits(initial.stake, initial.have)
-                    is TopUpResult.ToppedUp -> {
-                        soldCoins = topUp.soldCoins
-                        newPrice = topUp.newPrice
-                        BalanceCheck.Ok(topUp.user, topUp.balance)
-                    }
-                }
-            }
-            is BalanceCheck.Ok -> initial
+        val resolved = when (val r = WagerHelper.checkLockOrTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE, autoTopUp
+        )) {
+            is TopUpResolution.InvalidStake -> return SpinOutcome.InvalidStake(r.min, r.max)
+            TopUpResolution.UnknownUser -> return SpinOutcome.UnknownUser
+            is TopUpResolution.StillInsufficientCredits ->
+                return SpinOutcome.InsufficientCredits(r.stake, r.have)
+            is TopUpResolution.InsufficientCoinsForTopUp ->
+                return SpinOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.Ok -> r
         }
 
         val pull = machine.pull(random)
-        val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, pull.multiplier)
+        val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, pull.multiplier)
         return if (pull.isWin) {
             val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             SpinOutcome.Win(
                 stake = stake,
                 multiplier = pull.multiplier,
-                payout = r.payout,
-                net = r.net,
+                payout = wager.payout,
+                net = wager.net,
                 symbols = pull.symbols,
-                newBalance = r.newBalance + jackpot,
+                newBalance = wager.newBalance + jackpot,
                 jackpotPayout = jackpot,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
             SpinOutcome.Lose(
                 stake = stake,
                 symbols = pull.symbols,
-                newBalance = r.newBalance,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                newBalance = wager.newBalance,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
                 lossTribute = tribute,
             )
         }

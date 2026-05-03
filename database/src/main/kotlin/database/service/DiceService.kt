@@ -67,51 +67,33 @@ class DiceService(
         if (!dice.isValidPrediction(predicted)) {
             return RollOutcome.InvalidPrediction(1, dice.sidesCount)
         }
-        val initial = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, Dice.MIN_STAKE, Dice.MAX_STAKE
-        )
-        var soldCoins = 0L
-        var newPrice: Double? = null
-        val resolved = when (initial) {
-            is BalanceCheck.InvalidStake -> return RollOutcome.InvalidStake(initial.min, initial.max)
-            BalanceCheck.UnknownUser -> return RollOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> {
-                if (!autoTopUp) return RollOutcome.InsufficientCredits(initial.stake, initial.have)
-                val user = userService.getUserByIdForUpdate(discordId, guildId)
-                    ?: return RollOutcome.UnknownUser
-                val topUp = CasinoTopUpHelper.ensureCreditsForWager(
-                    tradeService, marketService, userService,
-                    user, guildId, currentBalance = initial.have, stake = stake
-                )
-                when (topUp) {
-                    is TopUpResult.InsufficientCoins ->
-                        return RollOutcome.InsufficientCoinsForTopUp(topUp.needed, topUp.have)
-                    TopUpResult.MarketUnavailable ->
-                        return RollOutcome.InsufficientCredits(initial.stake, initial.have)
-                    is TopUpResult.ToppedUp -> {
-                        soldCoins = topUp.soldCoins
-                        newPrice = topUp.newPrice
-                        BalanceCheck.Ok(topUp.user, topUp.balance)
-                    }
-                }
-            }
-            is BalanceCheck.Ok -> initial
+        val resolved = when (val r = WagerHelper.checkLockOrTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, Dice.MIN_STAKE, Dice.MAX_STAKE, autoTopUp
+        )) {
+            is TopUpResolution.InvalidStake -> return RollOutcome.InvalidStake(r.min, r.max)
+            TopUpResolution.UnknownUser -> return RollOutcome.UnknownUser
+            is TopUpResolution.StillInsufficientCredits ->
+                return RollOutcome.InsufficientCredits(r.stake, r.have)
+            is TopUpResolution.InsufficientCoinsForTopUp ->
+                return RollOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.Ok -> r
         }
 
         val roll = dice.roll(predicted, random)
-        val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, roll.multiplier)
+        val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, roll.multiplier)
         return if (roll.isWin) {
             val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             RollOutcome.Win(
                 stake = stake,
-                payout = r.payout,
-                net = r.net,
+                payout = wager.payout,
+                net = wager.net,
                 landed = roll.landed,
                 predicted = roll.predicted,
-                newBalance = r.newBalance + jackpot,
+                newBalance = wager.newBalance + jackpot,
                 jackpotPayout = jackpot,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -119,9 +101,9 @@ class DiceService(
                 stake = stake,
                 landed = roll.landed,
                 predicted = roll.predicted,
-                newBalance = r.newBalance,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                newBalance = wager.newBalance,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
                 lossTribute = tribute,
             )
         }

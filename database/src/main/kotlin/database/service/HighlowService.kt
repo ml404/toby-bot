@@ -101,35 +101,17 @@ class HighlowService(
         anchor: Int?,
         autoTopUp: Boolean
     ): PlayOutcome {
-        val initial = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE
-        )
-        var soldCoins = 0L
-        var soldNewPrice: Double? = null
-        val resolved = when (initial) {
-            is BalanceCheck.InvalidStake -> return PlayOutcome.InvalidStake(initial.min, initial.max)
-            BalanceCheck.UnknownUser -> return PlayOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> {
-                if (!autoTopUp) return PlayOutcome.InsufficientCredits(initial.stake, initial.have)
-                val user = userService.getUserByIdForUpdate(discordId, guildId)
-                    ?: return PlayOutcome.UnknownUser
-                val topUp = CasinoTopUpHelper.ensureCreditsForWager(
-                    tradeService, marketService, userService,
-                    user, guildId, currentBalance = initial.have, stake = stake
-                )
-                when (topUp) {
-                    is TopUpResult.InsufficientCoins ->
-                        return PlayOutcome.InsufficientCoinsForTopUp(topUp.needed, topUp.have)
-                    TopUpResult.MarketUnavailable ->
-                        return PlayOutcome.InsufficientCredits(initial.stake, initial.have)
-                    is TopUpResult.ToppedUp -> {
-                        soldCoins = topUp.soldCoins
-                        soldNewPrice = topUp.newPrice
-                        BalanceCheck.Ok(topUp.user, topUp.balance)
-                    }
-                }
-            }
-            is BalanceCheck.Ok -> initial
+        val resolved = when (val r = WagerHelper.checkLockOrTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE, autoTopUp
+        )) {
+            is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
+            TopUpResolution.UnknownUser -> return PlayOutcome.UnknownUser
+            is TopUpResolution.StillInsufficientCredits ->
+                return PlayOutcome.InsufficientCredits(r.stake, r.have)
+            is TopUpResolution.InsufficientCoinsForTopUp ->
+                return PlayOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.Ok -> r
         }
 
         val hand = if (anchor != null) {
@@ -137,21 +119,21 @@ class HighlowService(
         } else {
             highlow.play(direction, random)
         }
-        val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
+        val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
         return if (hand.isWin) {
             val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             PlayOutcome.Win(
                 stake = stake,
-                payout = r.payout,
-                net = r.net,
+                payout = wager.payout,
+                net = wager.net,
                 anchor = hand.anchor,
                 next = hand.next,
                 direction = hand.direction,
                 multiplier = hand.multiplier,
-                newBalance = r.newBalance + jackpot,
+                newBalance = wager.newBalance + jackpot,
                 jackpotPayout = jackpot,
-                soldTobyCoins = soldCoins,
-                newPrice = soldNewPrice,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -160,9 +142,9 @@ class HighlowService(
                 anchor = hand.anchor,
                 next = hand.next,
                 direction = hand.direction,
-                newBalance = r.newBalance,
-                soldTobyCoins = soldCoins,
-                newPrice = soldNewPrice,
+                newBalance = wager.newBalance,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
                 lossTribute = tribute,
             )
         }

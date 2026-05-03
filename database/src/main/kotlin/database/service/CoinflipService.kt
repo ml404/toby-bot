@@ -64,51 +64,33 @@ class CoinflipService(
         predicted: Coinflip.Side,
         autoTopUp: Boolean = false
     ): FlipOutcome {
-        val initial = WagerHelper.checkAndLock(
-            userService, discordId, guildId, stake, Coinflip.MIN_STAKE, Coinflip.MAX_STAKE
-        )
-        var soldCoins = 0L
-        var newPrice: Double? = null
-        val resolved = when (initial) {
-            is BalanceCheck.InvalidStake -> return FlipOutcome.InvalidStake(initial.min, initial.max)
-            BalanceCheck.UnknownUser -> return FlipOutcome.UnknownUser
-            is BalanceCheck.Insufficient -> {
-                if (!autoTopUp) return FlipOutcome.InsufficientCredits(initial.stake, initial.have)
-                val user = userService.getUserByIdForUpdate(discordId, guildId)
-                    ?: return FlipOutcome.UnknownUser
-                val topUp = CasinoTopUpHelper.ensureCreditsForWager(
-                    tradeService, marketService, userService,
-                    user, guildId, currentBalance = initial.have, stake = stake
-                )
-                when (topUp) {
-                    is TopUpResult.InsufficientCoins ->
-                        return FlipOutcome.InsufficientCoinsForTopUp(topUp.needed, topUp.have)
-                    TopUpResult.MarketUnavailable ->
-                        return FlipOutcome.InsufficientCredits(initial.stake, initial.have)
-                    is TopUpResult.ToppedUp -> {
-                        soldCoins = topUp.soldCoins
-                        newPrice = topUp.newPrice
-                        BalanceCheck.Ok(topUp.user, topUp.balance)
-                    }
-                }
-            }
-            is BalanceCheck.Ok -> initial
+        val resolved = when (val r = WagerHelper.checkLockOrTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, Coinflip.MIN_STAKE, Coinflip.MAX_STAKE, autoTopUp
+        )) {
+            is TopUpResolution.InvalidStake -> return FlipOutcome.InvalidStake(r.min, r.max)
+            TopUpResolution.UnknownUser -> return FlipOutcome.UnknownUser
+            is TopUpResolution.StillInsufficientCredits ->
+                return FlipOutcome.InsufficientCredits(r.stake, r.have)
+            is TopUpResolution.InsufficientCoinsForTopUp ->
+                return FlipOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.Ok -> r
         }
 
         val flip = coinflip.flip(predicted, random)
-        val r = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, flip.multiplier)
+        val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, flip.multiplier)
         return if (flip.isWin) {
             val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
             FlipOutcome.Win(
                 stake = stake,
-                payout = r.payout,
-                net = r.net,
+                payout = wager.payout,
+                net = wager.net,
                 landed = flip.landed,
                 predicted = flip.predicted,
-                newBalance = r.newBalance + jackpot,
+                newBalance = wager.newBalance + jackpot,
                 jackpotPayout = jackpot,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
             )
         } else {
             val tribute = JackpotHelper.divertOnLoss(jackpotService, configService, guildId, stake)
@@ -116,9 +98,9 @@ class CoinflipService(
                 stake = stake,
                 landed = flip.landed,
                 predicted = flip.predicted,
-                newBalance = r.newBalance,
-                soldTobyCoins = soldCoins,
-                newPrice = newPrice,
+                newBalance = wager.newBalance,
+                soldTobyCoins = resolved.soldCoins,
+                newPrice = resolved.newPrice,
                 lossTribute = tribute,
             )
         }

@@ -1,0 +1,204 @@
+/*
+ * Baccarat-specific styles. The shared "casino table" look (felt, cards,
+ * deal animation) lives in casino-table.css and is loaded via the @import
+ * below — same pattern as blackjack.css.
+ *
+ * Baccarat is a one-shot wager (no mid-hand actions), so this file is
+ * smaller than blackjack.css: side picker, both-hands layout, win/push/
+ * lose result accents.
+ */
+@import url("./casino-table.css");
+
+.bac-header {
+    margin-bottom: 1.5rem;
+}
+
+.bac-header h1 {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.bac-card {
+    background: var(--surface, #1f2128);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 56rem;
+    margin-bottom: 1.5rem;
+}
+
+.bac-card h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.bac-card form {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.bac-card input[type="number"] {
+    background: var(--surface-2, #16181d);
+    color: inherit;
+    border: 1px solid var(--border, #2a2d35);
+    border-radius: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+}
+
+.bac-card input[type="number"]:focus {
+    outline: 2px solid var(--accent, #5865f2);
+    outline-offset: 2px;
+}
+
+.bac-balance {
+    color: var(--muted, #a0a0b0);
+}
+
+/* Three-up side picker — Player / Banker / Tie. Each label is a
+   click-target tile that highlights when its radio is checked. */
+.bac-side-picker {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.bac-side-picker legend {
+    padding: 0;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted, #a0a0b0);
+}
+
+.bac-side {
+    background: var(--surface-2, #16181d);
+    border: 1px solid var(--border, #2a2d35);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    display: grid;
+    gap: 0.15rem;
+    transition: border-color 120ms ease, background 120ms ease;
+}
+
+.bac-side:hover {
+    border-color: var(--accent, #5865f2);
+}
+
+.bac-side input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.bac-side:has(input:checked) {
+    border-color: var(--accent, #5865f2);
+    background: rgba(88, 101, 242, 0.12);
+}
+
+.bac-side-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.bac-side-mult {
+    font-variant-numeric: tabular-nums;
+    color: #57f287;
+    font-weight: 600;
+}
+
+.bac-side-note {
+    font-size: 0.78rem;
+}
+
+.bac-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Two-hand table — Banker on top (dealer-zone polish from casino-table.css)
+   and Player below, each with its own card row and totals badge. */
+.bac-table .bac-row {
+    margin: 1rem 0;
+}
+
+.bac-table .bac-row h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.bac-cards {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-height: 4.5rem;
+}
+
+.bac-result {
+    margin-top: 1rem;
+    color: var(--muted, #a0a0b0);
+    line-height: 1.4;
+}
+
+.bac-result.bac-result-win {
+    color: #57f287;
+}
+
+.bac-result.bac-result-lose {
+    color: #ed4245;
+}
+
+.bac-result.bac-result-push {
+    color: #f0c040;
+}
+
+/* Same `[hidden]` override as blackjack — the explicit `display:flex` on
+   `.bac-cards` would otherwise outrank the UA `[hidden]{display:none}`,
+   leaving the previous round's hands on screen after a fresh deal. */
+.bac-cards[hidden] {
+    display: none;
+}
+
+/* Rules block — same shape as blackjack/highlow rules sections. */
+.bac-rules {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.bac-rules h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.bac-rules ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.bac-rules strong { color: #fff; }
+
+@media (max-width: 600px) {
+    .bac-card {
+        padding: 1rem;
+        max-width: 100%;
+    }
+    .bac-header h1 {
+        font-size: 1.4rem;
+    }
+    .bac-side-picker {
+        grid-template-columns: 1fr;
+    }
+}

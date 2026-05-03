@@ -59,11 +59,11 @@ class HighlowCommand @Autowired constructor(
         val userId = requestingUserDto.discordId
         val higher = Button.primary(
             HighlowEmbeds.directionButtonId(Highlow.Direction.HIGHER, anchor, stake, userId),
-            "${Highlow.Direction.HIGHER.display} (${HighlowEmbeds.multiplierLabel(higherMultiplier)})"
+            "${Highlow.Direction.HIGHER.display} (${WagerCommandEmbeds.multiplierLabel(higherMultiplier)})"
         )
         val lower = Button.primary(
             HighlowEmbeds.directionButtonId(Highlow.Direction.LOWER, anchor, stake, userId),
-            "${Highlow.Direction.LOWER.display} (${HighlowEmbeds.multiplierLabel(lowerMultiplier)})"
+            "${Highlow.Direction.LOWER.display} (${WagerCommandEmbeds.multiplierLabel(lowerMultiplier)})"
         )
 
         event.hook.sendMessageEmbeds(HighlowEmbeds.anchorEmbed(anchor, stake, higherMultiplier, lowerMultiplier))

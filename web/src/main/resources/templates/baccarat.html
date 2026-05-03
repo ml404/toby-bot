@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Baccarat', '/css/baccarat.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-min-stake=${minStake}, data-max-stake=${maxStake}">
+
+    <div class="bac-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🎴 Baccarat • ' + ${guildName}">🎴 Baccarat</h1>
+        <p class="muted">
+            Pick a side. Both hands deal automatically per the standard Punto Banco tableau.
+            Bet between <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">500</span> credits.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+
+    <section class="bac-card">
+        <h2>Place your bet</h2>
+        <form id="bac-bet" autocomplete="off">
+            <fieldset class="bac-side-picker" aria-label="Pick a side">
+                <legend>Side</legend>
+                <label class="bac-side">
+                    <input type="radio" name="side" value="PLAYER" checked>
+                    <span class="bac-side-name">Player</span>
+                    <span class="bac-side-mult"
+                          th:text="${#numbers.formatDecimal(playerMultiplier, 1, 2)} + '×'">2.00×</span>
+                </label>
+                <label class="bac-side">
+                    <input type="radio" name="side" value="BANKER">
+                    <span class="bac-side-name">Banker</span>
+                    <span class="bac-side-mult"
+                          th:text="${#numbers.formatDecimal(bankerMultiplier, 1, 2)} + '×'">1.95×</span>
+                    <span class="bac-side-note muted">5% commission</span>
+                </label>
+                <label class="bac-side">
+                    <input type="radio" name="side" value="TIE">
+                    <span class="bac-side-name">Tie</span>
+                    <span class="bac-side-mult"
+                          th:text="${#numbers.formatDecimal(tieMultiplier, 1, 2)} + '×'">9.00×</span>
+                </label>
+            </fieldset>
+            <label for="bac-stake">Stake (credits)</label>
+            <input id="bac-stake" name="stake" type="number"
+                   th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+
+            <div class="bac-actions">
+                <button type="submit" id="bac-deal" class="btn-primary">Deal</button>
+                <button type="submit" id="bac-deal-toby" class="btn-secondary casino-bet-toby" hidden
+                        title="Sells just enough TOBY at the live market price to cover the shortfall, then deals.">
+                    Deal (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+                </button>
+            </div>
+        </form>
+        <div class="bac-balance">
+            Wallet: <strong id="bac-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="bac-card bac-table casino-felt" id="bac-table" hidden>
+        <div class="bac-row casino-dealer-zone">
+            <h3>Banker <span class="muted" id="bac-banker-total"></span></h3>
+            <div id="bac-banker-cards" class="bac-cards casino-cards"></div>
+        </div>
+        <div class="bac-row casino-seat" id="bac-player-row">
+            <h3>Player <span class="muted" id="bac-player-total"></span></h3>
+            <div id="bac-player-cards" class="bac-cards casino-cards"></div>
+        </div>
+
+        <div id="bac-result" class="bac-result muted" hidden></div>
+    </section>
+
+    <section class="bac-rules">
+        <h2>Rules</h2>
+        <ul>
+            <li>Card values: <strong>A=1</strong>, 2–9 face value, <strong>10/J/Q/K=0</strong>. Hand total is the sum mod 10 (so 7+8=5).</li>
+            <li>Each side starts with two cards. If either has a total of 8 or 9, that's a <strong>Natural</strong> — both hands stand.</li>
+            <li>Otherwise: <strong>Player</strong> draws a third card on totals 0–5, stands on 6–7. <strong>Banker</strong>'s draw rule depends on whether Player drew and the value of Player's third card (the standard Punto Banco tableau).</li>
+            <li>Highest total after at most one extra card per side wins.</li>
+            <li>Winning bets: <strong>Player</strong> pays
+                <strong th:text="${#numbers.formatDecimal(playerMultiplier, 1, 2)} + '×'">2.00×</strong>,
+                <strong>Banker</strong> pays
+                <strong th:text="${#numbers.formatDecimal(bankerMultiplier, 1, 2)} + '×'">1.95×</strong>
+                (5% commission on the win), <strong>Tie</strong> pays
+                <strong th:text="${#numbers.formatDecimal(tieMultiplier, 1, 2)} + '×'">9.00×</strong>.</li>
+            <li>On a tied game, <strong>Player</strong> and <strong>Banker</strong> side bets are refunded.</li>
+        </ul>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-sounds.js}"></script>
+<script th:src="@{/js/casino-jackpot.js}"></script>
+<script th:src="@{/js/casino-topup.js}"></script>
+<script th:src="@{/js/casino-result.js}"></script>
+<script th:src="@{/js/casino-render.js}"></script>
+<script th:src="@{/js/casino-game.js}"></script>
+<script th:src="@{/js/baccarat.js}"></script>
+</body>
+</html>

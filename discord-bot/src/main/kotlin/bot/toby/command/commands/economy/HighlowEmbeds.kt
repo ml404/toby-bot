@@ -28,9 +28,6 @@ internal object HighlowEmbeds {
         else -> n.toString()
     }
 
-    /** "1.50×"-style label for direction buttons / embed copy. */
-    fun multiplierLabel(multiplier: Double): String = "%.2f×".format(multiplier)
-
     fun directionButtonId(direction: Highlow.Direction, anchor: Int, stake: Long, userId: Long): String =
         listOf(BUTTON_NAME, direction.name, anchor.toString(), stake.toString(), userId.toString())
             .joinToString(BUTTON_DELIM)
@@ -57,29 +54,27 @@ internal object HighlowEmbeds {
             .setTitle("🃏 Anchor: ${cardLabel(anchor)}")
             .setDescription(
                 "Stake **$stake credits**. Will the next card be **higher** or **lower**?\n" +
-                    "Higher pays **${multiplierLabel(higherMultiplier)}**, " +
-                    "lower pays **${multiplierLabel(lowerMultiplier)}**."
+                    "Higher pays **${WagerCommandEmbeds.multiplierLabel(higherMultiplier)}**, " +
+                    "lower pays **${WagerCommandEmbeds.multiplierLabel(lowerMultiplier)}**."
             )
             .setColor(ANCHOR_COLOR)
             .build()
 
     fun outcomeEmbed(outcome: PlayOutcome): MessageEmbed = when (outcome) {
-        is PlayOutcome.Win -> EmbedBuilder()
-            .setTitle("🃏 ${cardLabel(outcome.anchor)} → ${cardLabel(outcome.next)}")
-            .setDescription(
-                "You called **${outcome.direction.display}** at " +
-                    "**${multiplierLabel(outcome.multiplier)}** and won **+${outcome.net} credits**."
-            )
-            .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WagerCommandColors.WIN)
-            .build()
+        is PlayOutcome.Win -> WagerCommandEmbeds.outcomeEmbed(
+            title = "🃏 ${cardLabel(outcome.anchor)} → ${cardLabel(outcome.next)}",
+            description = "You called **${outcome.direction.display}** at " +
+                "**${WagerCommandEmbeds.multiplierLabel(outcome.multiplier)}** and won **+${outcome.net} credits**.",
+            newBalance = outcome.newBalance,
+            color = WagerCommandColors.WIN
+        )
 
-        is PlayOutcome.Lose -> EmbedBuilder()
-            .setTitle("🃏 ${cardLabel(outcome.anchor)} → ${cardLabel(outcome.next)}")
-            .setDescription("You called **${outcome.direction.display}**. Lost **${outcome.stake} credits**.")
-            .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WagerCommandColors.LOSE)
-            .build()
+        is PlayOutcome.Lose -> WagerCommandEmbeds.outcomeEmbed(
+            title = "🃏 ${cardLabel(outcome.anchor)} → ${cardLabel(outcome.next)}",
+            description = "You called **${outcome.direction.display}**. Lost **${outcome.stake} credits**.",
+            newBalance = outcome.newBalance,
+            color = WagerCommandColors.LOSE
+        )
 
         is PlayOutcome.InsufficientCredits -> WagerCommandEmbeds.failureEmbed(
             TITLE, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have)

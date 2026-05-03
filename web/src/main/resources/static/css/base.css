@@ -432,7 +432,8 @@ td { font-size: 0.95rem; }
 .coinflip-result-jackpot,
 .dice-result-jackpot,
 .highlow-result-jackpot,
-.scratch-result-jackpot {
+.scratch-result-jackpot,
+.bac-result-jackpot {
     color: #f1c40f;
     text-shadow: 0 0 8px rgba(241, 196, 15, 0.4);
 }
