@@ -67,6 +67,7 @@ class BlackjackService @Autowired constructor(
         data class Dealt(
             val tableId: Long,
             val snapshot: BlackjackTable,
+            val newBalance: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null
         ) : SoloDealOutcome
@@ -88,7 +89,7 @@ class BlackjackService @Autowired constructor(
     }
 
     sealed interface SoloActionOutcome {
-        data class Continued(val snapshot: BlackjackTable) : SoloActionOutcome
+        data class Continued(val snapshot: BlackjackTable, val newBalance: Long) : SoloActionOutcome
         data class Resolved(
             val tableId: Long,
             val result: BlackjackTable.HandResult,
@@ -158,7 +159,7 @@ class BlackjackService @Autowired constructor(
     }
 
     sealed interface MultiActionOutcome {
-        data class Continued(val snapshot: BlackjackTable) : MultiActionOutcome
+        data class Continued(val snapshot: BlackjackTable, val newBalance: Long) : MultiActionOutcome
         data class HandResolved(val tableId: Long, val result: BlackjackTable.HandResult) : MultiActionOutcome
         data object TableNotFound : MultiActionOutcome
         data object NotSeated : MultiActionOutcome
@@ -290,6 +291,7 @@ class BlackjackService @Autowired constructor(
             ResolveDecision.AwaitPlayer -> SoloDealOutcome.Dealt(
                 tableId = table.id,
                 snapshot = table,
+                newBalance = resolved.user.socialCredit ?: (resolved.balance - stake),
                 soldTobyCoins = soldCoins,
                 newPrice = soldNewPrice
             )
@@ -384,7 +386,10 @@ class BlackjackService @Autowired constructor(
             SoloTransition.HandNotFound -> SoloActionOutcome.HandNotFound
             SoloTransition.NotYourHand -> SoloActionOutcome.NotYourHand
             SoloTransition.IllegalAction -> SoloActionOutcome.IllegalAction
-            SoloTransition.Continue -> SoloActionOutcome.Continued(table)
+            SoloTransition.Continue -> SoloActionOutcome.Continued(
+                snapshot = table,
+                newBalance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L,
+            )
             is SoloTransition.Resolve -> {
                 val settlement = settleSolo(table, transition.seat, guildId)
                 SoloActionOutcome.Resolved(
@@ -1193,7 +1198,10 @@ class BlackjackService @Autowired constructor(
             MultiTransition.NotYourTurn -> MultiActionOutcome.NotYourTurn
             MultiTransition.Continue -> {
                 tableRegistry.rearmShotClock(tableId)
-                MultiActionOutcome.Continued(table)
+                MultiActionOutcome.Continued(
+                    snapshot = table,
+                    newBalance = userService.getUserById(discordId, guildId)?.socialCredit ?: 0L,
+                )
             }
             MultiTransition.Resolve -> {
                 val result = tableRegistry.lockTable(tableId) { t ->

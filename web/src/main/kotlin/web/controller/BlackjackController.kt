@@ -202,6 +202,7 @@ class BlackjackController(
                 BlackjackActionResponse(
                     ok = true,
                     tableId = outcome.tableId,
+                    newBalance = outcome.newBalance,
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice
                 )
@@ -239,7 +240,9 @@ class BlackjackController(
             ?: return@requireMemberForJson errors.badRequest("Unknown action: ${request.action}")
 
         when (val outcome = blackjackService.applySoloAction(discordId, guildId, tableId, action)) {
-            is SoloActionOutcome.Continued -> ResponseEntity.ok(BlackjackActionResponse(ok = true, tableId = tableId))
+            is SoloActionOutcome.Continued -> ResponseEntity.ok(
+                BlackjackActionResponse(ok = true, tableId = tableId, newBalance = outcome.newBalance)
+            )
             is SoloActionOutcome.Resolved -> {
                 // Leave the resolved table in the registry so the JS poll can read the
                 // final state (cards / dealer total / lastResult) and disable buttons.
@@ -405,7 +408,9 @@ class BlackjackController(
             ?: return@requireMemberForJson errors.badRequest("Unknown action: ${request.action}")
 
         when (val outcome = blackjackService.applyMultiAction(discordId, guildId, tableId, action)) {
-            is MultiActionOutcome.Continued -> ResponseEntity.ok(BlackjackActionResponse(ok = true, tableId = tableId))
+            is MultiActionOutcome.Continued -> ResponseEntity.ok(
+                BlackjackActionResponse(ok = true, tableId = tableId, newBalance = outcome.newBalance)
+            )
             is MultiActionOutcome.HandResolved -> ResponseEntity.ok(
                 BlackjackActionResponse(ok = true, tableId = tableId, resolved = true, handNumber = outcome.result.handNumber)
             )

@@ -281,8 +281,13 @@
                     window.toasts && window.toasts.error(b.error || "Deal failed.");
                     return;
                 }
+                // Always reflect the post-deal escrow in the wallet display, not
+                // just on the natural-BJ resolved short-circuit. Without this the
+                // wallet looked like it stayed full all hand and only "lost" the
+                // stake on resolution — making each subsequent action feel like
+                // it was charging stake again.
+                setBalance(b.newBalance);
                 if (b.resolved) {
-                    setBalance(b.newBalance);
                     refreshState();
                 } else {
                     refreshState();
@@ -298,9 +303,11 @@
                     window.toasts && window.toasts.error(b.error || "Action failed.");
                     return;
                 }
-                if (b.resolved) {
-                    setBalance(b.newBalance);
-                }
+                // Refresh on every successful action — the server echoes the
+                // live wallet on Continued too. HIT/STAND don't move the
+                // balance, but DOUBLE/SPLIT pre-debit additional stake mid-hand
+                // and the player should see that immediately.
+                setBalance(b.newBalance);
                 refreshState();
             });
     }
