@@ -197,50 +197,47 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         higherBtn.disabled = true;
         lowerBtn.disabled = true;
         const intervalId = startNextShuffle();
-        const requestStart = Date.now();
-        // /play uses postJson directly (different lifecycle than /start)
-        // so it doesn't go through casino-game.js's hold path. Hold the
-        // jackpot-pool banner here so it can't tick before the next-card
-        // shuffle settles and leak the outcome.
-        const jackpot = (window.TobyJackpot) ? window.TobyJackpot : null;
-        if (jackpot) jackpot.holdPoolBanner();
 
-        postJson('/casino/' + els.guildId + '/highlow/play', { direction: direction })
-            .then(function (body) {
-                const elapsed = Date.now() - requestStart;
-                const remaining = Math.max(0, NEXT_DEAL_MS - elapsed);
-                setTimeout(function () {
-                    playing = false;
-                    if (body && body.ok) {
-                        stopNextShuffle(intervalId, body.next);
-                        renderHighlowResult(els.resultEl, body, tableEl);
-                        if (window.CasinoSounds) {
-                            window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
-                        }
-                        if (game) {
-                            game.applyBalance(body.newBalance);
-                            game.applyTobyDelta(body);
-                        }
-                        // Round consumed → reset to lock mode after the
-                        // player has had a moment to read the result.
-                        setTimeout(showLockMode, ROUND_RESET_MS);
-                    } else {
-                        stopNextShuffle(intervalId);
-                        higherBtn.disabled = false;
-                        lowerBtn.disabled = false;
-                        window.toast((body && body.error) || 'Deal failed.', 'error');
+        // /play has a different lifecycle than /start (button pair, not
+        // form submit) so it goes through casino-game.js's runManual
+        // helper instead of init(). The helper handles the jackpot-pool
+        // lock + settle delay so the banner can't tick before the
+        // next-card shuffle lands.
+        window.TobyCasinoGame.runManual({
+            request: function () {
+                return postJson('/casino/' + els.guildId + '/highlow/play', { direction: direction });
+            },
+            settleMs: NEXT_DEAL_MS,
+            onSettle: function (body) {
+                playing = false;
+                if (body && body.ok) {
+                    stopNextShuffle(intervalId, body.next);
+                    renderHighlowResult(els.resultEl, body, tableEl);
+                    if (window.CasinoSounds) {
+                        window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
                     }
-                    if (jackpot) jackpot.releasePoolBanner();
-                }, remaining);
-            })
-            .catch(function () {
+                    if (game) {
+                        game.applyBalance(body.newBalance);
+                        game.applyTobyDelta(body);
+                    }
+                    // Round consumed → reset to lock mode after the
+                    // player has had a moment to read the result.
+                    setTimeout(showLockMode, ROUND_RESET_MS);
+                } else {
+                    stopNextShuffle(intervalId);
+                    higherBtn.disabled = false;
+                    lowerBtn.disabled = false;
+                    window.toast((body && body.error) || 'Deal failed.', 'error');
+                }
+            },
+            onError: function () {
                 stopNextShuffle(intervalId);
                 playing = false;
                 higherBtn.disabled = false;
                 lowerBtn.disabled = false;
                 window.toast('Network error.', 'error');
-                if (jackpot) jackpot.releasePoolBanner();
-            });
+            },
+        });
     }
 
     higherBtn.addEventListener('click', function () { runPlay('HIGHER'); });
