@@ -124,4 +124,247 @@ describe('casino-game.js — pool banner lock around settle', () => {
 
         expect(releaseSpy).not.toHaveBeenCalled();
     });
+
+    test('async renderResult holds the lock until its Promise resolves', async () => {
+        // Mirrors keno / baccarat: renderResult kicks off a staggered
+        // reveal that lands later via setTimeouts. The scaffold must
+        // wait for the Promise before applying balance and releasing
+        // the banner, otherwise the banner ticks before the cells /
+        // cards finish landing.
+        postJsonMock.mockResolvedValue({ ok: true, jackpotPool: 999, newBalance: 50 });
+        let resolveReveal;
+        const renderResult = jest.fn(function () {
+            return new Promise(function (r) { resolveReveal = r; });
+        });
+        const game = buildGame({ minSettleMs: 0, renderResult: renderResult });
+        game.run(false);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+
+        // settle setTimeout has fired and renderResult has been invoked,
+        // but its Promise is still pending — lock must stay held.
+        expect(renderResult).toHaveBeenCalledTimes(1);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        // Balance must NOT have been written either — the user would
+        // see it tick before the reveal lands.
+        expect(document.getElementById('bal').textContent).toBe('100');
+
+        // Resolve the reveal — now the scaffold should flush both.
+        resolveReveal();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+        expect(document.getElementById('bal').textContent).toBe('50');
+    });
+
+    test('async renderResult releases the lock even on rejection', async () => {
+        // Defensive: if the per-game reveal animation throws (e.g. a
+        // rendering bug), the banner must still recover.
+        postJsonMock.mockResolvedValue({ ok: true, jackpotPool: 7, newBalance: 90 });
+        let rejectReveal;
+        const renderResult = jest.fn(function () {
+            return new Promise(function (_, rej) { rejectReveal = rej; });
+        });
+        const game = buildGame({ minSettleMs: 0, renderResult: renderResult });
+        game.run(false);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        rejectReveal(new Error('boom'));
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('synchronous renderResult (returns undefined) releases immediately', async () => {
+        postJsonMock.mockResolvedValue({ ok: true, jackpotPool: 1, newBalance: 50 });
+        const renderResult = jest.fn(function () { /* sync, no return */ });
+        const game = buildGame({ minSettleMs: 0, renderResult: renderResult });
+        game.run(false);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+
+        expect(renderResult).toHaveBeenCalledTimes(1);
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+        expect(document.getElementById('bal').textContent).toBe('50');
+    });
+});
+
+describe('TobyCasinoGame.runManual', () => {
+    let requestMock;
+    let onSettle;
+    let onError;
+    let holdSpy;
+    let releaseSpy;
+
+    beforeEach(() => {
+        document.body.innerHTML =
+            '<div class="casino-jackpot-banner"><strong>0</strong></div>';
+        // Reset any leaked hold from a previous test before installing
+        // spies, so the first call we observe is the one this test makes.
+        window.TobyJackpot.releasePoolBanner();
+        holdSpy = jest.spyOn(window.TobyJackpot, 'holdPoolBanner');
+        releaseSpy = jest.spyOn(window.TobyJackpot, 'releasePoolBanner');
+        requestMock = jest.fn();
+        onSettle = jest.fn();
+        onError = jest.fn();
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        holdSpy.mockRestore();
+        releaseSpy.mockRestore();
+    });
+
+    test('holds the lock before request resolves', () => {
+        requestMock.mockImplementation(() => new Promise(() => {}));
+        window.TobyCasinoGame.runManual({
+            request: requestMock,
+            settleMs: 0,
+            onSettle: onSettle,
+            onError: onError,
+        });
+        expect(holdSpy).toHaveBeenCalledTimes(1);
+        expect(releaseSpy).not.toHaveBeenCalled();
+        expect(onSettle).not.toHaveBeenCalled();
+    });
+
+    test('runs onSettle with the body and releases after settleMs', async () => {
+        const body = { ok: true, jackpotPool: 100, newBalance: 50 };
+        requestMock.mockResolvedValue(body);
+        window.TobyCasinoGame.runManual({
+            request: requestMock,
+            settleMs: 500,
+            onSettle: onSettle,
+            onError: onError,
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(onSettle).not.toHaveBeenCalled();
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(499);
+        expect(onSettle).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(1);
+        expect(onSettle).toHaveBeenCalledWith(body);
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('passes a non-ok body to onSettle (caller decides how to render)', async () => {
+        const body = { ok: false, error: 'broke' };
+        requestMock.mockResolvedValue(body);
+        window.TobyCasinoGame.runManual({
+            request: requestMock,
+            settleMs: 0,
+            onSettle: onSettle,
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+
+        expect(onSettle).toHaveBeenCalledWith(body);
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('release waits for an async onSettle (Promise return)', async () => {
+        const body = { ok: true, jackpotPool: 1 };
+        requestMock.mockResolvedValue(body);
+        let resolveReveal;
+        const asyncSettle = jest.fn(function () {
+            return new Promise(function (r) { resolveReveal = r; });
+        });
+        window.TobyCasinoGame.runManual({
+            request: requestMock,
+            settleMs: 0,
+            onSettle: asyncSettle,
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+
+        expect(asyncSettle).toHaveBeenCalledTimes(1);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        resolveReveal();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('release fires when async onSettle rejects', async () => {
+        requestMock.mockResolvedValue({ ok: true });
+        let rejectReveal;
+        window.TobyCasinoGame.runManual({
+            request: requestMock,
+            settleMs: 0,
+            onSettle: function () {
+                return new Promise(function (_, rej) { rejectReveal = rej; });
+            },
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        rejectReveal(new Error('boom'));
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('runs onError and releases when the request rejects', async () => {
+        requestMock.mockRejectedValue(new Error('network'));
+        window.TobyCasinoGame.runManual({
+            request: requestMock,
+            settleMs: 1000,
+            onSettle: onSettle,
+            onError: onError,
+        });
+
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(onError).toHaveBeenCalledTimes(1);
+        expect(onSettle).not.toHaveBeenCalled();
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('releases even if onSettle throws synchronously', async () => {
+        const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            requestMock.mockResolvedValue({ ok: true });
+            window.TobyCasinoGame.runManual({
+                request: requestMock,
+                settleMs: 0,
+                onSettle: function () { throw new Error('render bug'); },
+            });
+
+            await Promise.resolve();
+            await Promise.resolve();
+            jest.advanceTimersByTime(0);
+
+            expect(releaseSpy).toHaveBeenCalledTimes(1);
+            expect(errSpy).toHaveBeenCalled();
+        } finally {
+            errSpy.mockRestore();
+        }
+    });
 });

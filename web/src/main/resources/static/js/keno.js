@@ -6,7 +6,11 @@
 // On a staged path: the cells the server drew light up one-by-one at
 // dealMs intervals (gold pulse if the draw matches a pick, dim grey
 // otherwise). The result line + chip flourish + win/lose sound hold
-// until every draw has landed.
+// until every draw has landed. Returns a Promise that resolves when
+// the last draw has landed (so the casino-game.js scaffold can hold
+// the balance / jackpot-pool refresh until the reveal completes).
+// Synchronous path (stagger: false / no grid / empty draws) returns
+// undefined, preserving the existing test contract.
 function renderKenoResult(opts) {
     var resultEl = opts.resultEl;
     var statusEl = opts.statusEl;
@@ -87,15 +91,17 @@ function renderKenoResult(opts) {
 
     // Staged path: schedule one cell-light-up per dealMs. The 'click'
     // sound rides the per-cell tick so the player can hear the deal.
-    draws.forEach(function (n, i) {
-        setTimeout(function () {
-            lightUpDraw(gridEl, n, picksSet);
-            if (typeof window !== 'undefined' && window.CasinoSounds) {
-                window.CasinoSounds.play('click');
-            }
-        }, i * dealMs);
+    return new Promise(function (resolve) {
+        draws.forEach(function (n, i) {
+            setTimeout(function () {
+                lightUpDraw(gridEl, n, picksSet);
+                if (typeof window !== 'undefined' && window.CasinoSounds) {
+                    window.CasinoSounds.play('click');
+                }
+            }, i * dealMs);
+        });
+        setTimeout(function () { finalize(); resolve(); }, draws.length * dealMs);
     });
-    setTimeout(finalize, draws.length * dealMs);
 }
 
 function lightUpDraw(gridEl, n, picksSet) {
@@ -260,7 +266,10 @@ function kenoLoseLineHtml(body) {
                 return null;
             },
             renderResult: function (body) {
-                renderKenoResult({
+                // Return the Promise — the scaffold waits for the
+                // staggered reveal to land before applying balance and
+                // releasing the jackpot-pool banner lock.
+                return renderKenoResult({
                     resultEl: resultEl,
                     statusEl: statusEl,
                     gridEl: gridEl,

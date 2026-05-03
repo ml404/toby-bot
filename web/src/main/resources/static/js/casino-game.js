@@ -148,16 +148,34 @@
                         busy = false;
                         setDisabled(false);
                         if (body && body.ok) {
-                            renderResult(body);
-                            if (autoApplyBalance) {
-                                applyBalance(body.newBalance);
-                                applyTobyDelta(body);
+                            // renderResult may run a staggered reveal
+                            // (keno's draw, baccarat's deal) and return a
+                            // Promise that resolves once the last cell /
+                            // card lands. In that case we hold the lock,
+                            // balance, and TOBY-coin update until the
+                            // animation actually completes — otherwise
+                            // the banner / credits would tick first and
+                            // leak the outcome. Synchronous renderResults
+                            // (slots/coinflip/dice) return undefined and
+                            // settle immediately as before.
+                            const settle = renderResult(body);
+                            const finishSettle = function () {
+                                if (autoApplyBalance) {
+                                    applyBalance(body.newBalance);
+                                    applyTobyDelta(body);
+                                }
+                                if (jackpot) jackpot.releasePoolBanner();
+                            };
+                            if (settle && typeof settle.then === 'function') {
+                                settle.then(finishSettle, finishSettle);
+                            } else {
+                                finishSettle();
                             }
                         } else {
                             hideResult();
                             showToast((body && body.error) || failureMessage, 'error');
+                            if (jackpot) jackpot.releasePoolBanner();
                         }
-                        if (jackpot) jackpot.releasePoolBanner();
                     }, remaining);
                 })
                 .catch(function () {
@@ -182,7 +200,69 @@
         };
     }
 
-    const api = { init: init };
+    // Manual lifecycle helper for casino flows that don't fit the
+    // form-submit scaffold (e.g. highlow's /play button pair). Mirrors
+    // init()'s jackpot-pool-lock + settle-delay handling so the
+    // banner can't tick before the per-flow animation lands. Caller
+    // owns the request, the per-call rendering, balance updates, and
+    // any button-disable bookkeeping.
+    //
+    // opts:
+    //   request    — () => Promise<body> (REQUIRED). Caller's fetch.
+    //   settleMs   — number (default 0). Minimum visual delay between
+    //                request start and onSettle firing, mirroring
+    //                init()'s minSettleMs.
+    //   onSettle   — (body) => void | Promise<void>. Runs once the
+    //                settle delay has elapsed, with whatever the
+    //                request resolved to (success or `{ ok: false }`).
+    //                If it returns a thenable the lock release waits
+    //                for it (parallels init()'s async-renderResult
+    //                support — keno/baccarat-shape).
+    //   onError    — (err) => void. Runs synchronously on a request
+    //                rejection (network / parse failure).
+    function runManual(opts) {
+        const request = opts.request;
+        const settleMs = (typeof opts.settleMs === 'number') ? opts.settleMs : 0;
+        const onSettle = opts.onSettle || function () {};
+        const onError = opts.onError || function () {};
+
+        const jackpot = (root && root.TobyJackpot) ? root.TobyJackpot : null;
+        if (jackpot) jackpot.holdPoolBanner();
+        const start = Date.now();
+        const release = function () {
+            if (jackpot) jackpot.releasePoolBanner();
+        };
+
+        return request().then(function (body) {
+            const remaining = Math.max(0, settleMs - (Date.now() - start));
+            setTimeout(function () {
+                let settled;
+                try {
+                    settled = onSettle(body);
+                } catch (e) {
+                    // Release the lock even if the caller's render
+                    // logic throws — otherwise the banner is stranded.
+                    // Surface the error via console so a regression
+                    // is still visible during dev.
+                    release();
+                    if (typeof console !== 'undefined' && console.error) {
+                        console.error('TobyCasinoGame.runManual onSettle threw:', e);
+                    }
+                    return;
+                }
+                if (settled && typeof settled.then === 'function') {
+                    settled.then(release, release);
+                } else {
+                    release();
+                }
+            }, remaining);
+        }, function (err) {
+            try { onError(err); }
+            finally { release(); }
+        });
+    }
+
+    const api = { init: init, runManual: runManual };
     if (root) root.TobyCasinoGame = api;
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

@@ -169,6 +169,50 @@ describe('renderKenoResult (staged path)', () => {
         tableEl = document.getElementById('t');
     });
 
+    test('synchronous path returns undefined (no Promise)', () => {
+        const ret = renderKenoResult({
+            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+            stagger: false,
+            body: {
+                win: false, picks: [1], draws: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                hits: 0, net: -50,
+            },
+        });
+        expect(ret).toBeUndefined();
+    });
+
+    test('staged path returns a Promise that resolves after the deal lands', async () => {
+        jest.useFakeTimers();
+        try {
+            const ret = renderKenoResult({
+                resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+                stagger: true, dealMs: 50,
+                body: {
+                    win: true, picks: [1], draws: [1, 2, 3],
+                    hits: 1, multiplier: 1, net: 100, payout: 200,
+                },
+            });
+            expect(ret && typeof ret.then).toBe('function');
+
+            const onSettle = jest.fn();
+            ret.then(onSettle);
+
+            // Before the deal sequence finishes, the Promise must not
+            // resolve — that's exactly what the casino-game.js scaffold
+            // depends on to keep the jackpot-pool banner held.
+            jest.advanceTimersByTime(149);
+            await Promise.resolve();
+            expect(onSettle).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(1);
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(onSettle).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     test('staged path holds the result line until the deal sequence completes', () => {
         jest.useFakeTimers();
         try {

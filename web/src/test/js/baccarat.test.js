@@ -252,6 +252,58 @@ describe('renderBaccaratResult', () => {
         expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
     });
 
+    test('synchronous path returns undefined (no Promise)', () => {
+        const ret = renderBaccaratResult({
+            resultEl, bankerCardsEl, playerCardsEl,
+            bankerTotalEl, playerTotalEl, tableEl,
+            flashTargetEl: tableEl,
+            stagger: false,
+            body: {
+                win: true, push: false, side: 'PLAYER', winner: 'PLAYER',
+                playerCards: ['5♠', '3♥'], bankerCards: ['2♣', '4♦'],
+                playerTotal: 8, bankerTotal: 6, multiplier: 2.0, net: 100,
+            },
+        });
+        expect(ret).toBeUndefined();
+    });
+
+    test('staged path returns a Promise that resolves after the deal lands', async () => {
+        jest.useFakeTimers();
+        try {
+            const ret = renderBaccaratResult({
+                resultEl, bankerCardsEl, playerCardsEl,
+                bankerTotalEl, playerTotalEl, tableEl,
+                flashTargetEl: tableEl,
+                stagger: true, dealMs: 50,
+                body: {
+                    win: true, push: false, side: 'PLAYER', winner: 'PLAYER',
+                    playerCards: ['5♠', '3♥'], bankerCards: ['2♣', '4♦'],
+                    playerTotal: 8, bankerTotal: 6,
+                    isPlayerNatural: true, isBankerNatural: false,
+                    multiplier: 2.0, net: 100,
+                },
+            });
+            expect(ret && typeof ret.then).toBe('function');
+
+            const onSettle = jest.fn();
+            ret.then(onSettle);
+
+            // 4 cards × 50ms = 200ms total. Before the last card lands,
+            // the Promise must remain pending — that's what casino-game.js
+            // relies on to keep the banner held.
+            jest.advanceTimersByTime(199);
+            await Promise.resolve();
+            expect(onSettle).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(1);
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(onSettle).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     test('staged path holds the result line until the deal sequence completes', () => {
         jest.useFakeTimers();
         try {

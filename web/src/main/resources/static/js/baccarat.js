@@ -7,7 +7,10 @@
 // opts.dealMs intervals (default 400ms) so the round feels played, not
 // pre-resolved. Tests pass `stagger: false` to keep their assertions
 // synchronous. The result line / chip flourish / win-or-lose sound are
-// held until the last card lands.
+// held until the last card lands. Returns a Promise that resolves
+// once the deal completes (or undefined on the synchronous path) so
+// the casino-game.js scaffold can hold balance + jackpot-pool updates
+// until the reveal lands.
 function renderBaccaratResult(opts) {
     var resultEl = opts.resultEl;
     var bankerCardsEl = opts.bankerCardsEl;
@@ -84,6 +87,17 @@ function renderBaccaratResult(opts) {
         }
     }
 
+    if (dealMs > 0) {
+        return new Promise(function (resolve) {
+            playBaccaratDeal({
+                playerCardsEl: playerCardsEl,
+                bankerCardsEl: bankerCardsEl,
+                body: body,
+                dealMs: dealMs,
+                onComplete: function () { finalize(); resolve(); },
+            });
+        });
+    }
     playBaccaratDeal({
         playerCardsEl: playerCardsEl,
         bankerCardsEl: bankerCardsEl,
@@ -219,7 +233,10 @@ function loseLineHtml(body, sideLabel, winnerLabel) {
                 return { side: selectedSide(), stake: state.stake, autoTopUp: state.autoTopUp };
             },
             renderResult: function (body) {
-                renderBaccaratResult({
+                // Return the Promise so the scaffold waits for the
+                // staged deal to land before applying balance and
+                // releasing the jackpot-pool banner lock.
+                return renderBaccaratResult({
                     resultEl: els.resultEl,
                     bankerCardsEl: bankerCardsEl,
                     playerCardsEl: playerCardsEl,
