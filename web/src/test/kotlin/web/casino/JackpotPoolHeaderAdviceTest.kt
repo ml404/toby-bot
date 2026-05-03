@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.core.MethodParameter
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.http.server.ServerHttpResponse
 import org.springframework.http.server.ServletServerHttpRequest
@@ -27,6 +28,14 @@ import org.springframework.web.servlet.HandlerMapping
  * test — every CasinoResponseLike response carries the post-action
  * pool size in the X-Jackpot-Pool header, and the JS reads it from
  * api.js. Adding a new minigame can no longer regress the banner.
+ *
+ * The [methodParameter] helper resolves real reflective method handles
+ * rather than mocking [MethodParameter.parameterType]. A pure mock
+ * implementation hides the [ResponseEntity] unwrapping bug — Spring's
+ * [org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor]
+ * passes the outer ResponseEntity MethodParameter to
+ * [org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice.supports],
+ * so the advice has to unwrap the generic itself.
  */
 class JackpotPoolHeaderAdviceTest {
 
@@ -41,15 +50,23 @@ class JackpotPoolHeaderAdviceTest {
     }
 
     @Test
-    fun `supports returns true for CasinoResponseLike return types`() {
-        val param = methodParameterReturning(SampleResponse::class.java)
-        assertTrue(advice.supports(param, MappingJackson2HttpMessageConverter::class.java))
+    fun `supports returns true for direct CasinoResponseLike subtype`() {
+        assertTrue(advice.supports(methodParameter("direct"), MappingJackson2HttpMessageConverter::class.java))
     }
 
     @Test
-    fun `supports returns false for non-CasinoResponseLike return types`() {
-        val param = methodParameterReturning(String::class.java)
-        assertFalse(advice.supports(param, MappingJackson2HttpMessageConverter::class.java))
+    fun `supports returns true for ResponseEntity wrapping CasinoResponseLike`() {
+        assertTrue(advice.supports(methodParameter("wrapped"), MappingJackson2HttpMessageConverter::class.java))
+    }
+
+    @Test
+    fun `supports returns false for ResponseEntity wrapping non-CasinoResponseLike`() {
+        assertFalse(advice.supports(methodParameter("nonCasinoWrapped"), MappingJackson2HttpMessageConverter::class.java))
+    }
+
+    @Test
+    fun `supports returns false for plain non-casino return type`() {
+        assertFalse(advice.supports(methodParameter("plainString"), MappingJackson2HttpMessageConverter::class.java))
     }
 
     @Test
@@ -60,7 +77,7 @@ class JackpotPoolHeaderAdviceTest {
 
         val returned = advice.beforeBodyWrite(
             body = body,
-            returnType = methodParameterReturning(SampleResponse::class.java),
+            returnType = methodParameter("direct"),
             selectedContentType = MediaType.APPLICATION_JSON,
             selectedConverterType = MappingJackson2HttpMessageConverter::class.java,
             request = request,
@@ -76,7 +93,7 @@ class JackpotPoolHeaderAdviceTest {
         val (request, response) = exchangeWithVars(emptyMap())
         advice.beforeBodyWrite(
             body = SampleResponse(ok = true),
-            returnType = methodParameterReturning(SampleResponse::class.java),
+            returnType = methodParameter("direct"),
             selectedContentType = MediaType.APPLICATION_JSON,
             selectedConverterType = MappingJackson2HttpMessageConverter::class.java,
             request = request,
@@ -90,7 +107,7 @@ class JackpotPoolHeaderAdviceTest {
         val (request, response) = exchangeWithGuildId("not-a-long")
         advice.beforeBodyWrite(
             body = SampleResponse(ok = true),
-            returnType = methodParameterReturning(SampleResponse::class.java),
+            returnType = methodParameter("direct"),
             selectedContentType = MediaType.APPLICATION_JSON,
             selectedConverterType = MappingJackson2HttpMessageConverter::class.java,
             request = request,
@@ -107,7 +124,7 @@ class JackpotPoolHeaderAdviceTest {
 
         val returned = advice.beforeBodyWrite(
             body = body,
-            returnType = methodParameterReturning(SampleResponse::class.java),
+            returnType = methodParameter("direct"),
             selectedContentType = MediaType.APPLICATION_JSON,
             selectedConverterType = MappingJackson2HttpMessageConverter::class.java,
             request = request,
@@ -123,11 +140,16 @@ class JackpotPoolHeaderAdviceTest {
         override val error: String? = null,
     ) : CasinoResponseLike
 
-    private fun methodParameterReturning(type: Class<*>): MethodParameter {
-        val param = mockk<MethodParameter>()
-        every { param.parameterType } returns type
-        return param
+    @Suppress("unused")
+    private class Sample {
+        fun direct(): SampleResponse = SampleResponse(ok = true)
+        fun wrapped(): ResponseEntity<SampleResponse> = ResponseEntity.ok(SampleResponse(ok = true))
+        fun nonCasinoWrapped(): ResponseEntity<String> = ResponseEntity.ok("nope")
+        fun plainString(): String = "nope"
     }
+
+    private fun methodParameter(name: String): MethodParameter =
+        MethodParameter(Sample::class.java.getDeclaredMethod(name), -1)
 
     private fun exchangeWithGuildId(guildIdValue: String): Pair<ServletServerHttpRequest, ServerHttpResponse> =
         exchangeWithVars(mapOf("guildId" to guildIdValue))
