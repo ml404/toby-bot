@@ -1,8 +1,6 @@
 package bot.toby.command.commands.economy
 
-import database.economy.Keno
 import database.service.KenoService.PlayOutcome
-import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
 
@@ -84,16 +82,6 @@ internal object KenoEmbeds {
     }
 
     fun errorEmbed(message: String): MessageEmbed = WagerCommandEmbeds.errorEmbed(TITLE, message)
-
-    /**
-     * Per-spots payout preview embed for the `/keno` slash command's
-     * help-style title bar — used when the user asks for a quick-pick
-     * without committing yet (future enhancement). Currently unused
-     * outside tests; kept here so the format lives next to the rest of
-     * the embed plumbing.
-     */
-    fun paytableSummaryLine(spots: Int): String =
-        "$spots-spot pays up to **${WagerCommandEmbeds.multiplierLabel(Keno.PAYTABLE[spots]?.maxOrNull() ?: 0.0)}** at full hit."
 
     private fun jackpotLine(jackpotPayout: Long): String =
         if (jackpotPayout > 0L) "\n🎰 Jackpot hit! **+$jackpotPayout credits.**" else ""
