@@ -162,6 +162,10 @@
     border-radius: 0.6rem;
     padding: 0.75rem 1rem;
     transition: box-shadow 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+    /* `position: relative` so flashChipsOn can drop a chip stack inside
+       the seat (absolute-positioned overlay) without leaking into the
+       page flow. The seat's other content stays untouched. */
+    position: relative;
 }
 
 /* Active actor — gold halo + slow pulse. */
@@ -326,12 +330,6 @@
 /* ------------------------------------------------------------------- */
 /* Win chip-stack flourish                                              */
 /* ------------------------------------------------------------------- */
-
-/* Anchored to the seat so JS can drop a stack inside without leaking
-   into the page flow. The seat's other content stays untouched. */
-.casino-seat {
-    position: relative;
-}
 
 .casino-chip-stack {
     position: absolute;
