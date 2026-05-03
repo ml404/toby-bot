@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Keno', '/css/keno.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice},
+               data-min-stake=${minStake}, data-max-stake=${maxStake},
+               data-min-spots=${minSpots}, data-max-spots=${maxSpots},
+               data-pool-size=${poolSize}, data-draws=${draws}">
+
+    <div class="keno-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🎯 Keno • ' + ${guildName}">🎯 Keno</h1>
+        <p class="muted">
+            Pick <span th:text="${minSpots}">1</span>-<span th:text="${maxSpots}">10</span> numbers from the
+            <span th:text="${poolSize}">80</span>-cell board, then watch <span th:text="${draws}">20</span>
+            numbers get drawn. Bigger spot counts unlock bigger top-end multipliers but need more hits to start paying.
+            Bet <span th:text="${minStake}">10</span>-<span th:text="${maxStake}">500</span> credits per ticket.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+
+    <section class="keno-bet">
+        <h2>Place your ticket</h2>
+        <form id="keno-bet-form" autocomplete="off">
+            <div class="keno-pickbar">
+                <span class="keno-pickcount">
+                    Picks: <strong id="keno-pickcount-value">0</strong> / <span th:text="${maxSpots}">10</span>
+                </span>
+                <button type="button" id="keno-quickpick" class="btn-secondary"
+                        title="Auto-fill the rest of your picks at random.">Quick Pick</button>
+                <button type="button" id="keno-clear" class="btn-secondary">Clear</button>
+            </div>
+            <label for="keno-stake">Stake (credits)</label>
+            <input id="keno-stake" name="stake" type="number"
+                   th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+            <div class="keno-actions">
+                <button type="submit" id="keno-deal" class="btn-primary">Deal</button>
+                <button type="submit" id="keno-deal-toby" class="btn-secondary casino-bet-toby" hidden
+                        title="Sells just enough TOBY at the live market price to cover the shortfall, then deals.">
+                    Deal (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+                </button>
+            </div>
+        </form>
+        <div class="keno-balance">
+            Wallet: <strong id="keno-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="keno-table casino-felt" id="keno-table">
+        <div class="keno-status" id="keno-status">
+            Tap up to <span th:text="${maxSpots}">10</span> cells, then hit Deal.
+        </div>
+        <div class="keno-grid" id="keno-grid" role="grid" aria-label="Keno number board">
+            <!--/* 80 cells, generated server-side so picks are progressive-enhancement
+                   safe. JS hooks click handlers + animates draws on resolve. */-->
+            <button th:each="n : ${#numbers.sequence(1, poolSize)}"
+                    type="button" class="keno-cell"
+                    th:attr="data-value=${n}, aria-label='Number ' + ${n}, aria-pressed='false'"
+                    th:text="${n}">1</button>
+        </div>
+        <div id="keno-result" class="keno-result muted" hidden></div>
+    </section>
+
+    <section class="keno-rules">
+        <h2>How to play</h2>
+        <ol>
+            <li>
+                <strong>Pick numbers.</strong> Tap up to
+                <strong th:text="${maxSpots}">10</strong> cells on the board (1–<span th:text="${poolSize}">80</span>).
+                You can also use <strong>Quick Pick</strong> to auto-fill the rest at random.
+            </li>
+            <li>
+                <strong>Set a stake</strong> between <strong th:text="${minStake}">10</strong> and
+                <strong th:text="${maxStake}">500</strong> credits, then <strong>Deal</strong>.
+            </li>
+            <li>
+                <strong>20 numbers are drawn</strong> from the same 1–<span th:text="${poolSize}">80</span> pool.
+                They light up on the board one-by-one.
+                Cells that match your picks <em>and</em> get drawn count as <strong>hits</strong>.
+            </li>
+            <li>
+                <strong>The payout</strong> depends on how many spots you picked and how many of those got hit —
+                see the table below. Bigger spot counts unlock bigger top-end multipliers but need more hits to
+                start paying (e.g. a 10-spot ticket needs 6+ hits to pay).
+            </li>
+            <li>
+                On a winning round your stake is multiplied; on a losing round you lose the stake. A small
+                slice of every loss feeds the per-server <strong>Jackpot Pool</strong> at the top of the page —
+                any future winning round on this server has a chance to claim the entire pool on top of its payout.
+            </li>
+        </ol>
+    </section>
+
+    <section class="keno-payouts">
+        <h2>Payouts (× stake)</h2>
+        <div class="keno-payouts-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>Spots</th>
+                    <th th:each="k : ${#numbers.sequence(0, maxSpots)}" th:text="${k}">0</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${paytable}">
+                    <td><strong th:text="${row.spots}">1</strong></td>
+                    <td th:each="k : ${#numbers.sequence(0, maxSpots)}"
+                        th:with="payouts=${row.payouts}, mult=${k < payouts.size() ? payouts[k] : null}"
+                        th:classappend="${mult != null and mult gt 0 ? 'is-pay' : ''}"
+                        th:text="${mult == null ? '' : (mult gt 0 ? mult + '×' : '—')}">—</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="muted">
+            Empty cells mean the spot count can't produce that hit count. RTP across the table sits in the 0.83-0.92 band.
+        </p>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-sounds.js}"></script>
+<script th:src="@{/js/casino-jackpot.js}"></script>
+<script th:src="@{/js/casino-topup.js}"></script>
+<script th:src="@{/js/casino-result.js}"></script>
+<script th:src="@{/js/casino-render.js}"></script>
+<script th:src="@{/js/casino-game.js}"></script>
+<script th:src="@{/js/keno.js}"></script>
+</body>
+</html>

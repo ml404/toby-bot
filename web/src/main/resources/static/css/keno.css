@@ -1,0 +1,235 @@
+@import url("./casino-table.css");
+
+.keno-header { margin-bottom: var(--space-5); }
+.keno-header h1 { margin: var(--space-2) 0; }
+.keno-header strong { color: #fff; }
+
+.keno-bet {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+    max-width: 56rem;
+}
+
+.keno-bet h2 { margin-top: 0; margin-bottom: var(--space-3); }
+
+.keno-bet form {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.keno-pickbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.keno-pickcount {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.keno-pickcount strong { color: #fff; }
+
+.keno-bet input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    max-width: 12rem;
+}
+
+.keno-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.keno-balance {
+    color: var(--text-muted);
+    margin-top: var(--space-3);
+}
+.keno-balance strong { color: #fff; }
+
+/* casino-felt owns the green table; this class only owns layout. */
+.keno-table {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.keno-status {
+    color: rgba(255, 255, 255, 0.78);
+    text-align: center;
+    font-size: 0.95rem;
+    min-height: 1.4em;
+}
+
+/* 8-column board renders the 80-cell pool as 8 wide × 10 tall. The
+   shared `.casino-card-face` recipe (white gradient, inner highlight,
+   serif numerals) gives each cell the same visual language as a card
+   glyph on blackjack/poker — different shape, same product. */
+.keno-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.4rem;
+    width: 100%;
+}
+
+.keno-cell {
+    aspect-ratio: 1 / 1;
+    background: var(--casino-card-bg);
+    color: #1a1a1a;
+    border: var(--casino-card-border);
+    border-radius: 0.4rem;
+    box-shadow: var(--casino-card-shadow);
+    font-family: "Cambria", "Georgia", serif;
+    font-weight: 700;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        background 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.1s ease,
+        border-color 0.15s ease;
+}
+
+.keno-cell:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(241, 196, 15, 0.5);
+}
+.keno-cell:active:not(:disabled) {
+    transform: translateY(0) scale(0.96);
+}
+.keno-cell:focus-visible {
+    outline: 2px solid #5865F2;
+    outline-offset: 2px;
+}
+.keno-cell:disabled {
+    cursor: default;
+}
+
+/* Picked but not-yet-drawn — gold ring tells the user "this is your
+   commitment", same treatment as selected sides on baccarat / coinflip. */
+.keno-cell.is-picked {
+    border-color: var(--casino-gold);
+    background: linear-gradient(180deg, #fff 0%, #fef3c7 100%);
+    box-shadow: var(--casino-active-glow);
+}
+
+/* A drawn number that the player did NOT pick — dim gray panel so the
+   cell still reads as "the round happened here" without competing for
+   attention with the hits. */
+.keno-cell.is-drawn {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* A drawn number the player DID pick — the hit. Pulse with the shared
+   casino-pulse keyframe so wins celebrate themselves. */
+.keno-cell.is-hit {
+    background: linear-gradient(180deg, #fde68a 0%, #fcd34d 100%);
+    color: #4a1a00;
+    border-color: var(--casino-gold);
+    box-shadow: var(--casino-active-glow);
+    animation: casino-pulse 1.6s ease-in-out infinite;
+}
+
+.keno-result {
+    min-height: 1.5em;
+    font-size: 1.05rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.85);
+}
+.keno-result.keno-result-win { color: #57F287; }
+.keno-result.keno-result-lose { color: #a0a0b0; }
+.keno-result strong { color: inherit; }
+
+.keno-rules,
+.keno-payouts {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+
+.keno-rules h2,
+.keno-payouts h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+
+.keno-rules ol {
+    list-style: decimal;
+    padding-left: 22px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.keno-rules strong { color: #fff; }
+.keno-rules em { color: #fff; font-style: normal; }
+
+/* Paytable horizontal scroll: 11 columns (Spots + 0..10 hits) often
+   overflows on phones — the scroll preserves alignment and prevents
+   the table from shrinking text below readable size. */
+.keno-payouts-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.keno-payouts table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    min-width: 38rem;
+}
+.keno-payouts th,
+.keno-payouts td {
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+.keno-payouts th:first-child,
+.keno-payouts td:first-child {
+    text-align: left;
+    color: rgba(255, 255, 255, 0.85);
+}
+.keno-payouts th {
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-align: right;
+}
+.keno-payouts td.is-pay {
+    color: var(--casino-gold);
+    font-weight: 600;
+}
+.keno-payouts tr:last-child td { border-bottom: none; }
+
+@media (max-width: 600px) {
+    .keno-cell { font-size: 0.85rem; }
+    .keno-payouts table { font-size: 0.82rem; }
+}
+
+@media (max-width: 380px) {
+    .keno-grid { gap: 0.3rem; }
+    .keno-cell { font-size: 0.75rem; }
+}
