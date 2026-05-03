@@ -6,6 +6,7 @@
     var tableId = main.dataset.tableId;
     var myId = main.dataset.myDiscordId;
 
+    var balanceEl = document.getElementById("bj-balance");
     var phaseEl = document.getElementById("bj-phase");
     var handNumberEl = document.getElementById("bj-hand-number");
     var toActEl = document.getElementById("bj-to-act");
@@ -280,6 +281,11 @@
     // POSTs go via TobyApi.postJson so the Spring Security CSRF header
     // (read off the <meta name="_csrf"> tag in the head fragment) is
     // included — without it Spring rejects the request with 403.
+    function setBalance(b) {
+        if (b == null) return;
+        if (balanceEl) balanceEl.textContent = b;
+    }
+
     function postAction(action) {
         return window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/action", { action: action })
             .then(function (b) {
@@ -287,6 +293,11 @@
                     window.toasts && window.toasts.error(b.error || "Action failed.");
                     return;
                 }
+                // Server echoes live wallet on every Continued/HandResolved
+                // response — without this the multi page never updates the
+                // displayed balance, so DOUBLE/SPLIT pre-debits and end-of-hand
+                // payouts only show on a full page reload.
+                setBalance(b.newBalance);
                 refreshState();
             });
     }
@@ -314,6 +325,7 @@
                     window.toasts && window.toasts.error(b.error || "Join failed.");
                     return;
                 }
+                setBalance(b.newBalance);
                 refreshState();
             });
     });
@@ -325,6 +337,7 @@
                     window.toasts && window.toasts.error(b.error || "Leave failed.");
                     return;
                 }
+                setBalance(b.newBalance);
                 if (b.queued) {
                     window.toasts && window.toasts.info("Leaving — you'll auto-stand and be removed at end of hand.");
                 } else {

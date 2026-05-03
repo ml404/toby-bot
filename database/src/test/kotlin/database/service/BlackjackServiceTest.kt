@@ -166,6 +166,34 @@ class BlackjackServiceTest {
     }
 
     @Test
+    fun `dealSolo Dealt and applySoloAction HIT echo the post-deal wallet — never re-debit per HIT`() {
+        // Regression for the UI bug "blackjack is taking the stake cost per
+        // interaction (e.g. hit)". The wallet is debited once at deal time;
+        // each subsequent HIT/STAND is a no-op on the wallet. The Dealt /
+        // Continued outcomes carry `newBalance` so the JS can refresh
+        // `#bj-balance` mid-hand without it appearing to fluctuate per click.
+        val user = primeNonBjDeal(
+            player = mutableListOf(c(Rank.FIVE), c(Rank.FIVE, Suit.HEARTS)), // 10 — keeps hitting safely
+            dealer = mutableListOf(c(Rank.KING), c(Rank.FOUR)),
+        )
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+        val dealt = assertInstanceOf(BlackjackService.SoloDealOutcome.Dealt::class.java, deal)
+        assertEquals(900L, user.socialCredit, "stake debited exactly once at deal time")
+        assertEquals(900L, dealt.newBalance, "Dealt outcome echoes the post-deal wallet")
+
+        // Each HIT lands a 2 → 12, 14, 16: never busts, never resolves.
+        every { blackjack.hit(any(), any()) } answers {
+            firstArg<MutableList<Card>>().add(c(Rank.TWO, Suit.HEARTS))
+        }
+        repeat(3) {
+            val outcome = service.applySoloAction(discordId, guildId, dealt.tableId, Blackjack.Action.HIT)
+            val cont = assertInstanceOf(BlackjackService.SoloActionOutcome.Continued::class.java, outcome)
+            assertEquals(900L, user.socialCredit, "wallet must not move on HIT")
+            assertEquals(900L, cont.newBalance, "Continued outcome must echo the live wallet (no per-HIT debit)")
+        }
+    }
+
+    @Test
     fun `applySoloAction HIT busts and resolves as PLAYER_BUST`() {
         val user = userWithBalance(1_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
@@ -305,10 +333,16 @@ class BlackjackServiceTest {
         assertNull(registry.get(tableId))
     }
 
-    private fun primeNonBjDeal(player: MutableList<Card>, dealer: MutableList<Card>) {
+    private fun primeNonBjDeal(player: MutableList<Card>, dealer: MutableList<Card>): UserDto {
         val user = userWithBalance(1_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        // Continued action responses now read the live wallet via [getUserById]
+        // so the controller can echo `newBalance` to the JS — return the same
+        // entity so the running mutation in dealSolo / applySoloAction is
+        // observable across both reads.
+        every { userService.getUserById(discordId, guildId) } returns user
         every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(player, dealer)
+        return user
     }
 
     // -------------------------------------------------------------------------

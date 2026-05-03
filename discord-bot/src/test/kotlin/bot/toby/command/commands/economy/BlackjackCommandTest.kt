@@ -82,7 +82,7 @@ internal class BlackjackCommandTest : CommandTest {
         every { event.getOption("stake") } returns intOpt(50L)
         val table = soloTable()
         every { service.dealSolo(discordId, guildId, 50L) } returns
-            BlackjackService.SoloDealOutcome.Dealt(tableId = table.id, snapshot = table)
+            BlackjackService.SoloDealOutcome.Dealt(tableId = table.id, snapshot = table, newBalance = 0L)
         every { registry.get(table.id) } returns table
 
         command.handle(DefaultCommandContext(event), user, 5)

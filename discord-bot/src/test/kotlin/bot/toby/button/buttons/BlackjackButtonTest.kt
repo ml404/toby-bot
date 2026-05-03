@@ -112,7 +112,7 @@ class BlackjackButtonTest : ButtonTest {
         every { event.componentId } returns BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.HIT, table.id)
         every {
             service.applySoloAction(ownerId, guildId, table.id, Blackjack.Action.HIT)
-        } returns BlackjackService.SoloActionOutcome.Continued(table)
+        } returns BlackjackService.SoloActionOutcome.Continued(table, newBalance = 0L)
 
         button.handle(DefaultButtonContext(event), UserDto(ownerId, guildId), 0)
 
@@ -176,7 +176,7 @@ class BlackjackButtonTest : ButtonTest {
         every { event.componentId } returns BlackjackEmbeds.buttonId(BlackjackEmbeds.Action.HIT, table.id)
         every {
             service.applyMultiAction(ownerId, guildId, table.id, Blackjack.Action.HIT)
-        } returns BlackjackService.MultiActionOutcome.Continued(table)
+        } returns BlackjackService.MultiActionOutcome.Continued(table, newBalance = 0L)
 
         button.handle(DefaultButtonContext(event), UserDto(ownerId, guildId), 0)
 
