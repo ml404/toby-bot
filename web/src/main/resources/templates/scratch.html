@@ -20,7 +20,7 @@
 
     <div th:replace="~{fragments/alerts :: error}"></div>
 
-    <section class="scratch-table">
+    <section class="scratch-table casino-felt">
         <div class="scratch-cells" id="scratch-cells">
             <button th:each="i : ${#numbers.sequence(0, cellCount - 1)}"
                     type="button" class="scratch-cell"

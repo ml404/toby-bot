@@ -30,6 +30,7 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
     const cellsContainer = document.getElementById('scratch-cells');
     const cellButtons = Array.from(cellsContainer ? cellsContainer.querySelectorAll('.scratch-cell') : []);
+    const tableEl = document.querySelector('.scratch-table');
     const stakeInput = document.getElementById('scratch-stake');
     const buyBtn = document.getElementById('scratch-buy');
     const buyTobyBtn = document.getElementById('scratch-buy-toby');
@@ -74,6 +75,21 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
             renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl);
             if (window.CasinoSounds) {
                 window.CasinoSounds.play((activeCard.net || 0) > 0 ? 'win' : 'lose');
+            }
+            // Drop the shared chip flourish on the felt for a win, so a
+            // scratchcard payout celebrates the same way every other
+            // casino game does. flashWinPayout treats `win: true` and a
+            // positive net as the trigger; scratch uses `net > 0` as its
+            // win flag so we synthesise that field for the helper.
+            if (window.CasinoRender) {
+                var payoutEstimate = (activeCard.jackpotPayout > 0
+                    ? activeCard.jackpotPayout
+                    : (activeCard.net || 0));
+                window.CasinoRender.flashWinPayout(tableEl, {
+                    win: (activeCard.net || 0) > 0,
+                    net: activeCard.net,
+                    jackpotPayout: activeCard.jackpotPayout,
+                }, Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100))));
             }
             // Now the credits visibly drop and the topup-coin recompute
             // catches up too — see autoApplyBalance: false in the helper.

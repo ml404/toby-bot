@@ -1,15 +1,16 @@
+@import url("./casino-table.css");
+
 .coinflip-header { margin-bottom: var(--space-5); }
 .coinflip-header h1 { margin: var(--space-2) 0; }
 
+/* casino-felt owns the green-felt frame; this class only owns layout. */
 .coinflip-table {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: var(--space-5);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-4);
+    /* Anchor the chip flourish overlay. */
+    position: relative;
 }
 
 .coinflip-coin {
@@ -75,17 +76,19 @@
     display: block;
     text-align: center;
     padding: 12px;
-    background: #0f1830;
+    background: rgba(0, 0, 0, 0.35);
     border: 2px solid var(--border);
     border-radius: 8px;
     color: var(--text-muted);
     font-weight: 600;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
 }
+/* Selected side gets the shared gold halo (--casino-active-glow). */
 .coinflip-side input[type="radio"]:checked + span {
-    border-color: #f1c40f;
+    border-color: var(--casino-gold);
     color: #fff;
-    background: #1a2240;
+    background: var(--casino-active-tile-bg);
+    box-shadow: var(--casino-active-glow);
 }
 .coinflip-side input[type="radio"]:focus-visible + span {
     outline: 2px solid #5865F2;

@@ -224,11 +224,26 @@
         }
     }
 
+    // Convenience wrapper: pull the right payout off a server response
+    // body and drop a chip flourish for it. `body.jackpotPayout` (when
+    // > 0) wins over `body.net` so a jackpot reads as the bigger payout
+    // it is. No-op on losses / zero / missing seat — every game caller
+    // can pass its body straight through without guarding.
+    function flashWinPayout(seatEl, body, chipCount) {
+        if (!seatEl || !body || !body.win) return;
+        var payout = (typeof body.jackpotPayout === "number" && body.jackpotPayout > 0)
+            ? body.jackpotPayout
+            : body.net;
+        if (!payout || payout <= 0) return;
+        flashChipsOn(seatEl, payout, chipCount);
+    }
+
     window.CasinoRender = {
         renderCards: renderCards,
         makeAvatar: makeAvatar,
         makeSeatHeader: makeSeatHeader,
         renderActorPill: renderActorPill,
         flashChipsOn: flashChipsOn,
+        flashWinPayout: flashWinPayout,
     };
 })();

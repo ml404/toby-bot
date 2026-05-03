@@ -1,29 +1,30 @@
+@import url("./casino-table.css");
+
 .dice-header { margin-bottom: var(--space-5); }
 .dice-header h1 { margin: var(--space-2) 0; }
 .dice-header strong { color: #fff; }
 
+/* casino-felt owns the green table look; this class only owns layout. */
 .dice-table {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: var(--space-5);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-4);
 }
 
+/* Visual recipe (white gradient, border, shadow, serif font) comes from
+   the shared `.casino-card-face` class in casino-table.css — applied
+   on the markup. Local rules only set size + interaction. */
 .dice-die {
     width: 120px;
     height: 120px;
     border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 -4px 8px rgba(0, 0, 0, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     user-select: none;
     transition: transform 0.2s;
+    position: relative;
 }
 .dice-die-face {
     font-size: 5rem;
@@ -78,19 +79,21 @@
     display: block;
     text-align: center;
     padding: 12px 0;
-    background: #0f1830;
+    background: rgba(0, 0, 0, 0.35);
     border: 2px solid var(--border);
     border-radius: 8px;
     color: var(--text-muted);
     font-weight: 700;
     font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
 }
+/* Selected number gets the shared gold halo (--casino-active-glow). */
 .dice-prediction input[type="radio"]:checked + span {
-    border-color: #f1c40f;
+    border-color: var(--casino-gold);
     color: #fff;
-    background: #1a2240;
+    background: var(--casino-active-tile-bg);
+    box-shadow: var(--casino-active-glow);
 }
 .dice-prediction input[type="radio"]:focus-visible + span {
     outline: 2px solid #5865F2;

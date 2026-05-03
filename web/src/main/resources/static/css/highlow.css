@@ -1,12 +1,12 @@
+@import url("./casino-table.css");
+
 .highlow-header { margin-bottom: var(--space-5); }
 .highlow-header h1 { margin: var(--space-2) 0; }
 .highlow-header strong { color: #fff; }
 
+/* casino-felt covers the green-felt frame; this class only owns the
+   stack layout for cards + form + buttons. */
 .highlow-table {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: var(--space-5);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -18,43 +18,40 @@
     align-items: center;
     gap: var(--space-3);
 }
+/* Each slot now stacks the casino card glyph above its "Anchor"/"Next"
+   label — the white card frame is gone (the glyph is the card). */
 .highlow-card {
-    width: 96px;
-    height: 134px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #fff 0%, #e8e8f0 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 0.4rem;
     user-select: none;
-    position: relative;
 }
 .highlow-card-face {
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: #1a1a2e;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
+    /* Sized larger than the default casino-card-glyph because high-low
+       has only one card per slot — there's room to make it the focal
+       point. casino-card-glyph still owns colour/shadow/typography. */
+    width: 4.5rem;
+    height: 6.4rem;
+    font-size: 2rem;
 }
 .highlow-card-label {
-    position: absolute;
-    bottom: 8px;
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #666;
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 600;
 }
-.highlow-card.shuffling { animation: highlow-pulse 0.4s linear infinite; }
-@keyframes highlow-pulse {
+.highlow-card.shuffling .highlow-card-face {
+    animation: highlow-shuffle 0.4s linear infinite;
+}
+@keyframes highlow-shuffle {
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-4px) scale(1.02); }
 }
 .highlow-arrow {
     font-size: 2rem;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.6);
     user-select: none;
 }
 
@@ -119,10 +116,18 @@
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .highlow-direction-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+/* Hover/focus reaches for the shared gold halo (--casino-active-glow). */
+.highlow-direction-btn:not(:disabled):hover,
+.highlow-direction-btn:not(:disabled):focus-visible {
+    border-color: var(--casino-gold);
+    box-shadow: var(--casino-active-glow);
+    outline: none;
 }
 
 .highlow-stake-label {
@@ -174,8 +179,7 @@
 .highlow-rules strong { color: #fff; }
 
 @media (max-width: 600px) {
-    .highlow-card { width: 76px; height: 110px; }
-    .highlow-card-face { font-size: 2rem; }
+    .highlow-card-face { width: 3.6rem; height: 5.2rem; font-size: 1.6rem; }
     .highlow-arrow { font-size: 1.5rem; }
     .highlow-bet { max-width: 100%; }
     /* Direction picker fills the row so Higher / Lower stay at ≥44px. */
@@ -187,7 +191,6 @@
 }
 
 @media (max-width: 380px) {
-    .highlow-card { width: 64px; height: 92px; }
-    .highlow-card-face { font-size: 1.6rem; }
+    .highlow-card-face { width: 3rem; height: 4.4rem; font-size: 1.3rem; }
     .highlow-arrow { font-size: 1.2rem; }
 }

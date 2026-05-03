@@ -8,6 +8,7 @@ function renderBaccaratResult(opts) {
     var bankerTotalEl = opts.bankerTotalEl;
     var playerTotalEl = opts.playerTotalEl;
     var tableEl = opts.tableEl;
+    var flashTargetEl = opts.flashTargetEl || tableEl;
     var body = opts.body;
 
     if (tableEl) tableEl.hidden = false;
@@ -64,6 +65,18 @@ function renderBaccaratResult(opts) {
             winLineHtml: winLineHtml(body, sideLabel, winnerLabel),
             loseLineHtml: loseLineHtml(body, sideLabel, winnerLabel),
         });
+    }
+
+    // Match the blackjack/poker payoff flourish: gold chip stack pops on
+    // wins, sound cue on either outcome. flashWinPayout picks the right
+    // payout (jackpot > net) and no-ops on losses.
+    if (typeof window !== 'undefined') {
+        if (window.CasinoRender) {
+            window.CasinoRender.flashWinPayout(flashTargetEl, body);
+        }
+        if (window.CasinoSounds) {
+            window.CasinoSounds.play(body.win ? 'win' : 'lose');
+        }
     }
 }
 
@@ -143,6 +156,7 @@ function loseLineHtml(body, sideLabel, winnerLabel) {
                     bankerTotalEl: bankerTotalEl,
                     playerTotalEl: playerTotalEl,
                     tableEl: tableEl,
+                    flashTargetEl: tableEl,
                     body: body,
                 });
             },

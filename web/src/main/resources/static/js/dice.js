@@ -1,6 +1,6 @@
 // Pure-DOM render for a /roll response. Hoisted out of the IIFE so the
 // jest test in `dice.test.js` can drive it without booting the page.
-function renderDiceResult(resultEl, body) {
+function renderDiceResult(resultEl, body, flashTargetEl) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -11,6 +11,10 @@ function renderDiceResult(resultEl, body) {
             loseLineHtml: '<strong>' + body.landed + '.</strong> You called ' +
                 body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
         });
+    }
+    // Same chip flourish blackjack/poker use on a winning hand.
+    if (typeof window !== 'undefined' && window.CasinoRender) {
+        window.CasinoRender.flashWinPayout(flashTargetEl, body);
     }
 }
 
@@ -23,6 +27,7 @@ function renderDiceResult(resultEl, body) {
     const guildId = main.dataset.guildId;
     const die = document.getElementById('dice-die');
     const dieFace = document.getElementById('dice-die-face');
+    const tableEl = document.querySelector('.dice-table');
     const stakeInput = document.getElementById('dice-stake');
     const rollBtn = document.getElementById('dice-roll');
     const rollTobyBtn = document.getElementById('dice-roll-toby');
@@ -95,7 +100,7 @@ function renderDiceResult(resultEl, body) {
         },
         startAnimation: startRollAnimation,
         stopAnimation: stopRollAnimation,
-        renderResult: function (body) { renderDiceResult(resultEl, body); },
+        renderResult: function (body) { renderDiceResult(resultEl, body, tableEl); },
     });
 })();
 

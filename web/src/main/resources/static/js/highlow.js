@@ -54,6 +54,7 @@ function renderHighlowResult(resultEl, body) {
     const nextFace = document.getElementById('highlow-next-face');
     const anchorCard = document.getElementById('highlow-anchor');
     const nextCard = document.getElementById('highlow-next');
+    const tableEl = document.querySelector('.highlow-table');
     const stakeInput = document.getElementById('highlow-stake');
     const dealBtn = document.getElementById('highlow-deal');
     const dealTobyBtn = document.getElementById('highlow-deal-toby');
@@ -104,6 +105,7 @@ function renderHighlowResult(resultEl, body) {
         if (typeof anchorValue === 'number') {
             anchorFace.textContent = cardLabel(anchorValue);
             if (anchorCard) anchorCard.dataset.value = String(anchorValue);
+            replayDealAnimation(anchorFace);
             if (window.CasinoSounds) window.CasinoSounds.play('deal');
         }
         nextFace.textContent = '?';
@@ -129,12 +131,28 @@ function renderHighlowResult(resultEl, body) {
         if (typeof value === 'number') {
             nextFace.textContent = cardLabel(value);
             nextCard.dataset.value = String(value);
+            replayDealAnimation(nextFace);
             // Final card snaps into place — sounds the flip cue.
             if (window.CasinoSounds) window.CasinoSounds.play('flip');
         } else {
             nextFace.textContent = '?';
             delete nextCard.dataset.value;
         }
+    }
+
+    // Re-trigger the shared casino deal-in animation on a glyph that's
+    // already in the DOM. casino-table.css applies the keyframe via
+    // `.is-dealt`, so toggling the class restarts the 280ms ease-out.
+    function replayDealAnimation(el) {
+        if (!el) return;
+        el.classList.remove('is-dealt');
+        // Force reflow so the browser registers the class removal before
+        // re-adding it — without this the animation just keeps its current
+        // state instead of replaying.
+        // eslint-disable-next-line no-unused-expressions
+        el.offsetWidth;
+        el.classList.add('is-dealt');
+        setTimeout(function () { el.classList.remove('is-dealt'); }, 320);
     }
 
     // /start uses the shared form + TOBY-topup scaffolding. /play has
@@ -186,6 +204,17 @@ function renderHighlowResult(resultEl, body) {
                         renderHighlowResult(resultEl, body);
                         if (window.CasinoSounds) {
                             window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
+                        }
+                        // Drop a chip stack on the felt so a high-low win
+                        // celebrates the same way a blackjack/poker win does.
+                        // highlow uses `net > 0` as its win flag; synthesise
+                        // the field flashWinPayout expects.
+                        if (window.CasinoRender) {
+                            window.CasinoRender.flashWinPayout(tableEl, {
+                                win: body.net > 0,
+                                net: body.net,
+                                jackpotPayout: body.jackpotPayout,
+                            });
                         }
                         if (game) {
                             game.applyBalance(body.newBalance);
