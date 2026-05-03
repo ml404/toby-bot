@@ -15,19 +15,49 @@
         return '🎰 <strong>JACKPOT!</strong> +' + payout + ' credits<br>';
     }
 
+    // Hold/release lock used by per-game JS to keep the pool banner in
+    // sync with reveal animations. While held, updatePoolBanner queues
+    // the latest body instead of painting (last-write-wins) so a player
+    // can't read the outcome from the banner ticking before the reels
+    // stop / cards land / scratch cells reveal. release flushes the
+    // queued body. Pages without an animation never call hold so the
+    // existing immediate-paint behaviour is preserved.
+    let locked = false;
+    let pending = null;
+
+    function paintPoolBanner(body) {
+        if (typeof document === 'undefined') return;
+        const target = document.querySelector('.casino-jackpot-banner strong');
+        if (target) target.textContent = String(body.jackpotPool);
+    }
+
     /**
      * Refresh the per-guild jackpot pool banner (`fragments/casino.html`)
      * from a `body.jackpotPool` value. Called centrally by api.js after
      * every casino POST, fed from the X-Jackpot-Pool response header — so
      * games never have to remember to mirror the pool themselves. No-ops
      * when the field is absent or the banner isn't on the current page (so
-     * duel/trade/tip pages silently skip the DOM write).
+     * duel/trade/tip pages silently skip the DOM write). When the banner
+     * is held (see holdPoolBanner) the value is stashed and painted on
+     * release instead.
      */
     function updatePoolBanner(body) {
         if (!body || typeof body.jackpotPool !== 'number') return;
-        if (typeof document === 'undefined') return;
-        const target = document.querySelector('.casino-jackpot-banner strong');
-        if (target) target.textContent = String(body.jackpotPool);
+        if (locked) { pending = body; return; }
+        paintPoolBanner(body);
+    }
+
+    function holdPoolBanner() {
+        locked = true;
+    }
+
+    function releasePoolBanner() {
+        locked = false;
+        if (pending) {
+            const body = pending;
+            pending = null;
+            paintPoolBanner(body);
+        }
     }
 
     /**
@@ -54,7 +84,15 @@
             body.lossTribute + ' to jackpot</span>';
     }
 
-    const api = { isJackpotHit, jackpotPrefixHtml, renderWinHtml, lossTributeSuffix, updatePoolBanner };
+    const api = {
+        isJackpotHit,
+        jackpotPrefixHtml,
+        renderWinHtml,
+        lossTributeSuffix,
+        updatePoolBanner,
+        holdPoolBanner,
+        releasePoolBanner,
+    };
 
     // Browser global so each game's IIFE-style JS can reach it without
     // bundler plumbing.
