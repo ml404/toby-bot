@@ -1,15 +1,16 @@
+@import url("./casino-table.css");
+
 .scratch-header { margin-bottom: var(--space-5); }
 .scratch-header h1 { margin: var(--space-2) 0; }
 
+/* casino-felt owns the green-felt frame; this class only owns layout. */
 .scratch-table {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: var(--space-5);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-4);
+    /* Anchor the chip flourish overlay. */
+    position: relative;
 }
 
 .scratch-cells {
@@ -87,6 +88,15 @@
 .scratch-cell.win-cell .scratch-cell-face {
     background: #1a3322;
     border: 2px solid #57F287;
+}
+/* Winning cells pulse with the same gold halo blackjack/poker uses for
+   the active actor — turns the "you won" scratchcard into a celebration
+   instead of a static green border. */
+.scratch-cell.win-cell {
+    animation: casino-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .scratch-cell.win-cell { animation: none; }
 }
 
 @keyframes scratch-off {

@@ -82,11 +82,11 @@
     cursor: pointer;
     display: grid;
     gap: 0.15rem;
-    transition: border-color 120ms ease, background 120ms ease;
+    transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .bac-side:hover {
-    border-color: var(--accent, #5865f2);
+    border-color: rgba(241, 196, 15, 0.6);
 }
 
 .bac-side input[type="radio"] {
@@ -95,9 +95,17 @@
     pointer-events: none;
 }
 
+/* Selected side: shared gold-ring treatment (--casino-active-glow) used
+   for the active actor on every casino game. */
 .bac-side:has(input:checked) {
-    border-color: var(--accent, #5865f2);
-    background: rgba(88, 101, 242, 0.12);
+    border-color: var(--casino-gold);
+    background: var(--casino-active-tile-bg);
+    box-shadow: var(--casino-active-glow);
+}
+
+.bac-side input[type="radio"]:focus-visible + .bac-side-name {
+    outline: 2px solid #5865F2;
+    outline-offset: 2px;
 }
 
 .bac-side-name {

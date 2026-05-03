@@ -1,6 +1,6 @@
 // Pure-DOM render for a /flip response. Hoisted out of the IIFE so the
 // jest test in `coinflip.test.js` can drive it without booting the page.
-function renderCoinflipResult(resultEl, body) {
+function renderCoinflipResult(resultEl, body, flashTargetEl) {
     const landedLabel = body.landed === 'HEADS' ? 'Heads' : 'Tails';
     const predictedLabel = body.predicted === 'HEADS' ? 'Heads' : 'Tails';
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
@@ -14,6 +14,10 @@ function renderCoinflipResult(resultEl, body) {
                 predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
         });
     }
+    // Same chip flourish blackjack uses when a hand pays out.
+    if (typeof window !== 'undefined' && window.CasinoRender) {
+        window.CasinoRender.flashWinPayout(flashTargetEl, body);
+    }
 }
 
 (function () {
@@ -25,6 +29,7 @@ function renderCoinflipResult(resultEl, body) {
     const guildId = main.dataset.guildId;
     const coin = document.getElementById('coinflip-coin');
     const coinFace = document.getElementById('coinflip-coin-face');
+    const tableEl = document.querySelector('.coinflip-table');
     const stakeInput = document.getElementById('coinflip-stake');
     const flipBtn = document.getElementById('coinflip-flip');
     const flipTobyBtn = document.getElementById('coinflip-flip-toby');
@@ -98,7 +103,7 @@ function renderCoinflipResult(resultEl, body) {
         },
         startAnimation: startFlipAnimation,
         stopAnimation: stopFlipAnimation,
-        renderResult: function (body) { renderCoinflipResult(resultEl, body); },
+        renderResult: function (body) { renderCoinflipResult(resultEl, body, tableEl); },
     });
 })();
 

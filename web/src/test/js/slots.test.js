@@ -5,13 +5,24 @@
 const { renderSlotsResult } = require('../../main/resources/static/js/slots');
 require('../../main/resources/static/js/casino-jackpot');
 require('../../main/resources/static/js/casino-result');
+require('../../main/resources/static/js/casino-render');
 
 describe('renderSlotsResult', () => {
     let resultEl;
+    let machineEl;
+    let reels;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="r"></div>';
+        document.body.innerHTML =
+            '<div id="r"></div>' +
+            '<section id="m">' +
+            '  <div class="slots-reel" id="r0"></div>' +
+            '  <div class="slots-reel" id="r1"></div>' +
+            '  <div class="slots-reel" id="r2"></div>' +
+            '</section>';
         resultEl = document.getElementById('r');
+        machineEl = document.getElementById('m');
+        reels = ['r0', 'r1', 'r2'].map((id) => document.getElementById(id));
     });
 
     test('renders a win line with the multiplier and net', () => {
@@ -74,5 +85,27 @@ describe('renderSlotsResult', () => {
         renderSlotsResult(resultEl, { win: false, net: -100, symbols: [] });
 
         expect(resultEl.innerHTML).not.toContain('to jackpot');
+    });
+
+    test('win lights up every reel with .win-cell and drops a chip stack on the machine', () => {
+        renderSlotsResult(resultEl, {
+            win: true, multiplier: 5, net: 400, symbols: ['🍒', '🍒', '🍒']
+        }, machineEl, reels);
+
+        reels.forEach((r) => expect(r.classList.contains('win-cell')).toBe(true));
+        const stack = machineEl.querySelector('.casino-chip-stack');
+        expect(stack).not.toBeNull();
+        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+400');
+    });
+
+    test('lose strips any prior .win-cell highlight and leaves the machine clean', () => {
+        // Pretend the previous spin won — the new lose render should clear it.
+        reels.forEach((r) => r.classList.add('win-cell'));
+        renderSlotsResult(resultEl, {
+            win: false, net: -100, symbols: ['🍒', '🍋', '⭐']
+        }, machineEl, reels);
+
+        reels.forEach((r) => expect(r.classList.contains('win-cell')).toBe(false));
+        expect(machineEl.querySelector('.casino-chip-stack')).toBeNull();
     });
 });

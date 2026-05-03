@@ -1,7 +1,7 @@
 // Pure-DOM render for a /spin response. Hoisted out of the IIFE so the
 // jest test in `slots.test.js` can drive it without booting the whole
 // page. The IIFE below calls it with the live result element.
-function renderSlotsResult(resultEl, body) {
+function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -11,6 +11,22 @@ function renderSlotsResult(resultEl, body) {
                 body.multiplier + '× on a stake',
             loseLineHtml: 'Lost <strong>' + Math.abs(body.net) + ' credits</strong>',
         });
+    }
+    if (typeof window === 'undefined' || !body) return;
+    // Light up the winning reels with the gold halo used everywhere else
+    // for "this is the active payoff", and drop the shared chip flourish
+    // on the felt so a slots win celebrates like a blackjack win.
+    if (reels && reels.length) {
+        reels.forEach(function (r) { if (r) r.classList.remove('win-cell'); });
+        if (body.win) {
+            reels.forEach(function (r) { if (r) r.classList.add('win-cell'); });
+        }
+    }
+    if (window.CasinoRender) {
+        // Bigger payouts get a taller stack, capped internally at 7.
+        var payoutEstimate = (body.jackpotPayout > 0 ? body.jackpotPayout : body.net) || 0;
+        var chipCount = Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100)));
+        window.CasinoRender.flashWinPayout(flashTargetEl, body, chipCount);
     }
 }
 
@@ -26,6 +42,7 @@ function renderSlotsResult(resultEl, body) {
         document.getElementById('slots-reel-1'),
         document.getElementById('slots-reel-2')
     ];
+    const machineEl = document.querySelector('.slots-machine');
     const stakeInput = document.getElementById('slots-stake');
     const spinBtn = document.getElementById('slots-spin');
     const spinTobyBtn = document.getElementById('slots-spin-toby');
@@ -40,7 +57,12 @@ function renderSlotsResult(resultEl, body) {
     const SPIN_DURATION_MS = 800;
 
     function startSpinAnimation() {
-        reels.forEach(function (reel) { reel.classList.add('spinning'); });
+        // Strip any prior win highlight so a fresh spin doesn't wear the
+        // gold halo from the previous round while it's still tumbling.
+        reels.forEach(function (reel) {
+            reel.classList.remove('win-cell');
+            reel.classList.add('spinning');
+        });
         if (window.CasinoSounds) window.CasinoSounds.play('deal');
         return setInterval(function () {
             reels.forEach(function (reel) {
@@ -83,7 +105,7 @@ function renderSlotsResult(resultEl, body) {
         failureMessage: 'Spin failed.',
         startAnimation: startSpinAnimation,
         stopAnimation: stopSpinAnimation,
-        renderResult: function (body) { renderSlotsResult(resultEl, body); },
+        renderResult: function (body) { renderSlotsResult(resultEl, body, machineEl, reels); },
     });
 })();
 

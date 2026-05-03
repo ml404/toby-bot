@@ -20,7 +20,11 @@ function highlowFormatMultiplier(m) {
 
 // Pure-DOM render for a /play response. Hoisted out of the IIFE so the
 // jest test in `highlow.test.js` can drive it without booting the page.
-function renderHighlowResult(resultEl, body) {
+//
+// flashTargetEl is the felt element that gets the chip-stack flourish
+// on a win — passing it through the render fn keeps the chip flourish
+// callable from tests, instead of being trapped inside the IIFE.
+function renderHighlowResult(resultEl, body, flashTargetEl) {
     if (typeof window === 'undefined' || !window.TobyCasinoResult) return;
     const dirLabel = body.direction === 'HIGHER' ? 'Higher' : 'Lower';
     const tie = body.next === body.anchor;
@@ -39,6 +43,14 @@ function renderHighlowResult(resultEl, body) {
             ' <strong>' + highlowCardLabel(body.anchor) + '</strong> &middot; you called ' +
             dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
     });
+    // Highlow's response has no `win` field — net > 0 is the win signal.
+    if (window.CasinoRender) {
+        window.CasinoRender.flashWinPayout(flashTargetEl, {
+            win: (body.net || 0) > 0,
+            net: body.net,
+            jackpotPayout: body.jackpotPayout,
+        });
+    }
 }
 
 (function () {
@@ -54,6 +66,7 @@ function renderHighlowResult(resultEl, body) {
     const nextFace = document.getElementById('highlow-next-face');
     const anchorCard = document.getElementById('highlow-anchor');
     const nextCard = document.getElementById('highlow-next');
+    const tableEl = document.querySelector('.highlow-table');
     const stakeInput = document.getElementById('highlow-stake');
     const dealBtn = document.getElementById('highlow-deal');
     const dealTobyBtn = document.getElementById('highlow-deal-toby');
@@ -104,6 +117,7 @@ function renderHighlowResult(resultEl, body) {
         if (typeof anchorValue === 'number') {
             anchorFace.textContent = cardLabel(anchorValue);
             if (anchorCard) anchorCard.dataset.value = String(anchorValue);
+            replayDealAnimation(anchorFace);
             if (window.CasinoSounds) window.CasinoSounds.play('deal');
         }
         nextFace.textContent = '?';
@@ -129,12 +143,28 @@ function renderHighlowResult(resultEl, body) {
         if (typeof value === 'number') {
             nextFace.textContent = cardLabel(value);
             nextCard.dataset.value = String(value);
+            replayDealAnimation(nextFace);
             // Final card snaps into place — sounds the flip cue.
             if (window.CasinoSounds) window.CasinoSounds.play('flip');
         } else {
             nextFace.textContent = '?';
             delete nextCard.dataset.value;
         }
+    }
+
+    // Re-trigger the shared casino deal-in animation on a glyph that's
+    // already in the DOM. casino-table.css applies the keyframe via
+    // `.is-dealt`, so toggling the class restarts the 280ms ease-out.
+    function replayDealAnimation(el) {
+        if (!el) return;
+        el.classList.remove('is-dealt');
+        // Force reflow so the browser registers the class removal before
+        // re-adding it — without this the animation just keeps its current
+        // state instead of replaying.
+        // eslint-disable-next-line no-unused-expressions
+        el.offsetWidth;
+        el.classList.add('is-dealt');
+        setTimeout(function () { el.classList.remove('is-dealt'); }, 320);
     }
 
     // /start uses the shared form + TOBY-topup scaffolding. /play has
@@ -183,7 +213,7 @@ function renderHighlowResult(resultEl, body) {
                     playing = false;
                     if (body && body.ok) {
                         stopNextShuffle(intervalId, body.next);
-                        renderHighlowResult(resultEl, body);
+                        renderHighlowResult(resultEl, body, tableEl);
                         if (window.CasinoSounds) {
                             window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
                         }

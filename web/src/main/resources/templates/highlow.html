@@ -18,17 +18,17 @@
 
     <div th:replace="~{fragments/alerts :: error}"></div>
 
-    <section class="highlow-table">
+    <section class="highlow-table casino-felt">
         <div class="highlow-cards">
             <div class="highlow-card" id="highlow-anchor"
                  th:attr="data-value=${anchor}" aria-live="polite">
-                <span class="highlow-card-face" id="highlow-anchor-face"
+                <span class="highlow-card-face casino-card-glyph" id="highlow-anchor-face"
                       th:text="${anchorLabel}">?</span>
                 <span class="highlow-card-label">Anchor</span>
             </div>
             <div class="highlow-arrow" id="highlow-arrow" aria-hidden="true">→</div>
             <div class="highlow-card" id="highlow-next" aria-live="polite">
-                <span class="highlow-card-face" id="highlow-next-face">?</span>
+                <span class="highlow-card-face casino-card-glyph" id="highlow-next-face">?</span>
                 <span class="highlow-card-label">Next</span>
             </div>
         </div>

@@ -1,27 +1,85 @@
 /*
- * Shared "casino table" primitives — used by both /blackjack and /poker
- * so the two card games look like the same product. Game-specific bits
- * (split hands, side pots, betting slider, bust labels) live in their
- * per-game CSS and only override what they truly need.
+ * Shared "casino table" primitives — used by every casino minigame
+ * (blackjack, poker, baccarat, high-low, dice, slots, coinflip, scratch)
+ * so they all look like the same product. Game-specific bits (split
+ * hands, side pots, betting slider, bust labels) live in their per-game
+ * CSS and only override what they truly need.
  *
  * Class prefix: `.casino-` for components, `.is-*` modifiers.
  * Loaded before the per-game stylesheet so per-game rules win on conflict.
+ *
+ * Custom-property tokens below are the single source of truth for:
+ *   --casino-gold              : the active-actor / selected-tile colour
+ *   --casino-active-glow       : 2px ring + soft halo applied to gold
+ *                                selections (used by every game's picker)
+ *   --casino-active-tile-bg    : translucent gold wash behind selected tiles
+ *   --casino-card-bg           : white-gradient card / die / reel face
+ *   --casino-card-border       : subtle outer border on card-style faces
+ *   --casino-card-shadow       : drop shadow + inner highlight on cards
+ * Edit them here once and every game inherits the change.
+ *
+ * ---------------------------------------------------------------------
+ * Adding a new game? The polish kit is roughly:
+ *
+ *   HTML
+ *     <section class="my-game-table casino-felt">      ← green felt
+ *       <div class="my-game-card casino-card-glyph">…  ← cards
+ *       <div class="my-game-die  casino-card-face">…   ← dice/reels
+ *
+ *   per-game CSS (@import url("./casino-table.css") first)
+ *     .my-game-pick:has(input:checked) {                ← selected tile
+ *       border-color: var(--casino-gold);
+ *       background:   var(--casino-active-tile-bg);
+ *       box-shadow:   var(--casino-active-glow);
+ *     }
+ *     `casino-pulse` keyframe is shared too — animate any winning cell
+ *     with `animation: casino-pulse 1.6s ease-in-out infinite;`.
+ *
+ *   per-game JS (load casino-render.js + casino-sounds.js + casino-result.js)
+ *     window.CasinoRender.renderCards(container, cards)         // deal animation
+ *     window.CasinoRender.flashChipsOn(feltEl, payout)          // win flourish
+ *     window.CasinoSounds.play('deal'|'win'|'lose'|'flip'|...)  // SFX
+ *     window.TobyCasinoResult.render({classPrefix:'mygame', …}) // result line
+ *
+ *   Then wire the page's <head>/<body> the same way blackjack-table.html
+ *   does — load casino-{sounds,jackpot,topup,result,render,game}.js, the
+ *   sound toggle auto-installs, and reduced-motion is already honoured.
+ * ---------------------------------------------------------------------
  */
+
+:root {
+    --casino-gold: #f1c40f;
+    --casino-active-glow:
+        0 0 0 2px var(--casino-gold),
+        0 0 18px rgba(241, 196, 15, 0.45);
+    --casino-active-tile-bg: rgba(241, 196, 15, 0.08);
+    --casino-card-bg: linear-gradient(180deg, #ffffff 0%, #f3f1ea 100%);
+    --casino-card-border: 1px solid rgba(0, 0, 0, 0.15);
+    --casino-card-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
 
 /* ------------------------------------------------------------------- */
 /* Felt table                                                          */
 /* ------------------------------------------------------------------- */
 
 .casino-felt {
+    /* Stops brightened from the previous "almost-black green" — the old
+       gradient bottomed out at #0e2418 with a 0.55-alpha inset shadow,
+       which on phones read as black with a green tint. New stops keep
+       the dark-mode mood but stay legibly green at the edges; the inset
+       shadow is also softened so the centre actually shows the bright
+       stop. Adjust here once and every casino game inherits the change. */
     background:
-        radial-gradient(ellipse at center, #1f4a36 0%, #143324 70%, #0e2418 100%);
+        radial-gradient(ellipse at center, #2e6b4f 0%, #1f4a36 70%, #143324 100%);
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 1.25rem;
     padding: 2rem;
     margin-bottom: 1.5rem;
     color: #f0f0f0;
     box-shadow:
-        inset 0 0 60px rgba(0, 0, 0, 0.55),
+        inset 0 0 60px rgba(0, 0, 0, 0.25),
         0 6px 24px rgba(0, 0, 0, 0.35);
     position: relative;
 }
@@ -54,23 +112,36 @@
     min-height: 4.75rem;
 }
 
+/* "Card face" recipe — the white-gradient + serif look that any game's
+   card-shaped surface should adopt (cards, dice, reels, ticket faces…).
+   Apply this class to any element to inherit the look; .casino-card-glyph
+   below extends it with the standard playing-card aspect ratio. */
+.casino-card-face {
+    background: var(--casino-card-bg);
+    color: #1a1a1a;
+    border: var(--casino-card-border);
+    border-radius: 0.5rem;
+    box-shadow: var(--casino-card-shadow);
+    font-family: "Cambria", "Georgia", serif;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 .casino-card-glyph {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 3rem;
     height: 4.5rem;
-    background: linear-gradient(180deg, #ffffff 0%, #f3f1ea 100%);
+    background: var(--casino-card-bg);
     color: #1a1a1a;
     border-radius: 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    border: var(--casino-card-border);
     font-family: "Cambria", "Georgia", serif;
     font-weight: 700;
     font-size: 1.35rem;
     font-variant-numeric: tabular-nums;
-    box-shadow:
-        0 2px 6px rgba(0, 0, 0, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    box-shadow: var(--casino-card-shadow);
 }
 
 .casino-card-glyph.is-red {
@@ -97,13 +168,15 @@
     border-radius: 0.6rem;
     padding: 0.75rem 1rem;
     transition: box-shadow 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+    /* `position: relative` so flashChipsOn can drop a chip stack inside
+       the seat (absolute-positioned overlay) without leaking into the
+       page flow. The seat's other content stays untouched. */
+    position: relative;
 }
 
 /* Active actor — gold halo + slow pulse. */
 .casino-seat.is-active {
-    box-shadow:
-        0 0 0 2px #f1c40f,
-        0 0 18px rgba(241, 196, 15, 0.45);
+    box-shadow: var(--casino-active-glow);
     animation: casino-pulse 1.6s ease-in-out infinite;
 }
 
@@ -168,7 +241,7 @@
 }
 
 .casino-seat.is-active .casino-avatar {
-    border-color: #f1c40f;
+    border-color: var(--casino-gold);
 }
 
 /* No avatarUrl on the seat → CSS-rendered initial circle from data-initial. */
@@ -208,7 +281,7 @@
 .casino-actor-pill .casino-avatar {
     width: 1.6rem;
     height: 1.6rem;
-    border-color: #f1c40f;
+    border-color: var(--casino-gold);
 }
 
 .casino-actor-pill-label {
@@ -235,12 +308,12 @@
 @keyframes casino-pulse {
     0%, 100% {
         box-shadow:
-            0 0 0 2px #f1c40f,
+            0 0 0 2px var(--casino-gold),
             0 0 18px rgba(241, 196, 15, 0.35);
     }
     50% {
         box-shadow:
-            0 0 0 2px #f1c40f,
+            0 0 0 2px var(--casino-gold),
             0 0 28px rgba(241, 196, 15, 0.65);
     }
 }
@@ -263,12 +336,6 @@
 /* ------------------------------------------------------------------- */
 /* Win chip-stack flourish                                              */
 /* ------------------------------------------------------------------- */
-
-/* Anchored to the seat so JS can drop a stack inside without leaking
-   into the page flow. The seat's other content stays untouched. */
-.casino-seat {
-    position: relative;
-}
 
 .casino-chip-stack {
     position: absolute;
@@ -352,7 +419,7 @@
 }
 
 .casino-sound-toggle:focus-visible {
-    outline: 2px solid #f1c40f;
+    outline: 2px solid var(--casino-gold);
     outline-offset: 2px;
 }
 

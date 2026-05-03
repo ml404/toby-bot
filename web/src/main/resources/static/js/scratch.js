@@ -1,9 +1,9 @@
 // Pure-DOM render for a /scratch response. Hoisted out of the IIFE so
 // the jest test in `scratch.test.js` can drive it without booting the
-// page. matchThreshold and balanceEl are passed in (they live as DOM
-// attributes / element references inside the IIFE) to keep this fully
-// stateless.
-function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
+// page. matchThreshold / balanceEl / flashTargetEl are passed in (they
+// live as DOM attributes / element references inside the IIFE) to keep
+// this fully stateless.
+function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTargetEl) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -16,6 +16,17 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         });
     }
     if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
+    // Scratch's response has no `win` field — net > 0 is the win signal.
+    // Bigger payouts get a taller stack (capped internally at 7).
+    if (typeof window !== 'undefined' && window.CasinoRender) {
+        const payoutEstimate = (body.jackpotPayout > 0 ? body.jackpotPayout : (body.net || 0));
+        const chipCount = Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100)));
+        window.CasinoRender.flashWinPayout(flashTargetEl, {
+            win: (body.net || 0) > 0,
+            net: body.net,
+            jackpotPayout: body.jackpotPayout,
+        }, chipCount);
+    }
 }
 
 (function () {
@@ -30,6 +41,7 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
 
     const cellsContainer = document.getElementById('scratch-cells');
     const cellButtons = Array.from(cellsContainer ? cellsContainer.querySelectorAll('.scratch-cell') : []);
+    const tableEl = document.querySelector('.scratch-table');
     const stakeInput = document.getElementById('scratch-stake');
     const buyBtn = document.getElementById('scratch-buy');
     const buyTobyBtn = document.getElementById('scratch-buy-toby');
@@ -71,7 +83,7 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
         // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
             highlightWinCells(activeCard);
-            renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl);
+            renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl, tableEl);
             if (window.CasinoSounds) {
                 window.CasinoSounds.play((activeCard.net || 0) > 0 ? 'win' : 'lose');
             }
