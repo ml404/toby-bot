@@ -32,8 +32,8 @@
  *       background:   var(--casino-active-tile-bg);
  *       box-shadow:   var(--casino-active-glow);
  *     }
- *     /* `casino-pulse` keyframe is shared too — animate any winning
- *        cell with: animation: casino-pulse 1.6s ease-in-out infinite; */
+ *     `casino-pulse` keyframe is shared too — animate any winning cell
+ *     with `animation: casino-pulse 1.6s ease-in-out infinite;`.
  *
  *   per-game JS (load casino-render.js + casino-sounds.js + casino-result.js)
  *     window.CasinoRender.renderCards(container, cards)         // deal animation
