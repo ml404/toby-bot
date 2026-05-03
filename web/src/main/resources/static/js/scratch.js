@@ -15,7 +15,9 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
                 Math.abs(body.net) + ' credits</strong>',
         });
     }
-    if (typeof body.newBalance === 'number' && balanceEl) balanceEl.textContent = body.newBalance;
+    if (typeof window !== 'undefined' && window.TobyBalance) {
+        window.TobyBalance.update(balanceEl, body.newBalance);
+    }
     // Scratch's response has no `win` field — net > 0 is the win signal.
     // Bigger payouts get a taller stack (capped internally at 7).
     if (typeof window !== 'undefined' && window.CasinoRender) {

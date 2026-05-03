@@ -1,3 +1,7 @@
+// Order matters: load `casino-balance` *before* the scratch module so
+// `window.TobyBalance.update` is registered by the time the scratch
+// module's top-level `renderScratchResult` ends up calling it.
+require('../../main/resources/static/js/casino-balance');
 const { renderScratchResult } = require('../../main/resources/static/js/scratch');
 require('../../main/resources/static/js/casino-jackpot');
 require('../../main/resources/static/js/casino-result');

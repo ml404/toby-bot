@@ -46,6 +46,10 @@ describe('blackjack-solo.js — wallet refresh on every action', () => {
 
         postJsonMock = jest.fn();
         window.TobyApi = { postJson: postJsonMock };
+        // blackjack-solo.js calls window.TobyBalance.update — load the
+        // shared helper into this jsdom before requiring the page IIFE
+        // so the writes go through the centralized site.
+        require('../../main/resources/static/js/casino-balance');
         // The IIFE schedules a refreshState() on load via fetch — stub it
         // out so we don't hit the network in jsdom.
         window.fetch = jest.fn().mockResolvedValue({

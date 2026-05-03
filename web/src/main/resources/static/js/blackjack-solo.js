@@ -262,11 +262,6 @@
             .catch(function (e) { console.warn("state poll failed", e); });
     }
 
-    function setBalance(b) {
-        if (b == null) return;
-        balanceEl.textContent = b;
-    }
-
     dealForm.addEventListener("submit", function (e) {
         e.preventDefault();
         var stake = parseInt(stakeInput.value, 10);
@@ -286,7 +281,7 @@
                 // wallet looked like it stayed full all hand and only "lost" the
                 // stake on resolution — making each subsequent action feel like
                 // it was charging stake again.
-                setBalance(b.newBalance);
+                window.TobyBalance.update(balanceEl, b.newBalance);
                 if (b.resolved) {
                     refreshState();
                 } else {
@@ -307,7 +302,7 @@
                 // live wallet on Continued too. HIT/STAND don't move the
                 // balance, but DOUBLE/SPLIT pre-debit additional stake mid-hand
                 // and the player should see that immediately.
-                setBalance(b.newBalance);
+                window.TobyBalance.update(balanceEl, b.newBalance);
                 refreshState();
             });
     }

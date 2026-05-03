@@ -281,11 +281,6 @@
     // POSTs go via TobyApi.postJson so the Spring Security CSRF header
     // (read off the <meta name="_csrf"> tag in the head fragment) is
     // included — without it Spring rejects the request with 403.
-    function setBalance(b) {
-        if (b == null) return;
-        if (balanceEl) balanceEl.textContent = b;
-    }
-
     function postAction(action) {
         return window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/action", { action: action })
             .then(function (b) {
@@ -297,7 +292,7 @@
                 // response — without this the multi page never updates the
                 // displayed balance, so DOUBLE/SPLIT pre-debits and end-of-hand
                 // payouts only show on a full page reload.
-                setBalance(b.newBalance);
+                window.TobyBalance.update(balanceEl, b.newBalance);
                 refreshState();
             });
     }
@@ -314,6 +309,11 @@
                     window.toasts && window.toasts.error(b.error || "Start failed.");
                     return;
                 }
+                // /start re-debits each seated player's ante for the next hand
+                // (BlackjackService.startMultiHand). Pick up whatever the
+                // server echoes — currently only present on responses that opt
+                // in via newBalance; no-ops cleanly until the backend adds it.
+                window.TobyBalance.update(balanceEl, b.newBalance);
                 refreshState();
             });
     });
@@ -325,7 +325,7 @@
                     window.toasts && window.toasts.error(b.error || "Join failed.");
                     return;
                 }
-                setBalance(b.newBalance);
+                window.TobyBalance.update(balanceEl, b.newBalance);
                 refreshState();
             });
     });
@@ -337,7 +337,7 @@
                     window.toasts && window.toasts.error(b.error || "Leave failed.");
                     return;
                 }
-                setBalance(b.newBalance);
+                window.TobyBalance.update(balanceEl, b.newBalance);
                 if (b.queued) {
                     window.toasts && window.toasts.info("Leaving — you'll auto-stand and be removed at end of hand.");
                 } else {
