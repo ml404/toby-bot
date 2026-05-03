@@ -3,6 +3,9 @@ const {
     jackpotPrefixHtml,
     renderWinHtml,
     lossTributeSuffix,
+    updatePoolBanner,
+    holdPoolBanner,
+    releasePoolBanner,
 } = require('../../main/resources/static/js/casino-jackpot');
 
 // ---------------------------------------------------------------------------
@@ -108,6 +111,81 @@ describe('renderWinHtml', () => {
 // ---------------------------------------------------------------------------
 // lossTributeSuffix
 // ---------------------------------------------------------------------------
+
+describe('pool banner lock', () => {
+    let strong;
+
+    beforeEach(() => {
+        document.body.innerHTML =
+            '<div class="casino-jackpot-banner"><strong>0</strong></div>';
+        strong = document.querySelector('.casino-jackpot-banner strong');
+        // Force-release in case a prior test left the lock held — the
+        // module-level state survives between tests.
+        releasePoolBanner();
+    });
+
+    test('updatePoolBanner paints immediately when no lock is held', () => {
+        updatePoolBanner({ jackpotPool: 100 });
+        expect(strong.textContent).toBe('100');
+    });
+
+    test('updatePoolBanner is a no-op while the banner is held', () => {
+        holdPoolBanner();
+        updatePoolBanner({ jackpotPool: 250 });
+        expect(strong.textContent).toBe('0');
+        releasePoolBanner();
+    });
+
+    test('releasePoolBanner flushes the latest queued value', () => {
+        holdPoolBanner();
+        updatePoolBanner({ jackpotPool: 250 });
+        expect(strong.textContent).toBe('0');
+        releasePoolBanner();
+        expect(strong.textContent).toBe('250');
+    });
+
+    test('last-write-wins under hold — only the final pool paints on release', () => {
+        holdPoolBanner();
+        updatePoolBanner({ jackpotPool: 100 });
+        updatePoolBanner({ jackpotPool: 200 });
+        updatePoolBanner({ jackpotPool: 300 });
+        expect(strong.textContent).toBe('0');
+        releasePoolBanner();
+        expect(strong.textContent).toBe('300');
+    });
+
+    test('release with no queued body leaves the DOM unchanged', () => {
+        strong.textContent = '42';
+        holdPoolBanner();
+        releasePoolBanner();
+        expect(strong.textContent).toBe('42');
+    });
+
+    test('release without a prior hold is a no-op and does not throw', () => {
+        strong.textContent = '7';
+        expect(() => releasePoolBanner()).not.toThrow();
+        expect(strong.textContent).toBe('7');
+    });
+
+    test('hold/update/release survives a missing banner element', () => {
+        document.body.innerHTML = '';
+        expect(() => {
+            holdPoolBanner();
+            updatePoolBanner({ jackpotPool: 999 });
+            releasePoolBanner();
+        }).not.toThrow();
+    });
+
+    test('updates after release paint immediately again', () => {
+        holdPoolBanner();
+        updatePoolBanner({ jackpotPool: 10 });
+        releasePoolBanner();
+        expect(strong.textContent).toBe('10');
+
+        updatePoolBanner({ jackpotPool: 20 });
+        expect(strong.textContent).toBe('20');
+    });
+});
 
 describe('lossTributeSuffix', () => {
     test('renders a "+N to jackpot" span with the casino-loss-tribute class', () => {

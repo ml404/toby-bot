@@ -83,6 +83,9 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
             // Now the credits visibly drop and the topup-coin recompute
             // catches up too — see autoApplyBalance: false in the helper.
             if (game) game.applyTobyDelta(activeCard);
+            // And only now release the central jackpot-pool banner so it
+            // doesn't tick before the suspense beat is over.
+            if (window.TobyJackpot) window.TobyJackpot.releasePoolBanner();
             // Card consumed — next "Buy ticket" starts a fresh one.
             activeCard = null;
             if (revealBtn) revealBtn.hidden = true;
@@ -135,6 +138,12 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
         startAnimation: function () {
             if (els.resultEl) els.resultEl.hidden = true;
             resetCells();
+            // Hold the central jackpot-pool banner across the whole
+            // user-driven reveal — released in revealCell once every
+            // cell is uncovered (or on a server error in stopAnimation).
+            // casino-game.js skips its own hold for scratch because
+            // autoApplyBalance is false.
+            if (window.TobyJackpot) window.TobyJackpot.holdPoolBanner();
             return null;
         },
         stopAnimation: function (_handle, body) {
@@ -144,6 +153,9 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
             } else {
                 activeCard = null;
                 if (revealBtn) revealBtn.hidden = true;
+                // Server errored or returned a non-ok body — there's
+                // no reveal coming, so drop the lock now.
+                if (window.TobyJackpot) window.TobyJackpot.releasePoolBanner();
             }
         },
         renderResult: function () {

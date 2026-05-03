@@ -130,6 +130,14 @@
             setDisabled(true);
             const animationHandle = startAnimation();
             const requestStart = Date.now();
+            // Hold the central pool-banner refresh (api.js feeds it from
+            // X-Jackpot-Pool the moment the response lands, which would
+            // otherwise leak the outcome before the reels/coin/cards
+            // settle). Pages without TobyJackpot just skip silently.
+            // Scratch opts out — its lock spans the user-driven reveal
+            // and is managed inside scratch.js itself.
+            const jackpot = (autoApplyBalance && root && root.TobyJackpot) ? root.TobyJackpot : null;
+            if (jackpot) jackpot.holdPoolBanner();
 
             postJson(endpoint, payload)
                 .then(function (body) {
@@ -149,6 +157,7 @@
                             hideResult();
                             showToast((body && body.error) || failureMessage, 'error');
                         }
+                        if (jackpot) jackpot.releasePoolBanner();
                     }, remaining);
                 })
                 .catch(function () {
@@ -157,6 +166,7 @@
                     setDisabled(false);
                     hideResult();
                     showToast('Network error.', 'error');
+                    if (jackpot) jackpot.releasePoolBanner();
                 });
         }
 
