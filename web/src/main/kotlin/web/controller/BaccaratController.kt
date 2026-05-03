@@ -1,5 +1,6 @@
 package web.controller
 
+import common.casino.CasinoCommonFailure
 import database.economy.Baccarat
 import database.service.BaccaratService
 import database.service.BaccaratService.PlayOutcome
@@ -18,8 +19,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
+import web.util.positiveOrNull
 
 /**
  * Web surface for the `/baccarat` minigame. GET renders the picker UI
@@ -50,19 +53,14 @@ class BaccaratController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
-    ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/casino/guilds"
-        }
-        model.addAttribute("minStake", Baccarat.MIN_STAKE)
-        model.addAttribute("maxStake", Baccarat.MAX_STAKE)
-        model.addAttribute("playerMultiplier", Baccarat.PLAYER_WIN_MULT)
-        model.addAttribute("bankerMultiplier", Baccarat.BANKER_WIN_MULT)
-        model.addAttribute("tieMultiplier", Baccarat.TIE_WIN_MULT)
-        "baccarat"
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra, template = "baccarat"
+    ) {
+        addAttribute("minStake", Baccarat.MIN_STAKE)
+        addAttribute("maxStake", Baccarat.MAX_STAKE)
+        addAttribute("playerMultiplier", Baccarat.PLAYER_WIN_MULT)
+        addAttribute("bankerMultiplier", Baccarat.BANKER_WIN_MULT)
+        addAttribute("tieMultiplier", Baccarat.TIE_WIN_MULT)
     }
 
     @PostMapping("/play")
@@ -95,8 +93,8 @@ class BaccaratController(
                     newBalance = outcome.newBalance,
                     win = true,
                     push = false,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -118,7 +116,7 @@ class BaccaratController(
                     newBalance = outcome.newBalance,
                     win = false,
                     push = true,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -139,16 +137,13 @@ class BaccaratController(
                     newBalance = outcome.newBalance,
                     win = false,
                     push = false,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    lossTribute = outcome.lossTribute.positiveOrNull(),
                 )
             )
 
-            is PlayOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
-            is PlayOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
-            is PlayOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
-            PlayOutcome.UnknownUser -> errors.unknownUser()
+            is CasinoCommonFailure -> errors.mapCommonFailure(outcome)
         }
     }
 

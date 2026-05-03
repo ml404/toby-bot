@@ -1,5 +1,6 @@
 package database.service
 
+import common.casino.CasinoCommonFailure
 import database.economy.SlotMachine
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -60,10 +61,13 @@ class SlotsService(
             val lossTribute: Long = 0L,
         ) : SpinOutcome
 
-        data class InsufficientCredits(val stake: Long, val have: Long) : SpinOutcome
-        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : SpinOutcome
-        data class InvalidStake(val min: Long, val max: Long) : SpinOutcome
-        data object UnknownUser : SpinOutcome
+        data class InsufficientCredits(override val stake: Long, override val have: Long) :
+            SpinOutcome, CasinoCommonFailure.InsufficientCredits
+        data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
+            SpinOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
+        data class InvalidStake(override val min: Long, override val max: Long) :
+            SpinOutcome, CasinoCommonFailure.InvalidStake
+        data object UnknownUser : SpinOutcome, CasinoCommonFailure.UnknownUser
     }
 
     fun spin(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): SpinOutcome {

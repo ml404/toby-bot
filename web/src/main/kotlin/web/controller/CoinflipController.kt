@@ -1,5 +1,6 @@
 package web.controller
 
+import common.casino.CasinoCommonFailure
 import database.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
@@ -18,8 +19,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
+import web.util.positiveOrNull
 
 /**
  * Web surface for the `/coinflip` minigame. GET renders the picker UI
@@ -46,17 +49,12 @@ class CoinflipController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
-    ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/casino/guilds"
-        }
-        model.addAttribute("minStake", Coinflip.MIN_STAKE)
-        model.addAttribute("maxStake", Coinflip.MAX_STAKE)
-        model.addAttribute("multiplier", Coinflip.DEFAULT_MULTIPLIER)
-        "coinflip"
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra, template = "coinflip"
+    ) {
+        addAttribute("minStake", Coinflip.MIN_STAKE)
+        addAttribute("maxStake", Coinflip.MAX_STAKE)
+        addAttribute("multiplier", Coinflip.DEFAULT_MULTIPLIER)
     }
 
     @PostMapping("/flip")
@@ -81,8 +79,8 @@ class CoinflipController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -96,16 +94,13 @@ class CoinflipController(
                     payout = 0L,
                     newBalance = outcome.newBalance,
                     win = false,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    lossTribute = outcome.lossTribute.positiveOrNull(),
                 )
             )
 
-            is FlipOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
-            is FlipOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
-            is FlipOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
-            FlipOutcome.UnknownUser -> errors.unknownUser()
+            is CasinoCommonFailure -> errors.mapCommonFailure(outcome)
         }
     }
 

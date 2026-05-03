@@ -1,5 +1,6 @@
 package database.service
 
+import common.casino.CasinoCommonFailure
 import database.economy.Highlow
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -59,10 +60,13 @@ class HighlowService(
             val lossTribute: Long = 0L,
         ) : PlayOutcome
 
-        data class InsufficientCredits(val stake: Long, val have: Long) : PlayOutcome
-        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : PlayOutcome
-        data class InvalidStake(val min: Long, val max: Long) : PlayOutcome
-        data object UnknownUser : PlayOutcome
+        data class InsufficientCredits(override val stake: Long, override val have: Long) :
+            PlayOutcome, CasinoCommonFailure.InsufficientCredits
+        data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
+            PlayOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
+        data class InvalidStake(override val min: Long, override val max: Long) :
+            PlayOutcome, CasinoCommonFailure.InvalidStake
+        data object UnknownUser : PlayOutcome, CasinoCommonFailure.UnknownUser
     }
 
     /** Draw a fresh anchor without committing any state. The web flow uses this on page load. */

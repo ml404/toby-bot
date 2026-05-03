@@ -32,25 +32,18 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
 (function () {
     'use strict';
 
-    const main = document.querySelector('main[data-guild-id]');
-    if (!main) return;
+    const els = window.TobyCasinoMinigameDom &&
+        window.TobyCasinoMinigameDom.standardElements('scratch', 'buy');
+    if (!els) return;
 
-    const guildId = main.dataset.guildId;
-    const matchThreshold = parseInt(main.dataset.matchThreshold, 10) || 5;
-    const initialTobyCoins = Number(main.dataset.tobyCoins) || 0;
+    const matchThreshold = parseInt(els.main.dataset.matchThreshold, 10) || 5;
 
     const cellsContainer = document.getElementById('scratch-cells');
     const cellButtons = Array.from(cellsContainer ? cellsContainer.querySelectorAll('.scratch-cell') : []);
     const tableEl = document.querySelector('.scratch-table');
-    const stakeInput = document.getElementById('scratch-stake');
-    const buyBtn = document.getElementById('scratch-buy');
-    const buyTobyBtn = document.getElementById('scratch-buy-toby');
     const revealBtn = document.getElementById('scratch-reveal-all');
-    const balanceEl = document.getElementById('scratch-balance');
-    const resultEl = document.getElementById('scratch-result');
-    const form = document.getElementById('scratch-bet');
 
-    if (!form || !buyBtn || !stakeInput || cellButtons.length === 0) return;
+    if (!els.form || !els.primaryBtn || !els.stakeInput || cellButtons.length === 0) return;
 
     // Latest active card. Server returns the symbols up front; cells are
     // hidden until the user scratches each one. Once all are revealed (or
@@ -83,7 +76,7 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
         // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
             highlightWinCells(activeCard);
-            renderScratchResult(resultEl, activeCard, matchThreshold, balanceEl, tableEl);
+            renderScratchResult(els.resultEl, activeCard, matchThreshold, els.balanceEl, tableEl);
             if (window.CasinoSounds) {
                 window.CasinoSounds.play((activeCard.net || 0) > 0 ? 'win' : 'lose');
             }
@@ -124,23 +117,23 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
     if (revealBtn) revealBtn.addEventListener('click', revealAll);
 
     game = window.TobyCasinoGame.init({
-        guildId: guildId,
-        endpoint: '/casino/' + guildId + '/scratch/scratch',
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: buyBtn,
-        tobyBtn: buyTobyBtn,
-        balanceEl: balanceEl,
-        resultEl: resultEl,
-        tobyCoins: initialTobyCoins,
-        marketPrice: Number(main.dataset.marketPrice) || 0,
+        guildId: els.guildId,
+        endpoint: '/casino/' + els.guildId + '/scratch/scratch',
+        form: els.form,
+        stakeInput: els.stakeInput,
+        primaryBtn: els.primaryBtn,
+        tobyBtn: els.tobyBtn,
+        balanceEl: els.balanceEl,
+        resultEl: els.resultEl,
+        tobyCoins: els.tobyCoins,
+        marketPrice: els.marketPrice,
         failureMessage: 'Buy failed.',
         // Scratch shows the result only after every cell has been
         // revealed, so the helper must NOT auto-update balance/coins on
         // response. revealCell() does it once the suspense is over.
         autoApplyBalance: false,
         startAnimation: function () {
-            if (resultEl) resultEl.hidden = true;
+            if (els.resultEl) els.resultEl.hidden = true;
             resetCells();
             return null;
         },

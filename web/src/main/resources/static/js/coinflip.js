@@ -23,21 +23,15 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
 (function () {
     'use strict';
 
-    const main = document.querySelector('main[data-guild-id]');
-    if (!main) return;
+    const els = window.TobyCasinoMinigameDom &&
+        window.TobyCasinoMinigameDom.standardElements('coinflip', 'flip');
+    if (!els) return;
 
-    const guildId = main.dataset.guildId;
     const coin = document.getElementById('coinflip-coin');
     const coinFace = document.getElementById('coinflip-coin-face');
     const tableEl = document.querySelector('.coinflip-table');
-    const stakeInput = document.getElementById('coinflip-stake');
-    const flipBtn = document.getElementById('coinflip-flip');
-    const flipTobyBtn = document.getElementById('coinflip-flip-toby');
-    const balanceEl = document.getElementById('coinflip-balance');
-    const resultEl = document.getElementById('coinflip-result');
-    const form = document.getElementById('coinflip-bet');
 
-    if (!form || !flipBtn || !stakeInput || !coin || !coinFace) return;
+    if (!els.form || !els.primaryBtn || !els.stakeInput || !coin || !coinFace) return;
 
     const FLIP_DURATION_MS = 800;
     const FLIP_INTERVAL_MS = 80;
@@ -45,7 +39,7 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
     const FLIP_FACES = ['🪙', '🟡'];
 
     function selectedSide() {
-        const checked = form.querySelector('input[name="side"]:checked');
+        const checked = els.form.querySelector('input[name="side"]:checked');
         return checked ? checked.value : null;
     }
 
@@ -82,16 +76,16 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
     }
 
     window.TobyCasinoGame.init({
-        guildId: guildId,
-        endpoint: '/casino/' + guildId + '/coinflip/flip',
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: flipBtn,
-        tobyBtn: flipTobyBtn,
-        balanceEl: balanceEl,
-        resultEl: resultEl,
-        tobyCoins: Number(main.dataset.tobyCoins) || 0,
-        marketPrice: Number(main.dataset.marketPrice) || 0,
+        guildId: els.guildId,
+        endpoint: '/casino/' + els.guildId + '/coinflip/flip',
+        form: els.form,
+        stakeInput: els.stakeInput,
+        primaryBtn: els.primaryBtn,
+        tobyBtn: els.tobyBtn,
+        balanceEl: els.balanceEl,
+        resultEl: els.resultEl,
+        tobyCoins: els.tobyCoins,
+        marketPrice: els.marketPrice,
         minSettleMs: FLIP_DURATION_MS,
         failureMessage: 'Flip failed.',
         validate: function () {
@@ -103,7 +97,7 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
         },
         startAnimation: startFlipAnimation,
         stopAnimation: stopFlipAnimation,
-        renderResult: function (body) { renderCoinflipResult(resultEl, body, tableEl); },
+        renderResult: function (body) { renderCoinflipResult(els.resultEl, body, tableEl); },
     });
 })();
 

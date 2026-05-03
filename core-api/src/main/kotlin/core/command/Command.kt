@@ -3,6 +3,7 @@ package core.command
 import common.logging.DiscordLogger
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.build.Commands
@@ -53,6 +54,26 @@ interface Command {
         @JvmStatic
         fun invokeDeleteOnHookResponse(deleteDelay: Int): Consumer<InteractionHook> {
             return Consumer { hook -> hook.deleteAfter(deleteDelay) }
+        }
+
+        /**
+         * `event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(d))`
+         * appears in 50+ command files. The extensions below collapse it to
+         * `event.hook.replyAndDelete(msg, d)` (and equivalents for embeds /
+         * ephemeral replies) so a future tweak to the queue-and-delete
+         * contract — or to the queue-cancel handler when it grows — is one
+         * edit instead of fifty.
+         */
+        fun InteractionHook.replyAndDelete(message: String, deleteDelay: Int) {
+            sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        }
+
+        fun InteractionHook.replyEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
+            sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        }
+
+        fun InteractionHook.replyEphemeralAndDelete(message: String, deleteDelay: Int) {
+            sendMessage(message).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 }

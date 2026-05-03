@@ -21,28 +21,22 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
 (function () {
     'use strict';
 
-    const main = document.querySelector('main[data-guild-id]');
-    if (!main) return;
+    const els = window.TobyCasinoMinigameDom &&
+        window.TobyCasinoMinigameDom.standardElements('dice', 'roll');
+    if (!els) return;
 
-    const guildId = main.dataset.guildId;
     const die = document.getElementById('dice-die');
     const dieFace = document.getElementById('dice-die-face');
     const tableEl = document.querySelector('.dice-table');
-    const stakeInput = document.getElementById('dice-stake');
-    const rollBtn = document.getElementById('dice-roll');
-    const rollTobyBtn = document.getElementById('dice-roll-toby');
-    const balanceEl = document.getElementById('dice-balance');
-    const resultEl = document.getElementById('dice-result');
-    const form = document.getElementById('dice-bet');
 
-    if (!form || !rollBtn || !stakeInput || !die || !dieFace) return;
+    if (!els.form || !els.primaryBtn || !els.stakeInput || !die || !dieFace) return;
 
     const FACES = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
     const ROLL_DURATION_MS = 800;
     const ROLL_INTERVAL_MS = 70;
 
     function selectedPrediction() {
-        const checked = form.querySelector('input[name="prediction"]:checked');
+        const checked = els.form.querySelector('input[name="prediction"]:checked');
         return checked ? parseInt(checked.value, 10) : null;
     }
 
@@ -75,16 +69,16 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
     }
 
     window.TobyCasinoGame.init({
-        guildId: guildId,
-        endpoint: '/casino/' + guildId + '/dice/roll',
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: rollBtn,
-        tobyBtn: rollTobyBtn,
-        balanceEl: balanceEl,
-        resultEl: resultEl,
-        tobyCoins: Number(main.dataset.tobyCoins) || 0,
-        marketPrice: Number(main.dataset.marketPrice) || 0,
+        guildId: els.guildId,
+        endpoint: '/casino/' + els.guildId + '/dice/roll',
+        form: els.form,
+        stakeInput: els.stakeInput,
+        primaryBtn: els.primaryBtn,
+        tobyBtn: els.tobyBtn,
+        balanceEl: els.balanceEl,
+        resultEl: els.resultEl,
+        tobyCoins: els.tobyCoins,
+        marketPrice: els.marketPrice,
         minSettleMs: ROLL_DURATION_MS,
         failureMessage: 'Roll failed.',
         validate: function () {
@@ -100,7 +94,7 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
         },
         startAnimation: startRollAnimation,
         stopAnimation: stopRollAnimation,
-        renderResult: function (body) { renderDiceResult(resultEl, body, tableEl); },
+        renderResult: function (body) { renderDiceResult(els.resultEl, body, tableEl); },
     });
 })();
 

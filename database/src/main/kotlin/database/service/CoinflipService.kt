@@ -1,5 +1,6 @@
 package database.service
 
+import common.casino.CasinoCommonFailure
 import database.economy.Coinflip
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -51,10 +52,13 @@ class CoinflipService(
             val lossTribute: Long = 0L,
         ) : FlipOutcome
 
-        data class InsufficientCredits(val stake: Long, val have: Long) : FlipOutcome
-        data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : FlipOutcome
-        data class InvalidStake(val min: Long, val max: Long) : FlipOutcome
-        data object UnknownUser : FlipOutcome
+        data class InsufficientCredits(override val stake: Long, override val have: Long) :
+            FlipOutcome, CasinoCommonFailure.InsufficientCredits
+        data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
+            FlipOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
+        data class InvalidStake(override val min: Long, override val max: Long) :
+            FlipOutcome, CasinoCommonFailure.InvalidStake
+        data object UnknownUser : FlipOutcome, CasinoCommonFailure.UnknownUser
     }
 
     fun flip(

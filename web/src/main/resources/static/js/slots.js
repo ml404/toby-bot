@@ -33,24 +33,18 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
 (function () {
     'use strict';
 
-    const main = document.querySelector('main[data-guild-id]');
-    if (!main) return;
+    const els = window.TobyCasinoMinigameDom &&
+        window.TobyCasinoMinigameDom.standardElements('slots', 'spin');
+    if (!els) return;
 
-    const guildId = main.dataset.guildId;
     const reels = [
         document.getElementById('slots-reel-0'),
         document.getElementById('slots-reel-1'),
         document.getElementById('slots-reel-2')
     ];
     const machineEl = document.querySelector('.slots-machine');
-    const stakeInput = document.getElementById('slots-stake');
-    const spinBtn = document.getElementById('slots-spin');
-    const spinTobyBtn = document.getElementById('slots-spin-toby');
-    const balanceEl = document.getElementById('slots-balance');
-    const resultEl = document.getElementById('slots-result');
-    const form = document.getElementById('slots-bet');
 
-    if (!form || !spinBtn || !stakeInput || reels.some(function (r) { return !r; })) return;
+    if (!els.form || !els.primaryBtn || !els.stakeInput || reels.some(function (r) { return !r; })) return;
 
     const SPIN_SYMBOLS = ['🍒', '🍋', '🔔', '⭐'];
     const SPIN_INTERVAL_MS = 60;
@@ -91,21 +85,21 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
     }
 
     window.TobyCasinoGame.init({
-        guildId: guildId,
-        endpoint: '/casino/' + guildId + '/slots/spin',
-        form: form,
-        stakeInput: stakeInput,
-        primaryBtn: spinBtn,
-        tobyBtn: spinTobyBtn,
-        balanceEl: balanceEl,
-        resultEl: resultEl,
-        tobyCoins: Number(main.dataset.tobyCoins) || 0,
-        marketPrice: Number(main.dataset.marketPrice) || 0,
+        guildId: els.guildId,
+        endpoint: '/casino/' + els.guildId + '/slots/spin',
+        form: els.form,
+        stakeInput: els.stakeInput,
+        primaryBtn: els.primaryBtn,
+        tobyBtn: els.tobyBtn,
+        balanceEl: els.balanceEl,
+        resultEl: els.resultEl,
+        tobyCoins: els.tobyCoins,
+        marketPrice: els.marketPrice,
         minSettleMs: SPIN_DURATION_MS,
         failureMessage: 'Spin failed.',
         startAnimation: startSpinAnimation,
         stopAnimation: stopSpinAnimation,
-        renderResult: function (body) { renderSlotsResult(resultEl, body, machineEl, reels); },
+        renderResult: function (body) { renderSlotsResult(els.resultEl, body, machineEl, reels); },
     });
 })();
 

@@ -1,5 +1,6 @@
 package web.controller
 
+import common.casino.CasinoCommonFailure
 import database.economy.ScratchCard
 import database.economy.SlotMachine
 import database.service.ScratchService
@@ -19,8 +20,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
+import web.util.positiveOrNull
 
 @Controller
 @RequestMapping("/casino/{guildId}/scratch")
@@ -38,20 +41,15 @@ class ScratchController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
-    ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/casino/guilds"
-        }
-        model.addAttribute("minStake", ScratchCard.MIN_STAKE)
-        model.addAttribute("maxStake", ScratchCard.MAX_STAKE)
-        model.addAttribute("cellCount", ScratchCard.CELL_COUNT)
-        model.addAttribute("matchThreshold", ScratchCard.MATCH_THRESHOLD)
-        model.addAttribute("matchCounts", (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).toList())
-        model.addAttribute("payoutTable", scratchPayoutRows())
-        "scratch"
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra, template = "scratch"
+    ) {
+        addAttribute("minStake", ScratchCard.MIN_STAKE)
+        addAttribute("maxStake", ScratchCard.MAX_STAKE)
+        addAttribute("cellCount", ScratchCard.CELL_COUNT)
+        addAttribute("matchThreshold", ScratchCard.MATCH_THRESHOLD)
+        addAttribute("matchCounts", (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).toList())
+        addAttribute("payoutTable", scratchPayoutRows())
     }
 
     // Per-symbol payout row: one cell per match count from MATCH_THRESHOLD
@@ -88,8 +86,8 @@ class ScratchController(
                     payout = outcome.payout,
                     newBalance = outcome.newBalance,
                     win = true,
-                    jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
             )
@@ -102,16 +100,13 @@ class ScratchController(
                     payout = 0L,
                     newBalance = outcome.newBalance,
                     win = false,
-                    soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
+                    soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
-                    lossTribute = outcome.lossTribute.takeIf { it > 0L },
+                    lossTribute = outcome.lossTribute.positiveOrNull(),
                 )
             )
 
-            is ScratchOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
-            is ScratchOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
-            is ScratchOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
-            ScratchOutcome.UnknownUser -> errors.unknownUser()
+            is CasinoCommonFailure -> errors.mapCommonFailure(outcome)
         }
     }
 }

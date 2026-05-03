@@ -1,5 +1,6 @@
 package web.casino
 
+import common.casino.CasinoCommonFailure
 import org.springframework.http.ResponseEntity
 
 /**
@@ -47,6 +48,21 @@ class CasinoOutcomeMapper<R : CasinoResponseLike>(
 
     fun badRequest(message: String): ResponseEntity<R> =
         ResponseEntity.badRequest().body(errorFactory(message))
+
+    /**
+     * Single-arm fallthrough for the four standard failure types every
+     * casino-game service exposes. Each per-game outcome's
+     * `InsufficientCredits` / `InsufficientCoinsForTopUp` / `InvalidStake`
+     * / `UnknownUser` implements the matching [CasinoCommonFailure]
+     * interface, so a controller's `when` can collapse four arms into one
+     * `is CasinoCommonFailure -> errors.mapCommonFailure(outcome)`.
+     */
+    fun mapCommonFailure(failure: CasinoCommonFailure): ResponseEntity<R> = when (failure) {
+        is CasinoCommonFailure.InsufficientCredits -> insufficientCredits(failure.stake, failure.have)
+        is CasinoCommonFailure.InsufficientCoinsForTopUp -> insufficientCoinsForTopUp(failure.needed, failure.have)
+        is CasinoCommonFailure.InvalidStake -> invalidStake(failure.min, failure.max)
+        is CasinoCommonFailure.UnknownUser -> unknownUser()
+    }
 
     companion object {
         const val NOT_SIGNED_IN = "Not signed in."

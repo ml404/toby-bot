@@ -1,7 +1,9 @@
 package bot.toby.command.commands.moderation
 
 import bot.toby.helpers.UserDtoHelper
+import bot.toby.helpers.stringOption
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.UserService
@@ -66,12 +68,13 @@ class AdjustUserCommand @Autowired constructor(
         isOwner: Boolean,
         deleteDelay: Int
     ) {
-        val permission = event.getOption(PERMISSION_NAME)?.asString
+        val permission = event.stringOption(PERMISSION_NAME)
 
         if (permission == null) {
-            event.hook.sendMessage("You did not mention a valid permission to update")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "You did not mention a valid permission to update",
+                deleteDelay,
+            )
             return
         }
 
@@ -110,24 +113,24 @@ class AdjustUserCommand @Autowired constructor(
         deleteDelay: Int
     ): List<Member>? {
         if (!member!!.isOwner && requestingUserDto?.superUser != true) {
-            event.hook.sendMessage(getErrorMessage(guildOwner!!.effectiveName))
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(getErrorMessage(guildOwner!!.effectiveName), deleteDelay)
             return null
         }
 
         val mentionedMembers = event.getOption(USERS)?.mentions?.members
         if (mentionedMembers.isNullOrEmpty()) {
-            event.hook.sendMessage("You must mention 1 or more Users to adjust permissions of")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "You must mention 1 or more Users to adjust permissions of",
+                deleteDelay,
+            )
             return null
         }
 
-        if (event.getOption(PERMISSION_NAME)?.asString == null) {
-            event.hook.sendMessage("You must mention a permission to adjust for the user you've mentioned.")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        if (event.stringOption(PERMISSION_NAME) == null) {
+            event.hook.replyEphemeralAndDelete(
+                "You must mention a permission to adjust for the user you've mentioned.",
+                deleteDelay,
+            )
             return null
         }
 

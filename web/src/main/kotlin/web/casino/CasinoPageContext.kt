@@ -8,6 +8,9 @@ import net.dv8tion.jda.api.entities.Guild
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Component
 import org.springframework.ui.Model
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.EconomyWebService
+import web.util.WebGuildAccess
 import web.util.displayName
 
 /**
@@ -49,4 +52,35 @@ class CasinoPageContext(
         model.addAttribute("username", user.displayName())
         return guild
     }
+}
+
+/**
+ * Membership guard + page-context populate + bot-kicked fallback +
+ * game-specific rules attributes — the GET-page boilerplate every
+ * minigame controller used to copy verbatim. Returns the template
+ * name to render or a `redirect:` string when guards fail.
+ *
+ * Extension (rather than a method on [CasinoPageContext]) so existing
+ * tests that mock `populate` directly still work — extension dispatch
+ * is static, but the inner `populate` call still routes through the
+ * mocked instance.
+ */
+fun CasinoPageContext.renderMinigamePage(
+    user: OAuth2User,
+    guildId: Long,
+    economyWebService: EconomyWebService,
+    model: Model,
+    ra: RedirectAttributes,
+    template: String,
+    lobbyPath: String = "/casino/guilds",
+    addRulesAttributes: Model.() -> Unit,
+): String = WebGuildAccess.requireMemberForPage(
+    user, guildId, economyWebService, ra, lobbyPath = lobbyPath
+) { discordId ->
+    populate(model, guildId, discordId, user) ?: run {
+        ra.addFlashAttribute("error", "Bot is not in that server.")
+        return@requireMemberForPage "redirect:$lobbyPath"
+    }
+    model.addRulesAttributes()
+    template
 }
