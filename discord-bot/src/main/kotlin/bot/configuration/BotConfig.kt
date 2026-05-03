@@ -52,7 +52,7 @@ class BotConfig {
                     CacheFlag.SCHEDULED_EVENTS
                 )
             )
-            .enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI)
+            .enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI, CacheFlag.ACTIVITY)
             .setAudioModuleConfig(AudioModuleConfig().withDaveSessionFactory(LDJDADaveSessionFactory(NativeDaveFactory())))
             .build()
     }
