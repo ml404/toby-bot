@@ -124,4 +124,78 @@ describe('casino-game.js — pool banner lock around settle', () => {
 
         expect(releaseSpy).not.toHaveBeenCalled();
     });
+
+    test('async renderResult holds the lock until its Promise resolves', async () => {
+        // Mirrors keno / baccarat: renderResult kicks off a staggered
+        // reveal that lands later via setTimeouts. The scaffold must
+        // wait for the Promise before applying balance and releasing
+        // the banner, otherwise the banner ticks before the cells /
+        // cards finish landing.
+        postJsonMock.mockResolvedValue({ ok: true, jackpotPool: 999, newBalance: 50 });
+        let resolveReveal;
+        const renderResult = jest.fn(function () {
+            return new Promise(function (r) { resolveReveal = r; });
+        });
+        const game = buildGame({ minSettleMs: 0, renderResult: renderResult });
+        game.run(false);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+
+        // settle setTimeout has fired and renderResult has been invoked,
+        // but its Promise is still pending — lock must stay held.
+        expect(renderResult).toHaveBeenCalledTimes(1);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        // Balance must NOT have been written either — the user would
+        // see it tick before the reveal lands.
+        expect(document.getElementById('bal').textContent).toBe('100');
+
+        // Resolve the reveal — now the scaffold should flush both.
+        resolveReveal();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+        expect(document.getElementById('bal').textContent).toBe('50');
+    });
+
+    test('async renderResult releases the lock even on rejection', async () => {
+        // Defensive: if the per-game reveal animation throws (e.g. a
+        // rendering bug), the banner must still recover.
+        postJsonMock.mockResolvedValue({ ok: true, jackpotPool: 7, newBalance: 90 });
+        let rejectReveal;
+        const renderResult = jest.fn(function () {
+            return new Promise(function (_, rej) { rejectReveal = rej; });
+        });
+        const game = buildGame({ minSettleMs: 0, renderResult: renderResult });
+        game.run(false);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+        expect(releaseSpy).not.toHaveBeenCalled();
+
+        rejectReveal(new Error('boom'));
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('synchronous renderResult (returns undefined) releases immediately', async () => {
+        postJsonMock.mockResolvedValue({ ok: true, jackpotPool: 1, newBalance: 50 });
+        const renderResult = jest.fn(function () { /* sync, no return */ });
+        const game = buildGame({ minSettleMs: 0, renderResult: renderResult });
+        game.run(false);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+
+        expect(renderResult).toHaveBeenCalledTimes(1);
+        expect(releaseSpy).toHaveBeenCalledTimes(1);
+        expect(document.getElementById('bal').textContent).toBe('50');
+    });
 });

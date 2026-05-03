@@ -198,6 +198,12 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         lowerBtn.disabled = true;
         const intervalId = startNextShuffle();
         const requestStart = Date.now();
+        // /play uses postJson directly (different lifecycle than /start)
+        // so it doesn't go through casino-game.js's hold path. Hold the
+        // jackpot-pool banner here so it can't tick before the next-card
+        // shuffle settles and leak the outcome.
+        const jackpot = (window.TobyJackpot) ? window.TobyJackpot : null;
+        if (jackpot) jackpot.holdPoolBanner();
 
         postJson('/casino/' + els.guildId + '/highlow/play', { direction: direction })
             .then(function (body) {
@@ -224,6 +230,7 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
                         lowerBtn.disabled = false;
                         window.toast((body && body.error) || 'Deal failed.', 'error');
                     }
+                    if (jackpot) jackpot.releasePoolBanner();
                 }, remaining);
             })
             .catch(function () {
@@ -232,6 +239,7 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
                 higherBtn.disabled = false;
                 lowerBtn.disabled = false;
                 window.toast('Network error.', 'error');
+                if (jackpot) jackpot.releasePoolBanner();
             });
     }
 

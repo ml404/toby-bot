@@ -148,16 +148,34 @@
                         busy = false;
                         setDisabled(false);
                         if (body && body.ok) {
-                            renderResult(body);
-                            if (autoApplyBalance) {
-                                applyBalance(body.newBalance);
-                                applyTobyDelta(body);
+                            // renderResult may run a staggered reveal
+                            // (keno's draw, baccarat's deal) and return a
+                            // Promise that resolves once the last cell /
+                            // card lands. In that case we hold the lock,
+                            // balance, and TOBY-coin update until the
+                            // animation actually completes — otherwise
+                            // the banner / credits would tick first and
+                            // leak the outcome. Synchronous renderResults
+                            // (slots/coinflip/dice) return undefined and
+                            // settle immediately as before.
+                            const settle = renderResult(body);
+                            const finishSettle = function () {
+                                if (autoApplyBalance) {
+                                    applyBalance(body.newBalance);
+                                    applyTobyDelta(body);
+                                }
+                                if (jackpot) jackpot.releasePoolBanner();
+                            };
+                            if (settle && typeof settle.then === 'function') {
+                                settle.then(finishSettle, finishSettle);
+                            } else {
+                                finishSettle();
                             }
                         } else {
                             hideResult();
                             showToast((body && body.error) || failureMessage, 'error');
+                            if (jackpot) jackpot.releasePoolBanner();
                         }
-                        if (jackpot) jackpot.releasePoolBanner();
                     }, remaining);
                 })
                 .catch(function () {
