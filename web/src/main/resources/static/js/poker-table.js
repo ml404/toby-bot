@@ -306,7 +306,7 @@
                     return;
                 }
                 showToast('success', 'Cashed out ' + resp.chipsReturned + ' chips.');
-                if (balanceEl && resp.newBalance != null) balanceEl.textContent = resp.newBalance;
+                window.TobyBalance.update(balanceEl, resp.newBalance);
                 window.location.href = '/poker/' + guildId;
             })
             .catch(function () { showToast('error', 'Network error.'); });
@@ -328,7 +328,7 @@
                         return;
                     }
                     showToast('success', 'You sat down with ' + buyIn + ' chips.');
-                    if (balanceEl && resp.newBalance != null) balanceEl.textContent = resp.newBalance;
+                    window.TobyBalance.update(balanceEl, resp.newBalance);
                     refresh();
                 })
                 .catch(function () { showToast('error', 'Network error.'); });

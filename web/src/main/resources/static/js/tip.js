@@ -41,7 +41,7 @@
                 return;
             }
 
-            if (balanceEl) balanceEl.textContent = String(resp.senderNewBalance);
+            window.TobyBalance.update(balanceEl, resp.senderNewBalance);
             if (sentEl) sentEl.textContent = String(resp.sentTodayAfter);
 
             if (headroomEl) {

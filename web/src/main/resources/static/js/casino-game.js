@@ -75,6 +75,14 @@
         }
 
         function applyBalance(newBalance) {
+            // Delegates to the shared module so every casino page funnels
+            // wallet writes through one site (animations, formatting, etc.).
+            // Falls back to the inline write if the shared module didn't
+            // load (older test paths that don't require it).
+            if (root && root.TobyBalance) {
+                root.TobyBalance.update(balanceEl, newBalance);
+                return;
+            }
             if (typeof newBalance !== 'number') return;
             if (balanceEl) balanceEl.textContent = newBalance;
         }
