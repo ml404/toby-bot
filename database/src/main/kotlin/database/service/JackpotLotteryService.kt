@@ -46,7 +46,6 @@ class JackpotLotteryService(
     private val jackpotService: JackpotService,
     private val userService: UserService,
     private val random: Random = Random.Default,
-    private val clock: () -> Instant = { Instant.now() },
 ) {
 
     sealed interface OpenOutcome {
@@ -112,7 +111,7 @@ class JackpotLotteryService(
 
         val drained = drainFromPool(guildId, seed)
 
-        val now = clock()
+        val now = Instant.now()
         val lottery = JackpotLotteryDto(
             guildId = guildId,
             ticketPrice = ticketPrice,

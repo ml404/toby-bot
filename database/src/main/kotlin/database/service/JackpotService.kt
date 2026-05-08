@@ -45,7 +45,6 @@ class JackpotService(
     private val configService: ConfigService,
     private val winnerPersistence: TobyCoinJackpotWinnerPersistence,
     private val voiceCreditDailyPersistence: VoiceCreditDailyPersistence,
-    private val clock: () -> Instant = { Instant.now() },
 ) {
 
     /** Current pool size; 0 if no row yet for this guild. */
@@ -117,13 +116,13 @@ class JackpotService(
      * both a casino-roll jackpot and a lottery jackpot within the
      * configured cooldown window.
      */
-    fun recordWin(guildId: Long, discordId: Long, amount: Long) {
+    fun recordWin(guildId: Long, discordId: Long, amount: Long, at: Instant = Instant.now()) {
         if (amount <= 0L) return
         winnerPersistence.upsert(
             TobyCoinJackpotWinnerDto(
                 guildId = guildId,
                 discordId = discordId,
-                lastWonAt = clock(),
+                lastWonAt = at,
                 lastWonAmount = amount,
             )
         )
@@ -134,11 +133,11 @@ class JackpotService(
      * the last `JACKPOT_WINNER_COOLDOWN_DAYS` (gate disabled when the
      * config is 0 / unset, in which case this always returns false).
      */
-    fun isOnCooldown(guildId: Long, discordId: Long): Boolean {
+    fun isOnCooldown(guildId: Long, discordId: Long, at: Instant = Instant.now()): Boolean {
         val days = JackpotHelper.winnerCooldownDays(configService, guildId)
         if (days <= 0L) return false
         val row = winnerPersistence.get(guildId, discordId) ?: return false
-        val elapsed = Duration.between(row.lastWonAt, clock())
+        val elapsed = Duration.between(row.lastWonAt, at)
         return elapsed < Duration.ofDays(days)
     }
 
@@ -153,11 +152,11 @@ class JackpotService(
      * earn path (voice, commands, intros, web UI) routes through it,
      * so a user who hasn't shown up at all won't have rows.
      */
-    fun isActive(guildId: Long, discordId: Long): Boolean {
+    fun isActive(guildId: Long, discordId: Long, at: Instant = Instant.now()): Boolean {
         val window = JackpotHelper.activityWindowDays(configService, guildId)
         if (window <= 0L) return true
         val minDays = JackpotHelper.activityMinDays(configService, guildId)
-        val today = LocalDate.ofInstant(clock(), ZoneOffset.UTC)
+        val today = LocalDate.ofInstant(at, ZoneOffset.UTC)
         // Inclusive `from` covers exactly `window` days of history including today.
         val from = today.minusDays(window - 1L)
         val days = voiceCreditDailyPersistence.countDaysSince(discordId, guildId, from)

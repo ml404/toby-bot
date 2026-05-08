@@ -13,13 +13,11 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import kotlin.random.Random
 
 class JackpotLotteryServiceTest {
 
     private val guildId = 100L
-    private val now: Instant = Instant.parse("2026-05-08T12:00:00Z")
 
     private lateinit var lotteryPersistence: JackpotLotteryPersistence
     private lateinit var jackpotService: JackpotService
@@ -36,7 +34,6 @@ class JackpotLotteryServiceTest {
             jackpotService,
             userService,
             random = Random(42),
-            clock = { now },
         )
     }
 

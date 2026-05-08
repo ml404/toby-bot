@@ -76,7 +76,6 @@ class JackpotServiceTest {
             configService,
             winnerPersistence,
             voiceCreditDailyPersistence,
-            clock = { now },
         )
     }
 
@@ -266,11 +265,11 @@ class JackpotServiceTest {
     // ---- recordWin / isOnCooldown ----
 
     @Test
-    fun `recordWin upserts a winner row with the current clock timestamp`() {
+    fun `recordWin upserts a winner row at the supplied timestamp`() {
         val captured = slot<TobyCoinJackpotWinnerDto>()
         every { winnerPersistence.upsert(capture(captured)) } answers { captured.captured }
 
-        service.recordWin(guildId, discordId, 250L)
+        service.recordWin(guildId, discordId, 250L, at = now)
 
         assertEquals(guildId, captured.captured.guildId)
         assertEquals(discordId, captured.captured.discordId)
@@ -288,7 +287,7 @@ class JackpotServiceTest {
     @Test
     fun `isOnCooldown returns false when the cooldown config is unset (gate disabled)`() {
         // setup() stubs the config to null — gate disabled.
-        assertFalse(service.isOnCooldown(guildId, discordId))
+        assertFalse(service.isOnCooldown(guildId, discordId, at = now))
         verify(exactly = 0) { winnerPersistence.get(any(), any()) }
     }
 
@@ -302,7 +301,7 @@ class JackpotServiceTest {
         } returns ConfigDto(name = "x", value = "14", guildId = guildId.toString())
         every { winnerPersistence.get(guildId, discordId) } returns null
 
-        assertFalse(service.isOnCooldown(guildId, discordId))
+        assertFalse(service.isOnCooldown(guildId, discordId, at = now))
     }
 
     @Test
@@ -320,7 +319,7 @@ class JackpotServiceTest {
             lastWonAmount = 100L,
         )
 
-        assertTrue(service.isOnCooldown(guildId, discordId))
+        assertTrue(service.isOnCooldown(guildId, discordId, at = now))
     }
 
     @Test
@@ -338,14 +337,14 @@ class JackpotServiceTest {
             lastWonAmount = 100L,
         )
 
-        assertFalse(service.isOnCooldown(guildId, discordId))
+        assertFalse(service.isOnCooldown(guildId, discordId, at = now))
     }
 
     // ---- isActive ----
 
     @Test
     fun `isActive returns true when the activity gate config is unset (disabled)`() {
-        assertTrue(service.isActive(guildId, discordId))
+        assertTrue(service.isActive(guildId, discordId, at = now))
         verify(exactly = 0) { voiceCreditDailyPersistence.countDaysSince(any(), any(), any()) }
     }
 
@@ -365,7 +364,7 @@ class JackpotServiceTest {
         } returns ConfigDto(name = "x", value = "3", guildId = guildId.toString())
         every { voiceCreditDailyPersistence.countDaysSince(eq(discordId), eq(guildId), any()) } returns 4L
 
-        assertTrue(service.isActive(guildId, discordId))
+        assertTrue(service.isActive(guildId, discordId, at = now))
     }
 
     @Test
@@ -384,6 +383,6 @@ class JackpotServiceTest {
         } returns ConfigDto(name = "x", value = "3", guildId = guildId.toString())
         every { voiceCreditDailyPersistence.countDaysSince(eq(discordId), eq(guildId), any()) } returns 2L
 
-        assertFalse(service.isActive(guildId, discordId))
+        assertFalse(service.isActive(guildId, discordId, at = now))
     }
 }
