@@ -390,7 +390,7 @@ class CasinoHoldemService @Autowired constructor(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.HOLDEM_MIN_STAKE, guildId, default = CasinoHoldem.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.HOLDEM_MAX_STAKE, guildId, default = CasinoHoldem.MAX_STAKE, min = minStake
         )
         val check = WagerHelper.checkAndLock(

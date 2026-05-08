@@ -110,7 +110,7 @@ class BaccaratService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.BACCARAT_MIN_STAKE, guildId, default = Baccarat.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.BACCARAT_MAX_STAKE, guildId, default = Baccarat.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

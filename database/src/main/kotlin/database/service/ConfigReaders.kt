@@ -22,3 +22,27 @@ fun ConfigService.cfgLong(
     val raw = getConfigByName(key.configValue, guildId.toString())?.value
     return raw?.toLongOrNull()?.coerceAtLeast(min) ?: default
 }
+
+/**
+ * Read a per-guild Long config value where `0` is a sentinel meaning "no
+ * upper cap." For `*_MAX_STAKE` / `POKER_MAX_BUY_IN` / `BLACKJACK_MAX_ANTE`
+ * style fields admins can type `0` instead of a giant number to remove
+ * the ceiling. Returns [Long.MAX_VALUE] when stored value is exactly `0L`,
+ * [default] when missing/unparseable, otherwise coerces to be at least
+ * [min] (defensive — write-time validation already enforces this).
+ *
+ * `JACKPOT_STAKE_ANCHOR` and `*_MIN_STAKE` keys keep using [cfgLong] —
+ * they have no "unlimited" semantics (anchor is a divisor; min < 1 has
+ * no meaning).
+ */
+fun ConfigService.cfgLongMax(
+    key: ConfigDto.Configurations,
+    guildId: Long,
+    default: Long,
+    min: Long,
+): Long {
+    val raw = getConfigByName(key.configValue, guildId.toString())?.value?.toLongOrNull()
+        ?: return default
+    if (raw == 0L) return Long.MAX_VALUE
+    return raw.coerceAtLeast(min)
+}

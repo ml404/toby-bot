@@ -72,7 +72,7 @@ class CoinflipService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.COINFLIP_MIN_STAKE, guildId, default = Coinflip.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.COINFLIP_MAX_STAKE, guildId, default = Coinflip.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

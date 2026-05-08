@@ -81,7 +81,7 @@ class DuelService @Autowired constructor(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.DUEL_MIN_STAKE, guildId, default = MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.DUEL_MAX_STAKE, guildId, default = MAX_STAKE, min = minStake
         )
         if (stake < minStake || stake > maxStake) {

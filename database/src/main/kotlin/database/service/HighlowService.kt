@@ -109,7 +109,7 @@ class HighlowService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.HIGHLOW_MIN_STAKE, guildId, default = Highlow.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.HIGHLOW_MAX_STAKE, guildId, default = Highlow.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

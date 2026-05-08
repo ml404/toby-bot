@@ -13,6 +13,7 @@ import database.poker.CasinoHoldem
 import database.service.ConfigService
 import database.service.DuelService
 import database.service.cfgLong
+import database.service.cfgLongMax
 import org.springframework.stereotype.Component
 
 /**
@@ -116,7 +117,8 @@ class StakeBounds(
         defaultMax: Long,
     ): Pair<Long, Long> {
         val min = configService.cfgLong(minKey, guildId, default = defaultMin, min = 1L)
-        val max = configService.cfgLong(maxKey, guildId, default = defaultMax, min = min)
+        // Max uses cfgLongMax — stored "0" means "no upper cap" → Long.MAX_VALUE
+        val max = configService.cfgLongMax(maxKey, guildId, default = defaultMax, min = min)
         return min to max
     }
 }

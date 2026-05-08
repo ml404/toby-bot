@@ -27,6 +27,10 @@ class ModerationTemplateRowsTest {
 
     @Test
     fun `moderation template surfaces every blackjack config key as an editable row`() {
+        // Stake-shaped keys (BLACKJACK_MIN_ANTE / BLACKJACK_MAX_ANTE) live
+        // in the consolidated "Casino stakes & buy-ins" card now, but the
+        // page still has to render rows for them — this test just asserts
+        // presence-anywhere, not which card.
         val keys = listOf(
             ConfigDto.Configurations.BLACKJACK_RAKE_PCT,
             ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
@@ -50,7 +54,10 @@ class ModerationTemplateRowsTest {
         // Same regression class as blackjack — `POKER_RAKE_PCT` was the only
         // poker key with a UI row before; the per-table parameters
         // (blinds, bets, buy-in range, max seats, shot clock) were defined
-        // and validated server-side but admins had no form for them.
+        // and validated server-side but admins had no form for them. The
+        // chip-amount keys (blinds/bets/buy-ins) now live in the
+        // consolidated "Casino stakes & buy-ins" card with the rest of
+        // the stake bounds.
         val keys = listOf(
             ConfigDto.Configurations.POKER_RAKE_PCT,
             ConfigDto.Configurations.POKER_SMALL_BLIND,
@@ -91,12 +98,13 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
-    fun `moderation template surfaces every per-game stake bound and the jackpot anchor as editable rows`() {
-        // Stake bounds and the jackpot scaling anchor live in their own
-        // "Casino stake bounds" card. Without this presence test, a refactor
-        // that drops or renames a row silently kills admin access to that
-        // dimension (and the service-side config quietly falls back to the
-        // hardcoded default).
+    fun `moderation template surfaces every stake or buy-in config key as an editable row`() {
+        // Every stake-shaped config — per-minigame min/max, blackjack ante
+        // bounds, the jackpot scaling anchor, and the poker chip thresholds
+        // (blinds/bets/buy-ins) — lives in the consolidated "Casino stakes
+        // & buy-ins" card. This guards against a refactor accidentally
+        // dropping a row (which would silently fall back to defaults
+        // since no UI surface remains for the admin to edit it).
         val keys = listOf(
             ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR,
             ConfigDto.Configurations.DICE_MIN_STAKE,
@@ -117,6 +125,14 @@ class ModerationTemplateRowsTest {
             ConfigDto.Configurations.HOLDEM_MAX_STAKE,
             ConfigDto.Configurations.DUEL_MIN_STAKE,
             ConfigDto.Configurations.DUEL_MAX_STAKE,
+            ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
+            ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
+            ConfigDto.Configurations.POKER_SMALL_BLIND,
+            ConfigDto.Configurations.POKER_BIG_BLIND,
+            ConfigDto.Configurations.POKER_SMALL_BET,
+            ConfigDto.Configurations.POKER_BIG_BET,
+            ConfigDto.Configurations.POKER_MIN_BUY_IN,
+            ConfigDto.Configurations.POKER_MAX_BUY_IN,
         )
         for (key in keys) {
             assertTrue(
@@ -127,11 +143,30 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
-    fun `casino stake bounds section has its own collapsed details block`() {
+    fun `casino stakes and buy-ins section has its own collapsed details block`() {
         assertTrue(
-            html.contains("<summary>Casino stake bounds</summary>"),
-            "expected a <details><summary>Casino stake bounds</summary> wrapper around the per-game stake rows"
+            html.contains("<summary>Casino stakes &amp; buy-ins</summary>"),
+            "expected a <details><summary>Casino stakes & buy-ins</summary> wrapper around the consolidated stake rows"
         )
+    }
+
+    @Test
+    fun `casino stakes card sub-groups every game with an h4 heading`() {
+        // The card is too long without sub-headings — admins scan by game.
+        // Asserting on a sample of headings so a flatten regression is
+        // obvious without making the test enumerate every group.
+        val headings = listOf(
+            "<h4>Jackpot scaling</h4>",
+            "<h4>Dice</h4>",
+            "<h4>Blackjack</h4>",
+            "<h4>Poker</h4>",
+        )
+        for (h in headings) {
+            assertTrue(
+                html.contains(h),
+                "expected $h sub-heading inside the consolidated card"
+            )
+        }
     }
 
     @Test

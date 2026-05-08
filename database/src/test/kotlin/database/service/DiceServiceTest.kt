@@ -120,6 +120,32 @@ class DiceServiceTest {
     }
 
     @Test
+    fun `DICE_MAX_STAKE = 0 means no upper cap (unlimited)`() {
+        // Per the moderation UI semantic: storing "0" in *_MAX_STAKE config
+        // means "no upper cap" — cfgLongMax expands it to Long.MAX_VALUE so
+        // the WagerHelper bounds check accepts arbitrary large stakes.
+        // Without this test, a regression in cfgLongMax (or accidentally
+        // switching the read back to cfgLong) would silently cap every
+        // game at the floor and the "0 = unlimited" UI label would be a lie.
+        val user = userWithBalance(10_000_000L)
+        every {
+            configService.getConfigByName(
+                database.dto.ConfigDto.Configurations.DICE_MAX_STAKE.configValue,
+                guildId.toString()
+            )
+        } returns database.dto.ConfigDto(name = "x", value = "0", guildId = guildId.toString())
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { dice.roll(4, any()) } returns Dice.Roll(landed = 4, predicted = 4, multiplier = 2L)
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.roll(discordId, guildId, stake = 5_000_000L, predicted = 4)
+
+        // Stake of 5,000,000 is way above the default MAX_STAKE (500) but
+        // 0 = unlimited lifts the cap, so the roll completes as a Win.
+        assertInstanceOf(DiceService.RollOutcome.Win::class.java, outcome)
+    }
+
+    @Test
     fun `loss tributes 10 percent of the stake into the jackpot pool`() {
         val user = UserDto(discordId, guildId).apply { socialCredit = 500L }
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user

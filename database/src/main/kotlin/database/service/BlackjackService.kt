@@ -1563,6 +1563,14 @@ class BlackjackService @Autowired constructor(
             val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
             return raw?.toLongOrNull()?.coerceAtLeast(min) ?: default
         }
+        // Sibling of cfgLong that interprets stored "0" as Long.MAX_VALUE
+        // ("no upper cap"). Used for max-cap keys like BLACKJACK_MAX_ANTE.
+        fun cfgLongMax(key: ConfigDto.Configurations, default: Long, min: Long): Long {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())
+                ?.value?.toLongOrNull() ?: return default
+            if (raw == 0L) return Long.MAX_VALUE
+            return raw.coerceAtLeast(min)
+        }
         fun cfgInt(key: ConfigDto.Configurations, default: Int, range: IntRange): Int {
             val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
             return raw?.toIntOrNull()?.coerceIn(range) ?: default
@@ -1578,7 +1586,7 @@ class BlackjackService @Autowired constructor(
             return (pct / 100.0).coerceAtMost(max)
         }
         val minAnte = cfgLong(ConfigDto.Configurations.BLACKJACK_MIN_ANTE, Blackjack.MULTI_MIN_ANTE, 1L)
-        val maxAnte = cfgLong(ConfigDto.Configurations.BLACKJACK_MAX_ANTE, Blackjack.MULTI_MAX_ANTE, minAnte)
+        val maxAnte = cfgLongMax(ConfigDto.Configurations.BLACKJACK_MAX_ANTE, Blackjack.MULTI_MAX_ANTE, minAnte)
         val maxSeats = cfgInt(ConfigDto.Configurations.BLACKJACK_MAX_SEATS, Blackjack.MULTI_MAX_SEATS, 2..7)
         val shotClock = cfgInt(
             ConfigDto.Configurations.BLACKJACK_SHOT_CLOCK_SECONDS,
