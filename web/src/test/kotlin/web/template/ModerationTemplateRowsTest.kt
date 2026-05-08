@@ -109,8 +109,6 @@ class ModerationTemplateRowsTest {
             ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR,
             ConfigDto.Configurations.DICE_MIN_STAKE,
             ConfigDto.Configurations.DICE_MAX_STAKE,
-            ConfigDto.Configurations.COINFLIP_MIN_STAKE,
-            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
             ConfigDto.Configurations.SLOTS_MIN_STAKE,
             ConfigDto.Configurations.SLOTS_MAX_STAKE,
             ConfigDto.Configurations.HIGHLOW_MIN_STAKE,

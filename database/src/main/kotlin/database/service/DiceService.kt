@@ -9,7 +9,7 @@ import kotlin.random.Random
 
 /**
  * Atomic roll path for the `/dice` minigame. Same lock-then-mutate
- * pattern as [SlotsService] / [CoinflipService] via
+ * pattern as [SlotsService] via
  * [UserService.getUserByIdForUpdate] so concurrent rolls from the same
  * user (Discord + web at once, or spam-clicking) can't double-spend.
  *

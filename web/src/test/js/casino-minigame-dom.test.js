@@ -36,7 +36,7 @@ describe('TobyCasinoMinigameDom.standardElements', () => {
         document.body.innerHTML =
             '<main data-guild-id="1"></main>';
 
-        const els = standardElements('coinflip', 'flip');
+        const els = standardElements('keno', 'play');
 
         expect(els.guildId).toBe('1');
         expect(els.tobyCoins).toBe(0);

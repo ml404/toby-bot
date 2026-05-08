@@ -117,10 +117,6 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.DICE_MIN_STAKE, gameLabel = "Dice", label = "minimum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.DICE_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.DICE_MAX_STAKE, gameLabel = "Dice", label = "maximum stake", min = 1L, unit = "credits")
-                ConfigDto.Configurations.COINFLIP_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.COINFLIP_MIN_STAKE, gameLabel = "Coinflip", label = "minimum stake", min = 1L, unit = "credits")
-                ConfigDto.Configurations.COINFLIP_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.COINFLIP_MAX_STAKE, gameLabel = "Coinflip", label = "maximum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.SLOTS_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.SLOTS_MIN_STAKE, gameLabel = "Slots", label = "minimum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.SLOTS_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,

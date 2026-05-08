@@ -1,7 +1,7 @@
 // Shared "Bet (sell TOBY)" button wiring for the casino minigame
 // pages. Each game's IIFE-style page JS calls TobyTopUp.init() once
 // to bind the second submit button to the same shortfall-recompute
-// logic, so /slots, /coinflip, /dice, /highlow, /scratch all behave
+// logic, so /slots, /dice, /highlow, /scratch all behave
 // identically when a player has TOBY but not enough credits to cover
 // their stake.
 //

@@ -2,7 +2,6 @@ package web.casino
 
 import database.dto.ConfigDto
 import database.economy.Baccarat
-import database.economy.Coinflip
 import database.economy.Dice
 import database.economy.Highlow
 import database.economy.Keno
@@ -36,14 +35,6 @@ class StakeBounds(
         ConfigDto.Configurations.DICE_MAX_STAKE,
         Dice.MIN_STAKE,
         Dice.MAX_STAKE,
-    )
-
-    fun coinflip(guildId: Long): Pair<Long, Long> = read(
-        guildId,
-        ConfigDto.Configurations.COINFLIP_MIN_STAKE,
-        ConfigDto.Configurations.COINFLIP_MAX_STAKE,
-        Coinflip.MIN_STAKE,
-        Coinflip.MAX_STAKE,
     )
 
     fun slots(guildId: Long): Pair<Long, Long> = read(

@@ -1,7 +1,7 @@
 // Shared helpers for the per-guild casino jackpot pool. Each minigame's
 // result-rendering JS prepends a "🎰 JACKPOT!" banner when the spin /
 // flip / roll / play / scratch hit the jackpot, so the visual treatment
-// stays identical across slots, coinflip, dice, highlow, and scratch.
+// stays identical across slots, dice, highlow, and scratch.
 
 (function (root) {
     'use strict';

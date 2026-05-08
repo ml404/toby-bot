@@ -7,8 +7,8 @@ import kotlin.random.Random
  * house edge from the green zero). No Spring, no DB, no JDA — just a
  * uniform pocket draw and a per-bet payout table.
  *
- * Bet menu (one bet per spin, mirroring `/dice` + `/coinflip` for a
- * one-stake/one-outcome service contract):
+ * Bet menu (one bet per spin, mirroring `/dice` for a one-stake/
+ * one-outcome service contract):
  *
  *   RED / BLACK              1:1   (even-money outside; 0 loses)
  *   ODD / EVEN               1:1   (even-money outside; 0 loses)

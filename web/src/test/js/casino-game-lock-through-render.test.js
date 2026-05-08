@@ -89,7 +89,7 @@ describe('casino-game.js — primary button stays disabled until renderResult se
         expect(primaryBtn.disabled).toBe(false);
     });
 
-    test('synchronous renderResult releases the lock once finishSettle runs (coinflip / dice / slots shape)', async () => {
+    test('synchronous renderResult releases the lock once finishSettle runs (dice / slots shape)', async () => {
         postJsonMock.mockReturnValue(Promise.resolve({ ok: true, newBalance: 100 }));
         bootInit({ renderResult: jest.fn(() => undefined) });
 

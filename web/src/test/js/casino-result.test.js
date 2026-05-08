@@ -56,19 +56,19 @@ describe('TobyCasinoResult.render', () => {
         // Manually pre-stick all three classes on the element to simulate
         // a previous render — the helper must drop them all so a fresh
         // result doesn't carry over old win/lose/jackpot styling.
-        el.classList.add('coinflip-result-win', 'coinflip-result-lose', 'coinflip-result-jackpot');
+        el.classList.add('dice-result-win', 'dice-result-lose', 'dice-result-jackpot');
 
         window.TobyCasinoResult.render({
             resultEl: el,
             body: { win: false, net: -10 },
-            classPrefix: 'coinflip',
+            classPrefix: 'dice',
             winLineHtml: 'WIN',
             loseLineHtml: 'lose body',
         });
 
-        expect(el.classList.contains('coinflip-result-win')).toBe(false);
-        expect(el.classList.contains('coinflip-result-jackpot')).toBe(false);
-        expect(el.classList.contains('coinflip-result-lose')).toBe(true);
+        expect(el.classList.contains('dice-result-win')).toBe(false);
+        expect(el.classList.contains('dice-result-jackpot')).toBe(false);
+        expect(el.classList.contains('dice-result-lose')).toBe(true);
     });
 
     test('jackpot win adds the -result-jackpot class and prepends the banner', () => {

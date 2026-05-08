@@ -1,6 +1,6 @@
 // Pure-DOM render for a /play response. Hoisted out of the IIFE so a
 // future jest test can drive it without booting the page. Mirrors the
-// shape of renderCoinflipResult / renderHighlowResult.
+// shape of renderDiceResult / renderHighlowResult.
 //
 // Staging: opts.stagger (default true) walks the cards onto the felt in
 // Punto Banco tableau order (P1 → B1 → P2 → B2 → optional P3 → B3) at

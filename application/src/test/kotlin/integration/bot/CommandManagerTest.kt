@@ -12,7 +12,6 @@ import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.command.commands.economy.BaccaratCommand
 import bot.toby.command.commands.economy.BlackjackCommand
 import bot.toby.command.commands.economy.CasinoHoldemCommand
-import bot.toby.command.commands.economy.CoinflipCommand
 import bot.toby.command.commands.economy.DiceCommand
 import bot.toby.command.commands.economy.DuelCommand
 import bot.toby.command.commands.economy.HighlowCommand
@@ -144,7 +143,6 @@ class CommandManagerTest {
             TitleCommand::class.java,
             TobyCoinCommand::class.java,
             SlotsCommand::class.java,
-            CoinflipCommand::class.java,
             DiceCommand::class.java,
             HighlowCommand::class.java,
             ScratchCommand::class.java,

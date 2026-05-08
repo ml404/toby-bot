@@ -398,7 +398,6 @@ class ModerationWebServiceTest {
         mockMember(ownerId, isOwner = true)
         val maxKeys = listOf(
             ConfigDto.Configurations.DICE_MAX_STAKE,
-            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
             ConfigDto.Configurations.SLOTS_MAX_STAKE,
             ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
             ConfigDto.Configurations.BACCARAT_MAX_STAKE,

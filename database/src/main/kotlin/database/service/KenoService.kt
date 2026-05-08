@@ -9,7 +9,7 @@ import kotlin.random.Random
 /**
  * Atomic play path for the `/keno` minigame. Same lock-then-mutate
  * pattern as the other one-shot wager services ([BaccaratService],
- * [CoinflipService], [DiceService]) via [UserService.getUserByIdForUpdate]:
+ * [DiceService]) via [UserService.getUserByIdForUpdate]:
  *   - validate stake against [Keno.MIN_STAKE]..[Keno.MAX_STAKE]
  *   - lock the user row
  *   - confirm balance ≥ stake (optionally sell TOBY for the shortfall

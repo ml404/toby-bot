@@ -8,7 +8,7 @@ import java.awt.Color
 
 /**
  * Shared scaffolding for the Discord casino-minigame commands
- * (`/slots`, `/coinflip`, `/dice`, `/highlow`, `/scratch`). Each one
+ * (`/slots`, `/dice`, `/highlow`, `/scratch`). Each one
  * was carrying a copy of:
  *
  *   - three identical color constants (win green, lose grey, error red)

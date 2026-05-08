@@ -780,7 +780,7 @@ class PokerService @Autowired constructor(
         // skip the user-lock + balance-update pass.
         if (!table.isFreePlay) {
             // Lock all refund recipients in ascending discord-id order to
-            // avoid cycles with concurrent /tip, /duel, /coinflip, etc.
+            // avoid cycles with concurrent /tip, /duel, /dice, etc.
             // transactions touching the same users.
             val locked = userService.lockUsersInAscendingOrder(refunds.keys, table.guildId)
             for ((discordId, amount) in refunds) {
@@ -895,7 +895,7 @@ class PokerService @Autowired constructor(
         if (table.isFreePlay) return
 
         // Lock all refund recipients in ascending discord-id order to avoid
-        // cycles with concurrent /tip, /duel, /coinflip, etc. transactions
+        // cycles with concurrent /tip, /duel, /dice, etc. transactions
         // that touch the same users.
         val locked = userService.lockUsersInAscendingOrder(refunds.keys, table.guildId)
         for ((discordId, amount) in refunds) {

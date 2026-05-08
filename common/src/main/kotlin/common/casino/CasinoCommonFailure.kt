@@ -2,7 +2,7 @@ package common.casino
 
 /**
  * Marker interface implemented by the four standard failure outcomes
- * shared across every casino-game service (Dice, Coinflip, Slots,
+ * shared across every casino-game service (Dice, Slots,
  * Scratch, Highlow, Baccarat, etc.).
  *
  * Each per-game `*Outcome` sealed hierarchy used to declare its own

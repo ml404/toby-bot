@@ -1,5 +1,5 @@
 // Shared scaffolding for the casino-game pages — every minigame
-// (dice, coinflip, slots, scratch, highlow) used to copy the same
+// (dice, slots, scratch, highlow) used to copy the same
 // validation/fetch/spinner/toast/balance-update plumbing. Centralising
 // it here means a tweak (e.g. a different toast on network errors,
 // changing the disabled-button protocol, swapping postJson for a new
@@ -164,7 +164,7 @@
                             // of the reveal of the first (keno was the
                             // worst offender at 8 draws × 120ms = ~1s of
                             // unguarded reveal). Synchronous renderResults
-                            // (slots/coinflip/dice) return undefined and
+                            // (slots/dice) return undefined and
                             // settle immediately as before.
                             const settle = renderResult(body);
                             const finishSettle = function () {

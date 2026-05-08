@@ -18,8 +18,8 @@ import kotlin.random.Random
  *   `(deckSize - 1) / winningOutcomes` × stake. Average RTP per hand is
  *   `(deckSize - 1) / deckSize` ≈ 12/13 ≈ 0.923 regardless of which
  *   direction the player picks, so a player who can see the anchor (web
- *   flow) cannot exploit extreme anchors for a positive edge. Sits
- *   between /coinflip (no edge) and /slots (~11% edge).
+ *   flow) cannot exploit extreme anchors for a positive edge. ~7.7%
+ *   house edge — moderate, sits below /slots (~11% edge).
  *
  * Two flows live here:
  *   - [play] — bundled draw used by Discord. Anchor + next come out

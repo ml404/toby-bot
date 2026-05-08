@@ -4,7 +4,7 @@ import database.dto.UserDto
 
 /**
  * Shared spine for the wager-style minigame services
- * ([SlotsService], [CoinflipService], [DiceService], [HighlowService],
+ * ([SlotsService], [DiceService], [HighlowService],
  * [ScratchService]). Each had its own copy of:
  *   - validate stake bounds → InvalidStake
  *   - lock the user row → UnknownUser if absent

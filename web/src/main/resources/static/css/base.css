@@ -429,7 +429,6 @@ td { font-size: 0.95rem; }
    spin/flip/roll/play/scratch wins the jackpot. Shared accent so each
    game's CSS doesn't have to redefine the colour. */
 .slots-result-jackpot,
-.coinflip-result-jackpot,
 .dice-result-jackpot,
 .highlow-result-jackpot,
 .scratch-result-jackpot,

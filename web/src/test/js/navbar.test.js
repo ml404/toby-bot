@@ -75,7 +75,6 @@ describe('navbar fragment', () => {
         );
         expect(casino).not.toBeNull();
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Slots/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Coinflip/);
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Dice/);
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*High-Low/);
         expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Scratch/);

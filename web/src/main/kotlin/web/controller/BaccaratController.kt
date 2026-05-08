@@ -30,7 +30,7 @@ import web.util.positiveOrNull
  * (Player / Banker / Tie + stake input + autoTopUp); POST runs the hand
  * via [BaccaratService.play] and returns JSON with both hands + verdict.
  *
- * Same shape as [CoinflipController] — baccarat is a one-shot wager so
+ * Same shape as [DiceController] — baccarat is a one-shot wager so
  * there's no session state, no anchor-then-resolve split. The card-game
  * polish comes from rendering both hands client-side via the shared
  * `casino-render.js` glyph engine.

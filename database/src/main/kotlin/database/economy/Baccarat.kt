@@ -29,9 +29,9 @@ import database.card.Rank
  *     - BANKER:  1:1 minus 5%   (multiplier 1.95)
  *     - TIE:     8:1            (multiplier 9.0)
  *   On a tied game, PLAYER and BANKER side bets push (multiplier 1.0).
- *   Any non-winning side returns 0.0. Per-bet house edge sits between
- *   /coinflip and /slots: ~1.24% on Player, ~1.06% on Banker, ~14.4% on
- *   Tie at this schedule.
+ *   Any non-winning side returns 0.0. Per-bet house edge: ~1.24% on
+ *   Player, ~1.06% on Banker, ~14.4% on Tie at this schedule (well
+ *   under /slots' ~11% on the main bets).
  */
 class Baccarat {
 

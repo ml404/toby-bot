@@ -421,25 +421,6 @@
                     </div>
                 </div>
                 <div class="config-group">
-                    <h4>Coinflip</h4>
-                    <div class="config-row" data-key="COINFLIP_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['COINFLIP_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="COINFLIP_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 1000)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['COINFLIP_MAX_STAKE']}"
-                               placeholder="1000"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
                     <h4>Slots</h4>
                     <div class="config-row" data-key="SLOTS_MIN_STAKE">
                         <label>Minimum stake (default 10)</label>

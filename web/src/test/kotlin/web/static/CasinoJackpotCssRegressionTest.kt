@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Test
 
 /**
  * The jackpot banner and per-game `*-result-jackpot` accent live in
- * `base.css` so every minigame page (slots / coinflip / dice / highlow /
- * scratch) renders them without duplicating styles. If a future cleanup
+ * `base.css` so every minigame page (slots / dice / highlow / scratch)
+ * renders them without duplicating styles. If a future cleanup
  * relocates these to a per-game stylesheet without porting them all, the
  * banner reverts to default text styling and the jackpot win line stops
  * looking distinct — both regressions players have explicitly asked us
@@ -34,7 +34,6 @@ class CasinoJackpotCssRegressionTest {
     fun `base css declares the per-game result-jackpot accents`() {
         listOf(
             ".slots-result-jackpot",
-            ".coinflip-result-jackpot",
             ".dice-result-jackpot",
             ".highlow-result-jackpot",
             ".scratch-result-jackpot",

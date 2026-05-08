@@ -1,6 +1,6 @@
 /*
  * Shared "casino table" primitives — used by every casino minigame
- * (blackjack, poker, baccarat, high-low, dice, slots, coinflip, scratch)
+ * (blackjack, poker, baccarat, high-low, dice, slots, scratch)
  * so they all look like the same product. Game-specific bits (split
  * hands, side pots, betting slider, bust labels) live in their per-game
  * CSS and only override what they truly need.

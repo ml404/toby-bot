@@ -96,7 +96,6 @@ class PageRenderSmokeIT {
             "/casino/guilds",
             "/casino/1/slots",
             "/casino/1/dice",
-            "/casino/1/coinflip",
             "/casino/1/highlow",
             "/casino/1/scratch",
             // Poker

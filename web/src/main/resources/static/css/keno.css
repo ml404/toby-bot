@@ -118,7 +118,7 @@
 }
 
 /* Picked but not-yet-drawn — gold ring tells the user "this is your
-   commitment", same treatment as selected sides on baccarat / coinflip. */
+   commitment", same treatment as selected sides on baccarat. */
 .keno-cell.is-picked {
     border-color: var(--casino-gold);
     background: linear-gradient(180deg, #fff 0%, #fef3c7 100%);

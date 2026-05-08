@@ -9,8 +9,7 @@ import kotlin.random.Random
  * Mechanic
  *   User picks a number 1..6, rolls a die. Match → `multiplier × stake`
  *   payout. True odds of a hit are 1/6 ≈ 0.1667; with a 5× payout,
- *   RTP = 5/6 ≈ 0.833 (~17% house edge). Sits between `/coinflip`
- *   (no edge) and `/slots` (~11% edge) on the risk/sink scale.
+ *   RTP = 5/6 ≈ 0.833 (~17% house edge — heavier than `/slots` at ~11%).
  *
  * Stake bounds (`MIN_STAKE` / `MAX_STAKE`) live here so the Discord
  * command, the web controller, and the service all agree on what's

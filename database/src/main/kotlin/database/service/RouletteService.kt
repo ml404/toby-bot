@@ -13,7 +13,7 @@ import kotlin.random.Random
  * through here so the debit/credit maths and the random draw only live
  * in one place.
  *
- * Pattern mirrors [SlotsService] / [CoinflipService]: lock the user row
+ * Pattern mirrors [SlotsService]: lock the user row
  * via [UserService.getUserByIdForUpdate], validate inputs against the
  * live balance, mutate, persist — all inside a single `@Transactional`
  * boundary so concurrent `/roulette` calls from the same user (Discord

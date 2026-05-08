@@ -2,7 +2,6 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.DuelLogDto
-import database.economy.Coinflip
 import database.persistence.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -18,7 +17,7 @@ import kotlin.random.Random
  *     up-front, but the authoritative check happens at accept time.
  *   - [acceptDuel] — atomic resolve. Locks both users in ascending
  *     discord-id order, re-verifies both balances, picks a winner
- *     by a fair coinflip, debits both and credits the winner the pot
+ *     by a fair coin toss, debits both and credits the winner the pot
  *     minus the jackpot tribute. Persists a [DuelLogDto] row.
  *
  * Loss tribute (10 % of stake by default, configurable per-guild via
@@ -175,7 +174,7 @@ class DuelService @Autowired constructor(
     }
 
     companion object {
-        const val MIN_STAKE: Long = Coinflip.MIN_STAKE
+        const val MIN_STAKE: Long = 10L
         const val MAX_STAKE: Long = 500L
     }
 }

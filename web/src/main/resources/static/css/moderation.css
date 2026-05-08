@@ -232,7 +232,7 @@
 .config-row .save-config { grid-column: 2; }
 
 /* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
-   Coinflip / Poker / etc. sub-groups). Each `.config-group` carries a
+   Slots / Poker / etc. sub-groups). Each `.config-group` carries a
    small uppercase `<h4>` heading and a hairline divider between groups
    so the card is scannable game-by-game. */
 .config-group { padding-top: var(--space-2); }

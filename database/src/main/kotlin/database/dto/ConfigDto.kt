@@ -123,8 +123,6 @@ class ConfigDto(
         // than per-game maxStake so it stays sensible at any cap.
         DICE_MIN_STAKE("DICE_MIN_STAKE"),
         DICE_MAX_STAKE("DICE_MAX_STAKE"),
-        COINFLIP_MIN_STAKE("COINFLIP_MIN_STAKE"),
-        COINFLIP_MAX_STAKE("COINFLIP_MAX_STAKE"),
         SLOTS_MIN_STAKE("SLOTS_MIN_STAKE"),
         SLOTS_MAX_STAKE("SLOTS_MAX_STAKE"),
         HIGHLOW_MIN_STAKE("HIGHLOW_MIN_STAKE"),

@@ -54,7 +54,7 @@ class TobyCoinTradeDto(
     // 'USER' (default) → manual `/economy sell` or `/tobycoin sell`.
     // 'TITLE_TOPUP' → TitlesWebService.buyTitleWithTobyCoin auto-sold
     // to cover a credit shortfall. 'CASINO_TOPUP' → a casino minigame
-    // (slots/coinflip/dice/highlow/scratch) auto-sold to fund a wager.
+    // (slots/dice/highlow/scratch) auto-sold to fund a wager.
     @Column(name = "reason", nullable = false)
     var reason: String = "USER"
 ) : Serializable

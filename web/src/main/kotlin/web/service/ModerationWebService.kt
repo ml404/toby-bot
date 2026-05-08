@@ -417,7 +417,6 @@ class ModerationWebService(
             // pathological, not "unlimited"; mins below 1 have no meaning.
             ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
             ConfigDto.Configurations.DICE_MIN_STAKE,
-            ConfigDto.Configurations.COINFLIP_MIN_STAKE,
             ConfigDto.Configurations.SLOTS_MIN_STAKE,
             ConfigDto.Configurations.HIGHLOW_MIN_STAKE,
             ConfigDto.Configurations.BACCARAT_MIN_STAKE,
@@ -437,7 +436,6 @@ class ModerationWebService(
             // Otherwise must be a positive whole number.
             ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
             ConfigDto.Configurations.DICE_MAX_STAKE,
-            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
             ConfigDto.Configurations.SLOTS_MAX_STAKE,
             ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
             ConfigDto.Configurations.BACCARAT_MAX_STAKE,

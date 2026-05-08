@@ -9,10 +9,10 @@ import org.springframework.http.ResponseEntity
  * sign-in/membership guard failures into [ResponseEntity] with the
  * controller's per-game response shape.
  *
- * Before this lived as 6+ copies of the same `when (outcome)` arms
- * across DiceController, CoinflipController, SlotsController,
- * ScratchController and HighlowController — the strings were identical
- * but had to be edited in five places. Now there is one place.
+ * Before this lived as multiple copies of the same `when (outcome)` arms
+ * across DiceController, SlotsController, ScratchController and
+ * HighlowController — the strings were identical but had to be edited in
+ * each one. Now there is one place.
  *
  * The mapper is parameterised on the concrete response type so each
  * controller keeps its typed Win/Lose construction; only the failure
