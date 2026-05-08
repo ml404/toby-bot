@@ -37,7 +37,14 @@
     // reuse where handNumber alone could collide.
     var lastFlashedKey = null;
 
-    var DEALER_REVEAL_STAGGER_MS = 400;
+    var DEALER_REVEAL_STAGGER_MS = (window.CasinoRender && window.CasinoRender.DEALER_REVEAL_STAGGER_MS) || 400;
+
+    function errorToast(msg) {
+        if (typeof window.toast === "function") window.toast(msg, "error");
+    }
+    function infoToast(msg) {
+        if (typeof window.toast === "function") window.toast(msg, "info");
+    }
 
     function renderCards(container, cards, opts) {
         // Delegate to the shared renderer so the per-container deal animation
@@ -45,8 +52,7 @@
         // .casino-card-glyph and the .is-dealt animation only on freshly arrived
         // cards.
         if (window.CasinoRender) {
-            window.CasinoRender.renderCards(container, cards, opts);
-            return;
+            return window.CasinoRender.renderCards(container, cards, opts);
         }
         // Fallback (loaded out of order) — keep the legacy text-glyph render.
         container.innerHTML = "";
@@ -64,6 +70,7 @@
             }
             container.appendChild(el);
         });
+        return { freshCount: 0, settleMs: 0 };
     }
 
     function statusBadge(status, pendingLeave) {
@@ -148,7 +155,7 @@
         // Slow the dealer's reveal/play-out so the hole card flips first
         // and each subsequent draw arrives with a clear beat between
         // cards, instead of everything popping in on the same frame.
-        renderCards(dealerCardsEl, state.dealer, { staggerMs: DEALER_REVEAL_STAGGER_MS });
+        var dealerDeal = renderCards(dealerCardsEl, state.dealer, { staggerMs: DEALER_REVEAL_STAGGER_MS }) || { settleMs: 0 };
         dealerTotalEl.textContent = state.dealer && state.dealer.length
             ? "(" + state.dealerTotalVisible + ")" : "";
         renderSeats(state);
@@ -188,8 +195,13 @@
         }
 
         if (state.lastResult && state.phase === "LOBBY") {
-            renderResult(state);
+            // Hold the banner / chip flourish until the dealer's last
+            // freshly-revealed card finishes its CSS animation. settleMs
+            // is 0 on polls where nothing fresh landed (e.g. an idle
+            // re-render), so the banner draws immediately in that case.
+            resultDefer.schedule(dealerDeal.settleMs, function () { renderResult(state); });
         } else {
+            resultDefer.cancel();
             resultEl.textContent = "";
         }
 
@@ -246,6 +258,20 @@
         }
     }
 
+    var resultDefer = (window.TobyBlackjackSolo && window.TobyBlackjackSolo.createDeferredScheduler)
+        ? window.TobyBlackjackSolo.createDeferredScheduler()
+        : (function () {
+            var t = null;
+            return {
+                schedule: function (ms, fn) {
+                    if (t) { clearTimeout(t); t = null; }
+                    if (!ms || ms <= 0) { fn(); return; }
+                    t = setTimeout(function () { t = null; fn(); }, ms);
+                },
+                cancel: function () { if (t) { clearTimeout(t); t = null; } },
+            };
+        }());
+
     function renderShotClock() {
         if (!deadlineMs) {
             shotClockEl.hidden = true;
@@ -290,7 +316,7 @@
         return window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/action", { action: action })
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Action failed.");
+                    errorToast(b.error || "Action failed.");
                     return;
                 }
                 // Server echoes live wallet on every Continued/HandResolved
@@ -311,7 +337,7 @@
         window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/start", {})
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Start failed.");
+                    errorToast(b.error || "Start failed.");
                     return;
                 }
                 // /start re-debits each seated player's ante for the next hand
@@ -327,7 +353,7 @@
         window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/join", {})
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Join failed.");
+                    errorToast(b.error || "Join failed.");
                     return;
                 }
                 window.TobyBalance.update(balanceEl, b.newBalance);
@@ -339,14 +365,14 @@
         window.TobyApi.postJson("/blackjack/" + guildId + "/" + tableId + "/leave", {})
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Leave failed.");
+                    errorToast(b.error || "Leave failed.");
                     return;
                 }
                 window.TobyBalance.update(balanceEl, b.newBalance);
                 if (b.queued) {
-                    window.toasts && window.toasts.info("Leaving — you'll auto-stand and be removed at end of hand.");
+                    infoToast("Leaving — you'll auto-stand and be removed at end of hand.");
                 } else {
-                    window.toasts && window.toasts.info("Cashed out " + b.refund + " credits.");
+                    infoToast("Cashed out " + b.refund + " credits.");
                     setTimeout(function () { window.location.href = "/blackjack/" + guildId; }, 800);
                 }
                 refreshState();

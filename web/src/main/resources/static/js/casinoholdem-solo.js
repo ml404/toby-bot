@@ -1,12 +1,19 @@
 (function () {
     "use strict";
 
+    // Shared with the rest of the casino card games so every felt
+    // beats out at the same pace.
+    var DEALER_REVEAL_STAGGER_MS = (window.CasinoRender && window.CasinoRender.DEALER_REVEAL_STAGGER_MS) || 400;
+
+    function errorToast(msg) {
+        if (typeof window.toast === "function") window.toast(msg, "error");
+    }
+
     // Shared card-glyph rendering — the same path blackjack-solo uses.
     // Falls back to inline glyphs if casino-render didn't load.
-    function renderCards(container, cards) {
+    function renderCards(container, cards, opts) {
         if (window.CasinoRender) {
-            window.CasinoRender.renderCards(container, cards);
-            return;
+            return window.CasinoRender.renderCards(container, cards, opts);
         }
         container.innerHTML = "";
         (cards || []).forEach(function (c) {
@@ -23,6 +30,7 @@
             }
             container.appendChild(el);
         });
+        return { freshCount: 0, settleMs: 0 };
     }
 
     // Dedup the celebratory chip-stack flourish per resolved hand. Each
@@ -60,7 +68,22 @@
     var playerRowEl = document.getElementById("che-player-row");
 
     var pollTimer = null;
+    var dealBusy = false;
+    var actionBusy = false;
     var shouldFlash = createFlashDedup();
+    var resultDefer = (window.TobyBlackjackSolo && window.TobyBlackjackSolo.createDeferredScheduler)
+        ? window.TobyBlackjackSolo.createDeferredScheduler()
+        : (function () {
+            var t = null;
+            return {
+                schedule: function (ms, fn) {
+                    if (t) { clearTimeout(t); t = null; }
+                    if (!ms || ms <= 0) { fn(); return; }
+                    t = setTimeout(function () { t = null; fn(); }, ms);
+                },
+                cancel: function () { if (t) { clearTimeout(t); t = null; } },
+            };
+        }());
 
     function setActionsEnabled(enabled) {
         callBtn.disabled = !enabled;
@@ -70,13 +93,17 @@
     function renderState(state) {
         if (!state) return;
         tableEl.hidden = false;
-        renderCards(dealerCardsEl, state.dealerHole);
+        // Dealer's hole card carries the same 400ms reveal stagger as
+        // every other card game so the felt feels consistent across
+        // /blackjack, /casinoholdem and /baccarat.
+        var dealerDeal = renderCards(dealerCardsEl, state.dealerHole, { staggerMs: DEALER_REVEAL_STAGGER_MS }) || { settleMs: 0 };
         renderCards(boardCardsEl, state.board);
         renderCards(playerCardsEl, state.playerHole);
         callCostEl.textContent = state.callStake;
 
         if (state.phase === "AWAIT_DECISION") {
             setActionsEnabled(true);
+            resultDefer.cancel();
             resultEl.textContent = "";
             resultEl.className = "che-result muted";
             if (playerRowEl) playerRowEl.classList.add("is-active");
@@ -84,7 +111,10 @@
             setActionsEnabled(false);
             if (playerRowEl) playerRowEl.classList.remove("is-active");
             if (state.phase === "RESOLVED" && state.lastResult) {
-                renderResult(state);
+                // Hold the result line + chip flourish until the
+                // dealer's hole card flip lands. settleMs is 0 on
+                // re-renders where nothing fresh arrived.
+                resultDefer.schedule(dealerDeal.settleMs, function () { renderResult(state); });
                 stopPoll();
             }
         }
@@ -164,32 +194,48 @@
 
     dealForm.addEventListener("submit", function (e) {
         e.preventDefault();
+        // Silent no-op while a deal is mid-flight — the Deal button is
+        // disabled, but a held submit can still fire here. No spam toast:
+        // the disabled control is the feedback.
+        if (dealBusy) return;
         var stake = parseInt(stakeInput.value, 10);
-        if (!stake) return;
+        if (!stake || stake <= 0) {
+            errorToast("Enter a positive stake.");
+            return;
+        }
+        resultDefer.cancel();
+        dealBusy = true;
         window.TobyApi.postJson("/casinoholdem/" + guildId + "/deal", { stake: stake })
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Deal failed.");
+                    errorToast(b.error || "Deal failed.");
                     return;
                 }
                 window.TobyBalance.update(balanceEl, b.newBalance);
                 refreshState();
                 startPoll();
-            });
+            })
+            .catch(function () { errorToast("Network error."); })
+            .then(function () { dealBusy = false; });
     });
 
     function postAction(action) {
+        if (actionBusy) return Promise.resolve();
+        actionBusy = true;
+        setActionsEnabled(false);
         return window.TobyApi.postJson("/casinoholdem/" + guildId + "/action", { action: action })
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Action failed.");
+                    errorToast(b.error || "Action failed.");
                     return;
                 }
                 if (typeof b.newBalance === "number") {
                     window.TobyBalance.update(balanceEl, b.newBalance);
                 }
                 refreshState();
-            });
+            })
+            .catch(function () { errorToast("Network error."); })
+            .then(function () { actionBusy = false; });
     }
 
     callBtn.addEventListener("click", function () { postAction("call"); });

@@ -33,7 +33,6 @@ class KenoService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
-    private val cooldownService: CasinoCooldownService,
     private val keno: Keno = Keno(),
     private val random: Random = Random.Default
 ) {
@@ -69,7 +68,6 @@ class KenoService(
         data class InvalidStake(val min: Long, val max: Long) : PlayOutcome
         data class InvalidPicks(val min: Int, val max: Int, val poolMax: Int) : PlayOutcome
         data object UnknownUser : PlayOutcome
-        data class OnCooldown(val remainingMs: Long) : PlayOutcome
     }
 
     /**
@@ -113,7 +111,6 @@ class KenoService(
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
             discordId, guildId, stake, minStake, maxStake, autoTopUp,
-            cooldownService = cooldownService, game = CasinoGameKey.KENO,
         )) {
             is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return PlayOutcome.UnknownUser
@@ -121,7 +118,6 @@ class KenoService(
                 return PlayOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return PlayOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
-            is TopUpResolution.OnCooldown -> return PlayOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
@@ -135,7 +131,6 @@ class KenoService(
         val wager = WagerHelper.applyMultiplier(
             userService, resolved.user, resolved.balance, stake, hand.multiplier
         )
-        cooldownService.arm(discordId, CasinoGameKey.KENO)
         return if (hand.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,

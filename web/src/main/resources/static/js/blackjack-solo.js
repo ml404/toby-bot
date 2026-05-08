@@ -6,15 +6,16 @@
     // even though the page-init code below early-returns when the
     // blackjack-solo template isn't present). -----
 
-    var DEALER_REVEAL_STAGGER_MS = 400;
+    // Shared with blackjack-table / casinoholdem / baccarat so every card
+    // game on the felt beats out at the same pace.
+    var DEALER_REVEAL_STAGGER_MS = (window.CasinoRender && window.CasinoRender.DEALER_REVEAL_STAGGER_MS) || 400;
 
     function renderCards(container, cards, opts) {
         // Delegate to the shared casino renderer so the deal animation only
         // fires on freshly arrived cards (not every poll re-render). Falls
         // back to the legacy text glyphs if the shared module didn't load.
         if (window.CasinoRender) {
-            window.CasinoRender.renderCards(container, cards, opts);
-            return;
+            return window.CasinoRender.renderCards(container, cards, opts);
         }
         container.innerHTML = "";
         (cards || []).forEach(function (c) {
@@ -31,6 +32,18 @@
             }
             container.appendChild(el);
         });
+        return { freshCount: 0, settleMs: 0 };
+    }
+
+    // Toast helper — funnels every error through the shared window.toast
+    // so a future tweak to error styling/duration is one edit. There's no
+    // anti-spam toast: rapid resubmits are stopped by keeping the button
+    // disabled until the dealer's reveal animation lands, not by piling
+    // up notifications.
+    function errorToast(msg) {
+        if (typeof window !== "undefined" && typeof window.toast === "function") {
+            window.toast(msg, "error");
+        }
     }
 
     function renderSplitHands(container, slots, activeIndex) {
@@ -101,10 +114,45 @@
         };
     }
 
+    // Shared validation — exposed for jest so the "Enter a positive
+    // stake." behaviour can be exercised without booting the page.
+    // Returns null when the stake is good, or the user-facing toast
+    // message when it isn't. Mirrors casino-game.js's stake rule so
+    // every casino page validates the same way.
+    function validateStake(rawStake) {
+        var stake = parseInt(rawStake, 10);
+        if (!stake || stake <= 0) return "Enter a positive stake.";
+        return null;
+    }
+
+    // Tiny factory the page uses to defer the win/lose banner until the
+    // dealer's last freshly-revealed card finishes its CSS animation.
+    // Hoisted so jest can drive it directly with fake timers — the
+    // bug it fixes (banner painted before the last card slides in)
+    // would otherwise need the full DOM-driven state-poll integration
+    // to reproduce.
+    function createDeferredScheduler() {
+        var timer = null;
+        return {
+            schedule: function (delayMs, fn) {
+                if (timer) { clearTimeout(timer); timer = null; }
+                if (!delayMs || delayMs <= 0) { fn(); return; }
+                timer = setTimeout(function () { timer = null; fn(); }, delayMs);
+            },
+            cancel: function () {
+                if (timer) { clearTimeout(timer); timer = null; }
+            },
+            isPending: function () { return timer !== null; },
+        };
+    }
+
     if (typeof window !== "undefined") {
         window.TobyBlackjackSolo = window.TobyBlackjackSolo || {};
         window.TobyBlackjackSolo.renderSplitHands = renderSplitHands;
         window.TobyBlackjackSolo.createFlashDedup = createFlashDedup;
+        window.TobyBlackjackSolo.validateStake = validateStake;
+        window.TobyBlackjackSolo.errorToast = errorToast;
+        window.TobyBlackjackSolo.createDeferredScheduler = createDeferredScheduler;
     }
 
     // ----- Page init. Bail out cleanly if we're loaded without the
@@ -132,6 +180,9 @@
     var playerRowEl = document.getElementById("bj-player-row");
 
     var pollTimer = null;
+    var resultDefer = createDeferredScheduler();
+    var dealBusy = false;
+    var actionBusy = false;
     var shouldFlash = createFlashDedup();
 
     function renderState(state) {
@@ -148,7 +199,10 @@
         // Slow the dealer's reveal/play-out so the hole card flips first
         // and each subsequent draw arrives with a clear beat between
         // cards, instead of everything popping in on the same frame.
-        renderCards(dealerCardsEl, state.dealer, { staggerMs: DEALER_REVEAL_STAGGER_MS });
+        // Capture settleMs so we can hold the win/lose banner until the
+        // last fresh card finishes animating (otherwise the result text
+        // spoils the reveal in the same paint frame).
+        var dealerDeal = renderCards(dealerCardsEl, state.dealer, { staggerMs: DEALER_REVEAL_STAGGER_MS }) || { settleMs: 0 };
         dealerTotalEl.textContent = state.dealer && state.dealer.length
             ? "(" + state.dealerTotalVisible + ")" : "";
 
@@ -195,7 +249,12 @@
         }
 
         if (state.lastResult && state.phase === "RESOLVED") {
-            renderResult(state, seat);
+            // Hold the banner / chip flourish / win sound until the
+            // last freshly-revealed dealer card has finished its CSS
+            // animation. dealerDeal.settleMs is 0 when nothing fresh
+            // landed this poll (e.g. a re-render after an in-flight
+            // settle), so the banner draws immediately in that case.
+            resultDefer.schedule(dealerDeal.settleMs, function () { renderResult(state, seat); });
             stopPoll();
         }
 
@@ -278,8 +337,22 @@
 
     dealForm.addEventListener("submit", function (e) {
         e.preventDefault();
+        // Silently no-op when a hand is already being dealt — the Deal
+        // button is disabled until the reveal lands, but a held-down
+        // click can still fire submit events on the form. No toast here:
+        // the disabled button is the feedback.
+        if (dealBusy) return;
+        var stakeError = validateStake(stakeInput.value);
+        if (stakeError) {
+            errorToast(stakeError);
+            return;
+        }
         var stake = parseInt(stakeInput.value, 10);
-        if (!stake) return;
+        // Cancel any deferred banner from the previous hand so a fast
+        // re-deal doesn't paint stale "You win." text over the new felt.
+        resultDefer.cancel();
+        dealBusy = true;
+        if (dealButton) dealButton.disabled = true;
         // POSTs go via TobyApi.postJson so the Spring Security CSRF
         // header (read off the <meta name="_csrf"> tag in the head
         // fragment) is included — without it Spring rejects the request
@@ -287,7 +360,7 @@
         window.TobyApi.postJson("/blackjack/" + guildId + "/solo/deal", { stake: stake })
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Deal failed.");
+                    errorToast(b.error || "Deal failed.");
                     return;
                 }
                 // Always reflect the post-deal escrow in the wallet display, not
@@ -302,14 +375,24 @@
                     refreshState();
                     startPoll();
                 }
-            });
+            })
+            .catch(function () { errorToast("Network error."); })
+            .then(function () { dealBusy = false; });
     });
 
     function postAction(action) {
+        // Drop a click that lands while a previous request is still in
+        // flight. We don't toggle the action buttons' `disabled` attribute
+        // here — renderState already drives that off the polled phase
+        // (`state.isMyTurn` flips them after each round-trip), so a
+        // local override would just duplicate that work and trip up
+        // tests that exercise multiple clicks against a stubbed poll.
+        if (actionBusy) return Promise.resolve();
+        actionBusy = true;
         return window.TobyApi.postJson("/blackjack/" + guildId + "/solo/action", { action: action })
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Action failed.");
+                    errorToast(b.error || "Action failed.");
                     return;
                 }
                 // Refresh on every successful action — the server echoes the
@@ -318,7 +401,9 @@
                 // and the player should see that immediately.
                 window.TobyBalance.update(balanceEl, b.newBalance);
                 refreshState();
-            });
+            })
+            .catch(function () { errorToast("Network error."); })
+            .then(function () { actionBusy = false; });
     }
 
     hitBtn.addEventListener("click", function () { postAction("hit"); });

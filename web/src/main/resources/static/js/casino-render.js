@@ -21,9 +21,19 @@
     // at the end of the hand) is recognised as fresh.
     var dealtCardsCache = new WeakMap();
     var DEFAULT_STAGGER_MS = 90;
+    // Card-game pages (blackjack solo/multi, casino hold'em, baccarat) share
+    // the same dealer-reveal pacing so the felt feels consistent across
+    // games. One knob, exported on the public API so per-page JS doesn't
+    // hard-code 400 in five places.
+    var DEALER_REVEAL_STAGGER_MS = 400;
+    // Matches the @keyframes casino-reveal duration in casino-table.css.
+    // Used to compute when the *last* fresh card has finished animating so
+    // a result banner / chip flourish can be deferred until then instead of
+    // landing on top of cards that haven't slid in yet.
+    var REVEAL_ANIMATION_MS = 320;
 
     function renderCards(container, cards, opts) {
-        if (!container) return;
+        if (!container) return { freshCount: 0, settleMs: 0 };
         var staggerMs = (opts && typeof opts.staggerMs === "number") ? opts.staggerMs : DEFAULT_STAGGER_MS;
         var prev = dealtCardsCache.get(container) || [];
         var list = cards || [];
@@ -73,6 +83,15 @@
             }
         }
         dealtCardsCache.set(container, list.slice());
+        // Tell the caller how many cards just landed and how long until
+        // the last one finishes its CSS animation. Game JS uses this to
+        // hold the win/lose banner until the reveal completes — without
+        // it the banner spoils the dealer's beat-out in the same frame.
+        var freshCount = firstFreshIndex >= 0 ? (list.length - firstFreshIndex) : 0;
+        var settleMs = freshCount > 0
+            ? (freshCount - 1) * staggerMs + REVEAL_ANIMATION_MS
+            : 0;
+        return { freshCount: freshCount, settleMs: settleMs };
     }
 
     function initialOf(name) {
@@ -257,5 +276,7 @@
         renderActorPill: renderActorPill,
         flashChipsOn: flashChipsOn,
         flashWinPayout: flashWinPayout,
+        DEALER_REVEAL_STAGGER_MS: DEALER_REVEAL_STAGGER_MS,
+        REVEAL_ANIMATION_MS: REVEAL_ANIMATION_MS,
     };
 })();

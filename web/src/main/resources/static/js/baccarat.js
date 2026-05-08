@@ -20,7 +20,13 @@ function renderBaccaratResult(opts) {
     var tableEl = opts.tableEl;
     var flashTargetEl = opts.flashTargetEl || tableEl;
     var stagger = opts.stagger !== false;
-    var dealMs = stagger ? (opts.dealMs || 400) : 0;
+    // Shared with blackjack/casinoholdem so every card-game felt deals
+    // at the same beat-out cadence. Tests can still override via opts.
+    var defaultStagger = (typeof window !== 'undefined' && window.CasinoRender &&
+        typeof window.CasinoRender.DEALER_REVEAL_STAGGER_MS === 'number')
+        ? window.CasinoRender.DEALER_REVEAL_STAGGER_MS
+        : 400;
+    var dealMs = stagger ? (opts.dealMs || defaultStagger) : 0;
     var body = opts.body;
 
     if (tableEl) tableEl.hidden = false;

@@ -20,7 +20,6 @@ class ScratchServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
-    private lateinit var cooldownService: CasinoCooldownService
     private lateinit var card: ScratchCard
     private lateinit var service: ScratchService
 
@@ -34,10 +33,8 @@ class ScratchServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
-        cooldownService = mockk(relaxed = true)
-        every { cooldownService.tryAcquire(any(), any(), any()) } returns CasinoCooldownService.AcquireResult.Ok
         card = mockk(relaxed = true)
-        service = ScratchService(userService, jackpotService, tradeService, marketService, configService, cooldownService, card, Random(0))
+        service = ScratchService(userService, jackpotService, tradeService, marketService, configService, card, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =

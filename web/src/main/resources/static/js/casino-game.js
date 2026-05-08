@@ -153,17 +153,17 @@
                     const remaining = Math.max(0, minSettleMs - elapsed);
                     setTimeout(function () {
                         stopAnimation(animationHandle, body);
-                        busy = false;
-                        setDisabled(false);
                         if (body && body.ok) {
                             // renderResult may run a staggered reveal
                             // (keno's draw, baccarat's deal) and return a
                             // Promise that resolves once the last cell /
-                            // card lands. In that case we hold the lock,
-                            // balance, and TOBY-coin update until the
-                            // animation actually completes — otherwise
-                            // the banner / credits would tick first and
-                            // leak the outcome. Synchronous renderResults
+                            // card lands. We hold the busy lock + button
+                            // disable until the animation completes too —
+                            // re-enabling the Deal button mid-reveal lets
+                            // an auto-clicker fire a second hand on top
+                            // of the reveal of the first (keno was the
+                            // worst offender at 8 draws × 120ms = ~1s of
+                            // unguarded reveal). Synchronous renderResults
                             // (slots/coinflip/dice) return undefined and
                             // settle immediately as before.
                             const settle = renderResult(body);
@@ -173,6 +173,8 @@
                                     applyTobyDelta(body);
                                 }
                                 if (jackpot) jackpot.releasePoolBanner();
+                                busy = false;
+                                setDisabled(false);
                             };
                             if (settle && typeof settle.then === 'function') {
                                 settle.then(finishSettle, finishSettle);
@@ -183,6 +185,8 @@
                             hideResult();
                             showToast((body && body.error) || failureMessage, 'error');
                             if (jackpot) jackpot.releasePoolBanner();
+                            busy = false;
+                            setDisabled(false);
                         }
                     }, remaining);
                 })

@@ -117,9 +117,6 @@ internal object BaccaratEmbeds {
             TITLE, WagerCommandFailure.InvalidStake(outcome.min, outcome.max)
         )
         PlayOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
-        is PlayOutcome.OnCooldown -> WagerCommandEmbeds.failureEmbed(
-            TITLE, WagerCommandFailure.OnCooldown(outcome.remainingMs)
-        )
     }
 
     fun errorEmbed(message: String): MessageEmbed = WagerCommandEmbeds.errorEmbed(TITLE, message)

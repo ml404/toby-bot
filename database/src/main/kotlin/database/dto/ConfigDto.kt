@@ -115,12 +115,6 @@ class ConfigDto(
         // (SocialCreditAwardService.DEFAULT_DAILY_CAP) when unset or invalid.
         DAILY_CREDIT_CAP("DAILY_CREDIT_CAP"),
 
-        // Per-user, per-game cooldown (seconds) on single-shot casino
-        // minigames (coinflip, slots, dice, highlow, scratch, baccarat,
-        // keno, solo blackjack, duel). Defends against autoclicker spam.
-        // Clamped 0-30 by CasinoCooldownService; 0 disables.
-        CASINO_COOLDOWN_SECONDS("CASINO_COOLDOWN_SECONDS"),
-
         // Per-game min/max stake bounds. Defaults come from each game's
         // companion-object MIN_STAKE/MAX_STAKE constants when unset, so
         // guilds that never touch these keys see today's behaviour.

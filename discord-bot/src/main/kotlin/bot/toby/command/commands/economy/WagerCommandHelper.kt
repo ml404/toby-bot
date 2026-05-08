@@ -56,7 +56,6 @@ internal sealed interface WagerCommandFailure {
     data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : WagerCommandFailure
     data class InvalidStake(val min: Long, val max: Long) : WagerCommandFailure
     data object UnknownUser : WagerCommandFailure
-    data class OnCooldown(val remainingMs: Long) : WagerCommandFailure
 }
 
 internal object WagerCommandEmbeds {
@@ -111,10 +110,6 @@ internal object WagerCommandEmbeds {
             "Stake must be between ${failure.min} and ${failure.max} credits."
         WagerCommandFailure.UnknownUser ->
             "No user record yet. Try another TobyBot command first."
-        is WagerCommandFailure.OnCooldown -> {
-            val seconds = ((failure.remainingMs + 999L) / 1000L).coerceAtLeast(1L)
-            "Slow down — wait $seconds${if (seconds == 1L) " second" else " seconds"} before playing again."
-        }
     }
 
     /**

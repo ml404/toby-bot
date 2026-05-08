@@ -92,9 +92,6 @@ class DiceCommand @Autowired constructor(
             TITLE, "Pick a number between ${outcome.min} and ${outcome.max}."
         )
         RollOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
-        is RollOutcome.OnCooldown -> WagerCommandEmbeds.failureEmbed(
-            TITLE, WagerCommandFailure.OnCooldown(outcome.remainingMs)
-        )
     }
 
     // payout / stake = multiplier — derived for the "5× on" string in the win embed.

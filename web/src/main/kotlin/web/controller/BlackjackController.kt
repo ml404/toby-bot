@@ -227,7 +227,6 @@ class BlackjackController(
             is SoloDealOutcome.HandInProgress ->
                 errors.badRequest("Finish your current hand before dealing a new one.")
             SoloDealOutcome.UnknownUser -> errors.unknownUser()
-            is SoloDealOutcome.OnCooldown -> errors.onCooldown(outcome.remainingMs)
         }
     }
 

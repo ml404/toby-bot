@@ -35,13 +35,4 @@ sealed interface CasinoCommonFailure {
     }
 
     interface UnknownUser : CasinoCommonFailure
-
-    /**
-     * The player tried to play this minigame again before their per-user
-     * cooldown elapsed. [remainingMs] is the time left on the timer at the
-     * moment of rejection so callers can surface a "wait Xs" countdown.
-     */
-    interface OnCooldown : CasinoCommonFailure {
-        val remainingMs: Long
-    }
 }

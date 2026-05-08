@@ -128,4 +128,40 @@ describe('CasinoRender.renderCards', () => {
         expect(cards[0].classList.contains('is-dealt')).toBe(true);
         expect(cards[1].classList.contains('is-dealt')).toBe(true);
     });
+
+    // The dealer-reveal stagger is shared across blackjack solo / multi,
+    // casino hold'em and baccarat so every card-game felt deals at the
+    // same beat-out cadence. Pinning the constant here so a future tweak
+    // to the value forces a deliberate test update.
+    test('exports DEALER_REVEAL_STAGGER_MS = 400 for the shared card-game cadence', () => {
+        expect(window.CasinoRender.DEALER_REVEAL_STAGGER_MS).toBe(400);
+    });
+
+    // The solo blackjack page used to write the win/lose banner in the
+    // same tick it dealt the dealer's last card, spoiling the reveal.
+    // renderCards now returns the time until the last freshly-revealed
+    // card finishes its CSS animation so the caller can defer the banner
+    // by exactly that long.
+    test('returns settleMs covering the staggered reveal of every fresh card', () => {
+        const ret = window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥', 'Q♣'], { staggerMs: 400 });
+        // 3 fresh cards: card 0 at delay 0, card 1 at 400, card 2 at 800.
+        // Each card's reveal animation runs 320ms (REVEAL_ANIMATION_MS).
+        // settleMs = (3 - 1) * 400 + 320 = 1120ms.
+        expect(ret).toEqual({ freshCount: 3, settleMs: 1120 });
+    });
+
+    test('returns settleMs = 0 on a re-render where nothing fresh arrived', () => {
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥']);
+        const ret = window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥']);
+        expect(ret).toEqual({ freshCount: 0, settleMs: 0 });
+    });
+
+    test('returns settleMs = REVEAL_ANIMATION_MS on a single fresh card', () => {
+        // A hit during a hand: one new card arrives onto an existing
+        // hand. Delay is 0 (it's the first fresh card in this render),
+        // duration is REVEAL_ANIMATION_MS = 320. settleMs = 320.
+        window.CasinoRender.renderCards(containerEl, ['A♠']);
+        const ret = window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥'], { staggerMs: 400 });
+        expect(ret).toEqual({ freshCount: 1, settleMs: 320 });
+    });
 });

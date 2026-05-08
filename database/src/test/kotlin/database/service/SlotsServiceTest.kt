@@ -19,7 +19,6 @@ class SlotsServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
-    private lateinit var cooldownService: CasinoCooldownService
     private lateinit var machine: SlotMachine
     private lateinit var service: SlotsService
 
@@ -33,10 +32,8 @@ class SlotsServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
-        cooldownService = mockk(relaxed = true)
-        every { cooldownService.tryAcquire(any(), any(), any()) } returns CasinoCooldownService.AcquireResult.Ok
         machine = mockk(relaxed = true)
-        service = SlotsService(userService, jackpotService, tradeService, marketService, configService, cooldownService, machine, Random(0))
+        service = SlotsService(userService, jackpotService, tradeService, marketService, configService, machine, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {

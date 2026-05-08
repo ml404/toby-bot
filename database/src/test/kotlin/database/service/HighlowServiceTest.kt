@@ -19,7 +19,6 @@ class HighlowServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
-    private lateinit var cooldownService: CasinoCooldownService
     private lateinit var highlow: Highlow
     private lateinit var service: HighlowService
 
@@ -33,10 +32,8 @@ class HighlowServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
-        cooldownService = mockk(relaxed = true)
-        every { cooldownService.tryAcquire(any(), any(), any()) } returns CasinoCooldownService.AcquireResult.Ok
         highlow = mockk(relaxed = true)
-        service = HighlowService(userService, jackpotService, tradeService, marketService, configService, cooldownService, highlow, Random(0))
+        service = HighlowService(userService, jackpotService, tradeService, marketService, configService, highlow, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto =

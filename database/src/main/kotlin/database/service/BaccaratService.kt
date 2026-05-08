@@ -31,7 +31,6 @@ class BaccaratService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
-    private val cooldownService: CasinoCooldownService,
     private val baccarat: Baccarat = Baccarat(),
     private val random: Random = Random.Default
 ) {
@@ -93,8 +92,6 @@ class BaccaratService(
         data class InvalidStake(override val min: Long, override val max: Long) :
             PlayOutcome, CasinoCommonFailure.InvalidStake
         data object UnknownUser : PlayOutcome, CasinoCommonFailure.UnknownUser
-        data class OnCooldown(override val remainingMs: Long) :
-            PlayOutcome, CasinoCommonFailure.OnCooldown
     }
 
     /**
@@ -119,7 +116,6 @@ class BaccaratService(
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
             discordId, guildId, stake, minStake, maxStake, autoTopUp,
-            cooldownService = cooldownService, game = CasinoGameKey.BACCARAT,
         )) {
             is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return PlayOutcome.UnknownUser
@@ -127,13 +123,11 @@ class BaccaratService(
                 return PlayOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return PlayOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
-            is TopUpResolution.OnCooldown -> return PlayOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
         val hand = baccarat.play(side, Deck(random))
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
-        cooldownService.arm(discordId, CasinoGameKey.BACCARAT)
         return when {
             hand.isWin -> {
                 val jackpot = JackpotHelper.rollOnWin(

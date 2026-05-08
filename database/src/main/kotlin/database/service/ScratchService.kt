@@ -23,7 +23,6 @@ class ScratchService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
-    private val cooldownService: CasinoCooldownService,
     private val card: ScratchCard = ScratchCard(),
     private val random: Random = Random.Default
 ) {
@@ -58,8 +57,6 @@ class ScratchService(
         data class InvalidStake(override val min: Long, override val max: Long) :
             ScratchOutcome, CasinoCommonFailure.InvalidStake
         data object UnknownUser : ScratchOutcome, CasinoCommonFailure.UnknownUser
-        data class OnCooldown(override val remainingMs: Long) :
-            ScratchOutcome, CasinoCommonFailure.OnCooldown
     }
 
     fun scratch(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): ScratchOutcome {
@@ -72,7 +69,6 @@ class ScratchService(
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
             discordId, guildId, stake, minStake, maxStake, autoTopUp,
-            cooldownService = cooldownService, game = CasinoGameKey.SCRATCH,
         )) {
             is TopUpResolution.InvalidStake -> return ScratchOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return ScratchOutcome.UnknownUser
@@ -80,13 +76,11 @@ class ScratchService(
                 return ScratchOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return ScratchOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
-            is TopUpResolution.OnCooldown -> return ScratchOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
         val result = card.scratch(random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, result.multiplier)
-        cooldownService.arm(discordId, CasinoGameKey.SCRATCH)
         return if (result.isWin && result.winningSymbol != null) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
