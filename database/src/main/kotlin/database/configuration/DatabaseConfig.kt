@@ -30,8 +30,9 @@ class DatabaseConfig(private val env: Environment) {
         dataSource.jdbcUrl = dbUrl
         dataSource.username = username
         dataSource.password = password
+        dataSource.maximumPoolSize = 3
+        dataSource.minimumIdle = 1
 
-        // Additional HikariCP settings can be set here if necessary
         return dataSource
     }
 

@@ -1,11 +1,10 @@
 package database.poker
 
-import jakarta.annotation.PreDestroy
+import database.configuration.RegistryScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -25,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong
 class CasinoHoldemTableRegistry(
     private val idleTtl: Duration = DEFAULT_IDLE_TTL,
     sweepInterval: Duration = DEFAULT_SWEEP_INTERVAL,
-    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1),
+    private val scheduler: ScheduledExecutorService = RegistryScheduler.instance,
 ) {
     private val tables = ConcurrentHashMap<Long, CasinoHoldemTable>()
     private val seq = AtomicLong()
@@ -99,11 +98,6 @@ class CasinoHoldemTableRegistry(
                 }
             }
         }
-    }
-
-    @PreDestroy
-    fun shutdown() {
-        scheduler.shutdownNow()
     }
 
     companion object {
