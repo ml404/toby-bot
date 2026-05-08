@@ -438,6 +438,17 @@
                                th:disabled="${!isOwner}">
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
+                    <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
+                        <label>Bot-suspicion max house edge (% — 0 disables; default 30; cap 50)</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
+                                   placeholder="30"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
                 </div>
                 <div class="config-group">
                     <h4>Slots</h4>

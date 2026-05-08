@@ -43,7 +43,7 @@ class CoinflipControllerTest {
 
     @Test
     fun `flip win returns 200 with win-shaped payload`() {
-        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Win(
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS, any(), any(), any(), any()) } returns FlipOutcome.Win(
             stake = 100L,
             payout = 200L,
             net = 100L,
@@ -67,7 +67,7 @@ class CoinflipControllerTest {
 
     @Test
     fun `flip lose returns 200 with negative net and win=false`() {
-        every { coinflipService.flip(discordId, guildId, 50L, Coinflip.Side.TAILS) } returns FlipOutcome.Lose(
+        every { coinflipService.flip(discordId, guildId, 50L, Coinflip.Side.TAILS, any(), any(), any(), any()) } returns FlipOutcome.Lose(
             stake = 50L,
             landed = Coinflip.Side.HEADS,
             predicted = Coinflip.Side.TAILS,
@@ -88,7 +88,7 @@ class CoinflipControllerTest {
 
     @Test
     fun `flip is case-insensitive on the side parameter`() {
-        every { coinflipService.flip(discordId, guildId, 10L, Coinflip.Side.TAILS) } returns FlipOutcome.Lose(
+        every { coinflipService.flip(discordId, guildId, 10L, Coinflip.Side.TAILS, any(), any(), any(), any()) } returns FlipOutcome.Lose(
             stake = 10L,
             landed = Coinflip.Side.HEADS,
             predicted = Coinflip.Side.TAILS,
@@ -98,7 +98,9 @@ class CoinflipControllerTest {
         val response = controller.flip(guildId, FlipRequest(side = "tails", stake = 10L), user)
 
         assertTrue(response.statusCode.is2xxSuccessful)
-        verify(exactly = 1) { coinflipService.flip(discordId, guildId, 10L, Coinflip.Side.TAILS) }
+        verify(exactly = 1) {
+            coinflipService.flip(discordId, guildId, 10L, Coinflip.Side.TAILS, any(), any(), any(), any())
+        }
     }
 
     @Test
@@ -107,12 +109,12 @@ class CoinflipControllerTest {
 
         assertEquals(400, response.statusCode.value())
         assertEquals(false, response.body?.ok)
-        verify(exactly = 0) { coinflipService.flip(any(), any(), any(), any()) }
+        verify(exactly = 0) { coinflipService.flip(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `flip returns 400 on insufficient credits`() {
-        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS, any(), any(), any(), any()) } returns
             FlipOutcome.InsufficientCredits(stake = 100L, have = 30L)
 
         val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 100L), user)
@@ -124,7 +126,7 @@ class CoinflipControllerTest {
 
     @Test
     fun `flip returns 400 on invalid stake`() {
-        every { coinflipService.flip(discordId, guildId, 5L, Coinflip.Side.HEADS) } returns
+        every { coinflipService.flip(discordId, guildId, 5L, Coinflip.Side.HEADS, any(), any(), any(), any()) } returns
             FlipOutcome.InvalidStake(min = 10L, max = 1_000L)
 
         val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 5L), user)
@@ -141,12 +143,12 @@ class CoinflipControllerTest {
         val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 100L), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { coinflipService.flip(any(), any(), any(), any()) }
+        verify(exactly = 0) { coinflipService.flip(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `jackpot win surfaces jackpotPayout in the response body`() {
-        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Win(
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS, any(), any(), any(), any()) } returns FlipOutcome.Win(
             stake = 100L,
             payout = 200L,
             net = 100L,
@@ -164,7 +166,7 @@ class CoinflipControllerTest {
 
     @Test
     fun `non-jackpot win does not include jackpotPayout`() {
-        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Win(
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS, any(), any(), any(), any()) } returns FlipOutcome.Win(
             stake = 100L,
             payout = 200L,
             net = 100L,
@@ -180,7 +182,7 @@ class CoinflipControllerTest {
 
     @Test
     fun `lose with loss tribute surfaces lossTribute on the response`() {
-        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS) } returns FlipOutcome.Lose(
+        every { coinflipService.flip(discordId, guildId, 100L, Coinflip.Side.HEADS, any(), any(), any(), any()) } returns FlipOutcome.Lose(
             stake = 100L,
             landed = Coinflip.Side.TAILS,
             predicted = Coinflip.Side.HEADS,
@@ -191,5 +193,46 @@ class CoinflipControllerTest {
         val response = controller.flip(guildId, FlipRequest(side = "HEADS", stake = 100L), user)
 
         assertEquals(10L, response.body!!.lossTribute)
+    }
+
+    @Test
+    fun `controller forwards bot-suspicion signals into the service`() {
+        every { coinflipService.flip(any(), any(), any(), any(), any(), any(), any(), any()) } returns FlipOutcome.Lose(
+            stake = 10L,
+            landed = Coinflip.Side.HEADS,
+            predicted = Coinflip.Side.TAILS,
+            newBalance = 90L
+        )
+
+        controller.flip(guildId, FlipRequest(
+            side = "TAILS", stake = 10L,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        ), user)
+
+        verify(exactly = 1) {
+            coinflipService.flip(
+                discordId, guildId, 10L, Coinflip.Side.TAILS, false,
+                clickX = 350, clickY = 220, mouseMoved = false,
+            )
+        }
+    }
+
+    @Test
+    fun `missing bot-suspicion fields are forwarded as null (Discord-equivalent path)`() {
+        every { coinflipService.flip(any(), any(), any(), any(), any(), any(), any(), any()) } returns FlipOutcome.Lose(
+            stake = 10L,
+            landed = Coinflip.Side.HEADS,
+            predicted = Coinflip.Side.TAILS,
+            newBalance = 90L
+        )
+
+        controller.flip(guildId, FlipRequest(side = "TAILS", stake = 10L), user)
+
+        verify(exactly = 1) {
+            coinflipService.flip(
+                discordId, guildId, 10L, Coinflip.Side.TAILS, false,
+                clickX = null, clickY = null, mouseMoved = null,
+            )
+        }
     }
 }
