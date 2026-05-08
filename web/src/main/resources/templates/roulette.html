@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Roulette', '/css/roulette.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-wheel-order=${#strings.listJoin(wheelOrder, ',')}">
+
+    <div class="roulette-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All servers</a>
+        <h1 th:text="'🎡 Roulette • ' + ${guildName}">🎡 Roulette</h1>
+        <p class="muted">European single-zero wheel. Bet between
+            <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">500</span> credits per spin.</p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <section class="roulette-table casino-felt">
+        <div class="roulette-wheel-stage" aria-live="polite">
+            <div class="roulette-pointer" aria-hidden="true"></div>
+            <svg class="roulette-wheel" id="roulette-wheel"
+                 viewBox="-110 -110 220 220" role="img" aria-label="Roulette wheel">
+                <!-- pocket sectors + number labels are rendered by roulette.js
+                     using the wheel order in `data-wheel-order` so the markup
+                     stays compact and the pocket geometry lives in one place. -->
+            </svg>
+            <div class="roulette-landed" id="roulette-landed" aria-hidden="true">
+                <span class="roulette-landed-label">Last</span>
+                <span class="roulette-landed-pocket" id="roulette-landed-pocket">—</span>
+            </div>
+        </div>
+
+        <div class="roulette-result" id="roulette-result" hidden></div>
+
+        <form class="roulette-bet" id="roulette-bet" autocomplete="off">
+            <fieldset class="roulette-bet-fieldset" id="roulette-bet-fieldset">
+                <legend>Bet</legend>
+                <div class="roulette-bet-grid" role="radiogroup" aria-label="Bet type">
+                    <button th:each="b : ${bets}"
+                            type="button"
+                            class="roulette-chip"
+                            th:attr="data-bet=${b.id}, data-requires-number=${b.requiresNumber}"
+                            role="radio"
+                            aria-checked="false">
+                        <span class="roulette-chip-label" th:text="${b.label}">Red</span>
+                        <span class="roulette-chip-odds" th:text="${b.odds}">1:1</span>
+                    </button>
+                </div>
+            </fieldset>
+
+            <div class="roulette-straight-picker" id="roulette-straight-picker" hidden>
+                <label for="roulette-straight">Pocket (0–<span th:text="${maxPocket}">36</span>)</label>
+                <input id="roulette-straight"
+                       name="number"
+                       type="number"
+                       min="0"
+                       th:attr="max=${maxPocket}"
+                       step="1"
+                       value="0">
+            </div>
+
+            <div class="roulette-stake-row">
+                <label for="roulette-stake">Stake (credits)</label>
+                <input id="roulette-stake"
+                       name="stake"
+                       type="number"
+                       th:attr="min=${minStake}, max=${maxStake}"
+                       th:value="${minStake}"
+                       step="1">
+                <button type="submit" id="roulette-spin" class="btn-primary">Spin</button>
+                <button type="submit" id="roulette-spin-toby" class="btn-secondary casino-bet-toby" hidden
+                        title="Sells just enough TOBY at the live market price to cover the shortfall, then spins.">
+                    Spin (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+                </button>
+            </div>
+        </form>
+
+        <div class="roulette-balance">
+            Balance: <strong id="roulette-balance" th:text="${balance}">0</strong> credits
+        </div>
+
+        <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+    </section>
+
+    <section class="roulette-payouts">
+        <h2>Payouts</h2>
+        <table>
+            <thead>
+            <tr><th>Bet</th><th>Pays</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${payoutTable}">
+                <td th:text="${row.label}">Red / Black</td>
+                <td th:text="${row.payout}">1:1</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted">European single-zero wheel. The green 0 loses every outside bet, giving the
+            house its standard 2.7% edge. Long-run RTP ≈ 97.3%.</p>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
+<script th:src="@{/js/roulette.js}"></script>
+</body>
+</html>

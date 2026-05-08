@@ -6,6 +6,7 @@ import database.economy.Coinflip
 import database.economy.Dice
 import database.economy.Highlow
 import database.economy.Keno
+import database.economy.Roulette
 import database.economy.ScratchCard
 import database.economy.SlotMachine
 import database.blackjack.Blackjack
@@ -83,6 +84,14 @@ class StakeBounds(
         ConfigDto.Configurations.SCRATCH_MAX_STAKE,
         ScratchCard.MIN_STAKE,
         ScratchCard.MAX_STAKE,
+    )
+
+    fun roulette(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.ROULETTE_MIN_STAKE,
+        ConfigDto.Configurations.ROULETTE_MAX_STAKE,
+        Roulette.MIN_STAKE,
+        Roulette.MAX_STAKE,
     )
 
     fun blackjackSolo(guildId: Long): Pair<Long, Long> = read(

@@ -4,7 +4,7 @@
 // alongside `casino-render.js`.
 //
 // API:
-//   CasinoSounds.play('deal'|'chip'|'flip'|'win'|'lose'|'click')
+//   CasinoSounds.play('deal'|'chip'|'flip'|'win'|'lose'|'click'|'tick'|'ball')
 //   CasinoSounds.toggle()           — flip enabled/disabled, persisted
 //   CasinoSounds.isEnabled()        — current pref (default: enabled)
 //   CasinoSounds.installToggle(parentEl)  — drop a 🔊/🔇 button somewhere
@@ -114,6 +114,15 @@
         // Lose = quick descending dip. Kept short and not too dour.
         lose: function () {
             blip({ freq: function (t) { return 220 - 80 * t; }, dur: 0.30, kind: "sawtooth", peak: 0.10 });
+        },
+        // Roulette wheel tick — the rapid, high-frequency click of the
+        // ball passing a fret. Very short and quiet because it fires
+        // many times per spin.
+        tick: function () { blip({ freq: 1500, dur: 0.018, kind: "square", peak: 0.05 }); },
+        // Roulette ball settling into a pocket — a soft descending
+        // triangle blip ("plonk") that lands once per spin.
+        ball: function () {
+            blip({ freq: function (t) { return 320 - 160 * t; }, dur: 0.18, kind: "triangle", peak: 0.12 });
         },
     };
 

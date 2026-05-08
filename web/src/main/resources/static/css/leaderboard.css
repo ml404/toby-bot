@@ -33,16 +33,47 @@
 }
 .lb-guild-games {
     display: flex;
-    gap: var(--space-2);
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: var(--space-3);
     margin-top: auto;
 }
-.lb-guild-games .btn-secondary {
+/* When the casino-guilds page renders ungrouped tiles (any older template
+   that hasn't been migrated to the Quick-play / Table-games split), keep
+   the legacy flex-row behaviour intact via the bare-button selector. */
+.lb-guild-games > .btn-secondary {
     flex: 1;
+}
+.lb-games-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.lb-games-group-title {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+.lb-games-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-2);
+}
+.lb-guild-games .btn-secondary {
     text-align: center;
     text-decoration: none;
     padding: 8px 12px;
     font-size: 0.9rem;
+    /* Even widths regardless of glyph width so emoji + label align across
+       a row whether the label is "Slots" (5 chars) or "Casino Hold'em"
+       (14 chars). The grid column gives the cell its width; the link
+       fills it. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 .lb-guild-card-header {
     display: flex;

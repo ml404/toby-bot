@@ -423,6 +423,7 @@ class ModerationWebService(
             ConfigDto.Configurations.BACCARAT_MIN_STAKE,
             ConfigDto.Configurations.KENO_MIN_STAKE,
             ConfigDto.Configurations.SCRATCH_MIN_STAKE,
+            ConfigDto.Configurations.ROULETTE_MIN_STAKE,
             ConfigDto.Configurations.HOLDEM_MIN_STAKE,
             ConfigDto.Configurations.DUEL_MIN_STAKE,
             ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> {
@@ -442,6 +443,7 @@ class ModerationWebService(
             ConfigDto.Configurations.BACCARAT_MAX_STAKE,
             ConfigDto.Configurations.KENO_MAX_STAKE,
             ConfigDto.Configurations.SCRATCH_MAX_STAKE,
+            ConfigDto.Configurations.ROULETTE_MAX_STAKE,
             ConfigDto.Configurations.HOLDEM_MAX_STAKE,
             ConfigDto.Configurations.DUEL_MAX_STAKE -> {
                 val n = rawValue.trim().toLongOrNull()
