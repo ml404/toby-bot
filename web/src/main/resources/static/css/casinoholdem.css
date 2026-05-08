@@ -1,0 +1,149 @@
+/*
+ * Casino Hold'em is layout-equivalent to blackjack solo: deal form,
+ * action zones, results panel, rules. The differences are mostly
+ * naming (`.che-*` vs `.bj-*`) and the addition of a paytable.
+ *
+ * To keep the visual language aligned with the rest of the casino,
+ * we import the shared casino-table felt + card glyphs and only
+ * declare the `.che-*` deltas below. Anything that's identical to
+ * blackjack uses the casino-table-* classes directly in the template.
+ */
+@import url("./casino-table.css");
+
+.che-header {
+    margin-bottom: 1.5rem;
+}
+
+.che-header h1 {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.back-link {
+    color: var(--muted, #a0a0b0);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.back-link:hover { text-decoration: underline; }
+
+.che-card {
+    background: var(--surface, #1f2128);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 56rem;
+    margin-bottom: 1.5rem;
+}
+
+.che-card h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.che-card form {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.che-card input {
+    background: var(--surface-2, #16181d);
+    color: inherit;
+    border: 1px solid var(--border, #2a2d35);
+    border-radius: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+}
+
+.che-card input:focus {
+    outline: 2px solid var(--accent, #5865f2);
+    outline-offset: 2px;
+}
+
+.che-balance {
+    color: var(--muted, #a0a0b0);
+}
+
+.che-table .che-row {
+    margin: 1rem 0;
+}
+
+.che-table .che-row h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.che-cards {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-height: 4.5rem;
+}
+
+.che-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0 0.5rem;
+}
+
+.che-result {
+    margin-top: 0.75rem;
+    min-height: 1.4rem;
+    font-weight: 600;
+}
+
+.che-result.che-win { color: #57f287; }
+.che-result.che-lose { color: #ed4245; }
+
+.che-rules {
+    margin-top: 2rem;
+    background: var(--surface, #1f2128);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    max-width: 56rem;
+}
+
+.che-rules h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.che-rules ul {
+    padding-left: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.che-rules li + li {
+    margin-top: 0.4rem;
+}
+
+.che-rules strong { color: #fff; }
+
+.che-paytable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.che-paytable th,
+.che-paytable td {
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--border, #2a2d35);
+}
+
+.che-paytable th {
+    color: var(--muted, #a0a0b0);
+    font-weight: 600;
+}
+
+.che-paytable tr:last-child td { border-bottom: none; }
+
+/* Match the blackjack hidden-card glyph so the dealer's masked hole
+   reads as a face-down playing card and not a literal "??". */
+.casino-card-glyph.bj-card-hidden,
+.casino-card-glyph.che-card-hidden {
+    color: #a0a0b0;
+}

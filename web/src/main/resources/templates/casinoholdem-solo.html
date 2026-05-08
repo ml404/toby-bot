@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Casino Hold''em', '/css/casinoholdem.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}, data-call-multiple=${callMultiple}, data-my-discord-id=${myDiscordId}">
+
+    <div class="che-header">
+        <a class="back-link" th:href="@{/casinoholdem/guilds}">&larr; All servers</a>
+        <h1>🃏 Casino Hold'em</h1>
+        <p class="muted">
+            Bet between <span th:text="${minStake}">10</span> and
+            <span th:text="${maxStake}">500</span> credits per hand.
+            See the flop, then call (<span th:text="${callMultiple}">2</span>× stake) or fold.
+            Dealer must hold a pair of fours or better to qualify.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+
+    <section class="che-card">
+        <h2>Place your ante</h2>
+        <form id="che-deal" autocomplete="off">
+            <label for="che-stake">Ante (credits)</label>
+            <input id="che-stake" name="stake" type="number"
+                   th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+            <button type="submit" class="btn-primary">Deal</button>
+        </form>
+        <div class="che-balance">
+            Wallet: <strong id="che-balance" th:text="${balance}">0</strong> credits
+        </div>
+    </section>
+
+    <section class="che-table casino-felt" id="che-table" hidden>
+        <div class="che-row casino-dealer-zone">
+            <h3>Dealer</h3>
+            <div id="che-dealer-cards" class="che-cards casino-cards"></div>
+        </div>
+        <div class="che-row casino-board-zone">
+            <h3>Board</h3>
+            <div id="che-board-cards" class="che-cards casino-cards"></div>
+        </div>
+        <div class="che-row casino-seat" id="che-player-row">
+            <h3>You</h3>
+            <div id="che-player-cards" class="che-cards casino-cards"></div>
+        </div>
+
+        <div class="che-actions">
+            <button id="che-action-call" class="btn-success" type="button" disabled>
+                Call (<span id="che-call-cost">0</span> credits)
+            </button>
+            <button id="che-action-fold" class="btn-danger" type="button" disabled>Fold</button>
+        </div>
+
+        <div id="che-result" class="che-result muted"></div>
+    </section>
+
+    <section class="che-rules">
+        <h2>Paytable &amp; rules</h2>
+        <ul>
+            <li>You ante <strong>stake</strong>, get 2 hole cards, see a 3-card flop.</li>
+            <li><strong>Call</strong> commits another <strong>2× stake</strong> to see the turn and river.
+                <strong>Fold</strong> forfeits your ante.</li>
+            <li>Dealer must qualify with at least a pair of fours. If they don't, the ante pays
+                <strong>1:1</strong> and the call <strong>pushes</strong> regardless of who has the better hand.</li>
+            <li>If both qualify, ante pays even on a win and the call leg pays per the schedule below.</li>
+        </ul>
+        <table class="che-paytable">
+            <thead>
+            <tr><th>Hand</th><th>Call payout</th></tr>
+            </thead>
+            <tbody>
+            <tr><td>Royal flush</td><td>100:1</td></tr>
+            <tr><td>Straight flush</td><td>20:1</td></tr>
+            <tr><td>Four of a kind</td><td>10:1</td></tr>
+            <tr><td>Full house</td><td>3:1</td></tr>
+            <tr><td>Flush</td><td>2:1</td></tr>
+            <tr><td>Straight</td><td>1:1</td></tr>
+            <tr><td>Trips, two pair, pair, high card (winning)</td><td>1:1</td></tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/casino-sounds.js}"></script>
+<script th:src="@{/js/casino-jackpot.js}"></script>
+<script th:src="@{/js/casino-balance.js}"></script>
+<script th:src="@{/js/casino-render.js}"></script>
+<script th:src="@{/js/casinoholdem-solo.js}"></script>
+</body>
+</html>
