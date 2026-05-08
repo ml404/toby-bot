@@ -75,7 +75,7 @@ class DiceService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.DICE_MIN_STAKE, guildId, default = Dice.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.DICE_MAX_STAKE, guildId, default = Dice.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

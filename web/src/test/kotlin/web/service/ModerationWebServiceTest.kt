@@ -357,22 +357,75 @@ class ModerationWebServiceTest {
     }
 
     @Test
-    fun `updateConfig accepts BLACKJACK_MIN_ANTE and MAX_ANTE when value is a positive long`() {
+    fun `updateConfig accepts BLACKJACK_MIN_ANTE when value is a positive long and rejects 0`() {
+        // Min-ante is a floor — 0 has no meaning, so it stays rejected
+        // (unlike MAX_ANTE which now accepts 0 as "unlimited").
         mockMember(ownerId, isOwner = true)
-        val keys = listOf(
-            ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
-            ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
-        )
-        for (key in keys) {
-            assertNull(service.updateConfig(ownerId, guildId, key, "10"))
-            assertNull(service.updateConfig(ownerId, guildId, key, "500"))
-            verify { configService.upsertConfig(key.configValue, "10", guildId.toString()) }
-            verify { configService.upsertConfig(key.configValue, "500", guildId.toString()) }
+        val key = ConfigDto.Configurations.BLACKJACK_MIN_ANTE
 
-            assertNotNull(service.updateConfig(ownerId, guildId, key, "0"))
-            assertNotNull(service.updateConfig(ownerId, guildId, key, "-5"))
-            assertNotNull(service.updateConfig(ownerId, guildId, key, "wibble"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "10"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "500"))
+        verify { configService.upsertConfig(key.configValue, "10", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "500", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-5"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "wibble"))
+    }
+
+    @Test
+    fun `updateConfig accepts BLACKJACK_MAX_ANTE positive value or 0 (unlimited) and rejects negatives`() {
+        // 0 is the "no upper cap" sentinel — admins type 0 instead of a
+        // giant number. cfgLongMax expands stored 0 to Long.MAX_VALUE at
+        // read time. Negatives + non-numeric values still fail validation.
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.BLACKJACK_MAX_ANTE
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "500"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"), "0 is the unlimited sentinel")
+        verify { configService.upsertConfig(key.configValue, "500", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "0", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-5"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "wibble"))
+    }
+
+    @Test
+    fun `updateConfig accepts every per-game MAX_STAKE key with 0 as unlimited`() {
+        // Pin the unlimited semantic for every minigame max-cap key in
+        // one place — drift in the validation arm (e.g. someone splitting
+        // a key back into the min-cap arm) trips here immediately.
+        mockMember(ownerId, isOwner = true)
+        val maxKeys = listOf(
+            ConfigDto.Configurations.DICE_MAX_STAKE,
+            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
+            ConfigDto.Configurations.SLOTS_MAX_STAKE,
+            ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
+            ConfigDto.Configurations.BACCARAT_MAX_STAKE,
+            ConfigDto.Configurations.KENO_MAX_STAKE,
+            ConfigDto.Configurations.SCRATCH_MAX_STAKE,
+            ConfigDto.Configurations.HOLDEM_MAX_STAKE,
+            ConfigDto.Configurations.DUEL_MAX_STAKE,
+            ConfigDto.Configurations.POKER_MAX_BUY_IN,
+        )
+        for (key in maxKeys) {
+            assertNull(service.updateConfig(ownerId, guildId, key, "0"), "$key should accept 0 (unlimited)")
+            assertNull(service.updateConfig(ownerId, guildId, key, "1000"), "$key should accept 1000")
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"), "$key should reject negatives")
         }
+    }
+
+    @Test
+    fun `updateConfig keeps JACKPOT_STAKE_ANCHOR as a min-only field that rejects 0`() {
+        // The anchor is a divisor in JackpotHelper.rollOnWin (stake / anchor),
+        // so 0 isn't "unlimited" — it's pathological. Stays rejected even
+        // after the broader 0=unlimited semantic for max-stake fields.
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "500"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "0"), "anchor must reject 0")
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"))
     }
 
     @Test

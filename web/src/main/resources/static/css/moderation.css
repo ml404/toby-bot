@@ -231,6 +231,28 @@
 }
 .config-row .save-config { grid-column: 2; }
 
+/* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
+   Coinflip / Poker / etc. sub-groups). Each `.config-group` carries a
+   small uppercase `<h4>` heading and a hairline divider between groups
+   so the card is scannable game-by-game. */
+.config-group { padding-top: var(--space-2); }
+.config-group + .config-group {
+    border-top: 1px solid var(--border);
+    margin-top: var(--space-2);
+}
+.config-group h4 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 var(--space-2);
+}
+/* Inside a group, the per-row border-top would double up with the
+   group's own top divider on the first row. Strip it. */
+.config-section .config-group .config-row:first-child {
+    border-top: 0;
+}
+
 /* Social credit */
 .sc-adjust {
     display: flex;

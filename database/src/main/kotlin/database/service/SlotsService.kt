@@ -75,7 +75,7 @@ class SlotsService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.SLOTS_MIN_STAKE, guildId, default = SlotMachine.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.SLOTS_MAX_STAKE, guildId, default = SlotMachine.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

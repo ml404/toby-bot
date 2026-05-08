@@ -382,11 +382,16 @@ class ModerationWebService(
             ConfigDto.Configurations.POKER_BIG_BLIND,
             ConfigDto.Configurations.POKER_SMALL_BET,
             ConfigDto.Configurations.POKER_BIG_BET,
-            ConfigDto.Configurations.POKER_MIN_BUY_IN,
-            ConfigDto.Configurations.POKER_MAX_BUY_IN -> {
+            ConfigDto.Configurations.POKER_MIN_BUY_IN -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of chips."
                 if (n < 1L) return "Value must be at least 1 chip."
+                n.toString()
+            }
+            ConfigDto.Configurations.POKER_MAX_BUY_IN -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of chips."
+                if (n < 0L) return "Value must be 0 (unlimited) or a positive number of chips."
                 n.toString()
             }
             ConfigDto.Configurations.POKER_MAX_SEATS -> {
@@ -407,30 +412,41 @@ class ModerationWebService(
                 if (n !in 0..20) return "Value must be between 0 and 20 (capped server-side)."
                 n.toString()
             }
+            // Min-cap stake keys + the jackpot anchor — must be >= 1.
+            // The anchor is a divisor in JackpotHelper.rollOnWin so 0 is
+            // pathological, not "unlimited"; mins below 1 have no meaning.
             ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
-            ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
             ConfigDto.Configurations.DICE_MIN_STAKE,
-            ConfigDto.Configurations.DICE_MAX_STAKE,
             ConfigDto.Configurations.COINFLIP_MIN_STAKE,
-            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
             ConfigDto.Configurations.SLOTS_MIN_STAKE,
-            ConfigDto.Configurations.SLOTS_MAX_STAKE,
             ConfigDto.Configurations.HIGHLOW_MIN_STAKE,
-            ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
             ConfigDto.Configurations.BACCARAT_MIN_STAKE,
-            ConfigDto.Configurations.BACCARAT_MAX_STAKE,
             ConfigDto.Configurations.KENO_MIN_STAKE,
-            ConfigDto.Configurations.KENO_MAX_STAKE,
             ConfigDto.Configurations.SCRATCH_MIN_STAKE,
-            ConfigDto.Configurations.SCRATCH_MAX_STAKE,
             ConfigDto.Configurations.HOLDEM_MIN_STAKE,
-            ConfigDto.Configurations.HOLDEM_MAX_STAKE,
             ConfigDto.Configurations.DUEL_MIN_STAKE,
-            ConfigDto.Configurations.DUEL_MAX_STAKE,
             ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
                 if (n < 1L) return "Value must be at least 1 credit."
+                n.toString()
+            }
+            // Max-cap stake keys — accept 0 as "no upper cap"
+            // (cfgLongMax expands stored 0 to Long.MAX_VALUE at read time).
+            // Otherwise must be a positive whole number.
+            ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
+            ConfigDto.Configurations.DICE_MAX_STAKE,
+            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
+            ConfigDto.Configurations.SLOTS_MAX_STAKE,
+            ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
+            ConfigDto.Configurations.BACCARAT_MAX_STAKE,
+            ConfigDto.Configurations.KENO_MAX_STAKE,
+            ConfigDto.Configurations.SCRATCH_MAX_STAKE,
+            ConfigDto.Configurations.HOLDEM_MAX_STAKE,
+            ConfigDto.Configurations.DUEL_MAX_STAKE -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of credits."
+                if (n < 0L) return "Value must be 0 (unlimited) or a positive number of credits."
                 n.toString()
             }
             ConfigDto.Configurations.BLACKJACK_MAX_SEATS -> {

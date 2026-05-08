@@ -63,7 +63,7 @@ class ScratchService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.SCRATCH_MIN_STAKE, guildId, default = ScratchCard.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.SCRATCH_MAX_STAKE, guildId, default = ScratchCard.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

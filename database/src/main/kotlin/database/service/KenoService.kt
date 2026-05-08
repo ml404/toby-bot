@@ -105,7 +105,7 @@ class KenoService(
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.KENO_MIN_STAKE, guildId, default = Keno.MIN_STAKE, min = 1L
         )
-        val maxStake = configService.cfgLong(
+        val maxStake = configService.cfgLongMax(
             ConfigDto.Configurations.KENO_MAX_STAKE, guildId, default = Keno.MAX_STAKE, min = minStake
         )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(

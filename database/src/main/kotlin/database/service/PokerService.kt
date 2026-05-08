@@ -326,6 +326,14 @@ class PokerService @Autowired constructor(
             val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
             return raw?.toLongOrNull()?.coerceAtLeast(min) ?: default
         }
+        // Sibling of cfgLong that interprets stored "0" as Long.MAX_VALUE
+        // ("no upper cap"). Used for POKER_MAX_BUY_IN.
+        fun cfgLongMax(key: ConfigDto.Configurations, default: Long, min: Long): Long {
+            val raw = configService.getConfigByName(key.configValue, guildId.toString())
+                ?.value?.toLongOrNull() ?: return default
+            if (raw == 0L) return Long.MAX_VALUE
+            return raw.coerceAtLeast(min)
+        }
         fun cfgInt(key: ConfigDto.Configurations, default: Int, range: IntRange): Int {
             val raw = configService.getConfigByName(key.configValue, guildId.toString())?.value
             return raw?.toIntOrNull()?.coerceIn(range) ?: default
@@ -336,7 +344,7 @@ class PokerService @Autowired constructor(
             smallBet = cfgLong(ConfigDto.Configurations.POKER_SMALL_BET, SMALL_BET, 1L),
             bigBet = cfgLong(ConfigDto.Configurations.POKER_BIG_BET, BIG_BET, 1L),
             minBuyIn = cfgLong(ConfigDto.Configurations.POKER_MIN_BUY_IN, MIN_BUY_IN, 1L),
-            maxBuyIn = cfgLong(ConfigDto.Configurations.POKER_MAX_BUY_IN, MAX_BUY_IN, 1L),
+            maxBuyIn = cfgLongMax(ConfigDto.Configurations.POKER_MAX_BUY_IN, MAX_BUY_IN, 1L),
             maxSeats = cfgInt(ConfigDto.Configurations.POKER_MAX_SEATS, MAX_SEATS, 2..9),
             shotClockSeconds = cfgInt(
                 ConfigDto.Configurations.POKER_SHOT_CLOCK_SECONDS,
