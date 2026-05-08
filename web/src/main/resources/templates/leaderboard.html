@@ -266,6 +266,46 @@
         </div>
     </details>
 
+    <details class="lb-collapse" data-section="topgames" open
+             th:if="${not #lists.isEmpty(view.topGames)}">
+        <summary class="lb-collapse-header">
+            <span class="lb-collapse-icon" aria-hidden="true">🎮</span>
+            <span class="lb-collapse-title">Top games this month</span>
+            <span class="lb-collapse-count" th:text="${#lists.size(view.topGames)} + ' games'">0 games</span>
+            <span class="lb-collapse-caret" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="18" height="18"><path fill="currentColor" d="M6 4l8 6-8 6V4z"/></svg>
+            </span>
+        </summary>
+        <div class="lb-collapse-body">
+            <div class="mod-table-wrap">
+                <table class="mod-table lb-standings-table">
+                    <thead>
+                    <tr>
+                        <th class="lb-col-rank">#</th>
+                        <th>Game</th>
+                        <th class="lb-col-value" aria-sort="descending">🎮 Playtime</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${view.topGames}">
+                        <td data-label="#">
+                            <span class="lb-rank"
+                                  th:classappend="${row.rank == 1 ? 'lb-rank-1' : (row.rank == 2 ? 'lb-rank-2' : (row.rank == 3 ? 'lb-rank-3' : ''))}"
+                                  th:text="${row.rank}">1</span>
+                        </td>
+                        <td data-label="Game">
+                            <span class="lb-name" th:text="${row.name}">Game name</span>
+                        </td>
+                        <td data-label="Playtime" class="lb-col-value">
+                            <strong class="lb-value" th:text="${row.playtimeDisplay}">0m</strong>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+
     <div class="empty-hero" th:if="${#lists.isEmpty(view.podium) and #lists.isEmpty(view.standings)}">
         <span class="emoji" aria-hidden="true">🏁</span>
         <h2>No credit has been earned here yet</h2>

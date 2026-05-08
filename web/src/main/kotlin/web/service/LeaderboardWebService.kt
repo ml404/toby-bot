@@ -1,5 +1,6 @@
 package web.service
 
+import database.service.ActivityMonthlyRollupService
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
 import database.service.TobyCoinMarketService
@@ -21,12 +22,15 @@ class LeaderboardWebService(
     private val titleService: TitleService,
     private val snapshotService: MonthlyCreditSnapshotService,
     private val membership: GuildMembership,
+    private val rollupService: ActivityMonthlyRollupService,
 ) {
 
     companion object {
         // Keep the list tight so the leaderboard page stays scannable. Users
         // below this don't meaningfully change the story of "who owns coin".
         const val TOBY_COIN_LEADERBOARD_LIMIT = 10
+        // Matches /activity server in Discord so the web view tells the same story.
+        const val TOP_GAMES_LIMIT = 10
     }
 
     fun getGuildsWhereUserCanView(accessToken: String, discordId: Long): List<LeaderboardGuildCard> {
@@ -92,8 +96,36 @@ class LeaderboardWebService(
             mostActiveMember = mostActiveName,
             totalMembers = resorted.size,
             sort = sort,
-            tobyCoinLeaders = buildTobyCoinLeaders(guildId)
+            tobyCoinLeaders = buildTobyCoinLeaders(guildId),
+            topGames = buildTopGames(guildId)
         )
+    }
+
+    private fun buildTopGames(guildId: Long): List<TopGameRow> {
+        val thisMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        // Mirror /activity server: skip rollup rows owned by users who have
+        // explicitly opted out of tracking, even though their old rows still exist.
+        val optedOut = runCatching {
+            userService.listGuildUsers(guildId)
+                .filterNotNull()
+                .filter { it.activityTrackingOptOut }
+                .map { it.discordId }
+                .toSet()
+        }.getOrDefault(emptySet())
+
+        val rollups = runCatching { rollupService.forGuildMonth(guildId, thisMonth) }
+            .getOrDefault(emptyList())
+
+        return rollups.asSequence()
+            .filter { it.discordId !in optedOut }
+            .groupBy { it.activityName }
+            .mapValues { (_, rows) -> rows.sumOf { it.seconds } }
+            .entries
+            .sortedByDescending { it.value }
+            .take(TOP_GAMES_LIMIT)
+            .mapIndexed { index, entry ->
+                TopGameRow(rank = index + 1, name = entry.key, seconds = entry.value)
+            }
     }
 
     private fun buildTobyCoinLeaders(guildId: Long): List<TobyCoinLeaderRow> {
@@ -185,7 +217,8 @@ data class LeaderboardGuildView(
     val mostActiveMember: String?,
     val totalMembers: Int,
     val sort: LeaderboardSort = LeaderboardSort.THIS_MONTH,
-    val tobyCoinLeaders: List<TobyCoinLeaderRow> = emptyList()
+    val tobyCoinLeaders: List<TobyCoinLeaderRow> = emptyList(),
+    val topGames: List<TopGameRow> = emptyList()
 ) {
     @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
     val totalVoiceThisMonthDisplay: String get() = formatDuration(totalVoiceThisMonth)
@@ -217,3 +250,17 @@ data class TobyCoinLeaderRow(
     val coinsThisMonth: Long = 0L,
     val portfolioCredits: Long
 )
+
+data class TopGameRow(
+    val rank: Int,
+    val name: String,
+    val seconds: Long
+) {
+    @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
+    val playtimeDisplay: String get() {
+        if (seconds <= 0) return "0m"
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+    }
+}
