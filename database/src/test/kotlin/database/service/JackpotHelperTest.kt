@@ -27,9 +27,11 @@ class JackpotHelperTest {
         configService = mockk(relaxed = true)
         // Default the post-fraud gates to "pass" so the legacy probability
         // tests below stay focused on the random-roll mechanics. Gate-
-        // specific tests override these stubs below.
-        every { jackpotService.isOnCooldown(any(), any()) } returns false
-        every { jackpotService.isActive(any(), any()) } returns true
+        // specific tests override these stubs below. The third matcher
+        // covers the `at: Instant = Instant.now()` default parameter — the
+        // bytecode call always has three args even when callers omit it.
+        every { jackpotService.isOnCooldown(any(), any(), any()) } returns false
+        every { jackpotService.isActive(any(), any(), any()) } returns true
     }
 
     private fun configReturns(value: String?) {
@@ -416,7 +418,7 @@ class JackpotHelperTest {
     fun `rollOnWin blocks payout when winner is on cooldown`() {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.isOnCooldown(guildId, discordId) } returns true
+        every { jackpotService.isOnCooldown(guildId, discordId, any()) } returns true
         val user = freshUser(initial = 100L)
 
         val won = JackpotHelper.rollOnWin(
@@ -427,14 +429,14 @@ class JackpotHelperTest {
         assertEquals(0L, won, "blocked by cooldown gate")
         assertEquals(100L, user.socialCredit, "balance untouched on blocked gate")
         verify(exactly = 0) { jackpotService.awardJackpot(any()) }
-        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
     @Test
     fun `rollOnWin blocks payout when user is not active enough`() {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.isActive(guildId, discordId) } returns false
+        every { jackpotService.isActive(guildId, discordId, any()) } returns false
         val user = freshUser(initial = 100L)
 
         val won = JackpotHelper.rollOnWin(
@@ -444,7 +446,7 @@ class JackpotHelperTest {
 
         assertEquals(0L, won, "blocked by activity gate")
         verify(exactly = 0) { jackpotService.awardJackpot(any()) }
-        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
     @Test
@@ -460,7 +462,7 @@ class JackpotHelperTest {
         )
 
         assertEquals(250L, won)
-        verify(exactly = 1) { jackpotService.recordWin(guildId, discordId, 250L) }
+        verify(exactly = 1) { jackpotService.recordWin(guildId, discordId, 250L, any()) }
     }
 
     @Test
@@ -475,7 +477,7 @@ class JackpotHelperTest {
             stake = MAX_STAKE, random = stubRandom(0.001)
         )
 
-        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
     // ---- payoutPct ----
