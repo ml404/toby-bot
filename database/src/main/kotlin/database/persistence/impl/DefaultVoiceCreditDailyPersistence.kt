@@ -40,9 +40,9 @@ class DefaultVoiceCreditDailyPersistence : VoiceCreditDailyPersistence {
     }
 
     override fun countDaysSince(discordId: Long, guildId: Long, from: LocalDate): Long {
-        val q: TypedQuery<Long> = entityManager.createNamedQuery(
-            "VoiceCreditDailyDto.countDaysSince", java.lang.Long::class.java
-        ) as TypedQuery<Long>
+        val q = entityManager.createNamedQuery(
+            "VoiceCreditDailyDto.countDaysSince", Long::class.javaObjectType
+        )
         q.setParameter("discordId", discordId)
         q.setParameter("guildId", guildId)
         q.setParameter("from", from)

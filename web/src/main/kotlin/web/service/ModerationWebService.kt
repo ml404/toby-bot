@@ -487,6 +487,30 @@ class ModerationWebService(
                 if (n !in 0..10000) return "Value must be between 0 and 10000 (default 90)."
                 n.toString()
             }
+            ConfigDto.Configurations.JACKPOT_PAYOUT_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (1-100; default 100)."
+                if (n !in 1..100) return "Value must be between 1 and 100."
+                n.toString()
+            }
+            ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number of days (0-365; 0 disables)."
+                if (n !in 0..365) return "Value must be between 0 and 365 days."
+                n.toString()
+            }
+            ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number of days (0-365; 0 disables)."
+                if (n !in 0..365) return "Value must be between 0 and 365 days."
+                n.toString()
+            }
+            ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (1-365; default 1)."
+                if (n !in 1..365) return "Value must be between 1 and 365."
+                n.toString()
+            }
         }
 
         val guildIdString = guild.id
