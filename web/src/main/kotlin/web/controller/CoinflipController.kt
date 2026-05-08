@@ -72,7 +72,12 @@ class CoinflipController(
         val side = parseSide(request.side)
             ?: return@requireMemberForJson errors.badRequest("Pick a side: HEADS or TAILS.")
 
-        when (val outcome = coinflipService.flip(discordId, guildId, request.stake, side, request.autoTopUp)) {
+        when (val outcome = coinflipService.flip(
+            discordId, guildId, request.stake, side, request.autoTopUp,
+            clickX = request.clickX,
+            clickY = request.clickY,
+            mouseMoved = request.mouseMoved,
+        )) {
             is FlipOutcome.Win -> ResponseEntity.ok(
                 FlipResponse(
                     ok = true,
@@ -114,7 +119,19 @@ class CoinflipController(
     }
 }
 
-data class FlipRequest(val side: String = "", val stake: Long = 0, val autoTopUp: Boolean = false)
+// `clickX` / `clickY` / `mouseMoved` are bot-suspicion signals captured by
+// `coinflip.js` from the bet button's click event and a document-level
+// mousemove watcher. All three are nullable: a Discord call path, a
+// keyboard submit, or a malformed client send leaves them null and the
+// backend treats the bet as non-suspicious.
+data class FlipRequest(
+    val side: String = "",
+    val stake: Long = 0,
+    val autoTopUp: Boolean = false,
+    val clickX: Int? = null,
+    val clickY: Int? = null,
+    val mouseMoved: Boolean? = null,
+)
 
 data class FlipResponse(
     override val ok: Boolean,

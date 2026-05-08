@@ -54,6 +54,59 @@ class CoinflipTest {
     }
 
     @Test
+    fun `loseProbabilityBoost of 1_0 always forces a loss with landed flipped`() {
+        // Bot-suspicion saturation: if every roll is a forced loss, the
+        // landed side is always the OPPOSITE of predicted so the response
+        // shape stays consistent for the player ("you called HEADS, it
+        // landed TAILS").
+        val coinflip = Coinflip(multiplier = 2L)
+        val rng = Random(2026)
+        repeat(100) {
+            val flip = coinflip.flip(Coinflip.Side.HEADS, rng, loseProbabilityBoost = 1.0)
+            assertFalse(flip.isWin)
+            assertEquals(Coinflip.Side.TAILS, flip.landed)
+            assertEquals(0L, flip.multiplier)
+        }
+    }
+
+    @Test
+    fun `loseProbabilityBoost of 0_0 leaves the fair 50_50 path untouched`() {
+        // Equivalent to omitting the parameter entirely. Sanity check the
+        // default-arg behaviour by comparing two long runs.
+        val withBoost = Coinflip(multiplier = 2L)
+        val withoutBoost = Coinflip(multiplier = 2L)
+        val rngA = Random(99)
+        val rngB = Random(99)
+        repeat(1_000) {
+            val a = withBoost.flip(Coinflip.Side.HEADS, rngA, loseProbabilityBoost = 0.0)
+            val b = withoutBoost.flip(Coinflip.Side.HEADS, rngB)
+            assertEquals(b.landed, a.landed)
+            assertEquals(b.multiplier, a.multiplier)
+        }
+    }
+
+    @Test
+    fun `loseProbabilityBoost of 0_3 produces RTP near 0_7 across many flips`() {
+        // 30 % house edge: 30 % forced losses + (70 % * 50 %) fair losses
+        // = 65 % total lose rate → RTP = 0.35 × 2 = 0.7. ±0.05 swallows
+        // the n=50k variance.
+        val coinflip = Coinflip(multiplier = 2L)
+        val rng = Random(7)
+        val stake = 100L
+        val n = 50_000
+        var totalWagered = 0L
+        var totalReturned = 0L
+        repeat(n) {
+            val predicted = if (rng.nextBoolean()) Coinflip.Side.HEADS else Coinflip.Side.TAILS
+            val flip = coinflip.flip(predicted, rng, loseProbabilityBoost = 0.3)
+            totalWagered += stake
+            totalReturned += flip.multiplier * stake
+        }
+        val rtp = totalReturned.toDouble() / totalWagered.toDouble()
+        assertTrue(rtp in 0.65..0.75, "expected RTP near 0.7 (±0.05) but saw $rtp")
+    }
+
+    @Test
     fun `RTP across 200k flips is within 5pp of 1_0`() {
         // No house edge by design — fair 50/50 with 2× payout. Across n flips
         // with random predictions, expected return is exactly 1.0 stake. The

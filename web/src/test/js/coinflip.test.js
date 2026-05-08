@@ -1,4 +1,4 @@
-const { renderCoinflipResult } = require('../../main/resources/static/js/coinflip');
+const { renderCoinflipResult, createBotSuspicionTracker } = require('../../main/resources/static/js/coinflip');
 require('../../main/resources/static/js/casino-jackpot');
 require('../../main/resources/static/js/casino-result');
 require('../../main/resources/static/js/casino-render');
@@ -53,6 +53,70 @@ describe('renderCoinflipResult', () => {
         });
 
         expect(resultEl.innerHTML).toContain('+5 to jackpot');
+    });
+
+    // The bot-suspicion tracker is exercised here as a unit so the page
+    // IIFE doesn't need a full DOM stand-up. The wiring inside the IIFE
+    // (document mousemove + button click listeners feeding this tracker)
+    // is exercised manually during web smoke.
+    describe('bot-suspicion tracker', () => {
+        test('first snapshot before any click reports nulls and mouseMoved=false', () => {
+            const t = createBotSuspicionTracker();
+            const snap = t.snapshotAndReset();
+            expect(snap).toEqual({ clickX: null, clickY: null, mouseMoved: false });
+        });
+
+        test('recordClick captures clientX/clientY into the next snapshot', () => {
+            const t = createBotSuspicionTracker();
+            t.recordClick({ clientX: 350, clientY: 220 });
+            const snap = t.snapshotAndReset();
+            expect(snap.clickX).toBe(350);
+            expect(snap.clickY).toBe(220);
+        });
+
+        test('recordMouseMove sets mouseMoved=true until the next snapshot', () => {
+            const t = createBotSuspicionTracker();
+            t.recordMouseMove();
+            expect(t.snapshotAndReset().mouseMoved).toBe(true);
+        });
+
+        test('snapshotAndReset clears mouseMoved for the following bet', () => {
+            // The frontend reports motion *between* bets, not since page
+            // load. So the second snapshot in a row sees no movement
+            // unless a new mousemove arrives between snapshots.
+            const t = createBotSuspicionTracker();
+            t.recordMouseMove();
+            t.snapshotAndReset();
+            const second = t.snapshotAndReset();
+            expect(second.mouseMoved).toBe(false);
+        });
+
+        test('coords persist across snapshots until a new click overwrites', () => {
+            // A new bet without a fresh click (rare — keyboard submit)
+            // resends the prior coords; the backend treats that as
+            // "same spot" but reset state on this bet means the streak
+            // bump is moot.
+            const t = createBotSuspicionTracker();
+            t.recordClick({ clientX: 100, clientY: 50 });
+            t.snapshotAndReset();
+            const second = t.snapshotAndReset();
+            expect(second.clickX).toBe(100);
+            expect(second.clickY).toBe(50);
+
+            t.recordClick({ clientX: 999, clientY: 1 });
+            const third = t.snapshotAndReset();
+            expect(third.clickX).toBe(999);
+            expect(third.clickY).toBe(1);
+        });
+
+        test('recordClick gracefully ignores malformed events', () => {
+            const t = createBotSuspicionTracker();
+            t.recordClick(null);
+            t.recordClick({});
+            const snap = t.snapshotAndReset();
+            expect(snap.clickX).toBeNull();
+            expect(snap.clickY).toBeNull();
+        });
     });
 
     test('win flashes a chip stack on the table; loss leaves it untouched', () => {

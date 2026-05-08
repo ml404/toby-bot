@@ -177,7 +177,17 @@ class ConfigDto(
         // JACKPOT_ACTIVITY_WINDOW_DAYS required for the user to be
         // jackpot-eligible. Defaults to 1; recommended 3 paired with a
         // 7-day window. Ignored when the window is 0.
-        JACKPOT_ACTIVITY_MIN_DAYS("JACKPOT_ACTIVITY_MIN_DAYS");
+        JACKPOT_ACTIVITY_MIN_DAYS("JACKPOT_ACTIVITY_MIN_DAYS"),
+
+        // Whole-number percentage (0-50) — ceiling on the dynamic house
+        // edge applied to web `/coinflip` bets that match an autoclicker
+        // signature (same screen pixel ± 2px clicked repeatedly with no
+        // intervening mouse motion). Each consecutive bot-like click
+        // adds ~2.5 pp to the edge; the cap saturates near streak 12 at
+        // the default 30. Set to 0 to disable the gate (back to the
+        // historical fair 50/50). Discord `/coinflip` is unaffected —
+        // the gate only applies when the frontend supplies click coords.
+        COINFLIP_BOT_EDGE_MAX_PCT("COINFLIP_BOT_EDGE_MAX_PCT");
     }
 
     override fun toString(): String {
