@@ -125,6 +125,63 @@
         return null;
     }
 
+    // Pure detector for the "active hand is a pre-split pair of aces" case.
+    // Cards on the wire are formatted by Card.toString() as
+    // `<rank-symbol><suit-symbol>` and the ACE rank symbol is the literal
+    // "A" — see database/card/Card.kt — so a leading "A" uniquely picks out
+    // an ace regardless of suit. Exposed for jest so the hint logic is
+    // testable without booting the full poll-driven page.
+    function isPairOfAces(cards) {
+        if (!cards || cards.length !== 2) return false;
+        return cards[0].charAt(0) === "A" && cards[1].charAt(0) === "A";
+    }
+
+    // Pure detector for "this resolved round had at least one split-ace
+    // hand". Used after settle to append the explainer line so a player
+    // who tapped Split before reading the pre-hint still sees why the
+    // dealer played immediately.
+    function hasSplitAceResolution(perHandResults) {
+        if (!perHandResults || !perHandResults.length) return false;
+        for (var i = 0; i < perHandResults.length; i++) {
+            var entry = perHandResults[i];
+            if (entry && entry.fromSplit && entry.cards && entry.cards.length &&
+                entry.cards[0].charAt(0) === "A") {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Per-hand result label shared between the single-hand banner and the
+    // per-hand split lines. Returns { label, cls } so callers can pick the
+    // banner colour from the dominant outcome.
+    function labelForResult(result) {
+        switch (result) {
+            case "PLAYER_BLACKJACK": return { label: "Blackjack! Paid 3:2.", cls: "bj-win" };
+            case "PLAYER_WIN":       return { label: "You win.",             cls: "bj-win" };
+            case "PUSH":             return { label: "Push — stake refunded.", cls: "muted" };
+            case "DEALER_WIN":       return { label: "Dealer wins.",         cls: "bj-lose" };
+            case "PLAYER_BUST":      return { label: "Bust.",                cls: "bj-lose" };
+            default:                 return { label: "",                     cls: "muted" };
+        }
+    }
+
+    // Pick a single CSS class for the whole result block when split hands
+    // had mixed outcomes: any win > push > any loss. Mirrors the way the
+    // wallet actually moves — a player who pushed one and won the other
+    // ended the round up, so the banner shouldn't read as a loss.
+    function dominantResultClass(perHandResults) {
+        var sawWin = false, sawLoss = false;
+        for (var i = 0; i < perHandResults.length; i++) {
+            var r = perHandResults[i].result;
+            if (r === "PLAYER_WIN" || r === "PLAYER_BLACKJACK") sawWin = true;
+            else if (r === "DEALER_WIN" || r === "PLAYER_BUST") sawLoss = true;
+        }
+        if (sawWin) return "bj-win";
+        if (sawLoss) return "bj-lose";
+        return "muted";
+    }
+
     // Tiny factory the page uses to defer the win/lose banner until the
     // dealer's last freshly-revealed card finishes its CSS animation.
     // Hoisted so jest can drive it directly with fake timers — the
@@ -153,6 +210,10 @@
         window.TobyBlackjackSolo.validateStake = validateStake;
         window.TobyBlackjackSolo.errorToast = errorToast;
         window.TobyBlackjackSolo.createDeferredScheduler = createDeferredScheduler;
+        window.TobyBlackjackSolo.isPairOfAces = isPairOfAces;
+        window.TobyBlackjackSolo.hasSplitAceResolution = hasSplitAceResolution;
+        window.TobyBlackjackSolo.labelForResult = labelForResult;
+        window.TobyBlackjackSolo.dominantResultClass = dominantResultClass;
     }
 
     // ----- Page init. Bail out cleanly if we're loaded without the
@@ -178,6 +239,7 @@
     var splitBtn = document.getElementById("bj-action-split");
     var resultEl = document.getElementById("bj-result");
     var playerRowEl = document.getElementById("bj-player-row");
+    var splitAcesHintEl = document.getElementById("bj-split-aces-hint");
 
     var pollTimer = null;
     var resultDefer = createDeferredScheduler();
@@ -223,6 +285,18 @@
             playerTotalEl.textContent = seat ? "(" + seat.total + ")" : "";
         }
 
+        // Pre-action hint: when the active hand is a pair of aces and SPLIT
+        // is offered, surface the rule that split aces auto-stand on one
+        // card. The rules section already documents this (templates/
+        // blackjack-solo.html), but it's easy to miss in a long list — and
+        // the round visibly "skipping ahead" after the split feels like a
+        // bug at the moment it happens.
+        var activeCards = (slots && slots.length > 1)
+            ? ((slots[seat.activeHandIndex] || slots[0]).cards || [])
+            : (seat ? seat.hand : []);
+        var showAcesHint = state.phase === "PLAYER_TURNS" && state.isMyTurn &&
+            state.canSplit && isPairOfAces(activeCards);
+
         var becomingInactive = false;
         if (state.phase === "PLAYER_TURNS" && state.isMyTurn) {
             hitBtn.disabled = false;
@@ -233,12 +307,14 @@
             resultEl.textContent = "";
             resultEl.className = "bj-result muted";
             if (playerRowEl) playerRowEl.classList.add("is-active");
+            if (splitAcesHintEl) splitAcesHintEl.hidden = !showAcesHint;
         } else {
             hitBtn.disabled = true;
             standBtn.disabled = true;
             doubleBtn.disabled = true;
             splitBtn.disabled = true;
             splitBtn.hidden = true;
+            if (splitAcesHintEl) splitAcesHintEl.hidden = true;
             // Defer the .is-active drop to the next frame so it doesn't tear
             // down the seat's compositing layer in the same paint as the
             // chip-stack flourish below — mobile WebKit drops the chip
@@ -271,6 +347,10 @@
         // survives JS Number's 53-bit precision; lookup keys match exactly.
         var seatResult = (r.seatResults || {})[seat.discordId];
         // Fire the celebratory chip stack once per hand on a winning result.
+        // Driven off the seat's total payout, which already aggregates every
+        // split branch — so a "push hand 1, win hand 2" round still triggers
+        // the win flourish even though seatResults only carries hand 0's
+        // outcome.
         if (shouldFlash(state) && window.CasinoRender) {
             var payout = (r.payouts || {})[seat.discordId];
             if (payout && payout > 0 && playerRowEl) {
@@ -280,33 +360,46 @@
                 window.CasinoSounds.play(payout && payout > 0 ? "win" : "lose");
             }
         }
-        var label;
-        var cls = "muted";
-        switch (seatResult) {
-            case "PLAYER_BLACKJACK":
-                label = "Blackjack! Paid 3:2.";
-                cls = "bj-win";
-                break;
-            case "PLAYER_WIN":
-                label = "You win.";
-                cls = "bj-win";
-                break;
-            case "PUSH":
-                label = "Push — stake refunded.";
-                break;
-            case "DEALER_WIN":
-                label = "Dealer wins.";
-                cls = "bj-lose";
-                break;
-            case "PLAYER_BUST":
-                label = "Bust.";
-                cls = "bj-lose";
-                break;
-            default:
-                label = "";
+
+        // Reset the result block in case it's a re-render after a previous
+        // round (textContent assign replaces children, including any
+        // explainer/per-hand lines we appended last time).
+        resultEl.textContent = "";
+
+        // For a split round, seatResults only carries hand 0's outcome —
+        // see BlackjackService.settleSolo (firstHandResult). Surface every
+        // hand's result so a "push + win" round doesn't read as a pure
+        // push and silently drop the second hand's payout from view.
+        var seatPerHand = (r.perHandResults || []).filter(function (p) {
+            return p.discordId === seat.discordId;
+        });
+        if (seatPerHand.length > 1) {
+            resultEl.className = "bj-result " + dominantResultClass(seatPerHand);
+            seatPerHand.forEach(function (entry, idx) {
+                var line = document.createElement("div");
+                var info = labelForResult(entry.result);
+                var prefix = "Hand " + (idx + 1) + ": ";
+                var suffix = entry.payout > 0 ? " (+" + entry.payout + ")" : "";
+                line.textContent = prefix + info.label + suffix;
+                resultEl.appendChild(line);
+            });
+        } else {
+            var info = labelForResult(seatResult);
+            resultEl.textContent = info.label;
+            resultEl.className = "bj-result " + info.cls;
         }
-        resultEl.textContent = label;
-        resultEl.className = "bj-result " + cls;
+
+        // Post-resolution explainer: if any branch was a split-ace, append
+        // a small italic note explaining why the dealer played immediately.
+        // Helps a player who tapped Split before reading the pre-hint.
+        if (hasSplitAceResolution(r.perHandResults)) {
+            var note = document.createElement("small");
+            note.className = "muted";
+            note.style.display = "block";
+            note.style.fontStyle = "italic";
+            note.textContent = "Split aces auto-stood on one card by house rule.";
+            resultEl.appendChild(note);
+        }
     }
 
     function startPoll() {
