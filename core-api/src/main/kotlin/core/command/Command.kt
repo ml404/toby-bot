@@ -57,17 +57,13 @@ interface Command {
         }
 
         /**
-         * `event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(d))`
-         * appears in 50+ command files. The extensions below collapse it to
-         * `event.hook.replyAndDelete(msg, d)` (and equivalents for embeds /
-         * ephemeral replies) so a future tweak to the queue-and-delete
-         * contract — or to the queue-cancel handler when it grows — is one
-         * edit instead of fifty.
+         * Embed-and-ephemeral wrappers for the
+         * `event.hook.sendMessage*(...).queue(invokeDeleteOnMessageResponse(d))`
+         * pattern. The non-ephemeral plain-text variant is intentionally
+         * not provided — most plain-text replies use `sendMessageFormat(...)`
+         * with positional arguments where a wrapper would force callers
+         * to pre-build the format string at the call site.
          */
-        fun InteractionHook.replyAndDelete(message: String, deleteDelay: Int) {
-            sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
-        }
-
         fun InteractionHook.replyEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
             sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }

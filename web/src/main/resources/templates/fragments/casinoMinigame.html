@@ -27,15 +27,15 @@
 
 <!--
     Shared script block for every minigame page. Order matters:
-      api       — fetch wrapper / CSRF
-      toasts    — toast notifications
-      sounds    — audio cues
-      jackpot   — jackpot pool banner mirroring
-      topup     — TOBY shortfall sell button
-      result    — win/lose class toggling + balance refresh
-      game      — TobyCasinoGame.init scaffolding
-      dom       — standard `{prefix}-X` element selectors
-      resultLine — win/lose HTML factory used by per-game JS
+      api      — fetch wrapper / CSRF
+      toasts   — toast notifications
+      sounds   — audio cues
+      jackpot  — jackpot pool banner mirroring
+      balance  — wallet balance update with flourish animation
+      topup    — TOBY shortfall sell button
+      result   — win/lose class toggling + balance refresh
+      game     — TobyCasinoGame.init scaffolding
+      dom      — standard `{prefix}-X` element selectors
     Each per-game template adds its own `<script th:src="@{/js/{game}.js}">`
     after this block.
 -->
@@ -49,7 +49,6 @@
     <script th:src="@{/js/casino-result.js}"></script>
     <script th:src="@{/js/casino-game.js}"></script>
     <script th:src="@{/js/casino-minigame-dom.js}"></script>
-    <script th:src="@{/js/casino-result-line.js}"></script>
 </th:block>
 
 </body>
