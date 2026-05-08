@@ -150,7 +150,34 @@ class ConfigDto(
         // probability; smaller bets scale linearly as stake/anchor.
         // Decoupled from per-game max stake so admins can raise max
         // freely without shrinking jackpot odds. Default 500.
-        JACKPOT_STAKE_ANCHOR("JACKPOT_STAKE_ANCHOR");
+        JACKPOT_STAKE_ANCHOR("JACKPOT_STAKE_ANCHOR"),
+
+        // Whole-number percentage (1-100) of the per-guild jackpot pool
+        // paid out on a winning roll. Defaults to 100 when unset (current
+        // behaviour: winner banks the entire pool). Set to e.g. 30 so a
+        // single roll never sweeps the whole pool — the remainder stays
+        // in and re-seeds the next cycle, preventing one lucky bet from
+        // unbalancing the server economy.
+        JACKPOT_PAYOUT_PCT("JACKPOT_PAYOUT_PCT"),
+
+        // Whole-number days a prior jackpot winner is ineligible for
+        // another payout. 0 (default) disables the cooldown; recommended
+        // value 14. Applies to both casino-roll wins and lottery draw
+        // wins so the same player can't sweep both within the window.
+        JACKPOT_WINNER_COOLDOWN_DAYS("JACKPOT_WINNER_COOLDOWN_DAYS"),
+
+        // Whole-number trailing-day window over which the jackpot
+        // eligibility check counts the user's distinct activity days.
+        // 0 (default) disables the gate (every user is eligible);
+        // recommended 7. Activity is sourced from voice_credit_daily —
+        // any day with credit-cap-eligible earnings counts.
+        JACKPOT_ACTIVITY_WINDOW_DAYS("JACKPOT_ACTIVITY_WINDOW_DAYS"),
+
+        // Whole-number minimum count of distinct activity days within
+        // JACKPOT_ACTIVITY_WINDOW_DAYS required for the user to be
+        // jackpot-eligible. Defaults to 1; recommended 3 paired with a
+        // 7-day window. Ignored when the window is 0.
+        JACKPOT_ACTIVITY_MIN_DAYS("JACKPOT_ACTIVITY_MIN_DAYS");
     }
 
     override fun toString(): String {

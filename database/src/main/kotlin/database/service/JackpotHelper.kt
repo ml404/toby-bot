@@ -37,6 +37,45 @@ internal object JackpotHelper {
     const val DEFAULT_WIN_PROBABILITY: Double = 0.01
 
     /**
+     * Default share of the pool paid on a winning roll when the server
+     * hasn't overridden the value via the `JACKPOT_PAYOUT_PCT` config
+     * entry. 100 % preserves the historic behaviour (winner banks the
+     * entire pool); guilds that have suffered a runaway pool can lower
+     * this so the remainder re-seeds the next cycle.
+     */
+    const val DEFAULT_PAYOUT_PCT: Double = 1.0
+
+    /**
+     * Default cooldown in days during which a prior jackpot winner is
+     * ineligible for another payout. 0 disables the gate (current
+     * behaviour for unconfigured guilds); recommended value is 14.
+     */
+    const val DEFAULT_WINNER_COOLDOWN_DAYS: Long = 0L
+
+    /**
+     * Hard cap on the configurable cooldown. A year is plenty — anything
+     * longer is effectively a permanent ban and should be surfaced as a
+     * separate moderation action, not a "cooldown."
+     */
+    const val MAX_WINNER_COOLDOWN_DAYS: Long = 365L
+
+    /**
+     * Default trailing-day window over which the eligibility gate counts
+     * the user's distinct activity days. 0 disables the gate (current
+     * behaviour); recommended value is 7 paired with `MIN_ACTIVITY_DAYS=3`.
+     */
+    const val DEFAULT_ACTIVITY_WINDOW_DAYS: Long = 0L
+
+    /** Hard cap on the activity window — a calendar year. */
+    const val MAX_ACTIVITY_WINDOW_DAYS: Long = 365L
+
+    /**
+     * Default minimum count of distinct activity days within the window
+     * required for jackpot eligibility. Ignored when the window is 0.
+     */
+    const val DEFAULT_ACTIVITY_MIN_DAYS: Long = 1L
+
+    /**
      * Default reference stake size for jackpot probability scaling
      * when `JACKPOT_STAKE_ANCHOR` is unset. Bets at or above this value
      * roll at the full base probability; smaller bets scale linearly.
@@ -98,8 +137,17 @@ internal object JackpotHelper {
         val scale = (stake.toDouble() / anchor.toDouble()).coerceIn(0.0, 1.0)
         val effective = baseProbability * scale
         if (random.nextDouble() >= effective) return 0L
+
+        // Post-fraud structural gates. Each defaults to "disabled" so an
+        // unconfigured guild's behaviour is unchanged. When enabled, a
+        // failed gate looks identical to a missed roll — pool keeps
+        // growing, no payout, no exception thrown into the wager service.
+        if (jackpotService.isOnCooldown(guildId, user.discordId)) return 0L
+        if (!jackpotService.isActive(guildId, user.discordId)) return 0L
+
         val won = jackpotService.awardJackpot(guildId)
         if (won == 0L) return 0L
+        jackpotService.recordWin(guildId, user.discordId, won)
         user.socialCredit = (user.socialCredit ?: 0L) + won
         userService.updateUser(user)
         return won
@@ -173,5 +221,67 @@ internal object JackpotHelper {
         )
         val pct = cfg?.value?.toDoubleOrNull() ?: return DEFAULT_LOSS_TRIBUTE
         return (pct / 100.0).coerceIn(0.0, MAX_LOSS_TRIBUTE)
+    }
+
+    /**
+     * Live payout fraction for [guildId] — admin-set whole-number percent
+     * (1-100) parsed from `JACKPOT_PAYOUT_PCT`. Returns [DEFAULT_PAYOUT_PCT]
+     * (1.0 = full pool) when unset or unparseable; clamps to (0, 1].
+     * 0 is treated as missing and falls back to the default to avoid
+     * silently disabling all jackpot payouts via a fat-fingered config row.
+     */
+    fun payoutPct(configService: ConfigService, guildId: Long): Double {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+            guildId.toString()
+        )
+        val pct = cfg?.value?.toDoubleOrNull() ?: return DEFAULT_PAYOUT_PCT
+        if (pct.isNaN() || pct.isInfinite() || pct <= 0.0) return DEFAULT_PAYOUT_PCT
+        return (pct / 100.0).coerceIn(0.0, 1.0).let { if (it == 0.0) DEFAULT_PAYOUT_PCT else it }
+    }
+
+    /**
+     * Live cooldown window for [guildId] in days — admin-set whole number
+     * parsed from `JACKPOT_WINNER_COOLDOWN_DAYS`. Returns
+     * [DEFAULT_WINNER_COOLDOWN_DAYS] (0 = disabled) when unset or
+     * unparseable; clamps to `[0, MAX_WINNER_COOLDOWN_DAYS]`.
+     */
+    fun winnerCooldownDays(configService: ConfigService, guildId: Long): Long {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+            guildId.toString()
+        )
+        val days = cfg?.value?.toLongOrNull() ?: return DEFAULT_WINNER_COOLDOWN_DAYS
+        return days.coerceIn(0L, MAX_WINNER_COOLDOWN_DAYS)
+    }
+
+    /**
+     * Live activity-eligibility window for [guildId] in days — admin-set
+     * whole number parsed from `JACKPOT_ACTIVITY_WINDOW_DAYS`. Returns
+     * [DEFAULT_ACTIVITY_WINDOW_DAYS] (0 = gate disabled) when unset or
+     * unparseable; clamps to `[0, MAX_ACTIVITY_WINDOW_DAYS]`.
+     */
+    fun activityWindowDays(configService: ConfigService, guildId: Long): Long {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS.configValue,
+            guildId.toString()
+        )
+        val days = cfg?.value?.toLongOrNull() ?: return DEFAULT_ACTIVITY_WINDOW_DAYS
+        return days.coerceIn(0L, MAX_ACTIVITY_WINDOW_DAYS)
+    }
+
+    /**
+     * Live minimum-activity-day requirement for [guildId] — admin-set
+     * whole number parsed from `JACKPOT_ACTIVITY_MIN_DAYS`. Returns
+     * [DEFAULT_ACTIVITY_MIN_DAYS] when unset or unparseable; coerces to
+     * `>= 1L`. Only consulted when the activity window is `> 0`.
+     */
+    fun activityMinDays(configService: ConfigService, guildId: Long): Long {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS.configValue,
+            guildId.toString()
+        )
+        val days = cfg?.value?.toLongOrNull() ?: return DEFAULT_ACTIVITY_MIN_DAYS
+        return days.coerceAtLeast(1L)
     }
 }

@@ -25,6 +25,13 @@ class JackpotHelperTest {
         jackpotService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        // Default the post-fraud gates to "pass" so the legacy probability
+        // tests below stay focused on the random-roll mechanics. Gate-
+        // specific tests override these stubs below. The third matcher
+        // covers the `at: Instant = Instant.now()` default parameter — the
+        // bytecode call always has three args even when callers omit it.
+        every { jackpotService.isOnCooldown(any(), any(), any()) } returns false
+        every { jackpotService.isActive(any(), any(), any()) } returns true
     }
 
     private fun configReturns(value: String?) {
@@ -403,5 +410,164 @@ class JackpotHelperTest {
         )
 
         assertEquals(100L, won)
+    }
+
+    // ---- post-fraud gates: cooldown, activity, recordWin ----
+
+    @Test
+    fun `rollOnWin blocks payout when winner is on cooldown`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        every { jackpotService.isOnCooldown(guildId, discordId, any()) } returns true
+        val user = freshUser(initial = 100L)
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, random = stubRandom(0.001)
+        )
+
+        assertEquals(0L, won, "blocked by cooldown gate")
+        assertEquals(100L, user.socialCredit, "balance untouched on blocked gate")
+        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `rollOnWin blocks payout when user is not active enough`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        every { jackpotService.isActive(guildId, discordId, any()) } returns false
+        val user = freshUser(initial = 100L)
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, random = stubRandom(0.001)
+        )
+
+        assertEquals(0L, won, "blocked by activity gate")
+        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `rollOnWin records the win for cooldown tracking on a successful payout`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        every { jackpotService.awardJackpot(guildId) } returns 250L
+        val user = freshUser()
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, random = stubRandom(0.001)
+        )
+
+        assertEquals(250L, won)
+        verify(exactly = 1) { jackpotService.recordWin(guildId, discordId, 250L, any()) }
+    }
+
+    @Test
+    fun `rollOnWin does not record a no-op award (empty pool)`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        every { jackpotService.awardJackpot(guildId) } returns 0L
+        val user = freshUser()
+
+        JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, random = stubRandom(0.001)
+        )
+
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
+    }
+
+    // ---- payoutPct ----
+
+    @Test
+    fun `payoutPct returns the default fraction when no config row exists`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                guildId.toString()
+            )
+        } returns null
+        assertEquals(JackpotHelper.DEFAULT_PAYOUT_PCT, JackpotHelper.payoutPct(configService, guildId), 1e-9)
+    }
+
+    @Test
+    fun `payoutPct parses whole-number percent and clamps to 1 at 100 percent`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "30", guildId = guildId.toString())
+        assertEquals(0.30, JackpotHelper.payoutPct(configService, guildId), 1e-9)
+    }
+
+    @Test
+    fun `payoutPct treats zero or negative as missing (falls back to default)`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "0", guildId = guildId.toString())
+        assertEquals(JackpotHelper.DEFAULT_PAYOUT_PCT, JackpotHelper.payoutPct(configService, guildId), 1e-9)
+
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "-10", guildId = guildId.toString())
+        assertEquals(JackpotHelper.DEFAULT_PAYOUT_PCT, JackpotHelper.payoutPct(configService, guildId), 1e-9)
+    }
+
+    // ---- winnerCooldownDays ----
+
+    @Test
+    fun `winnerCooldownDays defaults to disabled when unset`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns null
+        assertEquals(0L, JackpotHelper.winnerCooldownDays(configService, guildId))
+    }
+
+    @Test
+    fun `winnerCooldownDays clamps to MAX_WINNER_COOLDOWN_DAYS`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "9999", guildId = guildId.toString())
+        assertEquals(JackpotHelper.MAX_WINNER_COOLDOWN_DAYS, JackpotHelper.winnerCooldownDays(configService, guildId))
+    }
+
+    // ---- activityWindowDays / activityMinDays ----
+
+    @Test
+    fun `activityWindowDays defaults to disabled when unset`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns null
+        assertEquals(0L, JackpotHelper.activityWindowDays(configService, guildId))
+    }
+
+    @Test
+    fun `activityMinDays coerces to at least 1`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "0", guildId = guildId.toString())
+        assertEquals(1L, JackpotHelper.activityMinDays(configService, guildId))
     }
 }

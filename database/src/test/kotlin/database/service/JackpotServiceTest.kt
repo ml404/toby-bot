@@ -2,29 +2,40 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.TobyCoinJackpotDto
+import database.dto.TobyCoinJackpotWinnerDto
 import database.persistence.TobyCoinJackpotPersistence
-import io.mockk.Runs
+import database.persistence.TobyCoinJackpotWinnerPersistence
+import database.persistence.VoiceCreditDailyPersistence
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Duration
+import java.time.Instant
 
 class JackpotServiceTest {
 
     private val guildId = 42L
+    private val discordId = 7L
+    private val now: Instant = Instant.parse("2026-05-08T12:00:00Z")
 
     private lateinit var persistence: TobyCoinJackpotPersistence
     private lateinit var configService: ConfigService
+    private lateinit var winnerPersistence: TobyCoinJackpotWinnerPersistence
+    private lateinit var voiceCreditDailyPersistence: VoiceCreditDailyPersistence
     private lateinit var service: JackpotService
 
     @BeforeEach
     fun setup() {
         persistence = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        winnerPersistence = mockk(relaxed = true)
+        voiceCreditDailyPersistence = mockk(relaxed = true)
         // Default: no `JACKPOT_WIN_PCT` row in the DB → fall through to
         // [JackpotHelper.DEFAULT_WIN_PROBABILITY] (0.01 → 1.0%).
         every {
@@ -33,7 +44,39 @@ class JackpotServiceTest {
                 guildId.toString()
             )
         } returns null
-        service = JackpotService(persistence, configService)
+        // Default: no `JACKPOT_PAYOUT_PCT` row → full pool payout (matches
+        // pre-rebalance behaviour for unconfigured guilds).
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                guildId.toString()
+            )
+        } returns null
+        // Default: cooldown / activity gates disabled.
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns null
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns null
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns null
+        service = JackpotService(
+            persistence,
+            configService,
+            winnerPersistence,
+            voiceCreditDailyPersistence,
+        )
     }
 
     @Test
@@ -92,15 +135,33 @@ class JackpotServiceTest {
     }
 
     @Test
-    fun `awardJackpot returns the prior pool and zeroes the row`() {
+    fun `awardJackpot pays the entire pool when JACKPOT_PAYOUT_PCT is unset`() {
         val existing = TobyCoinJackpotDto(guildId = guildId, pool = 1_500L)
         every { persistence.getByGuildForUpdate(guildId) } returns existing
         every { persistence.upsert(any()) } answers { firstArg() }
 
         val won = service.awardJackpot(guildId)
 
-        assertEquals(1_500L, won, "winner banks the entire pool")
+        assertEquals(1_500L, won, "default payout pct = 100% pays the entire pool")
         assertEquals(0L, existing.pool, "pool resets in the same transaction")
+    }
+
+    @Test
+    fun `awardJackpot pays a configured fraction and re-seeds the remainder`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "30", guildId = guildId.toString())
+        val existing = TobyCoinJackpotDto(guildId = guildId, pool = 1_000L)
+        every { persistence.getByGuildForUpdate(guildId) } returns existing
+        every { persistence.upsert(any()) } answers { firstArg() }
+
+        val won = service.awardJackpot(guildId)
+
+        assertEquals(300L, won, "30% of 1000 paid out")
+        assertEquals(700L, existing.pool, "remainder re-seeds the next cycle")
     }
 
     @Test
@@ -173,9 +234,6 @@ class JackpotServiceTest {
 
     @Test
     fun `winProbabilityPct clamps absurd admin values to MAX_WIN_PROBABILITY`() {
-        // Validator on the moderation page should already reject anything
-        // above 50, but defend against a stale row from before the cap was
-        // tightened — JackpotHelper clamps at MAX_WIN_PROBABILITY = 0.5.
         every {
             configService.getConfigByName(
                 ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
@@ -202,5 +260,129 @@ class JackpotServiceTest {
             guildId = guildId.toString()
         )
         assertEquals(1.0, service.winProbabilityPct(guildId), 1e-9)
+    }
+
+    // ---- recordWin / isOnCooldown ----
+
+    @Test
+    fun `recordWin upserts a winner row at the supplied timestamp`() {
+        val captured = slot<TobyCoinJackpotWinnerDto>()
+        every { winnerPersistence.upsert(capture(captured)) } answers { captured.captured }
+
+        service.recordWin(guildId, discordId, 250L, at = now)
+
+        assertEquals(guildId, captured.captured.guildId)
+        assertEquals(discordId, captured.captured.discordId)
+        assertEquals(now, captured.captured.lastWonAt)
+        assertEquals(250L, captured.captured.lastWonAmount)
+    }
+
+    @Test
+    fun `recordWin is a no-op for non-positive amounts`() {
+        service.recordWin(guildId, discordId, 0L)
+        service.recordWin(guildId, discordId, -10L)
+        verify(exactly = 0) { winnerPersistence.upsert(any()) }
+    }
+
+    @Test
+    fun `isOnCooldown returns false when the cooldown config is unset (gate disabled)`() {
+        // setup() stubs the config to null — gate disabled.
+        assertFalse(service.isOnCooldown(guildId, discordId, at = now))
+        verify(exactly = 0) { winnerPersistence.get(any(), any()) }
+    }
+
+    @Test
+    fun `isOnCooldown returns false when the user has no prior win row`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "14", guildId = guildId.toString())
+        every { winnerPersistence.get(guildId, discordId) } returns null
+
+        assertFalse(service.isOnCooldown(guildId, discordId, at = now))
+    }
+
+    @Test
+    fun `isOnCooldown returns true when last win is within the configured window`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "14", guildId = guildId.toString())
+        every { winnerPersistence.get(guildId, discordId) } returns TobyCoinJackpotWinnerDto(
+            guildId = guildId,
+            discordId = discordId,
+            lastWonAt = now.minus(Duration.ofDays(7)),
+            lastWonAmount = 100L,
+        )
+
+        assertTrue(service.isOnCooldown(guildId, discordId, at = now))
+    }
+
+    @Test
+    fun `isOnCooldown returns false when last win is outside the window`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "14", guildId = guildId.toString())
+        every { winnerPersistence.get(guildId, discordId) } returns TobyCoinJackpotWinnerDto(
+            guildId = guildId,
+            discordId = discordId,
+            lastWonAt = now.minus(Duration.ofDays(20)),
+            lastWonAmount = 100L,
+        )
+
+        assertFalse(service.isOnCooldown(guildId, discordId, at = now))
+    }
+
+    // ---- isActive ----
+
+    @Test
+    fun `isActive returns true when the activity gate config is unset (disabled)`() {
+        assertTrue(service.isActive(guildId, discordId, at = now))
+        verify(exactly = 0) { voiceCreditDailyPersistence.countDaysSince(any(), any(), any()) }
+    }
+
+    @Test
+    fun `isActive returns true when activity meets the minimum threshold`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "7", guildId = guildId.toString())
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "3", guildId = guildId.toString())
+        every { voiceCreditDailyPersistence.countDaysSince(eq(discordId), eq(guildId), any()) } returns 4L
+
+        assertTrue(service.isActive(guildId, discordId, at = now))
+    }
+
+    @Test
+    fun `isActive returns false when activity is below the minimum threshold`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "7", guildId = guildId.toString())
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(name = "x", value = "3", guildId = guildId.toString())
+        every { voiceCreditDailyPersistence.countDaysSince(eq(discordId), eq(guildId), any()) } returns 2L
+
+        assertFalse(service.isActive(guildId, discordId, at = now))
     }
 }

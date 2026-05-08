@@ -10,6 +10,12 @@ import java.time.LocalDate
         name = "VoiceCreditDailyDto.get",
         query = "select d from VoiceCreditDailyDto d " +
                 "where d.discordId = :discordId and d.guildId = :guildId and d.earnDate = :earnDate"
+    ),
+    NamedQuery(
+        name = "VoiceCreditDailyDto.countDaysSince",
+        query = "select count(d) from VoiceCreditDailyDto d " +
+                "where d.discordId = :discordId and d.guildId = :guildId " +
+                "and d.earnDate >= :from and d.credits > 0"
     )
 )
 @Entity

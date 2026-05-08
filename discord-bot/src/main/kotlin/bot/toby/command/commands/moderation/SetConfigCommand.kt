@@ -155,6 +155,19 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.DUEL_MAX_STAKE, gameLabel = "Duel", label = "maximum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> setMinimumLongConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR, gameLabel = "Jackpot", label = "stake anchor", min = 1L, unit = "credits")
+                // Post-fraud rebalance gates. Like the per-game stake
+                // bounds above, these aren't in the /setconfig OptionData
+                // (admins use the /moderation web tab) but keep the
+                // dispatch exhaustive in case the option is registered
+                // manually.
+                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.JACKPOT_PAYOUT_PCT, gameLabel = "Jackpot", label = "payout percent", range = 1..100)
+                ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS, gameLabel = "Jackpot", label = "winner cooldown days", range = 0..365)
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS, gameLabel = "Jackpot", label = "activity window days", range = 0..365)
+                ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS, gameLabel = "Jackpot", label = "activity min days", range = 1..365)
             }
         }
     }
