@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import database.dto.ConfigDto
 import database.economy.ScratchCard
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -62,9 +63,15 @@ class ScratchService(
     }
 
     fun scratch(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): ScratchOutcome {
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.SCRATCH_MIN_STAKE, guildId, default = ScratchCard.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.SCRATCH_MAX_STAKE, guildId, default = ScratchCard.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, ScratchCard.MIN_STAKE, ScratchCard.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.SCRATCH,
         )) {
             is TopUpResolution.InvalidStake -> return ScratchOutcome.InvalidStake(r.min, r.max)
@@ -83,7 +90,7 @@ class ScratchService(
         return if (result.isWin && result.winningSymbol != null) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, ScratchCard.MAX_STAKE, random,
+                stake, random,
             )
             ScratchOutcome.Win(
                 stake = stake,

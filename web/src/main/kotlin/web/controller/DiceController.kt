@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -37,6 +38,7 @@ class DiceController(
     private val diceService: DiceService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> RollResponse(false, msg) }
@@ -50,8 +52,9 @@ class DiceController(
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra, template = "dice"
     ) {
-        addAttribute("minStake", Dice.MIN_STAKE)
-        addAttribute("maxStake", Dice.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.dice(guildId)
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
         addAttribute("sides", Dice.DEFAULT_SIDES)
         addAttribute("multiplier", Dice.DEFAULT_MULTIPLIER)
     }

@@ -18,6 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
 
@@ -40,6 +41,7 @@ class KenoController(
     private val kenoService: KenoService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> KenoPlayResponse(false, msg) }
@@ -57,8 +59,9 @@ class KenoController(
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/casino/guilds"
         }
-        model.addAttribute("minStake", Keno.MIN_STAKE)
-        model.addAttribute("maxStake", Keno.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.keno(guildId)
+        model.addAttribute("minStake", minStake)
+        model.addAttribute("maxStake", maxStake)
         model.addAttribute("minSpots", Keno.MIN_SPOTS)
         model.addAttribute("maxSpots", Keno.MAX_SPOTS)
         model.addAttribute("poolSize", Keno.POOL_SIZE)

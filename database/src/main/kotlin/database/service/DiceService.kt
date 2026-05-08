@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import database.dto.ConfigDto
 import database.economy.Dice
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -74,9 +75,15 @@ class DiceService(
         if (!dice.isValidPrediction(predicted)) {
             return RollOutcome.InvalidPrediction(1, dice.sidesCount)
         }
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.DICE_MIN_STAKE, guildId, default = Dice.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.DICE_MAX_STAKE, guildId, default = Dice.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Dice.MIN_STAKE, Dice.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.DICE,
         )) {
             is TopUpResolution.InvalidStake -> return RollOutcome.InvalidStake(r.min, r.max)
@@ -95,7 +102,7 @@ class DiceService(
         return if (roll.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, Dice.MAX_STAKE, random,
+                stake, random,
             )
             RollOutcome.Win(
                 stake = stake,

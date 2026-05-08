@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -39,6 +40,7 @@ class CoinflipController(
     private val coinflipService: CoinflipService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> FlipResponse(false, msg) }
@@ -52,8 +54,9 @@ class CoinflipController(
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra, template = "coinflip"
     ) {
-        addAttribute("minStake", Coinflip.MIN_STAKE)
-        addAttribute("maxStake", Coinflip.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.coinflip(guildId)
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
         addAttribute("multiplier", Coinflip.DEFAULT_MULTIPLIER)
     }
 

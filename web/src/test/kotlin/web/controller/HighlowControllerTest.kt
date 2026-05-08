@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.ConcurrentModel
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
 import web.casino.CasinoPageContext
+import web.casino.StakeBounds
 import web.service.EconomyWebService
 
 class HighlowControllerTest {
@@ -31,6 +32,7 @@ class HighlowControllerTest {
     private lateinit var highlowService: HighlowService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var pageContext: CasinoPageContext
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var session: HttpSession
     private lateinit var controller: HighlowController
@@ -40,6 +42,9 @@ class HighlowControllerTest {
         highlowService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         pageContext = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true) {
+            every { highlow(guildId) } returns (Highlow.MIN_STAKE to Highlow.MAX_STAKE)
+        }
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -52,7 +57,7 @@ class HighlowControllerTest {
         }
         every { pageContext.populate(any(), guildId, discordId, user) } returns guild
 
-        controller = HighlowController(highlowService, economyWebService, pageContext)
+        controller = HighlowController(highlowService, economyWebService, pageContext, stakeBounds)
     }
 
     @Test

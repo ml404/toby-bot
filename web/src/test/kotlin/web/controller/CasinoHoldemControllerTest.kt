@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
+import web.casino.StakeBounds
 import web.service.CasinoHoldemWebService
 import web.service.EconomyWebService
 import java.time.Instant
@@ -37,6 +38,7 @@ class CasinoHoldemControllerTest {
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: CasinoHoldemController
 
@@ -49,6 +51,7 @@ class CasinoHoldemControllerTest {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -62,6 +65,7 @@ class CasinoHoldemControllerTest {
             userService = userService,
             jackpotService = jackpotService,
             jda = jda,
+            stakeBounds = stakeBounds,
         )
     }
 

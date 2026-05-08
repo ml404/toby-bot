@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -43,6 +44,7 @@ class BaccaratController(
     private val baccaratService: BaccaratService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> BaccaratPlayResponse(false, msg) }
@@ -56,8 +58,9 @@ class BaccaratController(
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra, template = "baccarat"
     ) {
-        addAttribute("minStake", Baccarat.MIN_STAKE)
-        addAttribute("maxStake", Baccarat.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.baccarat(guildId)
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
         addAttribute("playerMultiplier", Baccarat.PLAYER_WIN_MULT)
         addAttribute("bankerMultiplier", Baccarat.BANKER_WIN_MULT)
         addAttribute("tieMultiplier", Baccarat.TIE_WIN_MULT)

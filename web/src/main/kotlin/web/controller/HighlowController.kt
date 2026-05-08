@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -31,6 +32,7 @@ class HighlowController(
     private val highlowService: HighlowService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val startErrors = CasinoOutcomeMapper { msg -> StartResponse(false, msg) }
@@ -51,9 +53,10 @@ class HighlowController(
         // player isn't asked to lock again on refresh.
         val activeAnchor = activeAnchor(session, guildId)
         val activeStake = activeStake(session, guildId)
+        val (minStake, maxStake) = stakeBounds.highlow(guildId)
 
-        addAttribute("minStake", Highlow.MIN_STAKE)
-        addAttribute("maxStake", Highlow.MAX_STAKE)
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
         addAttribute("anchor", activeAnchor)
         addAttribute("anchorLabel", activeAnchor?.let { cardLabel(it) } ?: "?")
         addAttribute("higherMultiplier", activeAnchor?.let {
@@ -75,8 +78,9 @@ class HighlowController(
     ): ResponseEntity<StartResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService, errorBuilder = startErrors.errorBuilder
     ) { _ ->
-        if (request.stake < Highlow.MIN_STAKE || request.stake > Highlow.MAX_STAKE) {
-            return@requireMemberForJson startErrors.invalidStake(Highlow.MIN_STAKE, Highlow.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.highlow(guildId)
+        if (request.stake < minStake || request.stake > maxStake) {
+            return@requireMemberForJson startErrors.invalidStake(minStake, maxStake)
         }
 
         val anchor = highlowService.dealAnchor()

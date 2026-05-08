@@ -24,7 +24,7 @@ class SlotsCommand @Autowired constructor(
 
     override val name: String = "slots"
     override val description: String =
-        "Spin a 3-reel slot machine. Bet ${SlotMachine.MIN_STAKE}-${SlotMachine.MAX_STAKE} credits per pull."
+        "Spin a 3-reel slot machine. Stake bounds are per-guild (default ${SlotMachine.MIN_STAKE}-${SlotMachine.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"
@@ -32,9 +32,8 @@ class SlotsCommand @Autowired constructor(
     }
 
     override val optionData: List<OptionData> = listOf(
-        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (10–500)", true)
-            .setMinValue(SlotMachine.MIN_STAKE)
-            .setMaxValue(SlotMachine.MAX_STAKE)
+        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.economy.Keno
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -103,9 +104,15 @@ class KenoService(
             return PlayOutcome.InvalidPicks(Keno.MIN_SPOTS, Keno.MAX_SPOTS, Keno.POOL_SIZE)
         }
 
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.KENO_MIN_STAKE, guildId, default = Keno.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.KENO_MAX_STAKE, guildId, default = Keno.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Keno.MIN_STAKE, Keno.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.KENO,
         )) {
             is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
@@ -132,7 +139,7 @@ class KenoService(
         return if (hand.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, Keno.MAX_STAKE, random,
+                stake, random,
             )
             PlayOutcome.Win(
                 stake = stake,

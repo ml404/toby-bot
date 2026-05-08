@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import web.casino.CasinoPageContext
+import web.casino.StakeBounds
 import web.service.EconomyWebService
 
 class KenoControllerTest {
@@ -23,6 +24,7 @@ class KenoControllerTest {
     private lateinit var kenoService: KenoService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var pageContext: CasinoPageContext
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: KenoController
 
@@ -31,12 +33,13 @@ class KenoControllerTest {
         kenoService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         pageContext = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = KenoController(kenoService, economyWebService, pageContext)
+        controller = KenoController(kenoService, economyWebService, pageContext, stakeBounds)
     }
 
     @Test

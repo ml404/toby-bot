@@ -380,7 +380,7 @@
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="BLACKJACK_MIN_ANTE">
-                    <label>Minimum ante per hand (multi &amp; solo; default 10)</label>
+                    <label>Minimum stake per hand (applies to solo &amp; multi; default 10)</label>
                     <input type="number" min="1"
                            th:value="${overview.config['BLACKJACK_MIN_ANTE']}"
                            placeholder="10"
@@ -388,7 +388,7 @@
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="BLACKJACK_MAX_ANTE">
-                    <label>Maximum ante per hand (multi &amp; solo; default 500)</label>
+                    <label>Maximum stake per hand (applies to solo &amp; multi; default 500)</label>
                     <input type="number" min="1"
                            th:value="${overview.config['BLACKJACK_MAX_ANTE']}"
                            placeholder="500"
@@ -438,6 +438,171 @@
                     <input type="number" min="1" max="10"
                            th:value="${overview.config['BLACKJACK_BJ_PAYOUT_DEN']}"
                            placeholder="2"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="config-section">
+            <summary>Casino stake bounds</summary>
+            <p class="muted mb-2">
+                Per-game min/max stake. No upper ceiling — set max as high as your economy can sustain.
+                Jackpot win probability scales by <code>stake / anchor</code>, so the anchor below stays a
+                stable reference even when stakes go large; bets at or above the anchor roll at the full
+                <code>JACKPOT_WIN_PCT</code> base probability. Blackjack stakes (solo and multi) are tuned
+                in the Blackjack card above via <code>BLACKJACK_MIN_ANTE</code> / <code>BLACKJACK_MAX_ANTE</code>.
+            </p>
+            <div class="config-grid">
+                <div class="config-row" data-key="JACKPOT_STAKE_ANCHOR">
+                    <label>Jackpot stake anchor (reference stake for jackpot probability scaling; default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['JACKPOT_STAKE_ANCHOR']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="DICE_MIN_STAKE">
+                    <label>Dice minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['DICE_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="DICE_MAX_STAKE">
+                    <label>Dice maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['DICE_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="COINFLIP_MIN_STAKE">
+                    <label>Coinflip minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['COINFLIP_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="COINFLIP_MAX_STAKE">
+                    <label>Coinflip maximum stake (default 1000)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['COINFLIP_MAX_STAKE']}"
+                           placeholder="1000"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="SLOTS_MIN_STAKE">
+                    <label>Slots minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['SLOTS_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="SLOTS_MAX_STAKE">
+                    <label>Slots maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['SLOTS_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="HIGHLOW_MIN_STAKE">
+                    <label>Highlow minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['HIGHLOW_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="HIGHLOW_MAX_STAKE">
+                    <label>Highlow maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['HIGHLOW_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BACCARAT_MIN_STAKE">
+                    <label>Baccarat minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['BACCARAT_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="BACCARAT_MAX_STAKE">
+                    <label>Baccarat maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['BACCARAT_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="KENO_MIN_STAKE">
+                    <label>Keno minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['KENO_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="KENO_MAX_STAKE">
+                    <label>Keno maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['KENO_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="SCRATCH_MIN_STAKE">
+                    <label>Scratch minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['SCRATCH_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="SCRATCH_MAX_STAKE">
+                    <label>Scratch maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['SCRATCH_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="HOLDEM_MIN_STAKE">
+                    <label>Casino Hold'em minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['HOLDEM_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="HOLDEM_MAX_STAKE">
+                    <label>Casino Hold'em maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['HOLDEM_MAX_STAKE']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="DUEL_MIN_STAKE">
+                    <label>Duel minimum stake (default 10)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['DUEL_MIN_STAKE']}"
+                           placeholder="10"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="DUEL_MAX_STAKE">
+                    <label>Duel maximum stake (default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['DUEL_MAX_STAKE']}"
+                           placeholder="500"
                            th:disabled="${!isOwner}">
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>

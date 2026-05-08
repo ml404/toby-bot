@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
@@ -38,6 +39,7 @@ class DuelController(
     private val userService: UserService,
     private val jda: JDA,
     private val eventPublisher: ApplicationEventPublisher,
+    private val stakeBounds: StakeBounds,
 ) {
     @GetMapping("/guilds")
     fun guildList(
@@ -77,8 +79,9 @@ class DuelController(
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", balance)
-        model.addAttribute("minStake", DuelService.MIN_STAKE)
-        model.addAttribute("maxStake", DuelService.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.duel(guildId)
+        model.addAttribute("minStake", minStake)
+        model.addAttribute("maxStake", maxStake)
         model.addAttribute("pending", pending)
         model.addAttribute("outgoing", outgoing)
         model.addAttribute("ttlLabel", PendingDuelRegistry.formatTtl(pendingDuelRegistry.ttl))

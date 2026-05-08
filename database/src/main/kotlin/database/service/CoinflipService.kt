@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import database.dto.ConfigDto
 import database.economy.Coinflip
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -71,9 +72,15 @@ class CoinflipService(
         predicted: Coinflip.Side,
         autoTopUp: Boolean = false
     ): FlipOutcome {
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.COINFLIP_MIN_STAKE, guildId, default = Coinflip.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.COINFLIP_MAX_STAKE, guildId, default = Coinflip.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Coinflip.MIN_STAKE, Coinflip.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.COINFLIP,
         )) {
             is TopUpResolution.InvalidStake -> return FlipOutcome.InvalidStake(r.min, r.max)
@@ -92,7 +99,7 @@ class CoinflipService(
         return if (flip.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, Coinflip.MAX_STAKE, random,
+                stake, random,
             )
             FlipOutcome.Win(
                 stake = stake,

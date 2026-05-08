@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -31,6 +32,7 @@ class ScratchController(
     private val scratchService: ScratchService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> ScratchResponse(false, msg) }
@@ -44,8 +46,9 @@ class ScratchController(
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra, template = "scratch"
     ) {
-        addAttribute("minStake", ScratchCard.MIN_STAKE)
-        addAttribute("maxStake", ScratchCard.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.scratch(guildId)
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
         addAttribute("cellCount", ScratchCard.CELL_COUNT)
         addAttribute("matchThreshold", ScratchCard.MATCH_THRESHOLD)
         addAttribute("matchCounts", (ScratchCard.MATCH_THRESHOLD..ScratchCard.CELL_COUNT).toList())

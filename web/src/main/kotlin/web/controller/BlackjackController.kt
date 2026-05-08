@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -69,6 +70,7 @@ class BlackjackController(
     private val userService: UserService,
     private val jackpotService: JackpotService,
     private val jda: JDA,
+    private val stakeBounds: StakeBounds,
 ) {
 
     /**
@@ -113,8 +115,9 @@ class BlackjackController(
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
-        model.addAttribute("minAnte", Blackjack.MULTI_MIN_ANTE)
-        model.addAttribute("maxAnte", Blackjack.MULTI_MAX_ANTE)
+        val (minAnte, maxAnte) = stakeBounds.blackjackSolo(guildId)
+        model.addAttribute("minAnte", minAnte)
+        model.addAttribute("maxAnte", maxAnte)
         model.addAttribute("maxSeats", Blackjack.MULTI_MAX_SEATS)
         model.addAttribute("tables", blackjackWebService.listMultiTables(guildId))
         model.addAttribute("username", user.displayName())
@@ -135,8 +138,9 @@ class BlackjackController(
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
-        model.addAttribute("minStake", Blackjack.MIN_STAKE)
-        model.addAttribute("maxStake", Blackjack.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.blackjackSolo(guildId)
+        model.addAttribute("minStake", minStake)
+        model.addAttribute("maxStake", maxStake)
         model.addAttribute("username", user.displayName())
         model.addAttribute("myDiscordId", discordId.toString())
         "blackjack-solo"

@@ -30,16 +30,15 @@ class HighlowCommand @Autowired constructor(
 
     override val name: String = "highlow"
     override val description: String =
-        "Predict if the next card is higher or lower than the anchor. Bet ${Highlow.MIN_STAKE}-${Highlow.MAX_STAKE} credits."
+        "Predict if the next card is higher or lower. Stake bounds per-guild (default ${Highlow.MIN_STAKE}-${Highlow.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"
     }
 
     override val optionData: List<OptionData> = listOf(
-        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (${Highlow.MIN_STAKE}-${Highlow.MAX_STAKE})", true)
-            .setMinValue(Highlow.MIN_STAKE)
-            .setMaxValue(Highlow.MAX_STAKE)
+        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

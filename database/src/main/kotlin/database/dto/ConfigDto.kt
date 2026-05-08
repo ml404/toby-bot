@@ -119,7 +119,42 @@ class ConfigDto(
         // minigames (coinflip, slots, dice, highlow, scratch, baccarat,
         // keno, solo blackjack, duel). Defends against autoclicker spam.
         // Clamped 0-30 by CasinoCooldownService; 0 disables.
-        CASINO_COOLDOWN_SECONDS("CASINO_COOLDOWN_SECONDS");
+        CASINO_COOLDOWN_SECONDS("CASINO_COOLDOWN_SECONDS"),
+
+        // Per-game min/max stake bounds. Defaults come from each game's
+        // companion-object MIN_STAKE/MAX_STAKE constants when unset, so
+        // guilds that never touch these keys see today's behaviour.
+        // No upper ceiling — admins can raise max arbitrarily; jackpot
+        // probability scaling is anchored to JACKPOT_STAKE_ANCHOR rather
+        // than per-game maxStake so it stays sensible at any cap.
+        DICE_MIN_STAKE("DICE_MIN_STAKE"),
+        DICE_MAX_STAKE("DICE_MAX_STAKE"),
+        COINFLIP_MIN_STAKE("COINFLIP_MIN_STAKE"),
+        COINFLIP_MAX_STAKE("COINFLIP_MAX_STAKE"),
+        SLOTS_MIN_STAKE("SLOTS_MIN_STAKE"),
+        SLOTS_MAX_STAKE("SLOTS_MAX_STAKE"),
+        HIGHLOW_MIN_STAKE("HIGHLOW_MIN_STAKE"),
+        HIGHLOW_MAX_STAKE("HIGHLOW_MAX_STAKE"),
+        BACCARAT_MIN_STAKE("BACCARAT_MIN_STAKE"),
+        BACCARAT_MAX_STAKE("BACCARAT_MAX_STAKE"),
+        KENO_MIN_STAKE("KENO_MIN_STAKE"),
+        KENO_MAX_STAKE("KENO_MAX_STAKE"),
+        SCRATCH_MIN_STAKE("SCRATCH_MIN_STAKE"),
+        SCRATCH_MAX_STAKE("SCRATCH_MAX_STAKE"),
+        // Solo blackjack reuses the existing BLACKJACK_MIN_ANTE /
+        // BLACKJACK_MAX_ANTE keys — solo and multi share a single
+        // configurable stake range.
+        HOLDEM_MIN_STAKE("HOLDEM_MIN_STAKE"),
+        HOLDEM_MAX_STAKE("HOLDEM_MAX_STAKE"),
+        DUEL_MIN_STAKE("DUEL_MIN_STAKE"),
+        DUEL_MAX_STAKE("DUEL_MAX_STAKE"),
+
+        // Reference stake size for jackpot probability scaling. Bets at
+        // or above this anchor roll at the full JACKPOT_WIN_PCT base
+        // probability; smaller bets scale linearly as stake/anchor.
+        // Decoupled from per-game max stake so admins can raise max
+        // freely without shrinking jackpot odds. Default 500.
+        JACKPOT_STAKE_ANCHOR("JACKPOT_STAKE_ANCHOR");
     }
 
     override fun toString(): String {
