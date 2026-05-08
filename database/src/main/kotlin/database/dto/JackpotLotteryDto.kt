@@ -56,7 +56,7 @@ class JackpotLotteryDto(
     var closesAt: Instant = Instant.EPOCH,
 
     @Column(name = "status", nullable = false, length = 16)
-    var status: String = STATUS_OPEN,
+    var status: String = "OPEN",
 ) : Serializable {
 
     companion object {
