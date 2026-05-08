@@ -106,7 +106,7 @@
             if (reason === null) return;
             btn.disabled = true;
             postJson('/moderation/' + guildId + '/kick', {
-                targetDiscordId: Number(memberId),
+                targetDiscordId: memberId,
                 reason: reason || null
             }).then(r => {
                 btn.disabled = false;
@@ -216,7 +216,7 @@
         moveForm.addEventListener('submit', e => {
             e.preventDefault();
             const targetChannelId = moveForm.elements.targetChannelId.value;
-            const memberIds = Array.from(moveForm.elements.memberIds.selectedOptions).map(o => Number(o.value));
+            const memberIds = Array.from(moveForm.elements.memberIds.selectedOptions).map(o => o.value);
             if (!targetChannelId || memberIds.length === 0) {
                 toast('Pick a destination and at least one member.', 'error');
                 return;
@@ -224,7 +224,7 @@
             const submitBtn = moveForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             postJson('/moderation/' + guildId + '/voice/move', {
-                targetChannelId: Number(targetChannelId),
+                targetChannelId: targetChannelId,
                 memberIds: memberIds
             }).then(r => {
                 submitBtn.disabled = false;
@@ -256,7 +256,7 @@
             const submitBtn = pollForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             postJson('/moderation/' + guildId + '/poll', {
-                channelId: Number(channelId),
+                channelId: channelId,
                 question: question,
                 options: options
             }).then(r => {
@@ -324,7 +324,7 @@
             const submitBtn = jackpotRefundForm.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             postJson('/moderation/' + guildId + '/jackpot/refund', {
-                sourceDiscordId: Number(sourceDiscordId),
+                sourceDiscordId: sourceDiscordId,
                 amount: amount
             }).then(r => {
                 submitBtn.disabled = false;

@@ -87,8 +87,6 @@ class JackpotAdminCommand @Autowired constructor(
                 "Refunded **${result.drained}** credits from ${target.asMention} into the jackpot. " +
                     "New pool: **${result.newPool}**. New balance: **${result.newSourceBalance}**."
             ).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            CasinoAdminService.RefundOutcome.UnknownUser ->
-                replyError(event, "${target.asMention} has no record in this guild.", deleteDelay)
             is CasinoAdminService.RefundOutcome.Insufficient ->
                 replyError(
                     event,

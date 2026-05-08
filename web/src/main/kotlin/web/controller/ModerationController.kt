@@ -132,7 +132,9 @@ class ModerationController(
     ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
         user, notSignedInApi
     ) { actor ->
-        val error = moderationWebService.kickMember(actor, guildId, body.targetDiscordId, body.reason)
+        val targetId = body.targetDiscordId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid user id."))
+        val error = moderationWebService.kickMember(actor, guildId, targetId, body.reason)
         if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
@@ -146,7 +148,10 @@ class ModerationController(
     ): ResponseEntity<MoveResponse> = WebGuildAccess.requireSignedInForJson(
         user, { MoveResponse(false, "Not signed in.") }
     ) { actor ->
-        val result = moderationWebService.moveMembers(actor, guildId, body.targetChannelId, body.memberIds)
+        val channelId = body.targetChannelId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(MoveResponse(false, "Invalid channel id."))
+        val memberIds = body.memberIds.mapNotNull { it.toLongOrNull() }
+        val result = moderationWebService.moveMembers(actor, guildId, channelId, memberIds)
         if (result.error != null) {
             ResponseEntity.badRequest().body(MoveResponse(false, result.error, result.moved, result.skipped))
         } else {
@@ -197,7 +202,11 @@ class ModerationController(
     ): ResponseEntity<JackpotAdminResponse> = WebGuildAccess.requireSignedInForJson(
         user, { JackpotAdminResponse(false, "Not signed in.") }
     ) { actor ->
-        val result = moderationWebService.refundJackpotFromUser(actor, guildId, body.sourceDiscordId, body.amount)
+        val sourceId = body.sourceDiscordId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(
+                JackpotAdminResponse(false, "Invalid user id.")
+            )
+        val result = moderationWebService.refundJackpotFromUser(actor, guildId, sourceId, body.amount)
         if (result.error != null) {
             ResponseEntity.badRequest().body(
                 JackpotAdminResponse(false, result.error, drained = result.drained, newPool = result.newPool, newSourceBalance = result.newSourceBalance)
@@ -218,7 +227,9 @@ class ModerationController(
     ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
         user, notSignedInApi
     ) { actor ->
-        val error = moderationWebService.createPoll(actor, guildId, body.channelId, body.question, body.options)
+        val channelId = body.channelId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid channel id."))
+        val error = moderationWebService.createPoll(actor, guildId, channelId, body.question, body.options)
         if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
         else ResponseEntity.ok(ApiResult(true, null))
     }
@@ -229,10 +240,10 @@ class ModerationController(
 data class PermissionRequest(val permission: String = "")
 data class SocialCreditRequest(val delta: Long = 0)
 data class ConfigRequest(val key: String = "", val value: String = "")
-data class KickRequest(val targetDiscordId: Long = 0, val reason: String? = null)
-data class MoveRequest(val targetChannelId: Long = 0, val memberIds: List<Long> = emptyList())
+data class KickRequest(val targetDiscordId: String = "", val reason: String? = null)
+data class MoveRequest(val targetChannelId: String = "", val memberIds: List<String> = emptyList())
 data class MuteRequest(val mute: Boolean = true)
-data class PollRequest(val channelId: Long = 0, val question: String = "", val options: List<String> = emptyList())
+data class PollRequest(val channelId: String = "", val question: String = "", val options: List<String> = emptyList())
 
 data class MoveResponse(
     val ok: Boolean,
@@ -249,7 +260,7 @@ data class MuteResponse(
 )
 
 data class JackpotRefundRequest(
-    val sourceDiscordId: Long = 0L,
+    val sourceDiscordId: String = "",
     val amount: Long = 0L,
 )
 

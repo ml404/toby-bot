@@ -296,8 +296,6 @@ class ModerationWebService(
                 )
                 RefundJackpotResult(null, outcome.drained, outcome.newPool, outcome.newSourceBalance)
             }
-            CasinoAdminService.RefundOutcome.UnknownUser ->
-                RefundJackpotResult("Source user has no record in this server.", 0L, jackpotService.getPool(guildId), 0L)
             is CasinoAdminService.RefundOutcome.Insufficient ->
                 RefundJackpotResult(
                     "Source user has only ${outcome.have} credits, can't refund ${outcome.needed}.",
