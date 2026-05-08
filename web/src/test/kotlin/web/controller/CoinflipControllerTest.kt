@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import web.casino.CasinoPageContext
+import web.casino.StakeBounds
 import web.service.EconomyWebService
 
 class CoinflipControllerTest {
@@ -22,6 +23,7 @@ class CoinflipControllerTest {
     private lateinit var coinflipService: CoinflipService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var pageContext: CasinoPageContext
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: CoinflipController
 
@@ -30,12 +32,13 @@ class CoinflipControllerTest {
         coinflipService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         pageContext = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = CoinflipController(coinflipService, economyWebService, pageContext)
+        controller = CoinflipController(coinflipService, economyWebService, pageContext, stakeBounds)
     }
 
     @Test

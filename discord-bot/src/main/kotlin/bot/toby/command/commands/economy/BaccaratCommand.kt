@@ -32,16 +32,15 @@ class BaccaratCommand @Autowired constructor(
 
     override val name: String = "baccarat"
     override val description: String =
-        "Pick Player, Banker, or Tie — both hands deal automatically. Bet ${Baccarat.MIN_STAKE}-${Baccarat.MAX_STAKE} credits."
+        "Pick Player, Banker, or Tie — both hands deal automatically. Stake bounds are per-guild (default ${Baccarat.MIN_STAKE}-${Baccarat.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"
     }
 
     override val optionData: List<OptionData> = listOf(
-        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (${Baccarat.MIN_STAKE}-${Baccarat.MAX_STAKE})", true)
-            .setMinValue(Baccarat.MIN_STAKE)
-            .setMaxValue(Baccarat.MAX_STAKE)
+        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

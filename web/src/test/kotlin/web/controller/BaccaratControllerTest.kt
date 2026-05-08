@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import web.casino.CasinoPageContext
+import web.casino.StakeBounds
 import web.service.EconomyWebService
 
 class BaccaratControllerTest {
@@ -26,6 +27,7 @@ class BaccaratControllerTest {
     private lateinit var baccaratService: BaccaratService
     private lateinit var economyWebService: EconomyWebService
     private lateinit var pageContext: CasinoPageContext
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: BaccaratController
 
@@ -34,12 +36,13 @@ class BaccaratControllerTest {
         baccaratService = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         pageContext = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
-        controller = BaccaratController(baccaratService, economyWebService, pageContext)
+        controller = BaccaratController(baccaratService, economyWebService, pageContext, stakeBounds)
     }
 
     private fun playerCards() = listOf(Card(Rank.FIVE, Suit.SPADES), Card(Rank.THREE, Suit.HEARTS))

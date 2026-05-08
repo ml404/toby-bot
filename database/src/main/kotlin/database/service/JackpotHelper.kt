@@ -37,6 +37,15 @@ internal object JackpotHelper {
     const val DEFAULT_WIN_PROBABILITY: Double = 0.01
 
     /**
+     * Default reference stake size for jackpot probability scaling
+     * when `JACKPOT_STAKE_ANCHOR` is unset. Bets at or above this value
+     * roll at the full base probability; smaller bets scale linearly.
+     * Matches the historical hardcoded MAX_STAKE on most minigames so
+     * behaviour is unchanged out of the box.
+     */
+    const val DEFAULT_STAKE_ANCHOR: Long = 500L
+
+    /**
      * Hard cap on the configurable win probability. 50 % keeps the
      * "growing pool" tension meaningful — without it an admin could
      * empty the pool on virtually every win.
@@ -66,11 +75,14 @@ internal object JackpotHelper {
      * is per-guild configurable via `JACKPOT_WIN_PCT`; defaults to
      * [DEFAULT_WIN_PROBABILITY].
      *
-     * The base probability is scaled linearly by `stake / maxStake`, so
-     * a min-wager autoclicker can't farm the pool — a 10/1000 coinflip
-     * rolls at 0.01 % even when the configured base is 1 %. Clamps the
-     * scale to [0,1] defensively in case a caller ever passes
-     * stake > maxStake.
+     * The base probability is scaled linearly by `stake / anchor`,
+     * where `anchor` is the per-guild `JACKPOT_STAKE_ANCHOR` config
+     * (default [DEFAULT_STAKE_ANCHOR]). A min-wager autoclicker can't
+     * farm the pool — a 10-credit play against a 500 anchor rolls at
+     * 0.02 % even when the configured base is 1 %. Bets at or above
+     * the anchor cap at full base probability. Decoupled from each
+     * game's max stake so admins can raise stakes arbitrarily without
+     * shrinking jackpot odds.
      */
     fun rollOnWin(
         jackpotService: JackpotService,
@@ -79,12 +91,11 @@ internal object JackpotHelper {
         user: UserDto,
         guildId: Long,
         stake: Long,
-        maxStake: Long,
         random: Random
     ): Long {
         val baseProbability = winProbability(configService, guildId)
-        val scale = if (maxStake <= 0L) 0.0
-            else (stake.toDouble() / maxStake.toDouble()).coerceIn(0.0, 1.0)
+        val anchor = stakeAnchor(configService, guildId)
+        val scale = (stake.toDouble() / anchor.toDouble()).coerceIn(0.0, 1.0)
         val effective = baseProbability * scale
         if (random.nextDouble() >= effective) return 0L
         val won = jackpotService.awardJackpot(guildId)
@@ -92,6 +103,20 @@ internal object JackpotHelper {
         user.socialCredit = (user.socialCredit ?: 0L) + won
         userService.updateUser(user)
         return won
+    }
+
+    /**
+     * Live jackpot stake anchor for [guildId] — admin-set whole-number
+     * credits parsed from the `JACKPOT_STAKE_ANCHOR` config entry.
+     * Returns [DEFAULT_STAKE_ANCHOR] when unset or unparseable; coerces
+     * `>= 1L` so a zero never reaches the divisor.
+     */
+    fun stakeAnchor(configService: ConfigService, guildId: Long): Long {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+            guildId.toString()
+        )
+        return cfg?.value?.toLongOrNull()?.coerceAtLeast(1L) ?: DEFAULT_STAKE_ANCHOR
     }
 
     /**

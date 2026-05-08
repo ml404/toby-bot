@@ -38,9 +38,8 @@ class CasinoHoldemCommand @Autowired constructor(
 
     override val optionData: List<OptionData> = listOf(
         OptionData(OptionType.INTEGER, OPT_STAKE,
-            "Credits to ante (${CasinoHoldem.MIN_STAKE}-${CasinoHoldem.MAX_STAKE})", true)
-            .setMinValue(CasinoHoldem.MIN_STAKE)
-            .setMaxValue(CasinoHoldem.MAX_STAKE),
+            "Credits to ante (per-guild bounds; service rejects out-of-range; default ${CasinoHoldem.MIN_STAKE}-${CasinoHoldem.MAX_STAKE})", true)
+            .setMinValue(1L),
         OptionData(OptionType.BOOLEAN, OPT_AUTO_TOPUP,
             "Sell TOBY at market to cover any credit shortfall", false),
     )

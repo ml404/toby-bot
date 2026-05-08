@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -39,6 +40,7 @@ class SlotsController(
     private val slotsService: SlotsService,
     private val economyWebService: EconomyWebService,
     private val pageContext: CasinoPageContext,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> SpinResponse(false, msg) }
@@ -53,8 +55,9 @@ class SlotsController(
         user, guildId, economyWebService, model, ra,
         template = "slots", lobbyPath = "/leaderboards"
     ) {
-        addAttribute("minStake", SlotMachine.MIN_STAKE)
-        addAttribute("maxStake", SlotMachine.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.slots(guildId)
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
         addAttribute("payoutTable", payoutRows())
     }
 

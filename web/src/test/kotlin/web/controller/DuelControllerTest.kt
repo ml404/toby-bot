@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.oauth2.core.user.OAuth2User
+import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
@@ -33,6 +34,7 @@ class DuelControllerTest {
     private lateinit var userService: UserService
     private lateinit var jda: JDA
     private lateinit var eventPublisher: ApplicationEventPublisher
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: DuelController
 
@@ -45,6 +47,7 @@ class DuelControllerTest {
         userService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -53,7 +56,7 @@ class DuelControllerTest {
         every { economyWebService.isMember(opponentId, guildId) } returns true
         controller = DuelController(
             duelService, duelWebService, pendingDuelRegistry,
-            economyWebService, userService, jda, eventPublisher
+            economyWebService, userService, jda, eventPublisher, stakeBounds
         )
     }
 

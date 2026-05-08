@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import database.dto.ConfigDto
 import database.economy.Highlow
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -108,9 +109,15 @@ class HighlowService(
         anchor: Int?,
         autoTopUp: Boolean
     ): PlayOutcome {
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.HIGHLOW_MIN_STAKE, guildId, default = Highlow.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.HIGHLOW_MAX_STAKE, guildId, default = Highlow.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.HIGHLOW,
         )) {
             is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
@@ -133,7 +140,7 @@ class HighlowService(
         return if (hand.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, Highlow.MAX_STAKE, random,
+                stake, random,
             )
             PlayOutcome.Win(
                 stake = stake,

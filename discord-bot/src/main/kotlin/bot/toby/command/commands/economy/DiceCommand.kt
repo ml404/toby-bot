@@ -24,7 +24,7 @@ class DiceCommand @Autowired constructor(
 
     override val name: String = "dice"
     override val description: String =
-        "Pick a number 1-6, roll a die. Bet ${Dice.MIN_STAKE}-${Dice.MAX_STAKE} credits."
+        "Pick a number 1-6, roll a die. Stake bounds are per-guild (default ${Dice.MIN_STAKE}-${Dice.MAX_STAKE})."
 
     companion object {
         private const val OPT_PREDICTION = "prediction"
@@ -39,9 +39,8 @@ class DiceCommand @Autowired constructor(
         OptionData(OptionType.INTEGER, OPT_PREDICTION, "Number to predict (1-6)", true)
             .setMinValue(1L)
             .setMaxValue(Dice.DEFAULT_SIDES.toLong()),
-        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (10-500)", true)
-            .setMinValue(Dice.MIN_STAKE)
-            .setMaxValue(Dice.MAX_STAKE)
+        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

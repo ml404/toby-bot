@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import database.dto.ConfigDto
 import database.dto.UserDto
 import database.poker.CasinoHoldem
 import database.poker.CasinoHoldemTable
@@ -274,7 +275,7 @@ class CasinoHoldemService @Autowired constructor(
             CasinoHoldem.AnteResult.WIN ->
                 jackpotPayout += JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, user, guildId,
-                    table.stake, CasinoHoldem.MAX_STAKE, random,
+                    table.stake, random,
                 )
             CasinoHoldem.AnteResult.LOSE ->
                 lossTribute += JackpotHelper.divertOnLoss(
@@ -293,7 +294,7 @@ class CasinoHoldemService @Autowired constructor(
             CasinoHoldem.CallResult.WIN_OTHER ->
                 jackpotPayout += JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, user, guildId,
-                    callStake, CasinoHoldem.MAX_STAKE * 2L, random,
+                    callStake, random,
                 )
             CasinoHoldem.CallResult.LOSE ->
                 lossTribute += JackpotHelper.divertOnLoss(
@@ -395,9 +396,15 @@ class CasinoHoldemService @Autowired constructor(
         stake: Long,
         autoTopUp: Boolean,
     ): TopUpResolution {
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.HOLDEM_MIN_STAKE, guildId, default = CasinoHoldem.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.HOLDEM_MAX_STAKE, guildId, default = CasinoHoldem.MAX_STAKE, min = minStake
+        )
         val check = WagerHelper.checkAndLock(
             userService, discordId, guildId, stake,
-            CasinoHoldem.MIN_STAKE, CasinoHoldem.MAX_STAKE
+            minStake, maxStake
         )
         return when (check) {
             is BalanceCheck.InvalidStake -> TopUpResolution.InvalidStake(check.min, check.max)

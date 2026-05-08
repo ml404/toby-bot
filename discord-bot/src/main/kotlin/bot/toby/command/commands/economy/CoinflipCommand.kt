@@ -25,7 +25,7 @@ class CoinflipCommand @Autowired constructor(
 
     override val name: String = "coinflip"
     override val description: String =
-        "Flip a coin for double-or-nothing. Bet ${Coinflip.MIN_STAKE}-${Coinflip.MAX_STAKE} credits."
+        "Flip a coin for double-or-nothing. Stake bounds are per-guild (default ${Coinflip.MIN_STAKE}-${Coinflip.MAX_STAKE})."
 
     companion object {
         private const val OPT_SIDE = "side"
@@ -39,9 +39,8 @@ class CoinflipCommand @Autowired constructor(
         OptionData(OptionType.STRING, OPT_SIDE, "Heads or tails", true)
             .addChoice("Heads", SIDE_HEADS)
             .addChoice("Tails", SIDE_TAILS),
-        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (10–1000)", true)
-            .setMinValue(Coinflip.MIN_STAKE)
-            .setMaxValue(Coinflip.MAX_STAKE)
+        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

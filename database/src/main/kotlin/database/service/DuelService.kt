@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.economy.Coinflip
 import database.persistence.DuelLogPersistence
@@ -79,8 +80,14 @@ class DuelService @Autowired constructor(
         guildId: Long,
         stake: Long,
     ): StartOutcome {
-        if (stake < MIN_STAKE || stake > MAX_STAKE) {
-            return StartOutcome.InvalidStake(MIN_STAKE, MAX_STAKE)
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.DUEL_MIN_STAKE, guildId, default = MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.DUEL_MAX_STAKE, guildId, default = MAX_STAKE, min = minStake
+        )
+        if (stake < minStake || stake > maxStake) {
+            return StartOutcome.InvalidStake(minStake, maxStake)
         }
         if (initiatorDiscordId == opponentDiscordId) {
             return StartOutcome.InvalidOpponent(StartOutcome.InvalidOpponent.Reason.SELF)

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.ConcurrentModel
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
+import web.casino.StakeBounds
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
 
@@ -39,6 +40,7 @@ class BlackjackControllerTest {
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
     private lateinit var jda: JDA
+    private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: BlackjackController
 
@@ -51,6 +53,9 @@ class BlackjackControllerTest {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
+        stakeBounds = mockk(relaxed = true) {
+            every { blackjackSolo(guildId) } returns (10L to 500L)
+        }
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -58,7 +63,7 @@ class BlackjackControllerTest {
         every { economyWebService.isMember(discordId, guildId) } returns true
         controller = BlackjackController(
             blackjackService, blackjackWebService, tableRegistry,
-            economyWebService, userService, jackpotService, jda,
+            economyWebService, userService, jackpotService, jda, stakeBounds,
         )
     }
 

@@ -29,7 +29,7 @@ class KenoCommand @Autowired constructor(
     override val name: String = "keno"
     override val description: String =
         "Pick ${Keno.MIN_SPOTS}-${Keno.MAX_SPOTS} numbers from 1-${Keno.POOL_SIZE}; bot draws ${Keno.DRAWS}. " +
-            "Bet ${Keno.MIN_STAKE}-${Keno.MAX_STAKE} credits."
+            "Stake bounds are per-guild (default ${Keno.MIN_STAKE}-${Keno.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"
@@ -42,10 +42,9 @@ class KenoCommand @Autowired constructor(
     override val optionData: List<OptionData> = listOf(
         OptionData(
             OptionType.INTEGER, OPT_STAKE,
-            "Credits to wager (${Keno.MIN_STAKE}-${Keno.MAX_STAKE})", true
+            "Credits to wager (per-guild bounds; service rejects out-of-range)", true
         )
-            .setMinValue(Keno.MIN_STAKE)
-            .setMaxValue(Keno.MAX_STAKE),
+            .setMinValue(1L),
         OptionData(
             OptionType.INTEGER, OPT_SPOTS,
             "How many numbers to pick (${Keno.MIN_SPOTS}-${Keno.MAX_SPOTS}, default $DEFAULT_SPOTS)", false

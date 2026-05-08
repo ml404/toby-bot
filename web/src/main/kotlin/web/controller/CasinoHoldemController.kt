@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
 import web.casino.CasinoResponseLike
+import web.casino.StakeBounds
 import web.service.CasinoHoldemWebService
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -56,6 +57,7 @@ class CasinoHoldemController(
     private val userService: UserService,
     private val jackpotService: JackpotService,
     private val jda: JDA,
+    private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> CasinoHoldemActionResponse(ok = false, error = msg) }
@@ -94,8 +96,9 @@ class CasinoHoldemController(
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
-        model.addAttribute("minStake", CasinoHoldem.MIN_STAKE)
-        model.addAttribute("maxStake", CasinoHoldem.MAX_STAKE)
+        val (minStake, maxStake) = stakeBounds.casinoHoldem(guildId)
+        model.addAttribute("minStake", minStake)
+        model.addAttribute("maxStake", maxStake)
         model.addAttribute("callMultiple", CasinoHoldem.CALL_MULTIPLE)
         model.addAttribute("username", user.displayName())
         model.addAttribute("myDiscordId", discordId.toString())

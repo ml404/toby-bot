@@ -3,6 +3,7 @@ package database.service
 import common.casino.CasinoCommonFailure
 import database.card.Card
 import database.card.Deck
+import database.dto.ConfigDto
 import database.economy.Baccarat
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -109,9 +110,15 @@ class BaccaratService(
         side: Baccarat.Side,
         autoTopUp: Boolean = false
     ): PlayOutcome {
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.BACCARAT_MIN_STAKE, guildId, default = Baccarat.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.BACCARAT_MAX_STAKE, guildId, default = Baccarat.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Baccarat.MIN_STAKE, Baccarat.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.BACCARAT,
         )) {
             is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
@@ -131,7 +138,7 @@ class BaccaratService(
             hand.isWin -> {
                 val jackpot = JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, resolved.user, guildId,
-                    stake, Baccarat.MAX_STAKE, random,
+                    stake, random,
                 )
                 PlayOutcome.Win(
                     stake = stake,

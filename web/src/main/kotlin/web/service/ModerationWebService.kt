@@ -410,7 +410,26 @@ class ModerationWebService(
                 n.toString()
             }
             ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
-            ConfigDto.Configurations.BLACKJACK_MAX_ANTE -> {
+            ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
+            ConfigDto.Configurations.DICE_MIN_STAKE,
+            ConfigDto.Configurations.DICE_MAX_STAKE,
+            ConfigDto.Configurations.COINFLIP_MIN_STAKE,
+            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
+            ConfigDto.Configurations.SLOTS_MIN_STAKE,
+            ConfigDto.Configurations.SLOTS_MAX_STAKE,
+            ConfigDto.Configurations.HIGHLOW_MIN_STAKE,
+            ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
+            ConfigDto.Configurations.BACCARAT_MIN_STAKE,
+            ConfigDto.Configurations.BACCARAT_MAX_STAKE,
+            ConfigDto.Configurations.KENO_MIN_STAKE,
+            ConfigDto.Configurations.KENO_MAX_STAKE,
+            ConfigDto.Configurations.SCRATCH_MIN_STAKE,
+            ConfigDto.Configurations.SCRATCH_MAX_STAKE,
+            ConfigDto.Configurations.HOLDEM_MIN_STAKE,
+            ConfigDto.Configurations.HOLDEM_MAX_STAKE,
+            ConfigDto.Configurations.DUEL_MIN_STAKE,
+            ConfigDto.Configurations.DUEL_MAX_STAKE,
+            ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
                 if (n < 1L) return "Value must be at least 1 credit."

@@ -26,7 +26,7 @@ class ScratchCommand @Autowired constructor(
     override val name: String = "scratch"
     override val description: String =
         "Buy a ${ScratchCard.CELL_COUNT}-cell scratchcard. Match ${ScratchCard.MATCH_THRESHOLD}+ of any symbol. " +
-            "Bet ${ScratchCard.MIN_STAKE}-${ScratchCard.MAX_STAKE} credits."
+            "Stake bounds are per-guild (default ${ScratchCard.MIN_STAKE}-${ScratchCard.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"
@@ -34,9 +34,8 @@ class ScratchCommand @Autowired constructor(
     }
 
     override val optionData: List<OptionData> = listOf(
-        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (10-500)", true)
-            .setMinValue(ScratchCard.MIN_STAKE)
-            .setMaxValue(ScratchCard.MAX_STAKE)
+        OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

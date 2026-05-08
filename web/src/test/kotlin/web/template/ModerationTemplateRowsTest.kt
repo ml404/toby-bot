@@ -91,6 +91,50 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
+    fun `moderation template surfaces every per-game stake bound and the jackpot anchor as editable rows`() {
+        // Stake bounds and the jackpot scaling anchor live in their own
+        // "Casino stake bounds" card. Without this presence test, a refactor
+        // that drops or renames a row silently kills admin access to that
+        // dimension (and the service-side config quietly falls back to the
+        // hardcoded default).
+        val keys = listOf(
+            ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR,
+            ConfigDto.Configurations.DICE_MIN_STAKE,
+            ConfigDto.Configurations.DICE_MAX_STAKE,
+            ConfigDto.Configurations.COINFLIP_MIN_STAKE,
+            ConfigDto.Configurations.COINFLIP_MAX_STAKE,
+            ConfigDto.Configurations.SLOTS_MIN_STAKE,
+            ConfigDto.Configurations.SLOTS_MAX_STAKE,
+            ConfigDto.Configurations.HIGHLOW_MIN_STAKE,
+            ConfigDto.Configurations.HIGHLOW_MAX_STAKE,
+            ConfigDto.Configurations.BACCARAT_MIN_STAKE,
+            ConfigDto.Configurations.BACCARAT_MAX_STAKE,
+            ConfigDto.Configurations.KENO_MIN_STAKE,
+            ConfigDto.Configurations.KENO_MAX_STAKE,
+            ConfigDto.Configurations.SCRATCH_MIN_STAKE,
+            ConfigDto.Configurations.SCRATCH_MAX_STAKE,
+            ConfigDto.Configurations.HOLDEM_MIN_STAKE,
+            ConfigDto.Configurations.HOLDEM_MAX_STAKE,
+            ConfigDto.Configurations.DUEL_MIN_STAKE,
+            ConfigDto.Configurations.DUEL_MAX_STAKE,
+        )
+        for (key in keys) {
+            assertTrue(
+                html.contains("data-key=\"${key.name}\""),
+                "moderation.html should have a config-row for ${key.name}"
+            )
+        }
+    }
+
+    @Test
+    fun `casino stake bounds section has its own collapsed details block`() {
+        assertTrue(
+            html.contains("<summary>Casino stake bounds</summary>"),
+            "expected a <details><summary>Casino stake bounds</summary> wrapper around the per-game stake rows"
+        )
+    }
+
+    @Test
     fun `every percent config row carries a visible suffix marker`() {
         // Admins editing a percent config used to see a bare number input
         // with no unit indicator. Each *_PCT row now wraps the input in

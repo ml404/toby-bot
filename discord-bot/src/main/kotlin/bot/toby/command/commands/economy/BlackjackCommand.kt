@@ -60,16 +60,14 @@ class BlackjackCommand @Autowired constructor(
     override val subCommands: List<SubcommandData> = listOf(
         SubcommandData(SUB_SOLO, "Play one hand of blackjack against the dealer.")
             .addOptions(
-                OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (${Blackjack.MIN_STAKE}-${Blackjack.MAX_STAKE})", true)
-                    .setMinValue(Blackjack.MIN_STAKE)
-                    .setMaxValue(Blackjack.MAX_STAKE),
+                OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
+                    .setMinValue(1L),
                 OptionData(OptionType.BOOLEAN, OPT_AUTO_TOPUP, "Sell TOBY at market to cover any credit shortfall", false)
             ),
         SubcommandData(SUB_CREATE, "Create a multiplayer blackjack table and seat yourself.")
             .addOptions(
-                OptionData(OptionType.INTEGER, OPT_ANTE, "Per-hand ante (${Blackjack.MULTI_MIN_ANTE}-${Blackjack.MULTI_MAX_ANTE})", true)
-                    .setMinValue(Blackjack.MULTI_MIN_ANTE)
-                    .setMaxValue(Blackjack.MULTI_MAX_ANTE),
+                OptionData(OptionType.INTEGER, OPT_ANTE, "Per-hand ante (per-guild bounds; service rejects out-of-range)", true)
+                    .setMinValue(1L),
                 OptionData(OptionType.BOOLEAN, OPT_AUTO_TOPUP, "Sell TOBY at market to cover any credit shortfall", false)
             ),
         SubcommandData(SUB_JOIN, "Join an existing blackjack table at its ante.")

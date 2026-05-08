@@ -35,7 +35,7 @@ class DuelCommand @Autowired constructor(
 
     override val name: String = "duel"
     override val description: String =
-        "Challenge another user to a 50/50 duel. Stake ${DuelService.MIN_STAKE}-${DuelService.MAX_STAKE} credits."
+        "Challenge another user to a 50/50 duel. Stake bounds are per-guild (default ${DuelService.MIN_STAKE}-${DuelService.MAX_STAKE})."
 
     companion object {
         private const val OPT_USER = "user"
@@ -47,11 +47,10 @@ class DuelCommand @Autowired constructor(
         OptionData(
             OptionType.INTEGER,
             OPT_STAKE,
-            "Credits to wager each (${DuelService.MIN_STAKE}-${DuelService.MAX_STAKE})",
+            "Credits to wager each (per-guild bounds; service rejects out-of-range)",
             true
         )
-            .setMinValue(DuelService.MIN_STAKE)
-            .setMaxValue(DuelService.MAX_STAKE)
+            .setMinValue(1L)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {

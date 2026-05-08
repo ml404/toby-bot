@@ -112,6 +112,50 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.CASINO_COOLDOWN_SECONDS,
                     gameLabel = "Casino", label = "cooldown seconds", range = 0..30,
                 )
+                // Per-game stake bounds + jackpot scaling anchor. Not
+                // registered as /setconfig OptionData because Discord caps
+                // the command at 25 options and these are better grouped
+                // in the /moderation web tab. Dispatch branches are kept
+                // exhaustive in case the option is registered manually
+                // (e.g. by direct API invocation).
+                ConfigDto.Configurations.DICE_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.DICE_MIN_STAKE, gameLabel = "Dice", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.DICE_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.DICE_MAX_STAKE, gameLabel = "Dice", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.COINFLIP_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.COINFLIP_MIN_STAKE, gameLabel = "Coinflip", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.COINFLIP_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.COINFLIP_MAX_STAKE, gameLabel = "Coinflip", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.SLOTS_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.SLOTS_MIN_STAKE, gameLabel = "Slots", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.SLOTS_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.SLOTS_MAX_STAKE, gameLabel = "Slots", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.HIGHLOW_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.HIGHLOW_MIN_STAKE, gameLabel = "Highlow", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.HIGHLOW_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.HIGHLOW_MAX_STAKE, gameLabel = "Highlow", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.BACCARAT_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BACCARAT_MIN_STAKE, gameLabel = "Baccarat", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.BACCARAT_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.BACCARAT_MAX_STAKE, gameLabel = "Baccarat", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.KENO_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.KENO_MIN_STAKE, gameLabel = "Keno", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.KENO_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.KENO_MAX_STAKE, gameLabel = "Keno", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.SCRATCH_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.SCRATCH_MIN_STAKE, gameLabel = "Scratch", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.SCRATCH_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.SCRATCH_MAX_STAKE, gameLabel = "Scratch", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.HOLDEM_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.HOLDEM_MIN_STAKE, gameLabel = "Casino Hold'em", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.HOLDEM_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.HOLDEM_MAX_STAKE, gameLabel = "Casino Hold'em", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.DUEL_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.DUEL_MIN_STAKE, gameLabel = "Duel", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.DUEL_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.DUEL_MAX_STAKE, gameLabel = "Duel", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR, gameLabel = "Jackpot", label = "stake anchor", min = 1L, unit = "credits")
             }
         }
     }
@@ -519,13 +563,13 @@ class SetConfigCommand @Autowired constructor(
             OptionData(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.BLACKJACK_MIN_ANTE.name.lowercase(Locale.getDefault()),
-                "Per-guild minimum blackjack ante (also the solo stake floor). Default 10.",
+                "Per-guild minimum blackjack stake (applies to both solo hands and multi-table antes). Default 10.",
                 false
             ),
             OptionData(
                 OptionType.INTEGER,
                 ConfigDto.Configurations.BLACKJACK_MAX_ANTE.name.lowercase(Locale.getDefault()),
-                "Per-guild maximum blackjack ante (also the solo stake ceiling). Default 500.",
+                "Per-guild maximum blackjack stake (applies to both solo hands and multi-table antes). Default 500.",
                 false
             ),
             OptionData(

@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import database.dto.ConfigDto
 import database.economy.SlotMachine
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -74,9 +75,15 @@ class SlotsService(
     }
 
     fun spin(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): SpinOutcome {
+        val minStake = configService.cfgLong(
+            ConfigDto.Configurations.SLOTS_MIN_STAKE, guildId, default = SlotMachine.MIN_STAKE, min = 1L
+        )
+        val maxStake = configService.cfgLong(
+            ConfigDto.Configurations.SLOTS_MAX_STAKE, guildId, default = SlotMachine.MAX_STAKE, min = minStake
+        )
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE, autoTopUp,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
             cooldownService = cooldownService, game = CasinoGameKey.SLOTS,
         )) {
             is TopUpResolution.InvalidStake -> return SpinOutcome.InvalidStake(r.min, r.max)
@@ -95,7 +102,7 @@ class SlotsService(
         return if (pull.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, SlotMachine.MAX_STAKE, random,
+                stake, random,
             )
             SpinOutcome.Win(
                 stake = stake,
