@@ -220,6 +220,8 @@ class BlackjackController(
             is SoloDealOutcome.InvalidStake -> errors.invalidStake(outcome.min, outcome.max)
             is SoloDealOutcome.InsufficientCredits -> errors.insufficientCredits(outcome.stake, outcome.have)
             is SoloDealOutcome.InsufficientCoinsForTopUp -> errors.insufficientCoinsForTopUp(outcome.needed, outcome.have)
+            is SoloDealOutcome.HandInProgress ->
+                errors.badRequest("Finish your current hand before dealing a new one.")
             SoloDealOutcome.UnknownUser -> errors.unknownUser()
         }
     }

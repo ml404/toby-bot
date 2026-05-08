@@ -331,6 +331,28 @@
 
 .casino-card-glyph.is-dealt {
     animation: casino-deal 280ms ease-out;
+    animation-fill-mode: backwards;
+}
+
+/* Hole-card flip / dealer-draw reveal. Cards that arrive *after* the
+   first fresh card in a render get this variant — the hole card flips
+   on the spot, then subsequent draws fan in with the same flip rather
+   than the slide-from-corner used for the initial deal. */
+@keyframes casino-reveal {
+    from {
+        transform: rotateY(90deg) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+.casino-card-glyph.is-dealt.is-revealed {
+    animation: casino-reveal 320ms ease-out;
+    animation-fill-mode: backwards;
+    backface-visibility: hidden;
 }
 
 /* ------------------------------------------------------------------- */
@@ -437,7 +459,8 @@
     .casino-seat.is-active {
         animation: none;
     }
-    .casino-card-glyph.is-dealt {
+    .casino-card-glyph.is-dealt,
+    .casino-card-glyph.is-dealt.is-revealed {
         animation: none;
     }
     .casino-chip,

@@ -67,3 +67,65 @@ describe('CasinoRender.flashWinPayout', () => {
         expect(stacks[0].querySelector('.casino-chip-payout').textContent).toBe('+200');
     });
 });
+
+describe('CasinoRender.renderCards', () => {
+    let containerEl;
+
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="cards"></div>';
+        containerEl = document.getElementById('cards');
+    });
+
+    test('flags freshly arrived cards with .is-dealt and a stagger delay', () => {
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥']);
+        const cards = containerEl.querySelectorAll('.casino-card-glyph');
+        expect(cards.length).toBe(2);
+        // First card animates immediately; second card carries a 90ms stagger.
+        expect(cards[0].classList.contains('is-dealt')).toBe(true);
+        expect(cards[0].style.animationDelay).toBe('0ms');
+        expect(cards[1].classList.contains('is-dealt')).toBe(true);
+        expect(cards[1].style.animationDelay).toBe('90ms');
+    });
+
+    test('does not re-animate cards that were already there last render', () => {
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥']);
+        // Same array on the next poll — no fresh cards.
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥']);
+        const cards = containerEl.querySelectorAll('.casino-card-glyph');
+        expect(cards.length).toBe(2);
+        expect(cards[0].classList.contains('is-dealt')).toBe(false);
+        expect(cards[1].classList.contains('is-dealt')).toBe(false);
+    });
+
+    test('treats a hole-card unmask (?? → real card) as a fresh arrival', () => {
+        // Initial dealer-view: upcard + masked hole card.
+        window.CasinoRender.renderCards(containerEl, ['A♠', '??']);
+        // Resolution flips the hole card to a real value.
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥']);
+        const cards = containerEl.querySelectorAll('.casino-card-glyph');
+        // Index 0 unchanged → no animation. Index 1 is fresh (glyph
+        // changed) → animates with .is-dealt + .is-revealed (subsequent
+        // fresh card flips, not slides in).
+        expect(cards[0].classList.contains('is-dealt')).toBe(false);
+        expect(cards[1].classList.contains('is-dealt')).toBe(true);
+    });
+
+    test('honours an explicit staggerMs override', () => {
+        // Dealer container uses a 400ms stagger so the play-out beats out.
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥', 'Q♣'], { staggerMs: 400 });
+        const cards = containerEl.querySelectorAll('.casino-card-glyph');
+        expect(cards[0].style.animationDelay).toBe('0ms');
+        expect(cards[1].style.animationDelay).toBe('400ms');
+        expect(cards[2].style.animationDelay).toBe('800ms');
+    });
+
+    test('count decrease (fresh deal) re-animates every card', () => {
+        window.CasinoRender.renderCards(containerEl, ['A♠', 'K♥', 'Q♣']);
+        // Next hand: fewer cards → reset baseline.
+        window.CasinoRender.renderCards(containerEl, ['T♦', 'J♥']);
+        const cards = containerEl.querySelectorAll('.casino-card-glyph');
+        expect(cards.length).toBe(2);
+        expect(cards[0].classList.contains('is-dealt')).toBe(true);
+        expect(cards[1].classList.contains('is-dealt')).toBe(true);
+    });
+});

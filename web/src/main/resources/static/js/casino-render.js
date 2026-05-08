@@ -14,21 +14,30 @@
 (function () {
     "use strict";
 
-    // Per-container "previous card count" so the deal animation only fires
-    // on cards that just arrived, not on every 2-second poll re-render.
-    var dealtCounts = new WeakMap();
+    // Per-container card-state cache so the deal animation only fires on
+    // cards that just arrived (or just unmasked), not on every poll
+    // re-render. Tracks each glyph individually instead of just the count
+    // so a `"??"` → real-card transition (the dealer's hole card flipping
+    // at the end of the hand) is recognised as fresh.
+    var dealtCardsCache = new WeakMap();
+    var DEFAULT_STAGGER_MS = 90;
 
-    function renderCards(container, cards) {
+    function renderCards(container, cards, opts) {
         if (!container) return;
-        var prev = dealtCounts.get(container) || 0;
+        var staggerMs = (opts && typeof opts.staggerMs === "number") ? opts.staggerMs : DEFAULT_STAGGER_MS;
+        var prev = dealtCardsCache.get(container) || [];
         var list = cards || [];
         // Card count went DOWN — that's a fresh deal, not an in-place
         // update. Reset so every card animates in.
-        if (list.length < prev) prev = 0;
+        if (list.length < prev.length) prev = [];
         container.innerHTML = "";
-        var firstFreshIndex = prev;
+        // First index that should animate: either an entirely new index, or
+        // an existing index whose glyph just changed (hole-card reveal).
+        var firstFreshIndex = -1;
         for (var i = 0; i < list.length; i++) {
             var c = list[i];
+            var wasFresh = i >= prev.length || prev[i] !== c;
+            if (wasFresh && firstFreshIndex === -1) firstFreshIndex = i;
             var el = document.createElement("span");
             el.className = "casino-card-glyph";
             if (c === "??") {
@@ -40,27 +49,30 @@
                     el.classList.add("is-red");
                 }
             }
-            // Only animate cards that weren't there last render. Stagger
-            // each new card by 90ms so a 2-card initial deal fans in
-            // instead of arriving simultaneously.
-            if (i >= prev) {
+            // Only animate cards that just arrived or just unmasked.
+            // Stagger each fresh card by `staggerMs` so the dealer's
+            // play-out beats out instead of all landing in one frame.
+            if (wasFresh) {
                 el.classList.add("is-dealt");
-                el.style.animationDelay = ((i - firstFreshIndex) * 90) + "ms";
+                if (i > firstFreshIndex) {
+                    el.classList.add("is-revealed");
+                }
+                el.style.animationDelay = ((i - firstFreshIndex) * staggerMs) + "ms";
             }
             container.appendChild(el);
         }
-        // Notify listeners (e.g. sounds module) about how many cards
-        // just landed. Stagger the deal cue once per arriving card so
+        // Notify listeners (e.g. sounds module) about how many cards just
+        // landed/unmasked. Stagger the deal cue once per arriving card so
         // the click matches the visual.
-        var freshCount = Math.max(0, list.length - firstFreshIndex);
-        if (freshCount > 0 && window.CasinoSounds) {
+        if (firstFreshIndex >= 0 && window.CasinoSounds) {
+            var freshCount = list.length - firstFreshIndex;
             for (var k = 0; k < freshCount; k++) {
                 (function (idx) {
-                    setTimeout(function () { window.CasinoSounds.play("deal"); }, idx * 90);
+                    setTimeout(function () { window.CasinoSounds.play("deal"); }, idx * staggerMs);
                 })(k);
             }
         }
-        dealtCounts.set(container, list.length);
+        dealtCardsCache.set(container, list.slice());
     }
 
     function initialOf(name) {

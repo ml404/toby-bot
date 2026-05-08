@@ -119,6 +119,22 @@ internal class BlackjackCommandTest : CommandTest {
     }
 
     @Test
+    fun `solo subcommand surfaces HandInProgress as an inline error embed`() {
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { event.subcommandName } returns "solo"
+        every { event.getOption("stake") } returns intOpt(50L)
+        every { service.dealSolo(discordId, guildId, 50L) } returns
+            BlackjackService.SoloDealOutcome.HandInProgress(tableId = 11L)
+
+        command.handle(DefaultCommandContext(event), user, 5)
+
+        // No play embed / action row when the redeal is rejected; the user
+        // gets the standard error reply path instead.
+        verify(exactly = 1) { service.dealSolo(discordId, guildId, 50L) }
+        verify(exactly = 0) { webhookMessageCreateAction.addComponents(any<ActionRow>()) }
+    }
+
+    @Test
     fun `solo subcommand without a stake never calls the service`() {
         val user = UserDto(discordId = discordId, guildId = guildId)
         every { event.subcommandName } returns "solo"

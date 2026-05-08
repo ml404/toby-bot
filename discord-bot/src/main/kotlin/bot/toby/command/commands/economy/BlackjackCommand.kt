@@ -159,6 +159,9 @@ class BlackjackCommand @Autowired constructor(
             is SoloDealOutcome.InsufficientCoinsForTopUp -> replyFailure(
                 event, WagerCommandFailure.InsufficientCoinsForTopUp(outcome.needed, outcome.have), deleteDelay
             )
+            is SoloDealOutcome.HandInProgress -> replyError(
+                event, "Finish your current hand before dealing a new one.", deleteDelay
+            )
             SoloDealOutcome.UnknownUser -> replyFailure(
                 event, WagerCommandFailure.UnknownUser, deleteDelay
             )

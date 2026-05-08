@@ -28,7 +28,7 @@
             <label for="bj-stake">Stake (credits)</label>
             <input id="bj-stake" name="stake" type="number"
                    th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
-            <button type="submit" class="btn-primary">Deal</button>
+            <button id="bj-deal-button" type="submit" class="btn-primary">Deal</button>
         </form>
         <div class="bj-balance">
             Wallet: <strong id="bj-balance" th:text="${balance}">0</strong> credits
