@@ -299,6 +299,84 @@
     gap: 8px;
 }
 
+/* Casino tab */
+.mod-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-3);
+    max-width: 760px;
+    margin-bottom: var(--space-3);
+}
+.mod-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.mod-card-wide { max-width: 560px; }
+.mod-card h3 {
+    margin: 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.mod-card p { margin: 0; }
+.mod-card .btn,
+.mod-card .btn-danger { align-self: flex-start; }
+.big-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.big-number .muted {
+    font-size: 0.85rem;
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+.jackpot-refund-form {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+.jackpot-refund-form label {
+    display: grid;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.jackpot-refund-form select,
+.jackpot-refund-form input {
+    padding: 6px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font: inherit;
+}
+.jackpot-refund-form select:focus,
+.jackpot-refund-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.jackpot-refund-form button[type="submit"] { justify-self: start; }
+.jackpot-refund-balance {
+    font-size: 0.85rem;
+}
+.jackpot-refund-balance-value {
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 640px) {
     .tab-btn { padding: 8px 10px; font-size: 0.9rem; }
 

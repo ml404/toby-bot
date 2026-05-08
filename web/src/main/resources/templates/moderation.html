@@ -535,21 +535,21 @@
             still drain a contaminated pool or claw an exploit refund
             back into it.
         </p>
-        <div class="mod-card">
-            <div>
+        <div class="mod-card-grid">
+            <div class="mod-card">
                 <h3>Current pool</h3>
                 <p class="big-number">
                     <span id="jackpot-pool" th:text="${jackpotPool}">0</span>
                     <span class="muted">credits</span>
                 </p>
             </div>
+            <div class="mod-card">
+                <h3>Reset jackpot pool</h3>
+                <p class="muted">Zero the pool. The drained amount is logged.</p>
+                <button id="jackpot-reset" type="button" class="btn btn-danger">Reset pool</button>
+            </div>
         </div>
-        <div class="mod-card">
-            <h3>Reset jackpot pool</h3>
-            <p class="muted">Zero the pool. The drained amount is logged.</p>
-            <button id="jackpot-reset" type="button" class="btn btn-warning">Reset pool</button>
-        </div>
-        <div class="mod-card">
+        <div class="mod-card mod-card-wide">
             <h3>Refund from user</h3>
             <p class="muted">
                 Debit a user's social credit by the given amount and
