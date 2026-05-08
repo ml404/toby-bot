@@ -299,7 +299,7 @@ class PokerControllerTest {
         }
         every { jda.getGuildById(guildId) } returns guild
         every { jackpotService.getPool(guildId) } returns 1234L
-        every { jackpotService.winProbabilityPct(guildId) } returns 2.5
+        every { jackpotService.winProbabilityDisplay(guildId) } returns "2.5"
         every { pokerWebService.listGuildTables(guildId) } returns emptyList()
 
         val model = org.springframework.ui.ConcurrentModel()
@@ -309,14 +309,14 @@ class PokerControllerTest {
 
         assertEquals("poker-lobby", view)
         assertEquals(1234L, model.getAttribute("jackpotPool"))
-        assertEquals(2.5, model.getAttribute("jackpotWinPct"))
+        assertEquals("2.5", model.getAttribute("jackpotWinPct"))
     }
 
     @Test
     fun `tablePage wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
         every { pokerWebService.snapshot(tableId, discordId) } returns sampleView()
         every { jackpotService.getPool(guildId) } returns 9876L
-        every { jackpotService.winProbabilityPct(guildId) } returns 5.0
+        every { jackpotService.winProbabilityDisplay(guildId) } returns "5"
 
         val model = org.springframework.ui.ConcurrentModel()
         val view = controller.tablePage(
@@ -326,7 +326,7 @@ class PokerControllerTest {
 
         assertEquals("poker-table", view)
         assertEquals(9876L, model.getAttribute("jackpotPool"))
-        assertEquals(5.0, model.getAttribute("jackpotWinPct"))
+        assertEquals("5", model.getAttribute("jackpotWinPct"))
     }
 
     private fun sampleView(guildId: Long = this.guildId): PokerWebService.TableStateView =

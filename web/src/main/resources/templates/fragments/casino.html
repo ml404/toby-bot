@@ -12,7 +12,7 @@
     <strong th:text="${jackpotPool}">0</strong> credits
     <span class="muted">
         — win any minigame for up to
-        <span th:text="${#numbers.formatDecimal(jackpotWinPct, 1, 2)}">1.00</span>%
+        <span th:text="${jackpotWinPct}">1</span>%
         chance to bank the pool, scaled by your stake ÷ that game's max.
     </span>
 </div>

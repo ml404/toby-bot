@@ -95,7 +95,7 @@ class CasinoHoldemController(
         model.addAttribute("guildName", guild.name)
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
+        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
         val (minStake, maxStake) = stakeBounds.casinoHoldem(guildId)
         model.addAttribute("minStake", minStake)
         model.addAttribute("maxStake", maxStake)

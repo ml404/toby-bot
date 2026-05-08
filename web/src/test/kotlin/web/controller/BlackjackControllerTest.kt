@@ -3,18 +3,18 @@ package web.controller
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.service.BlackjackService
-import database.service.JackpotService
-import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
-import net.dv8tion.jda.api.JDA
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.ConcurrentModel
+import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
+import web.casino.CasinoPageContext
 import web.casino.StakeBounds
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
@@ -22,10 +22,11 @@ import web.service.EconomyWebService
 /**
  * Page-handler regression tests. The JSON endpoints (`/state`, `/deal`,
  * `/action`, …) live in their own integration coverage; this class
- * exists specifically to lock in the model attributes that drive the
- * Thymeleaf templates — the original miss was that `jackpotPool` was
- * never wired through, so the shared `~{fragments/casino :: jackpotBanner}`
- * fragment renders blank on every blackjack page.
+ * exists specifically to lock in that the three GET handlers route
+ * through the shared [CasinoPageContext.populate] — earlier the
+ * controller open-coded its own model wiring and missed updates to
+ * the shared casino banner attributes (`jackpotPool`, `jackpotWinPct`,
+ * `tobyCoins`, …) that every other casino page got automatically.
  */
 class BlackjackControllerTest {
 
@@ -37,9 +38,7 @@ class BlackjackControllerTest {
     private lateinit var blackjackWebService: BlackjackWebService
     private lateinit var tableRegistry: BlackjackTableRegistry
     private lateinit var economyWebService: EconomyWebService
-    private lateinit var userService: UserService
-    private lateinit var jackpotService: JackpotService
-    private lateinit var jda: JDA
+    private lateinit var pageContext: CasinoPageContext
     private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: BlackjackController
@@ -50,9 +49,7 @@ class BlackjackControllerTest {
         blackjackWebService = mockk(relaxed = true)
         tableRegistry = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
-        userService = mockk(relaxed = true)
-        jackpotService = mockk(relaxed = true)
-        jda = mockk(relaxed = true)
+        pageContext = mockk(relaxed = true)
         stakeBounds = mockk(relaxed = true) {
             every { blackjackSolo(guildId) } returns (10L to 500L)
         }
@@ -61,52 +58,61 @@ class BlackjackControllerTest {
             every { getAttribute<String>("username") } returns "tester"
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
+        // Default populate stub: returns a guild and stamps the canonical
+        // casino attributes on the model so per-handler tests can assert
+        // the centralised wiring fires.
+        val guildStub = mockk<Guild>(relaxed = true).also { every { it.name } returns "Test Guild" }
+        every { pageContext.populate(any(), guildId, discordId, user) } answers {
+            val model = arg<Model>(0)
+            model.addAttribute("guildId", guildId.toString())
+            model.addAttribute("guildName", "Test Guild")
+            model.addAttribute("balance", 1L)
+            model.addAttribute("jackpotPool", 1234L)
+            model.addAttribute("jackpotWinPct", "0.0005")
+            model.addAttribute("username", "tester")
+            guildStub
+        }
         controller = BlackjackController(
             blackjackService, blackjackWebService, tableRegistry,
-            economyWebService, userService, jackpotService, jda, stakeBounds,
+            economyWebService, pageContext, stakeBounds,
         )
     }
 
     @Test
-    fun `lobby page wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
-        val guild = mockk<Guild>(relaxed = true).also {
-            every { it.name } returns "Test Guild"
-        }
-        every { jda.getGuildById(guildId) } returns guild
-        every { jackpotService.getPool(guildId) } returns 1234L
-        every { jackpotService.winProbabilityPct(guildId) } returns 2.5
+    fun `lobby page routes through CasinoPageContext for the shared banner attributes`() {
         every { blackjackWebService.listMultiTables(guildId) } returns emptyList()
 
         val model = ConcurrentModel()
         val view = controller.lobby(guildId, user, model, RedirectAttributesModelMap())
 
         assertEquals("blackjack-lobby", view)
+        verify { pageContext.populate(model, guildId, discordId, user) }
+        // Centralised attributes — populated by populate(), proxied here:
         assertEquals(1234L, model.getAttribute("jackpotPool"))
-        assertEquals(2.5, model.getAttribute("jackpotWinPct"))
+        assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
+        // Lobby-specific attributes still get added via the rules lambda:
+        assertEquals(10L, model.getAttribute("minAnte"))
+        assertEquals(500L, model.getAttribute("maxAnte"))
     }
 
     @Test
-    fun `soloPage wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
-        every { jackpotService.getPool(guildId) } returns 5555L
-        every { jackpotService.winProbabilityPct(guildId) } returns 1.0
-
+    fun `soloPage routes through CasinoPageContext for the shared banner attributes`() {
         val model = ConcurrentModel()
         val view = controller.soloPage(guildId, user, model, RedirectAttributesModelMap())
 
         assertEquals("blackjack-solo", view)
-        assertEquals(5555L, model.getAttribute("jackpotPool"))
-        assertEquals(1.0, model.getAttribute("jackpotWinPct"))
+        verify { pageContext.populate(model, guildId, discordId, user) }
+        assertEquals(1234L, model.getAttribute("jackpotPool"))
+        assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
+        assertEquals(10L, model.getAttribute("minStake"))
+        assertEquals(500L, model.getAttribute("maxStake"))
+        assertEquals(discordId.toString(), model.getAttribute("myDiscordId"))
     }
 
     @Test
-    fun `tablePage wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
-        // Snapshot must match the requested guild and be a MULTI table or
-        // the controller short-circuits to redirect — match the production
-        // shape so we exercise the model-attribute branch.
+    fun `tablePage routes through CasinoPageContext for the shared banner attributes`() {
         val snapshot = sampleSnapshot()
         every { blackjackWebService.snapshot(tableId, discordId) } returns snapshot
-        every { jackpotService.getPool(guildId) } returns 9876L
-        every { jackpotService.winProbabilityPct(guildId) } returns 5.0
 
         val model = ConcurrentModel()
         val view = controller.tablePage(
@@ -114,8 +120,12 @@ class BlackjackControllerTest {
         )
 
         assertEquals("blackjack-table", view)
-        assertEquals(9876L, model.getAttribute("jackpotPool"))
-        assertEquals(5.0, model.getAttribute("jackpotWinPct"))
+        verify { pageContext.populate(model, guildId, discordId, user) }
+        assertEquals(1234L, model.getAttribute("jackpotPool"))
+        assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
+        assertEquals(tableId.toString(), model.getAttribute("tableId"))
+        assertEquals(100L, model.getAttribute("ante"))
+        assertEquals(discordId.toString(), model.getAttribute("myDiscordId"))
     }
 
     private fun sampleSnapshot(): BlackjackWebService.TableStateView =

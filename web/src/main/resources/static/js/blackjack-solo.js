@@ -246,6 +246,19 @@
     var dealBusy = false;
     var actionBusy = false;
     var shouldFlash = createFlashDedup();
+    // Cached fragment of the most recent resolution response so the
+    // state-driven renderResult below can render the shared "🎰 JACKPOT!"
+    // win prefix / "+N to jackpot" loss suffix without the state poll
+    // having to carry the per-hand jackpot fields. Keyed by handNumber so
+    // a stale body from a previous hand doesn't bleed onto the next one.
+    var lastResolutionBody = null;
+    function captureResolutionBody(b) {
+        lastResolutionBody = {
+            handNumber: b.handNumber,
+            jackpotPayout: b.jackpotPayout || 0,
+            lossTribute: b.lossTribute || 0,
+        };
+    }
 
     function renderState(state) {
         if (!state) return;
@@ -366,6 +379,19 @@
         // explainer/per-hand lines we appended last time).
         resultEl.textContent = "";
 
+        // Match the cached resolution body to the current hand so a stale
+        // jackpot prefix / loss-tribute suffix from a previous hand never
+        // leaks onto the next. Falls back to no body (plain text) when
+        // the cache hasn't caught up yet — e.g. a state poll arrives
+        // before the deal/action POST resolves.
+        var jackpot = window.TobyJackpot;
+        var body = (jackpot && lastResolutionBody &&
+            lastResolutionBody.handNumber === r.handNumber) ? lastResolutionBody : null;
+        var jackpotPrefixHtml = (body && jackpot)
+            ? jackpot.jackpotPrefixHtml(body.jackpotPayout) : "";
+        var lossTributeSuffixHtml = (body && jackpot)
+            ? jackpot.lossTributeSuffix(body) : "";
+
         // For a split round, seatResults only carries hand 0's outcome —
         // see BlackjackService.settleSolo (firstHandResult). Surface every
         // hand's result so a "push + win" round doesn't read as a pure
@@ -375,6 +401,14 @@
         });
         if (seatPerHand.length > 1) {
             resultEl.className = "bj-result " + dominantResultClass(seatPerHand);
+            // Jackpot prefix at the top of the split block; the seat-level
+            // body.jackpotPayout already aggregates every winning branch.
+            if (jackpotPrefixHtml) {
+                var prefixEl = document.createElement("div");
+                prefixEl.innerHTML = jackpotPrefixHtml;
+                resultEl.appendChild(prefixEl);
+                resultEl.classList.add("bj-result-jackpot");
+            }
             seatPerHand.forEach(function (entry, idx) {
                 var line = document.createElement("div");
                 var info = labelForResult(entry.result);
@@ -383,10 +417,25 @@
                 line.textContent = prefix + info.label + suffix;
                 resultEl.appendChild(line);
             });
+            // Loss-tribute suffix at the bottom — body.lossTribute aggregates
+            // every losing branch.
+            if (lossTributeSuffixHtml) {
+                var tributeEl = document.createElement("div");
+                tributeEl.innerHTML = lossTributeSuffixHtml;
+                resultEl.appendChild(tributeEl);
+            }
         } else {
             var info = labelForResult(seatResult);
-            resultEl.textContent = info.label;
             resultEl.className = "bj-result " + info.cls;
+            if (info.cls === "bj-win" && body) {
+                resultEl.innerHTML = jackpot.renderWinHtml(
+                    resultEl, body, "bj-result-jackpot", info.label
+                );
+            } else if (info.cls === "bj-lose" && body) {
+                resultEl.innerHTML = info.label + lossTributeSuffixHtml;
+            } else {
+                resultEl.textContent = info.label;
+            }
         }
 
         // Post-resolution explainer: if any branch was a split-ace, append
@@ -444,6 +493,10 @@
         // Cancel any deferred banner from the previous hand so a fast
         // re-deal doesn't paint stale "You win." text over the new felt.
         resultDefer.cancel();
+        // Drop the cached jackpot/tribute body too — keying solely on
+        // handNumber leaves a window where the new hand happens to reuse
+        // the same number (e.g. solo-table re-creation resets it to 1).
+        lastResolutionBody = null;
         dealBusy = true;
         if (dealButton) dealButton.disabled = true;
         // POSTs go via TobyApi.postJson so the Spring Security CSRF
@@ -463,6 +516,7 @@
                 // it was charging stake again.
                 window.TobyBalance.update(balanceEl, b.newBalance);
                 if (b.resolved) {
+                    captureResolutionBody(b);
                     refreshState();
                 } else {
                     refreshState();
@@ -493,6 +547,7 @@
                 // balance, but DOUBLE/SPLIT pre-debit additional stake mid-hand
                 // and the player should see that immediately.
                 window.TobyBalance.update(balanceEl, b.newBalance);
+                if (b.resolved) captureResolutionBody(b);
                 refreshState();
             })
             .catch(function () { errorToast("Network error."); })
