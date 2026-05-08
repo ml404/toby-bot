@@ -17,6 +17,7 @@ import bot.toby.command.commands.economy.DiceCommand
 import bot.toby.command.commands.economy.DuelCommand
 import bot.toby.command.commands.economy.HighlowCommand
 import bot.toby.command.commands.economy.KenoCommand
+import bot.toby.command.commands.economy.LotteryCommand
 import bot.toby.command.commands.economy.PokerCommand
 import bot.toby.command.commands.economy.RouletteCommand
 import bot.toby.command.commands.economy.ScratchCommand
@@ -155,12 +156,13 @@ class CommandManagerTest {
             BaccaratCommand::class.java,
             KenoCommand::class.java,
             CasinoHoldemCommand::class.java,
-            RouletteCommand::class.java
+            RouletteCommand::class.java,
+            LotteryCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(60, commandManager.allCommands.size)
-        Assertions.assertEquals(60, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(61, commandManager.allCommands.size)
+        Assertions.assertEquals(61, commandManager.allSlashCommands.size)
     }
 
     @Test
