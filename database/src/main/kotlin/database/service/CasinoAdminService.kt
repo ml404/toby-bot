@@ -23,7 +23,6 @@ class CasinoAdminService(
 
     sealed interface RefundOutcome {
         data class Ok(val drained: Long, val newPool: Long, val newSourceBalance: Long) : RefundOutcome
-        data object UnknownUser : RefundOutcome
         data class Insufficient(val have: Long, val needed: Long) : RefundOutcome
         data class InvalidAmount(val amount: Long) : RefundOutcome
     }
@@ -46,10 +45,9 @@ class CasinoAdminService(
     ): RefundOutcome {
         if (amount <= 0L) return RefundOutcome.InvalidAmount(amount)
         val user = userService.getUserByIdForUpdate(sourceDiscordId, guildId)
-            ?: return RefundOutcome.UnknownUser
-        val balance = user.socialCredit ?: 0L
+        val balance = user?.socialCredit ?: 0L
         if (balance < amount) return RefundOutcome.Insufficient(balance, amount)
-        user.socialCredit = balance - amount
+        user!!.socialCredit = balance - amount
         userService.updateUser(user)
         val newPool = jackpotService.addToPool(guildId, amount)
         return RefundOutcome.Ok(
