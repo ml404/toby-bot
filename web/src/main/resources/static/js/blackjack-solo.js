@@ -6,12 +6,14 @@
     // even though the page-init code below early-returns when the
     // blackjack-solo template isn't present). -----
 
-    function renderCards(container, cards) {
+    var DEALER_REVEAL_STAGGER_MS = 400;
+
+    function renderCards(container, cards, opts) {
         // Delegate to the shared casino renderer so the deal animation only
         // fires on freshly arrived cards (not every poll re-render). Falls
         // back to the legacy text glyphs if the shared module didn't load.
         if (window.CasinoRender) {
-            window.CasinoRender.renderCards(container, cards);
+            window.CasinoRender.renderCards(container, cards, opts);
             return;
         }
         container.innerHTML = "";
@@ -113,6 +115,7 @@
     var guildId = main.dataset.guildId;
 
     var dealForm = document.getElementById("bj-deal");
+    var dealButton = document.getElementById("bj-deal-button");
     var stakeInput = document.getElementById("bj-stake");
     var balanceEl = document.getElementById("bj-balance");
     var tableEl = document.getElementById("bj-table");
@@ -134,7 +137,18 @@
     function renderState(state) {
         if (!state) return;
         tableEl.hidden = false;
-        renderCards(dealerCardsEl, state.dealer);
+        // Lock the Deal button while a hand is in flight. The server enforces
+        // this too (SoloDealOutcome.HandInProgress), but disabling the
+        // control client-side avoids the "I clicked Deal twice and the
+        // wallet went weird" footgun the user reported.
+        if (dealButton) {
+            var inFlight = state.phase === "PLAYER_TURNS" || state.phase === "DEALER_TURN";
+            dealButton.disabled = inFlight;
+        }
+        // Slow the dealer's reveal/play-out so the hole card flips first
+        // and each subsequent draw arrives with a clear beat between
+        // cards, instead of everything popping in on the same frame.
+        renderCards(dealerCardsEl, state.dealer, { staggerMs: DEALER_REVEAL_STAGGER_MS });
         dealerTotalEl.textContent = state.dealer && state.dealer.length
             ? "(" + state.dealerTotalVisible + ")" : "";
 

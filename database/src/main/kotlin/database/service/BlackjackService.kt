@@ -85,6 +85,12 @@ class BlackjackService @Autowired constructor(
         data class InsufficientCredits(val stake: Long, val have: Long) : SoloDealOutcome
         /** [autoTopUp] = true but the player's TOBY can't cover the credit shortfall. */
         data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : SoloDealOutcome
+        /**
+         * Caller already has an in-flight (non-RESOLVED) solo table on this
+         * guild. Reject the redeal so the wallet isn't double-debited and
+         * the previous table isn't orphaned in the registry.
+         */
+        data class HandInProgress(val tableId: Long) : SoloDealOutcome
         data object UnknownUser : SoloDealOutcome
     }
 
@@ -216,6 +222,16 @@ class BlackjackService @Autowired constructor(
         stake: Long,
         autoTopUp: Boolean = false
     ): SoloDealOutcome {
+        // Reject a redeal while the caller still has an in-flight solo
+        // table on this guild — without this guard, hitting the web Deal
+        // form mid-hand would debit the stake again, orphan the previous
+        // table in the registry, and leave the wallet wonky.
+        tableRegistry.listForGuild(guildId).firstOrNull { t ->
+            t.mode == BlackjackTable.Mode.SOLO &&
+                t.phase != BlackjackTable.Phase.RESOLVED &&
+                t.seats.any { it.discordId == discordId }
+        }?.let { return SoloDealOutcome.HandInProgress(it.id) }
+
         val params = readMultiTableParams(guildId)
         val check = WagerHelper.checkAndLock(
             userService, discordId, guildId, stake, params.minAnte, params.maxAnte
@@ -417,6 +433,13 @@ class BlackjackService @Autowired constructor(
         deck: database.card.Deck,
     ) {
         val active = seat.activeHand
+        // Defensive: a stale click + the 2s state poll could land an action
+        // here against an already-terminal slot (e.g. a split branch the
+        // player has finished). The caller's pre-flight covers DOUBLE/SPLIT,
+        // and the per-call lock serialises mutations, but a HIT/STAND from
+        // an out-of-date UI would silently mutate cards on a STANDING /
+        // BUSTED / DOUBLED / BLACKJACK slot otherwise.
+        if (active.status != BlackjackTable.SeatStatus.ACTIVE) return
         when (action) {
             Blackjack.Action.HIT -> {
                 blackjack.hit(active.cards, deck)

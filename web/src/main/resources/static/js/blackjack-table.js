@@ -37,13 +37,15 @@
     // reuse where handNumber alone could collide.
     var lastFlashedKey = null;
 
-    function renderCards(container, cards) {
+    var DEALER_REVEAL_STAGGER_MS = 400;
+
+    function renderCards(container, cards, opts) {
         // Delegate to the shared renderer so the per-container deal animation
         // book-keeping is consistent with poker. The shared renderer applies
         // .casino-card-glyph and the .is-dealt animation only on freshly arrived
         // cards.
         if (window.CasinoRender) {
-            window.CasinoRender.renderCards(container, cards);
+            window.CasinoRender.renderCards(container, cards, opts);
             return;
         }
         // Fallback (loaded out of order) — keep the legacy text-glyph render.
@@ -143,7 +145,10 @@
     function renderState(state) {
         phaseEl.textContent = state.phase;
         handNumberEl.textContent = state.handNumber;
-        renderCards(dealerCardsEl, state.dealer);
+        // Slow the dealer's reveal/play-out so the hole card flips first
+        // and each subsequent draw arrives with a clear beat between
+        // cards, instead of everything popping in on the same frame.
+        renderCards(dealerCardsEl, state.dealer, { staggerMs: DEALER_REVEAL_STAGGER_MS });
         dealerTotalEl.textContent = state.dealer && state.dealer.length
             ? "(" + state.dealerTotalVisible + ")" : "";
         renderSeats(state);
