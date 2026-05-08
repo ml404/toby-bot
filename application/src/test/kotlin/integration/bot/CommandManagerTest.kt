@@ -159,8 +159,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(61, commandManager.allCommands.size)
-        Assertions.assertEquals(61, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(60, commandManager.allCommands.size)
+        Assertions.assertEquals(60, commandManager.allSlashCommands.size)
     }
 
     @Test
