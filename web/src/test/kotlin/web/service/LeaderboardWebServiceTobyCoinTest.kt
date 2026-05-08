@@ -55,6 +55,7 @@ class LeaderboardWebServiceTobyCoinTest {
             titleService = titleService,
             snapshotService = snapshotService,
             membership = GuildMembership(jda),
+            rollupService = mockk(relaxed = true),
         )
     }
 

@@ -39,7 +39,8 @@ class LeaderboardWebServiceTest {
         service = LeaderboardWebService(
             jda, introWebService, moderationWebService, userService, marketService,
             mockk(relaxed = true), mockk(relaxed = true),
-            GuildMembership(jda)
+            GuildMembership(jda),
+            mockk(relaxed = true)
         )
     }
 
