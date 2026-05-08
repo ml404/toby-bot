@@ -723,9 +723,19 @@
             </p>
             <form class="jackpot-refund-form" autocomplete="off">
                 <label>
-                    User Discord ID
-                    <input type="text" name="sourceDiscordId" inputmode="numeric" pattern="[0-9]+" required>
+                    User
+                    <select name="sourceDiscordId" required>
+                        <option value="" disabled selected>Select a member…</option>
+                        <option th:each="m : ${overview.members}"
+                                th:value="${m.id}"
+                                th:attr="data-credit=${m.socialCredit}"
+                                th:text="${m.name} + ' — ' + ${m.socialCredit} + ' credits'">
+                        </option>
+                    </select>
                 </label>
+                <p class="muted jackpot-refund-balance" hidden>
+                    Current balance: <span class="jackpot-refund-balance-value">0</span> credits
+                </p>
                 <label>
                     Amount
                     <input type="number" name="amount" min="1" required>
