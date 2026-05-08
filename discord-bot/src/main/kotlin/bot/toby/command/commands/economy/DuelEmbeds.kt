@@ -108,6 +108,10 @@ internal object DuelEmbeds {
                 "Opponent only has ${outcome.have} credits — they can't cover a ${outcome.needed} stake."
             StartOutcome.UnknownInitiator -> "No user record yet. Try another TobyBot command first."
             StartOutcome.UnknownOpponent -> "Opponent has no user record in this guild yet."
+            is StartOutcome.OnCooldown -> {
+                val seconds = ((outcome.remainingMs + 999L) / 1000L).coerceAtLeast(1L)
+                "Slow down — wait $seconds${if (seconds == 1L) " second" else " seconds"} before duelling again."
+            }
             is StartOutcome.Ok -> "OK" // unreachable
         }
     )

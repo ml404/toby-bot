@@ -65,6 +65,12 @@ internal object JackpotHelper {
      * awarded. Returns `0L` on miss or empty pool. The hit probability
      * is per-guild configurable via `JACKPOT_WIN_PCT`; defaults to
      * [DEFAULT_WIN_PROBABILITY].
+     *
+     * The base probability is scaled linearly by `stake / maxStake`, so
+     * a min-wager autoclicker can't farm the pool — a 10/1000 coinflip
+     * rolls at 0.01 % even when the configured base is 1 %. Clamps the
+     * scale to [0,1] defensively in case a caller ever passes
+     * stake > maxStake.
      */
     fun rollOnWin(
         jackpotService: JackpotService,
@@ -72,10 +78,15 @@ internal object JackpotHelper {
         userService: UserService,
         user: UserDto,
         guildId: Long,
+        stake: Long,
+        maxStake: Long,
         random: Random
     ): Long {
-        val probability = winProbability(configService, guildId)
-        if (random.nextDouble() >= probability) return 0L
+        val baseProbability = winProbability(configService, guildId)
+        val scale = if (maxStake <= 0L) 0.0
+            else (stake.toDouble() / maxStake.toDouble()).coerceIn(0.0, 1.0)
+        val effective = baseProbability * scale
+        if (random.nextDouble() >= effective) return 0L
         val won = jackpotService.awardJackpot(guildId)
         if (won == 0L) return 0L
         user.socialCredit = (user.socialCredit ?: 0L) + won

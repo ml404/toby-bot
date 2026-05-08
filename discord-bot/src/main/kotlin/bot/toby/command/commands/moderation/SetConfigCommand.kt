@@ -107,6 +107,11 @@ class SetConfigCommand @Autowired constructor(
                     label = "blackjack payout denominator", range = 1..10)
                 ConfigDto.Configurations.UBI_DAILY_AMOUNT -> setUbiDailyAmount(event, optionMapping, deleteDelay)
                 ConfigDto.Configurations.DAILY_CREDIT_CAP -> setDailyCreditCap(event, optionMapping, deleteDelay)
+                ConfigDto.Configurations.CASINO_COOLDOWN_SECONDS -> setRangedIntConfig(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.CASINO_COOLDOWN_SECONDS,
+                    gameLabel = "Casino", label = "cooldown seconds", range = 0..30,
+                )
             }
         }
     }
@@ -547,5 +552,8 @@ class SetConfigCommand @Autowired constructor(
                 "Override for the daily social-credit cap that applies to voice/command/intro earnings. Default 90.",
                 false
             )
+            // CASINO_COOLDOWN_SECONDS deliberately not exposed here — JDA caps slash
+            // commands at 25 options. Set it via the /moderation web admin Casino tab,
+            // or by upserting the config row directly.
         )
 }

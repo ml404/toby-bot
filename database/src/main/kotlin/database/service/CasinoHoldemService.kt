@@ -48,6 +48,7 @@ class CasinoHoldemService @Autowired constructor(
      */
     @Autowired(required = false) private val tradeService: EconomyTradeService? = null,
     @Autowired(required = false) private val marketService: TobyCoinMarketService? = null,
+    @Autowired(required = false) private val cooldownService: CasinoCooldownService? = null,
     private val random: Random = Random.Default,
 ) {
 
@@ -66,6 +67,8 @@ class CasinoHoldemService @Autowired constructor(
         data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
             DealOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
         data object UnknownUser : DealOutcome, CasinoCommonFailure.UnknownUser
+        data class OnCooldown(override val remainingMs: Long) :
+            DealOutcome, CasinoCommonFailure.OnCooldown
     }
 
     sealed interface ActionOutcome {
@@ -105,6 +108,11 @@ class CasinoHoldemService @Autowired constructor(
         stake: Long,
         autoTopUp: Boolean = false,
     ): DealOutcome {
+        cooldownService?.tryAcquire(discordId, guildId, CasinoGameKey.CASINOHOLDEM)?.let { gate ->
+            if (gate is CasinoCooldownService.AcquireResult.OnCooldown) {
+                return DealOutcome.OnCooldown(gate.remainingMs)
+            }
+        }
         val resolved = when (val r = checkLockOrTopUp(discordId, guildId, stake, autoTopUp)) {
             is TopUpResolution.InvalidStake -> return DealOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return DealOutcome.UnknownUser
@@ -118,6 +126,7 @@ class CasinoHoldemService @Autowired constructor(
         // Debit the ante into table escrow up-front.
         resolved.user.socialCredit = resolved.balance - stake
         userService.updateUser(resolved.user)
+        cooldownService?.arm(discordId, CasinoGameKey.CASINOHOLDEM)
 
         // Sweep any RESOLVED tables this user left behind from a previous hand.
         sweepResolvedTablesFor(guildId, discordId)
@@ -264,7 +273,8 @@ class CasinoHoldemService @Autowired constructor(
         when (resolution.anteResult) {
             CasinoHoldem.AnteResult.WIN ->
                 jackpotPayout += JackpotHelper.rollOnWin(
-                    jackpotService, configService, userService, user, guildId, random
+                    jackpotService, configService, userService, user, guildId,
+                    table.stake, CasinoHoldem.MAX_STAKE, random,
                 )
             CasinoHoldem.AnteResult.LOSE ->
                 lossTribute += JackpotHelper.divertOnLoss(
@@ -282,7 +292,8 @@ class CasinoHoldemService @Autowired constructor(
             CasinoHoldem.CallResult.WIN_STRAIGHT,
             CasinoHoldem.CallResult.WIN_OTHER ->
                 jackpotPayout += JackpotHelper.rollOnWin(
-                    jackpotService, configService, userService, user, guildId, random
+                    jackpotService, configService, userService, user, guildId,
+                    callStake, CasinoHoldem.MAX_STAKE * 2L, random,
                 )
             CasinoHoldem.CallResult.LOSE ->
                 lossTribute += JackpotHelper.divertOnLoss(

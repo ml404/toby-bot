@@ -14,6 +14,7 @@ class JackpotHelperTest {
 
     private val guildId = 200L
     private val discordId = 7L
+    private val MAX_STAKE = 1_000L
 
     private lateinit var jackpotService: JackpotService
     private lateinit var userService: UserService
@@ -195,7 +196,8 @@ class JackpotHelperTest {
         val user = freshUser(initial = 100L)
 
         val won = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, user, guildId, stubRandom(0.001)
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.001)
         )
 
         assertEquals(500L, won)
@@ -210,7 +212,8 @@ class JackpotHelperTest {
 
         // 0.5 is far above the 0.01 threshold.
         val won = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, user, guildId, stubRandom(0.5)
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.5)
         )
 
         assertEquals(0L, won)
@@ -227,10 +230,12 @@ class JackpotHelperTest {
         val userMiss = freshUser()
 
         val hit = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, userHit, guildId, stubRandom(0.004)
+            jackpotService, configService, userService, userHit, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.004)
         )
         val miss = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, userMiss, guildId, stubRandom(0.006)
+            jackpotService, configService, userService, userMiss, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.006)
         )
 
         assertEquals(1_000L, hit, "0.004 < 0.005 should hit")
@@ -244,7 +249,8 @@ class JackpotHelperTest {
 
         // Even an absurdly small roll can't beat a 0.0 threshold (`< 0.0` is unreachable).
         val won = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, user, guildId, stubRandom(0.0)
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.0)
         )
 
         assertEquals(0L, won)
@@ -259,10 +265,12 @@ class JackpotHelperTest {
         val userMiss = freshUser()
 
         val hit = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, userHit, guildId, stubRandom(0.49)
+            jackpotService, configService, userService, userHit, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.49)
         )
         val miss = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, userMiss, guildId, stubRandom(0.51)
+            jackpotService, configService, userService, userMiss, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.51)
         )
 
         assertEquals(50L, hit)
@@ -276,11 +284,83 @@ class JackpotHelperTest {
         val user = freshUser(initial = 100L)
 
         val won = JackpotHelper.rollOnWin(
-            jackpotService, configService, userService, user, guildId, stubRandom(0.001)
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, maxStake = MAX_STAKE, random = stubRandom(0.001)
         )
 
         assertEquals(0L, won)
         assertEquals(100L, user.socialCredit, "balance must be untouched when pool was empty")
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    // ---- stake-weighted scaling ----
+
+    @Test
+    fun `rollOnWin scales by stake fraction so a min-wager autoclick is effectively zero`() {
+        winConfigReturns("1") // 1 % base → 10/1000 → 0.01 % effective
+        every { jackpotService.awardJackpot(guildId) } returns 1_000L
+        val userHit = freshUser()
+        val userMiss = freshUser()
+
+        val hit = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, userHit, guildId,
+            stake = 10L, maxStake = 1_000L, random = stubRandom(0.00009)
+        )
+        val miss = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, userMiss, guildId,
+            stake = 10L, maxStake = 1_000L, random = stubRandom(0.0001)
+        )
+
+        assertEquals(1_000L, hit, "0.00009 < 0.0001 should hit")
+        assertEquals(0L, miss, "0.0001 >= 0.0001 should miss")
+    }
+
+    @Test
+    fun `rollOnWin at full max stake rolls at the unscaled base probability`() {
+        winConfigReturns("1") // 1 % base → 1000/1000 → 1 % effective
+        every { jackpotService.awardJackpot(guildId) } returns 1_000L
+        val userHit = freshUser()
+        val userMiss = freshUser()
+
+        val hit = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, userHit, guildId,
+            stake = 1_000L, maxStake = 1_000L, random = stubRandom(0.009)
+        )
+        val miss = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, userMiss, guildId,
+            stake = 1_000L, maxStake = 1_000L, random = stubRandom(0.011)
+        )
+
+        assertEquals(1_000L, hit)
+        assertEquals(0L, miss)
+    }
+
+    @Test
+    fun `rollOnWin clamps stake fraction to 1 when stake exceeds maxStake (defensive)`() {
+        winConfigReturns("1") // base 1 %
+        every { jackpotService.awardJackpot(guildId) } returns 100L
+        val user = freshUser()
+
+        // stake > maxStake would push the formula past 1.0; clamp keeps it at 1 % effective.
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = 10_000L, maxStake = 1_000L, random = stubRandom(0.009)
+        )
+
+        assertEquals(100L, won)
+    }
+
+    @Test
+    fun `rollOnWin returns zero when maxStake is zero (defensive divide-by-zero guard)`() {
+        winConfigReturns("100") // would otherwise hit at the cap
+        val user = freshUser()
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = 100L, maxStake = 0L, random = stubRandom(0.0)
+        )
+
+        assertEquals(0L, won)
+        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
     }
 }

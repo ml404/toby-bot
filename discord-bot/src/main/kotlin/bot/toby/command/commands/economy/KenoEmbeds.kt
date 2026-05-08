@@ -79,6 +79,9 @@ internal object KenoEmbeds {
             "Pick ${outcome.min}-${outcome.max} distinct numbers between 1 and ${outcome.poolMax}."
         )
         PlayOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
+        is PlayOutcome.OnCooldown -> WagerCommandEmbeds.failureEmbed(
+            TITLE, WagerCommandFailure.OnCooldown(outcome.remainingMs)
+        )
     }
 
     fun errorEmbed(message: String): MessageEmbed = WagerCommandEmbeds.errorEmbed(TITLE, message)

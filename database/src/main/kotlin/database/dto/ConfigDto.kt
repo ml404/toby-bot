@@ -113,7 +113,13 @@ class ConfigDto(
         // Per-guild override of the social-credit daily cap that applies to
         // voice, command, intro, and UI-trade earnings. Falls back to 90
         // (SocialCreditAwardService.DEFAULT_DAILY_CAP) when unset or invalid.
-        DAILY_CREDIT_CAP("DAILY_CREDIT_CAP");
+        DAILY_CREDIT_CAP("DAILY_CREDIT_CAP"),
+
+        // Per-user, per-game cooldown (seconds) on single-shot casino
+        // minigames (coinflip, slots, dice, highlow, scratch, baccarat,
+        // keno, solo blackjack, duel). Defends against autoclicker spam.
+        // Clamped 0-30 by CasinoCooldownService; 0 disables.
+        CASINO_COOLDOWN_SECONDS("CASINO_COOLDOWN_SECONDS");
     }
 
     override fun toString(): String {

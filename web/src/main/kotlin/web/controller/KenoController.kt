@@ -132,6 +132,7 @@ class KenoController(
                 "Pick ${outcome.min}-${outcome.max} distinct numbers between 1 and ${outcome.poolMax}."
             )
             PlayOutcome.UnknownUser -> errors.unknownUser()
+            is PlayOutcome.OnCooldown -> errors.onCooldown(outcome.remainingMs)
         }
     }
 }

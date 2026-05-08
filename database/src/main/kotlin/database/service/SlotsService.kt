@@ -35,6 +35,7 @@ class SlotsService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val cooldownService: CasinoCooldownService,
     private val machine: SlotMachine = SlotMachine(),
     private val random: Random = Random.Default
 ) {
@@ -68,12 +69,15 @@ class SlotsService(
         data class InvalidStake(override val min: Long, override val max: Long) :
             SpinOutcome, CasinoCommonFailure.InvalidStake
         data object UnknownUser : SpinOutcome, CasinoCommonFailure.UnknownUser
+        data class OnCooldown(override val remainingMs: Long) :
+            SpinOutcome, CasinoCommonFailure.OnCooldown
     }
 
     fun spin(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): SpinOutcome {
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE, autoTopUp
+            discordId, guildId, stake, SlotMachine.MIN_STAKE, SlotMachine.MAX_STAKE, autoTopUp,
+            cooldownService = cooldownService, game = CasinoGameKey.SLOTS,
         )) {
             is TopUpResolution.InvalidStake -> return SpinOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return SpinOutcome.UnknownUser
@@ -81,13 +85,18 @@ class SlotsService(
                 return SpinOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return SpinOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.OnCooldown -> return SpinOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
         val pull = machine.pull(random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, pull.multiplier)
+        cooldownService.arm(discordId, CasinoGameKey.SLOTS)
         return if (pull.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(
+                jackpotService, configService, userService, resolved.user, guildId,
+                stake, SlotMachine.MAX_STAKE, random,
+            )
             SpinOutcome.Win(
                 stake = stake,
                 multiplier = pull.multiplier,

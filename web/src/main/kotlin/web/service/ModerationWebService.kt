@@ -4,7 +4,9 @@ import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UserDto
+import database.service.CasinoAdminService
 import database.service.ConfigService
+import database.service.JackpotService
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
 import database.service.UbiDailyService
@@ -30,6 +32,8 @@ class ModerationWebService(
     private val titleService: TitleService,
     private val snapshotService: MonthlyCreditSnapshotService,
     private val ubiDailyService: UbiDailyService,
+    private val jackpotService: JackpotService,
+    private val casinoAdminService: CasinoAdminService,
     private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
@@ -241,6 +245,69 @@ class ModerationWebService(
         return null
     }
 
+    /** Current per-guild jackpot pool size; for the admin tab banner. */
+    fun getJackpotPool(guildId: Long): Long = jackpotService.getPool(guildId)
+
+    /**
+     * Reset (zero) the per-guild jackpot pool. Returns null on success
+     * with [drained] populated; non-null on permission failure.
+     */
+    data class ResetJackpotResult(val error: String?, val drained: Long, val newPool: Long)
+    fun resetJackpotPool(actorDiscordId: Long, guildId: Long): ResetJackpotResult {
+        if (!canModerate(actorDiscordId, guildId)) {
+            return ResetJackpotResult("You are not allowed to moderate this server.", 0L, jackpotService.getPool(guildId))
+        }
+        val drained = casinoAdminService.resetJackpot(guildId)
+        logger.info("Casino admin reset jackpot for guild=$guildId by actor=$actorDiscordId, drained=$drained")
+        return ResetJackpotResult(null, drained, 0L)
+    }
+
+    /**
+     * Debit [amount] from [sourceDiscordId] and deposit it into the
+     * per-guild jackpot pool. Used to claw back exploit gains and
+     * return them to the pool that funded them.
+     */
+    data class RefundJackpotResult(
+        val error: String?,
+        val drained: Long,
+        val newPool: Long,
+        val newSourceBalance: Long,
+    )
+    fun refundJackpotFromUser(
+        actorDiscordId: Long,
+        guildId: Long,
+        sourceDiscordId: Long,
+        amount: Long,
+    ): RefundJackpotResult {
+        if (!canModerate(actorDiscordId, guildId)) {
+            return RefundJackpotResult(
+                "You are not allowed to moderate this server.",
+                0L, jackpotService.getPool(guildId), 0L,
+            )
+        }
+        if (amount <= 0L) {
+            return RefundJackpotResult("Amount must be positive.", 0L, jackpotService.getPool(guildId), 0L)
+        }
+        return when (val outcome = casinoAdminService.refundToJackpot(sourceDiscordId, guildId, amount)) {
+            is CasinoAdminService.RefundOutcome.Ok -> {
+                logger.info(
+                    "Casino admin refund-to-jackpot guild=$guildId actor=$actorDiscordId " +
+                        "source=$sourceDiscordId amount=${outcome.drained} newPool=${outcome.newPool}"
+                )
+                RefundJackpotResult(null, outcome.drained, outcome.newPool, outcome.newSourceBalance)
+            }
+            CasinoAdminService.RefundOutcome.UnknownUser ->
+                RefundJackpotResult("Source user has no record in this server.", 0L, jackpotService.getPool(guildId), 0L)
+            is CasinoAdminService.RefundOutcome.Insufficient ->
+                RefundJackpotResult(
+                    "Source user has only ${outcome.have} credits, can't refund ${outcome.needed}.",
+                    0L, jackpotService.getPool(guildId), outcome.have,
+                )
+            is CasinoAdminService.RefundOutcome.InvalidAmount ->
+                RefundJackpotResult("Amount must be positive.", 0L, jackpotService.getPool(guildId), 0L)
+        }
+    }
+
     fun updateConfig(
         actorDiscordId: Long,
         guildId: Long,
@@ -383,6 +450,12 @@ class ModerationWebService(
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number (0-10000)."
                 if (n !in 0..10000) return "Value must be between 0 and 10000 (default 90)."
+                n.toString()
+            }
+            ConfigDto.Configurations.CASINO_COOLDOWN_SECONDS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-30)."
+                if (n !in 0..30) return "Value must be between 0 and 30 (0 disables cooldown)."
                 n.toString()
             }
         }

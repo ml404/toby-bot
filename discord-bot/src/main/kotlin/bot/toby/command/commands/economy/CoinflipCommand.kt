@@ -93,5 +93,8 @@ class CoinflipCommand @Autowired constructor(
             TITLE, WagerCommandFailure.InvalidStake(outcome.min, outcome.max)
         )
         FlipOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
+        is FlipOutcome.OnCooldown -> WagerCommandEmbeds.failureEmbed(
+            TITLE, WagerCommandFailure.OnCooldown(outcome.remainingMs)
+        )
     }
 }

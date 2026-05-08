@@ -113,6 +113,28 @@ class JackpotServiceTest {
     }
 
     @Test
+    fun `resetPool drains the pool to zero and returns the prior amount`() {
+        val existing = TobyCoinJackpotDto(guildId = guildId, pool = 9_999L)
+        every { persistence.getByGuildForUpdate(guildId) } returns existing
+        every { persistence.upsert(any()) } answers { firstArg() }
+
+        val drained = service.resetPool(guildId)
+
+        assertEquals(9_999L, drained)
+        assertEquals(0L, existing.pool)
+        verify(exactly = 1) { persistence.upsert(existing) }
+    }
+
+    @Test
+    fun `resetPool is a no-op when the pool is already empty`() {
+        val empty = TobyCoinJackpotDto(guildId = guildId, pool = 0L)
+        every { persistence.getByGuildForUpdate(guildId) } returns empty
+
+        assertEquals(0L, service.resetPool(guildId))
+        verify(exactly = 0) { persistence.upsert(any()) }
+    }
+
+    @Test
     fun `winProbabilityPct returns the default 1 percent when no JACKPOT_WIN_PCT row exists`() {
         // setup() already stubs configService to return null for this key.
         // [JackpotHelper.DEFAULT_WIN_PROBABILITY] = 0.01 → 1.0%.

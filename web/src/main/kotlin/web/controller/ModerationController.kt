@@ -71,6 +71,7 @@ class ModerationController(
         model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
         model.addAttribute("username", user.displayName())
         model.addAttribute("actorDiscordId", discordId.toString())
+        model.addAttribute("jackpotPool", moderationWebService.getJackpotPool(guildId))
         "moderation"
     }
 
@@ -171,6 +172,43 @@ class ModerationController(
         }
     }
 
+    @PostMapping("/{guildId}/jackpot/reset", consumes = ["application/json"])
+    @ResponseBody
+    fun resetJackpot(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<JackpotAdminResponse> = WebGuildAccess.requireSignedInForJson(
+        user, { JackpotAdminResponse(false, "Not signed in.") }
+    ) { actor ->
+        val result = moderationWebService.resetJackpotPool(actor, guildId)
+        if (result.error != null) {
+            ResponseEntity.badRequest().body(JackpotAdminResponse(false, result.error, drained = result.drained, newPool = result.newPool))
+        } else {
+            ResponseEntity.ok(JackpotAdminResponse(true, null, drained = result.drained, newPool = result.newPool))
+        }
+    }
+
+    @PostMapping("/{guildId}/jackpot/refund", consumes = ["application/json"])
+    @ResponseBody
+    fun refundJackpot(
+        @PathVariable guildId: Long,
+        @RequestBody body: JackpotRefundRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<JackpotAdminResponse> = WebGuildAccess.requireSignedInForJson(
+        user, { JackpotAdminResponse(false, "Not signed in.") }
+    ) { actor ->
+        val result = moderationWebService.refundJackpotFromUser(actor, guildId, body.sourceDiscordId, body.amount)
+        if (result.error != null) {
+            ResponseEntity.badRequest().body(
+                JackpotAdminResponse(false, result.error, drained = result.drained, newPool = result.newPool, newSourceBalance = result.newSourceBalance)
+            )
+        } else {
+            ResponseEntity.ok(
+                JackpotAdminResponse(true, null, drained = result.drained, newPool = result.newPool, newSourceBalance = result.newSourceBalance)
+            )
+        }
+    }
+
     @PostMapping("/{guildId}/poll", consumes = ["application/json"])
     @ResponseBody
     fun createPoll(
@@ -208,4 +246,17 @@ data class MuteResponse(
     val error: String?,
     val changed: List<String> = emptyList(),
     val skipped: List<String> = emptyList()
+)
+
+data class JackpotRefundRequest(
+    val sourceDiscordId: Long = 0L,
+    val amount: Long = 0L,
+)
+
+data class JackpotAdminResponse(
+    val ok: Boolean,
+    val error: String?,
+    val drained: Long = 0L,
+    val newPool: Long = 0L,
+    val newSourceBalance: Long? = null,
 )

@@ -19,6 +19,7 @@ class DiceServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
+    private lateinit var cooldownService: CasinoCooldownService
     private lateinit var dice: Dice
     private lateinit var service: DiceService
 
@@ -32,11 +33,13 @@ class DiceServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        cooldownService = mockk(relaxed = true)
+        every { cooldownService.tryAcquire(any(), any(), any()) } returns CasinoCooldownService.AcquireResult.Ok
         dice = mockk(relaxed = true) {
             every { isValidPrediction(any()) } answers { firstArg<Int>() in 1..6 }
             every { sidesCount } returns 6
         }
-        service = DiceService(userService, jackpotService, tradeService, marketService, configService, dice, Random(0))
+        service = DiceService(userService, jackpotService, tradeService, marketService, configService, cooldownService, dice, Random(0))
     }
 
     private fun userWithBalance(balance: Long): UserDto {

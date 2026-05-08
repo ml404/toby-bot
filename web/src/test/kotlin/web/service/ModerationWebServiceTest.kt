@@ -41,6 +41,8 @@ class ModerationWebServiceTest {
     private lateinit var titleService: TitleService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var ubiDailyService: UbiDailyService
+    private lateinit var jackpotService: database.service.JackpotService
+    private lateinit var casinoAdminService: database.service.CasinoAdminService
     private lateinit var service: ModerationWebService
 
     private lateinit var guild: Guild
@@ -63,6 +65,8 @@ class ModerationWebServiceTest {
         titleService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
         ubiDailyService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
+        casinoAdminService = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         service = ModerationWebService(
@@ -74,6 +78,8 @@ class ModerationWebServiceTest {
             titleService,
             snapshotService,
             ubiDailyService,
+            jackpotService,
+            casinoAdminService,
             eventPublisher
         )
 

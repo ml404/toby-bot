@@ -30,6 +30,7 @@ class HighlowService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val cooldownService: CasinoCooldownService,
     private val highlow: Highlow = Highlow(),
     private val random: Random = Random.Default
 ) {
@@ -67,6 +68,8 @@ class HighlowService(
         data class InvalidStake(override val min: Long, override val max: Long) :
             PlayOutcome, CasinoCommonFailure.InvalidStake
         data object UnknownUser : PlayOutcome, CasinoCommonFailure.UnknownUser
+        data class OnCooldown(override val remainingMs: Long) :
+            PlayOutcome, CasinoCommonFailure.OnCooldown
     }
 
     /** Draw a fresh anchor without committing any state. The web flow uses this on page load. */
@@ -107,7 +110,8 @@ class HighlowService(
     ): PlayOutcome {
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE, autoTopUp
+            discordId, guildId, stake, Highlow.MIN_STAKE, Highlow.MAX_STAKE, autoTopUp,
+            cooldownService = cooldownService, game = CasinoGameKey.HIGHLOW,
         )) {
             is TopUpResolution.InvalidStake -> return PlayOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return PlayOutcome.UnknownUser
@@ -115,6 +119,7 @@ class HighlowService(
                 return PlayOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return PlayOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.OnCooldown -> return PlayOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
@@ -124,8 +129,12 @@ class HighlowService(
             highlow.play(direction, random)
         }
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
+        cooldownService.arm(discordId, CasinoGameKey.HIGHLOW)
         return if (hand.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(
+                jackpotService, configService, userService, resolved.user, guildId,
+                stake, Highlow.MAX_STAKE, random,
+            )
             PlayOutcome.Win(
                 stake = stake,
                 payout = wager.payout,

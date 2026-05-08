@@ -53,6 +53,7 @@ internal sealed interface TopUpResolution {
     data class StillInsufficientCredits(val stake: Long, val have: Long) : TopUpResolution
     data class InsufficientCoinsForTopUp(val needed: Long, val have: Long) : TopUpResolution
     data object UnknownUser : TopUpResolution
+    data class OnCooldown(val remainingMs: Long) : TopUpResolution
 }
 
 internal object WagerHelper {
@@ -136,6 +137,34 @@ internal object WagerHelper {
      * shape from the helper so the call-site is uniform.
      */
     fun checkLockOrTopUp(
+        userService: UserService,
+        tradeService: EconomyTradeService,
+        marketService: TobyCoinMarketService,
+        discordId: Long,
+        guildId: Long,
+        stake: Long,
+        minStake: Long,
+        maxStake: Long,
+        autoTopUp: Boolean,
+        cooldownService: CasinoCooldownService? = null,
+        game: CasinoGameKey? = null,
+    ): TopUpResolution {
+        // Cooldown is gated only when both collaborators are wired —
+        // existing test paths that don't pass them keep working.
+        if (cooldownService != null && game != null) {
+            when (val gate = cooldownService.tryAcquire(discordId, guildId, game)) {
+                CasinoCooldownService.AcquireResult.Ok -> Unit
+                is CasinoCooldownService.AcquireResult.OnCooldown ->
+                    return TopUpResolution.OnCooldown(gate.remainingMs)
+            }
+        }
+        return resolveCheckAndTopUp(
+            userService, tradeService, marketService,
+            discordId, guildId, stake, minStake, maxStake, autoTopUp,
+        )
+    }
+
+    private fun resolveCheckAndTopUp(
         userService: UserService,
         tradeService: EconomyTradeService,
         marketService: TobyCoinMarketService,
