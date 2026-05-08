@@ -30,7 +30,7 @@ class HighlowCommand @Autowired constructor(
 
     override val name: String = "highlow"
     override val description: String =
-        "Predict if the next card is higher or lower than the anchor. Stake bounds are per-guild (default ${Highlow.MIN_STAKE}-${Highlow.MAX_STAKE})."
+        "Predict if the next card is higher or lower. Stake bounds per-guild (default ${Highlow.MIN_STAKE}-${Highlow.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"

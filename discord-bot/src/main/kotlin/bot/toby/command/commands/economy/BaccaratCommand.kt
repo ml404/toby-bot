@@ -32,7 +32,7 @@ class BaccaratCommand @Autowired constructor(
 
     override val name: String = "baccarat"
     override val description: String =
-        "Pick Player, Banker, or Tie — both hands deal automatically. Stake bounds are per-guild (default ${Baccarat.MIN_STAKE}-${Baccarat.MAX_STAKE})."
+        "Player/Banker/Tie — both hands deal. Stake bounds per-guild (default ${Baccarat.MIN_STAKE}-${Baccarat.MAX_STAKE})."
 
     companion object {
         private const val OPT_STAKE = "stake"
