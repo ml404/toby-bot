@@ -249,7 +249,8 @@ class IntroWebService(
             if (duplicateSlot != null) {
                 return "You already have this intro in slot ${duplicateSlot.index}. Pick that slot to replace it."
             }
-            val newIndex = existingIntros.size + 1
+            val newIndex = nextFreeIndex(existingIntros)
+                ?: return "You already have $MAX_INTRO_COUNT intros. Please select one to replace."
             val newDto = MusicDto(user, newIndex, displayName, volume, urlBytes, startMs, endMs)
             // Safety net for any collision the byte compare misses — the
             // hash check in createNewMusicFile still fires.
@@ -301,7 +302,8 @@ class IntroWebService(
             selectedDto.endMs = endMs
             musicFileService.updateMusicFile(selectedDto)
         } else {
-            val newIndex = existingIntros.size + 1
+            val newIndex = nextFreeIndex(existingIntros)
+                ?: return "You already have $MAX_INTRO_COUNT intros. Please select one to replace."
             val newDto = MusicDto(user, newIndex, fileName, volume, fileBytes, startMs, endMs)
             musicFileService.createNewMusicFile(newDto)
                 ?: return "This file already exists as one of your intros."
@@ -344,6 +346,15 @@ class IntroWebService(
             }
         }
         return null
+    }
+
+    // Picks the smallest unused slot in 1..MAX_INTRO_COUNT. Walking the range
+    // (rather than `size + 1`) is what lets "Add" work after a delete left a
+    // gap like [1, 3] — otherwise the new id collides with an existing row's
+    // id and the JPA layer silently turns the insert into an update.
+    private fun nextFreeIndex(existingIntros: List<MusicDto>): Int? {
+        val used = existingIntros.mapNotNull { it.index }.toSet()
+        return (1..MAX_INTRO_COUNT).firstOrNull { it !in used }
     }
 
     private fun requireOwnedIntro(discordId: Long, guildId: Long, introId: String): String? =
