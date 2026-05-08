@@ -19,7 +19,7 @@ class CachingConfig {
         val manager = CaffeineCacheManager("configs", "brothers", "users", "music", "excuses", "tobyCoinMarkets")
         manager.setCaffeine(
             Caffeine.newBuilder()
-                .maximumSize(500)
+                .maximumSize(100)
                 .expireAfterWrite(30, TimeUnit.MINUTES)
         )
         return manager

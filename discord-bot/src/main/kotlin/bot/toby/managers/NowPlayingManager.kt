@@ -14,7 +14,7 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 class NowPlayingManager(
-    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(10),
+    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(2),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val guildLastNowPlayingMessage = ConcurrentHashMap<Long, Message>()

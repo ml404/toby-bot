@@ -7,4 +7,4 @@ FROM eclipse-temurin:21-jre
 RUN mkdir /app
 COPY --from=build /home/gradle/src/application/build/libs/*.jar /app/toby-bot.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xms64m", "-Xmx320m", "-XX:+UseZGC", "-jar", "/app/toby-bot.jar"]
+ENTRYPOINT ["java", "-Xms64m", "-Xmx320m", "-XX:+UseSerialGC", "-XX:MaxMetaspaceSize=128m", "-Xss512k", "-jar", "/app/toby-bot.jar"]
