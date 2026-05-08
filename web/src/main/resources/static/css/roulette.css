@@ -1,0 +1,303 @@
+@import url("./casino-table.css");
+
+.roulette-header {
+    margin-bottom: var(--space-5);
+}
+.roulette-header h1 { margin: var(--space-2) 0; }
+
+/* casino-felt owns the green-felt frame; this class only owns layout. */
+.roulette-table {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    /* Anchor the chip-flourish overlay to the felt so wins flash here. */
+    position: relative;
+}
+
+/* ─── Wheel stage ──────────────────────────────────────────────────────── */
+
+.roulette-wheel-stage {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.roulette-wheel {
+    width: 100%;
+    height: 100%;
+    /* JS sets `transform: rotate(...deg)` directly during spin / settle. */
+    transform-origin: 50% 50%;
+    will-change: transform;
+    /* Ring of gold around the rim — same token every other casino card uses. */
+    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.45));
+}
+
+.roulette-wheel.settling {
+    transition: transform 1.6s cubic-bezier(0.18, 0.78, 0.25, 1);
+}
+
+.roulette-wheel-pocket-red    { fill: #c0392b; }
+.roulette-wheel-pocket-black  { fill: #1a1a1a; }
+.roulette-wheel-pocket-green  { fill: #1f7a3a; }
+.roulette-wheel-pocket-stroke { stroke: rgba(255, 215, 0, 0.55); stroke-width: 0.4; }
+
+.roulette-wheel-rim {
+    fill: none;
+    stroke: var(--casino-gold);
+    stroke-width: 1.6;
+}
+.roulette-wheel-hub {
+    fill: #15131a;
+    stroke: var(--casino-gold);
+    stroke-width: 0.8;
+}
+.roulette-wheel-label {
+    fill: #fff;
+    font-family: inherit;
+    font-size: 6.5px;
+    font-weight: 600;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+}
+
+/* The pointer is a fixed gold triangle at the top of the stage that the
+   ball "drops past" when the wheel settles. Visually marks the winning
+   pocket without us needing to animate a separate ball element. */
+.roulette-pointer {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 16px solid var(--casino-gold);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    z-index: 2;
+}
+
+/* "Last" pill in the centre showing the most recent landed pocket. JS
+   updates the text + colour-tint after each settle. */
+.roulette-landed {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    pointer-events: none;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.roulette-landed-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+.roulette-landed-pocket {
+    font-size: 1.6rem;
+    font-weight: 700;
+    min-width: 1.6rem;
+    text-align: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+}
+.roulette-landed-pocket.color-red    { background: #c0392b; border-color: #f1c40f; }
+.roulette-landed-pocket.color-black  { background: #1a1a1a; border-color: #f1c40f; }
+.roulette-landed-pocket.color-green  { background: #1f7a3a; border-color: #f1c40f; }
+
+@media (prefers-reduced-motion: reduce) {
+    /* No spinning wheel for users who asked for fewer effects — JS
+       short-circuits the spin too, so we just keep the static render. */
+    .roulette-wheel.settling { transition: none; }
+}
+
+/* ─── Bet form ─────────────────────────────────────────────────────────── */
+
+.roulette-bet {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 560px;
+}
+
+.roulette-bet-fieldset {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-3);
+    background: rgba(0, 0, 0, 0.18);
+}
+.roulette-bet-fieldset legend {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 0 var(--space-2);
+}
+
+.roulette-bet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-2);
+}
+
+.roulette-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 10px 12px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.roulette-chip:hover { transform: translateY(-1px); border-color: var(--casino-gold); }
+.roulette-chip:focus-visible { outline: 2px solid var(--casino-gold); outline-offset: 2px; }
+.roulette-chip[aria-checked="true"] {
+    background: var(--casino-gold);
+    border-color: var(--casino-gold);
+    color: #1a1a1a;
+    box-shadow: var(--casino-active-glow);
+}
+.roulette-chip-label { font-size: 0.95rem; }
+.roulette-chip-odds {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+.roulette-chip[aria-checked="true"] .roulette-chip-odds { color: rgba(0, 0, 0, 0.7); }
+
+.roulette-straight-picker {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px dashed var(--casino-gold);
+    border-radius: 10px;
+    background: rgba(241, 196, 15, 0.08);
+}
+.roulette-straight-picker label {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+}
+.roulette-straight-picker input[type="number"] {
+    width: 80px;
+    padding: 8px 10px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.roulette-stake-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.roulette-stake-row label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.roulette-stake-row input[type="number"] {
+    width: 110px;
+    padding: 8px 10px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.roulette-balance {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.roulette-balance strong { color: #fff; }
+
+.roulette-result {
+    min-height: 1.5em;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+.roulette-result-win  { color: #57F287; }
+.roulette-result-lose { color: #a0a0b0; }
+
+/* ─── Payouts table ───────────────────────────────────────────────────── */
+
+.roulette-payouts {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.roulette-payouts h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.roulette-payouts table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+.roulette-payouts th,
+.roulette-payouts td {
+    text-align: left;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+}
+.roulette-payouts th {
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+.roulette-payouts tr:last-child td { border-bottom: none; }
+
+@media (max-width: 600px) {
+    .roulette-wheel-stage { width: 240px; height: 240px; }
+    .roulette-stake-row { flex-direction: column; align-items: stretch; }
+    .roulette-stake-row input[type="number"] { width: 100%; }
+    .roulette-stake-row button { min-height: 2.75rem; }
+    .roulette-bet-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 380px) {
+    .roulette-wheel-stage { width: 200px; height: 200px; }
+    .roulette-payouts { font-size: 0.85rem; }
+}

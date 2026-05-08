@@ -8,8 +8,9 @@
 <main id="main" class="container">
     <h1 class="mb-3">🎰 Casino</h1>
     <p class="muted mb-5">
-        Wager social credit on the reels. Each server has its own slots room —
-        balances are per-guild. Pick a server below to spin.
+        Wager social credit on slots, roulette, dice, cards and more — every
+        server has its own room and balances are per-guild. Pick a server below
+        to play.
     </p>
 
     <div th:replace="~{fragments/alerts :: error}"></div>
@@ -22,26 +23,38 @@
                 <span th:text="${g.credits} + ' credits'">0 credits</span>
             </div>
             <div class="lb-guild-games">
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/slots(id=${g.id})}">🎰 Slots</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/coinflip(id=${g.id})}">🪙 Coinflip</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/dice(id=${g.id})}">🎲 Dice</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/highlow(id=${g.id})}">🃏 High-Low</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/scratch(id=${g.id})}">🎟️ Scratch</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/keno(id=${g.id})}">🎯 Keno</a>
-                <a class="btn-secondary"
-                   th:href="@{/casino/{id}/baccarat(id=${g.id})}">🎴 Baccarat</a>
-                <a class="btn-secondary"
-                   th:href="@{/poker/{id}(id=${g.id})}">🎴 Poker</a>
-                <a class="btn-secondary"
-                   th:href="@{/blackjack/{id}/solo(id=${g.id})}">🂡 Blackjack</a>
-                <a class="btn-secondary"
-                   th:href="@{/casinoholdem/{id}(id=${g.id})}">🃏 Casino Hold'em</a>
+                <div class="lb-games-group">
+                    <h3 class="lb-games-group-title">Quick play</h3>
+                    <div class="lb-games-row">
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/coinflip(id=${g.id})}">🪙 Coinflip</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/dice(id=${g.id})}">🎲 Dice</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/highlow(id=${g.id})}">🃏 High-Low</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/keno(id=${g.id})}">🎯 Keno</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/roulette(id=${g.id})}">🎡 Roulette</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/scratch(id=${g.id})}">🎟️ Scratch</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/slots(id=${g.id})}">🎰 Slots</a>
+                    </div>
+                </div>
+                <div class="lb-games-group">
+                    <h3 class="lb-games-group-title">Table games</h3>
+                    <div class="lb-games-row">
+                        <a class="btn-secondary"
+                           th:href="@{/casino/{id}/baccarat(id=${g.id})}">🎴 Baccarat</a>
+                        <a class="btn-secondary"
+                           th:href="@{/blackjack/{id}/solo(id=${g.id})}">🂡 Blackjack</a>
+                        <a class="btn-secondary"
+                           th:href="@{/casinoholdem/{id}(id=${g.id})}">♠️ Casino Hold'em</a>
+                        <a class="btn-secondary"
+                           th:href="@{/poker/{id}(id=${g.id})}">🃏 Poker</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

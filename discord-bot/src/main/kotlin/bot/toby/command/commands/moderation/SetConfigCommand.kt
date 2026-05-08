@@ -141,6 +141,10 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.SCRATCH_MIN_STAKE, gameLabel = "Scratch", label = "minimum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.SCRATCH_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.SCRATCH_MAX_STAKE, gameLabel = "Scratch", label = "maximum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.ROULETTE_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.ROULETTE_MIN_STAKE, gameLabel = "Roulette", label = "minimum stake", min = 1L, unit = "credits")
+                ConfigDto.Configurations.ROULETTE_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.ROULETTE_MAX_STAKE, gameLabel = "Roulette", label = "maximum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.HOLDEM_MIN_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.HOLDEM_MIN_STAKE, gameLabel = "Casino Hold'em", label = "minimum stake", min = 1L, unit = "credits")
                 ConfigDto.Configurations.HOLDEM_MAX_STAKE -> setMinimumLongConfig(event, optionMapping, deleteDelay,
