@@ -65,6 +65,22 @@ class JackpotService(
         return won
     }
 
+    /**
+     * Admin-only: zero the pool without paying anyone. Returns the
+     * amount that was drained, so the caller can show "reset 12,345
+     * credits" in the audit response. Use when a player has
+     * pathologically inflated the pool via spam-tribute and rolling
+     * back the activity is the cleanest fix.
+     */
+    fun resetPool(guildId: Long): Long {
+        val row = lockOrCreate(guildId)
+        val drained = row.pool
+        if (drained == 0L) return 0L
+        row.pool = 0L
+        persistence.upsert(row)
+        return drained
+    }
+
     private fun lockOrCreate(guildId: Long): TobyCoinJackpotDto {
         persistence.getByGuildForUpdate(guildId)?.let { return it }
         // First fee for this guild — seed and re-read with the write lock.

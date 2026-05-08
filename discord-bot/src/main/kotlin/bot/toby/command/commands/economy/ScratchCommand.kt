@@ -85,5 +85,8 @@ class ScratchCommand @Autowired constructor(
             TITLE, WagerCommandFailure.InvalidStake(outcome.min, outcome.max)
         )
         ScratchOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
+        is ScratchOutcome.OnCooldown -> WagerCommandEmbeds.failureEmbed(
+            TITLE, WagerCommandFailure.OnCooldown(outcome.remainingMs)
+        )
     }
 }

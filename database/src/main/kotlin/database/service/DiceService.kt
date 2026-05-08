@@ -24,6 +24,7 @@ class DiceService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val cooldownService: CasinoCooldownService,
     private val dice: Dice = Dice(),
     private val random: Random = Random.Default
 ) {
@@ -59,6 +60,8 @@ class DiceService(
             RollOutcome, CasinoCommonFailure.InvalidStake
         data class InvalidPrediction(val min: Int, val max: Int) : RollOutcome
         data object UnknownUser : RollOutcome, CasinoCommonFailure.UnknownUser
+        data class OnCooldown(override val remainingMs: Long) :
+            RollOutcome, CasinoCommonFailure.OnCooldown
     }
 
     fun roll(
@@ -73,7 +76,8 @@ class DiceService(
         }
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
-            discordId, guildId, stake, Dice.MIN_STAKE, Dice.MAX_STAKE, autoTopUp
+            discordId, guildId, stake, Dice.MIN_STAKE, Dice.MAX_STAKE, autoTopUp,
+            cooldownService = cooldownService, game = CasinoGameKey.DICE,
         )) {
             is TopUpResolution.InvalidStake -> return RollOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return RollOutcome.UnknownUser
@@ -81,13 +85,18 @@ class DiceService(
                 return RollOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return RollOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
+            is TopUpResolution.OnCooldown -> return RollOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
         val roll = dice.roll(predicted, random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, roll.multiplier)
+        cooldownService.arm(discordId, CasinoGameKey.DICE)
         return if (roll.isWin) {
-            val jackpot = JackpotHelper.rollOnWin(jackpotService, configService, userService, resolved.user, guildId, random)
+            val jackpot = JackpotHelper.rollOnWin(
+                jackpotService, configService, userService, resolved.user, guildId,
+                stake, Dice.MAX_STAKE, random,
+            )
             RollOutcome.Win(
                 stake = stake,
                 payout = wager.payout,

@@ -19,6 +19,7 @@ class KenoServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
+    private lateinit var cooldownService: CasinoCooldownService
     private lateinit var keno: Keno
     private lateinit var service: KenoService
 
@@ -32,6 +33,8 @@ class KenoServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        cooldownService = mockk(relaxed = true)
+        every { cooldownService.tryAcquire(any(), any(), any()) } returns CasinoCooldownService.AcquireResult.Ok
         keno = mockk(relaxed = true)
         // Defaults so the engine doesn't NPE in tests that don't override:
         every { keno.drawNumbers(any()) } returns (1..20).toList()
@@ -41,7 +44,7 @@ class KenoServiceTest {
             Keno.Hand(picks = picks.sorted(), draws = draws, hits = 0, multiplier = 0.0)
         }
         service = KenoService(
-            userService, jackpotService, tradeService, marketService, configService,
+            userService, jackpotService, tradeService, marketService, configService, cooldownService,
             keno, Random(0)
         )
     }

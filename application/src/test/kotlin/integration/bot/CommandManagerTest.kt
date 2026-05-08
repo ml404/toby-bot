@@ -132,6 +132,7 @@ class CommandManagerTest {
             DbdRandomKillerCommand::class.java,
             ExcuseCommand::class.java,
             SocialCreditCommand::class.java,
+            JackpotAdminCommand::class.java,
             TeamCommand::class.java,
             EightBallCommand::class.java,
             LinkCharacterCommand::class.java,
@@ -156,8 +157,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(58, commandManager.allCommands.size)
-        Assertions.assertEquals(58, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(59, commandManager.allCommands.size)
+        Assertions.assertEquals(59, commandManager.allSlashCommands.size)
     }
 
     @Test

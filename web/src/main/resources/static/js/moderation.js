@@ -270,4 +270,59 @@
             }).catch(() => { submitBtn.disabled = false; toast('Network error.', 'error'); });
         });
     }
+
+    // --- Casino tab ---
+    const jackpotPoolEl = document.getElementById('jackpot-pool');
+    const jackpotResetBtn = document.getElementById('jackpot-reset');
+    if (jackpotResetBtn) {
+        jackpotResetBtn.addEventListener('click', () => {
+            const current = Number(jackpotPoolEl?.textContent || '0');
+            if (current === 0) {
+                toast('Pool is already empty.', 'info');
+                return;
+            }
+            if (!confirm('Reset the jackpot pool to 0? This drains ' + current + ' credits.')) return;
+            jackpotResetBtn.disabled = true;
+            postJson('/moderation/' + guildId + '/jackpot/reset', {}).then(r => {
+                jackpotResetBtn.disabled = false;
+                if (r && r.ok) {
+                    if (jackpotPoolEl) jackpotPoolEl.textContent = String(r.newPool ?? 0);
+                    toast('Jackpot reset. Drained ' + (r.drained ?? 0) + ' credits.', 'success');
+                } else {
+                    toast(r?.error || 'Could not reset jackpot.', 'error');
+                }
+            }).catch(() => { jackpotResetBtn.disabled = false; toast('Network error.', 'error'); });
+        });
+    }
+    const jackpotRefundForm = document.querySelector('.jackpot-refund-form');
+    if (jackpotRefundForm) {
+        jackpotRefundForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const sourceDiscordId = jackpotRefundForm.elements.sourceDiscordId.value.trim();
+            const amount = Number(jackpotRefundForm.elements.amount.value);
+            if (!/^[0-9]+$/.test(sourceDiscordId) || !Number.isFinite(amount) || amount <= 0) {
+                toast('Enter a valid Discord ID and a positive amount.', 'error');
+                return;
+            }
+            if (!confirm('Refund ' + amount + ' credits from user ' + sourceDiscordId + ' into the jackpot pool?')) return;
+            const submitBtn = jackpotRefundForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            postJson('/moderation/' + guildId + '/jackpot/refund', {
+                sourceDiscordId: Number(sourceDiscordId),
+                amount: amount
+            }).then(r => {
+                submitBtn.disabled = false;
+                if (r && r.ok) {
+                    if (jackpotPoolEl) jackpotPoolEl.textContent = String(r.newPool ?? 0);
+                    toast(
+                        'Refunded ' + (r.drained ?? 0) + ' credits. New pool: ' + (r.newPool ?? 0) + '.',
+                        'success'
+                    );
+                    jackpotRefundForm.reset();
+                } else {
+                    toast(r?.error || 'Could not refund to jackpot.', 'error');
+                }
+            }).catch(() => { submitBtn.disabled = false; toast('Network error.', 'error'); });
+        });
+    }
 })();

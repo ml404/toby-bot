@@ -59,6 +59,12 @@ class BlackjackService @Autowired constructor(
      * pays out correctly, the audit row just doesn't appear.
      */
     @Autowired(required = false) private val handLogPersistence: BlackjackHandLogPersistence? = null,
+    /**
+     * Optional cooldown gate. Null in test paths (no Spring context); when wired,
+     * `dealSolo` is rate-limited per user via [CasinoGameKey.BLACKJACK_SOLO]. The
+     * multi-player path is not gated — it self-throttles via the per-actor shot clock.
+     */
+    @Autowired(required = false) private val cooldownService: CasinoCooldownService? = null,
     private val random: Random = Random.Default
 ) {
 
@@ -92,6 +98,7 @@ class BlackjackService @Autowired constructor(
          */
         data class HandInProgress(val tableId: Long) : SoloDealOutcome
         data object UnknownUser : SoloDealOutcome
+        data class OnCooldown(val remainingMs: Long) : SoloDealOutcome
     }
 
     sealed interface SoloActionOutcome {
@@ -222,6 +229,11 @@ class BlackjackService @Autowired constructor(
         stake: Long,
         autoTopUp: Boolean = false
     ): SoloDealOutcome {
+        cooldownService?.tryAcquire(discordId, guildId, CasinoGameKey.BLACKJACK_SOLO)?.let { gate ->
+            if (gate is CasinoCooldownService.AcquireResult.OnCooldown) {
+                return SoloDealOutcome.OnCooldown(gate.remainingMs)
+            }
+        }
         // Reject a redeal while the caller still has an in-flight solo
         // table on this guild — without this guard, hitting the web Deal
         // form mid-hand would debit the stake again, orphan the previous
@@ -260,6 +272,7 @@ class BlackjackService @Autowired constructor(
         // Debit stake into seat escrow.
         resolved.user.socialCredit = resolved.balance - stake
         userService.updateUser(resolved.user)
+        cooldownService?.arm(discordId, CasinoGameKey.BLACKJACK_SOLO)
 
         // Sweep any resolved solo table left behind by this user's previous
         // hand — the action handler now leaves them in registry so the JS
@@ -663,7 +676,8 @@ class BlackjackService @Autowired constructor(
                 when (hand.result) {
                     Blackjack.Result.PLAYER_WIN, Blackjack.Result.PLAYER_BLACKJACK -> {
                         val rolled = JackpotHelper.rollOnWin(
-                            jackpotService, configService, userService, user, guildId, random
+                            jackpotService, configService, userService, user, guildId,
+                            hand.stake, Blackjack.MAX_STAKE, random,
                         )
                         if (rolled > 0L) {
                             jackpotPayout += rolled

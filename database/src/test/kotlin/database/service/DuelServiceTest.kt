@@ -42,7 +42,7 @@ class DuelServiceTest {
     }
 
     private fun service(random: Random = AlwaysHeadsRandom): DuelService =
-        DuelService(userService, jackpotService, configService, duelLogPersistence, random)
+        DuelService(userService, jackpotService, configService, duelLogPersistence, cooldownService = null, random = random)
 
     @Test
     fun `startDuel returns Ok when both players have enough credits`() {
