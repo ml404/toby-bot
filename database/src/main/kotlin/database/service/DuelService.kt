@@ -41,7 +41,6 @@ class DuelService @Autowired constructor(
     private val jackpotService: JackpotService,
     private val configService: ConfigService,
     private val duelLogPersistence: DuelLogPersistence,
-    @Autowired(required = false) private val cooldownService: CasinoCooldownService? = null,
     private val random: Random = Random.Default,
 ) {
     sealed interface StartOutcome {
@@ -54,7 +53,6 @@ class DuelService @Autowired constructor(
         data class OpponentInsufficient(val have: Long, val needed: Long) : StartOutcome
         data object UnknownInitiator : StartOutcome
         data object UnknownOpponent : StartOutcome
-        data class OnCooldown(val remainingMs: Long) : StartOutcome
     }
 
     sealed interface AcceptOutcome {
@@ -92,11 +90,6 @@ class DuelService @Autowired constructor(
         if (initiatorDiscordId == opponentDiscordId) {
             return StartOutcome.InvalidOpponent(StartOutcome.InvalidOpponent.Reason.SELF)
         }
-        cooldownService?.tryAcquire(initiatorDiscordId, guildId, CasinoGameKey.DUEL)?.let { gate ->
-            if (gate is CasinoCooldownService.AcquireResult.OnCooldown) {
-                return StartOutcome.OnCooldown(gate.remainingMs)
-            }
-        }
 
         val initiator = userService.getUserById(initiatorDiscordId, guildId)
             ?: return StartOutcome.UnknownInitiator
@@ -112,7 +105,6 @@ class DuelService @Autowired constructor(
             return StartOutcome.OpponentInsufficient(opponentBalance, stake)
         }
 
-        cooldownService?.arm(initiatorDiscordId, CasinoGameKey.DUEL)
         return StartOutcome.Ok(initiatorBalance)
     }
 

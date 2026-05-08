@@ -76,9 +76,6 @@ class SlotsCommand @Autowired constructor(
             TITLE, WagerCommandFailure.InvalidStake(outcome.min, outcome.max)
         )
         SpinOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
-        is SpinOutcome.OnCooldown -> WagerCommandEmbeds.failureEmbed(
-            TITLE, WagerCommandFailure.OnCooldown(outcome.remainingMs)
-        )
     }
 
     private fun reelLine(symbols: List<SlotMachine.Symbol>): String =

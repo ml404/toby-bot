@@ -46,13 +46,6 @@ class CasinoOutcomeMapper<R : CasinoResponseLike>(
     fun unknownUser(): ResponseEntity<R> =
         ResponseEntity.badRequest().body(errorFactory(UNKNOWN_USER))
 
-    fun onCooldown(remainingMs: Long): ResponseEntity<R> {
-        val seconds = ((remainingMs + 999L) / 1000L).coerceAtLeast(1L)
-        return ResponseEntity.status(429)
-            .header("Retry-After", seconds.toString())
-            .body(errorFactory(onCooldownMessage(seconds)))
-    }
-
     fun badRequest(message: String): ResponseEntity<R> =
         ResponseEntity.badRequest().body(errorFactory(message))
 
@@ -60,17 +53,15 @@ class CasinoOutcomeMapper<R : CasinoResponseLike>(
      * Single-arm fallthrough for the standard failure types every
      * casino-game service exposes. Each per-game outcome's
      * `InsufficientCredits` / `InsufficientCoinsForTopUp` / `InvalidStake`
-     * / `UnknownUser` / `OnCooldown` implements the matching
-     * [CasinoCommonFailure] interface, so a controller's `when` can
-     * collapse multiple arms into one
-     * `is CasinoCommonFailure -> errors.mapCommonFailure(outcome)`.
+     * / `UnknownUser` implements the matching [CasinoCommonFailure]
+     * interface, so a controller's `when` can collapse multiple arms
+     * into one `is CasinoCommonFailure -> errors.mapCommonFailure(outcome)`.
      */
     fun mapCommonFailure(failure: CasinoCommonFailure): ResponseEntity<R> = when (failure) {
         is CasinoCommonFailure.InsufficientCredits -> insufficientCredits(failure.stake, failure.have)
         is CasinoCommonFailure.InsufficientCoinsForTopUp -> insufficientCoinsForTopUp(failure.needed, failure.have)
         is CasinoCommonFailure.InvalidStake -> invalidStake(failure.min, failure.max)
         is CasinoCommonFailure.UnknownUser -> unknownUser()
-        is CasinoCommonFailure.OnCooldown -> onCooldown(failure.remainingMs)
     }
 
     companion object {
@@ -89,8 +80,5 @@ class CasinoOutcomeMapper<R : CasinoResponseLike>(
 
         fun invalidStakeMessage(min: Long, max: Long): String =
             "Stake must be between $min and $max credits."
-
-        fun onCooldownMessage(seconds: Long): String =
-            "Slow down — wait $seconds${if (seconds == 1L) " second" else " seconds"} before playing again."
     }
 }

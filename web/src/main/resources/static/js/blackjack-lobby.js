@@ -24,7 +24,9 @@
         window.TobyApi.postJson("/blackjack/" + guildId + "/create", { ante: ante })
             .then(function (b) {
                 if (!b.ok) {
-                    window.toasts && window.toasts.error(b.error || "Create failed.");
+                    if (typeof window.toast === "function") {
+                        window.toast(b.error || "Create failed.", "error");
+                    }
                     return;
                 }
                 window.location.href = "/blackjack/" + guildId + "/" + b.tableId;

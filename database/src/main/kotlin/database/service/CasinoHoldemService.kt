@@ -49,7 +49,6 @@ class CasinoHoldemService @Autowired constructor(
      */
     @Autowired(required = false) private val tradeService: EconomyTradeService? = null,
     @Autowired(required = false) private val marketService: TobyCoinMarketService? = null,
-    @Autowired(required = false) private val cooldownService: CasinoCooldownService? = null,
     private val random: Random = Random.Default,
 ) {
 
@@ -68,8 +67,6 @@ class CasinoHoldemService @Autowired constructor(
         data class InsufficientCoinsForTopUp(override val needed: Long, override val have: Long) :
             DealOutcome, CasinoCommonFailure.InsufficientCoinsForTopUp
         data object UnknownUser : DealOutcome, CasinoCommonFailure.UnknownUser
-        data class OnCooldown(override val remainingMs: Long) :
-            DealOutcome, CasinoCommonFailure.OnCooldown
     }
 
     sealed interface ActionOutcome {
@@ -109,11 +106,6 @@ class CasinoHoldemService @Autowired constructor(
         stake: Long,
         autoTopUp: Boolean = false,
     ): DealOutcome {
-        cooldownService?.tryAcquire(discordId, guildId, CasinoGameKey.CASINOHOLDEM)?.let { gate ->
-            if (gate is CasinoCooldownService.AcquireResult.OnCooldown) {
-                return DealOutcome.OnCooldown(gate.remainingMs)
-            }
-        }
         val resolved = when (val r = checkLockOrTopUp(discordId, guildId, stake, autoTopUp)) {
             is TopUpResolution.InvalidStake -> return DealOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return DealOutcome.UnknownUser
@@ -127,7 +119,6 @@ class CasinoHoldemService @Autowired constructor(
         // Debit the ante into table escrow up-front.
         resolved.user.socialCredit = resolved.balance - stake
         userService.updateUser(resolved.user)
-        cooldownService?.arm(discordId, CasinoGameKey.CASINOHOLDEM)
 
         // Sweep any RESOLVED tables this user left behind from a previous hand.
         sweepResolvedTablesFor(guildId, discordId)

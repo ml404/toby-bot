@@ -163,9 +163,6 @@ class BlackjackCommand @Autowired constructor(
             SoloDealOutcome.UnknownUser -> replyFailure(
                 event, WagerCommandFailure.UnknownUser, deleteDelay
             )
-            is SoloDealOutcome.OnCooldown -> replyFailure(
-                event, WagerCommandFailure.OnCooldown(outcome.remainingMs), deleteDelay
-            )
         }
     }
 

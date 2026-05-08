@@ -22,7 +22,6 @@ class BaccaratServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
-    private lateinit var cooldownService: CasinoCooldownService
     private lateinit var baccarat: Baccarat
     private lateinit var service: BaccaratService
 
@@ -36,11 +35,9 @@ class BaccaratServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
-        cooldownService = mockk(relaxed = true)
-        every { cooldownService.tryAcquire(any(), any(), any()) } returns CasinoCooldownService.AcquireResult.Ok
         baccarat = mockk(relaxed = true)
         service = BaccaratService(
-            userService, jackpotService, tradeService, marketService, configService, cooldownService,
+            userService, jackpotService, tradeService, marketService, configService,
             baccarat, Random(0)
         )
     }

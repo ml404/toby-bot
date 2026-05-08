@@ -26,7 +26,6 @@ class CoinflipService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
-    private val cooldownService: CasinoCooldownService,
     private val coinflip: Coinflip = Coinflip(),
     private val random: Random = Random.Default
 ) {
@@ -61,8 +60,6 @@ class CoinflipService(
         data class InvalidStake(override val min: Long, override val max: Long) :
             FlipOutcome, CasinoCommonFailure.InvalidStake
         data object UnknownUser : FlipOutcome, CasinoCommonFailure.UnknownUser
-        data class OnCooldown(override val remainingMs: Long) :
-            FlipOutcome, CasinoCommonFailure.OnCooldown
     }
 
     fun flip(
@@ -81,7 +78,6 @@ class CoinflipService(
         val resolved = when (val r = WagerHelper.checkLockOrTopUp(
             userService, tradeService, marketService,
             discordId, guildId, stake, minStake, maxStake, autoTopUp,
-            cooldownService = cooldownService, game = CasinoGameKey.COINFLIP,
         )) {
             is TopUpResolution.InvalidStake -> return FlipOutcome.InvalidStake(r.min, r.max)
             TopUpResolution.UnknownUser -> return FlipOutcome.UnknownUser
@@ -89,13 +85,11 @@ class CoinflipService(
                 return FlipOutcome.InsufficientCredits(r.stake, r.have)
             is TopUpResolution.InsufficientCoinsForTopUp ->
                 return FlipOutcome.InsufficientCoinsForTopUp(r.needed, r.have)
-            is TopUpResolution.OnCooldown -> return FlipOutcome.OnCooldown(r.remainingMs)
             is TopUpResolution.Ok -> r
         }
 
         val flip = coinflip.flip(predicted, random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, flip.multiplier)
-        cooldownService.arm(discordId, CasinoGameKey.COINFLIP)
         return if (flip.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,

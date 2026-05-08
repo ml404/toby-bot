@@ -471,12 +471,6 @@ class ModerationWebService(
                 if (n !in 0..10000) return "Value must be between 0 and 10000 (default 90)."
                 n.toString()
             }
-            ConfigDto.Configurations.CASINO_COOLDOWN_SECONDS -> {
-                val n = rawValue.trim().toIntOrNull()
-                    ?: return "Value must be a whole number (0-30)."
-                if (n !in 0..30) return "Value must be between 0 and 30 (0 disables cooldown)."
-                n.toString()
-            }
         }
 
         val guildIdString = guild.id

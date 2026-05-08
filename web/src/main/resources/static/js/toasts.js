@@ -75,6 +75,12 @@
         info: (m) => toast(m, 'info')
     };
 
+    // Alias — historical callers spelled the namespace `window.toasts`
+    // (lowercase plural). Pointing both names at the same object keeps
+    // those references working while we migrate them to the canonical
+    // `window.toast(msg, type)` shortcut below.
+    window.toasts = window.TobyToasts;
+
     // GLOBAL SHORTCUT (this is what your other files should use)
     window.toast = toast;
 })();

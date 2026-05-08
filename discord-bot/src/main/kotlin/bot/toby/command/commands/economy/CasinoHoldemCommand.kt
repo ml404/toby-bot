@@ -76,9 +76,6 @@ class CasinoHoldemCommand @Autowired constructor(
             DealOutcome.UnknownUser -> replyFailure(
                 event, WagerCommandFailure.UnknownUser, deleteDelay
             )
-            is DealOutcome.OnCooldown -> replyFailure(
-                event, WagerCommandFailure.OnCooldown(outcome.remainingMs), deleteDelay
-            )
         }
     }
 
