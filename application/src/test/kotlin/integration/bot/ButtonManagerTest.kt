@@ -72,6 +72,7 @@ class ButtonManagerTest {
         val availableButtons = listOf(
             BaccaratButton::class.java,
             BlackjackButton::class.java,
+            CasinoHoldemButton::class.java,
             DuelButton::class.java,
             HighlowButton::class.java,
             InitiativeClearButton::class.java,
@@ -85,7 +86,7 @@ class ButtonManagerTest {
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
-        assertEquals(12, buttonManager.buttons.size)
+        assertEquals(13, buttonManager.buttons.size)
     }
 
     @Test
