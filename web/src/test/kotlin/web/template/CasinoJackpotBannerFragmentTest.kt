@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test
 /**
  * Presence regression for the casino jackpot banner. The fragment used
  * to hardcode "1% chance to bank the pool" even though the live win
- * probability comes from the admin-configurable `JACKPOT_WIN_PCT` —
- * setting it to 5 still showed "1%" on every casino page. The fragment
- * now reads the [jackpotWinPct] model attribute and formats it via
- * `#numbers.formatDecimal`. This test reads the fragment off the
- * classpath and asserts the binding is in place and the literal `1%`
- * string is gone, so a future template tidy-up can't silently revert.
+ * probability comes from the admin-configurable `JACKPOT_WIN_PCT`. It
+ * also used `#numbers.formatDecimal(jackpotWinPct, 1, 2)` which forced
+ * exactly 2 decimal places, so neighbouring values like `0.005` and
+ * `0.0005` collapsed to the same `"0.01"` string. The fragment now
+ * renders the precomputed `JackpotService.winProbabilityDisplay` string
+ * directly so trailing zeros are stripped and small decimals survive.
  */
 class CasinoJackpotBannerFragmentTest {
 
@@ -29,9 +29,17 @@ class CasinoJackpotBannerFragmentTest {
             fragmentHtml.contains("jackpotWinPct"),
             "expected the fragment to reference the jackpotWinPct model attribute"
         )
-        assertTrue(
+    }
+
+    @Test
+    fun `jackpot banner renders the precomputed string without forcing 2 decimal places`() {
+        // formatDecimal(value, 1, 2) rounded sub-1% values like 0.0005
+        // back up to "0.01", masking the configured precision. The
+        // server-side `winProbabilityDisplay` already trims to a sensible
+        // string, so the fragment must just render it.
+        assertFalse(
             fragmentHtml.contains("formatDecimal"),
-            "expected the fragment to format jackpotWinPct via #numbers.formatDecimal"
+            "fragment should render jackpotWinPct directly — not via formatDecimal"
         )
     }
 

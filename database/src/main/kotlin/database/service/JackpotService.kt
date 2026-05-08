@@ -7,6 +7,8 @@ import database.persistence.TobyCoinJackpotWinnerPersistence
 import database.persistence.VoiceCreditDailyPersistence
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -61,6 +63,29 @@ class JackpotService(
      */
     fun winProbabilityPct(guildId: Long): Double =
         JackpotHelper.winProbability(configService, guildId) * 100.0
+
+    /**
+     * Banner-ready string for the live win probability — same source as
+     * [winProbabilityPct] but formatted to retain admin-set precision so
+     * `0.005` and `0.0005` render distinctly instead of both rounding to
+     * `0.01`. Trims trailing zeros (`1`, `0.5`, `0.05`, `0.005`,
+     * `0.0005`); the casino banner appends the `%` sign.
+     */
+    fun winProbabilityDisplay(guildId: Long): String {
+        val pct = winProbabilityPct(guildId)
+        if (pct == 0.0) return "0"
+        return BigDecimal.valueOf(pct)
+            .setScale(WIN_PCT_DISPLAY_SCALE, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+    }
+
+    companion object {
+        // 4dp covers the smallest probability the saved-percent / 100
+        // round-trip can express meaningfully — e.g. an admin saving
+        // "0.0005" yields a 0.0005% banner. Anything finer rounds to 0.
+        private const val WIN_PCT_DISPLAY_SCALE = 4
+    }
 
     /**
      * Add [amount] credits to the pool. Caller must already be inside a

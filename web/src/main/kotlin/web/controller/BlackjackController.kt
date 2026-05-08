@@ -11,9 +11,6 @@ import database.service.BlackjackService.MultiLeaveOutcome
 import database.service.BlackjackService.MultiStartOutcome
 import database.service.BlackjackService.SoloActionOutcome
 import database.service.BlackjackService.SoloDealOutcome
-import database.service.JackpotService
-import database.service.UserService
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -29,8 +26,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
 import web.casino.StakeBounds
+import web.casino.renderMinigamePage
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
@@ -67,9 +66,7 @@ class BlackjackController(
     private val blackjackWebService: BlackjackWebService,
     private val tableRegistry: BlackjackTableRegistry,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val jda: JDA,
+    private val pageContext: CasinoPageContext,
     private val stakeBounds: StakeBounds,
 ) {
 
@@ -102,26 +99,15 @@ class BlackjackController(
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes,
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/blackjack/guilds"
-    ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/blackjack/guilds"
-        }
-        val profile = userService.getUserById(discordId, guildId)
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", profile?.socialCredit ?: 0L)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra,
+        template = "blackjack-lobby", lobbyPath = "/blackjack/guilds"
+    ) {
         val (minAnte, maxAnte) = stakeBounds.blackjackSolo(guildId)
-        model.addAttribute("minAnte", minAnte)
-        model.addAttribute("maxAnte", maxAnte)
-        model.addAttribute("maxSeats", Blackjack.MULTI_MAX_SEATS)
-        model.addAttribute("tables", blackjackWebService.listMultiTables(guildId))
-        model.addAttribute("username", user.displayName())
-        "blackjack-lobby"
+        addAttribute("minAnte", minAnte)
+        addAttribute("maxAnte", maxAnte)
+        addAttribute("maxSeats", Blackjack.MULTI_MAX_SEATS)
+        addAttribute("tables", blackjackWebService.listMultiTables(guildId))
     }
 
     @GetMapping("/{guildId}/solo")
@@ -133,15 +119,13 @@ class BlackjackController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/blackjack/guilds"
     ) { discordId ->
-        val profile = userService.getUserById(discordId, guildId)
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("balance", profile?.socialCredit ?: 0L)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
+        pageContext.populate(model, guildId, discordId, user) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireMemberForPage "redirect:/blackjack/guilds"
+        }
         val (minStake, maxStake) = stakeBounds.blackjackSolo(guildId)
         model.addAttribute("minStake", minStake)
         model.addAttribute("maxStake", maxStake)
-        model.addAttribute("username", user.displayName())
         model.addAttribute("myDiscordId", discordId.toString())
         "blackjack-solo"
     }
@@ -161,14 +145,12 @@ class BlackjackController(
             ra.addFlashAttribute("error", "That blackjack table no longer exists.")
             return@requireMemberForPage "redirect:/blackjack/$guildId"
         }
-        val profile = userService.getUserById(discordId, guildId)
-        model.addAttribute("guildId", guildId.toString())
+        pageContext.populate(model, guildId, discordId, user) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireMemberForPage "redirect:/blackjack/guilds"
+        }
         model.addAttribute("tableId", tableId.toString())
-        model.addAttribute("balance", profile?.socialCredit ?: 0L)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
         model.addAttribute("ante", state.ante)
-        model.addAttribute("username", user.displayName())
         model.addAttribute("myDiscordId", discordId.toString())
         "blackjack-table"
     }

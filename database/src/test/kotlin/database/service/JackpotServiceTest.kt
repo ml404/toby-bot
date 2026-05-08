@@ -262,6 +262,72 @@ class JackpotServiceTest {
         assertEquals(1.0, service.winProbabilityPct(guildId), 1e-9)
     }
 
+    @Test
+    fun `winProbabilityDisplay renders the default percent without trailing zeros`() {
+        // setup() leaves the config row null → DEFAULT_WIN_PROBABILITY 0.01
+        // → 1.0 percent. The banner should read "1", not "1.00".
+        assertEquals("1", service.winProbabilityDisplay(guildId))
+    }
+
+    @Test
+    fun `winProbabilityDisplay preserves sub-percent precision admins set`() {
+        // Regression for the user-reported bug: saved 0.0005 used to
+        // collapse to "0.01" via formatDecimal(value, 1, 2). With the
+        // string-formatter the banner shows "0.0005" instead.
+        listOf(
+            "0.5" to "0.5",
+            "0.05" to "0.05",
+            "0.005" to "0.005",
+            "0.0005" to "0.0005",
+        ).forEach { (saved, expected) ->
+            every {
+                configService.getConfigByName(
+                    ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                    guildId.toString()
+                )
+            } returns ConfigDto(
+                name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                value = saved,
+                guildId = guildId.toString()
+            )
+            assertEquals(
+                expected,
+                service.winProbabilityDisplay(guildId),
+                "saved '$saved' should display as '$expected' on the banner"
+            )
+        }
+    }
+
+    @Test
+    fun `winProbabilityDisplay renders zero as a single 0`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            value = "0",
+            guildId = guildId.toString()
+        )
+        assertEquals("0", service.winProbabilityDisplay(guildId))
+    }
+
+    @Test
+    fun `winProbabilityDisplay echoes whole-number percents without a decimal point`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue,
+            value = "5",
+            guildId = guildId.toString()
+        )
+        assertEquals("5", service.winProbabilityDisplay(guildId))
+    }
+
     // ---- recordWin / isOnCooldown ----
 
     @Test

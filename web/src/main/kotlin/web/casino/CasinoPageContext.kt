@@ -48,7 +48,7 @@ class CasinoPageContext(
         model.addAttribute("tobyCoins", profile?.tobyCoins ?: 0L)
         model.addAttribute("marketPrice", marketService.getMarket(guildId)?.price ?: 0.0)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityPct(guildId))
+        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
         model.addAttribute("username", user.displayName())
         return guild
     }
