@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Casino Hold\'em', '/css/casinoholdem.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Casino Holdem', '/css/casinoholdem.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -10,7 +10,7 @@
 
     <div class="che-header">
         <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
-        <h1 th:text="'🃏 Casino Hold''em • ' + ${guildName}">🃏 Casino Hold'em</h1>
+        <h1 th:text="|🃏 Casino Hold'em • ${guildName}|">🃏 Casino Hold'em</h1>
         <p class="muted">
             Bet between <span th:text="${minStake}">10</span> and
             <span th:text="${maxStake}">500</span> credits per hand.
@@ -96,7 +96,6 @@
 <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
 <th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
-<script th:src="@{/js/casino-render.js}"></script>
 <script th:src="@{/js/casinoholdem-solo.js}"></script>
 </body>
 </html>

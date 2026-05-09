@@ -27,17 +27,29 @@
 
 <!--
     Shared script block for every minigame page. Order matters:
-      api      — fetch wrapper / CSRF
-      toasts   — toast notifications
-      sounds   — audio cues
-      jackpot  — jackpot pool banner mirroring
-      balance  — wallet balance update with flourish animation
-      topup    — TOBY shortfall sell button
-      result   — win/lose class toggling + balance refresh
-      game     — TobyCasinoGame.init scaffolding
-      dom      — standard `{prefix}-X` element selectors
+      api          — fetch wrapper / CSRF
+      toasts       — toast notifications
+      sounds       — audio cues + global mute toggle
+      jackpot      — jackpot pool banner mirroring
+      balance      — wallet balance update with flourish animation
+      topup        — TOBY shortfall sell button
+      result       — win/lose class toggling + balance refresh
+      render       — chip-stack flourish primitives (flashWinPayout etc.)
+      win-settle   — wires sounds + render into a single helper
+      game         — TobyCasinoGame.init scaffolding (calls win-settle)
+      dom          — standard `{prefix}-X` element selectors
+      bot-suspicion — anti-autoclicker telemetry tracker
     Each per-game template adds its own `<script th:src="@{/js/{game}.js}">`
     after this block.
+
+    casino-render lives here even though it's only strictly needed by
+    pages that draw chips: every minigame template historically had to
+    remember to load it explicitly, six of nine forgot, and the chip
+    flourish silently never fired (slots, coinflip, dice, highlow,
+    scratch, roulette). Hoisting it into the fragment closes that
+    forget-by-default loophole. Lobbies that never need it
+    (poker-lobby, blackjack-lobby) don't include this fragment, so
+    they still don't pay the cost.
 -->
 <th:block th:fragment="scripts">
     <script th:src="@{/js/api.js}"></script>
@@ -47,6 +59,8 @@
     <script th:src="@{/js/casino-balance.js}"></script>
     <script th:src="@{/js/casino-topup.js}"></script>
     <script th:src="@{/js/casino-result.js}"></script>
+    <script th:src="@{/js/casino-render.js}"></script>
+    <script th:src="@{/js/casino-win-settle.js}"></script>
     <script th:src="@{/js/casino-game.js}"></script>
     <script th:src="@{/js/casino-minigame-dom.js}"></script>
     <script th:src="@{/js/casino-bot-suspicion.js}"></script>

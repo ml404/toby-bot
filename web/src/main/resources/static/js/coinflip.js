@@ -1,6 +1,10 @@
 // Pure-DOM render for a /flip response. Hoisted out of the IIFE so the
 // jest test in `coinflip.test.js` can drive it without booting the page.
-function renderCoinflipResult(resultEl, body, flashTargetEl) {
+//
+// Win/lose sound + chip flourish are owned by the shared
+// `casino-win-settle.js` helper, fired by casino-game.js after this
+// renderResult returns (see flashTarget in init below).
+function renderCoinflipResult(resultEl, body) {
     const landedLabel = body.landed === 'HEADS' ? 'Heads' : 'Tails';
     const predictedLabel = body.predicted === 'HEADS' ? 'Heads' : 'Tails';
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
@@ -13,10 +17,6 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
             loseLineHtml: '<strong>' + landedLabel + '.</strong> You called ' +
                 predictedLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
         });
-    }
-    // Same chip flourish blackjack uses when a hand pays out.
-    if (typeof window !== 'undefined' && window.CasinoRender) {
-        window.CasinoRender.flashWinPayout(flashTargetEl, body);
     }
 }
 
@@ -83,11 +83,10 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
             coinFace.textContent = '🪙';
             delete coin.dataset.landed;
         }
+        // Chip-clink on landing — the win/lose cue follows from the
+        // shared win-settle helper a beat later.
         if (body && window.CasinoSounds) {
             window.CasinoSounds.play('chip');
-            setTimeout(function () {
-                window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
-            }, 80);
         }
     }
 
@@ -123,7 +122,8 @@ function renderCoinflipResult(resultEl, body, flashTargetEl) {
         },
         startAnimation: startFlipAnimation,
         stopAnimation: stopFlipAnimation,
-        renderResult: function (body) { renderCoinflipResult(els.resultEl, body, tableEl); },
+        renderResult: function (body) { renderCoinflipResult(els.resultEl, body); },
+        flashTarget: tableEl,
     });
 })();
 

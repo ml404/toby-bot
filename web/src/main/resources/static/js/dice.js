@@ -1,6 +1,10 @@
 // Pure-DOM render for a /roll response. Hoisted out of the IIFE so the
 // jest test in `dice.test.js` can drive it without booting the page.
-function renderDiceResult(resultEl, body, flashTargetEl) {
+//
+// Win/lose sound + chip flourish are owned by the shared
+// `casino-win-settle.js` helper, fired by casino-game.js after this
+// renderResult returns (see flashTarget in init below).
+function renderDiceResult(resultEl, body) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -11,10 +15,6 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
             loseLineHtml: '<strong>' + body.landed + '.</strong> You called ' +
                 body.predicted + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
         });
-    }
-    // Same chip flourish blackjack/poker use on a winning hand.
-    if (typeof window !== 'undefined' && window.CasinoRender) {
-        window.CasinoRender.flashWinPayout(flashTargetEl, body);
     }
 }
 
@@ -74,11 +74,10 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
             dieFace.textContent = '⚀';
             delete die.dataset.landed;
         }
+        // Click on landing — the win/lose cue follows from the shared
+        // win-settle helper a beat later.
         if (body && window.CasinoSounds) {
             window.CasinoSounds.play('click');
-            setTimeout(function () {
-                window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
-            }, 80);
         }
     }
 
@@ -114,7 +113,8 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
         },
         startAnimation: startRollAnimation,
         stopAnimation: stopRollAnimation,
-        renderResult: function (body) { renderDiceResult(els.resultEl, body, tableEl); },
+        renderResult: function (body) { renderDiceResult(els.resultEl, body); },
+        flashTarget: tableEl,
     });
 })();
 

@@ -93,13 +93,21 @@ class PageRenderSmokeIT {
             "/brother",
             "/config",
             "/music",
-            // Casino landing + per-guild minigame pages (the cluster that 500'd in #354)
+            // Casino landing + per-guild minigame pages. Every casino
+            // route on the navbar / picker is covered so a future
+            // template move (e.g. casinoholdem's URL move in #419)
+            // can't silently break the page without smoke catching it.
             "/casino/guilds",
             "/casino/1/slots",
             "/casino/1/dice",
             "/casino/1/coinflip",
             "/casino/1/highlow",
             "/casino/1/scratch",
+            "/casino/1/keno",
+            "/casino/1/roulette",
+            "/casino/1/baccarat",
+            "/casino/1/casinoholdem",
+            "/casino/1/lottery",
             // Poker
             "/poker/guilds",
             "/poker/1",

@@ -42,6 +42,20 @@
         // revealed every cell (so credits don't visibly drop before the
         // suspense beat is over). It opts out and updates manually.
         const autoApplyBalance = cfg.autoApplyBalance !== false;
+        // Win-settle: every minigame plays a win/lose cue + (on win) a
+        // chip flourish on the felt. The helper module centralises both.
+        // Pass `flashTarget` (a DOM element or `() => DOM element`) and
+        // the helper will auto-fire after renderResult settles. Passing
+        // null skips the visual half but the win/lose sound still plays
+        // (audio-only parity is the floor — every game gets the cue).
+        const flashTargetFn = (typeof cfg.flashTarget === 'function')
+            ? cfg.flashTarget
+            : (cfg.flashTarget ? () => cfg.flashTarget : () => null);
+        const chipCountFn = (typeof cfg.chipCount === 'function') ? cfg.chipCount : null;
+        // Some custom flows (scratch's user-driven reveal) drive the
+        // win-settle themselves — `autoWinSettle: false` opts out so
+        // the helper doesn't double-fire.
+        const autoWinSettle = cfg.autoWinSettle !== false;
 
         if (!form || !stakeInput || !primaryBtn) {
             return { run: function () {} };
@@ -85,6 +99,21 @@
             }
             if (typeof newBalance !== 'number') return;
             if (balanceEl) balanceEl.textContent = newBalance;
+        }
+
+        function applyWinSettle(body, override) {
+            // Plays the win/lose cue + drops a chip flourish via the
+            // shared helper. `override` lets a custom flow (scratch's
+            // reveal) supply a fresh body / target / chipCount without
+            // reaching into the helper's API directly.
+            if (!root || !root.TobyCasinoWinSettle) return;
+            var target = (override && 'flashTarget' in override)
+                ? override.flashTarget
+                : flashTargetFn(body);
+            var opts = (override && override.chipCount)
+                ? { chipCount: override.chipCount }
+                : (chipCountFn ? { chipCount: chipCountFn } : null);
+            root.TobyCasinoWinSettle.fire(body, target, opts);
         }
 
         function applyTobyDelta(body) {
@@ -172,6 +201,9 @@
                                     applyBalance(body.newBalance);
                                     applyTobyDelta(body);
                                 }
+                                if (autoWinSettle) {
+                                    applyWinSettle(body);
+                                }
                                 if (jackpot) jackpot.releasePoolBanner();
                                 busy = false;
                                 setDisabled(false);
@@ -208,6 +240,7 @@
             run: run,
             applyBalance: applyBalance,
             applyTobyDelta: applyTobyDelta,
+            applyWinSettle: applyWinSettle,
             isBusy: function () { return busy; },
         };
     }

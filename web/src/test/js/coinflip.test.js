@@ -55,18 +55,7 @@ describe('renderCoinflipResult', () => {
         expect(resultEl.innerHTML).toContain('+5 to jackpot');
     });
 
-    test('win flashes a chip stack on the table; loss leaves it untouched', () => {
-        renderCoinflipResult(resultEl, {
-            win: true, landed: 'HEADS', predicted: 'HEADS', net: 100,
-        }, tableEl);
-        const stack = tableEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+100');
-
-        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
-        renderCoinflipResult(resultEl, {
-            win: false, landed: 'TAILS', predicted: 'HEADS', net: -50,
-        }, tableEl);
-        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
-    });
+    // Chip flourish has moved to casino-win-settle (the shared helper);
+    // covered in casino-win-settle.test.js. renderCoinflipResult now
+    // only owns the result line + class toggling.
 });

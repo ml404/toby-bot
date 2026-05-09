@@ -1,7 +1,12 @@
 // Pure-DOM render for a /spin response. Hoisted out of the IIFE so the
 // jest test in `slots.test.js` can drive it without booting the whole
 // page. The IIFE below calls it with the live result element.
-function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
+//
+// Win/lose sound + chip flourish on the felt are owned by the shared
+// `casino-win-settle.js` helper, fired by casino-game.js after this
+// renderResult returns (see flashTarget in init below). All slots-
+// specific visuals (the gold halo on the winning reels) stay here.
+function renderSlotsResult(resultEl, body, reels) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -14,19 +19,12 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
     }
     if (typeof window === 'undefined' || !body) return;
     // Light up the winning reels with the gold halo used everywhere else
-    // for "this is the active payoff", and drop the shared chip flourish
-    // on the felt so a slots win celebrates like a blackjack win.
+    // for "this is the active payoff".
     if (reels && reels.length) {
         reels.forEach(function (r) { if (r) r.classList.remove('win-cell'); });
         if (body.win) {
             reels.forEach(function (r) { if (r) r.classList.add('win-cell'); });
         }
-    }
-    if (window.CasinoRender) {
-        // Bigger payouts get a taller stack, capped internally at 7.
-        var payoutEstimate = (body.jackpotPayout > 0 ? body.jackpotPayout : body.net) || 0;
-        var chipCount = Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100)));
-        window.CasinoRender.flashWinPayout(flashTargetEl, body, chipCount);
     }
 }
 
@@ -82,7 +80,9 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
         clearInterval(intervalId);
         const finalSymbols = body && body.symbols;
         // Stagger the reel-stop click cues so each reel locking in is
-        // audible — like a slot machine's individual reel ticks.
+        // audible — like a slot machine's individual reel ticks. The
+        // win/lose cue + chip flourish are fired by the shared
+        // win-settle helper a beat after these clicks land.
         reels.forEach(function (reel, i) {
             reel.classList.remove('spinning');
             if (finalSymbols && finalSymbols[i]) reel.textContent = finalSymbols[i];
@@ -90,11 +90,6 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
                 setTimeout(function () { window.CasinoSounds.play('click'); }, i * 110);
             }
         });
-        if (body && window.CasinoSounds) {
-            setTimeout(function () {
-                window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
-            }, reels.length * 110 + 80);
-        }
     }
 
     window.TobyCasinoGame.init({
@@ -124,7 +119,8 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
         },
         startAnimation: startSpinAnimation,
         stopAnimation: stopSpinAnimation,
-        renderResult: function (body) { renderSlotsResult(els.resultEl, body, machineEl, reels); },
+        renderResult: function (body) { renderSlotsResult(els.resultEl, body, reels); },
+        flashTarget: machineEl,
     });
 })();
 

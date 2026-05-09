@@ -15,7 +15,6 @@ function renderKenoResult(opts) {
     var resultEl = opts.resultEl;
     var statusEl = opts.statusEl;
     var gridEl = opts.gridEl;
-    var flashTargetEl = opts.flashTargetEl;
     var stagger = opts.stagger !== false;
     var dealMs = stagger ? (opts.dealMs || 120) : 0;
     var body = opts.body;
@@ -56,15 +55,11 @@ function renderKenoResult(opts) {
                 });
             }
         }
-
-        if (typeof window !== 'undefined') {
-            if (window.CasinoRender) {
-                window.CasinoRender.flashWinPayout(flashTargetEl, body);
-            }
-            if (window.CasinoSounds) {
-                window.CasinoSounds.play(body.win ? 'win' : 'lose');
-            }
-        }
+        // Win/lose cue + chip flourish are owned by the shared
+        // casino-win-settle helper, fired by casino-game.js once the
+        // staged reveal Promise resolves (i.e. after this finalize
+        // returns). The flashTarget on the keno init() is the table
+        // wrapper.
     }
 
     // Hide any prior result line while the deal plays out — it'll be
@@ -273,10 +268,10 @@ function kenoLoseLineHtml(body) {
                     resultEl: resultEl,
                     statusEl: statusEl,
                     gridEl: gridEl,
-                    flashTargetEl: tableEl,
                     body: body,
                 });
             },
+            flashTarget: tableEl,
         });
     }
 

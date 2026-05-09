@@ -87,25 +87,24 @@ describe('renderSlotsResult', () => {
         expect(resultEl.innerHTML).not.toContain('to jackpot');
     });
 
-    test('win lights up every reel with .win-cell and drops a chip stack on the machine', () => {
+    test('win lights up every reel with .win-cell', () => {
+        // Chip flourish is now owned by the shared casino-win-settle
+        // helper (fired from casino-game.js after renderResult). The
+        // per-reel gold halo is the slots-specific bit and stays here.
         renderSlotsResult(resultEl, {
             win: true, multiplier: 5, net: 400, symbols: ['🍒', '🍒', '🍒']
-        }, machineEl, reels);
+        }, reels);
 
         reels.forEach((r) => expect(r.classList.contains('win-cell')).toBe(true));
-        const stack = machineEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+400');
     });
 
-    test('lose strips any prior .win-cell highlight and leaves the machine clean', () => {
+    test('lose strips any prior .win-cell highlight', () => {
         // Pretend the previous spin won — the new lose render should clear it.
         reels.forEach((r) => r.classList.add('win-cell'));
         renderSlotsResult(resultEl, {
             win: false, net: -100, symbols: ['🍒', '🍋', '⭐']
-        }, machineEl, reels);
+        }, reels);
 
         reels.forEach((r) => expect(r.classList.contains('win-cell')).toBe(false));
-        expect(machineEl.querySelector('.casino-chip-stack')).toBeNull();
     });
 });

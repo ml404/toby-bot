@@ -18,7 +18,6 @@ function renderBaccaratResult(opts) {
     var bankerTotalEl = opts.bankerTotalEl;
     var playerTotalEl = opts.playerTotalEl;
     var tableEl = opts.tableEl;
-    var flashTargetEl = opts.flashTargetEl || tableEl;
     var stagger = opts.stagger !== false;
     // Shared with blackjack/casinoholdem so every card-game felt deals
     // at the same beat-out cadence. Tests can still override via opts.
@@ -79,18 +78,10 @@ function renderBaccaratResult(opts) {
                 loseLineHtml: loseLineHtml(body, sideLabel, winnerLabel),
             });
         }
-
-        // Match the blackjack/poker payoff flourish: gold chip stack pops on
-        // wins, sound cue on either outcome. flashWinPayout picks the right
-        // payout (jackpot > net) and no-ops on losses.
-        if (typeof window !== 'undefined') {
-            if (window.CasinoRender) {
-                window.CasinoRender.flashWinPayout(flashTargetEl, body);
-            }
-            if (window.CasinoSounds) {
-                window.CasinoSounds.play(body.win ? 'win' : 'lose');
-            }
-        }
+        // Win/lose cue + chip flourish are owned by the shared
+        // casino-win-settle helper, fired by casino-game.js once this
+        // staged-deal Promise resolves. The helper checks body.push
+        // and skips both cues on a tie.
     }
 
     if (dealMs > 0) {
@@ -238,6 +229,14 @@ function loseLineHtml(body, sideLabel, winnerLabel) {
             buildPayload: function (state) {
                 return { side: selectedSide(), stake: state.stake, autoTopUp: state.autoTopUp };
             },
+            startAnimation: function () {
+                // Click cue on bet submit so baccarat has the same
+                // "round started" audio anchor as the other minigames.
+                // The deal cues themselves ride along with each
+                // freshly-arriving card via casino-render's renderCards.
+                if (window.CasinoSounds) window.CasinoSounds.play('click');
+                return null;
+            },
             renderResult: function (body) {
                 // Return the Promise so the scaffold waits for the
                 // staged deal to land before applying balance and
@@ -249,10 +248,10 @@ function loseLineHtml(body, sideLabel, winnerLabel) {
                     bankerTotalEl: bankerTotalEl,
                     playerTotalEl: playerTotalEl,
                     tableEl: tableEl,
-                    flashTargetEl: tableEl,
                     body: body,
                 });
             },
+            flashTarget: tableEl,
         });
     }
 })();

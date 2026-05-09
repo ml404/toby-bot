@@ -16,7 +16,11 @@ function setBetInputsDisabled(disabled, fieldsetEl, straightInputEl) {
 // Pure-DOM render for a /spin response. Hoisted out of the IIFE so a
 // future jest test can drive it without booting the whole page (mirrors
 // renderSlotsResult). The IIFE below calls it with the live result element.
-function renderRouletteResult(resultEl, body, flashTargetEl) {
+//
+// Win/lose sound + chip flourish are owned by the shared
+// `casino-win-settle.js` helper, fired by casino-game.js after this
+// renderResult returns (see flashTarget in init below).
+function renderRouletteResult(resultEl, body) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         var betLabel = body.betLabel || body.bet || 'bet';
         var pocketLabel = '#' + body.landed +
@@ -32,12 +36,6 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
                 'Lost <strong>' + Math.abs(body.net) + ' credits</strong> &middot; ' +
                 betLabel + ' (landed ' + pocketLabel + ')',
         });
-    }
-    if (typeof window === 'undefined' || !body) return;
-    if (window.CasinoRender) {
-        var payoutEstimate = (body.jackpotPayout > 0 ? body.jackpotPayout : body.net) || 0;
-        var chipCount = Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100)));
-        window.CasinoRender.flashWinPayout(flashTargetEl, body, chipCount);
     }
 }
 
@@ -211,16 +209,13 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
         }
     }
 
-    function playOutcomeCues(body) {
+    function playOutcomeCues(_body) {
         if (!window.CasinoSounds) return;
+        // Ball-drop cue lands the moment the wheel settles. The win/lose
+        // arpeggio + chip flourish follow from the shared win-settle
+        // helper a beat later (fired by casino-game.js after
+        // renderResult returns).
         window.CasinoSounds.play('ball');
-        var win = body.net > 0;
-        // Slight delay so the ball-drop cue doesn't overlap the win/lose
-        // arpeggio — keeps the audio readable.
-        var id = setTimeout(function () {
-            window.CasinoSounds.play(win ? 'win' : 'lose');
-        }, 160);
-        settleTimeoutIds.push(id);
     }
 
     function paintLanded(body) {
@@ -309,8 +304,9 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
         startAnimation: startSpinAnimation,
         stopAnimation: stopSpinAnimation,
         renderResult: function (body) {
-            renderRouletteResult(els.resultEl, body, tableEl);
+            renderRouletteResult(els.resultEl, body);
         },
+        flashTarget: tableEl,
         validate: function (state) {
             var bet = selectedBet();
             if (!bet) return 'Pick a bet.';
