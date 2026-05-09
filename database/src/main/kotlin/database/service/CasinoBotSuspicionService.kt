@@ -1,5 +1,7 @@
 package database.service
 
+import common.events.AntiAutoclickEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
 
@@ -31,7 +33,9 @@ import java.util.concurrent.ConcurrentHashMap
  * the heuristic warrants.
  */
 @Service
-class CasinoBotSuspicionService {
+class CasinoBotSuspicionService(
+    private val eventPublisher: ApplicationEventPublisher,
+) {
 
     /**
      * Maximum pixel distance between consecutive bet clicks that still
@@ -74,11 +78,17 @@ class CasinoBotSuspicionService {
         // streak so a previously suspicious user gets a clean slate when
         // they switch input modality.
         if (clickX == null || clickY == null || mouseMoved == null) {
-            states.remove(key)
+            val priorEntry = states.remove(key)
+            if ((priorEntry?.streak ?: 0) >= 1) {
+                eventPublisher.publishEvent(
+                    AntiAutoclickEvent.SessionClosed(guildId, discordId, gameKey)
+                )
+            }
             return 0
         }
 
         val prior = states[key]
+        val priorStreak = prior?.streak ?: 0
         val newStreak = if (
             prior != null &&
             !mouseMoved &&
@@ -90,6 +100,15 @@ class CasinoBotSuspicionService {
             0
         }
         states[key] = State(lastX = clickX, lastY = clickY, streak = newStreak)
+        if (priorStreak == 0 && newStreak >= 1) {
+            eventPublisher.publishEvent(
+                AntiAutoclickEvent.SessionOpened(guildId, discordId, gameKey, newStreak)
+            )
+        } else if (priorStreak >= 1 && newStreak == 0) {
+            eventPublisher.publishEvent(
+                AntiAutoclickEvent.SessionClosed(guildId, discordId, gameKey)
+            )
+        }
         return newStreak
     }
 

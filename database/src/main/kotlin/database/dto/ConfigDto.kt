@@ -194,6 +194,14 @@ class ConfigDto(
         DICE_BOT_EDGE_MAX_PCT("DICE_BOT_EDGE_MAX_PCT"),
         SLOTS_BOT_EDGE_MAX_PCT("SLOTS_BOT_EDGE_MAX_PCT"),
 
+        // Per-guild text-channel ID where anti-autoclicker session embeds
+        // are posted: one message per suspicion session, edited in place
+        // as forced-loss substitutions accumulate, finalised when the
+        // streak resets. Stored as a stringified Long. Falls back to the
+        // guild's system channel when unset, unparseable, or the bot has
+        // no permission on the configured channel.
+        CASINO_MODLOG_CHANNEL_ID("CASINO_MODLOG_CHANNEL_ID"),
+
         // Daily match-numbers lottery (Pick 5 of 1-49) auto-draw toggle.
         // Boolean ("true"/"false"); defaults to "false" so guilds opt in.
         // When enabled, LotteryDailyJob runs at 00:00 UTC: closes the
