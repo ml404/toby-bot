@@ -272,6 +272,38 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
 }
 .empty-hero .emoji { font-size: 2.2rem; display: block; margin-bottom: 10px; }
 
+/* ---- Page header ----
+   Standard "back-link → h1 → optional muted lede" stack used by every
+   per-guild detail page (moderation, profile, leaderboard, economy,
+   intros, campaign, etc.). Hoisted here so individual page CSS files
+   stop redefining the same rhythm with slightly different margins. */
+.page-header {
+    margin-bottom: var(--space-5);
+}
+.page-header h1 {
+    margin-bottom: var(--space-2);
+}
+.page-header .lede {
+    color: var(--text-muted);
+    line-height: 1.55;
+    max-width: 60ch;
+}
+
+/* ---- Section eyebrow ----
+   Small uppercased accent label that sits above an h2 to flag the
+   section theme ("Casino & Coin", "Server Management", etc.). Used on
+   the public homepage; available here for any interior page that wants
+   the same rhythm. */
+.section-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #7289fa;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--space-2);
+}
+
 /* ---- Cards ---- */
 .card {
     background: var(--bg-elevated);
@@ -279,6 +311,12 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
     border-radius: var(--radius-lg);
     padding: var(--space-6);
 }
+/* Three-tier card-padding scale for cards that don't want the full
+   .card chrome but do want consistent inner padding. Compose with
+   bg-elevated/border manually if needed. */
+.card-pad-sm { padding: var(--space-3); }
+.card-pad-md { padding: var(--space-4); }
+.card-pad-lg { padding: var(--space-5) var(--space-6); }
 
 /* ---- Alerts (inline, for server-rendered fallback) ---- */
 .alert {

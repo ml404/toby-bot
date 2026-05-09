@@ -45,7 +45,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: var(--space-2) 0;
     border-bottom: 1px solid var(--border);
 }
 .profile-row:last-of-type { border-bottom: 0; }

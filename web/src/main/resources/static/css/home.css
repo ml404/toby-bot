@@ -118,15 +118,7 @@
     margin-bottom: 28px;
     max-width: 760px;
 }
-.section-eyebrow {
-    display: inline-block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #7289fa;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 8px;
-}
+/* .section-eyebrow lives in base.css now (used across admin + public). */
 .section h2 {
     font-size: 1.7rem;
     color: #fff;
