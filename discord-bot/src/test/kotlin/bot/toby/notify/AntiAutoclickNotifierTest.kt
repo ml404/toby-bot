@@ -4,7 +4,9 @@ import common.events.AntiAutoclickEvent
 import database.dto.ConfigDto
 import database.service.ConfigService
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
@@ -60,6 +62,11 @@ class AntiAutoclickNotifierTest {
     }
 
     private val pendingScheduledTasks = mutableListOf<Runnable>()
+    // Captures the Consumer<Message> handed to createAction.queue(...) on
+    // every send. Each open() call overwrites it; the
+    // completeOpenSendWithMessageId helper invokes the latest one to
+    // simulate JDA's REST callback firing.
+    private val openConsumerSlot = slot<Consumer<Message>>()
 
     @BeforeEach
     fun setup() {
@@ -89,11 +96,15 @@ class AntiAutoclickNotifierTest {
             )
         } returns null
 
-        // Send: capture the message-id callback so the test can synchronously
-        // simulate JDA's REST callback handing back a Message.
+        // Send: stub the queue() Consumer overload to capture the message-id
+        // callback into openConsumerSlot every time, so the test can synchronously
+        // simulate JDA's REST callback handing back a Message. Setting the
+        // capture in the stub (not in a verify) means the slot tracks the
+        // latest call and survives multiple opens within a single test.
         createAction = mockk(relaxed = true)
         every { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
         every { configChannel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
+        every { createAction.queue(capture(openConsumerSlot)) } just runs
 
         editAction = mockk(relaxed = true)
         every {
@@ -119,13 +130,11 @@ class AntiAutoclickNotifierTest {
         notifier = AntiAutoclickNotifier(jda, configService, advanceableClock, scheduler)
     }
 
-    /** Simulate JDA's REST callback completing — feeds the captured Consumer
-     *  a stub Message with the given idLong. */
+    /** Simulate JDA's REST callback completing — feeds the most recently
+     *  captured Consumer a stub Message with the given idLong. */
     private fun completeOpenSendWithMessageId(id: Long) {
-        val consumerSlot = slot<Consumer<Message>>()
-        verify { createAction.queue(capture(consumerSlot)) }
         val msg = mockk<Message>(relaxed = true).also { every { it.idLong } returns id }
-        consumerSlot.captured.accept(msg)
+        openConsumerSlot.captured.accept(msg)
     }
 
     private fun openEvent(streak: Int = 1) =
