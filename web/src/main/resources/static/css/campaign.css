@@ -18,24 +18,6 @@
    they read identically in practice.
    ============================================================ */
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-}
-.container { max-width: 800px; margin: var(--space-10) auto; padding: 0 var(--space-6); }
-h1 { font-size: 1.6rem; margin-bottom: var(--space-2); color: #fff; }
-.subtitle { color: var(--text-muted); margin-bottom: var(--space-8); }
-.error {
-    background: var(--danger-bg);
-    border: 1px solid var(--danger-border);
-    color: var(--danger);
-    padding: 10px 16px;
-    border-radius: 6px;
-    margin-bottom: var(--space-5);
-}
 .guild-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -94,27 +76,10 @@ h1 { font-size: 1.6rem; margin-bottom: var(--space-2); color: #fff; }
     border: 1px solid rgba(160,160,176,0.2);
 }
 .empty { color: var(--text-muted); text-align: center; padding: 48px 0; }
-.hint {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: var(--space-4) 20px;
-    margin-bottom: var(--space-6);
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-.hint code {
-    background: rgba(88,101,242,0.15);
-    color: #8892f5;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-}
 @media (max-width: 480px) {
     .guild-grid { grid-template-columns: 1fr; gap: var(--space-3); }
     .guild-card { padding: 14px 16px; }
 }
-    </style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
