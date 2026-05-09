@@ -209,6 +209,7 @@ class VoiceEventHandlerTest {
         every { event.channelLeft } returns null
         every { channel.members } returns listOf(nonBotMember)
         every { channel.name } returns "voiceChannelName"
+        every { channel.idLong } returns 99L
         every { channel.asVoiceChannel() } returns mockk(relaxed = true)
         every { nonBotMember.user.isBot } returns false
         every { member.guild } returns guild
@@ -271,6 +272,7 @@ class VoiceEventHandlerTest {
         every { event.channelLeft } returns null
         every { channel.members } returns listOf(nonBotMember)
         every { channel.name } returns "voiceChannelName"
+        every { channel.idLong } returns 99L
         every { channel.asVoiceChannel() } returns mockk(relaxed = true)
         every { nonBotMember.user.isBot } returns false
         every { member.guild } returns guild

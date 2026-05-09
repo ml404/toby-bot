@@ -53,6 +53,7 @@ internal class JoinCommandTest : MusicCommandTest {
         // Setup audio channel mocks
         every { audioChannelUnion.asVoiceChannel() } returns voiceChannel
         every { voiceChannel.name } returns "Channel Name"
+        every { voiceChannel.idLong } returns 4242L
 
         // Mock behaviors for audio player and other services
         every { mockAudioPlayer.isPaused } returns false
