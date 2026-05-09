@@ -1,13 +1,12 @@
 package web.controller
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,7 +15,14 @@ import org.springframework.ui.Model
 
 class ChangelogControllerTest {
 
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
+    // Plain Jackson ObjectMapper — no jackson-module-kotlin import. The
+    // kotlin module is on the runtime classpath (Spring Boot
+    // auto-registers it on the wired-in ObjectMapper) but not on the
+    // :application module's *test compile* classpath. ChangelogEntry's
+    // data class has defaults on every field so the synthetic no-arg
+    // constructor is enough for Jackson to deserialize without the
+    // kotlin module.
+    private val objectMapper: ObjectMapper = ObjectMapper()
 
     private lateinit var controller: ChangelogController
     private lateinit var model: Model
@@ -36,19 +42,9 @@ class ChangelogControllerTest {
 
     @Test
     fun `changelog adds the loaded entries onto the model`() {
-        val captured = slot<List<ChangelogController.ChangelogEntry>>()
-        every { model.addAttribute("entries", capture(captured)) } returns model
-
         controller.changelog(null, model)
 
         verify { model.addAttribute("entries", any<List<ChangelogController.ChangelogEntry>>()) }
-        assertFalse(captured.captured.isEmpty(), "changelog.json should seed at least one entry")
-        // Spot-check shape so a future schema drift surfaces here, not at
-        // template-render time.
-        val first = captured.captured.first()
-        assertTrue(first.date.isNotBlank(), "first entry should have a date")
-        assertTrue(first.title.isNotBlank(), "first entry should have a title")
-        assertTrue(first.summary.isNotBlank(), "first entry should have a summary")
     }
 
     @Test
@@ -58,8 +54,25 @@ class ChangelogControllerTest {
         // shipping unnoticed.
         assertTrue(
             controller.entryCount() > 0,
-            "ChangelogController should load entries from $RESOURCE on the classpath"
+            "ChangelogController should load entries from ${ChangelogController.CHANGELOG_RESOURCE} on the classpath"
         )
+    }
+
+    @Test
+    fun `changelog json entries have valid shape`() {
+        // Read the resource directly (independent of the controller) so a
+        // future schema drift surfaces here, not at template-render time.
+        val url = javaClass.classLoader.getResource(ChangelogController.CHANGELOG_RESOURCE)
+        assertNotNull(url, "${ChangelogController.CHANGELOG_RESOURCE} must be on the test classpath")
+        val entries: List<ChangelogController.ChangelogEntry> = objectMapper.readValue(
+            url!!.openStream(),
+            object : TypeReference<List<ChangelogController.ChangelogEntry>>() {}
+        )
+        assertTrue(entries.isNotEmpty(), "changelog.json should seed at least one entry")
+        val first = entries.first()
+        assertTrue(first.date.isNotBlank(), "first entry should have a date")
+        assertTrue(first.title.isNotBlank(), "first entry should have a title")
+        assertTrue(first.summary.isNotBlank(), "first entry should have a summary")
     }
 
     @Test
@@ -77,9 +90,5 @@ class ChangelogControllerTest {
         controller.changelog(user, model)
 
         verify { model.addAttribute("username", "TestUser") }
-    }
-
-    companion object {
-        private const val RESOURCE = ChangelogController.CHANGELOG_RESOURCE
     }
 }
