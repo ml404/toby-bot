@@ -6,7 +6,9 @@ import database.dto.ConfigDto
 import database.dto.UserDto
 import database.service.CasinoAdminService
 import database.service.ConfigService
+import database.service.JackpotLotteryService
 import database.service.JackpotService
+import database.service.LotteryHelper
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
 import database.service.UbiDailyService
@@ -34,6 +36,7 @@ class ModerationWebService(
     private val ubiDailyService: UbiDailyService,
     private val jackpotService: JackpotService,
     private val casinoAdminService: CasinoAdminService,
+    private val jackpotLotteryService: JackpotLotteryService,
     private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
@@ -306,6 +309,98 @@ class ModerationWebService(
         }
     }
 
+    /**
+     * Force-draw the daily match-numbers lottery for [guildId]: closes
+     * the current open draw (paying tier-based prizes) and opens a
+     * fresh one seeded from the jackpot. Mirrors what
+     * [bot.toby.scheduling.LotteryDailyJob] does at 00:00 UTC, but
+     * admin-triggered for testing or when the cron missed (bot was
+     * down at midnight, etc).
+     */
+    data class ForceDrawLotteryResult(
+        val error: String?,
+        val drewPrior: Boolean,
+        val priorTotalPaid: Long,
+        val priorRolledBack: Long,
+        val priorDrawn: List<Int>,
+        val openedNew: Boolean,
+        val newSeeded: Long,
+    )
+
+    fun forceDailyDraw(actorDiscordId: Long, guildId: Long): ForceDrawLotteryResult {
+        if (!canModerate(actorDiscordId, guildId)) {
+            return ForceDrawLotteryResult(
+                error = "You are not allowed to moderate this server.",
+                drewPrior = false, priorTotalPaid = 0L, priorRolledBack = 0L,
+                priorDrawn = emptyList(), openedNew = false, newSeeded = 0L,
+            )
+        }
+        // Step 1: close open daily if present.
+        var drewPrior = false
+        var priorTotalPaid = 0L
+        var priorRolledBack = 0L
+        var priorDrawn: List<Int> = emptyList()
+        when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
+            is JackpotLotteryService.DrawMatchOutcome.Ok -> {
+                drewPrior = true
+                priorTotalPaid = drawResult.totalPaid
+                priorRolledBack = drawResult.rolledBackToJackpot
+                priorDrawn = drawResult.drawnNumbers
+            }
+            JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
+                jackpotLotteryService.cancelMatchLottery(guildId)
+                drewPrior = true
+            }
+            JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> {
+                // No-op; nothing to close.
+            }
+        }
+        // Step 2: open fresh daily.
+        val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
+        val seedPct = LotteryHelper.dailySeedPct(configService, guildId)
+        val open = jackpotLotteryService.openMatchLottery(
+            guildId = guildId,
+            ticketPrice = ticketPrice,
+            seedPct = seedPct,
+            durationHours = 24L,
+        )
+        return when (open) {
+            is JackpotLotteryService.OpenOutcome.Ok -> {
+                logger.info(
+                    "Casino admin force-drew daily lottery: guild=$guildId actor=$actorDiscordId " +
+                        "drewPrior=$drewPrior priorTotalPaid=$priorTotalPaid newSeeded=${open.seeded}"
+                )
+                ForceDrawLotteryResult(
+                    error = null,
+                    drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
+                    priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    openedNew = true, newSeeded = open.seeded,
+                )
+            }
+            JackpotLotteryService.OpenOutcome.AlreadyOpen ->
+                ForceDrawLotteryResult(
+                    error = "A daily lottery is already open — close it first.",
+                    drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
+                    priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    openedNew = false, newSeeded = 0L,
+                )
+            JackpotLotteryService.OpenOutcome.EmptyPool ->
+                ForceDrawLotteryResult(
+                    error = null,
+                    drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
+                    priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    openedNew = false, newSeeded = 0L,
+                )
+            is JackpotLotteryService.OpenOutcome.InvalidParams ->
+                ForceDrawLotteryResult(
+                    error = open.reason,
+                    drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
+                    priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    openedNew = false, newSeeded = 0L,
+                )
+        }
+    }
+
     fun updateConfig(
         actorDiscordId: Long,
         guildId: Long,
@@ -517,6 +612,29 @@ class ModerationWebService(
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number percentage (0-50; 0 disables)."
                 if (n !in 0..50) return "Value must be between 0 and 50."
+                n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_ENABLED -> {
+                val v = rawValue.trim().lowercase()
+                if (v !in setOf("true", "false")) return "Value must be true or false."
+                v
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_TICKET_PRICE -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of credits (1-1000000)."
+                if (n !in 1L..1_000_000L) return "Value must be between 1 and 1,000,000 credits."
+                n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_SEED_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (1-100; default 5)."
+                if (n !in 1..100) return "Value must be between 1 and 100."
+                n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_REVENUE_JACKPOT_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (0-100; default 30)."
+                if (n !in 0..100) return "Value must be between 0 and 100."
                 n.toString()
             }
         }

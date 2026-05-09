@@ -38,7 +38,8 @@ class CasinoJackpotCssRegressionTest {
             ".dice-result-jackpot",
             ".highlow-result-jackpot",
             ".scratch-result-jackpot",
-            ".bac-result-jackpot"
+            ".bac-result-jackpot",
+            ".lottery-result-jackpot"
         ).forEach { selector ->
             assertTrue(
                 css.contains(selector),

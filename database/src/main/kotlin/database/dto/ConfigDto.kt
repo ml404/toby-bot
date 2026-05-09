@@ -192,7 +192,33 @@ class ConfigDto(
         // games with different baseline RTPs.
         COINFLIP_BOT_EDGE_MAX_PCT("COINFLIP_BOT_EDGE_MAX_PCT"),
         DICE_BOT_EDGE_MAX_PCT("DICE_BOT_EDGE_MAX_PCT"),
-        SLOTS_BOT_EDGE_MAX_PCT("SLOTS_BOT_EDGE_MAX_PCT");
+        SLOTS_BOT_EDGE_MAX_PCT("SLOTS_BOT_EDGE_MAX_PCT"),
+
+        // Daily match-numbers lottery (Pick 5 of 1-49) auto-draw toggle.
+        // Boolean ("true"/"false"); defaults to "false" so guilds opt in.
+        // When enabled, LotteryDailyJob runs at 00:00 UTC: closes the
+        // previous day's draw if any, opens a fresh one seeded from the
+        // jackpot pool. Doubles as a credit sink — a slice of every
+        // ticket sale routes back to the jackpot.
+        LOTTERY_DAILY_ENABLED("LOTTERY_DAILY_ENABLED"),
+
+        // Whole-number credits charged per match-numbers ticket. Default
+        // 50. Range 1-1_000_000. Tickets debit `count × ticket_price`
+        // from the buyer at submission time.
+        LOTTERY_DAILY_TICKET_PRICE("LOTTERY_DAILY_TICKET_PRICE"),
+
+        // Whole-number percentage (1-100) of the live jackpot pool that
+        // seeds each day's prize pool at open. Default 5. Lower = slower
+        // drain; higher = aggressive drain. Combined with ticket
+        // revenue, this is the prize budget for that day's draw.
+        LOTTERY_DAILY_SEED_PCT("LOTTERY_DAILY_SEED_PCT"),
+
+        // Whole-number percentage (0-100) of every match-numbers ticket
+        // sale routed to the per-guild jackpot pool; the remainder feeds
+        // the day's prize pool. Default 30. The 30/70 split makes the
+        // daily lottery a credit sink while keeping engagement-driven
+        // prize growth healthy.
+        LOTTERY_DAILY_REVENUE_JACKPOT_PCT("LOTTERY_DAILY_REVENUE_JACKPOT_PCT");
     }
 
     override fun toString(): String {

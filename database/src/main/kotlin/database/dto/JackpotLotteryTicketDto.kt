@@ -12,8 +12,15 @@ import java.io.Serializable
 
 /**
  * One row per (lottery, user) tracking the cumulative ticket count and
- * total credits the user has spent on this lottery. Weighting for the
- * draw is by `ticket_count`; `spent` is kept for refunds on cancel.
+ * total credits the user has spent on this lottery.
+ *
+ * - For TICKET_WEIGHTED lotteries: weighting for the draw is by
+ *   `ticket_count`; `spent` is kept for refunds on cancel.
+ * - For NUMBER_MATCH lotteries: each ticket carries the user's picks
+ *   in `picked_numbers` (comma-separated, sorted). One row per user
+ *   per draw; buying again on the same draw replaces picks (treat
+ *   each pick set as one ticket — `ticket_count` stays at 1 for
+ *   NUMBER_MATCH).
  */
 @NamedQueries(
     NamedQuery(
@@ -44,6 +51,13 @@ class JackpotLotteryTicketDto(
 
     @Column(name = "spent", nullable = false)
     var spent: Long = 0,
+
+    /**
+     * Comma-separated picks for NUMBER_MATCH tickets, sorted ascending.
+     * Null for TICKET_WEIGHTED tickets.
+     */
+    @Column(name = "picked_numbers")
+    var pickedNumbers: String? = null,
 ) : Serializable
 
 data class JackpotLotteryTicketId(

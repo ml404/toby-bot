@@ -13,19 +13,31 @@ import java.io.Serializable
 import java.time.Instant
 
 /**
- * Per-guild jackpot lottery event row.
+ * Per-guild jackpot lottery event row. Two flavours coexist on the
+ * same table, distinguished by [mode]:
  *
- * One OPEN row per guild at any time (enforced by a partial unique
- * index in V27). When the admin runs `/jackpotadmin lottery_draw`, the
- * service marks the row DRAWN and writes ticket-weighted payouts. On
- * `lottery_cancel` the row goes CANCELLED, all ticket spend is
- * refunded, and `pool_amount` returns to the per-guild jackpot pool.
+ *  - `TICKET_WEIGHTED`: admin-fired one-shot. Each ticket is a weight
+ *    in a top-K winner draw. `pickCount` / `numberMax` / `drawnNumbers`
+ *    are unused.
+ *  - `NUMBER_MATCH`: daily auto-draw. Players pick 5 numbers from
+ *    1-49; the job draws 5 winning numbers; payouts tier by match
+ *    count. `winnerCount` is unused (any number of holders can match).
+ *
+ * V28 added a partial unique index on (guild_id, mode) where status =
+ * 'OPEN', so one OPEN row per (guild, mode) is allowed — both flavours
+ * can run concurrently.
  */
 @NamedQueries(
     NamedQuery(
-        name = "JackpotLotteryDto.getOpenByGuild",
+        name = "JackpotLotteryDto.getOpenByGuildAndMode",
         query = "select l from JackpotLotteryDto l " +
-                "where l.guildId = :guildId and l.status = 'OPEN'"
+                "where l.guildId = :guildId and l.mode = :mode and l.status = 'OPEN'"
+    ),
+    NamedQuery(
+        name = "JackpotLotteryDto.getLatestByGuildAndMode",
+        query = "select l from JackpotLotteryDto l " +
+                "where l.guildId = :guildId and l.mode = :mode " +
+                "order by l.openedAt desc"
     )
 )
 @Entity
@@ -57,11 +69,30 @@ class JackpotLotteryDto(
 
     @Column(name = "status", nullable = false, length = 16)
     var status: String = "OPEN",
+
+    @Column(name = "mode", nullable = false, length = 16)
+    var mode: String = MODE_TICKET_WEIGHTED,
+
+    @Column(name = "pick_count", nullable = false)
+    var pickCount: Int = 0,
+
+    @Column(name = "number_max", nullable = false)
+    var numberMax: Int = 0,
+
+    /**
+     * Comma-separated winning numbers for NUMBER_MATCH draws. Null
+     * until status flips to DRAWN. Sorted ascending for stable display.
+     */
+    @Column(name = "drawn_numbers")
+    var drawnNumbers: String? = null,
 ) : Serializable {
 
     companion object {
         const val STATUS_OPEN = "OPEN"
         const val STATUS_DRAWN = "DRAWN"
         const val STATUS_CANCELLED = "CANCELLED"
+
+        const val MODE_TICKET_WEIGHTED = "TICKET_WEIGHTED"
+        const val MODE_NUMBER_MATCH = "NUMBER_MATCH"
     }
 }

@@ -846,6 +846,63 @@
                 <button type="submit" class="btn">Refund to jackpot</button>
             </form>
         </div>
+
+        <!-- Daily lottery: opt-in toggle + parameters + force draw -->
+        <div class="mod-card mod-card-wide">
+            <h3>Daily match-numbers lottery (Pick 5 of 1-49)</h3>
+            <p class="muted">
+                Auto-runs at 00:00 UTC. Closes the prior day's draw (paying tier prizes by
+                match count: 60/25/10/5 % of pool for 5/4/3/2 matches), then opens a new
+                day seeded from the jackpot pool. Each ticket sale routes a configurable
+                share back to the jackpot — the daily is a credit sink that drains the
+                pool steadily through many small wins instead of one big lucky roll.
+            </p>
+            <div class="config-row" data-key="LOTTERY_DAILY_ENABLED">
+                <label>
+                    Enable daily lottery
+                    <select name="LOTTERY_DAILY_ENABLED" data-key="LOTTERY_DAILY_ENABLED">
+                        <option value="true"
+                                th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == 'true'}">Enabled</option>
+                        <option value="false"
+                                th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] != 'true'}">Disabled</option>
+                    </select>
+                </label>
+            </div>
+            <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
+                <label>
+                    Ticket price (credits)
+                    <input type="number" name="LOTTERY_DAILY_TICKET_PRICE"
+                           th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
+                           min="1" max="1000000" placeholder="50 (default)">
+                </label>
+            </div>
+            <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
+                <label>
+                    Daily seed (% of jackpot pool)
+                    <span class="config-input-group">
+                        <input type="number" name="LOTTERY_DAILY_SEED_PCT"
+                               th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
+                               min="1" max="100" placeholder="5 (default)">
+                        <span class="config-suffix">%</span>
+                    </span>
+                </label>
+            </div>
+            <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
+                <label>
+                    Ticket revenue → jackpot
+                    <span class="config-input-group">
+                        <input type="number" name="LOTTERY_DAILY_REVENUE_JACKPOT_PCT"
+                               th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
+                               min="0" max="100" placeholder="30 (default)">
+                        <span class="config-suffix">%</span>
+                    </span>
+                </label>
+            </div>
+            <p class="muted">
+                Force the cycle to run now (close any open draw, pay prizes, open the next):
+            </p>
+            <button id="lottery-force-draw" type="button" class="btn">Force draw now</button>
+        </div>
     </section>
 </main>
 

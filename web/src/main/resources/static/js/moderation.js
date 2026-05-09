@@ -347,4 +347,37 @@
             }).catch(() => { submitBtn.disabled = false; toast('Network error.', 'error'); });
         });
     }
+
+    // ==========================================================
+    // Daily lottery — force-draw button
+    // ==========================================================
+    const lotteryForceDrawBtn = document.getElementById('lottery-force-draw');
+    if (lotteryForceDrawBtn) {
+        lotteryForceDrawBtn.addEventListener('click', () => {
+            if (!confirm(
+                'Force the daily lottery cycle to run now? This closes any open draw ' +
+                'and pays prizes by match tier, then opens a fresh draw seeded from the jackpot.'
+            )) return;
+            lotteryForceDrawBtn.disabled = true;
+            postJson('/moderation/' + guildId + '/lottery/draw', {}).then(r => {
+                lotteryForceDrawBtn.disabled = false;
+                if (r && r.ok) {
+                    let msg = 'Lottery cycle ran.';
+                    if (r.drewPrior) {
+                        msg += ' Prior draw paid ' + (r.priorTotalPaid ?? 0) +
+                            ' credits (' + (r.priorRolledBack ?? 0) + ' rolled back to jackpot).';
+                    }
+                    if (r.openedNew) {
+                        msg += ' New draw seeded with ' + (r.newSeeded ?? 0) + ' credits.';
+                    }
+                    toast(msg, 'success');
+                } else {
+                    toast(r?.error || 'Could not run the lottery cycle.', 'error');
+                }
+            }).catch(() => {
+                lotteryForceDrawBtn.disabled = false;
+                toast('Network error.', 'error');
+            });
+        });
+    }
 })();

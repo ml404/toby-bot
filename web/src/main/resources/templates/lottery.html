@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Lottery', '/css/lottery.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId},
+               data-toby-coins=${tobyCoins},
+               data-market-price=${marketPrice},
+               data-pick-count=${snapshot.pickCount},
+               data-number-max=${snapshot.numberMax},
+               data-revenue-jackpot-pct=${snapshot.revenueJackpotPct}">
+
+    <div class="lottery-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🎟️ Lottery • ' + ${guildName}">🎟️ Lottery</h1>
+        <p class="muted">
+            Pick <strong th:text="${snapshot.pickCount}">5</strong> numbers from
+            <strong>1–<span th:text="${snapshot.numberMax}">49</span></strong> for the daily draw.
+            <strong th:text="${snapshot.revenueJackpotPct}">30</strong>% of every ticket feeds the
+            per-server jackpot pool above; the remainder grows today's prize. Match more numbers,
+            win bigger.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+    <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+
+    <!-- ========================================================== -->
+    <!-- Today's daily match-numbers draw                            -->
+    <!-- ========================================================== -->
+    <section class="lottery-daily casino-felt">
+        <header class="lottery-daily-header">
+            <h2>Today's draw</h2>
+            <div class="lottery-daily-meta" th:if="${snapshot.daily != null}">
+                <span class="lottery-meta-item">
+                    Prize pool:
+                    <strong id="lottery-pool" th:text="${snapshot.daily.pool}">0</strong>
+                    <span class="muted">credits</span>
+                </span>
+                <span class="lottery-meta-item">
+                    Ticket: <strong th:text="${snapshot.daily.ticketPrice}">50</strong>
+                    <span class="muted">credits</span>
+                </span>
+                <span class="lottery-meta-item">
+                    Tickets sold: <strong th:text="${snapshot.daily.ticketBuyers}">0</strong>
+                </span>
+                <span class="lottery-meta-item lottery-countdown"
+                      th:if="${snapshot.daily.isOpen}"
+                      th:attr="data-closes-at=${snapshot.daily.closesAtMillis}">
+                    Closes in <strong class="lottery-countdown-value">--:--:--</strong>
+                </span>
+                <span class="lottery-meta-item muted"
+                      th:if="${!snapshot.daily.isOpen}"
+                      th:text="${'Status: ' + snapshot.daily.status}">Status: DRAWN</span>
+            </div>
+            <p class="muted" th:if="${snapshot.daily == null}">
+                No daily draw is open right now — check back soon. (The cycle opens at 00:00 UTC.)
+            </p>
+        </header>
+
+        <!-- Number picker -->
+        <div class="lottery-picker"
+             th:if="${snapshot.daily != null and snapshot.daily.isOpen and snapshot.daily.myPicks == null}">
+            <div class="lottery-pickbar">
+                <span class="lottery-pickcount">
+                    Picks: <strong id="lottery-pickcount-value">0</strong> / <span th:text="${snapshot.pickCount}">5</span>
+                </span>
+                <button type="button" id="lottery-quickpick" class="btn-secondary"
+                        title="Auto-fill the rest of your picks at random.">Quick Pick</button>
+                <button type="button" id="lottery-clear" class="btn-secondary">Clear</button>
+            </div>
+            <form id="lottery-bet" autocomplete="off">
+                <div class="lottery-cells" id="lottery-cells" role="grid"
+                     aria-label="Lottery number picker">
+                    <button th:each="n : ${#numbers.sequence(1, snapshot.numberMax)}"
+                            type="button" class="lottery-cell casino-card-face"
+                            th:attr="data-value=${n}, aria-label='Number ' + ${n}, aria-pressed='false'"
+                            th:text="${n}">1</button>
+                </div>
+                <div class="lottery-actions">
+                    <button type="submit" id="lottery-buy" class="btn-primary">
+                        Buy ticket (<span th:text="${snapshot.daily.ticketPrice}">50</span> credits)
+                    </button>
+                </div>
+            </form>
+            <div class="lottery-balance">
+                Wallet: <strong id="lottery-balance" th:text="${balance}">0</strong> credits
+            </div>
+        </div>
+
+        <!-- User's existing ticket (already bought today) -->
+        <div class="lottery-my-ticket"
+             th:if="${snapshot.daily != null and snapshot.daily.myPicks != null}">
+            <h3>Your ticket</h3>
+            <div class="lottery-cells lottery-cells-readonly" aria-label="Your picks">
+                <span th:each="n : ${snapshot.daily.myPicks}"
+                      class="lottery-cell casino-card-face is-picked"
+                      th:classappend="${snapshot.daily.drawnNumbers != null and #lists.contains(snapshot.daily.drawnNumbers, n) ? ' is-matched' : ''}"
+                      th:text="${n}">1</span>
+            </div>
+            <p class="muted" th:if="${snapshot.daily.isOpen}">
+                One ticket per draw — come back at the next 00:00 UTC for a fresh chance.
+            </p>
+        </div>
+
+        <!-- Last result panel -->
+        <div class="lottery-result-panel"
+             th:if="${snapshot.daily != null and snapshot.daily.drawnNumbers != null}">
+            <h3>
+                Winning numbers
+                <span class="muted lottery-result-label" th:if="${!snapshot.daily.isOpen}">(latest draw)</span>
+            </h3>
+            <div class="lottery-cells lottery-cells-readonly" aria-label="Winning numbers">
+                <span th:each="n : ${snapshot.daily.drawnNumbers}"
+                      class="lottery-cell casino-card-face is-drawn"
+                      th:text="${n}">1</span>
+            </div>
+            <p class="lottery-result-summary"
+               th:if="${snapshot.daily.myMatches != null}"
+               th:classappend="${snapshot.daily.myMatches >= 2 ? ' lottery-result-win' : ' lottery-result-lose'}"
+               th:text="'You matched ' + ${snapshot.daily.myMatches} + ' / ' + ${snapshot.pickCount} + '.'">
+                You matched 0 / 5.
+            </p>
+        </div>
+
+        <!-- Live result line written by JS after a buy -->
+        <div id="lottery-result" class="lottery-result muted" hidden></div>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- Featured event — admin-fired weighted lottery (when open)   -->
+    <!-- ========================================================== -->
+    <section class="lottery-weighted" th:if="${snapshot.weighted != null}">
+        <h2>🌟 Featured event • Weighted draw</h2>
+        <p class="muted">
+            Special admin-fired lottery — every ticket is a weight in the draw, and
+            <strong th:text="${snapshot.weighted.winnerCount}">3</strong>
+            winners share the prize pool by tier.
+        </p>
+        <div class="lottery-weighted-meta">
+            <span class="lottery-meta-item">
+                Prize pool:
+                <strong id="weighted-pool" th:text="${snapshot.weighted.pool}">0</strong>
+                <span class="muted">credits</span>
+            </span>
+            <span class="lottery-meta-item">
+                Ticket: <strong th:text="${snapshot.weighted.ticketPrice}">100</strong>
+                <span class="muted">credits</span>
+            </span>
+            <span class="lottery-meta-item">
+                Tickets sold:
+                <strong th:text="${snapshot.weighted.totalTickets}">0</strong>
+            </span>
+            <span class="lottery-meta-item">
+                Your tickets:
+                <strong id="weighted-my-tickets" th:text="${snapshot.weighted.myTickets}">0</strong>
+            </span>
+            <span class="lottery-meta-item lottery-countdown"
+                  th:attr="data-closes-at=${snapshot.weighted.closesAtMillis}">
+                Closes in <strong class="lottery-countdown-value">--:--:--</strong>
+            </span>
+        </div>
+        <form id="lottery-weighted-bet" autocomplete="off">
+            <label for="weighted-count">Tickets to buy</label>
+            <input id="weighted-count" name="count" type="number" min="1" value="1" required>
+            <button type="submit" id="weighted-buy" class="btn-primary">
+                Buy <span class="muted">(at <strong th:text="${snapshot.weighted.ticketPrice}">100</strong>/ticket)</span>
+            </button>
+        </form>
+        <div class="lottery-weighted-holders" th:if="${!#lists.isEmpty(snapshot.weighted.topHolders)}">
+            <h3>Top holders</h3>
+            <ol class="lottery-top-holders">
+                <li th:each="h : ${snapshot.weighted.topHolders}">
+                    <span class="muted">User #<span th:text="${h.discordId}">…</span></span>
+                    — <strong th:text="${h.ticketCount}">0</strong> tickets
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- Payout schedule                                             -->
+    <!-- ========================================================== -->
+    <section class="lottery-payouts">
+        <h2>How payouts work</h2>
+        <p class="muted">
+            The day's prize pool splits across match tiers. 0 or 1 matches pay nothing —
+            those tickets fund tomorrow's prizes (and feed the jackpot via the revenue split).
+            Empty tiers and rounding remainders roll back into the per-server jackpot pool.
+        </p>
+        <table class="lottery-tier-table">
+            <thead>
+                <tr>
+                    <th>Matches</th>
+                    <th>Prize pool share</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="i, iter : ${snapshot.tierPercents}"
+                    th:with="match=${5 - iter.index}">
+                    <td><strong th:text="${match} + ' / ' + ${snapshot.pickCount}">5 / 5</strong></td>
+                    <td><strong th:text="${snapshot.tierPercents[iter.index]} + '%'">60%</strong></td>
+                    <td class="muted">
+                        <span th:if="${match == 5}">Top tier — split equally if multiple jackpot winners.</span>
+                        <span th:if="${match == 4}">Second tier.</span>
+                        <span th:if="${match == 3}">Third tier — frequent at this odds level.</span>
+                        <span th:if="${match == 2}">Consolation tier — small return.</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>0–1 / <span th:text="${snapshot.pickCount}">5</span></strong></td>
+                    <td><strong>0%</strong></td>
+                    <td class="muted">Lose stake — funds tomorrow's pool.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
+<script th:src="@{/js/lottery.js}"></script>
+</body>
+</html>

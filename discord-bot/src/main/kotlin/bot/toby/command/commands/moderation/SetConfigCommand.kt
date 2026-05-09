@@ -177,6 +177,29 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT, gameLabel = "Slots",
                     label = "bot-suspicion max edge percent", range = 0..50)
+                // Daily match-numbers lottery — moderation web tab is the
+                // primary surface (toggles + daily-prize parameters), but
+                // keep the dispatch arms exhaustive for direct API use.
+                ConfigDto.Configurations.LOTTERY_DAILY_ENABLED -> setBooleanConfig(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.LOTTERY_DAILY_ENABLED,
+                    label = "daily lottery"
+                )
+                ConfigDto.Configurations.LOTTERY_DAILY_TICKET_PRICE -> setMinimumLongConfig(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.LOTTERY_DAILY_TICKET_PRICE,
+                    gameLabel = "Daily lottery", label = "ticket price", min = 1L, unit = "credits"
+                )
+                ConfigDto.Configurations.LOTTERY_DAILY_SEED_PCT -> setRangedIntConfig(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.LOTTERY_DAILY_SEED_PCT,
+                    gameLabel = "Daily lottery", label = "jackpot seed percent", range = 1..100
+                )
+                ConfigDto.Configurations.LOTTERY_DAILY_REVENUE_JACKPOT_PCT -> setRangedIntConfig(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.LOTTERY_DAILY_REVENUE_JACKPOT_PCT,
+                    gameLabel = "Daily lottery", label = "ticket revenue → jackpot percent", range = 0..100
+                )
             }
         }
     }
@@ -248,6 +271,26 @@ class SetConfigCommand @Autowired constructor(
         configService.upsertConfig(configValue, value.toString(), guildId)
         val rule = if (value) "hit on soft 17 (H17)" else "stand on all 17 (S17)"
         event.hook.sendMessage("Blackjack dealer will now $rule.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    /**
+     * Persist a boolean config knob ("true"/"false") and reply with a
+     * uniform "$label is now enabled/disabled." message. Used by simple
+     * on/off toggles like the daily lottery.
+     */
+    private fun setBooleanConfig(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+        config: ConfigDto.Configurations,
+        label: String,
+    ) {
+        val value = optionMapping.asBoolean
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(config.configValue, value.toString(), guildId)
+        val state = if (value) "enabled" else "disabled"
+        event.hook.sendMessage("$label is now $state.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
