@@ -634,6 +634,10 @@ class ModerationWebService(
     internal fun sanitizeChannelName(raw: String): String? {
         val cleaned = raw.trim().lowercase()
             .replace(Regex("[^a-z0-9-]+"), "-")
+            // Collapse consecutive dashes (covers both runs of original
+            // dashes and runs introduced by special-char replacement)
+            // so "--lottery--results--" doesn't end up "lottery--results".
+            .replace(Regex("-+"), "-")
             .trim('-')
             .take(90)
         return cleaned.takeIf { it.isNotEmpty() }

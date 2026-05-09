@@ -1084,21 +1084,27 @@ class ModerationWebServiceTest {
         // `guild.createTextChannel(name)
         //     .addRolePermissionOverride(...)
         //     .addMemberPermissionOverride(...)
-        //     .complete()`. Mockk's `relaxed = true` returns `this` from
-        // unstubbed methods so the chain actually compiles + flows;
-        // we only need to stub `.complete()` to return our test channel.
+        //     .setParent(...)?
+        //     .complete()`.
+        //
+        // mockk's `returns` form does a runtime-typed assignment that
+        // ClassCastExceptions on JDA's generic
+        // `RestAction<T>.complete(): T` because of type erasure.
+        // `answers { ... }` returns from a closure mockk treats more
+        // loosely — sidesteps the cast.
         val newChannel = mockk<TextChannel>(relaxed = true)
         every { newChannel.id } returns newId.toString()
         every { newChannel.name } returns name
         val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
         every {
             action.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } returns action
+        } answers { action }
         every {
             action.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } returns action
-        every { action.complete() } returns newChannel
-        every { guild.createTextChannel(name) } returns action
+        } answers { action }
+        every { action.setParent(any()) } answers { action }
+        every { action.complete() } answers { newChannel }
+        every { guild.createTextChannel(name) } answers { action }
         every { guild.publicRole.idLong } returns 1L
         return newChannel
     }
@@ -1229,18 +1235,139 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `createReadOnlyChannel happy path with existing parent category`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        stubChannelCreation(name = "lottery-results", newId = 555L)
+
+        val parent = mockk<net.dv8tion.jda.api.entities.channel.concrete.Category>(relaxed = true)
+        every { guild.getCategoryById(42L) } returns parent
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "lottery-results",
+            targetConfigName = "LOTTERY_CHANNEL",
+            parentCategoryId = "42",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Ok)
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects invalid parent category id`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        every { guild.getCategoryById(any<Long>()) } returns null
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "x",
+            targetConfigName = "LOTTERY_CHANNEL",
+            parentCategoryId = "9999",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("No category"))
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects non-numeric parent category id`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "x",
+            targetConfigName = "LOTTERY_CHANNEL",
+            parentCategoryId = "not-a-number",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Invalid category id"))
+    }
+
+    @Test
+    fun `createReadOnlyChannel happy path creates a new category`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        stubChannelCreation(name = "lottery-results", newId = 555L)
+
+        // Stub guild.createCategory("Lottery").complete() chain.
+        val newCategory = mockk<net.dv8tion.jda.api.entities.channel.concrete.Category>(relaxed = true)
+        val catAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<net.dv8tion.jda.api.entities.channel.concrete.Category>>(relaxed = true)
+        every { catAction.complete() } answers { newCategory }
+        every { guild.createCategory("Lottery") } answers { catAction }
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "lottery-results",
+            targetConfigName = "LOTTERY_CHANNEL",
+            newCategoryName = "Lottery",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Ok)
+        // New-category path was taken — verify createCategory was called.
+        verify(exactly = 1) { guild.createCategory("Lottery") }
+    }
+
+    @Test
+    fun `createReadOnlyChannel new-category-name takes precedence over parentCategoryId`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        stubChannelCreation(name = "lottery-results", newId = 555L)
+
+        val newCategory = mockk<net.dv8tion.jda.api.entities.channel.concrete.Category>(relaxed = true)
+        val catAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<net.dv8tion.jda.api.entities.channel.concrete.Category>>(relaxed = true)
+        every { catAction.complete() } answers { newCategory }
+        every { guild.createCategory("New Cat") } answers { catAction }
+
+        // Both fields supplied: new-category should win, the dropdown id ignored.
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "lottery-results",
+            targetConfigName = "LOTTERY_CHANNEL",
+            parentCategoryId = "42",            // would be looked up if used
+            newCategoryName = "New Cat",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Ok)
+        verify(exactly = 1) { guild.createCategory("New Cat") }
+        verify(exactly = 0) { guild.getCategoryById(any<Long>()) }
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects too-long new category name`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "x",
+            targetConfigName = "LOTTERY_CHANNEL",
+            newCategoryName = "a".repeat(101),
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Category name"))
+    }
+
+    @Test
     fun `createReadOnlyChannel surfaces JDA failure as Error`() {
         mockMember(ownerId, isOwner = true)
         stubBotPerms(canManageChannels = true)
         val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
         every {
             action.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } returns action
+        } answers { action }
         every {
             action.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } returns action
+        } answers { action }
+        every { action.setParent(any()) } answers { action }
         every { action.complete() } throws RuntimeException("rate limited")
-        every { guild.createTextChannel("lottery-results") } returns action
+        every { guild.createTextChannel("lottery-results") } answers { action }
         every { guild.publicRole.idLong } returns 1L
 
         val r = service.createReadOnlyChannel(
