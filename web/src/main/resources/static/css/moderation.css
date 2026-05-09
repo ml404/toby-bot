@@ -500,10 +500,15 @@
 
 .lottery-admin-card {
     /* Override .mod-card-wide's 560px cap so the prize-parameters
-       grid + force-draw banner can breathe on wider screens. */
-    max-width: 720px;
+       grid + force-draw banner can breathe in the dedicated Lottery tab. */
+    max-width: 760px;
     gap: var(--space-3);
 }
+/* Inside the lottery card, the config-sections aren't competing with
+   other content, so let them fill the card instead of capping at the
+   shared Config-tab 560px width. */
+.lottery-admin-card .config-section { max-width: none; }
+.lottery-admin-card .config-grid { max-width: none; }
 
 .lottery-admin-header {
     margin-bottom: var(--space-3);
