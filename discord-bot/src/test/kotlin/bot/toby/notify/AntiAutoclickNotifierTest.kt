@@ -112,8 +112,7 @@ class AntiAutoclickNotifierTest {
         every {
             scheduler.schedule(any<Runnable>(), any<Long>(), any<TimeUnit>())
         } answers {
-            val r = it.invocation.args[0] as Runnable
-            pendingScheduledTasks += r
+            pendingScheduledTasks += firstArg<Runnable>()
             mockk<ScheduledFuture<*>>(relaxed = true)
         }
 

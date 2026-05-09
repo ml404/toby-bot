@@ -146,10 +146,11 @@ class AntiAutoclickNotifier(
         // the runnable always reads the latest counters from the session,
         // so a single edit captures every bias-fire in the window.
         if (session.pendingEdit.get() != null) return
-        val future: ScheduledFuture<*> = scheduler.schedule({
+        val task = Runnable {
             session.pendingEdit.set(null)
             performEdit(discordId, gameKey, session)
-        }, EDIT_DEBOUNCE_MS, TimeUnit.MILLISECONDS)
+        }
+        val future: ScheduledFuture<*> = scheduler.schedule(task, EDIT_DEBOUNCE_MS, TimeUnit.MILLISECONDS)
         if (!session.pendingEdit.compareAndSet(null, future)) {
             // Another scheduling lost the race — discard ours.
             future.cancel(false)
