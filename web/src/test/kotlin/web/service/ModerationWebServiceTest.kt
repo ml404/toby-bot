@@ -1033,6 +1033,62 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig CASINO_MODLOG_CHANNEL_ID accepts a valid text channel id`() {
+        mockMember(ownerId, isOwner = true)
+        val channel = mockk<TextChannel>(relaxed = true)
+        every { channel.id } returns "12345"
+        every { guild.getTextChannelById(12345L) } returns channel
+
+        val err = service.updateConfig(
+            ownerId, guildId, ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID, "12345"
+        )
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("CASINO_MODLOG_CHANNEL_ID", "12345", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig CASINO_MODLOG_CHANNEL_ID empty value clears the override`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(
+            ownerId, guildId, ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID, ""
+        )
+
+        assertNull(err)
+        verify(exactly = 1) {
+            configService.upsertConfig("CASINO_MODLOG_CHANNEL_ID", "", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `updateConfig CASINO_MODLOG_CHANNEL_ID rejects non-numeric value`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(
+            ownerId, guildId, ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID, "not-a-number"
+        )
+
+        assertEquals("Channel id must be numeric.", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
+    fun `updateConfig CASINO_MODLOG_CHANNEL_ID rejects unknown channel id`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getTextChannelById(99999L) } returns null
+
+        val err = service.updateConfig(
+            ownerId, guildId, ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID, "99999"
+        )
+
+        assertEquals("No text channel with that id exists in this server.", err)
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
     fun `getLeaderboard queries voice for the CURRENT month, not the previous one`() {
         // Regression: the old code passed [prevMonthStart, thisMonthStart),
         // which is the just-finished month — copy-paste from
