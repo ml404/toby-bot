@@ -12,11 +12,10 @@ import database.service.ConfigService
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.managers.AudioManager
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class LeaveCommand @Autowired constructor(
+class LeaveCommand(
     private val configService: ConfigService,
     private val lastConnectedChannelTracker: LastConnectedChannelTracker,
 ) : MusicCommand {

@@ -20,7 +20,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
@@ -28,7 +27,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit
 
 @Service
-class IntroHelper @Autowired constructor(
+class IntroHelper(
     private val userDtoHelper: UserDtoHelper,
     private val musicFileService: MusicFileService,
     private val configService: ConfigService,
