@@ -16,10 +16,10 @@ import web.util.displayName
 /**
  * Resolves the model attributes every casino-game page needs:
  * `guildId`, `guildName`, `balance`, `tobyCoins`, `marketPrice`,
- * `jackpotPool`, `jackpotWinPct`, `username`. Returns the resolved
- * [Guild] (or `null` when the bot has been kicked from the guild
- * between the auth check and now) so the caller can short-circuit
- * with a flash error.
+ * `jackpotPool`, `jackpotWinPct`, `jackpotStakeAnchor`, `username`.
+ * Returns the resolved [Guild] (or `null` when the bot has been
+ * kicked from the guild between the auth check and now) so the caller
+ * can short-circuit with a flash error.
  *
  * Each per-game page handler used to repeat ~15 lines of `addAttribute`
  * calls; centralising them here means a new common attribute (e.g. a
@@ -49,6 +49,7 @@ class CasinoPageContext(
         model.addAttribute("marketPrice", marketService.getMarket(guildId)?.price ?: 0.0)
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
+        model.addAttribute("jackpotStakeAnchor", jackpotService.stakeAnchor(guildId))
         model.addAttribute("username", user.displayName())
         return guild
     }

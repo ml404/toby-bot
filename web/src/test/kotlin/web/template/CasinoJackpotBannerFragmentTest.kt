@@ -54,4 +54,46 @@ class CasinoJackpotBannerFragmentTest {
             "fragment should not hardcode '1% chance' — render jackpotWinPct instead"
         )
     }
+
+    @Test
+    fun `jackpot banner reads the live jackpotStakeAnchor model attribute`() {
+        // The win-roll scales by `stake / JACKPOT_STAKE_ANCHOR` (see
+        // JackpotHelper.rollOnWin), not by each game's max stake. The
+        // banner used to claim "scaled by your stake ÷ that game's max"
+        // which was simply false — admins could raise per-game caps
+        // without the divisor moving. Lock in that the fragment now
+        // reads the live anchor so the displayed threshold matches the
+        // actual scaling formula.
+        assertTrue(
+            fragmentHtml.contains("jackpotStakeAnchor"),
+            "expected the fragment to reference the jackpotStakeAnchor model attribute"
+        )
+    }
+
+    @Test
+    fun `jackpot banner no longer claims scaling is by that game's max`() {
+        // Guard against the misleading wording resurfacing — the divisor
+        // is the per-guild stake anchor, not the per-game max stake.
+        assertFalse(
+            fragmentHtml.contains("game's max"),
+            "fragment should not claim scaling is by 'that game's max' — divisor is JACKPOT_STAKE_ANCHOR"
+        )
+    }
+
+    @Test
+    fun `jackpot banner exposes anti-cheat tooltip via title attribute`() {
+        // Hover-discoverable note about the bot-suspicion / forced-loss
+        // system (see CasinoBotSuspicionService + CasinoEdgeService.applyBotEdge).
+        // Surfacing it on the banner means a user who's losing to the
+        // anti-cheat layer can find out why without trawling through
+        // server-only code paths.
+        assertTrue(
+            fragmentHtml.contains("title="),
+            "fragment should expose a title attribute for the anti-cheat tooltip"
+        )
+        assertTrue(
+            fragmentHtml.contains("Anti-cheat"),
+            "fragment tooltip should mention anti-cheat so the warning is discoverable"
+        )
+    }
 }

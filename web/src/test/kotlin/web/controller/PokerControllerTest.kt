@@ -287,19 +287,22 @@ class PokerControllerTest {
     }
 
     @Test
-    fun `lobby page wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
+    fun `lobby page wires jackpotPool jackpotWinPct and jackpotStakeAnchor model attributes so the banner renders`() {
         // Regression: poker lobby & table pages used to omit `jackpotPool`,
         // so `~{fragments/casino :: jackpotBanner}` rendered "0 credits"
         // (or 500'd in dev) — players couldn't see what the rake was
         // contributing to or what was up for grabs. The banner also takes
         // `jackpotWinPct` so the "X% chance to bank the pool" line reflects
-        // the admin-set probability instead of a hardcoded 1%.
+        // the admin-set probability instead of a hardcoded 1%, and
+        // `jackpotStakeAnchor` so the stake-scaling threshold quoted in
+        // the banner matches the per-guild `JACKPOT_STAKE_ANCHOR` config.
         val guild = mockk<net.dv8tion.jda.api.entities.Guild>(relaxed = true).also {
             every { it.name } returns "Test Guild"
         }
         every { jda.getGuildById(guildId) } returns guild
         every { jackpotService.getPool(guildId) } returns 1234L
         every { jackpotService.winProbabilityDisplay(guildId) } returns "2.5"
+        every { jackpotService.stakeAnchor(guildId) } returns 750L
         every { pokerWebService.listGuildTables(guildId) } returns emptyList()
 
         val model = org.springframework.ui.ConcurrentModel()
@@ -310,13 +313,15 @@ class PokerControllerTest {
         assertEquals("poker-lobby", view)
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("2.5", model.getAttribute("jackpotWinPct"))
+        assertEquals(750L, model.getAttribute("jackpotStakeAnchor"))
     }
 
     @Test
-    fun `tablePage wires jackpotPool and jackpotWinPct model attributes so the banner renders`() {
+    fun `tablePage wires jackpotPool jackpotWinPct and jackpotStakeAnchor model attributes so the banner renders`() {
         every { pokerWebService.snapshot(tableId, discordId) } returns sampleView()
         every { jackpotService.getPool(guildId) } returns 9876L
         every { jackpotService.winProbabilityDisplay(guildId) } returns "5"
+        every { jackpotService.stakeAnchor(guildId) } returns 250L
 
         val model = org.springframework.ui.ConcurrentModel()
         val view = controller.tablePage(
@@ -327,6 +332,7 @@ class PokerControllerTest {
         assertEquals("poker-table", view)
         assertEquals(9876L, model.getAttribute("jackpotPool"))
         assertEquals("5", model.getAttribute("jackpotWinPct"))
+        assertEquals(250L, model.getAttribute("jackpotStakeAnchor"))
     }
 
     private fun sampleView(guildId: Long = this.guildId): PokerWebService.TableStateView =

@@ -7,13 +7,16 @@
     HTML; centralising it means a copy/styling change ripples to every
     game in one edit.
 -->
-<div th:fragment="jackpotBanner" class="casino-jackpot-banner">
+<div th:fragment="jackpotBanner" class="casino-jackpot-banner"
+     title="Anti-cheat is on. Detected automation accrues forced losses up to a configured cap.">
     🎰 Jackpot pool:
     <strong th:text="${jackpotPool}">0</strong> credits
     <span class="muted">
         — win any minigame for up to
         <span th:text="${jackpotWinPct}">1</span>%
-        chance to bank the pool, scaled by your stake ÷ that game's max.
+        chance to bank the pool. The chance scales with your stake against a
+        <span th:text="${jackpotStakeAnchor}">500</span>-credit reference;
+        bets at or above that get the full rate, smaller bets scale linearly down.
     </span>
 </div>
 </body>
