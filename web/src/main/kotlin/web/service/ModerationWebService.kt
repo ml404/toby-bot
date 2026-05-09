@@ -635,6 +635,20 @@ class ModerationWebService(
                 "Bot needs the Manage Channels permission. Grant it in Server Settings → Roles."
             )
         }
+        // Setting permission overrides at channel-create time is gated
+        // by MANAGE_ROLES (a.k.a. Manage Permissions in the Discord UI)
+        // even when the bot already has MANAGE_CHANNEL — Discord
+        // returns 50013 Missing Permissions on the create call
+        // otherwise. Both flows here always apply overrides (read-only
+        // denies @everyone MESSAGE_SEND; admin-only denies @everyone
+        // VIEW_CHANNEL), so the check applies universally.
+        if (!bot.hasPermission(Permission.MANAGE_ROLES)) {
+            return CreateChannelOutcome.Error(
+                "Bot needs the Manage Roles permission to apply channel-level " +
+                    "permission overrides. Grant it in Server Settings → Roles, or " +
+                    "give the bot the Administrator permission as a shortcut."
+            )
+        }
         val name = sanitizeChannelName(rawName)
             ?: return CreateChannelOutcome.Error(
                 "Channel name must be 1-90 chars (a-z, 0-9, dashes)."
