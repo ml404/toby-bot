@@ -946,7 +946,10 @@
                 <summary>Daily prize parameters</summary>
                 <div class="config-grid">
                     <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
-                        <label>Ticket price (credits per ticket; default 50)</label>
+                        <label>
+                            Ticket price
+                            <span class="config-hint">Credits per ticket. Default 50.</span>
+                        </label>
                         <input type="number" min="1" max="1000000"
                                th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
                                placeholder="50"
@@ -954,7 +957,12 @@
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
-                        <label>Daily seed (% of jackpot pool pulled into prize pool at 00:00 UTC; default 5)</label>
+                        <label>
+                            Daily seed
+                            <span class="config-hint">
+                                Percent of the jackpot pool pulled into the prize pool at 00:00 UTC. Default 5.
+                            </span>
+                        </label>
                         <span class="config-input-group">
                             <input type="number" min="1" max="100"
                                    th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
@@ -965,7 +973,12 @@
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
-                        <label>Ticket revenue → jackpot (% of every sale routed back to pool; default 30)</label>
+                        <label>
+                            Ticket revenue &rarr; jackpot
+                            <span class="config-hint">
+                                Percent of every ticket sale routed back into the jackpot pool. Default 30.
+                            </span>
+                        </label>
                         <span class="config-input-group">
                             <input type="number" min="0" max="100"
                                    th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
@@ -977,10 +990,10 @@
                     </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_MIN_BUYERS">
                         <label>
-                            Minimum distinct buyers per draw (default 2)
+                            Minimum distinct buyers per draw
                             <span class="config-hint">
-                                Below this count the daily cancels and refunds — prevents a
-                                single user sweeping the seeded pool. 1 disables the safeguard.
+                                Below this count the daily cancels and refunds — prevents a single
+                                user sweeping the seeded pool. 1 disables the safeguard. Default 2.
                             </span>
                         </label>
                         <input type="number" min="1" max="50"
