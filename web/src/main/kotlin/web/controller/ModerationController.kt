@@ -261,6 +261,44 @@ class ModerationController(
         }
     }
 
+    /**
+     * Create a brand-new read-only text channel and auto-set the
+     * supplied channel-config to it. Powers the "Create" buttons next
+     * to channel-id dropdowns (LOTTERY_CHANNEL, LEADERBOARD_CHANNEL).
+     */
+    @PostMapping("/{guildId}/channel/create-read-only", consumes = ["application/json"])
+    @ResponseBody
+    fun createReadOnlyChannel(
+        @PathVariable guildId: Long,
+        @RequestBody body: CreateReadOnlyChannelRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<CreateReadOnlyChannelResponse> = WebGuildAccess.requireSignedInForJson(
+        user, { CreateReadOnlyChannelResponse(false, "Not signed in.") }
+    ) { actor ->
+        when (val result = moderationWebService.createReadOnlyChannel(
+            actorDiscordId = actor,
+            guildId = guildId,
+            rawName = body.name,
+            targetConfigName = body.targetConfig,
+            parentCategoryId = body.parentCategoryId,
+            newCategoryName = body.newCategoryName,
+        )) {
+            is ModerationWebService.CreateChannelOutcome.Ok -> ResponseEntity.ok(
+                CreateReadOnlyChannelResponse(
+                    ok = true,
+                    error = null,
+                    channelId = result.channelId,
+                    channelName = result.channelName,
+                    targetConfig = result.targetConfig,
+                )
+            )
+            is ModerationWebService.CreateChannelOutcome.Error ->
+                ResponseEntity.badRequest().body(
+                    CreateReadOnlyChannelResponse(ok = false, error = result.message)
+                )
+        }
+    }
+
     @PostMapping("/{guildId}/poll", consumes = ["application/json"])
     @ResponseBody
     fun createPoll(
@@ -327,4 +365,32 @@ data class ForceDrawLotteryResponse(
     val priorBuyersNeed: Int = 0,
     val openedNew: Boolean = false,
     val newSeeded: Long = 0L,
+)
+
+/**
+ * `targetConfig` is the canonical [database.dto.ConfigDto.Configurations]
+ * enum name (e.g. "LOTTERY_CHANNEL"); the service validates it against
+ * the allow-list. `name` is the human-typed channel name; the service
+ * normalises it to Discord's lowercase-dashed convention.
+ *
+ * Category placement is optional and resolved in the service:
+ *   - `newCategoryName` non-blank → create a new category with that
+ *     name and put the channel inside (takes precedence).
+ *   - `parentCategoryId` non-blank → put the channel under the existing
+ *     category with that id.
+ *   - both blank → channel is top-level (no parent).
+ */
+data class CreateReadOnlyChannelRequest(
+    val name: String = "",
+    val targetConfig: String = "",
+    val parentCategoryId: String? = null,
+    val newCategoryName: String? = null,
+)
+
+data class CreateReadOnlyChannelResponse(
+    val ok: Boolean,
+    val error: String?,
+    val channelId: String? = null,
+    val channelName: String? = null,
+    val targetConfig: String? = null,
 )
