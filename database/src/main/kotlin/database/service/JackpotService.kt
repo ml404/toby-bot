@@ -80,6 +80,17 @@ class JackpotService(
             .toPlainString()
     }
 
+    /**
+     * Live jackpot stake anchor for [guildId] in whole credits — reads
+     * the admin-set `JACKPOT_STAKE_ANCHOR` config and falls back to
+     * [JackpotHelper.DEFAULT_STAKE_ANCHOR]. Surfaced so the casino-page
+     * banner can name the actual scaling threshold the win-roll uses
+     * (`stake / anchor`, capped at 1.0); without this the banner has
+     * to either hardcode a value or misrepresent the divisor.
+     */
+    fun stakeAnchor(guildId: Long): Long =
+        JackpotHelper.stakeAnchor(configService, guildId)
+
     companion object {
         // 4dp covers the smallest probability the saved-percent / 100
         // round-trip can express meaningfully — e.g. an admin saving

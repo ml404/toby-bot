@@ -328,6 +328,61 @@ class JackpotServiceTest {
         assertEquals("5", service.winProbabilityDisplay(guildId))
     }
 
+    @Test
+    fun `stakeAnchor returns the default 500 when no JACKPOT_STAKE_ANCHOR row exists`() {
+        // setup() already stubs configService to return null for this key.
+        // [JackpotHelper.DEFAULT_STAKE_ANCHOR] = 500.
+        assertEquals(500L, service.stakeAnchor(guildId))
+    }
+
+    @Test
+    fun `stakeAnchor echoes the admin-set whole-number value`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+            value = "1500",
+            guildId = guildId.toString()
+        )
+        assertEquals(1500L, service.stakeAnchor(guildId))
+    }
+
+    @Test
+    fun `stakeAnchor coerces zero up to 1 to keep it out of the divisor`() {
+        // JackpotHelper.rollOnWin divides by the anchor — 0 would NaN
+        // the scaling factor. Helper coerces to >= 1; test pins that
+        // the public service method preserves that contract.
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+            value = "0",
+            guildId = guildId.toString()
+        )
+        assertEquals(1L, service.stakeAnchor(guildId))
+    }
+
+    @Test
+    fun `stakeAnchor falls back to the default when the row is unparseable`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR.configValue,
+            value = "wibble",
+            guildId = guildId.toString()
+        )
+        assertEquals(500L, service.stakeAnchor(guildId))
+    }
+
     // ---- recordWin / isOnCooldown ----
 
     @Test

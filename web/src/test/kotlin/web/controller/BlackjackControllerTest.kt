@@ -26,7 +26,8 @@ import web.service.EconomyWebService
  * through the shared [CasinoPageContext.populate] — earlier the
  * controller open-coded its own model wiring and missed updates to
  * the shared casino banner attributes (`jackpotPool`, `jackpotWinPct`,
- * `tobyCoins`, …) that every other casino page got automatically.
+ * `jackpotStakeAnchor`, `tobyCoins`, …) that every other casino page
+ * got automatically.
  */
 class BlackjackControllerTest {
 
@@ -69,6 +70,7 @@ class BlackjackControllerTest {
             model.addAttribute("balance", 1L)
             model.addAttribute("jackpotPool", 1234L)
             model.addAttribute("jackpotWinPct", "0.0005")
+            model.addAttribute("jackpotStakeAnchor", 500L)
             model.addAttribute("username", "tester")
             guildStub
         }
@@ -90,6 +92,7 @@ class BlackjackControllerTest {
         // Centralised attributes — populated by populate(), proxied here:
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
+        assertEquals(500L, model.getAttribute("jackpotStakeAnchor"))
         // Lobby-specific attributes still get added via the rules lambda:
         assertEquals(10L, model.getAttribute("minAnte"))
         assertEquals(500L, model.getAttribute("maxAnte"))
@@ -104,6 +107,7 @@ class BlackjackControllerTest {
         verify { pageContext.populate(model, guildId, discordId, user) }
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
+        assertEquals(500L, model.getAttribute("jackpotStakeAnchor"))
         assertEquals(10L, model.getAttribute("minStake"))
         assertEquals(500L, model.getAttribute("maxStake"))
         assertEquals(discordId.toString(), model.getAttribute("myDiscordId"))
@@ -123,6 +127,7 @@ class BlackjackControllerTest {
         verify { pageContext.populate(model, guildId, discordId, user) }
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
+        assertEquals(500L, model.getAttribute("jackpotStakeAnchor"))
         assertEquals(tableId.toString(), model.getAttribute("tableId"))
         assertEquals(100L, model.getAttribute("ante"))
         assertEquals(discordId.toString(), model.getAttribute("myDiscordId"))
