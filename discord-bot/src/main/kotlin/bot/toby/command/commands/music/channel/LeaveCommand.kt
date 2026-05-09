@@ -1,9 +1,9 @@
 package bot.toby.command.commands.music.channel
 
 import bot.toby.command.commands.music.MusicCommand
-import bot.toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.voice.LastConnectedChannelTracker
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
@@ -12,11 +12,13 @@ import database.service.ConfigService
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.managers.AudioManager
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class LeaveCommand @Autowired constructor(private val configService: ConfigService) : MusicCommand {
+class LeaveCommand(
+    private val configService: ConfigService,
+    private val lastConnectedChannelTracker: LastConnectedChannelTracker,
+) : MusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
@@ -70,7 +72,7 @@ class LeaveCommand @Autowired constructor(private val configService: ConfigServi
             volume = defaultVolume
         }
         audioManager.closeAudioConnection()
-        lastConnectedChannel.remove(event.guild!!.idLong)
+        lastConnectedChannelTracker.clear(event.guild!!.idLong)
 
         event.hook
             .sendMessage("Disconnecting from `\uD83D\uDD0A ${selfVoiceState?.channel?.name}`")

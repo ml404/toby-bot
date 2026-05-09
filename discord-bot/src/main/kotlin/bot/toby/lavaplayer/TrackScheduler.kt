@@ -1,8 +1,8 @@
 package bot.toby.lavaplayer
 
-import bot.toby.helpers.MusicPlayerHelper.deriveDeleteDelayFromTrack
 import bot.toby.helpers.MusicPlayerHelper.nowPlaying
 import bot.toby.helpers.MusicPlayerHelper.resetMessages
+import bot.toby.util.deriveDeleteDelayFromTrack
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist

@@ -3,6 +3,8 @@ package bot.toby.command.commands.music.player
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.util.adjustTrackPlayingTimes
+import bot.toby.util.isUrl
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -29,7 +31,7 @@ class PlayCommand : MusicCommand {
         val guild = event.guild ?: return
         val musicManager = instance.getMusicManager(guild)
 
-        val startPosition = MusicPlayerHelper.adjustTrackPlayingTimes(
+        val startPosition = adjustTrackPlayingTimes(
             event.getOption(START_POSITION)?.asLong ?: 0L
         )
         val volume = event.getOption(VOLUME)?.asInt ?: musicManager.audioPlayer.volume
@@ -41,7 +43,7 @@ class PlayCommand : MusicCommand {
 
             "link" -> {
                 var link = event.getOption(LINK)?.asString ?: ""
-                if (link.contains("youtube") && MusicPlayerHelper.isUrl(link).isEmpty()) {
+                if (link.contains("youtube") && isUrl(link).isEmpty()) {
                     link = "ytsearch:$link"
                 }
                 instance.loadAndPlay(guild, event, link, true, deleteDelay, startPosition, volume)

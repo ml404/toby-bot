@@ -1,16 +1,14 @@
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
-import bot.toby.voice.VoiceCompanyTracker
-import bot.toby.voice.VoiceCreditAwardService
+import bot.toby.voice.LastConnectedChannelTracker
+import bot.toby.voice.VoiceSessionLifecycle
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.service.ConfigService
 import database.service.SocialCreditAwardService
-import database.service.VoiceSessionService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA
@@ -40,20 +38,20 @@ class VoiceEventHandlerTest {
     private val configService: ConfigService = mockk()
     private val userDtoHelper: UserDtoHelper = mockk()
     private val introHelper: IntroHelper = mockk()
-    private val voiceSessionService: VoiceSessionService = mockk(relaxed = true)
-    private val voiceCompanyTracker: VoiceCompanyTracker = mockk(relaxed = true)
-    private val voiceCreditAwardService: VoiceCreditAwardService = mockk(relaxed = true)
+    private val voiceSessionLifecycle: VoiceSessionLifecycle = mockk(relaxed = true)
+    private val lastConnectedChannelTracker: LastConnectedChannelTracker = LastConnectedChannelTracker()
     private val awardService: SocialCreditAwardService = mockk(relaxed = true)
+    private val nowPlayingManager: NowPlayingManager = mockk(relaxed = true)
 
     private val handler = spyk(
         VoiceEventHandler(
             configService,
             userDtoHelper,
             introHelper,
-            voiceSessionService,
-            voiceCompanyTracker,
-            voiceCreditAwardService,
-            awardService
+            voiceSessionLifecycle,
+            lastConnectedChannelTracker,
+            awardService,
+            nowPlayingManager,
         )
     )
 
@@ -132,10 +130,10 @@ class VoiceEventHandlerTest {
             configService = mockk(),
             userDtoHelper = mockk(),
             introHelper = mockk(),
-            voiceSessionService = mockk(relaxed = true),
-            voiceCompanyTracker = mockk(relaxed = true),
-            voiceCreditAwardService = mockk(relaxed = true),
-            awardService = mockk(relaxed = true)
+            voiceSessionLifecycle = mockk(relaxed = true),
+            lastConnectedChannelTracker = LastConnectedChannelTracker(),
+            awardService = mockk(relaxed = true),
+            nowPlayingManager = mockk(relaxed = true),
         )
 
         handler.onReady(readyEvent)
@@ -157,7 +155,7 @@ class VoiceEventHandlerTest {
         val human1 = mockk<Member>(relaxed = true)
         val human2 = mockk<Member>(relaxed = true)
         val bot = mockk<Member>(relaxed = true)
-        val voiceSessionService = mockk<database.service.VoiceSessionService>(relaxed = true)
+        val voiceSessionLifecycle = mockk<VoiceSessionLifecycle>(relaxed = true)
 
         every { readyEvent.jda } returns jda
         every { jda.guildCache.iterator() } returns mutableListOf(guild).iterator()
@@ -174,31 +172,22 @@ class VoiceEventHandlerTest {
         every { human2.idLong } returns 200L
         every { bot.idLong } returns 999L  // explicit so the verify-block matcher doesn't touch the relaxed mock
 
-        // No prior session for either human — fresh insert path.
-        every { voiceSessionService.findOpenSession(any(), any()) } returns null
-
         val handler = VoiceEventHandler(
             configService = mockk(relaxed = true),
             userDtoHelper = mockk(relaxed = true),
             introHelper = mockk(relaxed = true),
-            voiceSessionService = voiceSessionService,
-            voiceCompanyTracker = mockk(relaxed = true),
-            voiceCreditAwardService = mockk(relaxed = true),
-            awardService = mockk(relaxed = true)
+            voiceSessionLifecycle = voiceSessionLifecycle,
+            lastConnectedChannelTracker = LastConnectedChannelTracker(),
+            awardService = mockk(relaxed = true),
+            nowPlayingManager = mockk(relaxed = true),
         )
 
         handler.onReady(readyEvent)
 
         // Both humans get a session; the bot does NOT.
-        verify(exactly = 1) {
-            voiceSessionService.openSession(match { it.discordId == 100L && it.guildId == 7L && it.channelId == 99L })
-        }
-        verify(exactly = 1) {
-            voiceSessionService.openSession(match { it.discordId == 200L && it.guildId == 7L && it.channelId == 99L })
-        }
-        verify(exactly = 0) {
-            voiceSessionService.openSession(match { it.discordId == 999L })
-        }
+        verify(exactly = 1) { voiceSessionLifecycle.openSession(100L, 7L, voiceChannel, any()) }
+        verify(exactly = 1) { voiceSessionLifecycle.openSession(200L, 7L, voiceChannel, any()) }
+        verify(exactly = 0) { voiceSessionLifecycle.openSession(999L, any(), any(), any()) }
     }
 
 
@@ -220,6 +209,7 @@ class VoiceEventHandlerTest {
         every { event.channelLeft } returns null
         every { channel.members } returns listOf(nonBotMember)
         every { channel.name } returns "voiceChannelName"
+        every { channel.idLong } returns 99L
         every { channel.asVoiceChannel() } returns mockk(relaxed = true)
         every { nonBotMember.user.isBot } returns false
         every { member.guild } returns guild
@@ -282,6 +272,7 @@ class VoiceEventHandlerTest {
         every { event.channelLeft } returns null
         every { channel.members } returns listOf(nonBotMember)
         every { channel.name } returns "voiceChannelName"
+        every { channel.idLong } returns 99L
         every { channel.asVoiceChannel() } returns mockk(relaxed = true)
         every { nonBotMember.user.isBot } returns false
         every { member.guild } returns guild
@@ -390,8 +381,11 @@ class VoiceEventHandlerTest {
         every { event.channelJoined } returns newChannel
         every { event.channelLeft } returns mockk()
 
-        // Simulate previous channel in lastConnectedChannel
-        VoiceEventHandler.lastConnectedChannel[guild.idLong] = previousChannel
+        // Simulate previous channel in the tracker. The handler resolves the
+        // VoiceChannel via Guild.getVoiceChannelById at use time, so wire that.
+        every { previousChannel.idLong } returns 7777L
+        every { guild.getVoiceChannelById(7777L) } returns previousChannel
+        lastConnectedChannelTracker.set(guild.idLong, 7777L)
 
         // Mock the audioManager behavior
         every { audioManager.openAudioConnection(any()) } just Runs
@@ -433,8 +427,8 @@ class VoiceEventHandlerTest {
         every { member.effectiveName } returns "BotName"
 
 
-        // Simulate no previous channel in lastConnectedChannel
-        VoiceEventHandler.lastConnectedChannel.remove(guild.idLong)
+        // Simulate no previous channel in the tracker
+        lastConnectedChannelTracker.clear(guild.idLong)
 
         handler.onGuildVoiceUpdate(event)
 
@@ -485,12 +479,10 @@ class VoiceEventHandlerTest {
     }
 
     @Test
-    fun `onGuildLeave cleans up PlayerManager, NowPlayingManager, and lastConnectedChannel`() {
+    fun `onGuildLeave cleans up PlayerManager, NowPlayingManager, and last-connected channel`() {
         val guild = mockk<Guild>()
         val event = mockk<GuildLeaveEvent>()
         val playerManager = mockk<PlayerManager>(relaxed = true)
-        val nowPlayingManager = mockk<NowPlayingManager>(relaxed = true)
-        val voiceChannel = mockk<VoiceChannel>()
 
         every { event.guild } returns guild
         every { guild.idLong } returns 42L
@@ -499,19 +491,18 @@ class VoiceEventHandlerTest {
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns playerManager
 
-        mockkObject(MusicPlayerHelper)
-        every { MusicPlayerHelper.nowPlayingManager } returns nowPlayingManager
-
-        VoiceEventHandler.lastConnectedChannel[42L] = voiceChannel
+        // Pre-seed the tracker — leaving the guild should evict it.
+        lastConnectedChannelTracker.set(42L, 1234L)
 
         handler.onGuildLeave(event)
 
         verify(exactly = 1) { playerManager.destroyMusicManager(42L) }
         verify(exactly = 1) { nowPlayingManager.resetNowPlayingMessage(42L) }
-        assert(VoiceEventHandler.lastConnectedChannel.containsKey(42L)) { "lastConnectedChannel should be preserved for potential reconnection" }
+        assert(lastConnectedChannelTracker.resolveChannel(guild) == null) {
+            "tracker entry for the left guild should be evicted"
+        }
 
         unmockkObject(PlayerManager)
-        unmockkObject(MusicPlayerHelper)
     }
 
     @Test

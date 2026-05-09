@@ -6,16 +6,14 @@ import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import bot.toby.helpers.nonBots
 import bot.toby.lavaplayer.PlayerManager
-import bot.toby.voice.VoiceCompanyTracker
-import bot.toby.voice.VoiceCreditAwardService
+import bot.toby.managers.NowPlayingManager
+import bot.toby.voice.LastConnectedChannelTracker
+import bot.toby.voice.VoiceSessionLifecycle
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations.DELETE_DELAY
 import database.dto.ConfigDto.Configurations.VOLUME
-import database.dto.VoiceSessionDto
 import database.service.ConfigService
 import database.service.SocialCreditAwardService
-import database.service.VoiceSessionService
-import bot.toby.helpers.MusicPlayerHelper
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -24,22 +22,20 @@ import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.api.managers.AudioManager
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
 
 private const val TEAM_REGEX = "(?i)team\\s[0-9]+"
 
 @Service
-class VoiceEventHandler @Autowired constructor(
+class VoiceEventHandler(
     private val configService: ConfigService,
     private val userDtoHelper: UserDtoHelper,
     private val introHelper: IntroHelper,
-    private val voiceSessionService: VoiceSessionService,
-    private val voiceCompanyTracker: VoiceCompanyTracker,
-    private val voiceCreditAwardService: VoiceCreditAwardService,
-    private val awardService: SocialCreditAwardService
+    private val voiceSessionLifecycle: VoiceSessionLifecycle,
+    private val lastConnectedChannelTracker: LastConnectedChannelTracker,
+    private val awardService: SocialCreditAwardService,
+    private val nowPlayingManager: NowPlayingManager,
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -51,14 +47,13 @@ class VoiceEventHandler @Autowired constructor(
             // Reconcile voice state: any non-bot member already in a voice
             // channel needs an open voice_session row, otherwise their
             // eventual leave event has nothing to close and the post-restart
-            // span gets silently dropped. The recovery hook just closed any
-            // *pre-restart* sessions; this opens fresh ones from this moment.
+            // span gets silently dropped.
             var reopened = 0
             guild.voiceChannels.forEach { channel ->
                 channel.members
                     .filter { !it.user.isBot }
                     .forEach { member ->
-                        runCatching { openSessionForUser(member.idLong, guild.idLong, channel, now) }
+                        runCatching { voiceSessionLifecycle.openSession(member.idLong, guild.idLong, channel, now) }
                             .onSuccess { reopened++ }
                             .onFailure {
                                 logger.error(
@@ -68,9 +63,6 @@ class VoiceEventHandler @Autowired constructor(
                             }
                     }
             }
-            // Always log the count, even when zero — silence is ambiguous, and
-            // we need to be able to confirm in production logs whether the
-            // reconciliation loop actually ran for this guild.
             logger.info { "Startup voice reconciliation: opened $reopened session(s) in guild ${guild.idLong}." }
             guild.connectToMostPopulatedVoiceChannel()
         }
@@ -80,7 +72,11 @@ class VoiceEventHandler @Autowired constructor(
         val guildId = event.guild.idLong
         logger.info { "Guild $guildId left — cleaning up audio resources" }
         PlayerManager.instance.destroyMusicManager(guildId)
-        MusicPlayerHelper.nowPlayingManager.resetNowPlayingMessage(guildId)
+        nowPlayingManager.resetNowPlayingMessage(guildId)
+        // The bot is no longer in this guild; the cached channel reference is
+        // dead weight (and pins a stale JDA VoiceChannel via id alone is moot
+        // here since we only kept ids — but the entry is still useless).
+        lastConnectedChannelTracker.clear(guildId)
     }
 
     private fun Guild.connectToMostPopulatedVoiceChannel() {
@@ -139,10 +135,9 @@ class VoiceEventHandler @Autowired constructor(
         val guild = event.guild
         val audioManager = guild.audioManager
 
-        // Check if the bot is being moved
         if (member.user.idLong == tobyBot.idLong) {
             logger.info { "${tobyBot.name} has been moved, checking for previous channel to rejoin..." }
-            val previousChannel = lastConnectedChannel[guild.idLong]
+            val previousChannel = lastConnectedChannelTracker.resolveChannel(guild)
             if (previousChannel != null) {
                 logger.info { "Rejoining '${previousChannel.name}'" }
                 audioManager.rejoin(previousChannel)
@@ -152,9 +147,8 @@ class VoiceEventHandler @Autowired constructor(
         } else {
             logger.info { "User '${member.effectiveName}' has moved, checking if AudioConnection should close..." }
             val now = Instant.now()
-            closeSessionForUser(member.idLong, guild.idLong, now)
-            event.channelLeft?.let { voiceCompanyTracker.reconcileChannel(it, now) }
-            event.channelJoined?.let { openSessionForUser(member.idLong, guild.idLong, it, now) }
+            voiceSessionLifecycle.closeSession(member.idLong, guild.idLong, event.channelLeft, now)
+            event.channelJoined?.let { voiceSessionLifecycle.openSession(member.idLong, guild.idLong, it, now) }
             audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
             val defaultVolume = getConfigValue(VOLUME.configValue, guild.id)
             checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
@@ -182,7 +176,7 @@ class VoiceEventHandler @Autowired constructor(
 
         if (event.member.user.idLong != event.jda.selfUser.idLong) {
             val now = Instant.now()
-            event.channelJoined?.let { openSessionForUser(event.member.idLong, guild.idLong, it, now) }
+            event.channelJoined?.let { voiceSessionLifecycle.openSession(event.member.idLong, guild.idLong, it, now) }
         }
 
         val requestingUserDto = event.member.getRequestingUserDto(userDtoHelper)
@@ -202,14 +196,15 @@ class VoiceEventHandler @Autowired constructor(
         guild: Guild,
         defaultVolume: Int
     ) {
-        //Ignore the bot joining voice event
         if (event.member.user.idLong != event.jda.selfUser.idLong) {
             val joinedChannelConnectedMembers = event.channelJoined?.members?.nonBots() ?: emptyList()
             if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
                 logger.info { "Joining new channel '${event.channelJoined?.name}'." }
                 PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-                event.channelJoined?.let { audioManager.openAudioConnection(it) }
-                lastConnectedChannel[guild.idLong] = event.channelJoined!!.asVoiceChannel()
+                event.channelJoined?.let { joined ->
+                    audioManager.openAudioConnection(joined)
+                    lastConnectedChannelTracker.set(guild.idLong, joined.idLong)
+                }
             }
         }
     }
@@ -246,37 +241,10 @@ class VoiceEventHandler @Autowired constructor(
         val member = event.member
         if (member.user.idLong != event.jda.selfUser.idLong) {
             val now = Instant.now()
-            closeSessionForUser(member.idLong, guild.idLong, now)
-            event.channelLeft?.let { voiceCompanyTracker.reconcileChannel(it, now) }
+            voiceSessionLifecycle.closeSession(member.idLong, guild.idLong, event.channelLeft, now)
         }
         audioManager.checkAudioManagerToCloseConnectionOnEmptyChannel()
         event.channelLeft?.let { deleteTemporaryChannelIfEmpty(it.members.nonBots().isEmpty(), it) }
-    }
-
-    private fun openSessionForUser(userId: Long, guildId: Long, channel: AudioChannel, now: Instant) {
-        runCatching {
-            voiceSessionService.findOpenSession(userId, guildId)?.let { stale ->
-                val companySeconds = voiceCompanyTracker.stopTracking(userId, guildId, now)
-                voiceCreditAwardService.closeSessionAndAward(stale, now, companySeconds)
-            }
-            voiceCompanyTracker.reconcileChannel(channel, now)
-            val session = VoiceSessionDto(
-                discordId = userId,
-                guildId = guildId,
-                channelId = channel.idLong,
-                joinedAt = now
-            )
-            voiceSessionService.openSession(session)
-            voiceCompanyTracker.startTracking(userId, guildId, channel, now)
-        }.onFailure { logger.error("Failed to open voice session for user $userId: ${it.message}") }
-    }
-
-    private fun closeSessionForUser(userId: Long, guildId: Long, now: Instant) {
-        runCatching {
-            val open = voiceSessionService.findOpenSession(userId, guildId) ?: return
-            val companySeconds = voiceCompanyTracker.stopTracking(userId, guildId, now)
-            voiceCreditAwardService.closeSessionAndAward(open, now, companySeconds)
-        }.onFailure { logger.error("Failed to close voice session for user $userId: ${it.message}") }
     }
 
     private fun AudioManager.checkAudioManagerToCloseConnectionOnEmptyChannel() {
@@ -285,7 +253,7 @@ class VoiceEventHandler @Autowired constructor(
             if (connectedChannel.members.nonBots().isEmpty()) {
                 this.closeAudioConnection()
                 logger.info("Audio connection closed due to empty channel.")
-                lastConnectedChannel.remove(this.guild.idLong)
+                lastConnectedChannelTracker.clear(this.guild.idLong)
             }
         }
     }
@@ -303,8 +271,6 @@ class VoiceEventHandler @Autowired constructor(
     }
 
     companion object {
-        val lastConnectedChannel = ConcurrentHashMap<Long, VoiceChannel>()
-
         // Small, daily-capped reward so joining a channel with an intro set
         // feels like something without becoming farmable via rejoin spam.
         const val INTRO_PLAY_CREDIT: Long = 2L

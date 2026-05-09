@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music
 
-import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.util.formatTime
 import core.command.Command
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
@@ -52,7 +52,7 @@ interface MusicCommand : Command {
                     .queue(invokeDeleteOnMessageResponse(deleteDelay))
             } else {
                 val duration = musicManager.audioPlayer.playingTrack.duration
-                val songDuration = MusicPlayerHelper.formatTime(duration)
+                val songDuration = formatTime(duration)
                 interactionHook
                     .sendMessage("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR $songDuration, $songDuration OF PLAYTIME!")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay))
