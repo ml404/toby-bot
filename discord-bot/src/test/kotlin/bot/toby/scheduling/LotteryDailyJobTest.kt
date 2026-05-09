@@ -61,6 +61,19 @@ class LotteryDailyJobTest {
         } returns dto
     }
 
+    private fun stubMode(mode: String) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue,
+                guildId.toString(),
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue,
+            value = mode,
+            guildId = guildId.toString(),
+        )
+    }
+
     @Test
     fun `runDaily skips guilds with daily lottery disabled`() {
         stubEnabled(false)
@@ -169,5 +182,93 @@ class LotteryDailyJobTest {
         // markRan is skipped so the next daily tick can retry once the
         // admin fixes the offending config.
         verify(exactly = 0) { lotteryDailyService.markRan(any(), any()) }
+    }
+
+    // ---- WEIGHTED-mode dispatch ----
+
+    @Test
+    fun `runDaily in WEIGHTED mode closes prior weighted draw and opens a fresh one`() {
+        stubEnabled(true)
+        stubMode("WEIGHTED")
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.drawLottery(guildId) } returns
+            JackpotLotteryService.DrawOutcome.Ok(
+                payouts = emptyList(), totalPaid = 1_000L, drained = 1_000L,
+            )
+        every { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId),
+                seeded = 5_000L,
+            )
+
+        job.runDaily()
+
+        // Weighted-path methods called, NOT match-path.
+        verify(exactly = 1) { jackpotLotteryService.drawLottery(guildId) }
+        verify(exactly = 1) { jackpotLotteryService.openLottery(guildId, any(), 24L, 3, any()) }
+        verify(exactly = 0) { jackpotLotteryService.drawMatchLottery(any()) }
+        verify(exactly = 0) { jackpotLotteryService.openMatchLottery(any(), any(), any(), any()) }
+        verify(exactly = 1) { lotteryDailyService.markRan(guildId, today) }
+    }
+
+    @Test
+    fun `runDaily in WEIGHTED mode treats EmptyPool as a soft skip and marks ran`() {
+        stubEnabled(true)
+        stubMode("WEIGHTED")
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns null
+        every { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.EmptyPool
+
+        job.runDaily()
+
+        // No spin-loop on every cron tick; admin must seed the pool.
+        verify(exactly = 1) { lotteryDailyService.markRan(guildId, today) }
+    }
+
+    @Test
+    fun `runDaily in WEIGHTED mode cancels prior draw if no tickets`() {
+        stubEnabled(true)
+        stubMode("WEIGHTED")
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.drawLottery(guildId) } returns
+            JackpotLotteryService.DrawOutcome.NoTickets
+        every { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId),
+                seeded = 1_000L,
+            )
+
+        job.runDaily()
+
+        verify(exactly = 1) { jackpotLotteryService.cancelLottery(guildId) }
+        verify(exactly = 1) { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `runDaily defaults to NUMBER_MATCH when mode config is missing or unknown`() {
+        stubEnabled(true)
+        // No mode stub — defaults to NUMBER_MATCH per LotteryHelper.dailyMode.
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenMatch(guildId) } returns null
+        every { jackpotLotteryService.openMatchLottery(guildId, any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 1L, guildId = guildId), seeded = 0L,
+            )
+
+        job.runDaily()
+
+        verify(exactly = 1) { jackpotLotteryService.openMatchLottery(guildId, any(), any(), any()) }
+        verify(exactly = 0) { jackpotLotteryService.openLottery(any(), any(), any(), any(), any()) }
     }
 }

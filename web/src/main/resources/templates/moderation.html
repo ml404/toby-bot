@@ -847,61 +847,112 @@
             </form>
         </div>
 
-        <!-- Daily lottery: opt-in toggle + parameters + force draw -->
-        <div class="mod-card mod-card-wide">
-            <h3>Daily match-numbers lottery (Pick 5 of 1-49)</h3>
-            <p class="muted">
-                Auto-runs at 00:00 UTC. Closes the prior day's draw (paying tier prizes by
-                match count: 60/25/10/5 % of pool for 5/4/3/2 matches), then opens a new
-                day seeded from the jackpot pool. Each ticket sale routes a configurable
-                share back to the jackpot — the daily is a credit sink that drains the
-                pool steadily through many small wins instead of one big lucky roll.
-            </p>
-            <div class="config-row" data-key="LOTTERY_DAILY_ENABLED">
-                <label>
-                    Enable daily lottery
-                    <select name="LOTTERY_DAILY_ENABLED" data-key="LOTTERY_DAILY_ENABLED">
-                        <option value="true"
-                                th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == 'true'}">Enabled</option>
-                        <option value="false"
-                                th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] != 'true'}">Disabled</option>
-                    </select>
-                </label>
+        <!--
+            Daily lottery: opt-in toggle + game mode + per-day parameters + force draw.
+
+            Each row uses the canonical .config-row pattern (label / input
+            or select / Save button) so moderation.js's existing handler
+            picks them up automatically. Without the Save button the row
+            is read-only and the admin can't actually persist anything.
+        -->
+        <div class="mod-card mod-card-wide lottery-admin-card">
+            <header class="lottery-admin-header">
+                <h3>Daily lottery</h3>
+                <p class="muted">
+                    Auto-runs at 00:00 UTC: closes the prior day's draw, pays prizes, opens a
+                    fresh one seeded from the jackpot pool. Doubles as a credit sink — a
+                    configurable slice of every ticket sale routes back to the jackpot,
+                    chipping the pool down through many small wins.
+                </p>
+            </header>
+
+            <details class="config-section" open>
+                <summary>Toggle &amp; mode</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_DAILY_ENABLED">
+                        <label>Enable daily lottery</label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="false"
+                                    th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == null or overview.config['LOTTERY_DAILY_ENABLED'] != 'true'}">
+                                Disabled
+                            </option>
+                            <option value="true"
+                                    th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == 'true'}">
+                                Enabled
+                            </option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_MODE">
+                        <label>
+                            Game mode
+                            <span class="config-hint">
+                                NUMBER_MATCH for high-traffic servers (≥30 tickets/day);
+                                WEIGHTED guarantees a winner every draw — best for &lt;30 active users.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="NUMBER_MATCH"
+                                    th:selected="${overview.config['LOTTERY_DAILY_MODE'] == null or overview.config['LOTTERY_DAILY_MODE'] != 'WEIGHTED'}">
+                                Pick 5 of 49
+                            </option>
+                            <option value="WEIGHTED"
+                                    th:selected="${overview.config['LOTTERY_DAILY_MODE'] == 'WEIGHTED'}">
+                                Top-3 weighted draw
+                            </option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Daily prize parameters</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
+                        <label>Ticket price (credits per ticket; default 50)</label>
+                        <input type="number" min="1" max="1000000"
+                               th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
+                               placeholder="50"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
+                        <label>Daily seed (% of jackpot pool pulled into prize pool at 00:00 UTC; default 5)</label>
+                        <span class="config-input-group">
+                            <input type="number" min="1" max="100"
+                                   th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
+                                   placeholder="5"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
+                        <label>Ticket revenue → jackpot (% of every sale routed back to pool; default 30)</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="100"
+                                   th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
+                                   placeholder="30"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <div class="lottery-admin-actions">
+                <div class="lottery-admin-actions-text">
+                    <strong>Force draw now</strong>
+                    <p class="muted">
+                        Closes any open draw, pays prizes, opens a fresh one — useful for
+                        testing or recovering from a missed cron.
+                    </p>
+                </div>
+                <button id="lottery-force-draw" type="button" class="btn"
+                        th:disabled="${!isOwner}">Force draw now</button>
             </div>
-            <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
-                <label>
-                    Ticket price (credits)
-                    <input type="number" name="LOTTERY_DAILY_TICKET_PRICE"
-                           th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
-                           min="1" max="1000000" placeholder="50 (default)">
-                </label>
-            </div>
-            <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
-                <label>
-                    Daily seed (% of jackpot pool)
-                    <span class="config-input-group">
-                        <input type="number" name="LOTTERY_DAILY_SEED_PCT"
-                               th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
-                               min="1" max="100" placeholder="5 (default)">
-                        <span class="config-suffix">%</span>
-                    </span>
-                </label>
-            </div>
-            <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
-                <label>
-                    Ticket revenue → jackpot
-                    <span class="config-input-group">
-                        <input type="number" name="LOTTERY_DAILY_REVENUE_JACKPOT_PCT"
-                               th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
-                               min="0" max="100" placeholder="30 (default)">
-                        <span class="config-suffix">%</span>
-                    </span>
-                </label>
-            </div>
-            <p class="muted">
-                Force the cycle to run now (close any open draw, pay prizes, open the next):
-            </p>
-            <button id="lottery-force-draw" type="button" class="btn">Force draw now</button>
         </div>
     </section>
 </main>

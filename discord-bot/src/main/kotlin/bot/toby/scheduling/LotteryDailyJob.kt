@@ -17,24 +17,28 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * Daily match-numbers (Pick 5 of 1-49) lottery auto-draw.
+ * Daily lottery auto-draw. Runs at 00:00 UTC.
  *
- * Runs at 00:00 UTC. For each guild with `LOTTERY_DAILY_ENABLED=true`:
- *   1. Close yesterday's draw if still OPEN — runs the prize tier
- *      payouts via [JackpotLotteryService.drawMatchLottery]. If no
- *      one bought, cancels and refunds the seed via
- *      [JackpotLotteryService.cancelMatchLottery] so credits don't
- *      strand on a no-tickets row.
- *   2. Open today's draw via [JackpotLotteryService.openMatchLottery],
- *      seeding `LOTTERY_DAILY_SEED_PCT` of the per-guild jackpot pool
- *      (default 5%) into the prize pool. Ticket price comes from
- *      `LOTTERY_DAILY_TICKET_PRICE` (default 50).
- *   3. Mark the day done in [LotteryDailyService] so a mid-cron
- *      restart skips this guild on the next tick.
+ * For each guild with `LOTTERY_DAILY_ENABLED=true`, dispatches on
+ * `LOTTERY_DAILY_MODE`:
  *
- * Mirrors [UniversalBasicIncomeJob]: idempotent via composite-key
- * ledger, per-guild error isolation via runCatching, prod-profile only
- * (test profile uses manual force-draw via the moderation web tab).
+ *   - **NUMBER_MATCH** (default): Pick 5 of 1-49. Closes yesterday's
+ *     draw via [JackpotLotteryService.drawMatchLottery] (or cancels if
+ *     no tickets), opens a fresh one via
+ *     [JackpotLotteryService.openMatchLottery]. Best for high-volume
+ *     servers — match tiers (5/4/3/2 → 60/25/10/5%) need many tickets
+ *     per draw to hit reliably.
+ *
+ *   - **WEIGHTED**: top-3 weighted draw, 50/30/20 % of pool. Closes
+ *     yesterday's draw via [JackpotLotteryService.drawLottery] (or
+ *     cancels if no tickets), opens a fresh one via
+ *     [JackpotLotteryService.openLottery] with `winnerCount=3`. Best
+ *     for low-volume servers — a winner is guaranteed every draw
+ *     regardless of ticket count, so the pool drains predictably.
+ *
+ * Idempotent via composite-key ledger ([LotteryDailyService]) — a
+ * mid-cron restart skips guilds whose ledger already records today.
+ * Per-guild error isolation via `runCatching`. Prod-profile only.
  */
 @Component
 @Profile("prod")
@@ -77,56 +81,129 @@ class LotteryDailyJob @Autowired constructor(
             return
         }
 
-        // Close yesterday's draw if still open.
+        val mode = LotteryHelper.dailyMode(configService, guildId)
+        val opened = when (mode) {
+            LotteryHelper.MODE_WEIGHTED -> rollWeighted(guildId)
+            else -> rollNumberMatch(guildId)  // MODE_NUMBER_MATCH (default)
+        }
+
+        if (opened) {
+            lotteryDailyService.markRan(guildId, today)
+        }
+        // If `opened` is false the open call returned InvalidParams —
+        // don't mark ran so the next cron tick retries once admin
+        // fixes the offending config.
+    }
+
+    /**
+     * NUMBER_MATCH cycle: close (or cancel) yesterday's match lottery,
+     * open a fresh one. Returns true if the open call succeeded (or
+     * AlreadyOpen — race with another worker is treated as success).
+     */
+    private fun rollNumberMatch(guildId: Long): Boolean {
         val openMatch = jackpotLotteryService.getOpenMatch(guildId)
         if (openMatch?.status == JackpotLotteryDto.STATUS_OPEN) {
             when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
-                is JackpotLotteryService.DrawMatchOutcome.Ok -> {
+                is JackpotLotteryService.DrawMatchOutcome.Ok ->
                     logger.info {
-                        "Daily lottery drew for guild $guildId: drawn=${drawResult.drawnNumbers} " +
+                        "Daily NUMBER_MATCH drew for guild $guildId: drawn=${drawResult.drawnNumbers} " +
                             "totalPaid=${drawResult.totalPaid} rolledBack=${drawResult.rolledBackToJackpot}"
                     }
-                }
                 JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
-                    logger.info { "Daily lottery for guild $guildId had no tickets; cancelling and refunding seed." }
+                    logger.info { "Daily NUMBER_MATCH for guild $guildId had no tickets; cancelling and refunding seed." }
                     jackpotLotteryService.cancelMatchLottery(guildId)
                 }
-                JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> {
-                    // Race with another worker — fine, just continue.
-                }
+                JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> Unit
             }
         }
 
-        // Open today's draw.
         val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
         val seedPct = LotteryHelper.dailySeedPct(configService, guildId)
-        when (val open = jackpotLotteryService.openMatchLottery(
-            guildId = guildId,
-            ticketPrice = ticketPrice,
-            seedPct = seedPct,
-            durationHours = DURATION_HOURS,
+        return when (val open = jackpotLotteryService.openMatchLottery(
+            guildId = guildId, ticketPrice = ticketPrice,
+            seedPct = seedPct, durationHours = DURATION_HOURS,
         )) {
             is JackpotLotteryService.OpenOutcome.Ok -> {
                 logger.info {
-                    "Daily lottery opened for guild $guildId: ticketPrice=$ticketPrice " +
+                    "Daily NUMBER_MATCH opened for guild $guildId: ticketPrice=$ticketPrice " +
                         "seeded=${open.seeded} seedPct=$seedPct"
                 }
+                true
             }
             JackpotLotteryService.OpenOutcome.AlreadyOpen -> {
-                logger.warn { "Daily lottery for guild $guildId is already open; skipping reopen." }
+                logger.warn { "Daily NUMBER_MATCH for guild $guildId is already open; skipping reopen." }
+                true
             }
             JackpotLotteryService.OpenOutcome.EmptyPool -> {
-                // Defensive — openMatchLottery accepts empty pools, so this
-                // shouldn't fire. Log if it does and move on.
-                logger.warn { "Daily lottery for guild $guildId reported EmptyPool unexpectedly." }
+                logger.warn { "Daily NUMBER_MATCH for guild $guildId reported EmptyPool unexpectedly." }
+                true
             }
             is JackpotLotteryService.OpenOutcome.InvalidParams -> {
-                logger.warn { "Daily lottery for guild $guildId rejected params: ${open.reason}" }
-                return  // Don't mark as run so admin can fix config and retry.
+                logger.warn { "Daily NUMBER_MATCH for guild $guildId rejected params: ${open.reason}" }
+                false
+            }
+        }
+    }
+
+    /**
+     * WEIGHTED cycle: close (or cancel) yesterday's weighted lottery,
+     * open a fresh one. Top 3 of N tickets share the pool 50/30/20 —
+     * always pays out at any ticket volume, so this is the right mode
+     * for low-engagement servers.
+     */
+    private fun rollWeighted(guildId: Long): Boolean {
+        val openWeighted = jackpotLotteryService.getOpenWeighted(guildId)
+        if (openWeighted?.status == JackpotLotteryDto.STATUS_OPEN) {
+            when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
+                is JackpotLotteryService.DrawOutcome.Ok ->
+                    logger.info {
+                        "Daily WEIGHTED drew for guild $guildId: " +
+                            "totalPaid=${drawResult.totalPaid} drained=${drawResult.drained}"
+                    }
+                JackpotLotteryService.DrawOutcome.NoTickets -> {
+                    logger.info { "Daily WEIGHTED for guild $guildId had no tickets; cancelling and refunding seed." }
+                    jackpotLotteryService.cancelLottery(guildId)
+                }
+                JackpotLotteryService.DrawOutcome.NoOpenLottery -> Unit
             }
         }
 
-        lotteryDailyService.markRan(guildId, today)
+        val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
+        val seedPct = LotteryHelper.dailySeedPct(configService, guildId)
+        val drainPct = (seedPct.toDouble() / 100.0).coerceIn(0.0, 1.0)
+        return when (val open = jackpotLotteryService.openLottery(
+            guildId = guildId,
+            ticketPrice = ticketPrice,
+            durationHours = DURATION_HOURS,
+            winnerCount = LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT,
+            drainPct = drainPct,
+        )) {
+            is JackpotLotteryService.OpenOutcome.Ok -> {
+                logger.info {
+                    "Daily WEIGHTED opened for guild $guildId: ticketPrice=$ticketPrice " +
+                        "seeded=${open.seeded} seedPct=$seedPct winners=${LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT}"
+                }
+                true
+            }
+            JackpotLotteryService.OpenOutcome.AlreadyOpen -> {
+                logger.warn { "Daily WEIGHTED for guild $guildId is already open; skipping reopen." }
+                true
+            }
+            JackpotLotteryService.OpenOutcome.EmptyPool -> {
+                logger.info {
+                    "Daily WEIGHTED for guild $guildId skipped — jackpot empty. " +
+                        "Admin must seed the pool before the next cycle can open."
+                }
+                // Mark as ran anyway so we don't spam the log; tomorrow
+                // will retry. If the admin wants an immediate retry they
+                // can use the moderation tab's force-draw button.
+                true
+            }
+            is JackpotLotteryService.OpenOutcome.InvalidParams -> {
+                logger.warn { "Daily WEIGHTED for guild $guildId rejected params: ${open.reason}" }
+                false
+            }
+        }
     }
 
     companion object {
