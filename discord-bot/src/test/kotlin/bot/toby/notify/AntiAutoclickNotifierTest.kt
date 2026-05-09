@@ -10,7 +10,7 @@ import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.SelfMember
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
@@ -34,7 +34,7 @@ class AntiAutoclickNotifierTest {
 
     private lateinit var jda: JDA
     private lateinit var guild: Guild
-    private lateinit var selfMember: Member
+    private lateinit var selfMember: SelfMember
     private lateinit var systemChannel: TextChannel
     private lateinit var configChannel: TextChannel
     private lateinit var configService: ConfigService
