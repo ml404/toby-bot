@@ -143,10 +143,21 @@ class RouletteController(
         )
     }
 
+    // Player-facing bet menu explainer. Lives next to the controller (vs.
+    // hard-coded in the template) so a future bet-type addition only edits
+    // one place. The "covers" copy is intentionally plain English — first-
+    // time players shouldn't have to know roulette parlance.
     private fun payoutRows(): List<RoulettePayoutRow> = listOf(
-        RoulettePayoutRow("Red / Black / Odd / Even / Low / High", "1:1"),
-        RoulettePayoutRow("Dozen / Column", "2:1"),
-        RoulettePayoutRow("Straight (single number)", "35:1"),
+        RoulettePayoutRow("Red / Black", "The 18 red or 18 black pockets. Zero loses.", "1:1"),
+        RoulettePayoutRow("Odd / Even", "Odd or even between 1 and 36. Zero loses.", "1:1"),
+        RoulettePayoutRow("Low / High", "1–18 or 19–36. Zero loses.", "1:1"),
+        RoulettePayoutRow("Dozens", "1st 12, 2nd 12, or 3rd 12 — twelve numbers each.", "2:1"),
+        RoulettePayoutRow(
+            "Columns",
+            "Column 1: 1·4·7… / Column 2: 2·5·8… / Column 3: 3·6·9… — twelve numbers each.",
+            "2:1",
+        ),
+        RoulettePayoutRow("Straight", "A single number you pick (0–36).", "35:1"),
     )
 }
 
@@ -184,4 +195,4 @@ data class RouletteBetRow(
     val requiresNumber: Boolean,
 )
 
-data class RoulettePayoutRow(val label: String, val payout: String)
+data class RoulettePayoutRow(val label: String, val covers: String, val payout: String)
