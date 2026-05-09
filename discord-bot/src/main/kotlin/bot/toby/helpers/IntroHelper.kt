@@ -1,8 +1,9 @@
 package bot.toby.helpers
 
 import bot.toby.handler.EventWaiter
+import bot.toby.intro.IntroMediaLoader
+import bot.toby.intro.IntroNotificationService
 import bot.toby.intro.IntroValidationService
-import bot.toby.util.isUrl
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.ConfigDto
@@ -10,21 +11,21 @@ import database.dto.MusicDto
 import database.dto.MusicDto.Companion.computeHash
 import database.service.ConfigService
 import database.service.MusicFileService
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.Message.Attachment
 import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.DurationUnit
 
 @Service
 class IntroHelper(
@@ -35,12 +36,18 @@ class IntroHelper(
     private val eventWaiter: EventWaiter,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val validationService: IntroValidationService = IntroValidationService(httpHelper, dispatcher),
+    private val mediaLoader: IntroMediaLoader = IntroMediaLoader(),
+    private val notificationService: IntroNotificationService = IntroNotificationService(
+        userDtoHelper, musicFileService, httpHelper, eventWaiter, validationService, mediaLoader, dispatcher,
+    ),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val supervisorJob = SupervisorJob()
     private val coroutineScope = CoroutineScope(supervisorJob + dispatcher)
 
-    // Store the pending intro in a cache (as either an attachment or a URL string)
+    // Per-user pending intro cache, written by /setintro and read by the
+    // confirmation menu. Distinct from the DM prompt flow, which lives in
+    // IntroNotificationService.
     val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
@@ -65,21 +72,12 @@ class IntroHelper(
 
         when (input) {
             is InputData.Attachment -> {
-                // Validate the attachment before proceeding
                 if (!validationService.isValidAttachment(input.attachment)) {
                     event.hook.sendMessage("Please provide a valid mp3 file under ${IntroValidationService.MAX_FILE_SIZE_KB}kb.")
                         .queue(invokeDeleteOnMessageResponse(deleteDelay))
                     return
                 }
-                handleAttachment(
-                    event,
-                    requestingUserDto,
-                    userName,
-                    deleteDelay,
-                    input.attachment,
-                    introVolume,
-                    selectedMusicDto
-                )
+                handleAttachment(event, requestingUserDto, userName, deleteDelay, input.attachment, introVolume, selectedMusicDto)
             }
 
             is InputData.Url -> {
@@ -90,15 +88,7 @@ class IntroHelper(
                     return
                 }
                 val uri = URI.create(uriString)
-                handleUrl(
-                    event,
-                    requestingUserDto,
-                    userName,
-                    deleteDelay,
-                    uri,
-                    introVolume,
-                    selectedMusicDto
-                )
+                handleUrl(event, requestingUserDto, userName, deleteDelay, uri, introVolume, selectedMusicDto)
             }
 
             else -> {
@@ -135,16 +125,7 @@ class IntroHelper(
             else -> {
                 val inputStream = downloadAttachment(attachment)
                 inputStream?.let {
-                    persistMusicFile(
-                        event,
-                        requestingUserDto,
-                        userName,
-                        deleteDelay,
-                        attachment.fileName,
-                        introVolume,
-                        it,
-                        selectedMusicDto,
-                    )
+                    persistMusicFile(event, requestingUserDto, userName, deleteDelay, attachment.fileName, introVolume, it, selectedMusicDto)
                 }
             }
         }
@@ -164,16 +145,7 @@ class IntroHelper(
         val urlString = validationService.convertShortsUrls(uri.toString())
         coroutineScope.launch {
             val title = runCatching { httpHelper.getYouTubeVideoTitle(urlString) }.getOrNull()
-            persistMusicUrl(
-                event,
-                requestingUserDto,
-                deleteDelay,
-                title ?: urlString,
-                urlString,
-                userName,
-                introVolume,
-                selectedMusicDto
-            )
+            persistMusicUrl(event, requestingUserDto, deleteDelay, title ?: urlString, urlString, userName, introVolume, selectedMusicDto)
         }
     }
 
@@ -185,15 +157,7 @@ class IntroHelper(
 
     fun deleteIntro(musicDto: MusicDto) = musicFileService.deleteMusicFileById(musicDto.id)
 
-    private fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
-
-    fun downloadAttachment(attachment: Attachment): InputStream? {
-        return runCatching {
-            attachment.proxy.download().get()
-        }.onFailure {
-            it.printStackTrace()
-        }.getOrNull()
-    }
+    fun downloadAttachment(attachment: Attachment): InputStream? = mediaLoader.downloadAttachment(attachment)
 
     @VisibleForTesting
     fun persistMusicFile(
@@ -208,7 +172,7 @@ class IntroHelper(
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music file" }
-        val fileContents = getFileContents(inputStream)
+        val fileContents = mediaLoader.readContents(inputStream)
             ?: return event.hook.sendMessageFormat("Unable to read file '%s'", filename)
                 .setEphemeral(true)
                 .queue(invokeDeleteOnMessageResponse(deleteDelay))
@@ -229,17 +193,12 @@ class IntroHelper(
             musicFileService.createNewMusicFile(musicDto)
                 ?.let { sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay) }
                 ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
-
         } else {
             musicFileService.updateMusicFile(musicDto)
                 ?.let { sendUpdateMessage(event, userName, filename, introVolume, musicDto.index!!, deleteDelay) }
                 ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
-
         }
     }
-
-    private fun getFileContents(inputStream: InputStream) =
-        runCatching { FileUtils.readInputStreamToByteArray(inputStream) }.getOrNull()
 
     fun persistMusicUrl(
         event: IReplyCallback,
@@ -324,116 +283,23 @@ class IntroHelper(
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
-    fun promptUserForMusicInfo(user: User, guild: Guild) {
-        logger.setGuildAndUserContext(guild, user)
-        logger.info { "Prompting user to set an intro for the server that they don't have one on" }
-        user.openPrivateChannel().queue { channel ->
-            channel.sendMessage("You don't have an intro song yet on server '${guild.name}'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'")
-                .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
-
-            // Wait for a response in the user's DM
-            setupWaiterForIntroMessage(user, channel, guild)
-        }
-    }
-
-    private fun setupWaiterForIntroMessage(
-        user: User,
-        channel: PrivateChannel,
-        guild: Guild
-    ) {
-        eventWaiter.waitForMessage(
-            { event -> event.author.idLong == user.idLong && event.channel == channel },
-            { event -> handleUserMusicResponse(event, channel, guild) },
-            5.minutes,
-            {
-                logger.info { "User did not set intro for the server that they don't have one on within the timeout period" }
-                channel.sendMessage("You didn't respond in time, you can always use the '/setintro' command on server '${guild.name}'")
-                    .queue(invokeDeleteOnMessageResponse(5.minutes.toInt(DurationUnit.SECONDS)))
-            }
-        )
-    }
-
-    private fun handleUserMusicResponse(event: MessageReceivedEvent, channel: PrivateChannel, guild: Guild) {
-        val message = event.message
-        val content = message.contentRaw
-        val attachment = message.attachments.firstOrNull()
-
-        when {
-            attachment != null -> {
-                handleAttachmentInput(event, channel, guild, attachment, content)
-            }
-
-            isUrl(content).isNotEmpty() -> {
-                handleUrlInput(event, channel, guild, content)
-            }
-
-            else -> {
-                channel.sendMessage("Please provide a valid URL or upload a file.").queue()
-                setupWaiterForIntroMessage(event.author, channel, guild)
-            }
-        }
-    }
-
-    private fun handleAttachmentInput(
-        event: MessageReceivedEvent,
-        channel: PrivateChannel,
-        guild: Guild,
-        attachment: Attachment,
-        content: String
-    ) {
-        val inputData = InputData.Attachment(attachment)
-        logger.info("User uploaded a music file: $inputData")
-
-        if (!validationService.isValidAttachment(attachment)) {
-            handleInvalidAttachment(channel, event.author, guild)
-            return
-        }
-
-        val volume = validationService.parseVolume(content)
-        saveUserMusicDto(event.author, guild, inputData, volume)
-    }
-
-    private fun handleUrlInput(event: MessageReceivedEvent, channel: PrivateChannel, guild: Guild, content: String) {
-        logger.info("User provided a URL: $content")
-
-        // Validate the intro length asynchronously
-        coroutineScope.launch {
-            try {
-                val isOverLimit = validationService.checkForOverlyLongIntroDuration(content)
-                if (isOverLimit) {
-                    handleOverLimitIntro(channel, event.author, guild)
-                } else {
-                    val title = runCatching { httpHelper.getYouTubeVideoTitle(content) }.getOrNull()
-                    val inputData = InputData.Url(isUrl(content))
-                    saveUserMusicDto(event.author, guild, inputData, validationService.parseVolume(content), title)
-                }
-            } catch (_: Exception) {
-                logger.error { "Error checking intro length for '$content'" }
-                handleOverLimitIntro(channel, event.author, guild)
-            }
-        }
-    }
-
-    private fun handleInvalidAttachment(channel: PrivateChannel, author: User, guild: Guild) {
-        logger.info { "Intro was rejected for not adhering to attachment requirements, trying again..." }
-        channel
-            .sendMessage("Intro provided was either not an mp3 file or too large. Please try again.")
-            .queue()
-        setupWaiterForIntroMessage(author, channel, guild)
-    }
-
-    private fun handleOverLimitIntro(channel: PrivateChannel, author: User, guild: Guild) {
-        logger.info { "Intro was rejected for being over the specified intro limit length of ${IntroValidationService.INTRO_LIMIT.inWholeSeconds} seconds, trying again..." }
-        channel
-            .sendMessage("Intro provided was over ${IntroValidationService.INTRO_LIMIT.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
-            .queue()
-        setupWaiterForIntroMessage(author, channel, guild)
-    }
-
     /**
      * Public delegations preserved so existing callers/tests don't have to
      * be rewired in the same change.
      */
+    fun promptUserForMusicInfo(user: User, guild: Guild) =
+        notificationService.promptUserForMusicInfo(user, guild)
+
+    @VisibleForTesting
+    fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?, displayName: String? = null) =
+        notificationService.saveUserMusicDto(user, guild, inputData, volume, displayName)
+
+    @VisibleForTesting
+    fun determineMusicBlob(input: InputData): ByteArray? = notificationService.determineMusicBlob(input)
+
+    @VisibleForTesting
+    fun determineFileName(input: InputData): String = notificationService.determineFileName(input)
+
     fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) =
         validationService.validateIntroLength(url, onResult)
 
@@ -441,54 +307,6 @@ class IntroHelper(
         validationService.checkForOverlyLongIntroDuration(url)
 
     fun parseVolume(content: String): Int? = validationService.parseVolume(content)
-
-    @VisibleForTesting
-    fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?, displayName: String? = null) {
-        // Save the musicDto for the user with the provided URL and volume
-        logger.info("Constructing musicDto from input ...")
-        val requestingUserDto = userDtoHelper.calculateUserDto(user.idLong, guild.idLong)
-        val fileName = displayName ?: determineFileName(inputData)
-        // Logic to save the musicDto in the database
-        val musicDto = MusicDto(requestingUserDto, 1, fileName, volume ?: 90, determineMusicBlob(inputData))
-        createIntro(musicDto)
-        logger.info { "User successfully uploaded intro as a result of the prompt!" }
-        user.openPrivateChannel().queue { channel ->
-            channel.sendMessage("Successfully set your intro on server '${guild.name}'")
-                .queue(invokeDeleteOnMessageResponse(1.minutes.toInt(DurationUnit.SECONDS)))
-        }
-    }
-
-    @VisibleForTesting
-    fun determineMusicBlob(input: InputData): ByteArray? {
-        return when (input) {
-            is InputData.Url -> {
-                logger.info("Processing URL input...")
-                // Logic for handling URL, e.g., downloading content, converting to blob, etc.
-                input.uri.toByteArray()  // Convert the URL to a ByteArray
-            }
-
-            is InputData.Attachment -> {
-                logger.info("Processing attachment input...")
-                val inputStream = downloadAttachment(input.attachment)
-                inputStream?.let { getFileContents(it) }  // Get the file contents as ByteArray if the input stream isn't null
-            }
-        }
-    }
-
-    @VisibleForTesting
-    fun determineFileName(input: InputData): String {
-        return when (input) {
-            is InputData.Url -> {
-                // Ensure the URL is not null or empty
-                input.uri.takeIf { it.isNotBlank() } ?: "" // Provide a default name if the URL is null or blank
-            }
-
-            is InputData.Attachment -> {
-                // Check if the attachment or its fileName is null
-                input.attachment.fileName
-            }
-        }
-    }
 
     companion object {
         private const val VOLUME = "volume"
