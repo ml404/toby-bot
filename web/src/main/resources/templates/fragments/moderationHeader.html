@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Per-guild moderation page header. Each split sub-page (users, settings,
+    voice, poll, casino, lottery) embeds this fragment so the back link,
+    guild name, owner/superuser banner, alerts include, and sub-nav are
+    laid out identically. The `active` arg is the slug of the currently
+    rendered sub-page (users / settings / voice / poll / casino /
+    lottery); the matching link gets the .active class + aria-current so
+    the user knows where they are.
+-->
+<div th:fragment="moderationHeader(overview, isOwner, active)">
+    <div class="mod-header">
+        <div>
+            <a class="back-link" th:href="@{/moderation/guilds}">&larr; All servers</a>
+            <h1 th:text="${overview.guildName}">Guild Name</h1>
+            <p class="muted" th:if="${isOwner}">You are the server owner.</p>
+            <p class="muted" th:unless="${isOwner}">You are a TobyBot superuser.</p>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <nav class="mod-subnav" aria-label="Moderation sections">
+        <a th:href="@{/moderation/{id}/users(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'users'} ? ' active'"
+           th:attr="aria-current=${active == 'users'} ? 'page'">Users</a>
+        <a th:href="@{/moderation/{id}/settings(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'settings'} ? ' active'"
+           th:attr="aria-current=${active == 'settings'} ? 'page'">Settings</a>
+        <a th:href="@{/moderation/{id}/voice(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'voice'} ? ' active'"
+           th:attr="aria-current=${active == 'voice'} ? 'page'">Voice</a>
+        <a th:href="@{/moderation/{id}/poll(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'poll'} ? ' active'"
+           th:attr="aria-current=${active == 'poll'} ? 'page'">Poll</a>
+        <a th:href="@{/moderation/{id}/casino(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'casino'} ? ' active'"
+           th:attr="aria-current=${active == 'casino'} ? 'page'">Casino</a>
+        <a th:href="@{/moderation/{id}/lottery(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'lottery'} ? ' active'"
+           th:attr="aria-current=${active == 'lottery'} ? 'page'">Lottery</a>
+    </nav>
+</div>
+</body>
+</html>

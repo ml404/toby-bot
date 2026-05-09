@@ -104,6 +104,11 @@ nav {
 }
 .nav-dropdown-menu a:hover { background: #2a2a4a; color: #fff; }
 .nav-dropdown-coming-soon { color: #555; cursor: default; font-style: italic; }
+.nav-dropdown-separator {
+    border: 0;
+    border-top: 1px solid #2a2a4a;
+    margin: 4px 12px;
+}
 
 @media (max-width: 600px) {
     .nav-toggle { display: block; min-height: 40px; min-width: 40px; }

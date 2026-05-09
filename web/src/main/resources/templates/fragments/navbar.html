@@ -3,15 +3,48 @@
 <body>
 <nav th:fragment="navbar">
     <a class="brand" href="/">TobyBot</a>
-    <!-- Order: personal anchor -> daily-driver dropdowns (Economy, Casino)
-         -> social/observational features -> utilities/docs -> admin. Economy
-         folds Market + Titles into one navbar item; Casino is the home for
-         /slots and future minigames (currently shows a "Coming soon" entry
-         until the Slots feature lands). Keep admin-ish Moderation last so
-         it doesn't sit next to the everyday links. -->
+    <!--
+        Top-level nav grouping: personal anchors first (Profile,
+        Leaderboards) → "Play" rolls every game (minigames + tables +
+        lottery) into one drop-down so a new admin can find every game
+        under one heading → Economy keeps the credit-flow features
+        together → Social groups passive identity features (intros,
+        campaigns) → Tools holds reference / utility pages → Admin
+        anchor sits last so the everyday traffic isn't next to it.
+
+        Anchor links inside the Play menu intentionally repeat the same
+        /casino/guilds target for the minigame entries — each row is a
+        feature index (an admin can tell that Baccarat exists from the
+        navbar alone), and the picker page handles the actual routing.
+        Poker / Blackjack / Lottery have dedicated landing routes and
+        are separated by a horizontal divider so the visual grouping
+        matches the routing reality.
+    -->
     <div class="nav-links" id="nav-menu">
         <a href="/profile/guilds">Profile</a>
         <a href="/leaderboards">Leaderboards</a>
+        <div class="nav-dropdown">
+            <button type="button"
+                    class="nav-dropdown-toggle"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    onclick="toggleDropdown(this)">Play <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="/casino/guilds" role="menuitem">&#127920; Slots</a>
+                <a href="/casino/guilds" role="menuitem">&#129689; Coinflip</a>
+                <a href="/casino/guilds" role="menuitem">&#127922; Dice</a>
+                <a href="/casino/guilds" role="menuitem">&#127183; High-Low</a>
+                <a href="/casino/guilds" role="menuitem">&#127903;&#65039; Scratch</a>
+                <a href="/casino/guilds" role="menuitem">&#127919; Keno</a>
+                <a href="/casino/guilds" role="menuitem">&#127905; Roulette</a>
+                <a href="/casino/guilds" role="menuitem">&#127924; Baccarat</a>
+                <a href="/casino/guilds" role="menuitem">&#127183; Casino Hold'em</a>
+                <hr class="nav-dropdown-separator" aria-hidden="true">
+                <a href="/poker/guilds" role="menuitem">&#127924; Poker</a>
+                <a href="/blackjack/guilds" role="menuitem">&#127922; Blackjack</a>
+                <a href="/lottery/guilds" role="menuitem">&#127903;&#65039; Lottery</a>
+            </div>
+        </div>
         <div class="nav-dropdown">
             <button type="button"
                     class="nav-dropdown-toggle"
@@ -30,27 +63,24 @@
                     class="nav-dropdown-toggle"
                     aria-haspopup="true"
                     aria-expanded="false"
-                    onclick="toggleDropdown(this)">Casino <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                    onclick="toggleDropdown(this)">Social <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
             <div class="nav-dropdown-menu" role="menu">
-                <a href="/casino/guilds" role="menuitem">&#127920; Slots</a>
-                <a href="/casino/guilds" role="menuitem">&#129689; Coinflip</a>
-                <a href="/casino/guilds" role="menuitem">&#127922; Dice</a>
-                <a href="/casino/guilds" role="menuitem">&#127183; High-Low</a>
-                <a href="/casino/guilds" role="menuitem">&#127903;&#65039; Scratch</a>
-                <a href="/casino/guilds" role="menuitem">&#127919; Keno</a>
-                <a href="/casino/guilds" role="menuitem">&#127905; Roulette</a>
-                <a href="/poker/guilds" role="menuitem">&#127924; Poker</a>
-                <a href="/blackjack/guilds" role="menuitem">&#127922; Blackjack</a>
-                <a href="/casino/guilds" role="menuitem">&#127924; Baccarat</a>
-                <a href="/casino/guilds" role="menuitem">&#127183; Casino Hold'em</a>
-                <a href="/lottery/guilds" role="menuitem">&#127903;&#65039; Lottery</a>
+                <a href="/intro/guilds" role="menuitem">Intro Songs</a>
+                <a href="/dnd/campaign" role="menuitem">Campaigns</a>
             </div>
         </div>
-        <a href="/intro/guilds">Intro Songs</a>
-        <a href="/dnd/campaign">Campaigns</a>
-        <a href="/utils">Utils</a>
-        <a href="/commands/wiki">Commands</a>
-        <a href="/moderation/guilds">Moderation</a>
+        <div class="nav-dropdown">
+            <button type="button"
+                    class="nav-dropdown-toggle"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    onclick="toggleDropdown(this)">Tools <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="/utils" role="menuitem">Utils</a>
+                <a href="/commands/wiki" role="menuitem">Commands</a>
+            </div>
+        </div>
+        <a href="/moderation/guilds">Admin</a>
         <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
             <span class="nav-user" th:text="${username}">User</span>
             <form th:action="@{/logout}" method="post" style="margin:0">
