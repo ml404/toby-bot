@@ -1080,31 +1080,32 @@ class ModerationWebServiceTest {
     }
 
     private fun stubChannelCreation(name: String, newId: Long): TextChannel {
-        // Mock the JDA fluent chain
-        // `guild.createTextChannel(name)
+        // Stubbing JDA's generic fluent chain `guild.createTextChannel(name)
         //     .addRolePermissionOverride(...)
         //     .addMemberPermissionOverride(...)
         //     .setParent(...)?
-        //     .complete()`.
-        //
-        // mockk's `returns` form does a runtime-typed assignment that
-        // ClassCastExceptions on JDA's generic
-        // `RestAction<T>.complete(): T` because of type erasure.
-        // `answers { ... }` returns from a closure mockk treats more
-        // loosely — sidesteps the cast.
+        //     .complete()` is hostile to mockk: recording
+        // `every { action.complete() } returns ...` against the cast
+        // `ChannelAction<TextChannel>` triggers a Kotlin-inserted checkcast
+        // on the relaxed mock's auto-returned `GuildChannel$Subclass16`.
+        // Recording on the star-projected `rawAction` instead — where
+        // `complete()` returns `Object` — sidesteps the cast at recording
+        // time. Production code's call site gets the right object back.
         val newChannel = mockk<TextChannel>(relaxed = true)
         every { newChannel.id } returns newId.toString()
         every { newChannel.name } returns name
-        val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
+        val rawAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<*>>(relaxed = true)
         every {
-            action.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } answers { action }
+            rawAction.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns rawAction
         every {
-            action.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } answers { action }
-        every { action.setParent(any()) } answers { action }
-        every { action.complete() } answers { newChannel }
-        every { guild.createTextChannel(name) } answers { action }
+            rawAction.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns rawAction
+        every { rawAction.setParent(any()) } returns rawAction
+        every { rawAction.complete() } returns newChannel
+        @Suppress("UNCHECKED_CAST")
+        val action = rawAction as net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>
+        every { guild.createTextChannel(name) } returns action
         every { guild.publicRole.idLong } returns 1L
         return newChannel
     }
@@ -1295,10 +1296,14 @@ class ModerationWebServiceTest {
         stubChannelCreation(name = "lottery-results", newId = 555L)
 
         // Stub guild.createCategory("Lottery").complete() chain.
+        // Same star-projection trick as stubChannelCreation — record on the
+        // raw mock to avoid the generic checkcast at recording time.
         val newCategory = mockk<net.dv8tion.jda.api.entities.channel.concrete.Category>(relaxed = true)
-        val catAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<net.dv8tion.jda.api.entities.channel.concrete.Category>>(relaxed = true)
-        every { catAction.complete() } answers { newCategory }
-        every { guild.createCategory("Lottery") } answers { catAction }
+        val rawCatAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<*>>(relaxed = true)
+        every { rawCatAction.complete() } returns newCategory
+        @Suppress("UNCHECKED_CAST")
+        val catAction = rawCatAction as net.dv8tion.jda.api.requests.restaction.ChannelAction<net.dv8tion.jda.api.entities.channel.concrete.Category>
+        every { guild.createCategory("Lottery") } returns catAction
 
         val r = service.createReadOnlyChannel(
             actorDiscordId = ownerId,
@@ -1319,9 +1324,11 @@ class ModerationWebServiceTest {
         stubChannelCreation(name = "lottery-results", newId = 555L)
 
         val newCategory = mockk<net.dv8tion.jda.api.entities.channel.concrete.Category>(relaxed = true)
-        val catAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<net.dv8tion.jda.api.entities.channel.concrete.Category>>(relaxed = true)
-        every { catAction.complete() } answers { newCategory }
-        every { guild.createCategory("New Cat") } answers { catAction }
+        val rawCatAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<*>>(relaxed = true)
+        every { rawCatAction.complete() } returns newCategory
+        @Suppress("UNCHECKED_CAST")
+        val catAction = rawCatAction as net.dv8tion.jda.api.requests.restaction.ChannelAction<net.dv8tion.jda.api.entities.channel.concrete.Category>
+        every { guild.createCategory("New Cat") } returns catAction
 
         // Both fields supplied: new-category should win, the dropdown id ignored.
         val r = service.createReadOnlyChannel(
@@ -1358,16 +1365,18 @@ class ModerationWebServiceTest {
     fun `createReadOnlyChannel surfaces JDA failure as Error`() {
         mockMember(ownerId, isOwner = true)
         stubBotPerms(canManageChannels = true)
-        val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
+        val rawAction = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<*>>(relaxed = true)
         every {
-            action.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } answers { action }
+            rawAction.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns rawAction
         every {
-            action.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
-        } answers { action }
-        every { action.setParent(any()) } answers { action }
-        every { action.complete() } throws RuntimeException("rate limited")
-        every { guild.createTextChannel("lottery-results") } answers { action }
+            rawAction.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns rawAction
+        every { rawAction.setParent(any()) } returns rawAction
+        every { rawAction.complete() } throws RuntimeException("rate limited")
+        @Suppress("UNCHECKED_CAST")
+        val action = rawAction as net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>
+        every { guild.createTextChannel("lottery-results") } returns action
         every { guild.publicRole.idLong } returns 1L
 
         val r = service.createReadOnlyChannel(
