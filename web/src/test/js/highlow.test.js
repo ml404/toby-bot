@@ -87,20 +87,7 @@ describe('renderHighlowResult', () => {
         expect(resultEl.innerHTML).toContain('+5 to jackpot');
     });
 
-    test('positive net flashes a chip stack on the felt; tie/loss leaves it untouched', () => {
-        // Highlow has no `win` field on the response — net > 0 is the
-        // win signal, so the render fn synthesises it for the helper.
-        renderHighlowResult(resultEl, {
-            anchor: 5, next: 11, direction: 'HIGHER', net: 100, multiplier: 1.5,
-        }, tableEl);
-        const stack = tableEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+100');
-
-        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
-        renderHighlowResult(resultEl, {
-            anchor: 7, next: 7, direction: 'HIGHER', net: -50,
-        }, tableEl);
-        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
-    });
+    // Chip flourish has moved to casino-win-settle (the shared helper);
+    // covered in casino-win-settle.test.js. renderHighlowResult now
+    // only owns the result line + class toggling.
 });

@@ -359,19 +359,17 @@
         // seat.discordId is a string from the projection so the snowflake
         // survives JS Number's 53-bit precision; lookup keys match exactly.
         var seatResult = (r.seatResults || {})[seat.discordId];
-        // Fire the celebratory chip stack once per hand on a winning result.
-        // Driven off the seat's total payout, which already aggregates every
-        // split branch — so a "push hand 1, win hand 2" round still triggers
-        // the win flourish even though seatResults only carries hand 0's
-        // outcome.
-        if (shouldFlash(state) && window.CasinoRender) {
+        // Fire the celebratory chip stack + win/lose cue once per hand
+        // via the shared casino-win-settle helper. Driven off the seat's
+        // total payout, which already aggregates every split branch —
+        // so a "push hand 1, win hand 2" round still triggers the win
+        // flourish even though seatResults only carries hand 0's outcome.
+        if (shouldFlash(state) && window.TobyCasinoWinSettle) {
             var payout = (r.payouts || {})[seat.discordId];
-            if (payout && payout > 0 && playerRowEl) {
-                window.CasinoRender.flashChipsOn(playerRowEl, payout);
-            }
-            if (window.CasinoSounds) {
-                window.CasinoSounds.play(payout && payout > 0 ? "win" : "lose");
-            }
+            window.TobyCasinoWinSettle.fire({
+                win: !!(payout && payout > 0),
+                net: payout || 0,
+            }, playerRowEl);
         }
 
         // Reset the result block in case it's a re-render after a previous

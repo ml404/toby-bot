@@ -21,10 +21,12 @@ function highlowFormatMultiplier(m) {
 // Pure-DOM render for a /play response. Hoisted out of the IIFE so the
 // jest test in `highlow.test.js` can drive it without booting the page.
 //
-// flashTargetEl is the felt element that gets the chip-stack flourish
-// on a win — passing it through the render fn keeps the chip flourish
-// callable from tests, instead of being trapped inside the IIFE.
-function renderHighlowResult(resultEl, body, flashTargetEl) {
+// Win/lose sound + chip flourish are owned by the shared
+// `casino-win-settle.js` helper (the helper synthesises a `win: true`
+// body for highlow since the response only carries `net`). Caller
+// triggers it via `game.applyWinSettle(body)` once the next-card
+// shuffle has settled.
+function renderHighlowResult(resultEl, body) {
     if (typeof window === 'undefined' || !window.TobyCasinoResult) return;
     const dirLabel = body.direction === 'HIGHER' ? 'Higher' : 'Lower';
     const tie = body.next === body.anchor;
@@ -43,14 +45,6 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
             ' <strong>' + highlowCardLabel(body.anchor) + '</strong> &middot; you called ' +
             dirLabel + ' &middot; lost <strong>' + Math.abs(body.net) + ' credits</strong>',
     });
-    // Highlow's response has no `win` field — net > 0 is the win signal.
-    if (window.CasinoRender) {
-        window.CasinoRender.flashWinPayout(flashTargetEl, {
-            win: (body.net || 0) > 0,
-            net: body.net,
-            jackpotPayout: body.jackpotPayout,
-        });
-    }
 }
 
 (function () {
@@ -177,8 +171,18 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         failureMessage: 'Could not lock the round.',
         // /start doesn't settle credit/coin movement — it just locks
         // the stake and deals the anchor. Balance updates land via
-        // /play's response instead.
+        // /play's response instead. The shared win-settle helper
+        // would otherwise fire a 'lose' cue on the stake-lock body
+        // (no win/net field), so opt out here too — the /play onSettle
+        // path drives the cue manually via game.applyWinSettle.
         autoApplyBalance: false,
+        autoWinSettle: false,
+        startAnimation: function () {
+            // Click cue on Lock submit so highlow has the same audio
+            // anchor as the rest of the minigames at "round started".
+            if (window.CasinoSounds) window.CasinoSounds.play('click');
+            return null;
+        },
         renderResult: function (body) {
             if (typeof body.anchor === 'number') {
                 showCallMode(body.anchor, body.higherMultiplier, body.lowerMultiplier);
@@ -196,6 +200,9 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
         playing = true;
         higherBtn.disabled = true;
         lowerBtn.disabled = true;
+        // Click cue on Higher / Lower so each call has the same audio
+        // anchor as a fresh round on the form-submit minigames.
+        if (window.CasinoSounds) window.CasinoSounds.play('click');
         const intervalId = startNextShuffle();
 
         // /play has a different lifecycle than /start (button pair, not
@@ -212,11 +219,13 @@ function renderHighlowResult(resultEl, body, flashTargetEl) {
                 playing = false;
                 if (body && body.ok) {
                     stopNextShuffle(intervalId, body.next);
-                    renderHighlowResult(els.resultEl, body, tableEl);
-                    if (window.CasinoSounds) {
-                        window.CasinoSounds.play(body.net > 0 ? 'win' : 'lose');
-                    }
+                    renderHighlowResult(els.resultEl, body);
                     if (game) {
+                        // Shared win-settle: plays win/lose cue + drops
+                        // chip flourish on the felt. Helper synthesises
+                        // body.win from net since highlow's response
+                        // carries net only.
+                        game.applyWinSettle(body, { flashTarget: tableEl });
                         game.applyBalance(body.newBalance);
                         game.applyTobyDelta(body);
                     }

@@ -139,13 +139,16 @@
         resultEl.textContent = label;
         resultEl.className = "che-result " + cls;
 
-        if (shouldFlash(state) && window.CasinoRender) {
-            if (r.totalPayout && r.totalPayout > 0 && playerRowEl) {
-                window.CasinoRender.flashChipsOn(playerRowEl, r.totalPayout);
-            }
-            if (window.CasinoSounds) {
-                window.CasinoSounds.play(r.net > 0 ? "win" : "lose");
-            }
+        // Win/lose cue + chip flourish via the shared helper. Push (net
+        // == 0) is suppressed by the helper's body.push branch below
+        // — set it explicitly so a tied hand stays silent.
+        if (shouldFlash(state) && window.TobyCasinoWinSettle) {
+            window.TobyCasinoWinSettle.fire({
+                win: r.net > 0,
+                net: r.net,
+                push: r.net === 0 && !r.folded,
+                jackpotPayout: r.jackpotPayout,
+            }, playerRowEl);
         }
     }
 
@@ -203,6 +206,9 @@
             errorToast("Enter a positive stake.");
             return;
         }
+        // Click cue on bet submit so casinoholdem has the same audio
+        // anchor as the rest of the minigames at "round started".
+        if (window.CasinoSounds) window.CasinoSounds.play("click");
         resultDefer.cancel();
         dealBusy = true;
         window.TobyApi.postJson("/casino/" + guildId + "/casinoholdem/deal", { stake: stake })

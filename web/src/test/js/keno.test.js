@@ -52,7 +52,7 @@ describe('renderKenoResult (synchronous path)', () => {
 
     test('win lights up hit cells with .is-hit, miss cells with .is-drawn, and renders the win line', () => {
         renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+            resultEl, statusEl, gridEl,
             stagger: false,
             body: {
                 win: true,
@@ -78,7 +78,7 @@ describe('renderKenoResult (synchronous path)', () => {
 
     test('lose path strips draws of any prior hit class and renders the lose line', () => {
         renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+            resultEl, statusEl, gridEl,
             stagger: false,
             body: {
                 win: false,
@@ -97,35 +97,13 @@ describe('renderKenoResult (synchronous path)', () => {
         expect(resultEl.innerHTML).toContain('0/3');
     });
 
-    test('win flashes a chip stack on the flash target; loss leaves it untouched', () => {
-        renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
-            stagger: false,
-            body: {
-                win: true, picks: [5], draws: [5, 1, 2, 3, 4, 6, 7, 8, 9, 10],
-                hits: 1, multiplier: 3.5, net: 250, payout: 350,
-            },
-        });
-        const stack = tableEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+250');
-
-        // Reset and re-test lose: no chip stack should be added.
-        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
-        renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
-            stagger: false,
-            body: {
-                win: false, picks: [5], draws: [1, 2, 3, 4, 6, 7, 8, 9, 10, 11],
-                hits: 0, net: -50,
-            },
-        });
-        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
-    });
+    // Chip flourish has moved to casino-win-settle (the shared helper);
+    // covered in casino-win-settle.test.js. renderKenoResult now only
+    // owns the result line + status text + grid decoration.
 
     test('jackpot win prepends the JACKPOT banner', () => {
         renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+            resultEl, statusEl, gridEl,
             stagger: false,
             body: {
                 win: true, picks: [5], draws: [5, 1, 2, 3, 4, 6, 7, 8, 9, 10],
@@ -139,7 +117,7 @@ describe('renderKenoResult (synchronous path)', () => {
 
     test('lose with lossTribute appends "+N to jackpot" suffix', () => {
         renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+            resultEl, statusEl, gridEl,
             stagger: false,
             body: {
                 win: false, picks: [5], draws: [1, 2, 3, 4, 6, 7, 8, 9, 10, 11],
@@ -171,7 +149,7 @@ describe('renderKenoResult (staged path)', () => {
 
     test('synchronous path returns undefined (no Promise)', () => {
         const ret = renderKenoResult({
-            resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+            resultEl, statusEl, gridEl,
             stagger: false,
             body: {
                 win: false, picks: [1], draws: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -185,7 +163,7 @@ describe('renderKenoResult (staged path)', () => {
         jest.useFakeTimers();
         try {
             const ret = renderKenoResult({
-                resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+                resultEl, statusEl, gridEl,
                 stagger: true, dealMs: 50,
                 body: {
                     win: true, picks: [1], draws: [1, 2, 3],
@@ -217,7 +195,7 @@ describe('renderKenoResult (staged path)', () => {
         jest.useFakeTimers();
         try {
             renderKenoResult({
-                resultEl, statusEl, gridEl, flashTargetEl: tableEl,
+                resultEl, statusEl, gridEl,
                 stagger: true, dealMs: 50,
                 body: {
                     win: true,
@@ -243,15 +221,17 @@ describe('renderKenoResult (staged path)', () => {
             expect(gridEl.querySelectorAll('.is-drawn').length).toBe(0);
             expect(resultEl.hidden).toBe(true);
 
-            // Past the deal sequence (3 cells × 50ms = 150ms), but before
-            // flashChipsOn's 2.5s safety-cleanup timer would remove the
-            // chip stack.
+            // Past the deal sequence (3 cells × 50ms = 150ms): the
+            // result line + status are now committed. The chip stack is
+            // dropped by the casino-win-settle helper, fired by
+            // casino-game.js after the staged-reveal Promise resolves
+            // — that's an integration concern for casino-game tests,
+            // not this pure-render unit.
             jest.advanceTimersByTime(200);
             expect(gridEl.querySelector('.keno-cell[data-value="2"]').classList.contains('is-hit')).toBe(true);
             expect(resultEl.hidden).toBe(false);
             expect(resultEl.classList.contains('keno-result-win')).toBe(true);
             expect(statusEl.textContent).toContain('2 of 3 hit');
-            expect(tableEl.querySelector('.casino-chip-stack')).not.toBeNull();
         } finally {
             jest.useRealTimers();
         }

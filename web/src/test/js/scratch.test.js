@@ -67,20 +67,7 @@ describe('renderScratchResult', () => {
         expect(resultEl.innerHTML).toContain('+10 to jackpot');
     });
 
-    test('positive net flashes a chip stack on the felt; loss leaves it untouched', () => {
-        // Scratch's response has no `win` field — net > 0 is the win
-        // signal, so the render fn synthesises it for the helper.
-        renderScratchResult(resultEl, {
-            matchCount: 5, winningSymbol: '⭐', net: 200, newBalance: 1_200,
-        }, 5, balanceEl, tableEl);
-        const stack = tableEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+200');
-
-        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
-        renderScratchResult(resultEl, {
-            net: -100, newBalance: 950,
-        }, 5, balanceEl, tableEl);
-        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
-    });
+    // Chip flourish has moved to casino-win-settle (the shared helper);
+    // covered in casino-win-settle.test.js. renderScratchResult now
+    // only owns the result line + class toggling + balance update.
 });

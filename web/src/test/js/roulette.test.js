@@ -99,16 +99,9 @@ describe('renderRouletteResult', () => {
         expect(() => renderRouletteResult(null, { win: true })).not.toThrow();
     });
 
-    test('drops a chip stack on the table felt for a win', () => {
-        renderRouletteResult(resultEl, {
-            win: true, net: 350, multiplier: 36,
-            bet: 'STRAIGHT', betLabel: 'Straight', landed: 17, color: 'BLACK',
-        }, tableEl);
-
-        const stack = tableEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+350');
-    });
+    // Chip flourish has moved to casino-win-settle (the shared helper);
+    // covered in casino-win-settle.test.js. renderRouletteResult now
+    // only owns the result line + class toggling.
 });
 
 describe('setBetInputsDisabled', () => {

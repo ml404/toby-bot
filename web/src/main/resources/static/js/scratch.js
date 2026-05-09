@@ -1,9 +1,13 @@
 // Pure-DOM render for a /scratch response. Hoisted out of the IIFE so
 // the jest test in `scratch.test.js` can drive it without booting the
-// page. matchThreshold / balanceEl / flashTargetEl are passed in (they
-// live as DOM attributes / element references inside the IIFE) to keep
-// this fully stateless.
-function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTargetEl) {
+// page.
+//
+// Win/lose sound + chip flourish are now owned by the shared
+// `casino-win-settle.js` helper; the IIFE below calls
+// `game.applyWinSettle(activeCard)` from inside `revealCell` once the
+// player has finished scratching. Keeping it here would duplicate the
+// helper and risk drift if the formula changes.
+function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
     if (typeof window !== 'undefined' && window.TobyCasinoResult) {
         window.TobyCasinoResult.render({
             resultEl: resultEl,
@@ -18,17 +22,6 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
     if (typeof window !== 'undefined' && window.TobyBalance) {
         window.TobyBalance.update(balanceEl, body.newBalance);
     }
-    // Scratch's response has no `win` field — net > 0 is the win signal.
-    // Bigger payouts get a taller stack (capped internally at 7).
-    if (typeof window !== 'undefined' && window.CasinoRender) {
-        const payoutEstimate = (body.jackpotPayout > 0 ? body.jackpotPayout : (body.net || 0));
-        const chipCount = Math.min(7, Math.max(3, Math.ceil(payoutEstimate / 100)));
-        window.CasinoRender.flashWinPayout(flashTargetEl, {
-            win: (body.net || 0) > 0,
-            net: body.net,
-            jackpotPayout: body.jackpotPayout,
-        }, chipCount);
-    }
 }
 
 (function () {
@@ -42,7 +35,6 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
 
     const cellsContainer = document.getElementById('scratch-cells');
     const cellButtons = Array.from(cellsContainer ? cellsContainer.querySelectorAll('.scratch-cell') : []);
-    const tableEl = document.querySelector('.scratch-table');
     const revealBtn = document.getElementById('scratch-reveal-all');
 
     if (!els.form || !els.primaryBtn || !els.stakeInput || cellButtons.length === 0) return;
@@ -78,13 +70,25 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
         // win cells once everything is revealed (see below).
         if (cellButtons.every(function (b) { return b.classList.contains('revealed'); })) {
             highlightWinCells(activeCard);
-            renderScratchResult(els.resultEl, activeCard, matchThreshold, els.balanceEl, tableEl);
-            if (window.CasinoSounds) {
-                window.CasinoSounds.play((activeCard.net || 0) > 0 ? 'win' : 'lose');
+            renderScratchResult(els.resultEl, activeCard, matchThreshold, els.balanceEl);
+            // Win/lose cue + chip flourish — fired AFTER the last cell
+            // reveals so the chips pop on the *cells* the player has
+            // been scratching (not the wider table). Jackpot wins get a
+            // taller stack so the celebration reads as bigger.
+            if (game) {
+                game.applyWinSettle(activeCard, {
+                    flashTarget: cellsContainer,
+                    chipCount: function (body) {
+                        var payout = body.jackpotPayout > 0 ? body.jackpotPayout : (body.net || 0);
+                        var cap = body.jackpotPayout > 0 ? 10 : 7;
+                        return Math.min(cap, Math.max(3, Math.ceil(payout / 100)));
+                    },
+                });
+                // Now the credits visibly drop and the topup-coin
+                // recompute catches up too — see autoApplyBalance: false
+                // in the helper.
+                game.applyTobyDelta(activeCard);
             }
-            // Now the credits visibly drop and the topup-coin recompute
-            // catches up too — see autoApplyBalance: false in the helper.
-            if (game) game.applyTobyDelta(activeCard);
             // And only now release the central jackpot-pool banner so it
             // doesn't tick before the suspense beat is over.
             if (window.TobyJackpot) window.TobyJackpot.releasePoolBanner();
@@ -136,7 +140,11 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl, flashTar
         // Scratch shows the result only after every cell has been
         // revealed, so the helper must NOT auto-update balance/coins on
         // response. revealCell() does it once the suspense is over.
+        // Same reasoning for the win-settle cue + flourish — opt out
+        // of the auto-fire and call game.applyWinSettle() ourselves
+        // from inside revealCell so the chips pop with the final reveal.
         autoApplyBalance: false,
+        autoWinSettle: false,
         startAnimation: function () {
             if (els.resultEl) els.resultEl.hidden = true;
             resetCells();

@@ -45,14 +45,7 @@ describe('renderDiceResult', () => {
         expect(resultEl.innerHTML).toContain('+10 to jackpot');
     });
 
-    test('win flashes a chip stack on the table; loss leaves it untouched', () => {
-        renderDiceResult(resultEl, { win: true, landed: 4, predicted: 4, net: 500 }, tableEl);
-        const stack = tableEl.querySelector('.casino-chip-stack');
-        expect(stack).not.toBeNull();
-        expect(stack.querySelector('.casino-chip-payout').textContent).toBe('+500');
-
-        tableEl.querySelectorAll('.casino-chip-stack').forEach((el) => el.remove());
-        renderDiceResult(resultEl, { win: false, landed: 2, predicted: 4, net: -100 }, tableEl);
-        expect(tableEl.querySelector('.casino-chip-stack')).toBeNull();
-    });
+    // Chip flourish has moved to casino-win-settle (the shared helper);
+    // covered in casino-win-settle.test.js. renderDiceResult now only
+    // owns the result line + class toggling.
 });
