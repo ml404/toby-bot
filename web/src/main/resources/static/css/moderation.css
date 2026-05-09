@@ -2,12 +2,6 @@
     margin-bottom: var(--space-5);
 }
 .mod-header h1 { margin-bottom: var(--space-2); }
-.back-link {
-    display: inline-block;
-    margin-bottom: var(--space-2);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
 
 /* Member search bar on the Users tab — client-side filter. */
 .mod-search {

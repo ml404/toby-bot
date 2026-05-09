@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: headSeo(
+        'TobyBot — Changelog',
+        'Recent shipped highlights — what just landed in TobyBot, in plain English.',
+        null,
+        '/css/home.css')}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="changelog-page">
+    <header class="changelog-header">
+        <a class="back-link" th:href="@{/}">&larr; Home</a>
+        <h1>Changelog</h1>
+        <p class="muted">
+            Curated highlights of what&rsquo;s shipped recently. The full
+            history lives on
+            <a href="https://github.com/ml404/toby-bot" rel="noopener" target="_blank">GitHub</a>.
+        </p>
+    </header>
+
+    <ol class="changelog-timeline">
+        <li class="changelog-entry" th:each="entry : ${entries}">
+            <div class="changelog-meta">
+                <span class="changelog-emoji" th:if="${entry.emoji != null}" th:text="${entry.emoji}" aria-hidden="true">✨</span>
+                <span class="changelog-date" th:text="${entry.date}">Month YYYY</span>
+            </div>
+            <div class="changelog-body">
+                <h2 class="changelog-title" th:text="${entry.title}">Headline</h2>
+                <p class="changelog-summary" th:text="${entry.summary}">Summary text.</p>
+                <a class="changelog-pr"
+                   th:if="${entry.prNumber != null}"
+                   th:href="'https://github.com/ml404/toby-bot/pull/' + ${entry.prNumber}"
+                   th:text="'#' + ${entry.prNumber}"
+                   rel="noopener" target="_blank">#0</a>
+            </div>
+        </li>
+    </ol>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>

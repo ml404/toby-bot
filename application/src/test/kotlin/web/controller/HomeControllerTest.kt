@@ -8,19 +8,28 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
+import web.service.HomeStatsService
 
 class HomeControllerTest {
 
     private lateinit var controller: HomeController
     private lateinit var model: Model
+    private lateinit var homeStatsService: HomeStatsService
 
     private val clientId = "test-client-id"
     private val expectedInviteUrl =
         "https://discord.com/api/oauth2/authorize?client_id=$clientId&permissions=8&scope=bot%20applications.commands"
+    private val sampleStats = HomeStatsService.HomeStats(
+        serverCount = 7,
+        commandCount = 42,
+        gameCount = 12,
+    )
 
     @BeforeEach
     fun setup() {
-        controller = HomeController(clientId)
+        homeStatsService = mockk(relaxed = true)
+        every { homeStatsService.get() } returns sampleStats
+        controller = HomeController(clientId, homeStatsService)
         model = mockk(relaxed = true)
     }
 
@@ -63,6 +72,14 @@ class HomeControllerTest {
         controller.home(user, model)
 
         verify { model.addAttribute("username", null) }
+    }
+
+    @Test
+    fun `home adds homeStats from the stats service`() {
+        controller.home(null, model)
+
+        verify { homeStatsService.get() }
+        verify { model.addAttribute("homeStats", sampleStats) }
     }
 
     @Test

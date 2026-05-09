@@ -15,10 +15,12 @@ class WebSecurityConfig {
         http
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/", "/terms", "/privacy", "/brother", "/config", "/music", "/user",
+                    "/", "/terms", "/privacy", "/changelog",
+                    "/brother", "/config", "/music", "/user",
                     "/commands", "/commands/**", "/actuator/**",
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
-                    "/images/**", "/js/**", "/css/**"
+                    "/images/**", "/js/**", "/css/**",
+                    "/sitemap.xml", "/robots.txt"
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.requestMatchers("/dnd/**").authenticated()

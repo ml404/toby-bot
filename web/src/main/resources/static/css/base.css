@@ -245,6 +245,33 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
     color: #fff;
 }
 
+/* ---- Shared "back to listing" anchor ----
+   Used on per-guild detail pages (moderation, profile, economy, casino
+   hold'em, etc.) to return to the picker. Single canonical rule here so
+   per-page CSS doesn't keep redefining it. */
+.back-link {
+    display: inline-block;
+    margin-bottom: var(--space-2);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+.back-link:hover { color: var(--text); text-decoration: underline; }
+
+/* ---- Empty-state hero ----
+   Dashed-border centred panel for "no items yet" states. Used by the
+   intros uploader, casino guild picker, leaderboard listing, duel
+   pending list, etc. */
+.empty-hero {
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+.empty-hero .emoji { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+
 /* ---- Cards ---- */
 .card {
     background: var(--bg-elevated);

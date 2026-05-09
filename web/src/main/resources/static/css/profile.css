@@ -2,12 +2,6 @@
     margin-bottom: var(--space-5);
 }
 .profile-header h1 { margin-bottom: var(--space-2); }
-.back-link {
-    display: inline-block;
-    margin-bottom: var(--space-2);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
 
 .profile-grid {
     display: grid;

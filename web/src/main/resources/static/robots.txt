@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /oauth2/
+Disallow: /logout
+Disallow: /actuator/
+
+Sitemap: https://www.toby-bot.co.uk/sitemap.xml

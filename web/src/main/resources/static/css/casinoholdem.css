@@ -18,14 +18,6 @@
     margin: 0.25rem 0 0.5rem;
 }
 
-.back-link {
-    color: var(--muted, #a0a0b0);
-    text-decoration: none;
-    font-size: 0.9rem;
-}
-
-.back-link:hover { text-decoration: underline; }
-
 .che-card {
     background: var(--surface, #1f2128);
     border-radius: 0.75rem;

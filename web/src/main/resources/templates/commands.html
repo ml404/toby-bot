@@ -1,73 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TobyBot &mdash; Commands</title>
-    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
-    <link rel="stylesheet" th:href="@{/css/base.css}">
-    <link rel="stylesheet" th:href="@{/css/nav.css}">
-    <style>
-        .commands-page { max-width: 960px; margin: 40px auto; padding: 0 24px 80px; }
-        .commands-page h1 { font-size: 1.8rem; color: var(--text); margin-bottom: 8px; }
-        .commands-page .subtitle { color: var(--text-muted); margin-bottom: 40px; }
-        .category { margin-bottom: 48px; }
-        .category h2 {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border);
-        }
-        .table-wrap {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .commands-table { width: 100%; border-collapse: collapse; }
-        .commands-table th {
-            text-align: left;
-            padding: 10px 16px;
-            color: var(--text-muted);
-            font-size: 0.78rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid var(--border);
-        }
-        .commands-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.9rem;
-            vertical-align: top;
-        }
-        .commands-table tr:last-child td { border-bottom: none; }
-        .commands-table tr:hover td { background: rgba(88, 101, 242, 0.05); }
-        .cmd { font-family: monospace; color: var(--accent); font-size: 0.95rem; white-space: nowrap; }
-        .desc { color: var(--text); }
-        .opts { list-style: none; padding: 0; margin: 0; }
-        .opt { margin-bottom: 8px; }
-        .opt:last-child { margin-bottom: 0; }
-        .opt-name { font-family: monospace; color: var(--text); font-size: 0.85rem; }
-        .badge {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            background: var(--border);
-            padding: 1px 6px;
-            border-radius: 4px;
-            margin-left: 5px;
-            vertical-align: middle;
-        }
-        .opt-desc { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
-        .choices { list-style: none; margin: 4px 0 0; padding-left: 10px; }
-        .choice { font-size: 0.78rem; color: var(--text-muted); font-family: monospace; }
-        .choice::before { content: "• "; color: var(--accent); }
-        .none { color: var(--text-muted); font-style: italic; font-size: 0.85rem; opacity: 0.6; }
-    </style>
-</head>
+<head th:replace="~{fragments/head :: headSeo(
+        'TobyBot — Commands',
+        'Auto-generated reference for every TobyBot slash command, grouped by category (Music, D&D, Moderation, Economy, Misc, Fetch).',
+        null,
+        '/css/commands.css')}"></head>
 <body>
 
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -128,6 +65,8 @@
         </div>
     </section>
 </main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
 
 </body>
 </html>
