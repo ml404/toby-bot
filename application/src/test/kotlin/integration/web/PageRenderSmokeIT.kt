@@ -88,6 +88,7 @@ class PageRenderSmokeIT {
             "/login",
             "/commands",
             "/commands/wiki",
+            "/changelog",
             // Bot info pages (public)
             "/brother",
             "/config",

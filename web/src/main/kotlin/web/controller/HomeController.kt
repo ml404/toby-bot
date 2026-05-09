@@ -6,11 +6,13 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
+import web.service.HomeStatsService
 
 @Controller
 class HomeController(
     @param:Value($$"${spring.security.oauth2.client.registration.discord.client-id}")
-    private val discordClientId: String
+    private val discordClientId: String,
+    private val homeStatsService: HomeStatsService,
 ) {
 
     @GetMapping("/")
@@ -20,6 +22,7 @@ class HomeController(
             "https://discord.com/api/oauth2/authorize?client_id=$discordClientId&permissions=8&scope=bot%20applications.commands"
         )
         model.addAttribute("username", user?.getAttribute<String>("username"))
+        model.addAttribute("homeStats", homeStatsService.get())
         return "home"
     }
 

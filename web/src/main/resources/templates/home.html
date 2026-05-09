@@ -1,191 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TobyBot — Your Discord Companion</title>
-
-    <!-- SEO -->
-    <meta name="description" content="Music, moderation, DnD, a live TOBY coin market, titles to equip, and monthly leaderboards — all in one bot.">
-
-    <!-- Open Graph (WhatsApp, Facebook, etc.) -->
-    <meta property="og:type"        content="website">
-    <meta property="og:url"         content="https://www.toby-bot.co.uk/">
-    <meta property="og:title"       content="TobyBot — Your Discord Companion">
-    <meta property="og:description" content="Music, moderation, DnD, a live TOBY coin market, titles to equip, and monthly leaderboards — all in one bot.">
-    <meta property="og:image"       content="https://www.toby-bot.co.uk/images/preview.svg">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
-    <link rel="stylesheet" th:href="@{/css/base.css}">
-    <link rel="stylesheet" th:href="@{/css/nav.css}">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-
-        /* HERO */
-        .hero {
-            text-align: center;
-            padding: 80px 24px 64px;
-        }
-        .hero-badge {
-            display: inline-block;
-            background: rgba(88, 101, 242, 0.15);
-            color: #7289fa;
-            border: 1px solid rgba(88, 101, 242, 0.3);
-            border-radius: 999px;
-            padding: 4px 16px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-bottom: 20px;
-        }
-        .hero h1 {
-            font-size: clamp(2rem, 5vw, 3.2rem);
-            color: #fff;
-            margin-bottom: 16px;
-            line-height: 1.2;
-        }
-        .hero h1 span { color: #5865F2; }
-        .hero p {
-            font-size: 1.1rem;
-            color: #a0a0b0;
-            max-width: 540px;
-            margin: 0 auto 36px;
-            line-height: 1.6;
-        }
-        .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-        .btn-primary {
-            display: inline-block;
-            background: #5865F2;
-            color: #fff;
-            text-decoration: none;
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        .btn-primary:hover { background: #4752c4; }
-        .btn-secondary {
-            display: inline-block;
-            background: transparent;
-            color: #e0e0e0;
-            text-decoration: none;
-            padding: 14px 28px;
-            border-radius: 8px;
-            border: 1px solid #3a3a5a;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: border-color 0.2s, color 0.2s;
-        }
-        .btn-secondary:hover { border-color: #5865F2; color: #fff; }
-
-        /* DIVIDER */
-        .divider {
-            height: 1px;
-            background: #2a2a4a;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        /* FEATURES */
-        .features {
-            padding: 64px 24px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-        .features h2 {
-            text-align: center;
-            font-size: 1.8rem;
-            color: #fff;
-            margin-bottom: 40px;
-        }
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-            gap: 20px;
-        }
-        .feature-card {
-            background: #16213e;
-            border: 1px solid #2a2a4a;
-            border-radius: 12px;
-            padding: 28px 20px;
-            text-align: center;
-            transition: border-color 0.2s, transform 0.15s;
-        }
-        .feature-card:hover { border-color: #5865F2; transform: translateY(-3px); }
-        .feature-icon { font-size: 2.2rem; margin-bottom: 14px; }
-        .feature-card h3 { font-size: 1rem; color: #fff; margin-bottom: 8px; }
-        .feature-card p { font-size: 0.88rem; color: #a0a0b0; line-height: 1.5; }
-        /* Linkable feature cards: no underline, full-card click target. */
-        a.feature-card { display: block; text-decoration: none; color: inherit; }
-        a.feature-card h3 { color: #fff; }
-        .commands-link {
-            text-align: center;
-            margin-top: 32px;
-        }
-        .commands-link a {
-            color: #7289fa;
-            text-decoration: none;
-            font-size: 0.95rem;
-        }
-        .commands-link a:hover { text-decoration: underline; }
-
-        /* INTRO CTA */
-        .intro-cta {
-            padding: 20px 24px 80px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .cta-card {
-            background: linear-gradient(135deg, #16213e 0%, #1a1a3e 100%);
-            border: 1px solid #3a3a6a;
-            border-radius: 16px;
-            padding: 48px 40px;
-            text-align: center;
-        }
-        .cta-card h2 { font-size: 1.6rem; color: #fff; margin-bottom: 12px; }
-        .cta-card p {
-            color: #a0a0b0;
-            margin-bottom: 28px;
-            max-width: 480px;
-            margin-left: auto;
-            margin-right: auto;
-            line-height: 1.6;
-        }
-
-        /* FOOTER */
-        footer {
-            border-top: 1px solid #2a2a4a;
-            padding: 24px;
-            text-align: center;
-            color: #555;
-            font-size: 0.82rem;
-        }
-        footer a { color: #7289fa; text-decoration: none; }
-        footer a:hover { text-decoration: underline; }
-
-        /* RESPONSIVE */
-        @media (max-width: 600px) {
-            .cta-card { padding: 32px 20px; }
-        }
-        @media (max-width: 480px) {
-            .hero { padding: 48px 16px 36px; }
-            .hero-actions { flex-direction: column; align-items: stretch; gap: 10px; }
-            .hero-actions .btn, .hero-actions a { width: 100%; text-align: center; }
-            .features { padding: 36px 16px; gap: 16px; }
-            .feature-card { padding: 20px 16px; }
-            .cta-card { padding: 24px 16px; }
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/head :: headSeo(
+        'TobyBot — Your Discord Companion',
+        'A live per-server coin economy, a 12-game casino with a shared jackpot pool, music, polls, monthly leaderboards, and a full web admin — all in one Discord bot.',
+        'https://www.toby-bot.co.uk/images/preview.svg',
+        '/css/home.css')}"></head>
 <body>
 
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -193,140 +12,188 @@
 <!-- Hero -->
 <section class="hero">
     <div class="hero-badge">Discord Bot</div>
-    <h1>Your server's <span>best companion</span></h1>
-    <p>Music, moderation, DnD tools, a live TOBY coin market, titles to equip, and monthly leaderboards — all in one bot.</p>
+    <h1>Your server&rsquo;s <span>best companion</span></h1>
+    <p>A live per-server coin economy, a 12-game casino with a shared jackpot pool,
+        music and intro songs, monthly leaderboards, and a full browser-based admin —
+        all in one Discord bot.</p>
     <div class="hero-actions">
         <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
-        <a href="/intro/guilds" class="btn-secondary">Manage Intro Songs</a>
+        <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
+    </div>
+    <p class="hero-aside">
+        <a th:href="@{/changelog}">What&rsquo;s new &rarr;</a>
+    </p>
+</section>
+
+<!-- Live stats -->
+<section class="stats-strip" aria-label="TobyBot at a glance">
+    <div class="stat">
+        <span class="stat-value" th:text="${homeStats.serverCount}">0</span>
+        <span class="stat-label">Servers</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value" th:text="${homeStats.commandCount}">0</span>
+        <span class="stat-label">Commands</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value" th:text="${homeStats.gameCount}">0</span>
+        <span class="stat-label">Games</span>
     </div>
 </section>
 
-<div class="divider"></div>
-
-<!-- Features -->
-<section class="features">
-    <h2>What can TobyBot do?</h2>
+<!-- Casino & coin -->
+<section class="section">
+    <header class="section-header">
+        <span class="section-eyebrow">Casino &amp; Coin</span>
+        <h2>A coin economy that actually loops</h2>
+        <p class="section-lede">
+            Earn social credit by hanging out, trade it for TOBY coin on a live
+            per-server market, then risk it all (or just some of it) on a
+            casino with a shared jackpot pool that grows from every loss.
+        </p>
+    </header>
     <div class="feature-grid">
-        <a class="feature-card" href="/intro/guilds">
-            <div class="feature-icon">&#127925;</div>
-            <h3>Music &amp; Intros</h3>
-            <p>Play audio and set personal intro songs that play when you join a voice channel.</p>
-        </a>
         <a class="feature-card" href="/economy/guilds">
             <div class="feature-icon">&#128176;</div>
-            <h3>TOBY Market</h3>
-            <p>Earn social credit by hanging out, then trade it for TOBY coin on a live per-server market.</p>
+            <h3>TOBY market</h3>
+            <p>Live per-server price tick every 5 minutes. Buy low, sell high — your wallet shows up on the leaderboard.</p>
+        </a>
+        <a class="feature-card" href="/casino/guilds">
+            <div class="feature-icon">&#127920;</div>
+            <h3>Casino games</h3>
+            <p>9 quick-play minigames (slots, dice, roulette, scratch, keno, high-low, baccarat, coinflip, Casino Hold&rsquo;em) plus seated Poker and Blackjack tables.</p>
+            <span class="feature-card-tag">12 games</span>
+        </a>
+        <a class="feature-card" href="/lottery/guilds">
+            <div class="feature-icon">&#127903;&#65039;</div>
+            <h3>Daily lottery</h3>
+            <p>Auto-draws at 00:00 UTC, seeded from the jackpot pool. Pick-5-of-49 or weighted-top-3, configurable per server.</p>
+        </a>
+        <a class="feature-card" href="/commands/wiki">
+            <div class="feature-icon">&#128293;</div>
+            <h3>Shared jackpot pool</h3>
+            <p>Every casino loss tributes to a per-server pool that any winning roll can claim. RTP-gated so high-RTP games don&rsquo;t double-dip.</p>
+        </a>
+        <a class="feature-card" href="/tip/guilds">
+            <div class="feature-icon">&#128184;</div>
+            <h3>Tip &amp; duel</h3>
+            <p>Send credit to a friend with a message, or stake them in a coin-flip duel — winner takes the pot.</p>
         </a>
         <a class="feature-card" href="/titles/guilds">
             <div class="feature-icon">&#127942;</div>
             <h3>Titles</h3>
-            <p>Spend credit on vanity titles that grant a matching Discord role when equipped.</p>
+            <p>Spend credit (or pay with TOBY in one click) on vanity titles that grant a matching Discord role when equipped.</p>
         </a>
-        <a class="feature-card" href="/tip/guilds">
-            <div class="feature-icon">&#128184;</div>
-            <h3>Tip A Friend</h3>
-            <p>Send some of your social credit to another user in the same server, with an optional message.</p>
-        </a>
-        <a class="feature-card" href="/duel/guilds">
-            <div class="feature-icon">&#9876;&#65039;</div>
-            <h3>Duel</h3>
-            <p>Stake credit and challenge someone to a coin-flip duel — winner takes most of the pot.</p>
-        </a>
-        <a class="feature-card" href="/poker/guilds">
-            <div class="feature-icon">&#127924;</div>
-            <h3>Poker</h3>
-            <p>Multiplayer fixed-limit Texas Hold'em with up to six seats. Buy in, deal hands, take credits from your friends.</p>
-        </a>
+    </div>
+</section>
+
+<!-- Server engagement -->
+<section class="section">
+    <header class="section-header">
+        <span class="section-eyebrow">Engagement</span>
+        <h2>Make your server worth showing up to</h2>
+        <p class="section-lede">
+            Voice-time and message activity feed monthly leaderboards, a per-user
+            profile, and personalised intro songs. Configurable daily caps,
+            UBI for non-voice users, and a 30-day rolling activity window.
+        </p>
+    </header>
+    <div class="feature-grid">
         <a class="feature-card" href="/leaderboards">
             <div class="feature-icon">&#128200;</div>
             <h3>Leaderboards</h3>
-            <p>Monthly standings and TobyCoin wallet rankings per server.</p>
+            <p>Monthly social-credit standings with a podium, TobyCoin wallet rankings, and a This-month / Total toggle.</p>
         </a>
-        <div class="feature-card">
-            <div class="feature-icon">&#127922;</div>
-            <h3>DnD Tools</h3>
-            <p>Roll dice, look up spells and monsters, and streamline your tabletop sessions.</p>
-        </div>
+        <a class="feature-card" href="/profile/guilds">
+            <div class="feature-icon">&#129489;</div>
+            <h3>Profile</h3>
+            <p>Per-server view of your social credit, equipped title, owned permissions, and recent activity.</p>
+        </a>
+        <a class="feature-card" href="/intro/guilds">
+            <div class="feature-icon">&#127925;</div>
+            <h3>Intro songs</h3>
+            <p>Set a custom track that plays whenever you join voice. YouTube links or MP3 uploads, capped per user.</p>
+        </a>
+    </div>
+</section>
+
+<!-- Server management -->
+<section class="section">
+    <header class="section-header">
+        <span class="section-eyebrow">Server Management</span>
+        <h2>Admin from the browser, not slash commands</h2>
+        <p class="section-lede">
+            A six-tab moderation web UI: search across every server config, toggle
+            user permissions, mute or move voice channels, post emoji-reaction
+            polls, and run casino remediation — without typing a single
+            <code>/setconfig</code>.
+        </p>
+    </header>
+    <div class="feature-grid">
         <a class="feature-card" href="/moderation/guilds">
             <div class="feature-icon">&#128737;</div>
-            <h3>Moderation</h3>
-            <p>Kick, mute, tweak permissions, and run polls &mdash; from your browser.</p>
+            <h3>Moderation web UI</h3>
+            <p>Search across ~58 config keys, toggle per-user permissions, adjust social credit, kick members — all in one place.</p>
+            <span class="feature-card-tag">New</span>
         </a>
-        <div class="feature-card">
-            <div class="feature-icon">&#10024;</div>
-            <h3>Miscellaneous</h3>
-            <p>Fun and utility commands for everyday use on your server.</p>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">&#128269;</div>
-            <h3>Fetch</h3>
-            <p>Retrieve information and look things up in an instant.</p>
-        </div>
-    </div>
-    <div class="commands-link">
-        <a href="/commands/wiki">Browse all commands &#8594;</a>
+        <a class="feature-card" href="/moderation/guilds">
+            <div class="feature-icon">&#128226;</div>
+            <h3>Polls &amp; voice ops</h3>
+            <p>Post emoji-reaction polls, mass-mute or move voice-channel members, and create read-only announce channels with one click.</p>
+        </a>
+        <a class="feature-card" href="/moderation/guilds">
+            <div class="feature-icon">&#129534;</div>
+            <h3>Anti-autoclicker</h3>
+            <p>Per-pixel click-pattern detection ramps the house edge for suspect sessions; legitimate play never trips the gate.</p>
+        </a>
     </div>
 </section>
 
-<div class="divider"></div>
-
-<!-- Intro Songs CTA -->
-<section class="intro-cta">
-    <div class="cta-card">
-        <h2>&#127925; Personalise Your Entrance</h2>
-        <p>Set a custom intro song that plays whenever you join a voice channel. Supports YouTube links and MP3 uploads.</p>
-        <a href="/intro/guilds" class="btn-primary">Manage Your Intros &#8594;</a>
+<!-- Tabletop & tools -->
+<section class="section">
+    <header class="section-header">
+        <span class="section-eyebrow">Tabletop &amp; Tools</span>
+        <h2>Sundries that earn their keep</h2>
+    </header>
+    <div class="feature-grid">
+        <a class="feature-card" href="/dnd/campaign">
+            <div class="feature-icon">&#127922;</div>
+            <h3>D&amp;D campaigns</h3>
+            <p>Build encounters, drag-drop your roster, and keep initiative running — all from the browser.</p>
+        </a>
+        <a class="feature-card" href="/utils">
+            <div class="feature-icon">&#128296;</div>
+            <h3>Utilities</h3>
+            <p>Meme generator, Dead by Daylight / Killing Floor 2 random builds, and other small tools.</p>
+        </a>
     </div>
 </section>
 
-<!-- TOBY Market CTA -->
-<section class="intro-cta">
-    <div class="cta-card">
-        <h2>&#128176; Trade TOBY Coin</h2>
-        <p>Every server has its own live market with a 5-minute price tick. Earn social credit by being active, then buy low and sell high. Your wallet travels with you to the leaderboard.</p>
-        <a href="/economy/guilds" class="btn-primary">Open The Market &#8594;</a>
+<!-- Final CTA -->
+<section class="final-cta">
+    <h2>Ready to add TobyBot to your server?</h2>
+    <p>Free to install, every feature is per-server configurable, and the
+        full source is on GitHub if you want to read or fork it.</p>
+    <div class="hero-actions">
+        <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
+        <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
     </div>
 </section>
 
-<!-- Titles CTA -->
-<section class="intro-cta">
-    <div class="cta-card">
-        <h2>&#127942; Wear A Title</h2>
-        <p>Spend social credit &mdash; or pay with TOBY in one click &mdash; on vanity titles that come with a matching Discord role you can equip any time.</p>
-        <a href="/titles/guilds" class="btn-primary">Browse The Title Shop &#8594;</a>
-    </div>
-</section>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
 
-<!-- Leaderboards CTA -->
-<section class="intro-cta">
-    <div class="cta-card">
-        <h2>&#128200; See The Leaderboards</h2>
-        <p>Monthly social-credit standings with a podium, TobyCoin wallet rankings, and a This month / Current total toggle so the top of the list actually changes.</p>
-        <a href="/leaderboards" class="btn-primary">View Leaderboards &#8594;</a>
-    </div>
-</section>
-
-<!-- DnD Campaign CTA -->
-<section class="intro-cta">
-    <div class="cta-card">
-        <h2>&#127922; Run Your Campaign</h2>
-        <p>Build encounters, drag and drop your roster, and keep initiative running — all from the browser.</p>
-        <a href="/dnd/campaign" class="btn-primary">Open Campaign Manager &#8594;</a>
-    </div>
-</section>
-
-<!-- Moderation CTA -->
-<section class="intro-cta">
-    <div class="cta-card">
-        <h2>&#128737; Moderate From The Web</h2>
-        <p>Adjust user permissions, tweak your server config, mute a voice channel, or post a poll — no slash commands needed.</p>
-        <a href="/moderation/guilds" class="btn-primary">Open Moderation &#8594;</a>
-    </div>
-</section>
-
-<footer>
-    <p>&copy; 2026 TobyBot &mdash; <a href="/terms">Terms of Service</a> &mdash; <a href="/privacy">Privacy Policy</a></p>
-</footer>
+<!-- JSON-LD: SoftwareApplication for rich Google card on the homepage. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "TobyBot",
+  "applicationCategory": "DiscordBot",
+  "operatingSystem": "Discord",
+  "url": "https://www.toby-bot.co.uk/",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" }
+}
+</script>
 
 <script th:src="@{/js/home.js}"></script>
 </body>

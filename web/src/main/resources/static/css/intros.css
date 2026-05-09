@@ -121,16 +121,6 @@
     font-family: inherit;
 }
 
-.empty-hero {
-    background: var(--bg-elevated);
-    border: 1px dashed var(--border-strong);
-    border-radius: var(--radius-lg);
-    padding: 40px 24px;
-    text-align: center;
-    color: var(--text-muted);
-}
-.empty-hero .emoji { font-size: 2.2rem; display: block; margin-bottom: 10px; }
-
 /* ============================================================
    Add / replace form
    ============================================================ */

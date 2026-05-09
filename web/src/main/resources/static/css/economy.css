@@ -7,15 +7,6 @@
     flex-wrap: wrap;
 }
 
-.back-link {
-    display: inline-block;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    margin-bottom: var(--space-2);
-}
-
-.back-link:hover { color: var(--text); }
-
 .economy-price {
     text-align: right;
 }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Shared site footer for public marketing pages (home, commands, login,
+    terms, privacy, changelog). Logged-in app pages don't include this —
+    they're working surfaces and the navbar already covers the legal
+    links via OAuth flows.
+
+    Three rows: copyright + legal, source link, tech stack. The
+    tech-stack row doubles as a craft signal for recruiters; the GitHub
+    link points at the same repo referenced from the legal pages.
+-->
+<footer th:fragment="footer" class="site-footer">
+    <div class="site-footer-inner">
+        <p class="site-footer-line">
+            &copy; 2026 TobyBot &mdash;
+            <a th:href="@{/terms}">Terms of Service</a> &middot;
+            <a th:href="@{/privacy}">Privacy Policy</a> &middot;
+            <a th:href="@{/changelog}">Changelog</a>
+        </p>
+        <p class="site-footer-line site-footer-source">
+            Open source on
+            <a href="https://github.com/ml404/toby-bot" rel="noopener" target="_blank">GitHub</a>.
+            <a th:href="@{/commands/wiki}">Browse all commands &rarr;</a>
+        </p>
+        <p class="site-footer-stack">
+            <span class="site-footer-stack-label">Built with</span>
+            <span class="site-footer-stack-item">Spring Boot</span>
+            <span class="site-footer-stack-item">Kotlin</span>
+            <span class="site-footer-stack-item">Thymeleaf</span>
+            <span class="site-footer-stack-item">Postgres</span>
+            <span class="site-footer-stack-item">JDA</span>
+            <span class="site-footer-stack-item">Lavalink</span>
+        </p>
+    </div>
+</footer>
+</body>
+</html>
