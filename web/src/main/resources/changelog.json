@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Batch changelog entries into one PR (main is protected)",
+    "summary": "The changelog automation added in #426 has been silently failing on every merged PR since it landed — #427, #428, #429 all triggered it, and every run failed in ~5 seconds at the final `git push origin main` step. No `chore(changelog)` commit has ever landed. **Root cause:** `main` is branch-protected, so the default `GITHUB_TOKEN` can never push there. The previous design's \"direct-push to main with `[skip ci]`\" was rejected by branch protection on every run. The prepend-…",
+    "emoji": "🔨",
+    "prNumber": 431
+  },
+  {
+    "date": "May 2026",
     "title": "Moderation page split + searchable settings",
     "summary": "The single moderation page became six focused sub-pages (Users, Settings, Voice, Poll, Casino, Lottery). The Settings page got a sticky search box and a dedicated Jackpot section exposing five eligibility/payout configs that were previously backend-only. A new CI guard fails the build if a future config key is added without a UI row.",
     "emoji": "🧹",
