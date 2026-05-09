@@ -1,6 +1,8 @@
 package database.service
 
+import common.events.AntiAutoclickEvent
 import database.dto.ConfigDto
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
@@ -27,6 +29,7 @@ import kotlin.random.Random
 class CasinoEdgeService(
     private val botSuspicionService: CasinoBotSuspicionService,
     private val configService: ConfigService,
+    private val eventPublisher: ApplicationEventPublisher,
     private val random: Random = Random.Default,
 ) {
 
@@ -67,6 +70,15 @@ class CasinoEdgeService(
         val houseEdge = (streak * EDGE_PCT_PER_STREAK / 100.0)
             .coerceIn(0.0, maxEdgePct / 100.0)
         if (houseEdge > 0.0 && random.nextDouble() < houseEdge) {
+            eventPublisher.publishEvent(
+                AntiAutoclickEvent.BiasFired(
+                    guildId = guildId,
+                    discordId = discordId,
+                    gameKey = gameKey,
+                    streak = streak,
+                    edgePct = houseEdge * 100.0,
+                )
+            )
             return asLoss()
         }
         return fairOutcome

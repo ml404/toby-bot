@@ -892,11 +892,13 @@ class ModerationWebService(
                 if (n !in 1..50) return "Value must be between 1 and 50."
                 n.toString()
             }
-            ConfigDto.Configurations.LOTTERY_CHANNEL -> {
+            ConfigDto.Configurations.LOTTERY_CHANNEL,
+            ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID -> {
                 val v = rawValue.trim()
                 if (v.isEmpty()) {
-                    // Empty value clears the override and falls back to
-                    // LEADERBOARD_CHANNEL → systemChannel at runtime.
+                    // Empty value clears the override. LOTTERY_CHANNEL falls
+                    // back to LEADERBOARD_CHANNEL → systemChannel at runtime;
+                    // CASINO_MODLOG_CHANNEL_ID falls back to systemChannel.
                     ""
                 } else {
                     val id = v.toLongOrNull()

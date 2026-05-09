@@ -211,8 +211,53 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.LOTTERY_CHANNEL -> setLotteryChannel(
                     event, optionMapping, deleteDelay
                 )
+                // Anti-autoclicker session log channel — managed primarily
+                // via the /moderation web tab; arm stays exhaustive in case
+                // the option is registered manually.
+                ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID -> setCasinoModlogChannel(
+                    event, optionMapping, deleteDelay
+                )
             }
         }
+    }
+
+    /**
+     * Validate + persist the per-guild text-channel id for anti-autoclick
+     * session embeds. Empty / `0` clears the override (notifier falls back
+     * to the guild's system channel). Otherwise the value must parse to a
+     * Long that resolves to a real text channel in this guild.
+     */
+    private fun setCasinoModlogChannel(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+    ) {
+        val raw = optionMapping.asString.trim()
+        val guild = event.guild ?: return
+        val resolved: String = if (raw.isEmpty() || raw == "0") {
+            ""
+        } else {
+            val id = raw.toLongOrNull() ?: run {
+                event.hook.sendMessage("Channel id must be numeric (or empty / 0 to clear).")
+                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                return
+            }
+            guild.getTextChannelById(id) ?: run {
+                event.hook.sendMessage("No text channel with id $id exists in this server.")
+                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                return
+            }
+            id.toString()
+        }
+        configService.upsertConfig(
+            ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID.configValue, resolved, guild.id
+        )
+        val msg = if (resolved.isEmpty()) {
+            "Anti-autoclick session log channel cleared. Falling back to the guild's system channel."
+        } else {
+            "Anti-autoclick session events will post to <#$resolved>."
+        }
+        event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     /**
