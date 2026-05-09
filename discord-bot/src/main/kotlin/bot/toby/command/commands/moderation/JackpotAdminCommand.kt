@@ -169,6 +169,14 @@ class JackpotAdminCommand @Autowired constructor(
                 replyError(event, "No open lottery to draw.", deleteDelay)
             JackpotLotteryService.DrawOutcome.NoTickets ->
                 replyError(event, "Lottery has no ticket buyers — cancel instead to refund the seed.", deleteDelay)
+            is JackpotLotteryService.DrawOutcome.BelowMinBuyers ->
+                replyError(
+                    event,
+                    "Only **${result.have}** distinct buyer(s) — need **${result.need}**. " +
+                        "Cancel to refund buyers and return the seed (admins can lower " +
+                        "`LOTTERY_DAILY_MIN_BUYERS` if this threshold is too strict).",
+                    deleteDelay,
+                )
         }
     }
 
