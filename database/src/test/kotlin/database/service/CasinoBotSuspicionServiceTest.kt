@@ -4,14 +4,22 @@ import common.events.AntiAutoclickEvent
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.concurrent.atomic.AtomicReference
 
 class CasinoBotSuspicionServiceTest {
 
     private lateinit var service: CasinoBotSuspicionService
     private lateinit var eventPublisher: ApplicationEventPublisher
+    private lateinit var nowRef: AtomicReference<Instant>
+    private lateinit var fakeClock: Clock
 
     private val discordId = 100L
     private val guildId = 200L
@@ -20,235 +28,243 @@ class CasinoBotSuspicionServiceTest {
     @BeforeEach
     fun setup() {
         eventPublisher = mockk(relaxed = true)
-        service = CasinoBotSuspicionService(eventPublisher)
+        nowRef = AtomicReference(Instant.parse("2026-05-09T12:00:00Z"))
+        // Mutable fixed clock — tests advance `nowRef` to simulate gaps.
+        fakeClock = object : Clock() {
+            override fun getZone(): ZoneId = ZoneOffset.UTC
+            override fun withZone(zone: ZoneId): Clock = this
+            override fun instant(): Instant = nowRef.get()
+        }
+        service = CasinoBotSuspicionService(eventPublisher, fakeClock)
+    }
+
+    private fun bot(times: Int, x: Int = 100, y: Int = 200): Int {
+        var last = 0
+        repeat(times) {
+            last = service.recordAndScore(discordId, guildId, game, x, y, mouseMoved = false)
+        }
+        return last
+    }
+
+    private fun advanceSeconds(seconds: Long) {
+        nowRef.set(nowRef.get().plusSeconds(seconds))
     }
 
     @Test
-    fun `first ever bet has streak 0`() {
-        // No prior state → no signal that this is bot-like, regardless of
-        // what the client supplied. Streak only grows on the *second* and
-        // subsequent same-spot, no-motion clicks.
-        val streak = service.recordAndScore(discordId, guildId, game,
-            clickX = 100, clickY = 200, mouseMoved = false)
-
-        assertEquals(0, streak)
+    fun `first ever bet returns 0 - no prior signal to match against`() {
+        val score = service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = false)
+        assertEquals(0, score)
     }
 
     @Test
-    fun `same spot with no movement increments streak across consecutive bets`() {
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val s2 = service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val s3 = service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val s4 = service.recordAndScore(discordId, guildId, game, 100, 200, false)
-
-        assertEquals(1, s2)
-        assertEquals(2, s3)
-        assertEquals(3, s4)
+    fun `natural slots-style session of 75 same-spot clicks does not flag`() {
+        // The user-reported false positive: a minute of identical-pixel,
+        // no-mouse-motion play (~75 spins) must NOT open the gate.
+        repeat(75) {
+            val score = service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = false)
+            assertEquals(0, score, "score must stay 0 below MIN_SAMPLE")
+        }
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
     }
 
     @Test
-    fun `pixel jitter inside the epsilon still counts as same spot`() {
-        // Each click is compared against the IMMEDIATELY PRIOR click (not
-        // the first click), so a sustained autoclicker that jitters by
-        // ±EPSILON_PX every time still climbs the streak.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val s2 = service.recordAndScore(discordId, guildId, game, 101, 200, false)   // dx=1
-        val s3 = service.recordAndScore(discordId, guildId, game, 100, 202, false)   // dx=1, dy=2
-        val s4 = service.recordAndScore(discordId, guildId, game, 102, 200, false)   // dx=2, dy=2
+    fun `1 minute + 10s pause + 1 minute does not flag - pause clears window if longer than IDLE_RESET`() {
+        // Owner's stated scenario: "1 min play, 10s pause, 1 min play"
+        // is plausible natural behaviour and must not flag. Two minutes
+        // of total play with a 16 s pause between them clears the
+        // window during the pause (gap > IDLE_RESET_MS = 15 s) so
+        // each minute's 75 bets accumulates from zero — neither half
+        // approaches MIN_SAMPLE.
+        bot(75)
+        advanceSeconds(16) // > IDLE_RESET_MS
+        bot(75)
 
-        assertEquals(1, s2)
-        assertEquals(2, s3)
-        assertEquals(3, s4, "all consecutive distances within EPSILON_PX=2")
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
     }
 
     @Test
-    fun `cumulative drift outside the epsilon still resets when a single hop exceeds it`() {
-        // Comparison is to the most recent click, not the origin. A 5-pixel
-        // jump in one bet resets even if all earlier clicks were tightly
-        // clustered around the origin.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val resetByOneHop = service.recordAndScore(discordId, guildId, game, 100, 205, false)
-        assertEquals(0, resetByOneHop)
+    fun `four minutes of uninterrupted bot-pattern play opens the gate`() {
+        // Continuous 300 bets with no gap > IDLE_RESET — that's
+        // explicitly the "this is a bot" threshold the algorithm flags.
+        bot(300)
+
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
     }
 
     @Test
-    fun `click outside the epsilon resets the streak`() {
-        // Build up a streak, then click far away — fresh slate.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val reset = service.recordAndScore(discordId, guildId, game, 500, 600, false)
+    fun `score is the match count once gate is open and ramps with continued bot signal`() {
+        // After the gate opens, recordAndScore returns the matches count
+        // so CasinoEdgeService's `streak * 2.5pp` formula reads "fully
+        // saturated" and applies the per-game cap.
+        val score = bot(310)
 
-        assertEquals(0, reset)
+        assertTrue(score >= 280, "expected match count near saturation; got $score")
     }
 
     @Test
-    fun `mouseMoved true resets the streak even at the same pixel`() {
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        val reset = service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
+    fun `mouse-moved click partway through dilutes the ratio but does not close immediately`() {
+        bot(300)
+        // Inject one motion click while still inside the same window.
+        service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
 
-        assertEquals(0, reset, "natural cursor motion before a same-spot click clears suspicion")
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
     }
 
     @Test
-    fun `null signals reset the streak (Discord, keyboard submit, broken client)`() {
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
+    fun `sustained mouse motion eventually closes an open session`() {
+        // Open the gate, then deliver a long burst of motion clicks until
+        // the ratio drops under RATIO_CLOSE (0.60).
+        bot(300)
+        repeat(200) {
+            service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
+        }
 
-        val nullClickX = service.recordAndScore(discordId, guildId, game, null, 200, false)
-        assertEquals(0, nullClickX)
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
+    }
 
-        // After a null reset, the next signaled bet starts fresh — needs a
-        // partner before the streak can climb again.
-        val firstAfterReset = service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        assertEquals(0, firstAfterReset, "first bet after reset re-seeds at 0")
+    @Test
+    fun `idle gap longer than IDLE_RESET_MS clears the window pre-flag`() {
+        // Build a window of 299 bot clicks (one short of MIN_SAMPLE).
+        bot(299)
+
+        // Walk away long enough to cross IDLE_RESET.
+        advanceSeconds(20)
+
+        // 200 more bot-shaped bets afterwards — fresh window, never
+        // approaches MIN_SAMPLE.
+        bot(200)
+
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
+    }
+
+    @Test
+    fun `idle gap closes an already-open session`() {
+        bot(300)
+        advanceSeconds(20)
+        // The next bet observes the gap and closes the session.
+        service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = false)
+
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
+    }
+
+    @Test
+    fun `pixel jitter inside epsilon still counts as same spot`() {
+        // Comparison is to the IMMEDIATELY prior click (not the first
+        // click), so a sustained autoclicker that jitters by ±EPSILON_PX
+        // every time still climbs the window.
+        service.recordAndScore(discordId, guildId, game, 100, 200, false)
+        repeat(299) { i ->
+            val dx = if (i % 2 == 0) 1 else -1
+            val dy = if (i % 3 == 0) 1 else 0
+            service.recordAndScore(discordId, guildId, game, 100 + dx, 200 + dy, mouseMoved = false)
+        }
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
+    }
+
+    @Test
+    fun `single drift bet contributes a non-match but does not block opening`() {
+        // 5-pixel jump in one bet doesn't match — it's `false` in the
+        // window. One non-match in 300 doesn't break threshold (ratio
+        // still ≥ 0.95) — gate still opens.
+        service.recordAndScore(discordId, guildId, game, 100, 200, false)
+        repeat(149) { service.recordAndScore(discordId, guildId, game, 100, 200, false) }
+        // 1 drift bet (5 px jump from prior at 100)
+        service.recordAndScore(discordId, guildId, game, 105, 200, false)
+        repeat(149) { service.recordAndScore(discordId, guildId, game, 105, 200, false) }
+
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
+    }
+
+    @Test
+    fun `null signal closes an open session and returns 0`() {
+        bot(300)
+
+        // Discord-path bet (null signals) → close the session, return 0.
+        val score = service.recordAndScore(discordId, guildId, game, null, null, null)
+        assertEquals(0, score)
+
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
+    }
+
+    @Test
+    fun `null signal with no open session does not publish a close event`() {
+        // Discord-only player who never tripped the gate shouldn't see a
+        // bogus SessionClosed when their bet hits the service.
+        service.recordAndScore(discordId, guildId, game, null, null, null)
+        service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
+        service.recordAndScore(discordId, guildId, game, 500, 600, mouseMoved = false)
+
+        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent>()) }
     }
 
     @Test
     fun `state is partitioned per (user, guild)`() {
         val otherUser = 999L
         val otherGuild = 888L
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        // A different user, even at the same pixel, starts at 0.
-        val otherUserStreak = service.recordAndScore(otherUser, guildId, game, 100, 200, false)
-        // The same user in a different guild also starts at 0 — bot suspicion
-        // does not leak across servers.
-        val otherGuildStreak = service.recordAndScore(discordId, otherGuild, game, 100, 200, false)
+        bot(300)
 
-        assertEquals(0, otherUserStreak)
-        assertEquals(0, otherGuildStreak)
-        // The original (user, guild) is unaffected and continues climbing.
-        assertEquals(3, service.recordAndScore(discordId, guildId, game, 100, 200, false))
-    }
+        // A different user, even at the same pixel, is a fresh window.
+        repeat(75) {
+            service.recordAndScore(otherUser, guildId, game, 100, 200, false)
+        }
+        // Same user different guild — also a fresh window.
+        repeat(75) {
+            service.recordAndScore(discordId, otherGuild, game, 100, 200, false)
+        }
 
-    @Test
-    fun `state is partitioned per gameKey so cross-game streaks don't leak`() {
-        // A coinflip streak shouldn't influence the dice gate. Each game
-        // tracks its own streak from the same (user, guild).
-        service.recordAndScore(discordId, guildId, "coinflip", 100, 200, false)
-        service.recordAndScore(discordId, guildId, "coinflip", 100, 200, false)
-        service.recordAndScore(discordId, guildId, "coinflip", 100, 200, false)
-        // Switching to dice at the same pixel is a fresh start.
-        val firstDiceStreak = service.recordAndScore(discordId, guildId, "dice", 100, 200, false)
-        assertEquals(0, firstDiceStreak)
-
-        // The coinflip streak is still climbing.
-        assertEquals(3, service.recordAndScore(discordId, guildId, "coinflip", 100, 200, false))
-        // Dice climbs independently.
-        assertEquals(1, service.recordAndScore(discordId, guildId, "dice", 100, 200, false))
-        // Slots starts fresh too.
-        assertEquals(0, service.recordAndScore(discordId, guildId, "slots", 100, 200, false))
-    }
-
-    // -------- Anti-autoclick event publishing --------
-
-    @Test
-    fun `publishes SessionOpened exactly once on the 0-to-1 transition`() {
-        // First call seeds state at streak=0; second matching call transitions
-        // to streak=1 — that's the moment we want a "session opened" event.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-
+        // Total opens: exactly one (the original user/guild). The match
+        // pinpoints the triple so any cross-bleed would surface as
+        // additional events.
         verify(exactly = 1) {
             eventPublisher.publishEvent(
-                AntiAutoclickEvent.SessionOpened(guildId, discordId, game, streak = 1)
+                match<AntiAutoclickEvent.SessionOpened> {
+                    it.guildId == guildId && it.discordId == discordId && it.gameKey == game
+                }
             )
-        }
-    }
-
-    @Test
-    fun `does not republish SessionOpened on subsequent streak increments`() {
-        // Streak climbs 0 → 1 → 2 → 3. Only the first transition fires
-        // SessionOpened; the rest are silent.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-
-        verify(exactly = 1) {
-            eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>())
         }
         verify(exactly = 0) {
-            eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>())
-        }
-    }
-
-    @Test
-    fun `publishes SessionClosed when streak resets via different pixel`() {
-        // Build streak 0 → 1 → 2, then jump pixel beyond epsilon → reset to 0.
-        // SessionClosed should fire on that close.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 500, 600, false)
-
-        verify(exactly = 1) {
             eventPublisher.publishEvent(
-                AntiAutoclickEvent.SessionClosed(guildId, discordId, game)
+                match<AntiAutoclickEvent.SessionOpened> {
+                    it.discordId == otherUser || it.guildId == otherGuild
+                }
             )
         }
     }
 
     @Test
-    fun `publishes SessionClosed when streak resets via mouseMoved=true`() {
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
+    fun `state is partitioned per gameKey`() {
+        // A coinflip bot session shouldn't influence the dice gate.
+        repeat(300) {
+            service.recordAndScore(discordId, guildId, "coinflip", 100, 200, false)
+        }
+        repeat(75) {
+            service.recordAndScore(discordId, guildId, "dice", 100, 200, false)
+        }
 
         verify(exactly = 1) {
             eventPublisher.publishEvent(
-                AntiAutoclickEvent.SessionClosed(guildId, discordId, game)
+                match<AntiAutoclickEvent.SessionOpened> { it.gameKey == "coinflip" }
             )
         }
-    }
-
-    @Test
-    fun `publishes SessionClosed when streak resets via null signal`() {
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-        service.recordAndScore(discordId, guildId, game, null, 200, false)
-
-        verify(exactly = 1) {
-            eventPublisher.publishEvent(
-                AntiAutoclickEvent.SessionClosed(guildId, discordId, game)
-            )
-        }
-    }
-
-    @Test
-    fun `does not publish SessionClosed when streak was already 0`() {
-        // No streak ever opened → null signal should not fire SessionClosed.
-        // This is the Discord-bet-only path; no bogus close events.
-        service.recordAndScore(discordId, guildId, game, null, null, null)
-        service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
-        service.recordAndScore(discordId, guildId, game, 500, 600, false)
-
         verify(exactly = 0) {
-            eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>())
+            eventPublisher.publishEvent(
+                match<AntiAutoclickEvent.SessionOpened> { it.gameKey == "dice" }
+            )
         }
-    }
-
-    @Test
-    fun `publishes no events when streak stays at 0 across calls`() {
-        // Single bet → streak 0 → no transitions, no events at all.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false)
-
-        verify(exactly = 0) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent>()) }
     }
 
     @Test
     fun `re-opens a fresh session after a close-then-build cycle`() {
-        // Open, close, then build back up — should fire one Open, one Close,
-        // then a second Open as the streak ramps up again.
-        service.recordAndScore(discordId, guildId, game, 100, 200, false) // 0
-        service.recordAndScore(discordId, guildId, game, 100, 200, false) // 1 → Opened
-        service.recordAndScore(discordId, guildId, game, 500, 600, false) // 0 → Closed
-        service.recordAndScore(discordId, guildId, game, 500, 600, false) // 0
-        service.recordAndScore(discordId, guildId, game, 500, 600, false) // 1 → Opened
+        bot(300)                                                // Opened
+        repeat(200) {
+            service.recordAndScore(discordId, guildId, game, 100, 200, mouseMoved = true)
+        }                                                        // Closed
+        // Build window back up with bot clicks. Need enough bot bets
+        // post-close to push ratio above 0.95 again.
+        repeat(500) { service.recordAndScore(discordId, guildId, game, 100, 200, false) }
 
         verify(exactly = 2) {
             eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>())
@@ -259,20 +275,17 @@ class CasinoBotSuspicionServiceTest {
     }
 
     @Test
-    fun `events are scoped per gameKey - independent open and close per game`() {
-        // Open dice session, then null-signal coinflip (which never opened) —
-        // must not fire SessionClosed for coinflip, only the dice open event.
-        service.recordAndScore(discordId, guildId, "dice", 100, 200, false)
-        service.recordAndScore(discordId, guildId, "dice", 100, 200, false)        // dice Opened
-        service.recordAndScore(discordId, guildId, "coinflip", null, null, null)   // no event
+    fun `idle clear during open session closes the session even if next bet matches`() {
+        bot(300)
+        advanceSeconds(20)
+        // First bet after the gap can't match (window was cleared, no
+        // prior pixel to compare). Even with the same pixel + no motion,
+        // size = 1 → cannot reopen.
+        val score = service.recordAndScore(discordId, guildId, game, 100, 200, false)
 
-        verify(exactly = 1) {
-            eventPublisher.publishEvent(
-                AntiAutoclickEvent.SessionOpened(guildId, discordId, "dice", streak = 1)
-            )
-        }
-        verify(exactly = 0) {
-            eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>())
-        }
+        assertEquals(0, score)
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionClosed>()) }
+        // No second SessionOpened — we're rebuilding from zero.
+        verify(exactly = 1) { eventPublisher.publishEvent(ofType<AntiAutoclickEvent.SessionOpened>()) }
     }
 }

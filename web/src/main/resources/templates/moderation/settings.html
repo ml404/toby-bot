@@ -344,6 +344,44 @@
                     </select>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
+                <div class="config-create-channel">
+                    <div class="config-create-channel-text">
+                        <strong>Create a private mod-log channel</strong>
+                        <p class="muted">
+                            Creates a channel only TobyBot and server admins can see —
+                            @everyone is denied <code>VIEW_CHANNEL</code>; admins keep
+                            access via Discord's built-in Administrator-permission rule.
+                            Auto-sets the dropdown above. Bot needs the Manage Channels
+                            permission.
+                        </p>
+                    </div>
+                    <form class="config-create-admin-channel-form"
+                          data-target-config="CASINO_MODLOG_CHANNEL_ID"
+                          data-default-name="casino-modlog">
+                        <label class="config-create-channel-field">
+                            <span>Channel name</span>
+                            <input type="text" name="name" value="casino-modlog"
+                                   maxlength="90" th:disabled="${!isOwner}">
+                        </label>
+                        <label class="config-create-channel-field">
+                            <span>Category</span>
+                            <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                <option value="">&mdash; top-level &mdash;</option>
+                                <option th:each="cat : ${overview.categories}"
+                                        th:value="${cat.id}"
+                                        th:text="${cat.name}"></option>
+                            </select>
+                        </label>
+                        <label class="config-create-channel-field">
+                            <span>or new category name</span>
+                            <input type="text" name="newCategoryName"
+                                   maxlength="100" placeholder="(blank = use existing)"
+                                   th:disabled="${!isOwner}">
+                        </label>
+                        <button type="submit" class="btn config-create-channel-btn"
+                                th:disabled="${!isOwner}">Create</button>
+                    </form>
+                </div>
             </div>
         </details>
 

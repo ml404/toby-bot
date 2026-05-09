@@ -58,6 +58,34 @@ class ModerationWebService(
             ConfigDto.Configurations.LOTTERY_CHANNEL,
             ConfigDto.Configurations.LEADERBOARD_CHANNEL,
         )
+
+        /** Allow-list for the admin-only `create-admin-only-channel`
+         *  flow — channels meant for moderator eyes only (anti-
+         *  autoclicker session embeds). Separate from the public
+         *  read-only allow-list so a future contributor can't
+         *  accidentally route a public-facing config (e.g.
+         *  LOTTERY_CHANNEL) through the admin-only endpoint. */
+        private val ADMIN_CHANNEL_CONFIG_ALLOWLIST: Set<ConfigDto.Configurations> = setOf(
+            ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID,
+        )
+    }
+
+    /**
+     * Visibility shape for a newly-created admin channel. Only differs
+     * from the public read-only flow on the @everyone permission set;
+     * everything else (sanitisation, category placement, bot perms,
+     * config upsert) is shared via [createTargetedChannel].
+     */
+    private enum class ChannelVisibility {
+        /** Public — @everyone allowed VIEW_CHANNEL but denied
+         *  MESSAGE_SEND + MESSAGE_ADD_REACTION. Bot can post. */
+        PUBLIC_READONLY,
+
+        /** Private — @everyone explicitly denied VIEW_CHANNEL. Server
+         *  admins (Administrator-permission roles) still see it via
+         *  Discord's built-in rule that Administrator overrides every
+         *  channel-level deny. Bot can post. */
+        ADMIN_ONLY,
     }
 
     private fun <T> safely(label: String, default: T, block: () -> T): T =
@@ -513,6 +541,69 @@ class ModerationWebService(
         guildId: Long,
         rawName: String,
         targetConfigName: String,
+        parentCategoryId: String? = null,
+        newCategoryName: String? = null,
+    ): CreateChannelOutcome = createTargetedChannel(
+        actorDiscordId = actorDiscordId,
+        guildId = guildId,
+        rawName = rawName,
+        targetConfigName = targetConfigName,
+        allowList = CHANNEL_CONFIG_ALLOWLIST,
+        visibility = ChannelVisibility.PUBLIC_READONLY,
+        parentCategoryId = parentCategoryId,
+        newCategoryName = newCategoryName,
+    )
+
+    /**
+     * Create a private text channel where only TobyBot and server admins
+     * can read or post — used for the casino mod-log so anti-autoclicker
+     * session embeds aren't visible to regular members. Mirrors the
+     * read-only flow's API exactly; only the @everyone permission set
+     * differs (denied VIEW_CHANNEL instead of allowed-with-write-deny).
+     *
+     * Server admins keep visibility for free via Discord's built-in
+     * rule that the Administrator permission overrides any channel-
+     * level deny — no explicit role grant required, no per-server
+     * mod-role configuration. The bot is granted VIEW_CHANNEL +
+     * MESSAGE_SEND + MESSAGE_EMBED_LINKS so it can post even if its
+     * server-wide role doesn't have those.
+     */
+    fun createAdminOnlyChannel(
+        actorDiscordId: Long,
+        guildId: Long,
+        rawName: String,
+        targetConfigName: String,
+        parentCategoryId: String? = null,
+        newCategoryName: String? = null,
+    ): CreateChannelOutcome = createTargetedChannel(
+        actorDiscordId = actorDiscordId,
+        guildId = guildId,
+        rawName = rawName,
+        targetConfigName = targetConfigName,
+        allowList = ADMIN_CHANNEL_CONFIG_ALLOWLIST,
+        visibility = ChannelVisibility.ADMIN_ONLY,
+        parentCategoryId = parentCategoryId,
+        newCategoryName = newCategoryName,
+    )
+
+    /**
+     * Shared backbone for the read-only and admin-only channel-create
+     * flows. The two callers differ only on:
+     *   1. The allow-list of configs they're permitted to set (so
+     *      `LOTTERY_CHANNEL` can't be routed through the admin-only
+     *      endpoint and vice-versa).
+     *   2. The @everyone permission overrides on the new channel.
+     * Everything else — moderation auth, JDA Manage Channels check,
+     * name sanitisation, parent-category resolution, JDA failure
+     * handling, config upsert — is identical across both flows.
+     */
+    private fun createTargetedChannel(
+        actorDiscordId: Long,
+        guildId: Long,
+        rawName: String,
+        targetConfigName: String,
+        allowList: Set<ConfigDto.Configurations>,
+        visibility: ChannelVisibility,
         /**
          * Existing category id to drop the new channel under, or null
          * for top-level. Ignored when [newCategoryName] is non-blank
@@ -533,7 +624,7 @@ class ModerationWebService(
         val targetConfig = runCatching {
             ConfigDto.Configurations.valueOf(targetConfigName.trim().uppercase())
         }.getOrNull()
-        if (targetConfig == null || targetConfig !in CHANNEL_CONFIG_ALLOWLIST) {
+        if (targetConfig == null || targetConfig !in allowList) {
             return CreateChannelOutcome.Error("Unknown channel config: $targetConfigName")
         }
         val guild = jda.getGuildById(guildId)
@@ -542,6 +633,20 @@ class ModerationWebService(
         if (!bot.hasPermission(Permission.MANAGE_CHANNEL)) {
             return CreateChannelOutcome.Error(
                 "Bot needs the Manage Channels permission. Grant it in Server Settings → Roles."
+            )
+        }
+        // Setting permission overrides at channel-create time is gated
+        // by MANAGE_ROLES (a.k.a. Manage Permissions in the Discord UI)
+        // even when the bot already has MANAGE_CHANNEL — Discord
+        // returns 50013 Missing Permissions on the create call
+        // otherwise. Both flows here always apply overrides (read-only
+        // denies @everyone MESSAGE_SEND; admin-only denies @everyone
+        // VIEW_CHANNEL), so the check applies universally.
+        if (!bot.hasPermission(Permission.MANAGE_ROLES)) {
+            return CreateChannelOutcome.Error(
+                "Bot needs the Manage Roles permission to apply channel-level " +
+                    "permission overrides. Grant it in Server Settings → Roles, or " +
+                    "give the bot the Administrator permission as a shortcut."
             )
         }
         val name = sanitizeChannelName(rawName)
@@ -582,13 +687,15 @@ class ModerationWebService(
         }
 
         val everyone = guild.publicRole
+        val (everyoneAllow, everyoneDeny) = when (visibility) {
+            ChannelVisibility.PUBLIC_READONLY -> listOf(Permission.VIEW_CHANNEL) to
+                listOf(Permission.MESSAGE_SEND, Permission.MESSAGE_ADD_REACTION)
+            ChannelVisibility.ADMIN_ONLY -> emptyList<Permission>() to
+                listOf(Permission.VIEW_CHANNEL)
+        }
         val newChannel = try {
             val action = guild.createTextChannel(name)
-                .addRolePermissionOverride(
-                    everyone.idLong,
-                    listOf(Permission.VIEW_CHANNEL),                                   // allow
-                    listOf(Permission.MESSAGE_SEND, Permission.MESSAGE_ADD_REACTION),  // deny
-                )
+                .addRolePermissionOverride(everyone.idLong, everyoneAllow, everyoneDeny)
                 .addMemberPermissionOverride(
                     bot.idLong,
                     listOf(
@@ -600,6 +707,22 @@ class ModerationWebService(
                 )
             if (parentCategory != null) action.setParent(parentCategory)
             action.complete()
+        } catch (e: net.dv8tion.jda.api.exceptions.ErrorResponseException) {
+            // JDA wraps Discord's `errors` JSON map. The generic toast
+            // "50013 Missing Permissions" buries which permission
+            // bounced — surface JDA's `meaning` so the toast at least
+            // hints at the cause. The preflight checks at the top of
+            // this method catch the common cases before we get here.
+            logger.error(
+                "Discord rejected channel-create for guild=$guildId target=$targetConfig " +
+                    "code=${e.errorCode} response=${e.errorResponse} meaning=${e.meaning}: ${e.message}"
+            )
+            return CreateChannelOutcome.Error(
+                "Discord rejected the create: ${e.meaning} (code ${e.errorCode}). " +
+                    "Most often the bot's role is missing Manage Channels or " +
+                    "Manage Roles — check Server Settings → Roles → @TobyBot, " +
+                    "or re-invite via the homepage to re-grant the install defaults."
+            )
         } catch (e: Exception) {
             logger.error(
                 "Failed to create channel for guild=$guildId target=$targetConfig: ${e.message}"
@@ -615,7 +738,7 @@ class ModerationWebService(
             guildId.toString(),
         )
         logger.info(
-            "Created read-only channel guild=$guildId actor=$actorDiscordId " +
+            "Created ${visibility.name.lowercase()} channel guild=$guildId actor=$actorDiscordId " +
                 "channel=${newChannel.id} name=${newChannel.name} target=$targetConfig"
         )
         return CreateChannelOutcome.Ok(

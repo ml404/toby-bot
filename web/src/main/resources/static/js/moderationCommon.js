@@ -59,62 +59,80 @@
         });
     });
 
-    // --- Generic "Create read-only channel" forms ---
-    // The form's `data-target-config` attribute (LOTTERY_CHANNEL,
-    // LEADERBOARD_CHANNEL, etc.) tells the server which config to
-    // auto-set after creating the channel. Page reloads on success
-    // so the new channel appears in the dropdown above with the
-    // right `selected` — cheaper than splicing an <option> in by
-    // hand and re-syncing two places.
-    document.querySelectorAll('.config-create-channel-form').forEach(form => {
-        const targetConfig = form.dataset.targetConfig;
-        const nameInput = form.querySelector('input[name="name"]');
-        const parentSelect = form.querySelector('select[name="parentCategoryId"]');
-        const newCategoryInput = form.querySelector('input[name="newCategoryName"]');
-        const btn = form.querySelector('.config-create-channel-btn');
-        if (!targetConfig || !nameInput || !btn) return;
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = (nameInput.value || '').trim();
-            if (!name) {
-                toast('Channel name required.', 'error');
-                return;
-            }
-            const parentCategoryId = (parentSelect?.value || '').trim();
-            const newCategoryName = (newCategoryInput?.value || '').trim();
-            // Build a confirm-message tail that reflects what'll happen
-            // server-side. The new-category path takes precedence over
-            // the dropdown so the user isn't surprised by their own input.
-            let categoryNote = '';
-            if (newCategoryName) {
-                categoryNote = ' under a new category "' + newCategoryName + '"';
-            } else if (parentCategoryId) {
-                const parentText = parentSelect.options[parentSelect.selectedIndex]?.text;
-                if (parentText) categoryNote = ' under category "' + parentText + '"';
-            }
-            if (!confirm(
-                'Create a new "#' + name + '" channel' + categoryNote + '? ' +
-                'It will be read-only for @everyone and post-only for TobyBot. ' +
-                'The ' + targetConfig + ' config will be set to this new channel.'
-            )) return;
-            btn.disabled = true;
-            ctx.postJson('/moderation/' + ctx.guildId + '/channel/create-read-only', {
-                name: name,
-                targetConfig: targetConfig,
-                parentCategoryId: parentCategoryId || null,
-                newCategoryName: newCategoryName || null
-            }).then(r => {
-                btn.disabled = false;
-                if (r && r.ok) {
-                    toast('Created #' + r.channelName + '. Reloading…', 'success');
-                    setTimeout(() => window.location.reload(), 700);
-                } else {
-                    toast(r?.error || 'Could not create channel.', 'error');
+    // --- Generic "Create channel" form handler, parameterised by
+    //     visibility. Two flows share the same form-field shape (name +
+    //     category + new-category) and lifecycle (POST → toast →
+    //     reload-page-so-the-new-channel-appears-in-the-dropdown);
+    //     they differ only on the endpoint and the confirm-prompt
+    //     wording. Wire each flavour to its CSS class:
+    //       - .config-create-channel-form       → public read-only
+    //                                               (LEADERBOARD_CHANNEL,
+    //                                                LOTTERY_CHANNEL).
+    //       - .config-create-admin-channel-form → admin-only/private
+    //                                               (CASINO_MODLOG_CHANNEL_ID).
+    function wireCreateChannelForm(selector, opts) {
+        document.querySelectorAll(selector).forEach(form => {
+            const targetConfig = form.dataset.targetConfig;
+            const nameInput = form.querySelector('input[name="name"]');
+            const parentSelect = form.querySelector('select[name="parentCategoryId"]');
+            const newCategoryInput = form.querySelector('input[name="newCategoryName"]');
+            const btn = form.querySelector('.config-create-channel-btn');
+            if (!targetConfig || !nameInput || !btn) return;
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = (nameInput.value || '').trim();
+                if (!name) {
+                    toast('Channel name required.', 'error');
+                    return;
                 }
-            }).catch(() => {
-                btn.disabled = false;
-                toast('Network error.', 'error');
+                const parentCategoryId = (parentSelect?.value || '').trim();
+                const newCategoryName = (newCategoryInput?.value || '').trim();
+                // Build a confirm-message tail that reflects what'll
+                // happen server-side. The new-category path takes
+                // precedence over the dropdown so the user isn't
+                // surprised by their own input.
+                let categoryNote = '';
+                if (newCategoryName) {
+                    categoryNote = ' under a new category "' + newCategoryName + '"';
+                } else if (parentCategoryId) {
+                    const parentText = parentSelect.options[parentSelect.selectedIndex]?.text;
+                    if (parentText) categoryNote = ' under category "' + parentText + '"';
+                }
+                if (!confirm(
+                    'Create a new "#' + name + '" channel' + categoryNote + '? ' +
+                    opts.confirmDescription + ' ' +
+                    'The ' + targetConfig + ' config will be set to this new channel.'
+                )) return;
+                btn.disabled = true;
+                ctx.postJson('/moderation/' + ctx.guildId + opts.endpoint, {
+                    name: name,
+                    targetConfig: targetConfig,
+                    parentCategoryId: parentCategoryId || null,
+                    newCategoryName: newCategoryName || null
+                }).then(r => {
+                    btn.disabled = false;
+                    if (r && r.ok) {
+                        toast('Created #' + r.channelName + '. Reloading…', 'success');
+                        setTimeout(() => window.location.reload(), 700);
+                    } else {
+                        toast(r?.error || 'Could not create channel.', 'error');
+                    }
+                }).catch(() => {
+                    btn.disabled = false;
+                    toast('Network error.', 'error');
+                });
             });
         });
+    }
+
+    wireCreateChannelForm('.config-create-channel-form', {
+        endpoint: '/channel/create-read-only',
+        confirmDescription:
+            'It will be read-only for @everyone and post-only for TobyBot.',
+    });
+    wireCreateChannelForm('.config-create-admin-channel-form', {
+        endpoint: '/channel/create-admin-only',
+        confirmDescription:
+            'Only TobyBot and server admins (Administrator role) will be able to read or post in it.',
     });
 })();

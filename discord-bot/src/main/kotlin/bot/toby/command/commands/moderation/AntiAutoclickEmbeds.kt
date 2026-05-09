@@ -84,7 +84,11 @@ internal object AntiAutoclickEmbeds {
         .addField("Peak streak", peakStreak.toString(), true)
         .addField("Duration", formatDuration(Duration.between(startedAt, endedAt)), true)
         .addField("Started", "<t:${startedAt.epochSecond}:f>", true)
-        .addField("Ended", "<t:${endedAt.epochSecond}:R>", true)
+        // Closed-embed Ended uses :f (fixed datetime) so the field
+        // doesn't keep re-rendering as "X seconds ago" indefinitely
+        // — the active embed's :R is right *while* the session is
+        // live, but once finalised the moment is historical.
+        .addField("Ended", "<t:${endedAt.epochSecond}:f>", true)
         .setColor(CLOSED_COLOR)
         .build()
 

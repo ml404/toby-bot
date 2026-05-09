@@ -1128,10 +1128,20 @@ class ModerationWebServiceTest {
     // createReadOnlyChannel
     // ===================================================================
 
-    private fun stubBotPerms(canManageChannels: Boolean) {
+    private fun stubBotPerms(
+        canManageChannels: Boolean,
+        canManageRoles: Boolean = canManageChannels,
+    ) {
+        // MANAGE_ROLES is gated separately from MANAGE_CHANNEL in
+        // Discord — applying permission overrides (which both create
+        // flows always do) requires MANAGE_ROLES even when MANAGE_CHANNEL
+        // is granted. Default to the same value as canManageChannels
+        // so the bulk of existing tests stay happy-path; explicit
+        // false lets us pin the per-permission rejection messages.
         val bot = mockk<SelfMember>(relaxed = true)
         every { bot.idLong } returns 999L
         every { bot.hasPermission(Permission.MANAGE_CHANNEL) } returns canManageChannels
+        every { bot.hasPermission(Permission.MANAGE_ROLES) } returns canManageRoles
         every { guild.selfMember } returns bot
     }
 
@@ -1227,6 +1237,50 @@ class ModerationWebServiceTest {
         assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
         r as ModerationWebService.CreateChannelOutcome.Error
         assertTrue(r.message.contains("Manage Channels"))
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects when bot has MANAGE_CHANNEL but not MANAGE_ROLES`() {
+        // Real-world case that produced Discord error 50013 Missing
+        // Permissions: bot can create the channel itself but Discord
+        // gates the override-set step on MANAGE_ROLES. The check must
+        // surface a clear actionable message before we ever hit JDA.
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true, canManageRoles = false)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "lottery-results",
+            targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(
+            r.message.contains("Manage Roles"),
+            "expected actionable Manage Roles message, got: ${r.message}",
+        )
+        // Never reached JDA.
+        verify(exactly = 0) { guild.createTextChannel(any<String>()) }
+    }
+
+    @Test
+    fun `createAdminOnlyChannel rejects when bot has MANAGE_CHANNEL but not MANAGE_ROLES`() {
+        // Same gate applies — the admin-only flow's deny-VIEW_CHANNEL
+        // override needs MANAGE_ROLES too.
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true, canManageRoles = false)
+
+        val r = service.createAdminOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "casino-modlog",
+            targetConfigName = "CASINO_MODLOG_CHANNEL_ID",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Manage Roles"))
+        verify(exactly = 0) { guild.createTextChannel(any<String>()) }
     }
 
     @Test
@@ -1442,6 +1496,116 @@ class ModerationWebServiceTest {
         assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
         r as ModerationWebService.CreateChannelOutcome.Error
         assertTrue(r.message.contains("rate limited"))
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    // ===================================================================
+    // createAdminOnlyChannel — mirrors createReadOnlyChannel but flips
+    // the @everyone permission shape from "see-but-no-write" to
+    // "denied VIEW_CHANNEL" and uses a separate allow-list so a
+    // public-facing config can't accidentally route through here.
+    // ===================================================================
+
+    @Test
+    fun `createAdminOnlyChannel rejects non-moderator caller`() {
+        mockMember(plainUserId, isOwner = false)
+
+        val r = service.createAdminOnlyChannel(
+            actorDiscordId = plainUserId,
+            guildId = guildId,
+            rawName = "casino-modlog",
+            targetConfigName = "CASINO_MODLOG_CHANNEL_ID",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        verify(exactly = 0) { guild.createTextChannel(any<String>()) }
+    }
+
+    @Test
+    fun `createAdminOnlyChannel rejects a public-facing config not on the admin allow-list`() {
+        // LOTTERY_CHANNEL is on the public allow-list but NOT the
+        // admin one — routing it through this endpoint would invert
+        // its visibility (denied to @everyone), defeating the lottery
+        // announce flow. Defence in depth on top of the form's
+        // data-target-config attribute.
+        mockMember(ownerId, isOwner = true)
+
+        val r = service.createAdminOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "casino-modlog",
+            targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Unknown channel config"))
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
+    fun `createAdminOnlyChannel happy path for CASINO_MODLOG_CHANNEL_ID upserts config`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        stubChannelCreation(name = "casino-modlog", newId = 4242L)
+
+        val r = service.createAdminOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "casino-modlog",
+            targetConfigName = "CASINO_MODLOG_CHANNEL_ID",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Ok)
+        r as ModerationWebService.CreateChannelOutcome.Ok
+        assertEquals("4242", r.channelId)
+        assertEquals("casino-modlog", r.channelName)
+        assertEquals("CASINO_MODLOG_CHANNEL_ID", r.targetConfig)
+
+        verify(exactly = 1) {
+            configService.upsertConfig(
+                "CASINO_MODLOG_CHANNEL_ID", "4242", guildId.toString(),
+            )
+        }
+        // Permission-override verification skipped — the stubbed
+        // ChannelAction chain mockk can match on `any<Collection>` but
+        // not deeply equate the deny list against
+        // listOf(Permission.VIEW_CHANNEL). The allow-list filter test
+        // (`createAdminOnlyChannel rejects a public-facing config…`)
+        // is the primary guard against routing the wrong config
+        // through the wrong visibility shape.
+    }
+
+    @Test
+    fun `createAdminOnlyChannel rejects when bot lacks MANAGE_CHANNEL`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = false)
+
+        val r = service.createAdminOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "casino-modlog",
+            targetConfigName = "CASINO_MODLOG_CHANNEL_ID",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Manage Channels"))
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects an admin-only config not on the public allow-list`() {
+        // Symmetric defence — CASINO_MODLOG_CHANNEL_ID must not be
+        // routable through the public read-only endpoint. Otherwise
+        // the channel would be visible to @everyone, defeating the
+        // private mod-log purpose.
+        mockMember(ownerId, isOwner = true)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "casino-modlog",
+            targetConfigName = "CASINO_MODLOG_CHANNEL_ID",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Unknown channel config"))
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
     }
 
