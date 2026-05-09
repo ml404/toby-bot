@@ -162,21 +162,29 @@
     list-style: none;
     padding: 12px 14px;
     font-weight: 600;
+    font-size: 0.92rem;
     color: var(--text);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     user-select: none;
+    transition: background 0.15s, color 0.15s;
 }
 .config-section > summary::-webkit-details-marker { display: none; }
 .config-section > summary::before {
-    content: '▸';
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    transition: transform 0.15s ease;
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease, border-color 0.15s;
+    margin-left: 2px;
 }
-.config-section[open] > summary::before { transform: rotate(90deg); }
-.config-section > summary:hover { background: var(--bg); }
+.config-section[open] > summary::before { transform: rotate(45deg); }
+.config-section > summary:hover { background: var(--bg); color: var(--accent); }
+.config-section > summary:hover::before { border-color: var(--accent); }
+.config-section[open] > summary { border-bottom: 1px solid var(--border); }
 .config-section .config-grid {
     padding: 0 14px 14px;
 }
@@ -185,51 +193,90 @@
     gap: var(--space-3);
     max-width: 560px;
 }
+/* Desktop: label/hint on left, input + Save paired on right.
+   On narrow screens (≤600px) the row collapses to stacked. */
 .config-row {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: var(--space-3);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 200px) auto;
+    column-gap: var(--space-4);
+    row-gap: var(--space-2);
     align-items: center;
     padding: 0;
 }
 .config-section .config-row {
     background: transparent;
     border: 0;
-    padding: 8px 0;
+    padding: 16px 0;
     border-top: 1px solid var(--border);
 }
 .config-section .config-row:first-child {
     border-top: 0;
+    padding-top: 6px;
+}
+.config-section .config-row:last-child {
+    padding-bottom: 6px;
 }
 .config-row label {
-    grid-column: 1 / -1;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-bottom: 4px;
+    grid-column: 1;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
 }
 .config-row input,
 .config-row select {
-    padding: 6px 10px;
+    padding: 7px 10px;
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
-    grid-column: 1;
+    grid-column: 2;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.config-row input:focus-visible,
+.config-row select:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 /* Wrapper for percentage inputs — keeps the input + visible "%" suffix
-   together in column 1 of the .config-row grid, so admins can see the
-   unit at a glance without hunting through the label. */
+   together in column 2 of the .config-row grid. */
 .config-row .config-input-group {
-    grid-column: 1;
-    display: inline-flex;
+    grid-column: 2;
+    display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+}
+.config-row .config-input-group input {
+    grid-column: auto;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .config-row .config-input-group .config-suffix {
     color: var(--text-muted);
     font-size: 0.95rem;
+    flex: 0 0 auto;
 }
-.config-row .save-config { grid-column: 2; }
+.config-row .save-config {
+    grid-column: 3;
+}
+
+/* Narrow / mobile: stack to label-on-top, input+save-below on left. */
+@media (max-width: 640px) {
+    .config-row {
+        grid-template-columns: minmax(0, 200px) auto;
+        column-gap: var(--space-3);
+    }
+    .config-row label { grid-column: 1 / -1; }
+    .config-row input,
+    .config-row select,
+    .config-row .config-input-group { grid-column: 1; }
+    .config-row .save-config { grid-column: 2; }
+}
 
 /* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
    Coinflip / Poker / etc. sub-groups). Each `.config-group` carries a
@@ -453,43 +500,54 @@
 
 .lottery-admin-card {
     /* Override .mod-card-wide's 560px cap so the prize-parameters
-       grid + force-draw banner can breathe on wider screens. */
-    max-width: 720px;
+       grid + force-draw banner can breathe in the dedicated Lottery tab. */
+    max-width: 760px;
+    gap: var(--space-3);
 }
+/* Inside the lottery card, the config-sections aren't competing with
+   other content, so let them fill the card instead of capping at the
+   shared Config-tab 560px width. */
+.lottery-admin-card .config-section { max-width: none; }
+.lottery-admin-card .config-grid { max-width: none; }
 
 .lottery-admin-header {
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
     padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--border);
 }
 .lottery-admin-header h3 {
     margin: 0 0 var(--space-2);
+    color: var(--accent);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
 }
 .lottery-admin-header p {
     margin: 0;
     max-width: 60ch;
-    font-size: 0.92rem;
-    line-height: 1.5;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text-muted);
 }
 
-/* Optional inline hint inside a config-row label — small italic
-   secondary text that explains the field without blowing up the
-   label height. */
+/* Inline hint inside a config-row label — small secondary text that
+   explains the field without blowing up the label height. */
 .config-row label .config-hint {
     display: block;
-    margin-top: 3px;
-    font-size: 0.78rem;
-    line-height: 1.4;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    line-height: 1.5;
     color: var(--text-dim);
     font-weight: 400;
-    font-style: italic;
+    max-width: 56ch;
 }
 
 /* Force-draw footer banner — separates the dangerous-ish action
    (mutates jackpot pool + any open draw) from the read-mostly
    parameter rows. Text-on-left, button-on-right responsive flex. */
 .lottery-admin-actions {
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
     padding: var(--space-3) var(--space-4);
     background: var(--bg);
     border: 1px solid var(--border);
@@ -506,13 +564,16 @@
 }
 .lottery-admin-actions-text strong {
     display: block;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 4px;
 }
 .lottery-admin-actions-text p {
     margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.4;
+    font-size: 0.83rem;
+    line-height: 1.45;
+    color: var(--text-dim);
 }
 .lottery-admin-actions .btn {
     flex: 0 0 auto;
@@ -529,45 +590,70 @@
    ============================================================== */
 .config-create-channel {
     grid-column: 1 / -1;
-    margin-top: var(--space-2);
-    padding-top: var(--space-3);
-    border-top: 1px dashed var(--border);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     display: flex;
+    flex-direction: column;
     gap: var(--space-3);
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-.config-create-channel-text {
-    flex: 1 1 280px;
-    min-width: 220px;
 }
 .config-create-channel-text strong {
     display: block;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 4px;
 }
 .config-create-channel-text p {
     margin: 0;
     font-size: 0.82rem;
-    line-height: 1.4;
+    line-height: 1.45;
+    color: var(--text-dim);
 }
 
 .config-create-channel-form {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
-    align-items: center;
+    align-items: flex-end;
 }
-.config-create-channel-form input {
-    width: 200px;
-    padding: 6px 10px;
-    background: var(--bg);
+.config-create-channel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 160px;
+    min-width: 0;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.config-create-channel-form input,
+.config-create-channel-form select {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    background: var(--bg-elevated);
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
-@media (max-width: 600px) {
-    .config-create-channel-form { flex-direction: column; align-items: stretch; }
-    .config-create-channel-form input { width: 100%; }
+.config-create-channel-form input:focus-visible,
+.config-create-channel-form select:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.config-create-channel-btn {
+    flex: 0 0 auto;
+    margin-left: auto;
 }

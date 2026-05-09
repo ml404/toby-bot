@@ -27,6 +27,7 @@
         <button class="tab-btn" data-tab="voice" role="tab" aria-selected="false">Voice</button>
         <button class="tab-btn" data-tab="poll" role="tab" aria-selected="false">Poll</button>
         <button class="tab-btn" data-tab="casino" role="tab" aria-selected="false">Casino</button>
+        <button class="tab-btn" data-tab="lottery" role="tab" aria-selected="false">Lottery</button>
     </div>
 
     <!-- USERS TAB -->
@@ -882,26 +883,29 @@
                 <button type="submit" class="btn">Refund to jackpot</button>
             </form>
         </div>
+    </section>
 
-        <!--
-            Daily lottery: opt-in toggle + game mode + per-day parameters + force draw.
+    <!-- LOTTERY TAB -->
+    <!--
+        Daily lottery configuration: opt-in toggle + game mode + per-day
+        parameters + force draw. Lives in its own tab (not Casino) because
+        the daily lottery has enough configuration depth to deserve a
+        dedicated page rather than competing with jackpot remediation
+        cards for vertical space.
 
-            Each row uses the canonical .config-row pattern (label / input
-            or select / Save button) so moderation.js's existing handler
-            picks them up automatically. Without the Save button the row
-            is read-only and the admin can't actually persist anything.
-        -->
+        Each row uses the canonical .config-row pattern (label / input
+        or select / Save button) so moderation.js's existing handler
+        picks them up automatically. Without the Save button the row
+        is read-only and the admin can't actually persist anything.
+    -->
+    <section class="tab-panel" data-panel="lottery">
+        <p class="muted mb-4">
+            Auto-runs at 00:00 UTC: closes the prior day's draw, pays prizes,
+            opens a fresh one seeded from the jackpot pool. Doubles as a credit
+            sink — a configurable slice of every ticket sale routes back to the
+            jackpot, chipping the pool down through many small wins.
+        </p>
         <div class="mod-card mod-card-wide lottery-admin-card">
-            <header class="lottery-admin-header">
-                <h3>Daily lottery</h3>
-                <p class="muted">
-                    Auto-runs at 00:00 UTC: closes the prior day's draw, pays prizes, opens a
-                    fresh one seeded from the jackpot pool. Doubles as a credit sink — a
-                    configurable slice of every ticket sale routes back to the jackpot,
-                    chipping the pool down through many small wins.
-                </p>
-            </header>
-
             <details class="config-section" open>
                 <summary>Toggle &amp; mode</summary>
                 <div class="config-grid">
@@ -946,7 +950,10 @@
                 <summary>Daily prize parameters</summary>
                 <div class="config-grid">
                     <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
-                        <label>Ticket price (credits per ticket; default 50)</label>
+                        <label>
+                            Ticket price
+                            <span class="config-hint">Credits per ticket. Default 50.</span>
+                        </label>
                         <input type="number" min="1" max="1000000"
                                th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
                                placeholder="50"
@@ -954,7 +961,12 @@
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
-                        <label>Daily seed (% of jackpot pool pulled into prize pool at 00:00 UTC; default 5)</label>
+                        <label>
+                            Daily seed
+                            <span class="config-hint">
+                                Percent of the jackpot pool pulled into the prize pool at 00:00 UTC. Default 5.
+                            </span>
+                        </label>
                         <span class="config-input-group">
                             <input type="number" min="1" max="100"
                                    th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
@@ -965,7 +977,12 @@
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
-                        <label>Ticket revenue → jackpot (% of every sale routed back to pool; default 30)</label>
+                        <label>
+                            Ticket revenue &rarr; jackpot
+                            <span class="config-hint">
+                                Percent of every ticket sale routed back into the jackpot pool. Default 30.
+                            </span>
+                        </label>
                         <span class="config-input-group">
                             <input type="number" min="0" max="100"
                                    th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
@@ -977,10 +994,10 @@
                     </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_MIN_BUYERS">
                         <label>
-                            Minimum distinct buyers per draw (default 2)
+                            Minimum distinct buyers per draw
                             <span class="config-hint">
-                                Below this count the daily cancels and refunds — prevents a
-                                single user sweeping the seeded pool. 1 disables the safeguard.
+                                Below this count the daily cancels and refunds — prevents a single
+                                user sweeping the seeded pool. 1 disables the safeguard. Default 2.
                             </span>
                         </label>
                         <input type="number" min="1" max="50"
