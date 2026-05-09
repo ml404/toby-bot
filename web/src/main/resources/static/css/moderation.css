@@ -171,7 +171,6 @@ details.config-section.is-hidden { display: none; }
 
 /* Config tab */
 .config-section {
-    max-width: 560px;
     margin-bottom: var(--space-3);
     background: var(--bg-elevated);
     border: 1px solid var(--border);
@@ -212,7 +211,6 @@ details.config-section.is-hidden { display: none; }
 .config-grid {
     display: grid;
     gap: var(--space-3);
-    max-width: 560px;
 }
 /* Desktop: label/hint on left, input + Save paired on right.
    On narrow screens (≤600px) the row collapses to stacked. */
@@ -321,19 +319,29 @@ details.config-section.is-hidden { display: none; }
     border-top: 0;
 }
 
-/* Social credit */
+/* Social credit. Fixed-track grid so the score, delta input and Apply
+   button align vertically across rows regardless of the score's digit
+   count. Without this the Apply column drifts whenever a score happens
+   to have 4 vs 5+ digits, giving the table a ragged look. */
 .sc-adjust {
-    display: flex;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 6ch 68px auto;
+    gap: 8px;
     align-items: center;
 }
+.sc-score {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+}
 .sc-adjust input {
-    width: 68px;
+    width: 100%;
     padding: 4px 8px;
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
+    box-sizing: border-box;
 }
 
 /* Voice tab */
@@ -362,7 +370,6 @@ details.config-section.is-hidden { display: none; }
 .move-form, .poll-form {
     display: grid;
     gap: var(--space-3);
-    max-width: 560px;
     background: var(--bg-elevated);
     padding: var(--space-4);
     border-radius: var(--radius-md);
@@ -394,7 +401,6 @@ details.config-section.is-hidden { display: none; }
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: var(--space-3);
-    max-width: 760px;
     margin-bottom: var(--space-3);
 }
 .mod-card {
@@ -406,7 +412,7 @@ details.config-section.is-hidden { display: none; }
     flex-direction: column;
     gap: var(--space-2);
 }
-.mod-card-wide { max-width: 560px; }
+.mod-card-wide { max-width: none; }
 .mod-card h3 {
     margin: 0;
     font-size: 0.78rem;
@@ -520,16 +526,8 @@ details.config-section.is-hidden { display: none; }
    ============================================================== */
 
 .lottery-admin-card {
-    /* Override .mod-card-wide's 560px cap so the prize-parameters
-       grid + force-draw banner can breathe in the dedicated Lottery tab. */
-    max-width: 760px;
     gap: var(--space-3);
 }
-/* Inside the lottery card, the config-sections aren't competing with
-   other content, so let them fill the card instead of capping at the
-   shared Config-tab 560px width. */
-.lottery-admin-card .config-section { max-width: none; }
-.lottery-admin-card .config-grid { max-width: none; }
 
 .lottery-admin-header {
     margin-bottom: var(--space-3);
