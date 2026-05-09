@@ -86,20 +86,21 @@
     </section>
 
     <section class="roulette-payouts">
-        <h2>Payouts</h2>
+        <h2>Bet types &amp; payouts</h2>
         <table>
             <thead>
-            <tr><th>Bet</th><th>Pays</th></tr>
+            <tr><th>Bet</th><th>Covers</th><th class="roulette-payouts-pays">Pays</th></tr>
             </thead>
             <tbody>
             <tr th:each="row : ${payoutTable}">
                 <td th:text="${row.label}">Red / Black</td>
-                <td th:text="${row.payout}">1:1</td>
+                <td th:text="${row.covers}">The 18 red or 18 black pockets. Zero loses.</td>
+                <td class="roulette-payouts-pays" th:text="${row.payout}">1:1</td>
             </tr>
             </tbody>
         </table>
-        <p class="muted">European single-zero wheel. The green 0 loses every outside bet, giving the
-            house its standard 2.7% edge. Long-run RTP ≈ 97.3%.</p>
+        <p class="muted">European single-zero wheel. The green 0 loses every outside bet (red/black,
+            odd/even, low/high), giving the house its standard 2.7% edge. Long-run RTP ≈ 97.3%.</p>
     </section>
 </main>
 

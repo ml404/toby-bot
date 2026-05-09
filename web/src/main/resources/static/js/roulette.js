@@ -1,3 +1,18 @@
+// Toggle every bet chip plus the straight-number picker in lockstep so
+// neither can be re-touched mid-spin. Hoisted out of the IIFE so a jest
+// test can drive it without booting the whole page; the IIFE wires it
+// into startSpinAnimation/stopSpinAnimation.
+function setBetInputsDisabled(disabled, fieldsetEl, straightInputEl) {
+    if (!fieldsetEl) return;
+    var chips = fieldsetEl.querySelectorAll('.roulette-chip');
+    chips.forEach(function (c) {
+        c.disabled = disabled;
+        if (disabled) c.setAttribute('aria-disabled', 'true');
+        else c.removeAttribute('aria-disabled');
+    });
+    if (straightInputEl) straightInputEl.disabled = disabled;
+}
+
 // Pure-DOM render for a /spin response. Hoisted out of the IIFE so a
 // future jest test can drive it without booting the whole page (mirrors
 // renderSlotsResult). The IIFE below calls it with the live result element.
@@ -85,6 +100,10 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
         wheel.classList.remove('settling');
         spinStartedAt = performance.now();
         cancelAllTimers();
+        // Lock every bet input until the wheel actually lands. casino-game.js
+        // already disables the primary spin button while busy, but the chip
+        // radiogroup + straight-number picker would otherwise stay live.
+        setBetInputsDisabled(true, fieldset, straightInput);
 
         if (REDUCED_MOTION) {
             // Skip the live animation; we'll snap straight to the settle
@@ -119,7 +138,10 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
 
         if (!body || typeof body.landed !== 'number') {
             // Network / error path — leave the wheel where it is and skip
-            // the settle. The toast surfaces the error to the player.
+            // the settle. The toast surfaces the error to the player. Unlock
+            // the bet inputs immediately so the player can retry without
+            // re-rolling the page.
+            setBetInputsDisabled(false, fieldset, straightInput);
             return;
         }
 
@@ -146,10 +168,12 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
 
         rotation = settleDeg;
         if (REDUCED_MOTION) {
-            // Snap to the final angle without a transition.
+            // Snap to the final angle without a transition; unlock straight
+            // away since there's no settle to wait through.
             wheel.style.transform = 'rotate(' + settleDeg + 'deg)';
             paintLanded(body);
             playOutcomeCues(body);
+            setBetInputsDisabled(false, fieldset, straightInput);
             return;
         }
 
@@ -164,11 +188,13 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
         // the cadence audibly slows as the ball approaches its pocket.
         scheduleSettleTicks(SETTLE_MS, 14);
         // Finish: clean up the transition class, paint the last-landed
-        // pill, and hand off to the win/lose cue.
+        // pill, hand off to the win/lose cue, and unlock the bet inputs
+        // so the player can pick a new bet for the next spin.
         var finishId = setTimeout(function () {
             wheel.classList.remove('settling');
             paintLanded(body);
             playOutcomeCues(body);
+            setBetInputsDisabled(false, fieldset, straightInput);
         }, SETTLE_MS + 30);
         settleTimeoutIds.push(finishId);
     }
@@ -227,6 +253,10 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
     }
 
     function selectChip(chip) {
+        // Defence in depth: even though disabled buttons don't fire `click`
+        // by default, a programmatic click or a keydown firing immediately
+        // before the disabled flag flips could still slip through.
+        if (chip.disabled) return;
         var chips = fieldset.querySelectorAll('.roulette-chip');
         chips.forEach(function (c) { c.setAttribute('aria-checked', 'false'); });
         chip.setAttribute('aria-checked', 'true');
@@ -379,5 +409,5 @@ function renderRouletteResult(resultEl, body, flashTargetEl) {
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { renderRouletteResult };
+    module.exports = { renderRouletteResult, setBetInputsDisabled };
 }
