@@ -203,8 +203,56 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.LOTTERY_DAILY_MODE -> setLotteryDailyMode(
                     event, optionMapping, deleteDelay
                 )
+                ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS -> setRangedIntConfig(
+                    event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS,
+                    gameLabel = "Daily lottery", label = "minimum distinct buyers", range = 1..50
+                )
+                ConfigDto.Configurations.LOTTERY_CHANNEL -> setLotteryChannel(
+                    event, optionMapping, deleteDelay
+                )
             }
         }
+    }
+
+    /**
+     * Validate + persist the daily-lottery announce channel id. Accepts
+     * a numeric channel id (or 0 / empty to clear and fall back through
+     * LEADERBOARD_CHANNEL → systemChannel). Rejects ids that don't
+     * resolve to a text channel in the current guild — admins can't
+     * usefully target someone else's channel.
+     */
+    private fun setLotteryChannel(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+    ) {
+        val raw = optionMapping.asString.trim()
+        val guild = event.guild ?: return
+        val resolved: String = if (raw.isEmpty() || raw == "0") {
+            ""
+        } else {
+            val id = raw.toLongOrNull() ?: run {
+                event.hook.sendMessage("Channel id must be numeric (or empty / 0 to clear).")
+                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                return
+            }
+            guild.getTextChannelById(id) ?: run {
+                event.hook.sendMessage("No text channel with id $id exists in this server.")
+                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                return
+            }
+            id.toString()
+        }
+        configService.upsertConfig(
+            ConfigDto.Configurations.LOTTERY_CHANNEL.configValue, resolved, guild.id
+        )
+        val msg = if (resolved.isEmpty()) {
+            "Daily lottery announce channel cleared. Falling back to LEADERBOARD_CHANNEL → system channel."
+        } else {
+            "Daily lottery announcements will post to <#$resolved>."
+        }
+        event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     /**

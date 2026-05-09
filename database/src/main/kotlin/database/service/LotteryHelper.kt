@@ -65,6 +65,15 @@ object LotteryHelper {
     const val WEIGHTED_DAILY_WINNER_COUNT: Int = 3
 
     /**
+     * Minimum *distinct* buyers required for a daily draw to pay out.
+     * Default 2: prevents a single engaged user sweeping the seeded
+     * pool when nobody else plays. 1 disables the safeguard (the draw
+     * pays out at any participation level). Range [1, 50].
+     */
+    const val DEFAULT_DAILY_MIN_BUYERS: Int = 2
+    const val MAX_DAILY_MIN_BUYERS: Int = 50
+
+    /**
      * Tier prize percentages for a match-numbers draw. Order: 5/5, 4/5,
      * 3/5, 2/5. Sum = 100; un-won tier shares roll back into the
      * per-guild jackpot pool via the remainder-handling in
@@ -131,5 +140,33 @@ object LotteryHelper {
             MODE_NUMBER_MATCH, MODE_WEIGHTED -> raw
             else -> DEFAULT_DAILY_MODE
         }
+    }
+
+    /**
+     * Live distinct-buyer threshold below which a daily draw cancels +
+     * refunds rather than paying out. Default [DEFAULT_DAILY_MIN_BUYERS],
+     * clamped to `[1, MAX_DAILY_MIN_BUYERS]` so an admin can't accidentally
+     * disable the safeguard with a 0 or negative value.
+     */
+    fun dailyMinBuyers(configService: ConfigService, guildId: Long): Int {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS.configValue,
+            guildId.toString()
+        )
+        val raw = cfg?.value?.toIntOrNull() ?: return DEFAULT_DAILY_MIN_BUYERS
+        return raw.coerceIn(1, MAX_DAILY_MIN_BUYERS)
+    }
+
+    /**
+     * Live announce-channel id for the daily lottery. Returns null when
+     * unset / unparseable so the caller can fall back through
+     * `LEADERBOARD_CHANNEL` then `guild.systemChannel`.
+     */
+    fun lotteryChannelId(configService: ConfigService, guildId: Long): Long? {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_CHANNEL.configValue,
+            guildId.toString()
+        )
+        return cfg?.value?.trim()?.takeIf { it.isNotEmpty() }?.toLongOrNull()
     }
 }

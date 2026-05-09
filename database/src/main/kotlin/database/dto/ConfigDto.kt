@@ -229,7 +229,22 @@ class ConfigDto(
         //                    every draw guarantees a winner, predictable
         //                    drain regardless of ticket volume.
         // Defaults to "NUMBER_MATCH" so existing guilds aren't disrupted.
-        LOTTERY_DAILY_MODE("LOTTERY_DAILY_MODE");
+        LOTTERY_DAILY_MODE("LOTTERY_DAILY_MODE"),
+
+        // Whole-number minimum *distinct* buyers required for the daily
+        // draw to actually pay out. Below this count, the draw cancels:
+        // every buyer is refunded and the seed returns to the jackpot
+        // pool. Default 2 — prevents a single user sweeping the seeded
+        // pool when they're the only one who engaged. Range [1, 50];
+        // 1 disables the safeguard (matches pre-PR behaviour).
+        LOTTERY_DAILY_MIN_BUYERS("LOTTERY_DAILY_MIN_BUYERS"),
+
+        // Discord text-channel id where the daily lottery announcer
+        // posts the close+open summary (and pings winners). Optional —
+        // when blank/unset the announcer falls back to LEADERBOARD_CHANNEL,
+        // then the guild's system channel. Resolution mirrors the
+        // monthly leaderboard job's pattern.
+        LOTTERY_CHANNEL("LOTTERY_CHANNEL");
     }
 
     override fun toString(): String {

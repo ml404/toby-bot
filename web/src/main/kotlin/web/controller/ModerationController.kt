@@ -240,6 +240,9 @@ class ModerationController(
                     ok = false, error = result.error,
                     drewPrior = result.drewPrior, priorTotalPaid = result.priorTotalPaid,
                     priorRolledBack = result.priorRolledBack, priorDrawn = result.priorDrawn,
+                    priorBelowMinBuyers = result.priorBelowMinBuyers,
+                    priorBuyersHave = result.priorBuyersHave,
+                    priorBuyersNeed = result.priorBuyersNeed,
                     openedNew = result.openedNew, newSeeded = result.newSeeded,
                 )
             )
@@ -249,6 +252,9 @@ class ModerationController(
                     ok = true, error = null,
                     drewPrior = result.drewPrior, priorTotalPaid = result.priorTotalPaid,
                     priorRolledBack = result.priorRolledBack, priorDrawn = result.priorDrawn,
+                    priorBelowMinBuyers = result.priorBelowMinBuyers,
+                    priorBuyersHave = result.priorBuyersHave,
+                    priorBuyersNeed = result.priorBuyersNeed,
                     openedNew = result.openedNew, newSeeded = result.newSeeded,
                 )
             )
@@ -316,6 +322,9 @@ data class ForceDrawLotteryResponse(
     val priorTotalPaid: Long = 0L,
     val priorRolledBack: Long = 0L,
     val priorDrawn: List<Int> = emptyList(),
+    val priorBelowMinBuyers: Boolean = false,
+    val priorBuyersHave: Int = 0,
+    val priorBuyersNeed: Int = 0,
     val openedNew: Boolean = false,
     val newSeeded: Long = 0L,
 )

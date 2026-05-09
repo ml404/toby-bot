@@ -323,6 +323,9 @@ class ModerationWebService(
         val priorTotalPaid: Long,
         val priorRolledBack: Long,
         val priorDrawn: List<Int>,
+        val priorBelowMinBuyers: Boolean = false,
+        val priorBuyersHave: Int = 0,
+        val priorBuyersNeed: Int = 0,
         val openedNew: Boolean,
         val newSeeded: Long,
     )
@@ -337,10 +340,18 @@ class ModerationWebService(
         }
         val mode = LotteryHelper.dailyMode(configService, guildId)
         // Step 1: close open daily if present (mode-dispatched).
+        // Note: this admin-only path doesn't post the channel announcement
+        // (the announcer lives in the discord-bot module which the web
+        // module doesn't depend on; see LotteryDailyJob for the announce
+        // wiring). Force-draw is admin debug / recovery; the response
+        // payload + toast are sufficient feedback.
         var drewPrior = false
         var priorTotalPaid = 0L
         var priorRolledBack = 0L
         var priorDrawn: List<Int> = emptyList()
+        var priorBelowMinBuyers = false
+        var priorBuyersHave = 0
+        var priorBuyersNeed = 0
         if (mode == LotteryHelper.MODE_WEIGHTED) {
             when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
                 is JackpotLotteryService.DrawOutcome.Ok -> {
@@ -351,6 +362,13 @@ class ModerationWebService(
                 JackpotLotteryService.DrawOutcome.NoTickets -> {
                     jackpotLotteryService.cancelLottery(guildId)
                     drewPrior = true
+                }
+                is JackpotLotteryService.DrawOutcome.BelowMinBuyers -> {
+                    jackpotLotteryService.cancelLottery(guildId)
+                    drewPrior = true
+                    priorBelowMinBuyers = true
+                    priorBuyersHave = drawResult.have
+                    priorBuyersNeed = drawResult.need
                 }
                 JackpotLotteryService.DrawOutcome.NoOpenLottery -> Unit
             }
@@ -365,6 +383,13 @@ class ModerationWebService(
                 JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
                     jackpotLotteryService.cancelMatchLottery(guildId)
                     drewPrior = true
+                }
+                is JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers -> {
+                    jackpotLotteryService.cancelMatchLottery(guildId)
+                    drewPrior = true
+                    priorBelowMinBuyers = true
+                    priorBuyersHave = drawResult.have
+                    priorBuyersNeed = drawResult.need
                 }
                 JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> Unit
             }
@@ -398,6 +423,9 @@ class ModerationWebService(
                     error = null,
                     drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
                     priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    priorBelowMinBuyers = priorBelowMinBuyers,
+                    priorBuyersHave = priorBuyersHave,
+                    priorBuyersNeed = priorBuyersNeed,
                     openedNew = true, newSeeded = open.seeded,
                 )
             }
@@ -406,6 +434,9 @@ class ModerationWebService(
                     error = "A daily lottery is already open — close it first.",
                     drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
                     priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    priorBelowMinBuyers = priorBelowMinBuyers,
+                    priorBuyersHave = priorBuyersHave,
+                    priorBuyersNeed = priorBuyersNeed,
                     openedNew = false, newSeeded = 0L,
                 )
             JackpotLotteryService.OpenOutcome.EmptyPool ->
@@ -413,6 +444,9 @@ class ModerationWebService(
                     error = null,
                     drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
                     priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    priorBelowMinBuyers = priorBelowMinBuyers,
+                    priorBuyersHave = priorBuyersHave,
+                    priorBuyersNeed = priorBuyersNeed,
                     openedNew = false, newSeeded = 0L,
                 )
             is JackpotLotteryService.OpenOutcome.InvalidParams ->
@@ -420,6 +454,9 @@ class ModerationWebService(
                     error = open.reason,
                     drewPrior = drewPrior, priorTotalPaid = priorTotalPaid,
                     priorRolledBack = priorRolledBack, priorDrawn = priorDrawn,
+                    priorBelowMinBuyers = priorBelowMinBuyers,
+                    priorBuyersHave = priorBuyersHave,
+                    priorBuyersNeed = priorBuyersNeed,
                     openedNew = false, newSeeded = 0L,
                 )
         }
@@ -667,6 +704,26 @@ class ModerationWebService(
                     return "Value must be NUMBER_MATCH or WEIGHTED."
                 }
                 v
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (1-50; default 2)."
+                if (n !in 1..50) return "Value must be between 1 and 50."
+                n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_CHANNEL -> {
+                val v = rawValue.trim()
+                if (v.isEmpty()) {
+                    // Empty value clears the override and falls back to
+                    // LEADERBOARD_CHANNEL → systemChannel at runtime.
+                    ""
+                } else {
+                    val id = v.toLongOrNull()
+                        ?: return "Channel id must be numeric."
+                    val channel = guild.getTextChannelById(id)
+                        ?: return "No text channel with that id exists in this server."
+                    channel.id
+                }
             }
         }
 

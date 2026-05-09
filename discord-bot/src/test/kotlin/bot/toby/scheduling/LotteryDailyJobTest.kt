@@ -23,6 +23,7 @@ class LotteryDailyJobTest {
     private lateinit var configService: ConfigService
     private lateinit var lotteryDailyService: LotteryDailyService
     private lateinit var jackpotLotteryService: JackpotLotteryService
+    private lateinit var lotteryAnnouncer: LotteryAnnouncer
     private lateinit var guild: Guild
     private lateinit var job: LotteryDailyJob
 
@@ -36,6 +37,7 @@ class LotteryDailyJobTest {
         configService = mockk(relaxed = true)
         lotteryDailyService = mockk(relaxed = true)
         jackpotLotteryService = mockk(relaxed = true)
+        lotteryAnnouncer = mockk(relaxed = true)
         guild = mockk(relaxed = true)
 
         val cache: SnowflakeCacheView<Guild> = mockk(relaxed = true)
@@ -44,7 +46,10 @@ class LotteryDailyJobTest {
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
 
-        job = LotteryDailyJob(jda, configService, lotteryDailyService, jackpotLotteryService, clock)
+        job = LotteryDailyJob(
+            jda, configService, lotteryDailyService, jackpotLotteryService,
+            lotteryAnnouncer, clock,
+        )
     }
 
     private fun stubEnabled(enabled: Boolean) {
@@ -270,5 +275,119 @@ class LotteryDailyJobTest {
 
         verify(exactly = 1) { jackpotLotteryService.openMatchLottery(guildId, any(), any(), any()) }
         verify(exactly = 0) { jackpotLotteryService.openLottery(any(), any(), any(), any(), any()) }
+    }
+
+    // ===================================================================
+    // Announcer wiring + BelowMinBuyers path
+    // ===================================================================
+
+    @Test
+    fun `runDaily calls announcer once after a successful WEIGHTED cycle`() {
+        stubEnabled(true)
+        stubMode("WEIGHTED")
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.drawLottery(guildId) } returns
+            JackpotLotteryService.DrawOutcome.Ok(
+                payouts = listOf(
+                    JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 2, amount = 500L),
+                ),
+                totalPaid = 500L, drained = 1_000L,
+            )
+        every { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId, poolAmount = 50L),
+                seeded = 50L,
+            )
+
+        job.runDaily()
+
+        verify(exactly = 1) {
+            lotteryAnnouncer.announceCycle(
+                guild,
+                "WEIGHTED",
+                any<LotteryAnnouncer.PriorOutcome.WeightedDrawn>(),
+                any<LotteryAnnouncer.OpenSummary.Ok>(),
+            )
+        }
+    }
+
+    @Test
+    fun `runDaily handles WEIGHTED BelowMinBuyers — cancels, refunds, announces, marks ran`() {
+        stubEnabled(true)
+        stubMode("WEIGHTED")
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.drawLottery(guildId) } returns
+            JackpotLotteryService.DrawOutcome.BelowMinBuyers(have = 1, need = 2)
+        every { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId, poolAmount = 50L),
+                seeded = 50L,
+            )
+
+        job.runDaily()
+
+        // Refund path called.
+        verify(exactly = 1) { jackpotLotteryService.cancelLottery(guildId) }
+        // Announcer called with BelowMinBuyers prior.
+        verify(exactly = 1) {
+            lotteryAnnouncer.announceCycle(
+                guild,
+                "WEIGHTED",
+                any<LotteryAnnouncer.PriorOutcome.BelowMinBuyers>(),
+                any<LotteryAnnouncer.OpenSummary.Ok>(),
+            )
+        }
+        // Day still marked ran — the gate firing isn't a config error,
+        // just low engagement.
+        verify(exactly = 1) { lotteryDailyService.markRan(guildId, today) }
+    }
+
+    @Test
+    fun `runDaily handles NUMBER_MATCH BelowMinBuyers same way`() {
+        stubEnabled(true)
+        // Default mode is NUMBER_MATCH.
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenMatch(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+        )
+        every { jackpotLotteryService.drawMatchLottery(guildId) } returns
+            JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers(have = 1, need = 3)
+        every { jackpotLotteryService.openMatchLottery(guildId, any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId, poolAmount = 0L), seeded = 0L,
+            )
+
+        job.runDaily()
+
+        verify(exactly = 1) { jackpotLotteryService.cancelMatchLottery(guildId) }
+        verify(exactly = 1) {
+            lotteryAnnouncer.announceCycle(
+                guild,
+                "NUMBER_MATCH",
+                any<LotteryAnnouncer.PriorOutcome.BelowMinBuyers>(),
+                any<LotteryAnnouncer.OpenSummary.Ok>(),
+            )
+        }
+    }
+
+    @Test
+    fun `runDaily skips announcer entirely when daily lottery is disabled`() {
+        stubEnabled(false)
+
+        job.runDaily()
+
+        verify(exactly = 0) { lotteryAnnouncer.announceCycle(any(), any(), any(), any()) }
     }
 }
