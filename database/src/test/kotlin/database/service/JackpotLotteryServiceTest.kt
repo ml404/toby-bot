@@ -39,6 +39,20 @@ class JackpotLotteryServiceTest {
                 guildId.toString()
             )
         } returns null
+        // Default: disable the participation gate (min buyers = 1) so the
+        // bulk of the existing tests stay focused on payout maths. The
+        // BelowMinBuyers test cases below opt in by stubbing a higher
+        // threshold per-test.
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS.configValue,
+            value = "1",
+            guildId = guildId.toString()
+        )
         service = JackpotLotteryService(
             lotteryPersistence,
             jackpotService,
@@ -561,5 +575,120 @@ class JackpotLotteryServiceTest {
             JackpotLotteryService.DrawMatchOutcome.NoTickets,
             service.drawMatchLottery(guildId)
         )
+    }
+
+    // ===================================================================
+    // BelowMinBuyers participation gate — both modes
+    // ===================================================================
+
+    private fun stubMinBuyers(value: Int) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_DAILY_MIN_BUYERS.configValue,
+            value = value.toString(),
+            guildId = guildId.toString()
+        )
+    }
+
+    @Test
+    fun `drawLottery returns BelowMinBuyers when distinct buyers below threshold`() {
+        stubMinBuyers(2)
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, poolAmount = 1_000L,
+            status = JackpotLotteryDto.STATUS_OPEN, mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        // Single buyer with multiple tickets — still below distinct-buyer
+        // threshold, so the gate fires regardless of ticket count.
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 5, spent = 250L),
+        )
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.BelowMinBuyers)
+        r as JackpotLotteryService.DrawOutcome.BelowMinBuyers
+        assertEquals(1, r.have)
+        assertEquals(2, r.need)
+        // No payouts written, pool unchanged — caller is expected to
+        // cancel + refund.
+        verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `drawLottery proceeds normally at threshold`() {
+        stubMinBuyers(2)
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, poolAmount = 1_000L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 1L, ticketCount = 3, spent = 150L),
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 2L, ticketCount = 2, spent = 100L),
+        )
+        val users = (1L..2L).associate { id ->
+            id to UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+        users.forEach { (id, u) ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns u
+        }
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.Ok, "2 distinct buyers passes the gate")
+    }
+
+    @Test
+    fun `drawLottery threshold of 1 disables the gate (matches pre-PR behaviour)`() {
+        stubMinBuyers(1)
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, poolAmount = 1_000L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 1, spent = 50L),
+        )
+        val user = UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 0L }
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns user
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.Ok, "threshold 1 lets a single buyer through")
+    }
+
+    @Test
+    fun `drawMatchLottery returns BelowMinBuyers when distinct buyers below threshold`() {
+        stubMinBuyers(2)
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, poolAmount = 1_000L,
+            status = JackpotLotteryDto.STATUS_OPEN, mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+            pickCount = 5, numberMax = 49,
+        )
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 7L, ticketCount = 1, spent = 50L,
+                pickedNumbers = "1,2,3,4,5",
+            ),
+        )
+
+        val r = service.drawMatchLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers)
+        r as JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers
+        assertEquals(1, r.have)
+        assertEquals(2, r.need)
+        // No drawn numbers persisted, no payouts — caller cancels + refunds.
+        verify(exactly = 0) { userService.updateUser(any()) }
     }
 }

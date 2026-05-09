@@ -74,6 +74,16 @@ class JackpotLotteryService(
         ) : DrawOutcome
         data object NoOpenLottery : DrawOutcome
         data object NoTickets : DrawOutcome
+
+        /**
+         * Distinct buyer count is below the per-guild
+         * `LOTTERY_DAILY_MIN_BUYERS` threshold. The caller should treat
+         * this the same as [NoTickets] — call [cancelLottery] to refund
+         * all buyers and return the seed to the jackpot pool. Distinct
+         * variant from [NoTickets] so the announcer can render the
+         * "1 buyer (need 2)" copy instead of "no tickets bought".
+         */
+        data class BelowMinBuyers(val have: Int, val need: Int) : DrawOutcome
     }
 
     sealed interface CancelOutcome {
@@ -112,6 +122,9 @@ class JackpotLotteryService(
         ) : DrawMatchOutcome
         data object NoOpenLottery : DrawMatchOutcome
         data object NoTickets : DrawMatchOutcome
+
+        /** Same semantics as [DrawOutcome.BelowMinBuyers]. */
+        data class BelowMinBuyers(val have: Int, val need: Int) : DrawMatchOutcome
     }
 
     /**
@@ -216,6 +229,17 @@ class JackpotLotteryService(
         val lotteryId = lottery.id ?: error("Open lottery has no id")
         val tickets = lotteryPersistence.ticketsByLottery(lotteryId)
         if (tickets.isEmpty() || tickets.sumOf { it.ticketCount.toLong() } == 0L) return DrawOutcome.NoTickets
+
+        // Participation safeguard: with one buyer, the top-3 weighted
+        // draw still pays them 50% of the seeded pool — effectively a
+        // free lift from the jackpot. Block payout below the configured
+        // distinct-buyer threshold so the caller can cancel + refund
+        // instead.
+        val minBuyers = LotteryHelper.dailyMinBuyers(configService, guildId)
+        val distinctBuyers = tickets.map { it.discordId }.toSet().size
+        if (distinctBuyers < minBuyers) {
+            return DrawOutcome.BelowMinBuyers(have = distinctBuyers, need = minBuyers)
+        }
 
         val winnerSlots = lottery.winnerCount.coerceAtLeast(1)
         val winners = drawWinners(tickets, winnerSlots, random)
@@ -428,6 +452,16 @@ class JackpotLotteryService(
         val lotteryId = lottery.id ?: error("Open lottery has no id")
         val tickets = lotteryPersistence.ticketsByLottery(lotteryId)
         if (tickets.isEmpty()) return DrawMatchOutcome.NoTickets
+
+        // Participation safeguard. NUMBER_MATCH is somewhat self-protecting
+        // at low counts (random rarely favours a solo buyer), but still
+        // enforce the threshold uniformly so the moderation surface
+        // means the same thing in both modes.
+        val minBuyers = LotteryHelper.dailyMinBuyers(configService, guildId)
+        val distinctBuyers = tickets.map { it.discordId }.toSet().size
+        if (distinctBuyers < minBuyers) {
+            return DrawMatchOutcome.BelowMinBuyers(have = distinctBuyers, need = minBuyers)
+        }
 
         val drawn = drawNumbers(lottery.numberMax, lottery.pickCount, random)
         val drawnSet = drawn.toSet()

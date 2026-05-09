@@ -364,8 +364,14 @@
                 if (r && r.ok) {
                     let msg = 'Lottery cycle ran.';
                     if (r.drewPrior) {
-                        msg += ' Prior draw paid ' + (r.priorTotalPaid ?? 0) +
-                            ' credits (' + (r.priorRolledBack ?? 0) + ' rolled back to jackpot).';
+                        if (r.priorBelowMinBuyers) {
+                            msg += ' Prior draw cancelled — only ' + (r.priorBuyersHave ?? 0) +
+                                ' distinct buyer(s), need ' + (r.priorBuyersNeed ?? 0) +
+                                '. Refunded buyer(s); seed returned to jackpot.';
+                        } else {
+                            msg += ' Prior draw paid ' + (r.priorTotalPaid ?? 0) +
+                                ' credits (' + (r.priorRolledBack ?? 0) + ' rolled back to jackpot).';
+                        }
                     }
                     if (r.openedNew) {
                         msg += ' New draw seeded with ' + (r.newSeeded ?? 0) + ' credits.';

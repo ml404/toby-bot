@@ -939,6 +939,35 @@
                         </span>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_MIN_BUYERS">
+                        <label>
+                            Minimum distinct buyers per draw (default 2)
+                            <span class="config-hint">
+                                Below this count the daily cancels and refunds — prevents a
+                                single user sweeping the seeded pool. 1 disables the safeguard.
+                            </span>
+                        </label>
+                        <input type="number" min="1" max="50"
+                               th:value="${overview.config['LOTTERY_DAILY_MIN_BUYERS']}"
+                               placeholder="2"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_CHANNEL">
+                        <label>
+                            Announce channel id (optional)
+                            <span class="config-hint">
+                                Channel id for the daily close+open ping. Falls back to
+                                LEADERBOARD_CHANNEL, then the guild's system channel.
+                                Leave blank to use the fallback chain.
+                            </span>
+                        </label>
+                        <input type="text"
+                               th:value="${overview.config['LOTTERY_CHANNEL']}"
+                               placeholder="(channel id)"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
                 </div>
             </details>
 

@@ -22,19 +22,15 @@ import java.time.ZoneOffset
  * For each guild with `LOTTERY_DAILY_ENABLED=true`, dispatches on
  * `LOTTERY_DAILY_MODE`:
  *
- *   - **NUMBER_MATCH** (default): Pick 5 of 1-49. Closes yesterday's
- *     draw via [JackpotLotteryService.drawMatchLottery] (or cancels if
- *     no tickets), opens a fresh one via
- *     [JackpotLotteryService.openMatchLottery]. Best for high-volume
- *     servers — match tiers (5/4/3/2 → 60/25/10/5%) need many tickets
- *     per draw to hit reliably.
+ *   - **NUMBER_MATCH** (default): Pick 5 of 1-49.
+ *   - **WEIGHTED**: top-3 weighted draw, 50/30/20 % of pool.
  *
- *   - **WEIGHTED**: top-3 weighted draw, 50/30/20 % of pool. Closes
- *     yesterday's draw via [JackpotLotteryService.drawLottery] (or
- *     cancels if no tickets), opens a fresh one via
- *     [JackpotLotteryService.openLottery] with `winnerCount=3`. Best
- *     for low-volume servers — a winner is guaranteed every draw
- *     regardless of ticket count, so the pool drains predictably.
+ * Both modes share the same outer flow: close yesterday's draw (or
+ * cancel + refund if there were no tickets, or distinct buyers were
+ * below the [LotteryHelper.dailyMinBuyers] threshold), then open a
+ * fresh one seeded from the jackpot pool. After the cycle, hand the
+ * outcome to [LotteryAnnouncer] so winners get pinged in the configured
+ * announce channel.
  *
  * Idempotent via composite-key ledger ([LotteryDailyService]) — a
  * mid-cron restart skips guilds whose ledger already records today.
@@ -47,6 +43,7 @@ class LotteryDailyJob @Autowired constructor(
     private val configService: ConfigService,
     private val lotteryDailyService: LotteryDailyService,
     private val jackpotLotteryService: JackpotLotteryService,
+    private val lotteryAnnouncer: LotteryAnnouncer,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -65,10 +62,9 @@ class LotteryDailyJob @Autowired constructor(
     }
 
     /**
-     * Roll the daily draw for a single guild. Public/internal for the
-     * moderation tab's "Force draw now" button — the web service
-     * delegates here so the same close→open→mark-ran flow drives both
-     * scheduled and manual triggers.
+     * Roll the daily draw for a single guild. Public for the moderation
+     * tab's "Force draw now" button — both call sites share the same
+     * close→open→announce→mark-ran flow.
      */
     fun rollGuild(guild: Guild, today: LocalDate) {
         val guildId = guild.idLong
@@ -82,41 +78,68 @@ class LotteryDailyJob @Autowired constructor(
         }
 
         val mode = LotteryHelper.dailyMode(configService, guildId)
-        val opened = when (mode) {
-            LotteryHelper.MODE_WEIGHTED -> rollWeighted(guildId)
-            else -> rollNumberMatch(guildId)  // MODE_NUMBER_MATCH (default)
+        val result = when (mode) {
+            LotteryHelper.MODE_WEIGHTED -> cycleWeighted(guildId)
+            else -> cycleNumberMatch(guildId)  // MODE_NUMBER_MATCH (default)
         }
 
-        if (opened) {
+        // Always announce — even Skipped opens get a "no draw today"
+        // message so the channel reflects what actually happened.
+        lotteryAnnouncer.announceCycle(guild, mode, result.prior, result.open)
+
+        if (result.markRan) {
             lotteryDailyService.markRan(guildId, today)
         }
-        // If `opened` is false the open call returned InvalidParams —
+        // If markRan is false the open call returned InvalidParams —
         // don't mark ran so the next cron tick retries once admin
         // fixes the offending config.
     }
 
     /**
      * NUMBER_MATCH cycle: close (or cancel) yesterday's match lottery,
-     * open a fresh one. Returns true if the open call succeeded (or
-     * AlreadyOpen — race with another worker is treated as success).
+     * open a fresh one. Returns the prior + open outcomes so the
+     * announcer can render a combined message.
      */
-    private fun rollNumberMatch(guildId: Long): Boolean {
-        val openMatch = jackpotLotteryService.getOpenMatch(guildId)
-        if (openMatch?.status == JackpotLotteryDto.STATUS_OPEN) {
-            when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
-                is JackpotLotteryService.DrawMatchOutcome.Ok ->
-                    logger.info {
-                        "Daily NUMBER_MATCH drew for guild $guildId: drawn=${drawResult.drawnNumbers} " +
-                            "totalPaid=${drawResult.totalPaid} rolledBack=${drawResult.rolledBackToJackpot}"
-                    }
-                JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
-                    logger.info { "Daily NUMBER_MATCH for guild $guildId had no tickets; cancelling and refunding seed." }
-                    jackpotLotteryService.cancelMatchLottery(guildId)
-                }
-                JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> Unit
-            }
-        }
+    private fun cycleNumberMatch(guildId: Long): CycleResult {
+        val prior = closePriorMatch(guildId)
+        val (open, markRan) = openMatch(guildId)
+        return CycleResult(prior, open, markRan)
+    }
 
+    private fun closePriorMatch(guildId: Long): LotteryAnnouncer.PriorOutcome? {
+        val openMatch = jackpotLotteryService.getOpenMatch(guildId)
+        if (openMatch?.status != JackpotLotteryDto.STATUS_OPEN) return null
+        return when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
+            is JackpotLotteryService.DrawMatchOutcome.Ok -> {
+                logger.info {
+                    "Daily NUMBER_MATCH drew for guild $guildId: drawn=${drawResult.drawnNumbers} " +
+                        "totalPaid=${drawResult.totalPaid} rolledBack=${drawResult.rolledBackToJackpot}"
+                }
+                LotteryAnnouncer.PriorOutcome.MatchDrawn(
+                    drawnNumbers = drawResult.drawnNumbers,
+                    tierPayouts = drawResult.tierPayouts,
+                    totalPaid = drawResult.totalPaid,
+                    rolledBack = drawResult.rolledBackToJackpot,
+                )
+            }
+            JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
+                logger.info { "Daily NUMBER_MATCH for guild $guildId had no tickets; cancelling and refunding seed." }
+                jackpotLotteryService.cancelMatchLottery(guildId)
+                LotteryAnnouncer.PriorOutcome.NoTickets
+            }
+            is JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers -> {
+                logger.info {
+                    "Daily NUMBER_MATCH for guild $guildId below buyer threshold " +
+                        "(${drawResult.have}/${drawResult.need}); cancelling and refunding."
+                }
+                jackpotLotteryService.cancelMatchLottery(guildId)
+                LotteryAnnouncer.PriorOutcome.BelowMinBuyers(drawResult.have, drawResult.need)
+            }
+            JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> null
+        }
+    }
+
+    private fun openMatch(guildId: Long): Pair<LotteryAnnouncer.OpenSummary, Boolean> {
         val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
         val seedPct = LotteryHelper.dailySeedPct(configService, guildId)
         return when (val open = jackpotLotteryService.openMatchLottery(
@@ -128,46 +151,70 @@ class LotteryDailyJob @Autowired constructor(
                     "Daily NUMBER_MATCH opened for guild $guildId: ticketPrice=$ticketPrice " +
                         "seeded=${open.seeded} seedPct=$seedPct"
                 }
-                true
+                LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = open.seeded,
+                    ticketPrice = ticketPrice,
+                    poolAmount = open.lottery.poolAmount,
+                ) to true
             }
             JackpotLotteryService.OpenOutcome.AlreadyOpen -> {
                 logger.warn { "Daily NUMBER_MATCH for guild $guildId is already open; skipping reopen." }
-                true
+                LotteryAnnouncer.OpenSummary.Skipped to true
             }
             JackpotLotteryService.OpenOutcome.EmptyPool -> {
                 logger.warn { "Daily NUMBER_MATCH for guild $guildId reported EmptyPool unexpectedly." }
-                true
+                LotteryAnnouncer.OpenSummary.Skipped to true
             }
             is JackpotLotteryService.OpenOutcome.InvalidParams -> {
                 logger.warn { "Daily NUMBER_MATCH for guild $guildId rejected params: ${open.reason}" }
-                false
+                LotteryAnnouncer.OpenSummary.Skipped to false
             }
         }
     }
 
     /**
      * WEIGHTED cycle: close (or cancel) yesterday's weighted lottery,
-     * open a fresh one. Top 3 of N tickets share the pool 50/30/20 —
-     * always pays out at any ticket volume, so this is the right mode
-     * for low-engagement servers.
+     * open a fresh one. Top 3 of N tickets share the pool 50/30/20.
      */
-    private fun rollWeighted(guildId: Long): Boolean {
-        val openWeighted = jackpotLotteryService.getOpenWeighted(guildId)
-        if (openWeighted?.status == JackpotLotteryDto.STATUS_OPEN) {
-            when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
-                is JackpotLotteryService.DrawOutcome.Ok ->
-                    logger.info {
-                        "Daily WEIGHTED drew for guild $guildId: " +
-                            "totalPaid=${drawResult.totalPaid} drained=${drawResult.drained}"
-                    }
-                JackpotLotteryService.DrawOutcome.NoTickets -> {
-                    logger.info { "Daily WEIGHTED for guild $guildId had no tickets; cancelling and refunding seed." }
-                    jackpotLotteryService.cancelLottery(guildId)
-                }
-                JackpotLotteryService.DrawOutcome.NoOpenLottery -> Unit
-            }
-        }
+    private fun cycleWeighted(guildId: Long): CycleResult {
+        val prior = closePriorWeighted(guildId)
+        val (open, markRan) = openWeighted(guildId)
+        return CycleResult(prior, open, markRan)
+    }
 
+    private fun closePriorWeighted(guildId: Long): LotteryAnnouncer.PriorOutcome? {
+        val openWeighted = jackpotLotteryService.getOpenWeighted(guildId)
+        if (openWeighted?.status != JackpotLotteryDto.STATUS_OPEN) return null
+        return when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
+            is JackpotLotteryService.DrawOutcome.Ok -> {
+                logger.info {
+                    "Daily WEIGHTED drew for guild $guildId: " +
+                        "totalPaid=${drawResult.totalPaid} drained=${drawResult.drained}"
+                }
+                LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                    payouts = drawResult.payouts,
+                    totalPaid = drawResult.totalPaid,
+                    drained = drawResult.drained,
+                )
+            }
+            JackpotLotteryService.DrawOutcome.NoTickets -> {
+                logger.info { "Daily WEIGHTED for guild $guildId had no tickets; cancelling and refunding seed." }
+                jackpotLotteryService.cancelLottery(guildId)
+                LotteryAnnouncer.PriorOutcome.NoTickets
+            }
+            is JackpotLotteryService.DrawOutcome.BelowMinBuyers -> {
+                logger.info {
+                    "Daily WEIGHTED for guild $guildId below buyer threshold " +
+                        "(${drawResult.have}/${drawResult.need}); cancelling and refunding."
+                }
+                jackpotLotteryService.cancelLottery(guildId)
+                LotteryAnnouncer.PriorOutcome.BelowMinBuyers(drawResult.have, drawResult.need)
+            }
+            JackpotLotteryService.DrawOutcome.NoOpenLottery -> null
+        }
+    }
+
+    private fun openWeighted(guildId: Long): Pair<LotteryAnnouncer.OpenSummary, Boolean> {
         val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
         val seedPct = LotteryHelper.dailySeedPct(configService, guildId)
         val drainPct = (seedPct.toDouble() / 100.0).coerceIn(0.0, 1.0)
@@ -183,28 +230,38 @@ class LotteryDailyJob @Autowired constructor(
                     "Daily WEIGHTED opened for guild $guildId: ticketPrice=$ticketPrice " +
                         "seeded=${open.seeded} seedPct=$seedPct winners=${LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT}"
                 }
-                true
+                LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = open.seeded,
+                    ticketPrice = ticketPrice,
+                    poolAmount = open.lottery.poolAmount,
+                ) to true
             }
             JackpotLotteryService.OpenOutcome.AlreadyOpen -> {
                 logger.warn { "Daily WEIGHTED for guild $guildId is already open; skipping reopen." }
-                true
+                LotteryAnnouncer.OpenSummary.Skipped to true
             }
             JackpotLotteryService.OpenOutcome.EmptyPool -> {
                 logger.info {
                     "Daily WEIGHTED for guild $guildId skipped — jackpot empty. " +
                         "Admin must seed the pool before the next cycle can open."
                 }
-                // Mark as ran anyway so we don't spam the log; tomorrow
-                // will retry. If the admin wants an immediate retry they
-                // can use the moderation tab's force-draw button.
-                true
+                // Mark as ran anyway so we don't spam logs every minute;
+                // admin can use the moderation tab's force-draw button
+                // for an immediate retry once they fund the pool.
+                LotteryAnnouncer.OpenSummary.Skipped to true
             }
             is JackpotLotteryService.OpenOutcome.InvalidParams -> {
                 logger.warn { "Daily WEIGHTED for guild $guildId rejected params: ${open.reason}" }
-                false
+                LotteryAnnouncer.OpenSummary.Skipped to false
             }
         }
     }
+
+    private data class CycleResult(
+        val prior: LotteryAnnouncer.PriorOutcome?,
+        val open: LotteryAnnouncer.OpenSummary,
+        val markRan: Boolean,
+    )
 
     companion object {
         /** A day. The daily draw opens for 24h and closes at the next tick. */
