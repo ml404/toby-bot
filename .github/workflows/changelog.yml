@@ -1,20 +1,28 @@
 name: Changelog
 
-# Auto-prepend a new entry to web/src/main/resources/changelog.json when a
-# user-facing PR merges into main. Skips PRs labelled `chore`, `docs`,
-# `ci`, `build`, `style`, `dependencies`, or `skip-changelog` — the
-# label workflow auto-applies the conventional-commit prefix label, so
-# `chore: bump deps` (or a Dependabot PR) gets `chore` and silently
-# falls through here.
+# When a user-facing PR merges into main, prepend a new entry to
+# web/src/main/resources/changelog.json on a long-lived `changelog/batch`
+# branch and open (or auto-update) a single PR from that branch into
+# main. Entries accumulate on the same PR until you merge it — one
+# review surface, batched release.
+#
+# Why batch instead of direct-pushing to main: main is branch-protected,
+# so the default GITHUB_TOKEN can't push there. The batch branch is
+# unprotected; entries land cheaply, then a real PR is reviewed/merged
+# weekly (or whenever you choose).
+#
+# Skips PRs labelled `chore`, `docs`, `ci`, `build`, `style`,
+# `dependencies`, or `skip-changelog`. The label workflow auto-applies
+# the conventional-commit prefix label, so `chore: bump deps` (or a
+# Dependabot PR) silently falls through here. The batch PR itself is
+# titled `chore(changelog): …` and labelled `chore` + `skip-changelog`,
+# so merging it doesn't recursively re-trigger this workflow.
 #
 # The emoji is picked from the PR's feature labels (casino, jackpot,
 # lottery, etc. — see .github/labeler.yml) using a priority list. PRs
 # touching multiple feature areas pick the first match. PRs with no
 # feature label fall back to a type-based emoji (✨ feat, 🔨 fix,
 # 🧹 refactor, ⚡ perf) or a plain ✨ default.
-#
-# Pushes the change directly to main with `[skip ci]` so we don't
-# retrigger the gradle build for a docs-only commit.
 
 on:
   pull_request:
@@ -23,7 +31,7 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   changelog:
@@ -33,12 +41,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          # We need history so the push back to main doesn't fail with
-          # "shallow clone" weirdness on conflicting force-push attempts.
+          # Full history so we can rebase the batch branch onto main
+          # cleanly each run (force-push needs the parent chain).
           fetch-depth: 0
-          # Use the default GITHUB_TOKEN for the push. It can write to
-          # the repo but the resulting push doesn't trigger downstream
-          # workflow runs — exactly what we want for a changelog commit.
+          # GITHUB_TOKEN can push to the unprotected `changelog/batch`
+          # branch and open PRs against main. Pushes from this token
+          # also don't trigger downstream workflow runs, so the gradle
+          # build doesn't churn on a docs-only update.
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decide whether to append
@@ -138,35 +147,66 @@ jobs:
             core.setOutput('entry', JSON.stringify(entry));
             core.info(`Will prepend entry: ${JSON.stringify(entry)}`);
 
-      - name: Prepend entry to changelog.json
+      - name: Append entry to batch branch and open/update PR
         if: steps.gate.outputs.skip == 'false'
         env:
           ENTRY: ${{ steps.gate.outputs.entry }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          BATCH_BRANCH="changelog/batch"
           FILE="web/src/main/resources/changelog.json"
-          # Idempotency: if an entry for this PR is already at the top
-          # (re-run of the workflow on the same merged PR), skip.
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          if jq -e --argjson n "$PR_NUMBER" '.[0].prNumber == $n' "$FILE" >/dev/null; then
-            echo "Entry for PR #$PR_NUMBER already at top; nothing to do."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Continue from the existing batch branch only if a PR is
+          # actually open for it. Otherwise (first run, post-merge,
+          # branch-deleted-on-merge, stale state) start fresh from main
+          # so we don't resurrect already-published entries.
+          EXISTING_PR=$(gh pr list --head "$BATCH_BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING_PR" ] && git ls-remote --exit-code --heads origin "$BATCH_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$BATCH_BRANCH":"$BATCH_BRANCH"
+            git checkout "$BATCH_BRANCH"
+            # Keep the batch on top of main so the PR diff is just our
+            # accumulated changelog edits. If the rebase conflicts
+            # (someone hand-edited main's changelog.json), start fresh.
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              git checkout main
+              git branch -D "$BATCH_BRANCH"
+              git checkout -B "$BATCH_BRANCH" origin/main
+            fi
+          else
+            git checkout -B "$BATCH_BRANCH" origin/main
+          fi
+
+          # Idempotency: if this PR is already in changelog.json, no-op.
+          if jq -e --argjson n "$PR_NUMBER" 'any(.[]; .prNumber == $n)' "$FILE" >/dev/null; then
+            echo "Entry for PR #$PR_NUMBER already in changelog; nothing to do."
             exit 0
           fi
+
           tmp=$(mktemp)
           jq --argjson entry "$ENTRY" '[$entry] + .' "$FILE" > "$tmp"
           mv "$tmp" "$FILE"
-          echo "Prepended entry for PR #$PR_NUMBER."
 
-      - name: Commit and push
-        if: steps.gate.outputs.skip == 'false'
-        run: |
-          set -euo pipefail
-          if git diff --quiet web/src/main/resources/changelog.json; then
-            echo "No changes to commit (idempotent re-run)."
-            exit 0
+          git add "$FILE"
+          git commit -m "chore(changelog): add entry for #$PR_NUMBER"
+          # Force-with-lease because we may have rebased onto main.
+          git push --force-with-lease origin "$BATCH_BRANCH"
+
+          # Existing PRs auto-update from the push above; open one if
+          # we just started a fresh batch.
+          if [ -z "$EXISTING_PR" ]; then
+            gh pr create \
+              --base main \
+              --head "$BATCH_BRANCH" \
+              --title "chore(changelog): batch of pending entries" \
+              --body "Auto-collected changelog entries from merged PRs. Merge to publish them; new entries will continue to accumulate on this branch until you do." \
+              --label chore \
+              --label skip-changelog
+          else
+            echo "Auto-updated existing PR #$EXISTING_PR."
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/src/main/resources/changelog.json
-          git commit -m "chore(changelog): add entry for #${{ github.event.pull_request.number }} [skip ci]"
-          git push origin main
