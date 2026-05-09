@@ -1,0 +1,248 @@
+@import url("./casino-table.css");
+
+/* ============================================================ */
+/* Page header                                                   */
+/* ============================================================ */
+
+.lottery-header { margin-bottom: var(--space-5); }
+.lottery-header h1 { margin: var(--space-2) 0; }
+
+.lottery-daily-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    text-align: center;
+}
+.lottery-daily-header h2 { margin: 0; }
+
+.lottery-daily-meta,
+.lottery-weighted-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3) var(--space-5);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.lottery-meta-item {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+}
+
+/* Tabular-nums on the live countdown so the digits don't jiggle. */
+.lottery-countdown-value { font-variant-numeric: tabular-nums; }
+
+/* ============================================================ */
+/* Number picker grid                                            */
+/* ============================================================ */
+
+.lottery-daily { /* casino-felt owns the green-felt frame; layout only here */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    position: relative;
+}
+
+.lottery-pickbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    justify-content: center;
+}
+.lottery-pickcount {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+}
+
+/* 7 columns × ceil(49/7) = 7 rows for the 1-49 grid. The grid auto-
+   wraps with auto-fit if max changes (e.g. 4-of-20 future variant). */
+.lottery-cells {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--space-2);
+    width: 100%;
+    max-width: 460px;
+}
+
+.lottery-cells-readonly {
+    /* Readonly displays use auto-fit so 5 numbers don't span 7 columns. */
+    grid-template-columns: repeat(auto-fit, minmax(48px, 60px));
+    justify-content: center;
+}
+
+.lottery-cell {
+    aspect-ratio: 1 / 1;
+    /* Override casino-card-face's 3rem×4.5rem — the picker needs square
+       cells in a tight grid, not playing-card proportions. */
+    width: auto;
+    height: auto;
+    min-width: 40px;
+    border-radius: 50%;          /* round like a lotto ball */
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s;
+    user-select: none;
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.lottery-cell:hover:not(:disabled):not(.is-drawn) {
+    transform: translateY(-2px);
+}
+.lottery-cell:active:not(:disabled) {
+    transform: translateY(0) scale(0.96);
+}
+.lottery-cell:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Pick states (user side) */
+.lottery-cell.is-picked {
+    background: var(--casino-active-tile-bg);
+    box-shadow: var(--casino-active-glow);
+    color: #1a1a1a;
+}
+
+/* Draw states (winning numbers) */
+.lottery-cell.is-drawn {
+    background: linear-gradient(180deg, #f6dc6c 0%, #d4a017 100%);
+    color: #1a1a1a;
+    cursor: default;
+    box-shadow: 0 0 12px rgba(241, 196, 15, 0.55), var(--casino-card-shadow);
+}
+
+/* Both picked AND drawn — winning match, biggest visual reward */
+.lottery-cell.is-picked.is-matched,
+.lottery-cell.is-matched {
+    background: linear-gradient(180deg, #f6dc6c 0%, #d4a017 100%);
+    box-shadow:
+        0 0 0 3px var(--casino-gold),
+        0 0 22px rgba(241, 196, 15, 0.7);
+    animation: casino-pulse 1.6s ease-in-out infinite;
+}
+
+.lottery-actions {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.lottery-balance {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================ */
+/* Result panel                                                  */
+/* ============================================================ */
+
+.lottery-result-panel {
+    width: 100%;
+    max-width: 460px;
+    text-align: center;
+}
+
+.lottery-result-panel h3 {
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-2);
+}
+
+.lottery-result-summary {
+    margin-top: var(--space-3);
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.lottery-result {
+    min-height: 1.5em;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    margin-top: var(--space-3);
+}
+
+.lottery-result-win,
+.lottery-result-summary.lottery-result-win {
+    color: #57F287;
+}
+
+.lottery-result-lose,
+.lottery-result-summary.lottery-result-lose {
+    color: var(--text-muted);
+}
+
+/* ============================================================ */
+/* Featured weighted-event card                                  */
+/* ============================================================ */
+
+.lottery-weighted {
+    margin-top: var(--space-6);
+    padding: var(--space-5);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+.lottery-weighted h2 { margin-top: 0; }
+
+#lottery-weighted-bet {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin: var(--space-4) 0;
+}
+#lottery-weighted-bet label {
+    color: var(--text-muted);
+}
+#lottery-weighted-bet input {
+    width: 120px;
+}
+
+.lottery-top-holders {
+    list-style: decimal;
+    padding-left: var(--space-5);
+    margin: 0;
+}
+
+/* ============================================================ */
+/* Payout / tier schedule table                                  */
+/* ============================================================ */
+
+.lottery-payouts {
+    margin-top: var(--space-6);
+}
+.lottery-tier-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+.lottery-tier-table th,
+.lottery-tier-table td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+.lottery-tier-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom-width: 2px;
+}
+
+@media (max-width: 480px) {
+    .lottery-cells { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .lottery-cell { min-width: 30px; font-size: 0.9rem; }
+}

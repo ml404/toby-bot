@@ -4,11 +4,22 @@ import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
 
 interface JackpotLotteryPersistence {
-    /** Returns the single OPEN lottery row for [guildId], or null. */
-    fun getOpenByGuild(guildId: Long): JackpotLotteryDto?
+    /**
+     * Returns the OPEN lottery row for [guildId] in [mode], or null.
+     * One OPEN per (guild, mode) is enforced by the V28 partial unique
+     * index, so this returns at most one row.
+     */
+    fun getOpenByGuildAndMode(guildId: Long, mode: String): JackpotLotteryDto?
 
     /** SELECT … FOR UPDATE on the OPEN lottery row. Requires @Transactional. */
-    fun getOpenByGuildForUpdate(guildId: Long): JackpotLotteryDto?
+    fun getOpenByGuildAndModeForUpdate(guildId: Long, mode: String): JackpotLotteryDto?
+
+    /**
+     * Most-recent lottery row for [guildId] in [mode], regardless of
+     * status. Used for the web UI's "latest result" panel — pulls the
+     * last DRAWN row by [openedAt] desc.
+     */
+    fun getLatestByGuildAndMode(guildId: Long, mode: String): JackpotLotteryDto?
 
     fun upsert(lottery: JackpotLotteryDto): JackpotLotteryDto
 

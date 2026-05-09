@@ -10,34 +10,27 @@ import kotlin.math.max
 import kotlin.random.Random
 
 /**
- * Per-guild jackpot-pool lottery events.
+ * Per-guild jackpot-pool lottery events. Two flavours coexist on the
+ * same DB table, distinguished by the row's `mode`:
  *
- * Admins fire one of these to drain a runaway jackpot pool through a
- * ticketed multi-winner draw rather than letting one casino-roll
- * winner sweep the whole thing. Workflow:
+ *   - **TICKET_WEIGHTED** (admin-fired one-shot drain).
+ *     [openLottery] / [buyTickets] / [drawLottery] / [cancelLottery].
+ *     Each ticket is a weight; top-K winners share the pool 50/30/20-style.
  *
- *   1. [openLottery] — admin sets ticket price, duration, winner count
- *      and what fraction of the current pool seeds the prize. The seed
- *      amount is moved out of the per-guild jackpot row and parked on
- *      the lottery row's `pool_amount`.
- *   2. [buyTickets] — players spend credits; each purchase increments
- *      their ticket row and adds the spend to the lottery's prize
- *      `pool_amount` (so the prize grows with engagement).
- *   3. [drawLottery] — admin closes the lottery: weighted draw without
- *      replacement (probability ∝ ticket_count) picks `winner_count`
- *      winners, prize splits 50/30/20-style across them, winners are
- *      credited and recorded against [JackpotService.recordWin] so the
- *      cooldown gate covers both lottery and casino-roll wins.
- *   4. [cancelLottery] — admin cancels: every ticket buyer is refunded
- *      what they spent, the seed `pool_amount` returns to the per-guild
- *      jackpot row, and the lottery is marked CANCELLED.
+ *   - **NUMBER_MATCH** (daily auto-drain — Pick 5 of 1-49).
+ *     [openMatchLottery] / [buyMatchTicket] / [drawMatchLottery].
+ *     Players pick 5 distinct numbers from 1-49; the draw produces 5
+ *     winning numbers; payouts tier by match count
+ *     (5/4/3/2 → 60/25/10/5 % of pool). 0 / 1 matches pay nothing —
+ *     those tickets are the credit sink.
+ *
+ * V28 added a partial unique index on (guild_id, mode) where status =
+ * 'OPEN'; both modes can be open simultaneously without clashing.
  *
  * Concurrency: every mutation runs inside a `@Transactional` boundary
  * with a pessimistic write lock on the lottery row. Per-user ticket
- * rows are also locked on update so two simultaneous /lottery buy calls
- * from the same user can't double-spend their balance. Only one OPEN
- * lottery may exist per guild at a time, enforced by a partial unique
- * index in V27.
+ * rows are locked individually so two simultaneous /lottery buys from
+ * the same user can't double-spend.
  */
 @Service
 @Transactional
@@ -45,8 +38,13 @@ class JackpotLotteryService(
     private val lotteryPersistence: JackpotLotteryPersistence,
     private val jackpotService: JackpotService,
     private val userService: UserService,
+    private val configService: ConfigService,
     private val random: Random = Random.Default,
 ) {
+
+    // ===================================================================
+    // TICKET_WEIGHTED outcomes (existing)
+    // ===================================================================
 
     sealed interface OpenOutcome {
         data class Ok(val lottery: JackpotLotteryDto, val seeded: Long) : OpenOutcome
@@ -85,12 +83,52 @@ class JackpotLotteryService(
 
     data class WinnerPayout(val discordId: Long, val ticketCount: Int, val amount: Long)
 
+    // ===================================================================
+    // NUMBER_MATCH outcomes (new)
+    // ===================================================================
+
+    sealed interface BuyMatchOutcome {
+        data class Ok(
+            val pickedNumbers: List<Int>,
+            val totalSpent: Long,
+            val newBalance: Long,
+            val newPool: Long,
+            val jackpotInflow: Long,
+        ) : BuyMatchOutcome
+        data object NoOpenLottery : BuyMatchOutcome
+        data class InvalidPicks(val reason: String) : BuyMatchOutcome
+        data class Insufficient(val have: Long, val need: Long) : BuyMatchOutcome
+        data object UnknownUser : BuyMatchOutcome
+        data object AlreadyBought : BuyMatchOutcome
+    }
+
+    sealed interface DrawMatchOutcome {
+        data class Ok(
+            val drawnNumbers: List<Int>,
+            val tierPayouts: List<MatchTierPayout>,
+            val totalPaid: Long,
+            val drained: Long,
+            val rolledBackToJackpot: Long,
+        ) : DrawMatchOutcome
+        data object NoOpenLottery : DrawMatchOutcome
+        data object NoTickets : DrawMatchOutcome
+    }
+
     /**
-     * Open a new lottery for [guildId]. Pulls `floor(currentPool * drainPct)`
-     * out of the per-guild jackpot pool and parks it on the lottery row.
-     * Rejects if a lottery is already open, params are invalid, or the
-     * pool is empty (nothing to drain).
+     * One winner's match-tier payout.
+     * - [matches] is how many of their 5 picks matched the draw
+     * - [share] is the *per-winner* credit amount they received
      */
+    data class MatchTierPayout(
+        val discordId: Long,
+        val matches: Int,
+        val share: Long,
+    )
+
+    // ===================================================================
+    // TICKET_WEIGHTED methods (existing)
+    // ===================================================================
+
     fun openLottery(
         guildId: Long,
         ticketPrice: Long,
@@ -103,7 +141,10 @@ class JackpotLotteryService(
         if (winnerCount < 1) return OpenOutcome.InvalidParams("winner count must be >= 1")
         if (drainPct <= 0.0 || drainPct > 1.0) return OpenOutcome.InvalidParams("drain pct must be in (0, 1]")
 
-        if (lotteryPersistence.getOpenByGuildForUpdate(guildId) != null) return OpenOutcome.AlreadyOpen
+        if (lotteryPersistence.getOpenByGuildAndModeForUpdate(
+                guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED
+            ) != null
+        ) return OpenOutcome.AlreadyOpen
 
         val poolBefore = jackpotService.getPool(guildId)
         if (poolBefore == 0L) return OpenOutcome.EmptyPool
@@ -120,19 +161,16 @@ class JackpotLotteryService(
             openedAt = now,
             closesAt = now.plusSeconds(durationHours * 3600L),
             status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
         )
         return OpenOutcome.Ok(lotteryPersistence.upsert(lottery), seeded = drained)
     }
 
-    /**
-     * Buy [ticketCount] tickets in the open lottery for [guildId].
-     * Debits the user's social_credit, increments the ticket row, and
-     * adds the spend to the lottery's prize pool.
-     */
     fun buyTickets(guildId: Long, discordId: Long, ticketCount: Int): BuyOutcome {
         if (ticketCount <= 0) return BuyOutcome.InvalidCount(ticketCount)
-        val lottery = lotteryPersistence.getOpenByGuildForUpdate(guildId)
-            ?: return BuyOutcome.NoOpenLottery
+        val lottery = lotteryPersistence.getOpenByGuildAndModeForUpdate(
+            guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED
+        ) ?: return BuyOutcome.NoOpenLottery
 
         val cost = lottery.ticketPrice * ticketCount.toLong()
 
@@ -171,16 +209,10 @@ class JackpotLotteryService(
         )
     }
 
-    /**
-     * Close the open lottery for [guildId]. Picks `winner_count` winners
-     * via weighted draw without replacement; splits `pool_amount`
-     * across them with a 50/30/20-style schedule (single winner gets
-     * 100 %); credits each, records the wins for cooldown, and marks
-     * the lottery DRAWN.
-     */
     fun drawLottery(guildId: Long): DrawOutcome {
-        val lottery = lotteryPersistence.getOpenByGuildForUpdate(guildId)
-            ?: return DrawOutcome.NoOpenLottery
+        val lottery = lotteryPersistence.getOpenByGuildAndModeForUpdate(
+            guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED
+        ) ?: return DrawOutcome.NoOpenLottery
         val lotteryId = lottery.id ?: error("Open lottery has no id")
         val tickets = lotteryPersistence.ticketsByLottery(lotteryId)
         if (tickets.isEmpty() || tickets.sumOf { it.ticketCount.toLong() } == 0L) return DrawOutcome.NoTickets
@@ -215,14 +247,10 @@ class JackpotLotteryService(
         return DrawOutcome.Ok(payouts = payouts, totalPaid = totalPaid, drained = drained)
     }
 
-    /**
-     * Cancel the open lottery for [guildId]: refund every buyer the
-     * credits they spent, return `pool_amount` to the per-guild
-     * jackpot pool, and mark the row CANCELLED.
-     */
     fun cancelLottery(guildId: Long): CancelOutcome {
-        val lottery = lotteryPersistence.getOpenByGuildForUpdate(guildId)
-            ?: return CancelOutcome.NoOpenLottery
+        val lottery = lotteryPersistence.getOpenByGuildAndModeForUpdate(
+            guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED
+        ) ?: return CancelOutcome.NoOpenLottery
         val lotteryId = lottery.id ?: error("Open lottery has no id")
         val tickets = lotteryPersistence.ticketsByLottery(lotteryId)
 
@@ -248,22 +276,280 @@ class JackpotLotteryService(
     }
 
     /** Read-only summary for `/lottery status` and the moderation tab. */
-    fun getOpen(guildId: Long): JackpotLotteryDto? = lotteryPersistence.getOpenByGuild(guildId)
+    fun getOpenWeighted(guildId: Long): JackpotLotteryDto? =
+        lotteryPersistence.getOpenByGuildAndMode(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
 
-    fun ticketsForOpen(guildId: Long): List<JackpotLotteryTicketDto> {
-        val open = lotteryPersistence.getOpenByGuild(guildId) ?: return emptyList()
+    fun ticketsForOpenWeighted(guildId: Long): List<JackpotLotteryTicketDto> {
+        val open = getOpenWeighted(guildId) ?: return emptyList()
         val id = open.id ?: return emptyList()
         return lotteryPersistence.ticketsByLottery(id)
     }
 
+    // ===================================================================
+    // NUMBER_MATCH methods (new)
+    // ===================================================================
+
     /**
-     * Pick [count] winners by ticket-weighted draw without replacement.
-     * The same physical ticket can never win twice; once a holder is
-     * picked, their entire ticket count is removed from the bag for the
-     * subsequent picks. If [count] exceeds the number of distinct
-     * holders, the result is shorter than [count] (the prize for the
-     * unfilled slots rolls back into the per-guild pool via the
-     * remainder-handling in [drawLottery]).
+     * Open a NUMBER_MATCH daily lottery for [guildId]. Seeds the prize
+     * pool with `floor(currentJackpot * seedPct/100)`, sets pick_count =
+     * 5 and number_max = 49 (Lotto-style), and stays open for
+     * [durationHours]. Rejects if a NUMBER_MATCH lottery is already
+     * open. Unlike weighted, an empty jackpot is OK — players' tickets
+     * still grow the prize pool.
+     */
+    fun openMatchLottery(
+        guildId: Long,
+        ticketPrice: Long,
+        seedPct: Long,
+        durationHours: Long,
+    ): OpenOutcome {
+        if (ticketPrice <= 0L) return OpenOutcome.InvalidParams("ticket price must be > 0")
+        if (durationHours <= 0L) return OpenOutcome.InvalidParams("duration must be > 0 hours")
+        if (seedPct < 0L || seedPct > 100L) return OpenOutcome.InvalidParams("seed pct must be in [0, 100]")
+
+        if (lotteryPersistence.getOpenByGuildAndModeForUpdate(
+                guildId, JackpotLotteryDto.MODE_NUMBER_MATCH
+            ) != null
+        ) return OpenOutcome.AlreadyOpen
+
+        val poolBefore = jackpotService.getPool(guildId)
+        // 0-pool is fine for NUMBER_MATCH — engagement-driven prize pool.
+        val seed = if (poolBefore <= 0L || seedPct <= 0L) 0L else
+            kotlin.math.floor(poolBefore * (seedPct.toDouble() / 100.0)).toLong().coerceAtMost(poolBefore)
+        val drained = if (seed > 0L) drainFromPool(guildId, seed) else 0L
+
+        val now = Instant.now()
+        val lottery = JackpotLotteryDto(
+            guildId = guildId,
+            ticketPrice = ticketPrice,
+            poolAmount = drained,
+            winnerCount = 0,                 // unused for NUMBER_MATCH
+            openedAt = now,
+            closesAt = now.plusSeconds(durationHours * 3600L),
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+            pickCount = LotteryHelper.MATCH_PICK_COUNT,
+            numberMax = LotteryHelper.MATCH_NUMBER_MAX,
+        )
+        return OpenOutcome.Ok(lotteryPersistence.upsert(lottery), seeded = drained)
+    }
+
+    /**
+     * Buy a NUMBER_MATCH ticket with a specific pick set. Picks must be
+     * exactly [LotteryHelper.MATCH_PICK_COUNT] distinct ints in
+     * `[1, MATCH_NUMBER_MAX]`. Each user can buy at most one ticket per
+     * draw — repeated buys return [BuyMatchOutcome.AlreadyBought]; pick
+     * what you want, you live with it.
+     *
+     * Revenue split: the configured
+     * `LOTTERY_DAILY_REVENUE_JACKPOT_PCT` of the cost routes back to
+     * the per-guild jackpot pool; the rest feeds today's prize pool.
+     * The 30/70 default makes the daily a credit sink while letting
+     * engagement grow the prize pool.
+     */
+    fun buyMatchTicket(guildId: Long, discordId: Long, picks: List<Int>): BuyMatchOutcome {
+        val pickCount = LotteryHelper.MATCH_PICK_COUNT
+        val numberMax = LotteryHelper.MATCH_NUMBER_MAX
+        val validation = validatePicks(picks, pickCount, numberMax)
+        if (validation != null) return BuyMatchOutcome.InvalidPicks(validation)
+
+        val lottery = lotteryPersistence.getOpenByGuildAndModeForUpdate(
+            guildId, JackpotLotteryDto.MODE_NUMBER_MATCH
+        ) ?: return BuyMatchOutcome.NoOpenLottery
+
+        val lotteryId = lottery.id ?: error("Open lottery has no id")
+        if (lotteryPersistence.getTicketForUpdate(lotteryId, discordId) != null) {
+            return BuyMatchOutcome.AlreadyBought
+        }
+
+        val cost = lottery.ticketPrice
+        val user = userService.getUserByIdForUpdate(discordId, guildId)
+            ?: return BuyMatchOutcome.UnknownUser
+        val balance = user.socialCredit ?: 0L
+        if (balance < cost) return BuyMatchOutcome.Insufficient(have = balance, need = cost)
+
+        user.socialCredit = balance - cost
+        userService.updateUser(user)
+
+        val sortedPicks = picks.sorted()
+        lotteryPersistence.upsertTicket(
+            JackpotLotteryTicketDto(
+                lotteryId = lotteryId,
+                discordId = discordId,
+                ticketCount = 1,
+                spent = cost,
+                pickedNumbers = sortedPicks.joinToString(","),
+            )
+        )
+
+        val jackpotPct = LotteryHelper.dailyRevenueJackpotPct(configService, guildId)
+        val toJackpot = kotlin.math.floor(cost * (jackpotPct.toDouble() / 100.0)).toLong().coerceIn(0L, cost)
+        val toPrize = cost - toJackpot
+
+        if (toPrize > 0L) {
+            lottery.poolAmount += toPrize
+            lotteryPersistence.upsert(lottery)
+        }
+        if (toJackpot > 0L) {
+            jackpotService.addToPool(guildId, toJackpot)
+        }
+
+        return BuyMatchOutcome.Ok(
+            pickedNumbers = sortedPicks,
+            totalSpent = cost,
+            newBalance = user.socialCredit ?: (balance - cost),
+            newPool = lottery.poolAmount,
+            jackpotInflow = toJackpot,
+        )
+    }
+
+    /**
+     * Draw a NUMBER_MATCH lottery: pick 5 winning numbers, compute
+     * match counts per ticket, distribute the prize pool by tier.
+     *
+     * Tier shares (60/25/10/5 % of pool, see [LotteryHelper.TIER_PCTS_5_4_3_2]):
+     *   - 5/5 matches share 60% equally
+     *   - 4/5 share 25% equally
+     *   - 3/5 share 10% equally
+     *   - 2/5 share 5% equally
+     *   - 0/5 and 1/5 win nothing — sink for the day.
+     *
+     * Empty tiers and rounding remainders roll back into the per-guild
+     * jackpot pool so credits never vanish.
+     *
+     * Returns [DrawMatchOutcome.NoTickets] when no one bought today —
+     * the caller (scheduler) is expected to refund the seed in that
+     * case via [cancelMatchLottery].
+     */
+    fun drawMatchLottery(guildId: Long): DrawMatchOutcome {
+        val lottery = lotteryPersistence.getOpenByGuildAndModeForUpdate(
+            guildId, JackpotLotteryDto.MODE_NUMBER_MATCH
+        ) ?: return DrawMatchOutcome.NoOpenLottery
+        val lotteryId = lottery.id ?: error("Open lottery has no id")
+        val tickets = lotteryPersistence.ticketsByLottery(lotteryId)
+        if (tickets.isEmpty()) return DrawMatchOutcome.NoTickets
+
+        val drawn = drawNumbers(lottery.numberMax, lottery.pickCount, random)
+        val drawnSet = drawn.toSet()
+
+        // Group tickets by match count (0..pickCount).
+        val byMatches = (0..lottery.pickCount).associateWith { mutableListOf<JackpotLotteryTicketDto>() }
+        for (ticket in tickets) {
+            val picks = parsePicks(ticket.pickedNumbers)
+            val matches = picks.count { it in drawnSet }
+            byMatches[matches]?.add(ticket)
+        }
+
+        val totalPool = lottery.poolAmount
+        val tierShares = computeTierShares(totalPool, LotteryHelper.TIER_PCTS_5_4_3_2)
+        val payouts = mutableListOf<MatchTierPayout>()
+        var totalPaid = 0L
+
+        // Tier order: 5, 4, 3, 2 matches → indexes 0..3 in tierShares.
+        val tierMatchCounts = listOf(5, 4, 3, 2)
+        tierMatchCounts.forEachIndexed { tierIndex, matchCount ->
+            val share = tierShares[tierIndex]
+            if (share <= 0L) return@forEachIndexed
+            val winners = byMatches[matchCount].orEmpty()
+            if (winners.isEmpty()) return@forEachIndexed
+            val perWinner = share / winners.size
+            if (perWinner <= 0L) return@forEachIndexed
+            for (ticket in winners) {
+                val user = userService.getUserByIdForUpdate(ticket.discordId, guildId) ?: continue
+                user.socialCredit = (user.socialCredit ?: 0L) + perWinner
+                userService.updateUser(user)
+                jackpotService.recordWin(guildId, ticket.discordId, perWinner)
+                payouts += MatchTierPayout(ticket.discordId, matchCount, perWinner)
+                totalPaid += perWinner
+            }
+        }
+
+        lottery.drawnNumbers = drawn.joinToString(",")
+        lottery.poolAmount = 0L
+        lottery.status = JackpotLotteryDto.STATUS_DRAWN
+        lotteryPersistence.upsert(lottery)
+
+        val remainder = totalPool - totalPaid
+        val rolledBack = if (remainder > 0L) {
+            jackpotService.addToPool(guildId, remainder)
+            remainder
+        } else 0L
+
+        return DrawMatchOutcome.Ok(
+            drawnNumbers = drawn,
+            tierPayouts = payouts,
+            totalPaid = totalPaid,
+            drained = totalPool,
+            rolledBackToJackpot = rolledBack,
+        )
+    }
+
+    /**
+     * Cancel an open NUMBER_MATCH lottery: refund every buyer their
+     * spend (the prize portion of their ticket cost — the jackpot
+     * portion already left the user's wallet on buy and isn't here to
+     * refund). Returns the seed share to the per-guild jackpot pool.
+     *
+     * Used by the scheduler when a draw rolls but no tickets were
+     * bought (no one to draw against).
+     */
+    fun cancelMatchLottery(guildId: Long): CancelOutcome {
+        val lottery = lotteryPersistence.getOpenByGuildAndModeForUpdate(
+            guildId, JackpotLotteryDto.MODE_NUMBER_MATCH
+        ) ?: return CancelOutcome.NoOpenLottery
+        val lotteryId = lottery.id ?: error("Open lottery has no id")
+        val tickets = lotteryPersistence.ticketsByLottery(lotteryId)
+
+        var refundedTotal = 0L
+        var refundedUsers = 0
+        for (t in tickets) {
+            if (t.spent <= 0L) continue
+            val user = userService.getUserByIdForUpdate(t.discordId, guildId) ?: continue
+            user.socialCredit = (user.socialCredit ?: 0L) + t.spent
+            userService.updateUser(user)
+            refundedTotal += t.spent
+            refundedUsers++
+        }
+
+        val seedReturn = (lottery.poolAmount - refundedTotal).coerceAtLeast(0L)
+        if (seedReturn > 0L) jackpotService.addToPool(guildId, seedReturn)
+
+        lottery.poolAmount = 0L
+        lottery.status = JackpotLotteryDto.STATUS_CANCELLED
+        lotteryPersistence.upsert(lottery)
+
+        return CancelOutcome.Ok(refundedUsers, refundedTotal, returnedToPool = seedReturn)
+    }
+
+    /** Read-only: current open NUMBER_MATCH lottery for [guildId], if any. */
+    fun getOpenMatch(guildId: Long): JackpotLotteryDto? =
+        lotteryPersistence.getOpenByGuildAndMode(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+
+    /** Read-only: most-recent NUMBER_MATCH row (any status) for the result panel. */
+    fun getLatestMatch(guildId: Long): JackpotLotteryDto? =
+        lotteryPersistence.getLatestByGuildAndMode(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+
+    /** Read-only: tickets for the current open NUMBER_MATCH lottery. */
+    fun ticketsForOpenMatch(guildId: Long): List<JackpotLotteryTicketDto> {
+        val open = getOpenMatch(guildId) ?: return emptyList()
+        val id = open.id ?: return emptyList()
+        return lotteryPersistence.ticketsByLottery(id)
+    }
+
+    /** This user's ticket for the current open NUMBER_MATCH, if bought. */
+    fun userTicketForOpenMatch(guildId: Long, discordId: Long): JackpotLotteryTicketDto? {
+        val open = getOpenMatch(guildId) ?: return null
+        val id = open.id ?: return null
+        return lotteryPersistence.ticketsByLottery(id).firstOrNull { it.discordId == discordId }
+    }
+
+    // ===================================================================
+    // Internal helpers (testable)
+    // ===================================================================
+
+    /**
+     * Pick [count] distinct winners by ticket-weighted draw without
+     * replacement. Used by TICKET_WEIGHTED draws.
      */
     internal fun drawWinners(
         tickets: List<JackpotLotteryTicketDto>,
@@ -292,14 +578,13 @@ class JackpotLotteryService(
     }
 
     /**
-     * Split [pool] across [slots] winner slots. Schedule:
+     * Split [pool] across [slots] winner slots for TICKET_WEIGHTED.
+     * Schedule:
      *  - 1 winner: 100
      *  - 2 winners: 60/40
      *  - 3 winners: 50/30/20
      *  - 4 winners: 40/30/20/10
      *  - 5+ winners: linear taper that always sums to 100
-     * Floor each share to a whole credit; the rounding remainder is
-     * handled by [drawLottery] (sent back into the per-guild jackpot).
      */
     internal fun prizeShares(slots: Int, pool: Long): List<Long> {
         if (slots <= 0 || pool <= 0L) return emptyList()
@@ -309,7 +594,6 @@ class JackpotLotteryService(
             3 -> doubleArrayOf(0.5, 0.3, 0.2)
             4 -> doubleArrayOf(0.4, 0.3, 0.2, 0.1)
             else -> {
-                // Linear taper: weight i = (slots - i); normalise.
                 val raw = DoubleArray(slots) { (slots - it).toDouble() }
                 val sum = raw.sum().coerceAtLeast(1.0)
                 DoubleArray(slots) { raw[it] / sum }
@@ -319,17 +603,63 @@ class JackpotLotteryService(
     }
 
     /**
-     * Decrement the per-guild jackpot row by [amount]. Mirrors the lock
-     * + mutate + upsert idiom in `JackpotService.awardJackpot` so the
-     * draw doesn't leak credits and matches the same concurrency
-     * contract. Caller must already be inside a @Transactional boundary.
+     * Pick [count] distinct numbers in `[1, max]` for a NUMBER_MATCH
+     * draw. Result is sorted ascending for stable display in the
+     * `drawn_numbers` column and matched-pick UI.
+     */
+    internal fun drawNumbers(max: Int, count: Int, random: Random): List<Int> {
+        require(count in 1..max) { "count must be in 1..max ($count, $max)" }
+        val pool = (1..max).toMutableList()
+        val out = mutableListOf<Int>()
+        repeat(count) {
+            val index = random.nextInt(pool.size)
+            out += pool.removeAt(index)
+        }
+        return out.sorted()
+    }
+
+    /**
+     * Convert tier percentages [60, 25, 10, 5] to per-tier credit
+     * amounts using `floor` (rounding remainder rolls to jackpot).
+     */
+    internal fun computeTierShares(pool: Long, tierPcts: IntArray): LongArray {
+        if (pool <= 0L) return LongArray(tierPcts.size)
+        return LongArray(tierPcts.size) { i ->
+            kotlin.math.floor(pool * (tierPcts[i].toDouble() / 100.0)).toLong().coerceAtLeast(0L)
+        }
+    }
+
+    /**
+     * Validate a NUMBER_MATCH pick set. Returns null when valid; an
+     * error reason string otherwise. Centralised so the controller can
+     * surface a friendly 400 message.
+     */
+    internal fun validatePicks(picks: List<Int>, pickCount: Int, numberMax: Int): String? {
+        if (picks.size != pickCount) return "must select exactly $pickCount numbers"
+        if (picks.toSet().size != picks.size) return "picks must be distinct"
+        val outOfRange = picks.firstOrNull { it < 1 || it > numberMax }
+        if (outOfRange != null) return "picks must be in 1..$numberMax (got $outOfRange)"
+        return null
+    }
+
+    /**
+     * Parse the comma-separated `picked_numbers` column on a ticket
+     * row. Returns an empty list when null/blank — the row is
+     * effectively a non-pick (which counts as 0 matches).
+     */
+    internal fun parsePicks(csv: String?): List<Int> {
+        if (csv.isNullOrBlank()) return emptyList()
+        return csv.split(',').mapNotNull { it.trim().toIntOrNull() }
+    }
+
+    /**
+     * Decrement the per-guild jackpot row by [amount]. Mirrors the
+     * lock+mutate+upsert idiom in `JackpotService.awardJackpot`.
      */
     private fun drainFromPool(guildId: Long, amount: Long): Long {
         if (amount <= 0L) return 0L
-        // We don't have a public partial-drain on JackpotService; reset
-        // and re-deposit the leftover — a single transaction so the pool
-        // never observably gaps. This matches the resetPool→addToPool
-        // sequence the moderation flow already uses.
+        // resetPool→addToPool keeps the pool atomically non-gappy and
+        // matches the pattern used elsewhere in the codebase.
         val pool = jackpotService.resetPool(guildId)
         val drained = amount.coerceAtMost(pool)
         val leftover = pool - drained

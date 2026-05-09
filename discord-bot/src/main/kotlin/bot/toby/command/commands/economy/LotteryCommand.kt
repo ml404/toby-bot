@@ -94,12 +94,12 @@ class LotteryCommand @Autowired constructor(
         guildId: Long,
         deleteDelay: Int,
     ) {
-        val lottery = jackpotLotteryService.getOpen(guildId) ?: run {
+        val lottery = jackpotLotteryService.getOpenWeighted(guildId) ?: run {
             event.hook.sendMessage("No lottery is open right now.")
                 .queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
-        val tickets = jackpotLotteryService.ticketsForOpen(guildId)
+        val tickets = jackpotLotteryService.ticketsForOpenWeighted(guildId)
         val totalTickets = tickets.sumOf { it.ticketCount.toLong() }
         val mine = tickets.firstOrNull { it.discordId == user.discordId }
         val top = tickets.sortedByDescending { it.ticketCount }.take(5)

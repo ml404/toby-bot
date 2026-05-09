@@ -18,20 +18,32 @@ class DefaultJackpotLotteryPersistence : JackpotLotteryPersistence {
     @PersistenceContext
     private lateinit var entityManager: EntityManager
 
-    override fun getOpenByGuild(guildId: Long): JackpotLotteryDto? {
+    override fun getOpenByGuildAndMode(guildId: Long, mode: String): JackpotLotteryDto? {
         val q: TypedQuery<JackpotLotteryDto> = entityManager.createNamedQuery(
-            "JackpotLotteryDto.getOpenByGuild", JackpotLotteryDto::class.java
+            "JackpotLotteryDto.getOpenByGuildAndMode", JackpotLotteryDto::class.java
         )
         q.setParameter("guildId", guildId)
+        q.setParameter("mode", mode)
         return q.resultList.firstOrNull()
     }
 
-    override fun getOpenByGuildForUpdate(guildId: Long): JackpotLotteryDto? {
+    override fun getOpenByGuildAndModeForUpdate(guildId: Long, mode: String): JackpotLotteryDto? {
         val q: TypedQuery<JackpotLotteryDto> = entityManager.createNamedQuery(
-            "JackpotLotteryDto.getOpenByGuild", JackpotLotteryDto::class.java
+            "JackpotLotteryDto.getOpenByGuildAndMode", JackpotLotteryDto::class.java
         )
         q.setParameter("guildId", guildId)
+        q.setParameter("mode", mode)
         q.lockMode = LockModeType.PESSIMISTIC_WRITE
+        return q.resultList.firstOrNull()
+    }
+
+    override fun getLatestByGuildAndMode(guildId: Long, mode: String): JackpotLotteryDto? {
+        val q: TypedQuery<JackpotLotteryDto> = entityManager.createNamedQuery(
+            "JackpotLotteryDto.getLatestByGuildAndMode", JackpotLotteryDto::class.java
+        )
+        q.setParameter("guildId", guildId)
+        q.setParameter("mode", mode)
+        q.maxResults = 1
         return q.resultList.firstOrNull()
     }
 

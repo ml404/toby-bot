@@ -218,6 +218,43 @@ class ModerationController(
         }
     }
 
+    /**
+     * Force the daily match-numbers lottery cycle to run *now* for
+     * [guildId]. Closes the current open draw (paying tier-based
+     * prizes), opens a fresh one seeded from the jackpot. Equivalent
+     * to what `LotteryDailyJob` does at 00:00 UTC, exposed manually so
+     * admins can fast-forward (testing, missed crons, demo).
+     */
+    @PostMapping("/{guildId}/lottery/draw", consumes = ["application/json"])
+    @ResponseBody
+    fun forceDailyLotteryDraw(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ForceDrawLotteryResponse> = WebGuildAccess.requireSignedInForJson(
+        user, { ForceDrawLotteryResponse(false, "Not signed in.") }
+    ) { actor ->
+        val result = moderationWebService.forceDailyDraw(actor, guildId)
+        if (result.error != null) {
+            ResponseEntity.badRequest().body(
+                ForceDrawLotteryResponse(
+                    ok = false, error = result.error,
+                    drewPrior = result.drewPrior, priorTotalPaid = result.priorTotalPaid,
+                    priorRolledBack = result.priorRolledBack, priorDrawn = result.priorDrawn,
+                    openedNew = result.openedNew, newSeeded = result.newSeeded,
+                )
+            )
+        } else {
+            ResponseEntity.ok(
+                ForceDrawLotteryResponse(
+                    ok = true, error = null,
+                    drewPrior = result.drewPrior, priorTotalPaid = result.priorTotalPaid,
+                    priorRolledBack = result.priorRolledBack, priorDrawn = result.priorDrawn,
+                    openedNew = result.openedNew, newSeeded = result.newSeeded,
+                )
+            )
+        }
+    }
+
     @PostMapping("/{guildId}/poll", consumes = ["application/json"])
     @ResponseBody
     fun createPoll(
@@ -270,4 +307,15 @@ data class JackpotAdminResponse(
     val drained: Long = 0L,
     val newPool: Long = 0L,
     val newSourceBalance: Long? = null,
+)
+
+data class ForceDrawLotteryResponse(
+    val ok: Boolean,
+    val error: String?,
+    val drewPrior: Boolean = false,
+    val priorTotalPaid: Long = 0L,
+    val priorRolledBack: Long = 0L,
+    val priorDrawn: List<Int> = emptyList(),
+    val openedNew: Boolean = false,
+    val newSeeded: Long = 0L,
 )
