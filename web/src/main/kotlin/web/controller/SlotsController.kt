@@ -2,6 +2,7 @@ package web.controller
 
 import common.casino.CasinoCommonFailure
 import database.economy.SlotMachine
+import database.service.JackpotGame
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
 import org.springframework.http.ResponseEntity
@@ -53,7 +54,8 @@ class SlotsController(
         ra: RedirectAttributes
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra,
-        template = "slots", lobbyPath = "/leaderboards"
+        template = "slots", lobbyPath = "/leaderboards",
+        game = JackpotGame.SLOTS,
     ) {
         val (minStake, maxStake) = stakeBounds.slots(guildId)
         addAttribute("minStake", minStake)

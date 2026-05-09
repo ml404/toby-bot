@@ -4,6 +4,7 @@ import common.casino.CasinoCommonFailure
 import database.economy.Dice
 import database.service.DiceService
 import database.service.DiceService.RollOutcome
+import database.service.JackpotGame
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -50,7 +51,8 @@ class DiceController(
         model: Model,
         ra: RedirectAttributes
     ): String = pageContext.renderMinigamePage(
-        user, guildId, economyWebService, model, ra, template = "dice"
+        user, guildId, economyWebService, model, ra, template = "dice",
+        game = JackpotGame.DICE,
     ) {
         val (minStake, maxStake) = stakeBounds.dice(guildId)
         addAttribute("minStake", minStake)

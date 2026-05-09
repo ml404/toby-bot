@@ -1,5 +1,6 @@
 package web.casino
 
+import database.service.JackpotGame
 import database.service.JackpotService
 import database.service.TobyCoinMarketService
 import database.service.UserService
@@ -39,6 +40,7 @@ class CasinoPageContext(
         guildId: Long,
         discordId: Long,
         user: OAuth2User,
+        game: JackpotGame? = null,
     ): Guild? {
         val guild = jda.getGuildById(guildId) ?: return null
         val profile = userService.getUserById(discordId, guildId)
@@ -50,6 +52,14 @@ class CasinoPageContext(
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
         model.addAttribute("jackpotStakeAnchor", jackpotService.stakeAnchor(guildId))
+        // Per-game RTP eligibility — only set when caller declares which
+        // game this page is for. Lottery / poker pages share the banner
+        // but don't roll for the jackpot themselves, so they leave `game`
+        // null and the banner stays in its eligible-by-default form.
+        if (game != null && !jackpotService.isEligibleByRtp(guildId, game)) {
+            model.addAttribute("jackpotIneligible", true)
+            model.addAttribute("jackpotRtpMax", jackpotService.rtpMaxPct(guildId))
+        }
         model.addAttribute("username", user.displayName())
         return guild
     }
@@ -74,11 +84,12 @@ fun CasinoPageContext.renderMinigamePage(
     ra: RedirectAttributes,
     template: String,
     lobbyPath: String = "/casino/guilds",
+    game: JackpotGame? = null,
     addRulesAttributes: Model.() -> Unit,
 ): String = WebGuildAccess.requireMemberForPage(
     user, guildId, economyWebService, ra, lobbyPath = lobbyPath
 ) { discordId ->
-    populate(model, guildId, discordId, user) ?: run {
+    populate(model, guildId, discordId, user, game) ?: run {
         ra.addFlashAttribute("error", "Bot is not in that server.")
         return@requireMemberForPage "redirect:$lobbyPath"
     }

@@ -13,7 +13,7 @@ import kotlin.random.Random
  * suites in `database.economy` / `database.blackjack`; if a game's
  * payout schedule is tuned, the value here moves with it.
  */
-internal enum class JackpotGame(val rtp: Double) {
+enum class JackpotGame(val rtp: Double) {
     COINFLIP(1.0),     // 50/50 fair, 2× payout — no house edge by design.
     BLACKJACK(0.99),   // Basic strategy hovers ~99-100%; conservatively 0.99.
     BACCARAT(0.99),    // Banker ~98.94%, Player ~98.76% — pin to the higher.

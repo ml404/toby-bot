@@ -55,7 +55,7 @@ class HighlowControllerTest {
         val guild = mockk<Guild>(relaxed = true).also {
             every { it.name } returns "Test Guild"
         }
-        every { pageContext.populate(any(), guildId, discordId, user) } returns guild
+        every { pageContext.populate(any(), guildId, discordId, user, any()) } returns guild
 
         controller = HighlowController(highlowService, economyWebService, pageContext, stakeBounds)
     }

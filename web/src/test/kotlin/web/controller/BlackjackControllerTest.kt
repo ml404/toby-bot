@@ -3,6 +3,7 @@ package web.controller
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.service.BlackjackService
+import database.service.JackpotGame
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -63,7 +64,7 @@ class BlackjackControllerTest {
         // casino attributes on the model so per-handler tests can assert
         // the centralised wiring fires.
         val guildStub = mockk<Guild>(relaxed = true).also { every { it.name } returns "Test Guild" }
-        every { pageContext.populate(any(), guildId, discordId, user) } answers {
+        every { pageContext.populate(any(), guildId, discordId, user, any()) } answers {
             val model = arg<Model>(0)
             model.addAttribute("guildId", guildId.toString())
             model.addAttribute("guildName", "Test Guild")
@@ -88,7 +89,7 @@ class BlackjackControllerTest {
         val view = controller.lobby(guildId, user, model, RedirectAttributesModelMap())
 
         assertEquals("blackjack-lobby", view)
-        verify { pageContext.populate(model, guildId, discordId, user) }
+        verify { pageContext.populate(model, guildId, discordId, user, JackpotGame.BLACKJACK) }
         // Centralised attributes — populated by populate(), proxied here:
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
@@ -104,7 +105,7 @@ class BlackjackControllerTest {
         val view = controller.soloPage(guildId, user, model, RedirectAttributesModelMap())
 
         assertEquals("blackjack-solo", view)
-        verify { pageContext.populate(model, guildId, discordId, user) }
+        verify { pageContext.populate(model, guildId, discordId, user, JackpotGame.BLACKJACK) }
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
         assertEquals(500L, model.getAttribute("jackpotStakeAnchor"))
@@ -124,7 +125,7 @@ class BlackjackControllerTest {
         )
 
         assertEquals("blackjack-table", view)
-        verify { pageContext.populate(model, guildId, discordId, user) }
+        verify { pageContext.populate(model, guildId, discordId, user, JackpotGame.BLACKJACK) }
         assertEquals(1234L, model.getAttribute("jackpotPool"))
         assertEquals("0.0005", model.getAttribute("jackpotWinPct"))
         assertEquals(500L, model.getAttribute("jackpotStakeAnchor"))

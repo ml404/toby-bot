@@ -3,6 +3,7 @@ package web.controller
 import common.casino.CasinoCommonFailure
 import database.economy.ScratchCard
 import database.economy.SlotMachine
+import database.service.JackpotGame
 import database.service.ScratchService
 import database.service.ScratchService.ScratchOutcome
 import org.springframework.http.ResponseEntity
@@ -44,7 +45,8 @@ class ScratchController(
         model: Model,
         ra: RedirectAttributes
     ): String = pageContext.renderMinigamePage(
-        user, guildId, economyWebService, model, ra, template = "scratch"
+        user, guildId, economyWebService, model, ra, template = "scratch",
+        game = JackpotGame.SCRATCH,
     ) {
         val (minStake, maxStake) = stakeBounds.scratch(guildId)
         addAttribute("minStake", minStake)

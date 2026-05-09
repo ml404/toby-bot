@@ -1,6 +1,7 @@
 package web.controller
 
 import database.economy.Keno
+import database.service.JackpotGame
 import database.service.KenoService
 import database.service.KenoService.PlayOutcome
 import org.springframework.http.ResponseEntity
@@ -55,7 +56,7 @@ class KenoController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/casino/guilds"
     ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
+        pageContext.populate(model, guildId, discordId, user, game = JackpotGame.KENO) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/casino/guilds"
         }

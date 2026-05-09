@@ -6,6 +6,7 @@ import database.poker.CasinoHoldemTableRegistry
 import database.service.CasinoHoldemService
 import database.service.CasinoHoldemService.ActionOutcome
 import database.service.CasinoHoldemService.DealOutcome
+import database.service.JackpotGame
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -71,6 +72,7 @@ class CasinoHoldemController(
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra,
         template = "casinoholdem-solo",
+        game = JackpotGame.HOLDEM,
     ) {
         val discordId = user.attributes["id"].toString().toLong()
         val (minStake, maxStake) = stakeBounds.casinoHoldem(guildId)

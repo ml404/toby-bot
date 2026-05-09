@@ -2,6 +2,7 @@ package web.controller
 
 import common.casino.CasinoCommonFailure
 import database.economy.Roulette
+import database.service.JackpotGame
 import database.service.RouletteService
 import database.service.RouletteService.SpinOutcome
 import org.springframework.http.ResponseEntity
@@ -54,6 +55,7 @@ class RouletteController(
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra,
         template = "roulette", lobbyPath = "/casino/guilds",
+        game = JackpotGame.ROULETTE,
     ) {
         val (minStake, maxStake) = stakeBounds.roulette(guildId)
         addAttribute("minStake", minStake)
