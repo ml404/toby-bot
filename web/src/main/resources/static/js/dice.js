@@ -35,6 +35,20 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
     const ROLL_DURATION_MS = 800;
     const ROLL_INTERVAL_MS = 70;
 
+    // Anti-autoclicker telemetry: same shape as coinflip/slots — capture
+    // (clickX, clickY) from the bet button + a doc-level mousemove flag,
+    // forward both to the backend so CasinoBotSuspicionService can score
+    // the player's pattern. Genuine cursor motion clears the streak.
+    const botSuspicion = window.TobyCasinoBotSuspicion &&
+        window.TobyCasinoBotSuspicion.createTracker();
+    if (botSuspicion) {
+        document.addEventListener('mousemove', botSuspicion.recordMouseMove, { passive: true });
+        [els.primaryBtn, els.tobyBtn].forEach(function (btn) {
+            if (!btn) return;
+            btn.addEventListener('click', botSuspicion.recordClick, true);
+        });
+    }
+
     function selectedPrediction() {
         const checked = els.form.querySelector('input[name="prediction"]:checked');
         return checked ? parseInt(checked.value, 10) : null;
@@ -86,10 +100,16 @@ function renderDiceResult(resultEl, body, flashTargetEl) {
             return null;
         },
         buildPayload: function (state) {
+            const signals = botSuspicion ? botSuspicion.snapshotAndReset() : {
+                clickX: null, clickY: null, mouseMoved: null,
+            };
             return {
                 prediction: selectedPrediction(),
                 stake: state.stake,
                 autoTopUp: state.autoTopUp,
+                clickX: signals.clickX,
+                clickY: signals.clickY,
+                mouseMoved: signals.mouseMoved,
             };
         },
         startAnimation: startRollAnimation,

@@ -180,14 +180,19 @@ class ConfigDto(
         JACKPOT_ACTIVITY_MIN_DAYS("JACKPOT_ACTIVITY_MIN_DAYS"),
 
         // Whole-number percentage (0-50) — ceiling on the dynamic house
-        // edge applied to web `/coinflip` bets that match an autoclicker
+        // edge applied to web casino bets that match an autoclicker
         // signature (same screen pixel ± 2px clicked repeatedly with no
         // intervening mouse motion). Each consecutive bot-like click
         // adds ~2.5 pp to the edge; the cap saturates near streak 12 at
-        // the default 30. Set to 0 to disable the gate (back to the
-        // historical fair 50/50). Discord `/coinflip` is unaffected —
-        // the gate only applies when the frontend supplies click coords.
-        COINFLIP_BOT_EDGE_MAX_PCT("COINFLIP_BOT_EDGE_MAX_PCT");
+        // the default 30. Set to 0 to disable the gate for that game.
+        // Discord call paths are unaffected — the gate only applies
+        // when the frontend supplies click coords.
+        //
+        // Per game so admins can tune sensitivity differently across
+        // games with different baseline RTPs.
+        COINFLIP_BOT_EDGE_MAX_PCT("COINFLIP_BOT_EDGE_MAX_PCT"),
+        DICE_BOT_EDGE_MAX_PCT("DICE_BOT_EDGE_MAX_PCT"),
+        SLOTS_BOT_EDGE_MAX_PCT("SLOTS_BOT_EDGE_MAX_PCT");
     }
 
     override fun toString(): String {

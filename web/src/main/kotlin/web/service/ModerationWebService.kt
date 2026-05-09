@@ -511,7 +511,9 @@ class ModerationWebService(
                 if (n !in 1..365) return "Value must be between 1 and 365."
                 n.toString()
             }
-            ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT -> {
+            ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT,
+            ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT,
+            ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT -> {
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number percentage (0-50; 0 disables)."
                 if (n !in 0..50) return "Value must be between 0 and 50."

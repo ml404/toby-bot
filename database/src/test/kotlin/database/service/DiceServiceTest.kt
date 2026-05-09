@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.UserDto
 import database.economy.Dice
 import io.mockk.every
@@ -8,6 +9,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -19,6 +21,7 @@ class DiceServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
+    private lateinit var casinoEdgeService: CasinoEdgeService
     private lateinit var dice: Dice
     private lateinit var service: DiceService
 
@@ -32,11 +35,21 @@ class DiceServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        casinoEdgeService = mockk(relaxed = true)
         dice = mockk(relaxed = true) {
             every { isValidPrediction(any()) } answers { firstArg<Int>() in 1..6 }
             every { sidesCount } returns 6
         }
-        service = DiceService(userService, jackpotService, tradeService, marketService, configService, dice, Random(0))
+        // Default: pass the fair Roll through untouched.
+        every {
+            casinoEdgeService.applyBotEdge<Dice.Roll>(
+                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+        } answers { arg<Dice.Roll>(7) }
+        service = DiceService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, dice, Random(0)
+        )
     }
 
     private fun userWithBalance(balance: Long): UserDto {
@@ -157,5 +170,52 @@ class DiceServiceTest {
         val lose = assertInstanceOf(DiceService.RollOutcome.Lose::class.java, outcome)
         assertEquals(10L, lose.lossTribute)
         verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
+    }
+
+    @Test
+    fun `roll forwards bot signals + dice gameKey + DICE config to CasinoEdgeService`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fair = Dice.Roll(landed = 3, predicted = 4, multiplier = 0L)
+        every { dice.roll(4, any()) } returns fair
+
+        service.roll(
+            discordId, guildId, stake = 100L, predicted = 4,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        )
+
+        verify(exactly = 1) {
+            casinoEdgeService.applyBotEdge(
+                discordId = discordId,
+                guildId = guildId,
+                gameKey = "dice",
+                clickX = 350, clickY = 220, mouseMoved = false,
+                edgeMaxConfig = ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT,
+                fairOutcome = fair,
+                asLoss = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `forced-loss substitution lands on a non-predicted face`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fairWin = Dice.Roll(landed = 4, predicted = 4, multiplier = 5L)
+        every { dice.roll(4, any()) } returns fairWin
+        val lossSlot = slot<() -> Dice.Roll>()
+        every {
+            casinoEdgeService.applyBotEdge<Dice.Roll>(
+                any(), any(), any(), any(), any(), any(), any(), any(),
+                asLoss = capture(lossSlot),
+            )
+        } answers { lossSlot.captured.invoke() }
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.roll(discordId, guildId, stake = 100L, predicted = 4)
+
+        val lose = assertInstanceOf(DiceService.RollOutcome.Lose::class.java, outcome)
+        assertTrue(lose.landed != lose.predicted, "substitute must land on a non-predicted face")
+        assertEquals(4, lose.predicted)
     }
 }

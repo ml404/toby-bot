@@ -13,17 +13,17 @@ import kotlin.random.Random
  *   minigame portfolio. `/slots` is the actual credit sink (~11% house
  *   edge).
  *
+ * Anti-autoclicker bias is applied OUTSIDE this class by
+ * `database.service.CasinoEdgeService.applyBotEdge`, which substitutes
+ * a loss outcome with probability proportional to the player's
+ * bot-suspicion streak. This class stays fair so its math reads cleanly
+ * and matches the docstring.
+ *
  * Stake bounds (`MIN_STAKE` / `MAX_STAKE`) live here so the Discord
  * command, the web controller, and the service all agree on what's
  * valid. Higher MAX than `/slots` because the max payout is just 2×
  * (1,000 → 2,000 credits) — meaningful all-in without being
  * server-breaking.
- *
- * `loseProbabilityBoost` is the optional anti-autoclicker bias supplied
- * by `CoinflipService` based on `CoinflipBotSuspicionService`'s streak.
- * 0.0 keeps the fair 50/50; >0 pre-rolls a forced loss with that
- * probability before the fair flip runs. Default keeps every existing
- * caller's behaviour identical.
  */
 class Coinflip(
     private val multiplier: Long = DEFAULT_MULTIPLIER
@@ -42,19 +42,7 @@ class Coinflip(
         val isWin: Boolean get() = landed == predicted
     }
 
-    fun flip(
-        predicted: Side,
-        random: Random,
-        loseProbabilityBoost: Double = 0.0,
-    ): Flip {
-        if (loseProbabilityBoost > 0.0 && random.nextDouble() < loseProbabilityBoost) {
-            // Forced loss: land on the opposite side so the response shape
-            // (landed vs predicted) reads naturally to the player. The
-            // multiplier is 0 either way on a loss, so the wager service's
-            // debit math is unchanged.
-            val landed = if (predicted == Side.HEADS) Side.TAILS else Side.HEADS
-            return Flip(landed = landed, predicted = predicted, multiplier = 0L)
-        }
+    fun flip(predicted: Side, random: Random): Flip {
         val landed = if (random.nextBoolean()) Side.HEADS else Side.TAILS
         return Flip(
             landed = landed,

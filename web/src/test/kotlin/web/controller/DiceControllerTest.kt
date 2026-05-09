@@ -42,7 +42,7 @@ class DiceControllerTest {
 
     @Test
     fun `roll win returns 200 with win-shaped payload`() {
-        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Win(
+        every { diceService.roll(discordId, guildId, 100L, 4, any(), any(), any(), any()) } returns RollOutcome.Win(
             stake = 100L, payout = 500L, net = 400L, landed = 4, predicted = 4, newBalance = 1_400L
         )
 
@@ -59,7 +59,7 @@ class DiceControllerTest {
 
     @Test
     fun `roll lose returns 200 with negative net and win=false`() {
-        every { diceService.roll(discordId, guildId, 50L, 3) } returns RollOutcome.Lose(
+        every { diceService.roll(discordId, guildId, 50L, 3, any(), any(), any(), any()) } returns RollOutcome.Lose(
             stake = 50L, landed = 1, predicted = 3, newBalance = 950L
         )
 
@@ -74,7 +74,7 @@ class DiceControllerTest {
 
     @Test
     fun `roll returns 400 on invalid prediction`() {
-        every { diceService.roll(discordId, guildId, 100L, 7) } returns
+        every { diceService.roll(discordId, guildId, 100L, 7, any(), any(), any(), any()) } returns
             RollOutcome.InvalidPrediction(min = 1, max = 6)
 
         val response = controller.roll(guildId, RollRequest(prediction = 7, stake = 100L), user)
@@ -86,7 +86,7 @@ class DiceControllerTest {
 
     @Test
     fun `roll returns 400 on insufficient credits`() {
-        every { diceService.roll(discordId, guildId, 100L, 3) } returns
+        every { diceService.roll(discordId, guildId, 100L, 3, any(), any(), any(), any()) } returns
             RollOutcome.InsufficientCredits(stake = 100L, have = 30L)
 
         val response = controller.roll(guildId, RollRequest(prediction = 3, stake = 100L), user)
@@ -96,7 +96,7 @@ class DiceControllerTest {
 
     @Test
     fun `roll returns 400 on invalid stake`() {
-        every { diceService.roll(discordId, guildId, 5L, 3) } returns
+        every { diceService.roll(discordId, guildId, 5L, 3, any(), any(), any(), any()) } returns
             RollOutcome.InvalidStake(min = 10L, max = 500L)
 
         val response = controller.roll(guildId, RollRequest(prediction = 3, stake = 5L), user)
@@ -111,12 +111,12 @@ class DiceControllerTest {
         val response = controller.roll(guildId, RollRequest(prediction = 3, stake = 100L), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { diceService.roll(any(), any(), any(), any()) }
+        verify(exactly = 0) { diceService.roll(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `jackpot win surfaces jackpotPayout in the response body`() {
-        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Win(
+        every { diceService.roll(discordId, guildId, 100L, 4, any(), any(), any(), any()) } returns RollOutcome.Win(
             stake = 100L, payout = 500L, net = 400L, landed = 4, predicted = 4,
             newBalance = 11_400L, jackpotPayout = 10_000L
         )
@@ -128,7 +128,7 @@ class DiceControllerTest {
 
     @Test
     fun `non-jackpot win does not include jackpotPayout`() {
-        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Win(
+        every { diceService.roll(discordId, guildId, 100L, 4, any(), any(), any(), any()) } returns RollOutcome.Win(
             stake = 100L, payout = 500L, net = 400L, landed = 4, predicted = 4, newBalance = 1_400L
         )
 
@@ -139,12 +139,47 @@ class DiceControllerTest {
 
     @Test
     fun `lose with loss tribute surfaces lossTribute on the response`() {
-        every { diceService.roll(discordId, guildId, 100L, 4) } returns RollOutcome.Lose(
+        every { diceService.roll(discordId, guildId, 100L, 4, any(), any(), any(), any()) } returns RollOutcome.Lose(
             stake = 100L, landed = 1, predicted = 4, newBalance = 900L, lossTribute = 10L
         )
 
         val response = controller.roll(guildId, RollRequest(prediction = 4, stake = 100L), user)
 
         assertEquals(10L, response.body!!.lossTribute)
+    }
+
+    @Test
+    fun `controller forwards bot-suspicion signals into the service`() {
+        every { diceService.roll(any(), any(), any(), any(), any(), any(), any(), any()) } returns RollOutcome.Lose(
+            stake = 10L, landed = 1, predicted = 3, newBalance = 90L
+        )
+
+        controller.roll(guildId, RollRequest(
+            prediction = 3, stake = 10L,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        ), user)
+
+        verify(exactly = 1) {
+            diceService.roll(
+                discordId, guildId, 10L, 3, false,
+                clickX = 350, clickY = 220, mouseMoved = false,
+            )
+        }
+    }
+
+    @Test
+    fun `missing bot-suspicion fields are forwarded as null (Discord-equivalent path)`() {
+        every { diceService.roll(any(), any(), any(), any(), any(), any(), any(), any()) } returns RollOutcome.Lose(
+            stake = 10L, landed = 1, predicted = 3, newBalance = 90L
+        )
+
+        controller.roll(guildId, RollRequest(prediction = 3, stake = 10L), user)
+
+        verify(exactly = 1) {
+            diceService.roll(
+                discordId, guildId, 10L, 3, false,
+                clickX = null, clickY = null, mouseMoved = null,
+            )
+        }
     }
 }

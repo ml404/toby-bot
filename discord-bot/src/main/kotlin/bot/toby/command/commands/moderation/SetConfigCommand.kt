@@ -171,6 +171,12 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT, gameLabel = "Coinflip",
                     label = "bot-suspicion max edge percent", range = 0..50)
+                ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT, gameLabel = "Dice",
+                    label = "bot-suspicion max edge percent", range = 0..50)
+                ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT, gameLabel = "Slots",
+                    label = "bot-suspicion max edge percent", range = 0..50)
             }
         }
     }

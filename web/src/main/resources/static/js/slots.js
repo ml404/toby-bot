@@ -50,6 +50,19 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
     const SPIN_INTERVAL_MS = 60;
     const SPIN_DURATION_MS = 800;
 
+    // Anti-autoclicker telemetry: same shape as coinflip/dice — capture
+    // the bet button click coords + a doc-level mousemove flag so the
+    // backend can score the player's pattern.
+    const botSuspicion = window.TobyCasinoBotSuspicion &&
+        window.TobyCasinoBotSuspicion.createTracker();
+    if (botSuspicion) {
+        document.addEventListener('mousemove', botSuspicion.recordMouseMove, { passive: true });
+        [els.primaryBtn, els.tobyBtn].forEach(function (btn) {
+            if (!btn) return;
+            btn.addEventListener('click', botSuspicion.recordClick, true);
+        });
+    }
+
     function startSpinAnimation() {
         // Strip any prior win highlight so a fresh spin doesn't wear the
         // gold halo from the previous round while it's still tumbling.
@@ -97,6 +110,18 @@ function renderSlotsResult(resultEl, body, flashTargetEl, reels) {
         marketPrice: els.marketPrice,
         minSettleMs: SPIN_DURATION_MS,
         failureMessage: 'Spin failed.',
+        buildPayload: function (state) {
+            const signals = botSuspicion ? botSuspicion.snapshotAndReset() : {
+                clickX: null, clickY: null, mouseMoved: null,
+            };
+            return {
+                stake: state.stake,
+                autoTopUp: state.autoTopUp,
+                clickX: signals.clickX,
+                clickY: signals.clickY,
+                mouseMoved: signals.mouseMoved,
+            };
+        },
         startAnimation: startSpinAnimation,
         stopAnimation: stopSpinAnimation,
         renderResult: function (body) { renderSlotsResult(els.resultEl, body, machineEl, reels); },

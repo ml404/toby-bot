@@ -281,6 +281,55 @@
                     </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
+                <div class="config-group">
+                    <h4>Anti-autoclicker</h4>
+                    <p class="muted">
+                        Suspected autoclickers (same screen pixel clicked
+                        repeatedly with no cursor motion between bets) get
+                        a per-(user, guild) "streak" that ramps the house
+                        edge by 2.5 percentage points per consecutive
+                        bot-like click, capped per game by the values
+                        below. The cap is the forced-loss probability
+                        applied on top of the fair game; the suspect's
+                        effective RTP becomes <code>(1 − cap/100) × fair RTP</code>.
+                        Legitimate play never trips the detector. Set 0
+                        to disable a game's gate entirely. Discord call
+                        paths are unaffected (no mouse signal).
+                    </p>
+                    <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
+                        <label>Coinflip — max bot-suspicion house edge. Fair RTP 100 % → suspect RTP <code>100 − cap</code> %. Default 30 → suspect RTP 70 %. 0 disables.</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
+                                   placeholder="30"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="DICE_BOT_EDGE_MAX_PCT">
+                        <label>Dice — max bot-suspicion house edge. Fair RTP ≈ 83 % → suspect RTP ≈ <code>83 × (1 − cap/100)</code> %. Default 30 → suspect RTP ≈ 58 %. 0 disables.</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['DICE_BOT_EDGE_MAX_PCT']}"
+                                   placeholder="30"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="SLOTS_BOT_EDGE_MAX_PCT">
+                        <label>Slots — max bot-suspicion house edge. Fair RTP ≈ 89 % → suspect RTP ≈ <code>89 × (1 − cap/100)</code> %. Default 30 → suspect RTP ≈ 62 %. 0 disables.</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['SLOTS_BOT_EDGE_MAX_PCT']}"
+                                   placeholder="30"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
             </div>
         </details>
 
@@ -436,17 +485,6 @@
                                th:value="${overview.config['COINFLIP_MAX_STAKE']}"
                                placeholder="1000"
                                th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
-                        <label>Bot-suspicion max house edge (% — 0 disables; default 30; cap 50)</label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="50"
-                                   th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
-                                   placeholder="30"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                 </div>

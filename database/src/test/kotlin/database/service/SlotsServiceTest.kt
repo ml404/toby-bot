@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.UserDto
 import database.economy.SlotMachine
 import io.mockk.every
@@ -8,6 +9,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -19,6 +21,7 @@ class SlotsServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
+    private lateinit var casinoEdgeService: CasinoEdgeService
     private lateinit var machine: SlotMachine
     private lateinit var service: SlotsService
 
@@ -32,8 +35,18 @@ class SlotsServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        casinoEdgeService = mockk(relaxed = true)
         machine = mockk(relaxed = true)
-        service = SlotsService(userService, jackpotService, tradeService, marketService, configService, machine, Random(0))
+        // Default: pass the fair Pull through untouched.
+        every {
+            casinoEdgeService.applyBotEdge<SlotMachine.Pull>(
+                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+        } answers { arg<SlotMachine.Pull>(7) }
+        service = SlotsService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, machine, Random(0)
+        )
     }
 
     private fun userWithBalance(balance: Long): UserDto {
@@ -148,5 +161,60 @@ class SlotsServiceTest {
         val lose = assertInstanceOf(SlotsService.SpinOutcome.Lose::class.java, outcome)
         assertEquals(10L, lose.lossTribute, "10 % of 100 stake → 10 to jackpot")
         verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
+    }
+
+    @Test
+    fun `spin forwards bot signals + slots gameKey + SLOTS config to CasinoEdgeService`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fair = SlotMachine.Pull(
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            multiplier = 0L,
+        )
+        every { machine.pull(any()) } returns fair
+
+        service.spin(
+            discordId, guildId, stake = 100L,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        )
+
+        verify(exactly = 1) {
+            casinoEdgeService.applyBotEdge(
+                discordId = discordId,
+                guildId = guildId,
+                gameKey = "slots",
+                clickX = 350, clickY = 220, mouseMoved = false,
+                edgeMaxConfig = ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT,
+                fairOutcome = fair,
+                asLoss = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `forced-loss substitution returns three distinct symbols and zero multiplier`() {
+        // Verify the asLoss lambda invoked by the edge service produces a
+        // Pull that SlotMachine.pull's win-detection (3-of-a-kind) treats
+        // as a loss.
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fairWin = SlotMachine.Pull(
+            symbols = listOf(SlotMachine.Symbol.STAR, SlotMachine.Symbol.STAR, SlotMachine.Symbol.STAR),
+            multiplier = 100L,
+        )
+        every { machine.pull(any()) } returns fairWin
+        val lossSlot = slot<() -> SlotMachine.Pull>()
+        every {
+            casinoEdgeService.applyBotEdge<SlotMachine.Pull>(
+                any(), any(), any(), any(), any(), any(), any(), any(),
+                asLoss = capture(lossSlot),
+            )
+        } answers { lossSlot.captured.invoke() }
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.spin(discordId, guildId, stake = 100L)
+
+        val lose = assertInstanceOf(SlotsService.SpinOutcome.Lose::class.java, outcome)
+        assertTrue(lose.symbols.toSet().size == 3, "three distinct symbols → guaranteed non-payout")
     }
 }
