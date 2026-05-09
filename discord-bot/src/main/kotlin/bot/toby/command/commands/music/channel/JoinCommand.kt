@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music.channel
 
 import bot.toby.command.commands.music.MusicCommand
-import bot.toby.handler.VoiceEventHandler.Companion.lastConnectedChannel
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.voice.LastConnectedChannelTracker
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.ConfigDto
@@ -14,7 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class JoinCommand @Autowired constructor(private val configService: ConfigService) : MusicCommand {
+class JoinCommand @Autowired constructor(
+    private val configService: ConfigService,
+    private val lastConnectedChannelTracker: LastConnectedChannelTracker,
+) : MusicCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
@@ -45,7 +48,7 @@ class JoinCommand @Autowired constructor(private val configService: ConfigServic
         }
 
         memberChannel?.let { audioManager.openAudioConnection(it) }
-        lastConnectedChannel[event.guild!!.idLong] = memberChannel!!
+        lastConnectedChannelTracker.set(event.guild!!.idLong, memberChannel!!.idLong)
         val volumePropertyName = ConfigDto.Configurations.VOLUME.configValue
         val databaseConfig = configService.getConfigByName(volumePropertyName, event.guild?.id)
         val defaultVolume = databaseConfig?.value?.toInt() ?: 100

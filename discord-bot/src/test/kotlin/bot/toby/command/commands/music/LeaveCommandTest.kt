@@ -11,6 +11,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.musicManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.LeaveCommand
+import bot.toby.voice.LastConnectedChannelTracker
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import database.service.ConfigService
 import io.mockk.every
@@ -30,7 +31,7 @@ internal class LeaveCommandTest : MusicCommandTest {
     fun setup() {
         setupCommonMusicMocks()
         configService = mockk()
-        command = LeaveCommand(configService)
+        command = LeaveCommand(configService, LastConnectedChannelTracker())
     }
 
     @AfterEach

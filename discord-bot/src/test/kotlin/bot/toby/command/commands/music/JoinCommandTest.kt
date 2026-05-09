@@ -13,6 +13,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.playerManager
 import bot.toby.command.commands.music.MusicCommandTest.Companion.track
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.JoinCommand
+import bot.toby.voice.LastConnectedChannelTracker
 import database.dto.ConfigDto
 import database.service.ConfigService
 import io.mockk.*
@@ -31,7 +32,7 @@ internal class JoinCommandTest : MusicCommandTest {
     fun setup() {
         setupCommonMusicMocks()
         configService = mockk<ConfigService>()
-        command = JoinCommand(configService)
+        command = JoinCommand(configService, LastConnectedChannelTracker())
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("", "100", "1")
     }
 
