@@ -848,6 +848,12 @@ class ModerationWebService(
                 if (n !in 1..365) return "Value must be between 1 and 365."
                 n.toString()
             }
+            ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (0-100; 0 disables; recommended 95)."
+                if (n !in 0..100) return "Value must be between 0 and 100 (0 disables; recommended 95)."
+                n.toString()
+            }
             ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT,
             ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT,
             ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT -> {

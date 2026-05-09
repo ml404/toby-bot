@@ -664,7 +664,7 @@ class BlackjackService @Autowired constructor(
                     Blackjack.Result.PLAYER_WIN, Blackjack.Result.PLAYER_BLACKJACK -> {
                         val rolled = JackpotHelper.rollOnWin(
                             jackpotService, configService, userService, user, guildId,
-                            hand.stake, random,
+                            hand.stake, JackpotGame.BLACKJACK, random,
                         )
                         if (rolled > 0L) {
                             jackpotPayout += rolled

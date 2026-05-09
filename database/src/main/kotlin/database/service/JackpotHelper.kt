@@ -5,6 +5,28 @@ import database.dto.UserDto
 import kotlin.random.Random
 
 /**
+ * Casino games that feed the jackpot pool, paired with their canonical
+ * RTP. The value is the highest plausible RTP across that game's bet
+ * variants (Banker for Baccarat, basic-strategy for Blackjack, etc.) —
+ * the RTP eligibility gate uses it to decide whether a game is "too
+ * generous" to also pay a jackpot. Pinned alongside the per-game test
+ * suites in `database.economy` / `database.blackjack`; if a game's
+ * payout schedule is tuned, the value here moves with it.
+ */
+internal enum class JackpotGame(val rtp: Double) {
+    COINFLIP(1.0),     // 50/50 fair, 2× payout — no house edge by design.
+    BLACKJACK(0.99),   // Basic strategy hovers ~99-100%; conservatively 0.99.
+    BACCARAT(0.99),    // Banker ~98.94%, Player ~98.76% — pin to the higher.
+    ROULETTE(0.973),   // 36/37 European wheel — uniform across bet types.
+    HOLDEM(0.97),      // Casino Hold'em vs dealer; ~2-3% edge industry-wide.
+    HIGHLOW(0.923),    // 12/13 ≈ deckSize-1/deckSize regardless of direction.
+    KENO(0.92),        // 0.83-0.92 band; pin to the top so the gate is honest.
+    SLOTS(0.890),      // ~11% house edge; closed-form pinned by SlotMachineTest.
+    SCRATCH(0.875),    // ~12.5% edge; pinned by ScratchCard.expectedRtp().
+    DICE(0.833),       // 5/6 — 5× payout at 1/6 odds.
+}
+
+/**
  * Two casino-side feeders for the per-guild jackpot pool:
  *
  *   - [rollOnWin] — on every minigame WIN, roll a small probability
@@ -35,6 +57,19 @@ internal object JackpotHelper {
      * the `JACKPOT_WIN_PCT` config entry. Tuned alongside the trade fee.
      */
     const val DEFAULT_WIN_PROBABILITY: Double = 0.01
+
+    /**
+     * Default ceiling on a game's RTP for it to remain jackpot-eligible.
+     * Whole-number percent (0-100). 0 (default) disables the gate so
+     * unconfigured guilds keep the pre-PR behaviour — every game rolls
+     * for the jackpot. Recommended value 95: blocks Coinflip (1.0),
+     * Blackjack (~0.99), Baccarat (~0.99), Roulette (0.973) — games that
+     * already return ~all stake on their own — while keeping Slots,
+     * Scratch, Dice, Keno, and HighLow eligible. The intent is "high-RTP
+     * games don't *also* need a jackpot sweetener; jackpots compensate
+     * for house edge."
+     */
+    const val DEFAULT_RTP_MAX_PCT: Long = 0L
 
     /**
      * Default share of the pool paid on a winning roll when the server
@@ -130,6 +165,7 @@ internal object JackpotHelper {
         user: UserDto,
         guildId: Long,
         stake: Long,
+        game: JackpotGame,
         random: Random
     ): Long {
         val baseProbability = winProbability(configService, guildId)
@@ -144,6 +180,7 @@ internal object JackpotHelper {
         // growing, no payout, no exception thrown into the wager service.
         if (jackpotService.isOnCooldown(guildId, user.discordId)) return 0L
         if (!jackpotService.isActive(guildId, user.discordId)) return 0L
+        if (!isEligibleByRtp(game, configService, guildId)) return 0L
 
         val won = jackpotService.awardJackpot(guildId)
         if (won == 0L) return 0L
@@ -283,5 +320,35 @@ internal object JackpotHelper {
         )
         val days = cfg?.value?.toLongOrNull() ?: return DEFAULT_ACTIVITY_MIN_DAYS
         return days.coerceAtLeast(1L)
+    }
+
+    /**
+     * Live RTP-eligibility ceiling for [guildId] in whole-number percent
+     * (0-100), parsed from `JACKPOT_RTP_MAX_PCT`. Returns
+     * [DEFAULT_RTP_MAX_PCT] (0 = gate disabled) when unset, unparseable,
+     * or negative; clamps anything above 100 down to 100.
+     */
+    fun rtpMaxPct(configService: ConfigService, guildId: Long): Long {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT.configValue,
+            guildId.toString()
+        )
+        val pct = cfg?.value?.toLongOrNull() ?: return DEFAULT_RTP_MAX_PCT
+        return pct.coerceIn(0L, 100L)
+    }
+
+    /**
+     * Returns `true` when [game]'s canonical RTP is at or below the
+     * configured per-guild ceiling, or when the gate is disabled
+     * (`JACKPOT_RTP_MAX_PCT` = 0). The rationale is that jackpots exist
+     * to compensate for house edge — a game already returning ~all stake
+     * to the player (Coinflip, Blackjack, Baccarat) doesn't need a
+     * jackpot bolted on top, and admins can opt out of paying one by
+     * setting a ceiling like 95.
+     */
+    fun isEligibleByRtp(game: JackpotGame, configService: ConfigService, guildId: Long): Boolean {
+        val maxPct = rtpMaxPct(configService, guildId)
+        if (maxPct == 0L) return true
+        return game.rtp * 100.0 <= maxPct.toDouble()
     }
 }

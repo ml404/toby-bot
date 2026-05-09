@@ -134,7 +134,7 @@ class KenoService(
         return if (hand.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, random,
+                stake, JackpotGame.KENO, random,
             )
             PlayOutcome.Win(
                 stake = stake,

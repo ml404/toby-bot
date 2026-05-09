@@ -179,6 +179,18 @@ class ConfigDto(
         // 7-day window. Ignored when the window is 0.
         JACKPOT_ACTIVITY_MIN_DAYS("JACKPOT_ACTIVITY_MIN_DAYS"),
 
+        // Whole-number ceiling (0-100) on a game's canonical RTP for it
+        // to roll for the jackpot. 0 (default) disables the gate so every
+        // game stays eligible (pre-PR behaviour). Recommended 95: blocks
+        // Coinflip (1.0), Blackjack (~0.99), Baccarat (~0.99), Roulette
+        // (0.973) — games that already pay back ~all stake on their own
+        // — while keeping Slots, Scratch, Dice, Keno, and HighLow
+        // eligible. The intent is "high-RTP games don't *also* need a
+        // jackpot sweetener; jackpots compensate for house edge." A
+        // failed gate looks identical to a missed roll: no payout, pool
+        // keeps growing, no exception surfaced.
+        JACKPOT_RTP_MAX_PCT("JACKPOT_RTP_MAX_PCT"),
+
         // Whole-number percentage (0-50) — ceiling on the dynamic house
         // edge applied to web casino bets that match an autoclicker
         // signature (same screen pixel ± 2px clicked repeatedly with no

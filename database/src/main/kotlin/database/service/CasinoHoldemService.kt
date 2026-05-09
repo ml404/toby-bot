@@ -266,7 +266,7 @@ class CasinoHoldemService @Autowired constructor(
             CasinoHoldem.AnteResult.WIN ->
                 jackpotPayout += JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, user, guildId,
-                    table.stake, random,
+                    table.stake, JackpotGame.HOLDEM, random,
                 )
             CasinoHoldem.AnteResult.LOSE ->
                 lossTribute += JackpotHelper.divertOnLoss(
@@ -285,7 +285,7 @@ class CasinoHoldemService @Autowired constructor(
             CasinoHoldem.CallResult.WIN_OTHER ->
                 jackpotPayout += JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, user, guildId,
-                    callStake, random,
+                    callStake, JackpotGame.HOLDEM, random,
                 )
             CasinoHoldem.CallResult.LOSE ->
                 lossTribute += JackpotHelper.divertOnLoss(
