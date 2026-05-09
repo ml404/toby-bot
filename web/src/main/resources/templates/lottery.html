@@ -14,14 +14,29 @@
                data-revenue-jackpot-pct=${snapshot.revenueJackpotPct}">
 
     <div class="lottery-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/lottery/guilds}">&larr; All servers</a>
         <h1 th:text="'🎟️ Lottery • ' + ${guildName}">🎟️ Lottery</h1>
-        <p class="muted">
+        <!-- Mode-aware blurb: NUMBER_MATCH (Pick-X) vs WEIGHTED (top-3
+             weighted draw) reflects the guild's LOTTERY_DAILY_MODE
+             config. Disabled guilds get a paused-state explainer that
+             tells the user to ask an admin. -->
+        <p class="muted" th:if="${!snapshot.dailyEnabled}">
+            Daily lottery is paused on this server. Ask a server admin to
+            re-enable it on the moderation page.
+        </p>
+        <p class="muted" th:if="${snapshot.dailyEnabled and !snapshot.isDailyWeighted}">
             Pick <strong th:text="${snapshot.pickCount}">5</strong> numbers from
             <strong>1–<span th:text="${snapshot.numberMax}">49</span></strong> for the daily draw.
             <strong th:text="${snapshot.revenueJackpotPct}">30</strong>% of every ticket feeds the
             per-server jackpot pool above; the remainder grows today's prize. Match more numbers,
             win bigger.
+        </p>
+        <p class="muted" th:if="${snapshot.dailyEnabled and snapshot.isDailyWeighted}">
+            Weighted daily draw — every ticket is one entry, and three winners are picked at
+            close-time weighted by ticket count, sharing the pool
+            <strong>50 / 30 / 20</strong> by tier.
+            <strong th:text="${snapshot.revenueJackpotPct}">30</strong>% of every ticket feeds the
+            per-server jackpot pool above; the remainder grows today's prize.
         </p>
     </div>
 
@@ -29,9 +44,28 @@
     <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
 
     <!-- ========================================================== -->
-    <!-- Today's daily match-numbers draw                            -->
+    <!-- Daily lottery is paused — short-circuit the whole body      -->
+    <!-- with a one-card explainer; admin needs to flip ENABLED back -->
+    <!-- on in moderation. We don't render any picker/buy form so a  -->
+    <!-- stray click can't hit a buy endpoint that would 4xx anyway. -->
     <!-- ========================================================== -->
-    <section class="lottery-daily casino-felt">
+    <section class="lottery-daily casino-felt" th:if="${!snapshot.dailyEnabled}">
+        <header class="lottery-daily-header">
+            <h2>Today's draw</h2>
+            <p class="muted">
+                The daily lottery is currently disabled on this server. Check back once a
+                server admin re-enables it from the moderation page.
+            </p>
+        </header>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- NUMBER_MATCH daily — Pick X of Y picker, my-ticket panel,   -->
+    <!-- last-result panel. Reads from snapshot.daily (the open or   -->
+    <!-- last-drawn MODE_NUMBER_MATCH row).                          -->
+    <!-- ========================================================== -->
+    <section class="lottery-daily casino-felt"
+             th:if="${snapshot.dailyEnabled and !snapshot.isDailyWeighted}">
         <header class="lottery-daily-header">
             <h2>Today's draw</h2>
             <div class="lottery-daily-meta" th:if="${snapshot.daily != null}">
@@ -131,9 +165,76 @@
     </section>
 
     <!-- ========================================================== -->
-    <!-- Featured event — admin-fired weighted lottery (when open)   -->
+    <!-- WEIGHTED daily — every ticket is one entry, top-3 by weight -->
+    <!-- share 50/30/20 of the pool. Reuses snapshot.weighted (same  -->
+    <!-- DOM as the featured-event card from NUMBER_MATCH mode), but -->
+    <!-- labelled as "Today's draw" because in WEIGHTED mode this    -->
+    <!-- IS the daily, not a one-off featured event.                 -->
     <!-- ========================================================== -->
-    <section class="lottery-weighted" th:if="${snapshot.weighted != null}">
+    <section class="lottery-weighted casino-felt"
+             th:if="${snapshot.dailyEnabled and snapshot.isDailyWeighted}">
+        <header class="lottery-daily-header">
+            <h2>Today's draw</h2>
+            <div class="lottery-weighted-meta" th:if="${snapshot.weighted != null}">
+                <span class="lottery-meta-item">
+                    Prize pool:
+                    <strong id="weighted-pool" th:text="${snapshot.weighted.pool}">0</strong>
+                    <span class="muted">credits</span>
+                </span>
+                <span class="lottery-meta-item">
+                    Ticket: <strong th:text="${snapshot.weighted.ticketPrice}">50</strong>
+                    <span class="muted">credits</span>
+                </span>
+                <span class="lottery-meta-item">
+                    Tickets sold:
+                    <strong th:text="${snapshot.weighted.totalTickets}">0</strong>
+                </span>
+                <span class="lottery-meta-item">
+                    Your tickets:
+                    <strong id="weighted-my-tickets" th:text="${snapshot.weighted.myTickets}">0</strong>
+                </span>
+                <span class="lottery-meta-item lottery-countdown"
+                      th:attr="data-closes-at=${snapshot.weighted.closesAtMillis}">
+                    Closes in <strong class="lottery-countdown-value">--:--:--</strong>
+                </span>
+            </div>
+            <p class="muted" th:if="${snapshot.weighted == null}">
+                No draw is open right now — check back soon. (The cycle opens at 00:00 UTC.)
+            </p>
+        </header>
+
+        <form id="lottery-weighted-bet" autocomplete="off"
+              th:if="${snapshot.weighted != null}">
+            <label for="weighted-count">Tickets to buy</label>
+            <input id="weighted-count" name="count" type="number" min="1" value="1" required>
+            <button type="submit" id="weighted-buy" class="btn-primary">
+                Buy <span class="muted">(at <strong th:text="${snapshot.weighted.ticketPrice}">50</strong>/ticket)</span>
+            </button>
+            <div class="lottery-balance">
+                Wallet: <strong id="lottery-balance" th:text="${balance}">0</strong> credits
+            </div>
+        </form>
+
+        <div class="lottery-weighted-holders"
+             th:if="${snapshot.weighted != null and !#lists.isEmpty(snapshot.weighted.topHolders)}">
+            <h3>Top holders</h3>
+            <ol class="lottery-top-holders">
+                <li th:each="h : ${snapshot.weighted.topHolders}">
+                    <span class="muted">User #<span th:text="${h.discordId}">…</span></span>
+                    — <strong th:text="${h.ticketCount}">0</strong> tickets
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- ========================================================== -->
+    <!-- Featured event — admin-fired weighted lottery (when open).  -->
+    <!-- Only shows in NUMBER_MATCH-daily mode, since a WEIGHTED     -->
+    <!-- daily already occupies the single weighted-row slot upstairs -->
+    <!-- and there can't be two opens of the same mode at once.      -->
+    <!-- ========================================================== -->
+    <section class="lottery-weighted"
+             th:if="${snapshot.dailyEnabled and !snapshot.isDailyWeighted and snapshot.weighted != null}">
         <h2>🌟 Featured event • Weighted draw</h2>
         <p class="muted">
             Special admin-fired lottery — every ticket is a weight in the draw, and
@@ -143,7 +244,7 @@
         <div class="lottery-weighted-meta">
             <span class="lottery-meta-item">
                 Prize pool:
-                <strong id="weighted-pool" th:text="${snapshot.weighted.pool}">0</strong>
+                <strong id="featured-pool" th:text="${snapshot.weighted.pool}">0</strong>
                 <span class="muted">credits</span>
             </span>
             <span class="lottery-meta-item">
@@ -156,17 +257,17 @@
             </span>
             <span class="lottery-meta-item">
                 Your tickets:
-                <strong id="weighted-my-tickets" th:text="${snapshot.weighted.myTickets}">0</strong>
+                <strong id="featured-my-tickets" th:text="${snapshot.weighted.myTickets}">0</strong>
             </span>
             <span class="lottery-meta-item lottery-countdown"
                   th:attr="data-closes-at=${snapshot.weighted.closesAtMillis}">
                 Closes in <strong class="lottery-countdown-value">--:--:--</strong>
             </span>
         </div>
-        <form id="lottery-weighted-bet" autocomplete="off">
-            <label for="weighted-count">Tickets to buy</label>
-            <input id="weighted-count" name="count" type="number" min="1" value="1" required>
-            <button type="submit" id="weighted-buy" class="btn-primary">
+        <form id="lottery-featured-bet" autocomplete="off">
+            <label for="featured-count">Tickets to buy</label>
+            <input id="featured-count" name="count" type="number" min="1" value="1" required>
+            <button type="submit" id="featured-buy" class="btn-primary">
                 Buy <span class="muted">(at <strong th:text="${snapshot.weighted.ticketPrice}">100</strong>/ticket)</span>
             </button>
         </form>
@@ -182,9 +283,12 @@
     </section>
 
     <!-- ========================================================== -->
-    <!-- Payout schedule                                             -->
+    <!-- Payout schedule — NUMBER_MATCH tier table (5/4/3/2 matches) -->
+    <!-- only renders for NUMBER_MATCH-mode dailies. WEIGHTED mode   -->
+    <!-- gets a 50/30/20 top-3 schedule instead.                     -->
     <!-- ========================================================== -->
-    <section class="lottery-payouts">
+    <section class="lottery-payouts"
+             th:if="${snapshot.dailyEnabled and !snapshot.isDailyWeighted}">
         <h2>How payouts work</h2>
         <p class="muted">
             The day's prize pool splits across match tiers. 0 or 1 matches pay nothing —
@@ -216,6 +320,33 @@
                     <td><strong>0%</strong></td>
                     <td class="muted">Lose stake — funds tomorrow's pool.</td>
                 </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="lottery-payouts"
+             th:if="${snapshot.dailyEnabled and snapshot.isDailyWeighted}">
+        <h2>How payouts work</h2>
+        <p class="muted">
+            Three winners are picked at close-time, weighted by how many tickets each user holds.
+            More tickets = higher chance of being drawn (and of being drawn into a higher tier).
+            Empty tiers and rounding remainders roll back into the per-server jackpot pool.
+        </p>
+        <table class="lottery-tier-table">
+            <thead>
+                <tr>
+                    <th>Tier</th>
+                    <th>Prize pool share</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>1st</strong></td><td><strong>50%</strong></td>
+                    <td class="muted">Top tier — drawn first, weighted by ticket count.</td></tr>
+                <tr><td><strong>2nd</strong></td><td><strong>30%</strong></td>
+                    <td class="muted">Second tier — remaining holders re-weighted after 1st is removed.</td></tr>
+                <tr><td><strong>3rd</strong></td><td><strong>20%</strong></td>
+                    <td class="muted">Third tier — same.</td></tr>
             </tbody>
         </table>
     </section>

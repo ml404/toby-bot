@@ -6,13 +6,8 @@ import database.poker.CasinoHoldemTableRegistry
 import database.service.CasinoHoldemService
 import database.service.CasinoHoldemService.ActionOutcome
 import database.service.CasinoHoldemService.DealOutcome
-import database.service.JackpotService
-import database.service.UserService
-import net.dv8tion.jda.api.JDA
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -24,88 +19,68 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
+import web.casino.CasinoPageContext
 import web.casino.CasinoResponseLike
 import web.casino.StakeBounds
+import web.casino.renderMinigamePage
 import web.service.CasinoHoldemWebService
 import web.service.EconomyWebService
 import web.util.WebGuildAccess
-import web.util.discordIdOrNull
-import web.util.displayName
 
 /**
- * Web surface for `/casinoholdem`. Same [CasinoHoldemService] the
- * Discord command uses, plus the same in-memory
- * [CasinoHoldemTableRegistry] — a hand started in Discord can also be
- * played from the web inbox, and vice versa.
+ * Web surface for the per-guild Casino Hold'em page. Same
+ * [CasinoHoldemService] the Discord command uses, plus the same
+ * in-memory [CasinoHoldemTableRegistry] — a hand started in Discord can
+ * also be played from the web, and vice versa.
+ *
+ * URL surface mirrors the rest of the casino minigame family
+ * (`/casino/{guildId}/<game>`), routed via [CasinoPageContext.
+ * renderMinigamePage] so the page model picks up `tobyCoins` /
+ * `marketPrice` / `jackpotPool` for free — same wiring as Baccarat
+ * et al. The dedicated `/casinoholdem/guilds` picker was retired in
+ * favour of the shared [CasinoController] hub at `/casino/guilds`,
+ * which already lists Hold'em alongside the other table games.
  *
  * Pages:
- *   - `GET /casinoholdem/guilds` — guild selector
- *   - `GET /casinoholdem/{guildId}` — solo play page
+ *   - `GET /casino/{guildId}/casinoholdem` — solo play page
  *
  * JSON endpoints (browser polls every ~2s for live updates):
- *   - `GET  /casinoholdem/{guildId}/state`
- *   - `POST /casinoholdem/{guildId}/deal`
- *   - `POST /casinoholdem/{guildId}/action`
+ *   - `GET  /casino/{guildId}/casinoholdem/state`
+ *   - `POST /casino/{guildId}/casinoholdem/deal`
+ *   - `POST /casino/{guildId}/casinoholdem/action`
  */
 @Controller
-@RequestMapping("/casinoholdem")
+@RequestMapping("/casino/{guildId}/casinoholdem")
 class CasinoHoldemController(
     private val service: CasinoHoldemService,
     private val webService: CasinoHoldemWebService,
     private val tableRegistry: CasinoHoldemTableRegistry,
     private val economyWebService: EconomyWebService,
-    private val userService: UserService,
-    private val jackpotService: JackpotService,
-    private val jda: JDA,
+    private val pageContext: CasinoPageContext,
     private val stakeBounds: StakeBounds,
 ) {
 
     private val errors = CasinoOutcomeMapper { msg -> CasinoHoldemActionResponse(ok = false, error = msg) }
 
-    @GetMapping("/guilds")
-    fun guildList(
-        @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
-        @AuthenticationPrincipal user: OAuth2User,
-        model: Model,
-    ): String {
-        val discordId = user.discordIdOrNull()
-        val guilds = if (discordId != null) {
-            economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
-        } else emptyList()
-        model.addAttribute("guilds", guilds)
-        model.addAttribute("username", user.displayName())
-        return "casinoholdem-guilds"
-    }
-
-    @GetMapping("/{guildId}")
+    @GetMapping
     fun page(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes,
-    ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/casinoholdem/guilds"
-    ) { discordId ->
-        val guild = jda.getGuildById(guildId) ?: run {
-            ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/casinoholdem/guilds"
-        }
-        val profile = userService.getUserById(discordId, guildId)
-        model.addAttribute("guildId", guildId.toString())
-        model.addAttribute("guildName", guild.name)
-        model.addAttribute("balance", profile?.socialCredit ?: 0L)
-        model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
-        model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
+    ): String = pageContext.renderMinigamePage(
+        user, guildId, economyWebService, model, ra,
+        template = "casinoholdem-solo",
+    ) {
+        val discordId = user.attributes["id"].toString().toLong()
         val (minStake, maxStake) = stakeBounds.casinoHoldem(guildId)
-        model.addAttribute("minStake", minStake)
-        model.addAttribute("maxStake", maxStake)
-        model.addAttribute("callMultiple", CasinoHoldem.CALL_MULTIPLE)
-        model.addAttribute("username", user.displayName())
-        model.addAttribute("myDiscordId", discordId.toString())
-        "casinoholdem-solo"
+        addAttribute("minStake", minStake)
+        addAttribute("maxStake", maxStake)
+        addAttribute("callMultiple", CasinoHoldem.CALL_MULTIPLE)
+        addAttribute("myDiscordId", discordId.toString())
     }
 
-    @GetMapping("/{guildId}/state")
+    @GetMapping("/state")
     @ResponseBody
     fun state(
         @PathVariable guildId: Long,
@@ -121,7 +96,7 @@ class CasinoHoldemController(
         ResponseEntity.ok(view)
     }
 
-    @PostMapping("/{guildId}/deal")
+    @PostMapping("/deal")
     @ResponseBody
     fun deal(
         @PathVariable guildId: Long,
@@ -144,7 +119,7 @@ class CasinoHoldemController(
         }
     }
 
-    @PostMapping("/{guildId}/action")
+    @PostMapping("/action")
     @ResponseBody
     fun action(
         @PathVariable guildId: Long,

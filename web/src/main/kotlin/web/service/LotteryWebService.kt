@@ -25,6 +25,12 @@ class LotteryWebService(
     /**
      * Daily-draw + featured weighted-event snapshot for the page render.
      * Either field can be null when no lottery of that mode is open.
+     *
+     * `dailyMode` + `dailyEnabled` reflect the guild's `LOTTERY_DAILY_*`
+     * config so the page can branch its copy: a WEIGHTED-mode guild
+     * should not see the Pick-5 picker or the 5/4/3/2-match tier table,
+     * and a paused guild (`LOTTERY_DAILY_ENABLED=false`) should see an
+     * explicit empty state instead of a stale picker.
      */
     data class LotteryPageSnapshot(
         val dailyOpen: JackpotLotteryDto?,
@@ -39,6 +45,8 @@ class LotteryWebService(
         val numberMax: Int,
         val tierPercents: List<Int>,
         val revenueJackpotPct: Long,
+        val dailyMode: String,
+        val dailyEnabled: Boolean,
     )
 
     fun snapshot(guildId: Long, discordId: Long): LotteryPageSnapshot {
@@ -68,6 +76,8 @@ class LotteryWebService(
             numberMax = LotteryHelper.MATCH_NUMBER_MAX,
             tierPercents = LotteryHelper.TIER_PCTS_5_4_3_2.toList(),
             revenueJackpotPct = LotteryHelper.dailyRevenueJackpotPct(configService, guildId),
+            dailyMode = LotteryHelper.dailyMode(configService, guildId),
+            dailyEnabled = LotteryHelper.dailyEnabled(configService, guildId),
         )
     }
 

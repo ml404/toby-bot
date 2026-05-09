@@ -9,11 +9,8 @@ import database.poker.CasinoHoldemTableRegistry
 import database.service.CasinoHoldemService
 import database.service.CasinoHoldemService.ActionOutcome
 import database.service.CasinoHoldemService.DealOutcome
-import database.service.JackpotService
-import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
-import net.dv8tion.jda.api.JDA
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -21,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
+import web.casino.CasinoPageContext
 import web.casino.StakeBounds
 import web.service.CasinoHoldemWebService
 import web.service.EconomyWebService
@@ -35,9 +33,7 @@ class CasinoHoldemControllerTest {
     private lateinit var webService: CasinoHoldemWebService
     private lateinit var registry: CasinoHoldemTableRegistry
     private lateinit var economyWebService: EconomyWebService
-    private lateinit var userService: UserService
-    private lateinit var jackpotService: JackpotService
-    private lateinit var jda: JDA
+    private lateinit var pageContext: CasinoPageContext
     private lateinit var stakeBounds: StakeBounds
     private lateinit var user: OAuth2User
     private lateinit var controller: CasinoHoldemController
@@ -48,9 +44,7 @@ class CasinoHoldemControllerTest {
         webService = mockk(relaxed = true)
         registry = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
-        userService = mockk(relaxed = true)
-        jackpotService = mockk(relaxed = true)
-        jda = mockk(relaxed = true)
+        pageContext = mockk(relaxed = true)
         stakeBounds = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
@@ -62,9 +56,7 @@ class CasinoHoldemControllerTest {
             webService = webService,
             tableRegistry = registry,
             economyWebService = economyWebService,
-            userService = userService,
-            jackpotService = jackpotService,
-            jda = jda,
+            pageContext = pageContext,
             stakeBounds = stakeBounds,
         )
     }
