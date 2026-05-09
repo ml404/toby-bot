@@ -183,6 +183,18 @@ data class LotteryViewModel(
     val revenueJackpotPct: Long,
     val daily: DailyView?,
     val weighted: WeightedView?,
+    /** True iff the daily lottery is enabled in moderation. When false the
+     *  page renders a paused empty-state instead of a stale picker. */
+    val dailyEnabled: Boolean,
+    /** "NUMBER_MATCH" (Pick-X picker + tier table) or "WEIGHTED" (top-3
+     *  weighted draw — shares DOM with the featured-event card and reads
+     *  from `weighted` rather than `daily`). The Featured-event card only
+     *  shows in NUMBER_MATCH mode, since a WEIGHTED daily already occupies
+     *  the single weighted-row slot. */
+    val dailyMode: String,
+    /** Convenience: true when `dailyMode == "WEIGHTED"`. Avoids string
+     *  comparisons in Thymeleaf. */
+    val isDailyWeighted: Boolean,
 ) {
     data class DailyView(
         val pool: Long,
@@ -252,6 +264,9 @@ data class LotteryViewModel(
                 revenueJackpotPct = snap.revenueJackpotPct,
                 daily = daily,
                 weighted = weighted,
+                dailyEnabled = snap.dailyEnabled,
+                dailyMode = snap.dailyMode,
+                isDailyWeighted = snap.dailyMode == database.service.LotteryHelper.MODE_WEIGHTED,
             )
         }
 

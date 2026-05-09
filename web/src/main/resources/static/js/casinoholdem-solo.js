@@ -179,7 +179,7 @@
     }
 
     function refreshState() {
-        return fetch("/casinoholdem/" + guildId + "/state", { credentials: "same-origin" })
+        return fetch("/casino/" + guildId + "/casinoholdem/state", { credentials: "same-origin" })
             .then(function (r) {
                 if (r.status === 404) {
                     stopPoll();
@@ -205,7 +205,7 @@
         }
         resultDefer.cancel();
         dealBusy = true;
-        window.TobyApi.postJson("/casinoholdem/" + guildId + "/deal", { stake: stake })
+        window.TobyApi.postJson("/casino/" + guildId + "/casinoholdem/deal", { stake: stake })
             .then(function (b) {
                 if (!b.ok) {
                     errorToast(b.error || "Deal failed.");
@@ -223,7 +223,7 @@
         if (actionBusy) return Promise.resolve();
         actionBusy = true;
         setActionsEnabled(false);
-        return window.TobyApi.postJson("/casinoholdem/" + guildId + "/action", { action: action })
+        return window.TobyApi.postJson("/casino/" + guildId + "/casinoholdem/action", { action: action })
             .then(function (b) {
                 if (!b.ok) {
                     errorToast(b.error || "Action failed.");

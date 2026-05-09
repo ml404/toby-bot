@@ -217,6 +217,8 @@ class LotteryControllerTest {
             numberMax = 49,
             tierPercents = listOf(60, 25, 10, 5),
             revenueJackpotPct = 30L,
+            dailyMode = "NUMBER_MATCH",
+            dailyEnabled = true,
         )
 
         val vm = LotteryViewModel.from(snap)
@@ -243,6 +245,8 @@ class LotteryControllerTest {
             numberMax = 49,
             tierPercents = listOf(60, 25, 10, 5),
             revenueJackpotPct = 30L,
+            dailyMode = "NUMBER_MATCH",
+            dailyEnabled = true,
         )
 
         val vm = LotteryViewModel.from(snap)
