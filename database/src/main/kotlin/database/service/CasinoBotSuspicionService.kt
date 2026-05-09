@@ -3,6 +3,7 @@ package database.service
 import common.events.AntiAutoclickEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -14,27 +15,32 @@ import java.util.concurrent.ConcurrentHashMap
  * the cursor between bets — even by a few pixels — and the browser emits
  * mousemove notifications during that motion.
  *
- * On every bet, [recordAndScore] compares the supplied `clickX`/`clickY`
- * against the user's previous bet **for the same game** and consults the
- * supplied `mouseMoved` flag. When **both** signal "bot-like" (same spot
- * ± [EPSILON_PX], no intervening motion), the user's streak for that
- * game increments. Any other outcome — coordinates outside the epsilon,
- * `mouseMoved == true`, or any field `null` (e.g. Discord call paths or
- * the rare keyboard submit) — resets the streak to 0. [CasinoEdgeService]
- * reads this streak and converts it to an effective house edge.
+ * **Rolling window of the last 100 click signals.** A monotonic streak
+ * couldn't tell a determined sit-still slots player apart from a real
+ * bot — both produce identical signals during continuous play. The
+ * window samples the last [WINDOW_SIZE] bets and only flags when at
+ * least [MIN_SAMPLE] of them match the bot pattern *and* the match
+ * ratio is at least [RATIO_OPEN]. Even one mouse-twitch or pixel
+ * drift per ~20 bets keeps the ratio under threshold; a real bot
+ * stays at 1.0.
  *
- * State is partitioned by `gameKey` so a player's slots streak doesn't
- * bleed into their dice or coinflip streak. Each game uses a stable
- * string identifier (`"coinflip"`, `"dice"`, `"slots"`).
+ * Hysteresis: open at ratio ≥ [RATIO_OPEN], close at ratio < [RATIO_CLOSE].
+ * The gap prevents flapping at the boundary as one stray non-match
+ * eviction shifts the ratio.
+ *
+ * Idle reset: if the gap between bets exceeds [IDLE_RESET_MS] (5 min),
+ * the window clears. A user who comes back from a break starts on a
+ * fresh slate; old bot-shaped signals don't haunt them.
  *
  * State is held in an in-memory [ConcurrentHashMap]. Restart-resets are
- * acceptable: a real bot rebuilds the streak in a handful of bets, and
+ * acceptable: a real bot rebuilds its window in [WINDOW_SIZE] bets, and
  * persisting suspicion data through a deploy is more complexity than
  * the heuristic warrants.
  */
 @Service
 class CasinoBotSuspicionService(
     private val eventPublisher: ApplicationEventPublisher,
+    private val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
     /**
@@ -48,20 +54,26 @@ class CasinoBotSuspicionService(
     private data class State(
         var lastX: Int,
         var lastY: Int,
-        var streak: Int,
+        // Match-history bitset for the last WINDOW_SIZE bets. true = the
+        // bet's click signals matched the bot pattern (same pixel ±2 px,
+        // mouseMoved == false). false = at least one signal differed.
+        val window: ArrayDeque<Boolean>,
+        var lastClickTimeMs: Long,
+        var currentlyOpen: Boolean,
     )
 
     private val states: ConcurrentHashMap<Triple<Long, Long, String>, State> = ConcurrentHashMap()
 
     /**
-     * Record a bet's click signature and return the resulting consecutive
-     * "bot-like" streak for the supplied [gameKey]. The streak grows when
-     * the new click is within [EPSILON_PX] of the previous click for the
-     * same game and `mouseMoved` is `false`; any other combination —
-     * including any `null` signal field — resets it to 0.
+     * Record a bet's click signature and return the current bot-suspicion
+     * "streak" used by [CasinoEdgeService] for the per-game forced-loss
+     * gate. Returns the count of matched bets in the window when the
+     * session is currently open, else 0 — so a session below the
+     * detection threshold contributes no house-edge bias even if some
+     * recent bets happen to match.
      *
      * Caller is expected to invoke this inside the same `@Transactional`
-     * boundary as the wager itself so the streak update and the bias
+     * boundary as the wager itself so the window update and the bias
      * decision are observed together.
      */
     fun recordAndScore(
@@ -73,13 +85,15 @@ class CasinoBotSuspicionService(
         mouseMoved: Boolean?,
     ): Int {
         val key = Triple(discordId, guildId, gameKey)
-        // Missing any of the three signals → treat as a non-suspicious bet
-        // (Discord path, keyboard submit, browser without JS). Reset the
-        // streak so a previously suspicious user gets a clean slate when
-        // they switch input modality.
+
+        // Missing any of the three signals → treat as a non-suspicious
+        // bet (Discord path, keyboard submit, browser without JS). Drop
+        // the whole window so a previously suspicious user gets a clean
+        // slate when they switch input modality, and close the session
+        // if it was open.
         if (clickX == null || clickY == null || mouseMoved == null) {
             val priorEntry = states.remove(key)
-            if ((priorEntry?.streak ?: 0) >= 1) {
+            if (priorEntry?.currentlyOpen == true) {
                 eventPublisher.publishEvent(
                     AntiAutoclickEvent.SessionClosed(guildId, discordId, gameKey)
                 )
@@ -87,32 +101,103 @@ class CasinoBotSuspicionService(
             return 0
         }
 
+        val now = clock.millis()
         val prior = states[key]
-        val priorStreak = prior?.streak ?: 0
-        val newStreak = if (
-            prior != null &&
+
+        // Idle reset — a long gap between bets clears the window. Real
+        // autoclickers fire continuously; humans take breaks.
+        if (prior != null && (now - prior.lastClickTimeMs) > IDLE_RESET_MS) {
+            prior.window.clear()
+            if (prior.currentlyOpen) {
+                prior.currentlyOpen = false
+                eventPublisher.publishEvent(
+                    AntiAutoclickEvent.SessionClosed(guildId, discordId, gameKey)
+                )
+            }
+        }
+
+        // Match check: same pixel within epsilon AND no motion since the
+        // previous bet. The first bet of a window can't match (no prior
+        // pixel to compare) and contributes a `false` so the ratio
+        // can't be inflated by a session of length 1.
+        val matched = prior != null &&
             !mouseMoved &&
             kotlin.math.abs(prior.lastX - clickX) <= EPSILON_PX &&
             kotlin.math.abs(prior.lastY - clickY) <= EPSILON_PX
-        ) {
-            prior.streak + 1
-        } else {
-            0
+
+        val window = prior?.window ?: ArrayDeque<Boolean>(WINDOW_SIZE)
+        window.addLast(matched)
+        while (window.size > WINDOW_SIZE) window.removeFirst()
+
+        val size = window.size
+        val matches = window.count { it }
+        val ratio = if (size > 0) matches.toDouble() / size else 0.0
+        val wasOpen = prior?.currentlyOpen ?: false
+
+        val nowOpen = when {
+            wasOpen && ratio < RATIO_CLOSE -> false
+            !wasOpen && size >= MIN_SAMPLE && ratio >= RATIO_OPEN -> true
+            else -> wasOpen
         }
-        states[key] = State(lastX = clickX, lastY = clickY, streak = newStreak)
-        if (priorStreak == 0 && newStreak >= 1) {
+
+        states[key] = State(
+            lastX = clickX,
+            lastY = clickY,
+            window = window,
+            lastClickTimeMs = now,
+            currentlyOpen = nowOpen,
+        )
+
+        if (!wasOpen && nowOpen) {
             eventPublisher.publishEvent(
-                AntiAutoclickEvent.SessionOpened(guildId, discordId, gameKey, newStreak)
+                AntiAutoclickEvent.SessionOpened(guildId, discordId, gameKey, streak = matches)
             )
-        } else if (priorStreak >= 1 && newStreak == 0) {
+        } else if (wasOpen && !nowOpen) {
             eventPublisher.publishEvent(
                 AntiAutoclickEvent.SessionClosed(guildId, discordId, gameKey)
             )
         }
-        return newStreak
+
+        // Return the matches count only while the session is open — the
+        // edge gate only ramps when the rolling window has confirmed
+        // the bot pattern at threshold. Below-threshold sessions report
+        // 0 so [CasinoEdgeService]'s `streak * 2.5pp` formula yields
+        // zero bias for natural play.
+        return if (nowOpen) matches else 0
     }
 
     companion object {
         const val EPSILON_PX: Int = 2
+
+        /** Number of recent bets the window keeps. Sized large enough
+         *  to absorb [MIN_SAMPLE] bets so the ratio measures over the
+         *  full session-of-interest, not a sliding tail of it. */
+        const val WINDOW_SIZE: Int = 300
+
+        /** Minimum window fill before the gate can open. 300 bets at
+         *  slots' 800 ms minimum spin = ~4 min of *uninterrupted*
+         *  identical clicking. A natural multi-minute session that
+         *  includes any conscious pauses never reaches it (the
+         *  [IDLE_RESET_MS] cutoff clears the window during the pause). */
+        const val MIN_SAMPLE: Int = 300
+
+        /** Match ratio (matches / size) at which the gate opens. 95 %
+         *  means even one mouse-twitch or slight pixel drift per 20 bets
+         *  keeps a human under threshold. */
+        const val RATIO_OPEN: Double = 0.95
+
+        /** Match ratio at which an open gate closes. Hysteresis prevents
+         *  flapping when one stray match-eviction nudges the ratio
+         *  across the open threshold. */
+        const val RATIO_CLOSE: Double = 0.60
+
+        /** Idle gap between bets that clears the window entirely. Set
+         *  to 15 s — natural slots cycles are 1–3 s (animation + react
+         *  + click), so a 15 s gap reliably indicates a conscious
+         *  pause. Players who glance at chat, sip a drink, or stop to
+         *  read a result hit this cutoff and start a fresh window;
+         *  only continuous bot-grade play accumulates toward
+         *  [MIN_SAMPLE]. */
+        const val IDLE_RESET_MS: Long = 15L * 1000L
     }
 }

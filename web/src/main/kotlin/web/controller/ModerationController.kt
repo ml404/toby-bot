@@ -366,6 +366,51 @@ class ModerationController(
         }
     }
 
+    /**
+     * Create a *private* text channel where only TobyBot and server
+     * admins can read. Used for the casino mod-log so anti-autoclicker
+     * session embeds aren't visible to regular members. Mirrors the
+     * read-only flow's request/response shape; only the @everyone
+     * permission overrides differ on the server side.
+     *
+     * `targetConfig` must be allow-listed in
+     * [ModerationWebService.ADMIN_CHANNEL_CONFIG_ALLOWLIST] (currently
+     * just `CASINO_MODLOG_CHANNEL_ID`) so a public-facing config can't
+     * be routed through this endpoint by accident.
+     */
+    @PostMapping("/{guildId}/channel/create-admin-only", consumes = ["application/json"])
+    @ResponseBody
+    fun createAdminOnlyChannel(
+        @PathVariable guildId: Long,
+        @RequestBody body: CreateReadOnlyChannelRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<CreateReadOnlyChannelResponse> = WebGuildAccess.requireSignedInForJson(
+        user, { CreateReadOnlyChannelResponse(false, "Not signed in.") }
+    ) { actor ->
+        when (val result = moderationWebService.createAdminOnlyChannel(
+            actorDiscordId = actor,
+            guildId = guildId,
+            rawName = body.name,
+            targetConfigName = body.targetConfig,
+            parentCategoryId = body.parentCategoryId,
+            newCategoryName = body.newCategoryName,
+        )) {
+            is ModerationWebService.CreateChannelOutcome.Ok -> ResponseEntity.ok(
+                CreateReadOnlyChannelResponse(
+                    ok = true,
+                    error = null,
+                    channelId = result.channelId,
+                    channelName = result.channelName,
+                    targetConfig = result.targetConfig,
+                )
+            )
+            is ModerationWebService.CreateChannelOutcome.Error ->
+                ResponseEntity.badRequest().body(
+                    CreateReadOnlyChannelResponse(ok = false, error = result.message)
+                )
+        }
+    }
+
     @PostMapping("/{guildId}/poll", consumes = ["application/json"])
     @ResponseBody
     fun createPoll(
