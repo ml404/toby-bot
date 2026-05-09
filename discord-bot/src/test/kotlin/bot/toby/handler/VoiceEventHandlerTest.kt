@@ -1,6 +1,5 @@
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
@@ -42,6 +41,7 @@ class VoiceEventHandlerTest {
     private val voiceSessionLifecycle: VoiceSessionLifecycle = mockk(relaxed = true)
     private val lastConnectedChannelTracker: LastConnectedChannelTracker = LastConnectedChannelTracker()
     private val awardService: SocialCreditAwardService = mockk(relaxed = true)
+    private val nowPlayingManager: NowPlayingManager = mockk(relaxed = true)
 
     private val handler = spyk(
         VoiceEventHandler(
@@ -51,6 +51,7 @@ class VoiceEventHandlerTest {
             voiceSessionLifecycle,
             lastConnectedChannelTracker,
             awardService,
+            nowPlayingManager,
         )
     )
 
@@ -132,6 +133,7 @@ class VoiceEventHandlerTest {
             voiceSessionLifecycle = mockk(relaxed = true),
             lastConnectedChannelTracker = LastConnectedChannelTracker(),
             awardService = mockk(relaxed = true),
+            nowPlayingManager = mockk(relaxed = true),
         )
 
         handler.onReady(readyEvent)
@@ -177,6 +179,7 @@ class VoiceEventHandlerTest {
             voiceSessionLifecycle = voiceSessionLifecycle,
             lastConnectedChannelTracker = LastConnectedChannelTracker(),
             awardService = mockk(relaxed = true),
+            nowPlayingManager = mockk(relaxed = true),
         )
 
         handler.onReady(readyEvent)
@@ -478,7 +481,6 @@ class VoiceEventHandlerTest {
         val guild = mockk<Guild>()
         val event = mockk<GuildLeaveEvent>()
         val playerManager = mockk<PlayerManager>(relaxed = true)
-        val nowPlayingManager = mockk<NowPlayingManager>(relaxed = true)
 
         every { event.guild } returns guild
         every { guild.idLong } returns 42L
@@ -486,9 +488,6 @@ class VoiceEventHandlerTest {
 
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns playerManager
-
-        mockkObject(MusicPlayerHelper)
-        every { MusicPlayerHelper.nowPlayingManager } returns nowPlayingManager
 
         // Pre-seed the tracker — leaving the guild should evict it.
         lastConnectedChannelTracker.set(42L, 1234L)
@@ -502,7 +501,6 @@ class VoiceEventHandlerTest {
         }
 
         unmockkObject(PlayerManager)
-        unmockkObject(MusicPlayerHelper)
     }
 
     @Test

@@ -1,12 +1,12 @@
 package bot.toby.handler
 
 import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.MusicPlayerHelper.playUserIntro
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import bot.toby.helpers.nonBots
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
 import bot.toby.voice.VoiceSessionLifecycle
 import common.logging.DiscordLogger
@@ -35,6 +35,7 @@ class VoiceEventHandler(
     private val voiceSessionLifecycle: VoiceSessionLifecycle,
     private val lastConnectedChannelTracker: LastConnectedChannelTracker,
     private val awardService: SocialCreditAwardService,
+    private val nowPlayingManager: NowPlayingManager,
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -71,7 +72,7 @@ class VoiceEventHandler(
         val guildId = event.guild.idLong
         logger.info { "Guild $guildId left — cleaning up audio resources" }
         PlayerManager.instance.destroyMusicManager(guildId)
-        MusicPlayerHelper.nowPlayingManager.resetNowPlayingMessage(guildId)
+        nowPlayingManager.resetNowPlayingMessage(guildId)
         // The bot is no longer in this guild; the cached channel reference is
         // dead weight (and pins a stale JDA VoiceChannel via id alone is moot
         // here since we only kept ids — but the entry is still useless).

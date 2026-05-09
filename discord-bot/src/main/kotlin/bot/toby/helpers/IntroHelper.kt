@@ -1,7 +1,7 @@
 package bot.toby.helpers
 
 import bot.toby.handler.EventWaiter
-import bot.toby.helpers.MusicPlayerHelper.isUrl
+import bot.toby.util.isUrl
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.ConfigDto

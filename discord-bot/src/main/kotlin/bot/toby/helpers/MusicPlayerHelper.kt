@@ -5,6 +5,7 @@ import bot.toby.command.commands.music.MusicCommand.Companion.sendDeniedStoppabl
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
+import bot.toby.util.isUrl as utilIsUrl
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.discord.embed
@@ -13,7 +14,6 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
 import database.dto.MusicDto
 import database.dto.UserDto
-import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Guild
@@ -22,11 +22,9 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import java.awt.Color
-import java.util.concurrent.TimeUnit
 
 object MusicPlayerHelper {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
-    private const val SECOND_MULTIPLIER = 1000
     val nowPlayingManager = NowPlayingManager()
 
     fun playUserIntro(
@@ -233,41 +231,12 @@ object MusicPlayerHelper {
 
     private fun determineUrlFromMusicDto(it: MusicDto): String {
         // If fileName is a URL, use it directly (backward compatibility)
-        if (isUrl(it.fileName!!).isNotEmpty()) return it.fileName!!
+        if (utilIsUrl(it.fileName!!).isNotEmpty()) return it.fileName!!
         // If musicBlob contains a URL (e.g. fileName stores the video title), use that
         val blobString = it.musicBlob?.let { bytes -> String(bytes) } ?: ""
-        if (isUrl(blobString).isNotEmpty()) return blobString
+        if (utilIsUrl(blobString).isNotEmpty()) return blobString
         // Otherwise, serve the binary data via the web endpoint
         return "$BOT_WEB_URL/music?id=${it.id}"
-    }
-
-    fun formatTime(timeInMillis: Long): String {
-        val hours = TimeUnit.MILLISECONDS.toHours(timeInMillis)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeInMillis) % 60
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(timeInMillis) % 60
-
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
-    }
-
-    fun adjustTrackPlayingTimes(startTime: Long): Long {
-        val adjustmentMap = mutableMapOf<String, Long>()
-        if (startTime > 0L) adjustmentMap[MusicDto.Adjustment.START.name] = startTime
-        return adjustmentMap[MusicDto.Adjustment.START.name]?.times(SECOND_MULTIPLIER) ?: 0L
-    }
-
-    // Method to extract URL using regex
-    fun isUrl(content: String): String {
-        // Regex pattern to match a URL
-        val urlRegex = Regex(
-            """\b(https?://[^\s/$.?#].\S*)\b""",
-            RegexOption.IGNORE_CASE
-        )
-        return urlRegex.find(content)?.value ?: ""
-    }
-
-    @JvmStatic
-    fun deriveDeleteDelayFromTrack(track: AudioTrack): Int {
-        return (track.duration / SECOND_MULTIPLIER).toInt()
     }
 
     fun resetMessages(guildId: Long) = nowPlayingManager.resetNowPlayingMessage(guildId)

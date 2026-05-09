@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music.player
 
 import bot.toby.command.commands.music.MusicCommand
-import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.util.formatTime
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import core.command.CommandContext
 import database.dto.UserDto
@@ -49,7 +49,7 @@ class QueueCommand : MusicCommand {
                     .addContent(" by ")
                     .addContent(info?.author!!)
                     .addContent("` [`")
-                    .addContent(MusicPlayerHelper.formatTime(track.duration))
+                    .addContent(formatTime(track.duration))
                     .addContent("`]\n")
         }
         if (trackList.size > trackCount) {

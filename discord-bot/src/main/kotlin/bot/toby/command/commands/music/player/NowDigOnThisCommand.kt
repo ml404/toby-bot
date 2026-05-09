@@ -1,9 +1,9 @@
 package bot.toby.command.commands.music.player
 
 import bot.toby.command.commands.music.MusicCommand
-import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.URLHelper
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.util.adjustTrackPlayingTimes
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
@@ -53,7 +53,7 @@ class NowDigOnThisCommand : MusicCommand {
             link = "ytsearch:$link"
         }
 
-        val startPosition = MusicPlayerHelper.adjustTrackPlayingTimes(event.getOption(START_POSITION)?.asLong ?: 0L)
+        val startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION)?.asLong ?: 0L)
         val musicManager = instance.getMusicManager(ctx.guild)
         val volume = event.getOption(VOLUME)?.asInt ?: musicManager.audioPlayer.volume
 

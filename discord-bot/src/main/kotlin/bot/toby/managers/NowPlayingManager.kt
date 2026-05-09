@@ -1,6 +1,6 @@
 package bot.toby.managers
 
-import bot.toby.helpers.MusicPlayerHelper.formatTime
+import bot.toby.util.formatTime
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.logging.DiscordLogger
