@@ -36,6 +36,7 @@ class SlotsService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val casinoEdgeService: CasinoEdgeService,
     private val machine: SlotMachine = SlotMachine(),
     private val random: Random = Random.Default
 ) {
@@ -71,7 +72,15 @@ class SlotsService(
         data object UnknownUser : SpinOutcome, CasinoCommonFailure.UnknownUser
     }
 
-    fun spin(discordId: Long, guildId: Long, stake: Long, autoTopUp: Boolean = false): SpinOutcome {
+    fun spin(
+        discordId: Long,
+        guildId: Long,
+        stake: Long,
+        autoTopUp: Boolean = false,
+        clickX: Int? = null,
+        clickY: Int? = null,
+        mouseMoved: Boolean? = null,
+    ): SpinOutcome {
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.SLOTS_MIN_STAKE, guildId, default = SlotMachine.MIN_STAKE, min = 1L
         )
@@ -91,7 +100,25 @@ class SlotsService(
             is TopUpResolution.Ok -> r
         }
 
-        val pull = machine.pull(random)
+        val fairPull = machine.pull(random)
+        // Anti-autoclicker substitution: replace the fair pull with a
+        // forced losing reel set. We pick three distinct symbols so the
+        // animated reels still settle on something natural-looking
+        // (any non-3-of-a-kind reads as a loss to the player).
+        val pull = casinoEdgeService.applyBotEdge(
+            discordId = discordId,
+            guildId = guildId,
+            gameKey = "slots",
+            clickX = clickX, clickY = clickY, mouseMoved = mouseMoved,
+            edgeMaxConfig = ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT,
+            fairOutcome = fairPull,
+            asLoss = {
+                // Three distinct symbols → guaranteed multiplier=0 in
+                // SlotMachine.pull's logic (only 3-of-a-kind pays).
+                val faces = SlotMachine.Symbol.entries.take(3)
+                SlotMachine.Pull(symbols = faces, multiplier = 0L)
+            },
+        )
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, pull.multiplier)
         return if (pull.isWin) {
             val jackpot = JackpotHelper.rollOnWin(

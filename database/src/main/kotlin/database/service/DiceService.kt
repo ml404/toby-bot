@@ -25,6 +25,7 @@ class DiceService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val casinoEdgeService: CasinoEdgeService,
     private val dice: Dice = Dice(),
     private val random: Random = Random.Default
 ) {
@@ -67,7 +68,10 @@ class DiceService(
         guildId: Long,
         stake: Long,
         predicted: Int,
-        autoTopUp: Boolean = false
+        autoTopUp: Boolean = false,
+        clickX: Int? = null,
+        clickY: Int? = null,
+        mouseMoved: Boolean? = null,
     ): RollOutcome {
         if (!dice.isValidPrediction(predicted)) {
             return RollOutcome.InvalidPrediction(1, dice.sidesCount)
@@ -91,7 +95,25 @@ class DiceService(
             is TopUpResolution.Ok -> r
         }
 
-        val roll = dice.roll(predicted, random)
+        val fairRoll = dice.roll(predicted, random)
+        // Anti-autoclicker substitution: with probability proportional
+        // to the suspect's streak, replace the fair roll with a forced
+        // loss landing on a random non-predicted face.
+        val roll = casinoEdgeService.applyBotEdge(
+            discordId = discordId,
+            guildId = guildId,
+            gameKey = "dice",
+            clickX = clickX, clickY = clickY, mouseMoved = mouseMoved,
+            edgeMaxConfig = ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT,
+            fairOutcome = fairRoll,
+            asLoss = {
+                // Pick any face other than the predicted one. We don't care
+                // which loser face — the player only sees "you predicted X,
+                // it landed Y" so any non-X reads naturally.
+                val loserFace = (1..dice.sidesCount).first { it != predicted }
+                Dice.Roll(landed = loserFace, predicted = predicted, multiplier = 0L)
+            },
+        )
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, roll.multiplier)
         return if (roll.isWin) {
             val jackpot = JackpotHelper.rollOnWin(

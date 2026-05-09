@@ -68,7 +68,10 @@ class DiceController(
     ): ResponseEntity<RollResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
-        when (val outcome = diceService.roll(discordId, guildId, request.stake, request.prediction, request.autoTopUp)) {
+        when (val outcome = diceService.roll(
+            discordId, guildId, request.stake, request.prediction, request.autoTopUp,
+            clickX = request.clickX, clickY = request.clickY, mouseMoved = request.mouseMoved,
+        )) {
             is RollOutcome.Win -> ResponseEntity.ok(
                 RollResponse(
                     ok = true,
@@ -107,7 +110,17 @@ class DiceController(
     }
 }
 
-data class RollRequest(val prediction: Int = 0, val stake: Long = 0, val autoTopUp: Boolean = false)
+// `clickX` / `clickY` / `mouseMoved` are bot-suspicion signals from
+// `dice.js`'s tracker. All three nullable so non-browser callers (Discord,
+// keyboard submit) can omit them — backend treats nulls as non-suspicious.
+data class RollRequest(
+    val prediction: Int = 0,
+    val stake: Long = 0,
+    val autoTopUp: Boolean = false,
+    val clickX: Int? = null,
+    val clickY: Int? = null,
+    val mouseMoved: Boolean? = null,
+)
 
 data class RollResponse(
     override val ok: Boolean,

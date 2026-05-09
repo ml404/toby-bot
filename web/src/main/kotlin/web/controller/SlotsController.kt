@@ -70,7 +70,10 @@ class SlotsController(
     ): ResponseEntity<SpinResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService, errorBuilder = errors.errorBuilder
     ) { discordId ->
-        when (val outcome = slotsService.spin(discordId, guildId, request.stake, request.autoTopUp)) {
+        when (val outcome = slotsService.spin(
+            discordId, guildId, request.stake, request.autoTopUp,
+            clickX = request.clickX, clickY = request.clickY, mouseMoved = request.mouseMoved,
+        )) {
             is SpinOutcome.Win -> ResponseEntity.ok(
                 SpinResponse(
                     ok = true,
@@ -120,7 +123,16 @@ class SlotsController(
     }
 }
 
-data class SpinRequest(val stake: Long = 0, val autoTopUp: Boolean = false)
+// `clickX` / `clickY` / `mouseMoved` are bot-suspicion signals from
+// `slots.js`'s tracker. All three nullable so non-browser callers (Discord,
+// keyboard submit) can omit them — backend treats nulls as non-suspicious.
+data class SpinRequest(
+    val stake: Long = 0,
+    val autoTopUp: Boolean = false,
+    val clickX: Int? = null,
+    val clickY: Int? = null,
+    val mouseMoved: Boolean? = null,
+)
 
 data class SpinResponse(
     override val ok: Boolean,

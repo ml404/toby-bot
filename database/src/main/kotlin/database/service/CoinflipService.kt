@@ -17,6 +17,12 @@ import kotlin.random.Random
  * Web callers can request `autoTopUp` to sell TOBY for the credit
  * shortfall via [CasinoTopUpHelper]; the resulting trade row is tagged
  * `CASINO_TOPUP`.
+ *
+ * Anti-autoclicker bias is applied via [CasinoEdgeService]: the fair
+ * flip outcome is computed first, then potentially substituted for a
+ * loss outcome based on the player's bot-suspicion streak. Discord
+ * call paths supply `null` for the click signals, which makes the gate
+ * a no-op (streak resets to 0 → bias = 0).
  */
 @Service
 @Transactional
@@ -26,26 +32,10 @@ class CoinflipService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
-    private val botSuspicionService: CoinflipBotSuspicionService,
+    private val casinoEdgeService: CasinoEdgeService,
     private val coinflip: Coinflip = Coinflip(),
     private val random: Random = Random.Default
 ) {
-
-    companion object {
-        /** Per-bet house-edge slope as the suspicion streak grows. 2.5 % per
-         *  consecutive bot-like click means streak 12 saturates the default
-         *  30 % cap. */
-        const val EDGE_PCT_PER_STREAK: Double = 2.5
-
-        /** Default ceiling on the bot-suspicion house edge, in whole percent.
-         *  Active when `JACKPOT_*` admins haven't tuned `COINFLIP_BOT_EDGE_MAX_PCT`. */
-        const val DEFAULT_EDGE_MAX_PCT: Long = 30L
-
-        /** Hard upper bound for the configurable cap. 50 % of bets becoming
-         *  forced losses is already aggressive — beyond that the game is
-         *  unplayable for false positives. */
-        const val MAX_EDGE_MAX_PCT: Long = 50L
-    }
 
     sealed interface FlipOutcome {
         data class Win(
@@ -108,21 +98,22 @@ class CoinflipService(
             is TopUpResolution.Ok -> r
         }
 
-        // Map the user's recent click pattern into a forced-loss probability
-        // before running the fair flip. A streak of 0 (humans, Discord, first
-        // bet) means boost = 0 and the original 50/50 is preserved exactly.
-        val streak = botSuspicionService.recordAndScore(discordId, guildId, clickX, clickY, mouseMoved)
-        val maxEdgePct = configService.cfgLong(
-            ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT, guildId,
-            default = DEFAULT_EDGE_MAX_PCT, min = 0L,
-        ).coerceAtMost(MAX_EDGE_MAX_PCT)
-        val houseEdge = (streak * EDGE_PCT_PER_STREAK / 100.0).coerceIn(0.0, maxEdgePct / 100.0)
-        // Translate house edge → biased lose probability. A 30 % edge means
-        // RTP 0.7, i.e. 65 % lose / 35 % win. We pre-roll the (edge) chunk
-        // as a forced loss; the rest falls through to the fair flip.
-        val loseProbabilityBoost = houseEdge
+        val fairFlip = coinflip.flip(predicted, random)
+        // Suspected autoclickers get a forced-loss substitution at the
+        // configured cap; legitimate play keeps the fair outcome.
+        val flip = casinoEdgeService.applyBotEdge(
+            discordId = discordId,
+            guildId = guildId,
+            gameKey = "coinflip",
+            clickX = clickX, clickY = clickY, mouseMoved = mouseMoved,
+            edgeMaxConfig = ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT,
+            fairOutcome = fairFlip,
+            asLoss = {
+                val opposite = if (predicted == Coinflip.Side.HEADS) Coinflip.Side.TAILS else Coinflip.Side.HEADS
+                Coinflip.Flip(landed = opposite, predicted = predicted, multiplier = 0L)
+            },
+        )
 
-        val flip = coinflip.flip(predicted, random, loseProbabilityBoost)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, flip.multiplier)
         return if (flip.isWin) {
             val jackpot = JackpotHelper.rollOnWin(

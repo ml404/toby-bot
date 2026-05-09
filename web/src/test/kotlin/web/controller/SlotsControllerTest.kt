@@ -49,7 +49,7 @@ class SlotsControllerTest {
 
     @Test
     fun `spin win returns 200 with win-shaped payload`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Win(
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns SpinOutcome.Win(
             stake = 100L,
             multiplier = 5L,
             payout = 500L,
@@ -77,7 +77,7 @@ class SlotsControllerTest {
 
     @Test
     fun `spin lose returns 200 with negative net and win=false`() {
-        every { slotsService.spin(discordId, guildId, 50L) } returns SpinOutcome.Lose(
+        every { slotsService.spin(discordId, guildId, 50L, any(), any(), any(), any()) } returns SpinOutcome.Lose(
             stake = 50L,
             symbols = listOf(
                 SlotMachine.Symbol.CHERRY,
@@ -99,7 +99,7 @@ class SlotsControllerTest {
 
     @Test
     fun `spin returns 400 with error message on insufficient credits`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns
             SpinOutcome.InsufficientCredits(stake = 100L, have = 30L)
 
         val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
@@ -112,7 +112,7 @@ class SlotsControllerTest {
 
     @Test
     fun `spin returns 400 on invalid stake`() {
-        every { slotsService.spin(discordId, guildId, 5L) } returns
+        every { slotsService.spin(discordId, guildId, 5L, any(), any(), any(), any()) } returns
             SpinOutcome.InvalidStake(min = 10L, max = 500L)
 
         val response = controller.spin(guildId, SpinRequest(stake = 5L), user)
@@ -125,7 +125,7 @@ class SlotsControllerTest {
 
     @Test
     fun `spin returns 400 on unknown user`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.UnknownUser
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns SpinOutcome.UnknownUser
 
         val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
 
@@ -140,12 +140,12 @@ class SlotsControllerTest {
         val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { slotsService.spin(any(), any(), any()) }
+        verify(exactly = 0) { slotsService.spin(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `jackpot win surfaces jackpotPayout in the response body`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Win(
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns SpinOutcome.Win(
             stake = 100L,
             multiplier = 5L,
             payout = 500L,
@@ -166,7 +166,7 @@ class SlotsControllerTest {
 
     @Test
     fun `non-jackpot win does not include jackpotPayout`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Win(
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns SpinOutcome.Win(
             stake = 100L,
             multiplier = 2L,
             payout = 200L,
@@ -183,7 +183,7 @@ class SlotsControllerTest {
 
     @Test
     fun `lose with loss tribute surfaces lossTribute on the response`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Lose(
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns SpinOutcome.Lose(
             stake = 100L,
             symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
             newBalance = 900L,
@@ -198,7 +198,7 @@ class SlotsControllerTest {
 
     @Test
     fun `lose with zero tribute (admin disabled) omits lossTribute`() {
-        every { slotsService.spin(discordId, guildId, 100L) } returns SpinOutcome.Lose(
+        every { slotsService.spin(discordId, guildId, 100L, any(), any(), any(), any()) } returns SpinOutcome.Lose(
             stake = 100L,
             symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
             newBalance = 900L,
@@ -208,5 +208,44 @@ class SlotsControllerTest {
         val response = controller.spin(guildId, SpinRequest(stake = 100L), user)
 
         assertEquals(null, response.body!!.lossTribute)
+    }
+
+    @Test
+    fun `controller forwards bot-suspicion signals into the service`() {
+        every { slotsService.spin(any(), any(), any(), any(), any(), any(), any()) } returns SpinOutcome.Lose(
+            stake = 10L,
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            newBalance = 90L,
+        )
+
+        controller.spin(guildId, SpinRequest(
+            stake = 10L,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        ), user)
+
+        verify(exactly = 1) {
+            slotsService.spin(
+                discordId, guildId, 10L, false,
+                clickX = 350, clickY = 220, mouseMoved = false,
+            )
+        }
+    }
+
+    @Test
+    fun `missing bot-suspicion fields are forwarded as null (Discord-equivalent path)`() {
+        every { slotsService.spin(any(), any(), any(), any(), any(), any(), any()) } returns SpinOutcome.Lose(
+            stake = 10L,
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            newBalance = 90L,
+        )
+
+        controller.spin(guildId, SpinRequest(stake = 10L), user)
+
+        verify(exactly = 1) {
+            slotsService.spin(
+                discordId, guildId, 10L, false,
+                clickX = null, clickY = null, mouseMoved = null,
+            )
+        }
     }
 }

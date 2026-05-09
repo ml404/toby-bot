@@ -4,8 +4,8 @@ import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Per-(user, guild) tracker of bet-click signatures used to detect
- * autoclicker spam on the web `/coinflip` page.
+ * Per-(user, guild, gameKey) tracker of bet-click signatures used to
+ * detect autoclicker spam on the web casino minigame pages.
  *
  * Heuristic: an autoclicker fires `click` events at a fixed pixel without
  * synthesising the surrounding `mousemove` events. Genuine players move
@@ -13,24 +13,25 @@ import java.util.concurrent.ConcurrentHashMap
  * mousemove notifications during that motion.
  *
  * On every bet, [recordAndScore] compares the supplied `clickX`/`clickY`
- * against the user's previous bet and consults the supplied `mouseMoved`
- * flag. When **both** signal "bot-like" (same spot ± [EPSILON_PX], no
- * intervening motion), the user's streak increments. Any other outcome
- * — coordinates outside the epsilon, `mouseMoved == true`, or any field
- * `null` (e.g. Discord call paths or the rare keyboard submit) — resets
- * the streak to 0. [CoinflipService] reads this streak and converts it
- * to an effective house edge.
+ * against the user's previous bet **for the same game** and consults the
+ * supplied `mouseMoved` flag. When **both** signal "bot-like" (same spot
+ * ± [EPSILON_PX], no intervening motion), the user's streak for that
+ * game increments. Any other outcome — coordinates outside the epsilon,
+ * `mouseMoved == true`, or any field `null` (e.g. Discord call paths or
+ * the rare keyboard submit) — resets the streak to 0. [CasinoEdgeService]
+ * reads this streak and converts it to an effective house edge.
+ *
+ * State is partitioned by `gameKey` so a player's slots streak doesn't
+ * bleed into their dice or coinflip streak. Each game uses a stable
+ * string identifier (`"coinflip"`, `"dice"`, `"slots"`).
  *
  * State is held in an in-memory [ConcurrentHashMap]. Restart-resets are
  * acceptable: a real bot rebuilds the streak in a handful of bets, and
  * persisting suspicion data through a deploy is more complexity than
- * the heuristic warrants. The map grows with active casino users and
- * shrinks naturally as the process restarts; for a Discord-bot scale
- * server this is bounded by registered users-per-guild (low thousands
- * at the absolute upper bound).
+ * the heuristic warrants.
  */
 @Service
-class CoinflipBotSuspicionService {
+class CasinoBotSuspicionService {
 
     /**
      * Maximum pixel distance between consecutive bet clicks that still
@@ -46,26 +47,28 @@ class CoinflipBotSuspicionService {
         var streak: Int,
     )
 
-    private val states: ConcurrentHashMap<Pair<Long, Long>, State> = ConcurrentHashMap()
+    private val states: ConcurrentHashMap<Triple<Long, Long, String>, State> = ConcurrentHashMap()
 
     /**
      * Record a bet's click signature and return the resulting consecutive
-     * "bot-like" streak. The streak grows when the new click is within
-     * [EPSILON_PX] of the previous and `mouseMoved` is `false`; any other
-     * combination — including any `null` field — resets it to 0.
+     * "bot-like" streak for the supplied [gameKey]. The streak grows when
+     * the new click is within [EPSILON_PX] of the previous click for the
+     * same game and `mouseMoved` is `false`; any other combination —
+     * including any `null` signal field — resets it to 0.
      *
-     * Caller is expected to read the returned streak inside the same
-     * `CoinflipService.flip` transaction so the bias and the recording
-     * happen atomically with the wager itself.
+     * Caller is expected to invoke this inside the same `@Transactional`
+     * boundary as the wager itself so the streak update and the bias
+     * decision are observed together.
      */
     fun recordAndScore(
         discordId: Long,
         guildId: Long,
+        gameKey: String,
         clickX: Int?,
         clickY: Int?,
         mouseMoved: Boolean?,
     ): Int {
-        val key = discordId to guildId
+        val key = Triple(discordId, guildId, gameKey)
         // Missing any of the three signals → treat as a non-suspicious bet
         // (Discord path, keyboard submit, browser without JS). Reset the
         // streak so a previously suspicious user gets a clean slate when
