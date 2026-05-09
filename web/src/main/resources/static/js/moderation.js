@@ -400,6 +400,8 @@
     document.querySelectorAll('.config-create-channel-form').forEach(form => {
         const targetConfig = form.dataset.targetConfig;
         const nameInput = form.querySelector('input[name="name"]');
+        const parentSelect = form.querySelector('select[name="parentCategoryId"]');
+        const newCategoryInput = form.querySelector('input[name="newCategoryName"]');
         const btn = form.querySelector('.config-create-channel-btn');
         if (!targetConfig || !nameInput || !btn) return;
         form.addEventListener('submit', (e) => {
@@ -409,15 +411,29 @@
                 toast('Channel name required.', 'error');
                 return;
             }
+            const parentCategoryId = (parentSelect?.value || '').trim();
+            const newCategoryName = (newCategoryInput?.value || '').trim();
+            // Build a confirm-message tail that reflects what'll happen
+            // server-side. The new-category path takes precedence over
+            // the dropdown so the user isn't surprised by their own input.
+            let categoryNote = '';
+            if (newCategoryName) {
+                categoryNote = ' under a new category "' + newCategoryName + '"';
+            } else if (parentCategoryId) {
+                const parentText = parentSelect.options[parentSelect.selectedIndex]?.text;
+                if (parentText) categoryNote = ' under category "' + parentText + '"';
+            }
             if (!confirm(
-                'Create a new "#' + name + '" channel? It will be read-only ' +
-                'for @everyone and post-only for TobyBot. The ' + targetConfig +
-                ' config will be set to this new channel.'
+                'Create a new "#' + name + '" channel' + categoryNote + '? ' +
+                'It will be read-only for @everyone and post-only for TobyBot. ' +
+                'The ' + targetConfig + ' config will be set to this new channel.'
             )) return;
             btn.disabled = true;
             postJson('/moderation/' + guildId + '/channel/create-read-only', {
                 name: name,
-                targetConfig: targetConfig
+                targetConfig: targetConfig,
+                parentCategoryId: parentCategoryId || null,
+                newCategoryName: newCategoryName || null
             }).then(r => {
                 btn.disabled = false;
                 if (r && r.ok) {

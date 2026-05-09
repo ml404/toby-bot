@@ -280,6 +280,8 @@ class ModerationController(
             guildId = guildId,
             rawName = body.name,
             targetConfigName = body.targetConfig,
+            parentCategoryId = body.parentCategoryId,
+            newCategoryName = body.newCategoryName,
         )) {
             is ModerationWebService.CreateChannelOutcome.Ok -> ResponseEntity.ok(
                 CreateReadOnlyChannelResponse(
@@ -370,10 +372,19 @@ data class ForceDrawLotteryResponse(
  * enum name (e.g. "LOTTERY_CHANNEL"); the service validates it against
  * the allow-list. `name` is the human-typed channel name; the service
  * normalises it to Discord's lowercase-dashed convention.
+ *
+ * Category placement is optional and resolved in the service:
+ *   - `newCategoryName` non-blank → create a new category with that
+ *     name and put the channel inside (takes precedence).
+ *   - `parentCategoryId` non-blank → put the channel under the existing
+ *     category with that id.
+ *   - both blank → channel is top-level (no parent).
  */
 data class CreateReadOnlyChannelRequest(
     val name: String = "",
     val targetConfig: String = "",
+    val parentCategoryId: String? = null,
+    val newCategoryName: String? = null,
 )
 
 data class CreateReadOnlyChannelResponse(

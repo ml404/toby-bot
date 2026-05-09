@@ -203,8 +203,26 @@
                     <form class="config-create-channel-form"
                           data-target-config="LEADERBOARD_CHANNEL"
                           data-default-name="leaderboard">
-                        <input type="text" name="name" value="leaderboard"
-                               maxlength="90" th:disabled="${!isOwner}">
+                        <label class="config-create-channel-field">
+                            <span>Channel name</span>
+                            <input type="text" name="name" value="leaderboard"
+                                   maxlength="90" th:disabled="${!isOwner}">
+                        </label>
+                        <label class="config-create-channel-field">
+                            <span>Category</span>
+                            <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                <option value="">&mdash; top-level &mdash;</option>
+                                <option th:each="cat : ${overview.categories}"
+                                        th:value="${cat.id}"
+                                        th:text="${cat.name}"></option>
+                            </select>
+                        </label>
+                        <label class="config-create-channel-field">
+                            <span>or new category name</span>
+                            <input type="text" name="newCategoryName"
+                                   maxlength="100" placeholder="(blank = use existing)"
+                                   th:disabled="${!isOwner}">
+                        </label>
                         <button type="submit" class="btn config-create-channel-btn"
                                 th:disabled="${!isOwner}">Create</button>
                     </form>
@@ -1001,8 +1019,26 @@
                         <form class="config-create-channel-form"
                               data-target-config="LOTTERY_CHANNEL"
                               data-default-name="lottery-results">
-                            <input type="text" name="name" value="lottery-results"
-                                   maxlength="90" th:disabled="${!isOwner}">
+                            <label class="config-create-channel-field">
+                                <span>Channel name</span>
+                                <input type="text" name="name" value="lottery-results"
+                                       maxlength="90" th:disabled="${!isOwner}">
+                            </label>
+                            <label class="config-create-channel-field">
+                                <span>Category</span>
+                                <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                    <option value="">&mdash; top-level &mdash;</option>
+                                    <option th:each="cat : ${overview.categories}"
+                                            th:value="${cat.id}"
+                                            th:text="${cat.name}"></option>
+                                </select>
+                            </label>
+                            <label class="config-create-channel-field">
+                                <span>or new category name</span>
+                                <input type="text" name="newCategoryName"
+                                       maxlength="100" placeholder="(blank = use existing)"
+                                       th:disabled="${!isOwner}">
+                            </label>
                             <button type="submit" class="btn config-create-channel-btn"
                                     th:disabled="${!isOwner}">Create</button>
                         </form>

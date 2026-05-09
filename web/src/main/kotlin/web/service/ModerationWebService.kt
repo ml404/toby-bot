@@ -116,6 +116,12 @@ class ModerationWebService(
         val textChannels = guild.textChannels
             .filter { guild.selfMember.hasPermission(it, Permission.MESSAGE_SEND) }
             .map { TextChannelInfo(id = it.id, name = it.name) }
+        // Categories are only used by the create-read-only-channel form
+        // for grouping. Order matches Discord's left-rail order so
+        // admins can scan top-down.
+        val categories = guild.categories
+            .sortedBy { it.position }
+            .map { CategoryInfo(id = it.id, name = it.name) }
 
         val configByKey = ConfigDto.Configurations.entries.associate { cfg ->
             cfg.name to configService.getConfigByName(cfg.configValue, guild.id)?.value
@@ -127,6 +133,7 @@ class ModerationWebService(
             members = rows,
             voiceChannels = voiceChannels,
             textChannels = textChannels,
+            categories = categories,
             config = configByKey
         )
     }
@@ -506,6 +513,19 @@ class ModerationWebService(
         guildId: Long,
         rawName: String,
         targetConfigName: String,
+        /**
+         * Existing category id to drop the new channel under, or null
+         * for top-level. Ignored when [newCategoryName] is non-blank
+         * (new-category path takes precedence so a stale dropdown
+         * value can't override an explicit "create new" intent).
+         */
+        parentCategoryId: String? = null,
+        /**
+         * If non-blank, create a new category with this (sanitised)
+         * name and drop the channel inside. Validated + sanitised
+         * the same way as the channel name.
+         */
+        newCategoryName: String? = null,
     ): CreateChannelOutcome {
         if (!canModerate(actorDiscordId, guildId)) {
             return CreateChannelOutcome.Error("Not allowed.")
@@ -529,9 +549,41 @@ class ModerationWebService(
                 "Channel name must be 1-90 chars (a-z, 0-9, dashes)."
             )
 
+        // Resolve parent category. Three paths:
+        //   1. newCategoryName non-blank → create a category, use that.
+        //   2. parentCategoryId non-blank → look up existing category.
+        //   3. neither → channel is top-level (no parent).
+        val parentCategory: net.dv8tion.jda.api.entities.channel.concrete.Category? = when {
+            !newCategoryName.isNullOrBlank() -> {
+                val rawCatName = newCategoryName.trim()
+                if (rawCatName.length > 100) {
+                    return CreateChannelOutcome.Error(
+                        "Category name must be 1-100 chars."
+                    )
+                }
+                try {
+                    guild.createCategory(rawCatName).complete()
+                } catch (e: Exception) {
+                    logger.error(
+                        "Failed to create category '$rawCatName' for guild=$guildId: ${e.message}"
+                    )
+                    return CreateChannelOutcome.Error(
+                        "Failed to create category: ${e.message ?: "unknown error"}"
+                    )
+                }
+            }
+            !parentCategoryId.isNullOrBlank() -> {
+                val parsedId = parentCategoryId.toLongOrNull()
+                    ?: return CreateChannelOutcome.Error("Invalid category id.")
+                guild.getCategoryById(parsedId)
+                    ?: return CreateChannelOutcome.Error("No category with that id exists in this server.")
+            }
+            else -> null
+        }
+
         val everyone = guild.publicRole
         val newChannel = try {
-            guild.createTextChannel(name)
+            val action = guild.createTextChannel(name)
                 .addRolePermissionOverride(
                     everyone.idLong,
                     listOf(Permission.VIEW_CHANNEL),                                   // allow
@@ -546,7 +598,8 @@ class ModerationWebService(
                     ),
                     emptyList(),
                 )
-                .complete()
+            if (parentCategory != null) action.setParent(parentCategory)
+            action.complete()
         } catch (e: Exception) {
             logger.error(
                 "Failed to create channel for guild=$guildId target=$targetConfig: ${e.message}"
@@ -1041,6 +1094,7 @@ data class GuildOverview(
     val members: List<ModeratedMember>,
     val voiceChannels: List<VoiceChannelInfo>,
     val textChannels: List<TextChannelInfo>,
+    val categories: List<CategoryInfo> = emptyList(),
     val config: Map<String, String?>
 )
 
@@ -1064,6 +1118,17 @@ data class VoiceChannelInfo(
 )
 
 data class TextChannelInfo(
+    val id: String,
+    val name: String
+)
+
+/**
+ * Channel-category projection for the create-read-only-channel form.
+ * Categories are Discord's left-rail groupers; an admin can drop a
+ * new lottery / leaderboard channel under one for natural
+ * segregation.
+ */
+data class CategoryInfo(
     val id: String,
     val name: String
 )
