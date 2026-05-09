@@ -1067,4 +1067,207 @@ class ModerationWebServiceTest {
         assertEquals(expectedUntil, untilCaptor.captured,
             "voice range must END at next month's 1st, not this month's 1st")
     }
+
+    // ===================================================================
+    // createReadOnlyChannel
+    // ===================================================================
+
+    private fun stubBotPerms(canManageChannels: Boolean) {
+        val bot = mockk<SelfMember>(relaxed = true)
+        every { bot.idLong } returns 999L
+        every { bot.hasPermission(Permission.MANAGE_CHANNEL) } returns canManageChannels
+        every { guild.selfMember } returns bot
+    }
+
+    private fun stubChannelCreation(name: String, newId: Long): TextChannel {
+        // Mock the JDA fluent chain
+        // `guild.createTextChannel(name)
+        //     .addRolePermissionOverride(...)
+        //     .addMemberPermissionOverride(...)
+        //     .complete()`. Mockk's `relaxed = true` returns `this` from
+        // unstubbed methods so the chain actually compiles + flows;
+        // we only need to stub `.complete()` to return our test channel.
+        val newChannel = mockk<TextChannel>(relaxed = true)
+        every { newChannel.id } returns newId.toString()
+        every { newChannel.name } returns name
+        val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
+        every { action.addRolePermissionOverride(any(), any(), any()) } returns action
+        every { action.addMemberPermissionOverride(any(), any(), any()) } returns action
+        every { action.complete() } returns newChannel
+        every { guild.createTextChannel(name) } returns action
+        every { guild.publicRole.idLong } returns 1L
+        return newChannel
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects non-moderator caller`() {
+        mockMember(plainUserId, isOwner = false)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = plainUserId,
+            guildId = guildId,
+            rawName = "lottery-results",
+            targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Not allowed"))
+        // No JDA mutation attempted.
+        verify(exactly = 0) { guild.createTextChannel(any<String>()) }
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects non-allow-listed targetConfig`() {
+        mockMember(ownerId, isOwner = true)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "x",
+            // Real enum entry but NOT in CHANNEL_CONFIG_ALLOWLIST.
+            targetConfigName = "JACKPOT_PAYOUT_PCT",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Unknown channel config"))
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects unknown targetConfig`() {
+        mockMember(ownerId, isOwner = true)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "x",
+            targetConfigName = "TOTALLY_MADE_UP",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects when bot lacks MANAGE_CHANNEL`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = false)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "lottery-results",
+            targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("Manage Channels"))
+    }
+
+    @Test
+    fun `createReadOnlyChannel rejects empty or all-special-chars name`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId, guildId = guildId,
+            rawName = "!!!", targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("1-90 chars"))
+
+        val r2 = service.createReadOnlyChannel(
+            actorDiscordId = ownerId, guildId = guildId,
+            rawName = "   ", targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r2 is ModerationWebService.CreateChannelOutcome.Error)
+    }
+
+    @Test
+    fun `createReadOnlyChannel happy path for LOTTERY_CHANNEL`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        stubChannelCreation(name = "lottery-results", newId = 555L)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "Lottery Results 🎉",  // gets sanitised to "lottery-results"
+            targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Ok)
+        r as ModerationWebService.CreateChannelOutcome.Ok
+        assertEquals("555", r.channelId)
+        assertEquals("lottery-results", r.channelName)
+        assertEquals("LOTTERY_CHANNEL", r.targetConfig)
+        verify(exactly = 1) {
+            configService.upsertConfig("LOTTERY_CHANNEL", "555", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `createReadOnlyChannel happy path for LEADERBOARD_CHANNEL`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        stubChannelCreation(name = "leaderboard", newId = 777L)
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId,
+            guildId = guildId,
+            rawName = "leaderboard",
+            targetConfigName = "LEADERBOARD_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Ok)
+        r as ModerationWebService.CreateChannelOutcome.Ok
+        assertEquals("LEADERBOARD_CHANNEL", r.targetConfig)
+        verify(exactly = 1) {
+            configService.upsertConfig("LEADERBOARD_CHANNEL", "777", guildId.toString())
+        }
+    }
+
+    @Test
+    fun `createReadOnlyChannel surfaces JDA failure as Error`() {
+        mockMember(ownerId, isOwner = true)
+        stubBotPerms(canManageChannels = true)
+        val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
+        every { action.addRolePermissionOverride(any(), any(), any()) } returns action
+        every { action.addMemberPermissionOverride(any(), any(), any()) } returns action
+        every { action.complete() } throws RuntimeException("rate limited")
+        every { guild.createTextChannel("lottery-results") } returns action
+        every { guild.publicRole.idLong } returns 1L
+
+        val r = service.createReadOnlyChannel(
+            actorDiscordId = ownerId, guildId = guildId,
+            rawName = "lottery-results", targetConfigName = "LOTTERY_CHANNEL",
+        )
+        assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
+        r as ModerationWebService.CreateChannelOutcome.Error
+        assertTrue(r.message.contains("rate limited"))
+        verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
+    }
+
+    // ---- sanitizeChannelName ----
+
+    @Test
+    fun `sanitizeChannelName lowercases, dashes, and trims`() {
+        assertEquals("lottery-results", service.sanitizeChannelName("Lottery Results"))
+        assertEquals("lottery-results", service.sanitizeChannelName("Lottery Results 🎉"))
+        assertEquals("lottery-results", service.sanitizeChannelName("--lottery--results--"))
+        assertEquals("a-b-c", service.sanitizeChannelName("a@b@c"))
+    }
+
+    @Test
+    fun `sanitizeChannelName returns null for empty or all-special input`() {
+        assertNull(service.sanitizeChannelName(""))
+        assertNull(service.sanitizeChannelName("   "))
+        assertNull(service.sanitizeChannelName("!!!"))
+        assertNull(service.sanitizeChannelName("---"))
+    }
+
+    @Test
+    fun `sanitizeChannelName caps at 90 chars`() {
+        val long = "a".repeat(200)
+        val result = service.sanitizeChannelName(long)
+        assertNotNull(result)
+        assertEquals(90, result!!.length)
+    }
 }

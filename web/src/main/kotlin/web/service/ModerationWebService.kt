@@ -46,6 +46,18 @@ class ModerationWebService(
             "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
         )
         private val logger = DiscordLogger(ModerationWebService::class.java)
+
+        /**
+         * Channel-config keys eligible for the
+         * [createReadOnlyChannel] flow. Hard-coded allow-list so a
+         * malformed (or maliciously crafted) request can't point the
+         * `targetConfig` at, say, `JACKPOT_PAYOUT_PCT` and clobber a
+         * percentage value with a channel id.
+         */
+        private val CHANNEL_CONFIG_ALLOWLIST: Set<ConfigDto.Configurations> = setOf(
+            ConfigDto.Configurations.LOTTERY_CHANNEL,
+            ConfigDto.Configurations.LEADERBOARD_CHANNEL,
+        )
     }
 
     private fun <T> safely(label: String, default: T, block: () -> T): T =
@@ -460,6 +472,118 @@ class ModerationWebService(
                     openedNew = false, newSeeded = 0L,
                 )
         }
+    }
+
+    /**
+     * Create a brand-new text channel that's read-only for `@everyone`
+     * and post-able by the bot, then auto-set the supplied
+     * channel-config to point at it.
+     *
+     * Generic over the target config key — admin-fired from beside
+     * either `LOTTERY_CHANNEL` or `LEADERBOARD_CHANNEL` rows on the
+     * moderation tab. New channel-config keys can be allow-listed in
+     * [CHANNEL_CONFIG_ALLOWLIST] to gain the same affordance.
+     *
+     * Permission overrides on the new channel:
+     *   - `@everyone`: VIEW_CHANNEL allowed; MESSAGE_SEND +
+     *     MESSAGE_ADD_REACTION denied → readers see results, can't
+     *     reply or react-spam.
+     *   - Bot member: VIEW_CHANNEL + MESSAGE_SEND + MESSAGE_EMBED_LINKS
+     *     allowed → can post embeds even if the bot's role doesn't
+     *     grant SEND server-wide.
+     */
+    sealed interface CreateChannelOutcome {
+        data class Ok(
+            val channelId: String,
+            val channelName: String,
+            val targetConfig: String,
+        ) : CreateChannelOutcome
+        data class Error(val message: String) : CreateChannelOutcome
+    }
+
+    fun createReadOnlyChannel(
+        actorDiscordId: Long,
+        guildId: Long,
+        rawName: String,
+        targetConfigName: String,
+    ): CreateChannelOutcome {
+        if (!canModerate(actorDiscordId, guildId)) {
+            return CreateChannelOutcome.Error("Not allowed.")
+        }
+        val targetConfig = runCatching {
+            ConfigDto.Configurations.valueOf(targetConfigName.trim().uppercase())
+        }.getOrNull()
+        if (targetConfig == null || targetConfig !in CHANNEL_CONFIG_ALLOWLIST) {
+            return CreateChannelOutcome.Error("Unknown channel config: $targetConfigName")
+        }
+        val guild = jda.getGuildById(guildId)
+            ?: return CreateChannelOutcome.Error("Bot is not in that server.")
+        val bot = guild.selfMember
+        if (!bot.hasPermission(Permission.MANAGE_CHANNEL)) {
+            return CreateChannelOutcome.Error(
+                "Bot needs the Manage Channels permission. Grant it in Server Settings → Roles."
+            )
+        }
+        val name = sanitizeChannelName(rawName)
+            ?: return CreateChannelOutcome.Error(
+                "Channel name must be 1-90 chars (a-z, 0-9, dashes)."
+            )
+
+        val everyone = guild.publicRole
+        val newChannel = try {
+            guild.createTextChannel(name)
+                .addRolePermissionOverride(
+                    everyone.idLong,
+                    listOf(Permission.VIEW_CHANNEL),                                   // allow
+                    listOf(Permission.MESSAGE_SEND, Permission.MESSAGE_ADD_REACTION),  // deny
+                )
+                .addMemberPermissionOverride(
+                    bot.idLong,
+                    listOf(
+                        Permission.VIEW_CHANNEL,
+                        Permission.MESSAGE_SEND,
+                        Permission.MESSAGE_EMBED_LINKS,
+                    ),
+                    emptyList(),
+                )
+                .complete()
+        } catch (e: Exception) {
+            logger.error(
+                "Failed to create channel for guild=$guildId target=$targetConfig: ${e.message}"
+            )
+            return CreateChannelOutcome.Error(
+                "Failed to create channel: ${e.message ?: "unknown error"}"
+            )
+        }
+
+        configService.upsertConfig(
+            targetConfig.configValue,
+            newChannel.id,
+            guildId.toString(),
+        )
+        logger.info(
+            "Created read-only channel guild=$guildId actor=$actorDiscordId " +
+                "channel=${newChannel.id} name=${newChannel.name} target=$targetConfig"
+        )
+        return CreateChannelOutcome.Ok(
+            channelId = newChannel.id,
+            channelName = newChannel.name,
+            targetConfig = targetConfig.name,
+        )
+    }
+
+    /**
+     * Normalise a user-supplied channel name to Discord's lowercase /
+     * dashed convention. Returns null for input that ends up empty
+     * (all-special-chars, blank, etc) so the caller can surface a
+     * validation error rather than create a `""`-named channel.
+     */
+    internal fun sanitizeChannelName(raw: String): String? {
+        val cleaned = raw.trim().lowercase()
+            .replace(Regex("[^a-z0-9-]+"), "-")
+            .trim('-')
+            .take(90)
+        return cleaned.takeIf { it.isNotEmpty() }
     }
 
     fun updateConfig(
