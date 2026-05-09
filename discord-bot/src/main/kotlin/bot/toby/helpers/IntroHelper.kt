@@ -1,6 +1,7 @@
 package bot.toby.helpers
 
 import bot.toby.handler.EventWaiter
+import bot.toby.intro.IntroValidationService
 import bot.toby.util.isUrl
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
@@ -19,21 +20,22 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.net.URI
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
 @Service
-class IntroHelper(
+class IntroHelper @Autowired constructor(
     private val userDtoHelper: UserDtoHelper,
     private val musicFileService: MusicFileService,
     private val configService: ConfigService,
     private val httpHelper: HttpHelper,
     private val eventWaiter: EventWaiter,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val validationService: IntroValidationService = IntroValidationService(httpHelper, dispatcher),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val supervisorJob = SupervisorJob()
@@ -65,8 +67,8 @@ class IntroHelper(
         when (input) {
             is InputData.Attachment -> {
                 // Validate the attachment before proceeding
-                if (!isValidAttachment(input.attachment)) {
-                    event.hook.sendMessage("Please provide a valid mp3 file under ${MAX_FILE_SIZE_KB}kb.")
+                if (!validationService.isValidAttachment(input.attachment)) {
+                    event.hook.sendMessage("Please provide a valid mp3 file under ${IntroValidationService.MAX_FILE_SIZE_KB}kb.")
                         .queue(invokeDeleteOnMessageResponse(deleteDelay))
                     return
                 }
@@ -107,11 +109,6 @@ class IntroHelper(
         }
     }
 
-    private fun isValidAttachment(attachment: Attachment): Boolean {
-        return attachment.fileExtension == "mp3" && attachment.size <= MAX_FILE_SIZE
-    }
-
-
     fun handleAttachment(
         event: IReplyCallback,
         requestingUserDto: database.dto.UserDto,
@@ -130,9 +127,9 @@ class IntroHelper(
                     .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
 
-            attachment.size > MAX_FILE_SIZE -> {
+            attachment.size > IntroValidationService.MAX_FILE_SIZE -> {
                 logger.info { "File size was too large" }
-                event.hook.sendMessage("Please keep the file size under ${MAX_FILE_SIZE_KB}kb")
+                event.hook.sendMessage("Please keep the file size under ${IntroValidationService.MAX_FILE_SIZE_KB}kb")
                     .queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
 
@@ -165,7 +162,7 @@ class IntroHelper(
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling URL inside intro helper..." }
-        val urlString = uri.toString().convertShortsUrls()
+        val urlString = validationService.convertShortsUrls(uri.toString())
         coroutineScope.launch {
             val title = runCatching { httpHelper.getYouTubeVideoTitle(urlString) }.getOrNull()
             persistMusicUrl(
@@ -180,8 +177,6 @@ class IntroHelper(
             )
         }
     }
-
-    fun String.convertShortsUrls() = this.replace("/shorts/", "/watch?v=" )
 
     fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(guildId, discordId)
 
@@ -390,12 +385,12 @@ class IntroHelper(
         val inputData = InputData.Attachment(attachment)
         logger.info("User uploaded a music file: $inputData")
 
-        if (!isValidAttachment(attachment)) {
+        if (!validationService.isValidAttachment(attachment)) {
             handleInvalidAttachment(channel, event.author, guild)
             return
         }
 
-        val volume = parseVolume(content)
+        val volume = validationService.parseVolume(content)
         saveUserMusicDto(event.author, guild, inputData, volume)
     }
 
@@ -405,13 +400,13 @@ class IntroHelper(
         // Validate the intro length asynchronously
         coroutineScope.launch {
             try {
-                val isOverLimit = checkForOverlyLongIntroDuration(content)
+                val isOverLimit = validationService.checkForOverlyLongIntroDuration(content)
                 if (isOverLimit) {
                     handleOverLimitIntro(channel, event.author, guild)
                 } else {
                     val title = runCatching { httpHelper.getYouTubeVideoTitle(content) }.getOrNull()
                     val inputData = InputData.Url(isUrl(content))
-                    saveUserMusicDto(event.author, guild, inputData, parseVolume(content), title)
+                    saveUserMusicDto(event.author, guild, inputData, validationService.parseVolume(content), title)
                 }
             } catch (_: Exception) {
                 logger.error { "Error checking intro length for '$content'" }
@@ -429,41 +424,24 @@ class IntroHelper(
     }
 
     private fun handleOverLimitIntro(channel: PrivateChannel, author: User, guild: Guild) {
-        logger.info { "Intro was rejected for being over the specified intro limit length of ${INTRO_LIMIT.inWholeSeconds} seconds, trying again..." }
+        logger.info { "Intro was rejected for being over the specified intro limit length of ${IntroValidationService.INTRO_LIMIT.inWholeSeconds} seconds, trying again..." }
         channel
-            .sendMessage("Intro provided was over ${INTRO_LIMIT.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
+            .sendMessage("Intro provided was over ${IntroValidationService.INTRO_LIMIT.inWholeSeconds} seconds long, out of courtesy please pick a shorter intro.")
             .queue()
         setupWaiterForIntroMessage(author, channel, guild)
     }
 
-    fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) {
-        logger.info { "Checking duration of '$url'" }
-        coroutineScope.launch {
-            try {
-                val isOverLimit = checkForOverlyLongIntroDuration(url)
-                onResult(isOverLimit)
-            } catch (_: Exception) {
-                logger.error { "Error checking intro length for '$url'" }
-                onResult(true) // You can choose to handle this differently
-            }
-        }
-    }
+    /**
+     * Public delegations preserved so existing callers/tests don't have to
+     * be rewired in the same change.
+     */
+    fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) =
+        validationService.validateIntroLength(url, onResult)
 
-    suspend fun checkForOverlyLongIntroDuration(url: String): Boolean {
-        val duration = withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }
-        if (duration != null) {
-            logger.info { "Duration of intro is '$duration' vs limit of '$INTRO_LIMIT'" }
-            return duration > INTRO_LIMIT
-        }
-        return false
-    }
+    suspend fun checkForOverlyLongIntroDuration(url: String): Boolean =
+        validationService.checkForOverlyLongIntroDuration(url)
 
-    fun parseVolume(content: String): Int? {
-        // Try to extract a volume value (0-100) from the message content
-        val volumeRegex = """\b(\d{1,3})\b""".toRegex()
-        val volumeMatch = volumeRegex.find(content)
-        return volumeMatch?.value?.toIntOrNull()?.takeIf { it in 0..100 }
-    }
+    fun parseVolume(content: String): Int? = validationService.parseVolume(content)
 
     @VisibleForTesting
     fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?, displayName: String? = null) {
@@ -515,10 +493,13 @@ class IntroHelper(
 
     companion object {
         private const val VOLUME = "volume"
-        const val MAX_FILE_SIZE = 550 * 1024
-        const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
-        val INTRO_LIMIT = 15.seconds
 
+        // Backwards-compat aliases — canonical values live on
+        // [IntroValidationService.Companion]. Existing callers (SetIntroCommand,
+        // tests) still see the same constants here.
+        const val MAX_FILE_SIZE = IntroValidationService.MAX_FILE_SIZE
+        const val MAX_FILE_SIZE_KB = IntroValidationService.MAX_FILE_SIZE_KB
+        val INTRO_LIMIT = IntroValidationService.INTRO_LIMIT
     }
 }
 
