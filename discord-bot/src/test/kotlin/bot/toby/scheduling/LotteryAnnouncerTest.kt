@@ -11,7 +11,7 @@ import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.SelfMember
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
@@ -33,7 +33,7 @@ class LotteryAnnouncerTest {
     private val guildId = 100L
     private lateinit var configService: ConfigService
     private lateinit var guild: Guild
-    private lateinit var bot: Member
+    private lateinit var bot: SelfMember
     private lateinit var channel: TextChannel
     private lateinit var sendAction: MessageCreateAction
     private lateinit var announcer: LotteryAnnouncer
