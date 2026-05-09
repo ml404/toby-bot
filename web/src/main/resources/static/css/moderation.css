@@ -440,3 +440,80 @@
     .mod-table td[data-label="Member"] { display: block; }
     .mod-table td[data-label="Member"]::before { display: none; }
 }
+
+/* ==============================================================
+   Daily lottery admin card — sits inside the casino tab, replaces
+   the previous flat stack of unsavable rows with a card laid out
+   in three blocks: header (title + description), two collapsible
+   `<details>` sections for Toggle/Mode and Prize parameters, and
+   a footer action area for "Force draw now". Reuses .config-grid
+   / .config-row / .config-section so the rows match the rest of
+   the moderation tab.
+   ============================================================== */
+
+.lottery-admin-card {
+    /* Override .mod-card-wide's 560px cap so the prize-parameters
+       grid + force-draw banner can breathe on wider screens. */
+    max-width: 720px;
+}
+
+.lottery-admin-header {
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
+}
+.lottery-admin-header h3 {
+    margin: 0 0 var(--space-2);
+}
+.lottery-admin-header p {
+    margin: 0;
+    max-width: 60ch;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+/* Optional inline hint inside a config-row label — small italic
+   secondary text that explains the field without blowing up the
+   label height. */
+.config-row label .config-hint {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--text-dim);
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* Force-draw footer banner — separates the dangerous-ish action
+   (mutates jackpot pool + any open draw) from the read-mostly
+   parameter rows. Text-on-left, button-on-right responsive flex. */
+.lottery-admin-actions {
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.lottery-admin-actions-text {
+    flex: 1 1 320px;
+    min-width: 240px;
+}
+.lottery-admin-actions-text strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+.lottery-admin-actions-text p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+.lottery-admin-actions .btn {
+    flex: 0 0 auto;
+}

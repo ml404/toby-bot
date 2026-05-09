@@ -218,7 +218,18 @@ class ConfigDto(
         // the day's prize pool. Default 30. The 30/70 split makes the
         // daily lottery a credit sink while keeping engagement-driven
         // prize growth healthy.
-        LOTTERY_DAILY_REVENUE_JACKPOT_PCT("LOTTERY_DAILY_REVENUE_JACKPOT_PCT");
+        LOTTERY_DAILY_REVENUE_JACKPOT_PCT("LOTTERY_DAILY_REVENUE_JACKPOT_PCT"),
+
+        // Which game mode the daily auto-draw uses. Two values:
+        //   "NUMBER_MATCH" — Pick 5 of 1-49 lotto-style. Best for
+        //                    high-engagement servers (≥30 tickets/day);
+        //                    relies on tier hit-rates to drain the pool.
+        //   "WEIGHTED"     — Top-3 weighted draw (50/30/20). Best for
+        //                    low-engagement servers (<30 tickets/day);
+        //                    every draw guarantees a winner, predictable
+        //                    drain regardless of ticket volume.
+        // Defaults to "NUMBER_MATCH" so existing guilds aren't disrupted.
+        LOTTERY_DAILY_MODE("LOTTERY_DAILY_MODE");
     }
 
     override fun toString(): String {

@@ -48,6 +48,23 @@ object LotteryHelper {
     const val MAX_DAILY_REVENUE_JACKPOT_PCT: Long = 100L
 
     /**
+     * Daily-lottery game mode. NUMBER_MATCH (default) is the lotto-style
+     * Pick 5 of 49; WEIGHTED is the top-3 ticket-weighted draw better
+     * suited to low-engagement servers where match tiers can't reliably
+     * fire. Reuses the same DTO mode strings.
+     */
+    const val MODE_NUMBER_MATCH: String = "NUMBER_MATCH"
+    const val MODE_WEIGHTED: String = "WEIGHTED"
+    const val DEFAULT_DAILY_MODE: String = MODE_NUMBER_MATCH
+
+    /**
+     * For WEIGHTED daily mode: how many top winners share the pool, in
+     * 50/30/20-tier order. Hardcoded at 3 — varying this would mean a
+     * different prize-share schedule (see [JackpotLotteryService.prizeShares]).
+     */
+    const val WEIGHTED_DAILY_WINNER_COUNT: Int = 3
+
+    /**
      * Tier prize percentages for a match-numbers draw. Order: 5/5, 4/5,
      * 3/5, 2/5. Sum = 100; un-won tier shares roll back into the
      * per-guild jackpot pool via the remainder-handling in
@@ -97,5 +114,22 @@ object LotteryHelper {
         )
         val pct = cfg?.value?.toLongOrNull() ?: return DEFAULT_DAILY_REVENUE_JACKPOT_PCT
         return pct.coerceIn(0L, MAX_DAILY_REVENUE_JACKPOT_PCT)
+    }
+
+    /**
+     * Live daily-lottery game mode. Returns one of [MODE_NUMBER_MATCH]
+     * or [MODE_WEIGHTED]; falls back to [DEFAULT_DAILY_MODE] for unknown
+     * or unset values. The scheduler dispatches on this to pick the
+     * matching open/draw flow.
+     */
+    fun dailyMode(configService: ConfigService, guildId: Long): String {
+        val raw = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue,
+            guildId.toString()
+        )?.value?.trim()?.uppercase()
+        return when (raw) {
+            MODE_NUMBER_MATCH, MODE_WEIGHTED -> raw
+            else -> DEFAULT_DAILY_MODE
+        }
     }
 }

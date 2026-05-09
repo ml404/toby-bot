@@ -200,8 +200,34 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.LOTTERY_DAILY_REVENUE_JACKPOT_PCT,
                     gameLabel = "Daily lottery", label = "ticket revenue → jackpot percent", range = 0..100
                 )
+                ConfigDto.Configurations.LOTTERY_DAILY_MODE -> setLotteryDailyMode(
+                    event, optionMapping, deleteDelay
+                )
             }
         }
+    }
+
+    /**
+     * Validate + persist the daily-lottery mode (NUMBER_MATCH | WEIGHTED).
+     * Stored uppercase so [LotteryHelper.dailyMode] reads cleanly.
+     */
+    private fun setLotteryDailyMode(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+    ) {
+        val raw = optionMapping.asString.trim().uppercase()
+        if (raw !in setOf("NUMBER_MATCH", "WEIGHTED")) {
+            event.hook.sendMessage("Daily lottery mode must be NUMBER_MATCH or WEIGHTED.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(
+            ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue, raw, guildId
+        )
+        event.hook.sendMessage("Daily lottery mode set to $raw.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     /**

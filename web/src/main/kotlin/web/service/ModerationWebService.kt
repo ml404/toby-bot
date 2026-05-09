@@ -335,35 +335,59 @@ class ModerationWebService(
                 priorDrawn = emptyList(), openedNew = false, newSeeded = 0L,
             )
         }
-        // Step 1: close open daily if present.
+        val mode = LotteryHelper.dailyMode(configService, guildId)
+        // Step 1: close open daily if present (mode-dispatched).
         var drewPrior = false
         var priorTotalPaid = 0L
         var priorRolledBack = 0L
         var priorDrawn: List<Int> = emptyList()
-        when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
-            is JackpotLotteryService.DrawMatchOutcome.Ok -> {
-                drewPrior = true
-                priorTotalPaid = drawResult.totalPaid
-                priorRolledBack = drawResult.rolledBackToJackpot
-                priorDrawn = drawResult.drawnNumbers
+        if (mode == LotteryHelper.MODE_WEIGHTED) {
+            when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
+                is JackpotLotteryService.DrawOutcome.Ok -> {
+                    drewPrior = true
+                    priorTotalPaid = drawResult.totalPaid
+                    priorRolledBack = (drawResult.drained - drawResult.totalPaid).coerceAtLeast(0L)
+                }
+                JackpotLotteryService.DrawOutcome.NoTickets -> {
+                    jackpotLotteryService.cancelLottery(guildId)
+                    drewPrior = true
+                }
+                JackpotLotteryService.DrawOutcome.NoOpenLottery -> Unit
             }
-            JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
-                jackpotLotteryService.cancelMatchLottery(guildId)
-                drewPrior = true
-            }
-            JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> {
-                // No-op; nothing to close.
+        } else {
+            when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
+                is JackpotLotteryService.DrawMatchOutcome.Ok -> {
+                    drewPrior = true
+                    priorTotalPaid = drawResult.totalPaid
+                    priorRolledBack = drawResult.rolledBackToJackpot
+                    priorDrawn = drawResult.drawnNumbers
+                }
+                JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
+                    jackpotLotteryService.cancelMatchLottery(guildId)
+                    drewPrior = true
+                }
+                JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> Unit
             }
         }
-        // Step 2: open fresh daily.
+        // Step 2: open fresh daily (mode-dispatched).
         val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
         val seedPct = LotteryHelper.dailySeedPct(configService, guildId)
-        val open = jackpotLotteryService.openMatchLottery(
-            guildId = guildId,
-            ticketPrice = ticketPrice,
-            seedPct = seedPct,
-            durationHours = 24L,
-        )
+        val open = if (mode == LotteryHelper.MODE_WEIGHTED) {
+            jackpotLotteryService.openLottery(
+                guildId = guildId,
+                ticketPrice = ticketPrice,
+                durationHours = 24L,
+                winnerCount = LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT,
+                drainPct = (seedPct.toDouble() / 100.0).coerceIn(0.0, 1.0),
+            )
+        } else {
+            jackpotLotteryService.openMatchLottery(
+                guildId = guildId,
+                ticketPrice = ticketPrice,
+                seedPct = seedPct,
+                durationHours = 24L,
+            )
+        }
         return when (open) {
             is JackpotLotteryService.OpenOutcome.Ok -> {
                 logger.info(
@@ -636,6 +660,13 @@ class ModerationWebService(
                     ?: return "Value must be a whole number percentage (0-100; default 30)."
                 if (n !in 0..100) return "Value must be between 0 and 100."
                 n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_MODE -> {
+                val v = rawValue.trim().uppercase()
+                if (v !in setOf("NUMBER_MATCH", "WEIGHTED")) {
+                    return "Value must be NUMBER_MATCH or WEIGHTED."
+                }
+                v
             }
         }
 
