@@ -10,6 +10,93 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Ensure every label referenced by labeler.yml + the type-prefix
+      # step + the changelog skip rules actually exists in the repo.
+      # `actions/labeler@v4` only *applies* labels — it doesn't create
+      # them — so a brand-new label rule is silently a no-op until the
+      # label exists. `gh label create --force` is idempotent (creates
+      # if missing, updates colour/description if present), runs in
+      # ~30 API calls per PR, and means a new entry in labeler.yml
+      # only needs to land in this list to start working.
+      - name: Bootstrap labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sync() {
+            local name="$1" color="$2" desc="$3"
+            gh label create "$name" --color "$color" --description "$desc" --force
+          }
+
+          # Type labels (conventional-commit prefixes). The changelog
+          # workflow skips PRs carrying chore/docs/ci/build/style/dependencies.
+          sync feat         0e8a16 "User-facing feature work"
+          sync fix          d73a4a "User-facing bug fix"
+          sync refactor     7057ff "Internal refactor (may still be user-facing)"
+          sync perf         ff9f1c "Performance improvement"
+          sync chore        cccccc "Internal upkeep — skipped from changelog"
+          sync docs         0075ca "Documentation only — skipped from changelog"
+          sync style        c5def5 "Cosmetic / formatting only — skipped from changelog"
+          sync test         bfdadc "Test-only change"
+          sync build        5319e7 "Build / packaging change — skipped from changelog"
+          sync ci           1d76db "CI / Actions change — skipped from changelog"
+          sync dependencies 0366d6 "Dependency bump — skipped from changelog"
+          sync skip-changelog cccccc "Manually opt this PR out of the changelog"
+
+          # Feature labels (path-based, drive the changelog emoji).
+          sync casino       e99695 "Quick-play casino minigames"
+          sync jackpot      fbca04 "Jackpot pool tuning + payout"
+          sync lottery      f9d0c4 "Daily lottery draw"
+          sync poker        24292e "Multiplayer poker tables"
+          sync blackjack    1a1a1a "Blackjack tables (solo + multi)"
+          sync moderation   5319e7 "Server moderation web UI + commands"
+          sync economy      006b75 "TOBY market, titles, tip, duel"
+          sync music        bfd4f2 "Music playback + intro songs"
+          sync dnd          8a4baf "D&D campaign + dice tools"
+
+          # Layer labels (existing — colour-synced for consistency).
+          sync Documentation 0075ca "Markdown / docs files"
+          sync Config        c2e0c6 "Build config (gradle, properties)"
+          sync Bot           bfdadc "discord-bot module"
+          sync Buttons       c5def5 "Discord button handlers"
+          sync Commands      e4e669 "Slash command implementations"
+          sync Common        cccccc "common module"
+          sync Core-api      f9d0c4 "core-api module"
+          sync Database      d4c5f9 "database module"
+          sync Helpers       bfdadc "Bot helper utilities"
+          sync Lavaplayer    c2e0c6 "Audio / Lavaplayer integration"
+          sync Managers      ededed "Bot manager classes"
+          sync web           0e8a16 "web module"
+          sync Tests         1d76db "Test code"
+
+      # Path-based labels (.github/labeler.yml) — area + feature labels.
       - uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      # Conventional-commit prefix → type label. Adds a single label
+      # matching the PR title prefix (chore, fix, feat, etc.) so the
+      # changelog workflow can skip non-user-facing PRs without us
+      # remembering to label them by hand. `dependabot` and `deps:`
+      # PRs both fold into the `dependencies` label so the skip rule
+      # is one entry instead of two.
+      - name: Apply title-prefix label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title || '';
+            const match = title.match(/^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|deps|dependencies)(\([^)]*\))?!?:/i);
+            if (!match) {
+              core.info(`PR title "${title}" has no conventional-commit prefix; skipping type label.`);
+              return;
+            }
+            let label = match[1].toLowerCase();
+            if (label === 'deps') label = 'dependencies';
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: [label],
+            });
+            core.info(`Applied label: ${label}`);

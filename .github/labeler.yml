@@ -41,3 +41,67 @@ Tests:
  - database/src/test/kotlin/**
  - discord-bot/src/test/kotlin/**
  - web/src/test/kotlin/**
+
+# ======================================================================
+# Feature-area labels — drive the emoji on the auto-appended changelog
+# entry (see .github/workflows/changelog.yml). A PR can pick up several;
+# the changelog action walks them in priority order and uses the first
+# match. Path globs match files anywhere in the PR's diff, so a PR
+# touching e.g. a Blackjack service + a moderation template gets both
+# labels and the priority list decides the emoji.
+# ======================================================================
+
+casino:
+ - 'discord-bot/src/main/kotlin/bot/toby/command/commands/casino/**'
+ - 'database/src/main/kotlin/database/service/{Slots,Coinflip,Dice,Highlow,Scratch,Keno,Roulette,Baccarat,CasinoHoldem}*'
+ - 'web/src/main/kotlin/web/controller/Casino*'
+ - 'web/src/main/kotlin/web/service/Casino*'
+ - 'web/src/main/resources/templates/{slots,coinflip,dice,highlow,scratch,keno,roulette,baccarat,casino-*,casinoholdem-*}.html'
+ - 'web/src/main/resources/static/{js,css}/{slots,coinflip,dice,highlow,scratch,keno,roulette,baccarat,casino*,casinoholdem*}.*'
+
+jackpot:
+ - '**/*Jackpot*'
+
+lottery:
+ - '**/*Lottery*'
+ - 'web/src/main/resources/templates/lottery*.html'
+ - 'web/src/main/resources/static/{js,css}/lottery*.*'
+
+poker:
+ - '**/*Poker*'
+ - 'web/src/main/resources/templates/poker-*.html'
+ - 'web/src/main/resources/static/{js,css}/poker*.*'
+
+blackjack:
+ - '**/*Blackjack*'
+ - 'web/src/main/resources/templates/blackjack-*.html'
+ - 'web/src/main/resources/static/{js,css}/blackjack*.*'
+
+moderation:
+ - 'discord-bot/src/main/kotlin/bot/toby/command/commands/moderation/**'
+ - 'web/src/main/kotlin/web/controller/Moderation*'
+ - 'web/src/main/kotlin/web/service/Moderation*'
+ - 'web/src/main/resources/templates/moderation/**'
+ - 'web/src/main/resources/templates/moderation*.html'
+ - 'web/src/main/resources/static/js/moderation/**'
+ - 'web/src/main/resources/static/{js,css}/moderation*.*'
+
+economy:
+ - 'discord-bot/src/main/kotlin/bot/toby/command/commands/economy/**'
+ - 'web/src/main/kotlin/web/controller/{Economy,Title,Tip,Duel}*'
+ - 'web/src/main/kotlin/web/service/{Economy,Title,Tip,Duel}*'
+ - 'web/src/main/resources/templates/{economy,titles,tip,duel}*.html'
+ - 'web/src/main/resources/static/{js,css}/{economy,titles,tip,duel}*.*'
+
+music:
+ - 'discord-bot/src/main/kotlin/bot/toby/command/commands/music/**'
+ - 'discord-bot/src/main/kotlin/bot/toby/lavaplayer/**'
+ - 'web/src/main/kotlin/web/controller/Intro*'
+ - 'web/src/main/kotlin/web/service/Intro*'
+ - 'web/src/main/resources/templates/intros.html'
+ - 'web/src/main/resources/static/{js,css}/intros*.*'
+
+dnd:
+ - 'discord-bot/src/main/kotlin/bot/toby/command/commands/dnd/**'
+ - 'web/src/main/kotlin/web/controller/{Dnd,Campaign}*'
+ - 'web/src/main/resources/templates/campaign*.html'

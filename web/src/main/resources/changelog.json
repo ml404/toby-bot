@@ -1,0 +1,61 @@
+[
+  {
+    "date": "May 2026",
+    "title": "Moderation page split + searchable settings",
+    "summary": "The single moderation page became six focused sub-pages (Users, Settings, Voice, Poll, Casino, Lottery). The Settings page got a sticky search box and a dedicated Jackpot section exposing five eligibility/payout configs that were previously backend-only. A new CI guard fails the build if a future config key is added without a UI row.",
+    "emoji": "🧹",
+    "prNumber": 424
+  },
+  {
+    "date": "May 2026",
+    "title": "Jackpot RTP eligibility gate",
+    "summary": "High-RTP games (blackjack, coinflip, baccarat, roulette) can now be excluded from jackpot rolls via a configurable RTP ceiling, so they don't double-dip on a sweetener they don't need.",
+    "emoji": "🎰",
+    "prNumber": 422
+  },
+  {
+    "date": "May 2026",
+    "title": "Anti-autoclicker channel logs",
+    "summary": "Suspected-bot session embeds now post to a configurable Discord channel and update in place as forced-loss substitutions accumulate over the session.",
+    "emoji": "🔍",
+    "prNumber": 420
+  },
+  {
+    "date": "April 2026",
+    "title": "Daily lottery (Pick 5 of 49 + weighted mode)",
+    "summary": "Auto-runs at 00:00 UTC: closes the prior draw, pays tier-based prizes, opens a fresh one seeded from the jackpot pool. NUMBER_MATCH for high-engagement servers, WEIGHTED for low-traffic ones; configurable per guild from the moderation Lottery sub-page.",
+    "emoji": "🎟️",
+    "prNumber": 412
+  },
+  {
+    "date": "April 2026",
+    "title": "Casino refresh: Roulette + Casino Hold'em",
+    "summary": "Two new minigames join the quick-play roster, both wired into the per-guild jackpot pool with the same loss-tribute and stake-anchor rules as the rest.",
+    "emoji": "🎲",
+    "prNumber": 404
+  },
+  {
+    "date": "April 2026",
+    "title": "Multiplayer Blackjack tables",
+    "summary": "Up to 7 seats per multi-table, configurable shot clock, S17/H17 dealer rule, and 3:2 / 6:5 payout toggle. Solo blackjack shares the same stake bounds.",
+    "emoji": "♠️"
+  },
+  {
+    "date": "March 2026",
+    "title": "Poker tables (fixed-limit Hold'em)",
+    "summary": "2-9 seats, configurable blinds and bet structure, per-actor shot clock with auto-fold, and rake routed to the jackpot pool.",
+    "emoji": "♠️"
+  },
+  {
+    "date": "March 2026",
+    "title": "TOBY coin live market",
+    "summary": "Per-server live market with a 5-minute price tick. Earn social credit by being active, then trade it for TOBY coin.",
+    "emoji": "💰"
+  },
+  {
+    "date": "February 2026",
+    "title": "Web moderation admin",
+    "summary": "Browser-based moderation: toggle user permissions, adjust social credit, mute or move voice channels, post polls — no slash commands needed.",
+    "emoji": "🛡️"
+  }
+]
