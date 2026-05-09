@@ -1091,8 +1091,12 @@ class ModerationWebServiceTest {
         every { newChannel.id } returns newId.toString()
         every { newChannel.name } returns name
         val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
-        every { action.addRolePermissionOverride(any(), any(), any()) } returns action
-        every { action.addMemberPermissionOverride(any(), any(), any()) } returns action
+        every {
+            action.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns action
+        every {
+            action.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns action
         every { action.complete() } returns newChannel
         every { guild.createTextChannel(name) } returns action
         every { guild.publicRole.idLong } returns 1L
@@ -1229,8 +1233,12 @@ class ModerationWebServiceTest {
         mockMember(ownerId, isOwner = true)
         stubBotPerms(canManageChannels = true)
         val action = mockk<net.dv8tion.jda.api.requests.restaction.ChannelAction<TextChannel>>(relaxed = true)
-        every { action.addRolePermissionOverride(any(), any(), any()) } returns action
-        every { action.addMemberPermissionOverride(any(), any(), any()) } returns action
+        every {
+            action.addRolePermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns action
+        every {
+            action.addMemberPermissionOverride(any<Long>(), any<Collection<Permission>>(), any<Collection<Permission>>())
+        } returns action
         every { action.complete() } throws RuntimeException("rate limited")
         every { guild.createTextChannel("lottery-results") } returns action
         every { guild.publicRole.idLong } returns 1L
