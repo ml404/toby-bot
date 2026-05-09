@@ -193,28 +193,35 @@
     gap: var(--space-3);
     max-width: 560px;
 }
+/* Desktop: label/hint on left, input + Save paired on right.
+   On narrow screens (≤600px) the row collapses to stacked. */
 .config-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 200px) auto;
+    column-gap: var(--space-4);
+    row-gap: var(--space-2);
     align-items: center;
     padding: 0;
 }
 .config-section .config-row {
     background: transparent;
     border: 0;
-    padding: 10px 0;
+    padding: 16px 0;
     border-top: 1px solid var(--border);
 }
 .config-section .config-row:first-child {
     border-top: 0;
+    padding-top: 6px;
+}
+.config-section .config-row:last-child {
+    padding-bottom: 6px;
 }
 .config-row label {
-    flex: 1 1 100%;
-    font-size: 0.88rem;
+    grid-column: 1;
+    font-size: 0.92rem;
     font-weight: 500;
     color: var(--text);
-    margin-bottom: 2px;
+    line-height: 1.4;
 }
 .config-row input,
 .config-row select {
@@ -223,12 +230,12 @@
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
-    flex: 0 1 220px;
+    grid-column: 2;
+    width: 100%;
     min-width: 0;
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
-.config-row select { flex-basis: 320px; }
 .config-row input:focus-visible,
 .config-row select:focus-visible {
     outline: none;
@@ -236,16 +243,16 @@
     box-shadow: 0 0 0 3px var(--accent-soft);
 }
 /* Wrapper for percentage inputs — keeps the input + visible "%" suffix
-   together as one flex item in the row, so admins can see the unit at
-   a glance without hunting through the label. */
+   together in column 2 of the .config-row grid. */
 .config-row .config-input-group {
-    flex: 0 1 220px;
+    grid-column: 2;
     display: flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
 }
 .config-row .config-input-group input {
+    grid-column: auto;
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -255,8 +262,20 @@
     flex: 0 0 auto;
 }
 .config-row .save-config {
-    flex: 0 0 auto;
-    margin-left: auto;
+    grid-column: 3;
+}
+
+/* Narrow / mobile: stack to label-on-top, input+save-below on left. */
+@media (max-width: 640px) {
+    .config-row {
+        grid-template-columns: minmax(0, 200px) auto;
+        column-gap: var(--space-3);
+    }
+    .config-row label { grid-column: 1 / -1; }
+    .config-row input,
+    .config-row select,
+    .config-row .config-input-group { grid-column: 1; }
+    .config-row .save-config { grid-column: 2; }
 }
 
 /* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
@@ -511,11 +530,12 @@
    explains the field without blowing up the label height. */
 .config-row label .config-hint {
     display: block;
-    margin-top: 3px;
-    font-size: 0.78rem;
-    line-height: 1.45;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    line-height: 1.5;
     color: var(--text-dim);
     font-weight: 400;
+    max-width: 56ch;
 }
 
 /* Force-draw footer banner — separates the dangerous-ish action
