@@ -1,0 +1,172 @@
+name: Changelog
+
+# Auto-prepend a new entry to web/src/main/resources/changelog.json when a
+# user-facing PR merges into main. Skips PRs labelled `chore`, `docs`,
+# `ci`, `build`, `style`, `dependencies`, or `skip-changelog` — the
+# label workflow auto-applies the conventional-commit prefix label, so
+# `chore: bump deps` (or a Dependabot PR) gets `chore` and silently
+# falls through here.
+#
+# The emoji is picked from the PR's feature labels (casino, jackpot,
+# lottery, etc. — see .github/labeler.yml) using a priority list. PRs
+# touching multiple feature areas pick the first match. PRs with no
+# feature label fall back to a type-based emoji (✨ feat, 🔨 fix,
+# 🧹 refactor, ⚡ perf) or a plain ✨ default.
+#
+# Pushes the change directly to main with `[skip ci]` so we don't
+# retrigger the gradle build for a docs-only commit.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  changelog:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # We need history so the push back to main doesn't fail with
+          # "shallow clone" weirdness on conflicting force-push attempts.
+          fetch-depth: 0
+          # Use the default GITHUB_TOKEN for the push. It can write to
+          # the repo but the resulting push doesn't trigger downstream
+          # workflow runs — exactly what we want for a changelog commit.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide whether to append
+        id: gate
+        uses: actions/github-script@v7
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const labels = (context.payload.pull_request.labels || []).map(l => l.name);
+            const SKIP = ['chore', 'docs', 'ci', 'build', 'style', 'dependencies', 'skip-changelog'];
+            const skipLabel = labels.find(l => SKIP.includes(l));
+            if (skipLabel) {
+              core.info(`Skipping: PR has '${skipLabel}' label.`);
+              core.setOutput('skip', 'true');
+              return;
+            }
+
+            // Feature-label priority — first match wins. Curated rather
+            // than alphabetical so cross-cutting PRs (e.g. moderation
+            // touching jackpot configs) pick the more specific emoji.
+            const FEATURE_EMOJI = [
+              ['jackpot',    '🎰'],
+              ['lottery',    '🎟️'],
+              ['poker',      '♠️'],
+              ['blackjack',  '♠️'],
+              ['casino',     '🎲'],
+              ['moderation', '🛡️'],
+              ['economy',    '💰'],
+              ['music',      '🎵'],
+              ['dnd',        '🐉'],
+            ];
+            const TYPE_EMOJI = {
+              feat:     '✨',
+              fix:      '🔨',
+              refactor: '🧹',
+              perf:     '⚡',
+            };
+
+            const featureMatch = FEATURE_EMOJI.find(([label]) => labels.includes(label));
+            let emoji = featureMatch ? featureMatch[1] : null;
+            if (!emoji) {
+              const typeLabel = Object.keys(TYPE_EMOJI).find(t => labels.includes(t));
+              emoji = typeLabel ? TYPE_EMOJI[typeLabel] : '✨';
+            }
+
+            // Strip conventional-commit prefix from the headline.
+            // "feat(casino): roulette refresh" → "Roulette refresh".
+            // Casing: capitalise the first letter so the headline reads
+            // like a sentence regardless of how the PR author wrote it.
+            const rawTitle = process.env.PR_TITLE || '';
+            const stripped = rawTitle.replace(/^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|deps|dependencies)(\([^)]*\))?!?:\s*/i, '');
+            const title = stripped.length > 0
+              ? stripped.charAt(0).toUpperCase() + stripped.slice(1)
+              : rawTitle;
+
+            // Summary: prefer the "## Summary" section of the PR body
+            // (we have a PR template that puts it there), else first
+            // non-empty paragraph. Cap at 480 chars to keep one entry
+            // visually balanced against the others.
+            const body = (process.env.PR_BODY || '').replace(/\r/g, '');
+            let summary = '';
+            const summaryMatch = body.match(/##\s+Summary\s*\n+([\s\S]+?)(\n##\s+|\n---|$)/i);
+            if (summaryMatch) {
+              summary = summaryMatch[1].trim();
+            } else {
+              const firstPara = body.split(/\n\s*\n/).find(p => p.trim().length > 0);
+              summary = (firstPara || '').trim();
+            }
+            // Strip bullet markers + the auto-appended Claude session
+            // link so it doesn't bleed into a public-facing entry.
+            summary = summary
+              .split('\n')
+              .map(line => line.replace(/^\s*[-*]\s+/, ''))
+              .filter(line => !/^https?:\/\/claude\.ai\//i.test(line.trim()))
+              .join(' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            if (summary.length > 480) summary = summary.slice(0, 477).trimEnd() + '…';
+            if (!summary) summary = title;
+
+            // Date: human-readable "Month YYYY" matching the existing
+            // seed entries.
+            const now = new Date();
+            const date = now.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+
+            const entry = {
+              date,
+              title,
+              summary,
+              emoji,
+              prNumber: parseInt(process.env.PR_NUMBER, 10),
+            };
+            core.setOutput('skip', 'false');
+            core.setOutput('entry', JSON.stringify(entry));
+            core.info(`Will prepend entry: ${JSON.stringify(entry)}`);
+
+      - name: Prepend entry to changelog.json
+        if: steps.gate.outputs.skip == 'false'
+        env:
+          ENTRY: ${{ steps.gate.outputs.entry }}
+        run: |
+          set -euo pipefail
+          FILE="web/src/main/resources/changelog.json"
+          # Idempotency: if an entry for this PR is already at the top
+          # (re-run of the workflow on the same merged PR), skip.
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if jq -e --argjson n "$PR_NUMBER" '.[0].prNumber == $n' "$FILE" >/dev/null; then
+            echo "Entry for PR #$PR_NUMBER already at top; nothing to do."
+            exit 0
+          fi
+          tmp=$(mktemp)
+          jq --argjson entry "$ENTRY" '[$entry] + .' "$FILE" > "$tmp"
+          mv "$tmp" "$FILE"
+          echo "Prepended entry for PR #$PR_NUMBER."
+
+      - name: Commit and push
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          if git diff --quiet web/src/main/resources/changelog.json; then
+            echo "No changes to commit (idempotent re-run)."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/main/resources/changelog.json
+          git commit -m "chore(changelog): add entry for #${{ github.event.pull_request.number }} [skip ci]"
+          git push origin main

@@ -10,6 +10,34 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Path-based labels (.github/labeler.yml) — area + feature labels.
       - uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      # Conventional-commit prefix → type label. Adds a single label
+      # matching the PR title prefix (chore, fix, feat, etc.) so the
+      # changelog workflow can skip non-user-facing PRs without us
+      # remembering to label them by hand. `dependabot` and `deps:`
+      # PRs both fold into the `dependencies` label so the skip rule
+      # is one entry instead of two.
+      - name: Apply title-prefix label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title || '';
+            const match = title.match(/^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|deps|dependencies)(\([^)]*\))?!?:/i);
+            if (!match) {
+              core.info(`PR title "${title}" has no conventional-commit prefix; skipping type label.`);
+              return;
+            }
+            let label = match[1].toLowerCase();
+            if (label === 'deps') label = 'dependencies';
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: [label],
+            });
+            core.info(`Applied label: ${label}`);
