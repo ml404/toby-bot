@@ -707,6 +707,22 @@ class ModerationWebService(
                 )
             if (parentCategory != null) action.setParent(parentCategory)
             action.complete()
+        } catch (e: net.dv8tion.jda.api.exceptions.ErrorResponseException) {
+            // JDA wraps Discord's `errors` JSON map. The generic toast
+            // "50013 Missing Permissions" buries which permission
+            // bounced — surface JDA's `meaning` so the toast at least
+            // hints at the cause. The preflight checks at the top of
+            // this method catch the common cases before we get here.
+            logger.error(
+                "Discord rejected channel-create for guild=$guildId target=$targetConfig " +
+                    "code=${e.errorCode} response=${e.errorResponse} meaning=${e.meaning}: ${e.message}"
+            )
+            return CreateChannelOutcome.Error(
+                "Discord rejected the create: ${e.meaning} (code ${e.errorCode}). " +
+                    "Most often the bot's role is missing Manage Channels or " +
+                    "Manage Roles — check Server Settings → Roles → @TobyBot, " +
+                    "or re-invite via the homepage to re-grant the install defaults."
+            )
         } catch (e: Exception) {
             logger.error(
                 "Failed to create channel for guild=$guildId target=$targetConfig: ${e.message}"

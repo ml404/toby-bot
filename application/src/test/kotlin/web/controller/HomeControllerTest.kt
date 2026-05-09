@@ -17,8 +17,13 @@ class HomeControllerTest {
     private lateinit var homeStatsService: HomeStatsService
 
     private val clientId = "test-client-id"
-    private val expectedInviteUrl =
-        "https://discord.com/api/oauth2/authorize?client_id=$clientId&permissions=8&scope=bot%20applications.commands"
+    // Pinning the *shape* of the invite URL — the bitmask itself is
+    // computed from web.util.DiscordInvite.permissionsBitmask so a
+    // future bot feature that needs a new permission only has to
+    // update REQUIRED_PERMISSIONS in one place. Asserting the exact
+    // `permissions=N` string would couple this test to that constant
+    // unnecessarily; instead we delegate the bitmask via the helper.
+    private val expectedInviteUrl = web.util.DiscordInvite.urlFor(clientId)
     private val sampleStats = HomeStatsService.HomeStats(
         serverCount = 7,
         commandCount = 42,

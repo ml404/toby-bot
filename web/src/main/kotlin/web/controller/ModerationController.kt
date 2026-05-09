@@ -31,7 +31,7 @@ class ModerationController(
     private val discordClientId: String
 ) {
     private val inviteUrl: String
-        get() = "https://discord.com/api/oauth2/authorize?client_id=$discordClientId&permissions=8&scope=bot%20applications.commands"
+        get() = web.util.DiscordInvite.urlFor(discordClientId)
 
     @GetMapping("/guilds")
     fun guildList(
