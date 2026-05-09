@@ -186,8 +186,8 @@
     max-width: 560px;
 }
 .config-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
     align-items: center;
     padding: 0;
@@ -202,7 +202,7 @@
     border-top: 0;
 }
 .config-row label {
-    grid-column: 1 / -1;
+    flex: 1 1 100%;
     font-size: 0.85rem;
     color: var(--text-muted);
     margin-bottom: 4px;
@@ -214,16 +214,15 @@
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
-    grid-column: 1;
-    width: 100%;
+    flex: 1 1 200px;
     min-width: 0;
     box-sizing: border-box;
 }
 /* Wrapper for percentage inputs — keeps the input + visible "%" suffix
-   together in column 1 of the .config-row grid, so admins can see the
-   unit at a glance without hunting through the label. */
+   together as one flex item in the row, so admins can see the unit at
+   a glance without hunting through the label. */
 .config-row .config-input-group {
-    grid-column: 1;
+    flex: 1 1 200px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -231,12 +230,16 @@
 }
 .config-row .config-input-group input {
     flex: 1 1 auto;
+    min-width: 0;
 }
 .config-row .config-input-group .config-suffix {
     color: var(--text-muted);
     font-size: 0.95rem;
+    flex: 0 0 auto;
 }
-.config-row .save-config { grid-column: 2; }
+.config-row .save-config {
+    flex: 0 0 auto;
+}
 
 /* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
    Coinflip / Poker / etc. sub-groups). Each `.config-group` carries a
@@ -562,19 +565,31 @@
 
 .config-create-channel-form {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
-    align-items: center;
+    align-items: flex-end;
 }
-.config-create-channel-form input {
-    width: 200px;
+.config-create-channel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 160px;
+    min-width: 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.config-create-channel-form input,
+.config-create-channel-form select {
+    width: 100%;
+    min-width: 0;
     padding: 6px 10px;
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
+    box-sizing: border-box;
 }
-@media (max-width: 600px) {
-    .config-create-channel-form { flex-direction: column; align-items: stretch; }
-    .config-create-channel-form input { width: 100%; }
+.config-create-channel-btn {
+    flex: 0 0 auto;
 }
