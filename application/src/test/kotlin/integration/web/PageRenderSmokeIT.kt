@@ -126,9 +126,15 @@ class PageRenderSmokeIT {
             // Titles
             "/titles/guilds",
             "/titles/1",
-            // Moderation
+            // Moderation — bare guildId redirects into /users; each tab is its own sub-route now.
             "/moderation/guilds",
             "/moderation/1",
+            "/moderation/1/users",
+            "/moderation/1/settings",
+            "/moderation/1/voice",
+            "/moderation/1/poll",
+            "/moderation/1/casino",
+            "/moderation/1/lottery",
             // Intros
             "/intro/guilds",
             "/intro/1",

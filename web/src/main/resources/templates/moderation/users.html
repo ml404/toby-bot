@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Users', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'users')}"></div>
+
+    <section class="mod-panel" data-panel="users">
+        <p class="muted mb-4">
+            Toggle TobyBot permissions for members of this server. Server owners
+            can also toggle SUPERUSER, adjust social credit, and kick members.
+            View the full credit standings on the
+            <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}">leaderboard page</a>.
+        </p>
+        <div class="mod-search">
+            <label for="user-search" class="sr-only">Search members</label>
+            <input id="user-search"
+                   type="search"
+                   class="mod-search-input"
+                   placeholder="Search members by name…"
+                   autocomplete="off"
+                   aria-describedby="user-search-count">
+            <span id="user-search-count" class="mod-search-count" aria-live="polite"></span>
+        </div>
+        <div class="mod-table-wrap">
+            <table class="mod-table">
+                <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Music</th>
+                    <th>Meme</th>
+                    <th>Dig</th>
+                    <th>Superuser</th>
+                    <th>Credit</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${overview.members}"
+                    th:attr="data-member-id=${m.id}">
+                    <td data-label="Member">
+                        <div class="member-cell">
+                            <img th:if="${m.avatarUrl != null}"
+                                 th:src="${m.avatarUrl}"
+                                 th:alt="${m.name} + ' avatar'"
+                                 class="avatar">
+                            <span th:text="${m.name}">Name</span>
+                            <span class="badge owner" th:if="${m.isOwner}">owner</span>
+                        </div>
+                    </td>
+                    <td data-label="Music">
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.musicPermission} ? ' on' : ''"
+                                th:attr="data-permission='MUSIC',
+                                         data-owner=${m.isOwner}"
+                                th:title="'Music: ' + (${m.musicPermission} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Music permission for ' + ${m.name}"
+                                th:text="${m.musicPermission} ? 'On' : 'Off'">On</button>
+                    </td>
+                    <td data-label="Meme">
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.memePermission} ? ' on' : ''"
+                                th:attr="data-permission='MEME',
+                                         data-owner=${m.isOwner}"
+                                th:title="'Meme: ' + (${m.memePermission} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Meme permission for ' + ${m.name}"
+                                th:text="${m.memePermission} ? 'On' : 'Off'">On</button>
+                    </td>
+                    <td data-label="Dig">
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.digPermission} ? ' on' : ''"
+                                th:attr="data-permission='DIG',
+                                         data-owner=${m.isOwner}"
+                                th:title="'Dig: ' + (${m.digPermission} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Dig permission for ' + ${m.name}"
+                                th:text="${m.digPermission} ? 'On' : 'Off'">On</button>
+                    </td>
+                    <td data-label="Superuser">
+                        <button type="button" class="toggle-btn"
+                                th:classappend="${m.superUser} ? ' on' : ''"
+                                th:attr="data-permission='SUPERUSER',
+                                         data-owner=${m.isOwner},
+                                         data-owner-only='true'"
+                                th:disabled="${!isOwner}"
+                                th:title="'Superuser: ' + (${m.superUser} ? 'On' : 'Off')"
+                                th:aria-label="'Toggle Superuser permission for ' + ${m.name}"
+                                th:text="${m.superUser} ? 'On' : 'Off'">Off</button>
+                    </td>
+                    <td data-label="Credit">
+                        <div class="sc-adjust" th:if="${isOwner}">
+                            <span class="sc-score" th:text="${m.socialCredit}">0</span>
+                            <input type="number" value="0" step="1" aria-label="Delta">
+                            <button type="button" class="btn sc-apply">Apply</button>
+                        </div>
+                        <span th:unless="${isOwner}" class="sc-score" th:text="${m.socialCredit}">0</span>
+                    </td>
+                    <td data-label="Actions">
+                        <button type="button" class="btn-danger kick-btn"
+                                th:attr="data-name=${m.name}"
+                                th:disabled="${m.isOwner}">Kick</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/users.js}"></script>
+</body>
+</html>

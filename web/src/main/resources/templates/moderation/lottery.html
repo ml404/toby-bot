@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Lottery', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'lottery')}"></div>
+
+    <!--
+        Daily lottery configuration: opt-in toggle + game mode + per-day
+        parameters + force draw. Lives on its own sub-page (split out from
+        the Casino tab on the old single-page moderation view) because
+        the daily lottery has enough configuration depth to deserve a
+        dedicated page rather than competing with jackpot remediation
+        cards for vertical space.
+
+        Each row uses the canonical .config-row pattern (label / input
+        or select / Save button) so settings.js's existing handler
+        picks them up automatically. Without the Save button the row
+        is read-only and the admin can't actually persist anything.
+    -->
+    <section class="mod-panel" data-panel="lottery">
+        <p class="muted mb-4">
+            Auto-runs at 00:00 UTC: closes the prior day's draw, pays prizes,
+            opens a fresh one seeded from the jackpot pool. Doubles as a credit
+            sink — a configurable slice of every ticket sale routes back to the
+            jackpot, chipping the pool down through many small wins.
+        </p>
+        <div class="mod-card mod-card-wide lottery-admin-card">
+            <details class="config-section" open>
+                <summary>Toggle &amp; mode</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_DAILY_ENABLED">
+                        <label>Enable daily lottery</label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="false"
+                                    th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == null or overview.config['LOTTERY_DAILY_ENABLED'] != 'true'}">
+                                Disabled
+                            </option>
+                            <option value="true"
+                                    th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == 'true'}">
+                                Enabled
+                            </option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_MODE">
+                        <label>
+                            Game mode
+                            <span class="config-hint">
+                                NUMBER_MATCH for high-traffic servers (≥30 tickets/day);
+                                WEIGHTED guarantees a winner every draw — best for &lt;30 active users.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="NUMBER_MATCH"
+                                    th:selected="${overview.config['LOTTERY_DAILY_MODE'] == null or overview.config['LOTTERY_DAILY_MODE'] != 'WEIGHTED'}">
+                                Pick 5 of 49
+                            </option>
+                            <option value="WEIGHTED"
+                                    th:selected="${overview.config['LOTTERY_DAILY_MODE'] == 'WEIGHTED'}">
+                                Top-3 weighted draw
+                            </option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Daily prize parameters</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
+                        <label>
+                            Ticket price
+                            <span class="config-hint">Credits per ticket. Default 50.</span>
+                        </label>
+                        <input type="number" min="1" max="1000000"
+                               th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
+                               placeholder="50"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
+                        <label>
+                            Daily seed
+                            <span class="config-hint">
+                                Percent of the jackpot pool pulled into the prize pool at 00:00 UTC. Default 5.
+                            </span>
+                        </label>
+                        <span class="config-input-group">
+                            <input type="number" min="1" max="100"
+                                   th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
+                                   placeholder="5"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
+                        <label>
+                            Ticket revenue &rarr; jackpot
+                            <span class="config-hint">
+                                Percent of every ticket sale routed back into the jackpot pool. Default 30.
+                            </span>
+                        </label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="100"
+                                   th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
+                                   placeholder="30"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_MIN_BUYERS">
+                        <label>
+                            Minimum distinct buyers per draw
+                            <span class="config-hint">
+                                Below this count the daily cancels and refunds — prevents a single
+                                user sweeping the seeded pool. 1 disables the safeguard. Default 2.
+                            </span>
+                        </label>
+                        <input type="number" min="1" max="50"
+                               th:value="${overview.config['LOTTERY_DAILY_MIN_BUYERS']}"
+                               placeholder="2"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_CHANNEL">
+                        <label>
+                            Announce channel
+                            <span class="config-hint">
+                                Daily close+open posts land here. Leave on
+                                "fall back" to use LEADERBOARD_CHANNEL, then
+                                the guild's system channel.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="">&mdash; fall back to leaderboard / system &mdash;</option>
+                            <option th:each="tc : ${overview.textChannels}"
+                                    th:value="${tc.id}"
+                                    th:text="'#' + ${tc.name}"
+                                    th:selected="${overview.config['LOTTERY_CHANNEL'] == tc.id}"></option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-create-channel">
+                        <div class="config-create-channel-text">
+                            <strong>Create a read-only lottery channel</strong>
+                            <p class="muted">
+                                Creates a new text channel where @everyone can read but
+                                only TobyBot can post; auto-sets the announce channel
+                                above to it. Bot needs the Manage Channels permission.
+                            </p>
+                        </div>
+                        <form class="config-create-channel-form"
+                              data-target-config="LOTTERY_CHANNEL"
+                              data-default-name="lottery-results">
+                            <label class="config-create-channel-field">
+                                <span>Channel name</span>
+                                <input type="text" name="name" value="lottery-results"
+                                       maxlength="90" th:disabled="${!isOwner}">
+                            </label>
+                            <label class="config-create-channel-field">
+                                <span>Category</span>
+                                <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                    <option value="">&mdash; top-level &mdash;</option>
+                                    <option th:each="cat : ${overview.categories}"
+                                            th:value="${cat.id}"
+                                            th:text="${cat.name}"></option>
+                                </select>
+                            </label>
+                            <label class="config-create-channel-field">
+                                <span>or new category name</span>
+                                <input type="text" name="newCategoryName"
+                                       maxlength="100" placeholder="(blank = use existing)"
+                                       th:disabled="${!isOwner}">
+                            </label>
+                            <button type="submit" class="btn config-create-channel-btn"
+                                    th:disabled="${!isOwner}">Create</button>
+                        </form>
+                    </div>
+                </div>
+            </details>
+
+            <div class="lottery-admin-actions">
+                <div class="lottery-admin-actions-text">
+                    <strong>Force draw now</strong>
+                    <p class="muted">
+                        Closes any open draw, pays prizes, opens a fresh one — useful for
+                        testing or recovering from a missed cron.
+                    </p>
+                </div>
+                <button id="lottery-force-draw" type="button" class="btn"
+                        th:disabled="${!isOwner}">Force draw now</button>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/lottery.js}"></script>
+</body>
+</html>

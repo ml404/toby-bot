@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Casino', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'casino')}"></div>
+
+    <section class="mod-panel" data-panel="casino">
+        <p class="muted mb-4">
+            Casino remediation. Use these when a player has farmed the
+            jackpot via spam or another exploit. Per-stake jackpot
+            scaling is in place, but you can still drain a contaminated
+            pool or claw an exploit refund back into it. Tune jackpot
+            probability, payout, and eligibility gates on the
+            <a th:href="@{/moderation/{id}/settings(id=${overview.guildId})}">Settings</a>
+            page.
+        </p>
+        <div class="mod-card-grid">
+            <div class="mod-card">
+                <h3>Current pool</h3>
+                <p class="big-number">
+                    <span id="jackpot-pool" th:text="${jackpotPool}">0</span>
+                    <span class="muted">credits</span>
+                </p>
+            </div>
+            <div class="mod-card">
+                <h3>Reset jackpot pool</h3>
+                <p class="muted">Zero the pool. The drained amount is logged.</p>
+                <button id="jackpot-reset" type="button" class="btn btn-danger">Reset pool</button>
+            </div>
+        </div>
+        <div class="mod-card mod-card-wide">
+            <h3>Refund from user</h3>
+            <p class="muted">
+                Debit a user's social credit by the given amount and
+                deposit it back into the jackpot pool. Use after a
+                clawback when the player profited from a spent pool.
+            </p>
+            <form class="jackpot-refund-form" autocomplete="off">
+                <label>
+                    User
+                    <select name="sourceDiscordId" required>
+                        <option value="" disabled selected>Select a member…</option>
+                        <option th:each="m : ${overview.members}"
+                                th:value="${m.id}"
+                                th:attr="data-credit=${m.socialCredit}"
+                                th:text="${m.name} + ' — ' + ${m.socialCredit} + ' credits'">
+                        </option>
+                    </select>
+                </label>
+                <p class="muted jackpot-refund-balance" hidden>
+                    Current balance: <span class="jackpot-refund-balance-value">0</span> credits
+                </p>
+                <label>
+                    Amount
+                    <input type="number" name="amount" min="1" required>
+                </label>
+                <button type="submit" class="btn">Refund to jackpot</button>
+            </form>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/casino.js}"></script>
+</body>
+</html>

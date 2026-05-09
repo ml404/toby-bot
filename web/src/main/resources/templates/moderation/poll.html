@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Poll', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'poll')}"></div>
+
+    <section class="mod-panel" data-panel="poll">
+        <p class="muted mb-4">
+            Post an emoji-reaction poll in a text channel. Up to 10 options.
+        </p>
+        <form class="poll-form">
+            <label>
+                Channel
+                <select name="channelId" required>
+                    <option value="">&mdash; choose &mdash;</option>
+                    <option th:each="tc : ${overview.textChannels}"
+                            th:value="${tc.id}"
+                            th:text="'#' + ${tc.name}"></option>
+                </select>
+            </label>
+            <label>
+                Question
+                <input type="text" name="question" maxlength="256" required>
+            </label>
+            <div class="poll-options">
+                <label>Option 1 <input type="text" maxlength="100" class="poll-option" required></label>
+                <label>Option 2 <input type="text" maxlength="100" class="poll-option" required></label>
+                <label>Option 3 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 4 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 5 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 6 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 7 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 8 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 9 <input type="text" maxlength="100" class="poll-option"></label>
+                <label>Option 10 <input type="text" maxlength="100" class="poll-option"></label>
+            </div>
+            <button type="submit" class="btn">Post poll</button>
+        </form>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/poll.js}"></script>
+</body>
+</html>

@@ -40,32 +40,50 @@
     font-variant-numeric: tabular-nums;
 }
 .mod-table tr.is-hidden { display: none; }
+.config-row.is-hidden { display: none; }
+details.config-section.is-hidden { display: none; }
 
-.tabs {
+/* Per-guild moderation sub-nav. Each tab is a real anchor link to a
+   distinct sub-route (/moderation/{id}/users, /settings, /voice, …),
+   styled to look like the old in-page tabs so the visual continuity is
+   preserved. The .active class is set on the link matching the
+   currently rendered page. */
+.mod-subnav {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     border-bottom: 1px solid var(--border);
     margin-bottom: var(--space-5);
 }
-.tab-btn {
-    background: transparent;
-    border: 0;
+.mod-subnav-link {
     color: var(--text-muted);
     padding: 10px 16px;
-    cursor: pointer;
-    font: inherit;
+    text-decoration: none;
+    font-size: inherit;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
 }
-.tab-btn:hover { color: var(--text); }
-.tab-btn.active {
+.mod-subnav-link:hover { color: var(--text); }
+.mod-subnav-link.active {
     color: var(--accent);
     border-bottom-color: var(--accent);
 }
 
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.mod-panel { display: block; }
+
+/* Settings page: sticky config search bar. Reuses .mod-search markup but
+   pins to the top of the viewport so it stays visible while the user
+   scrolls the long Config sections. The solid background covers
+   anything scrolling beneath it. */
+.config-search-bar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) 0;
+    background: var(--bg);
+}
 
 .mod-table-wrap {
     overflow-x: auto;
@@ -447,7 +465,7 @@
 }
 
 @media (max-width: 640px) {
-    .tab-btn { padding: 8px 10px; font-size: 0.9rem; }
+    .mod-subnav-link { padding: 8px 10px; font-size: 0.9rem; }
 
     .mod-table-wrap {
         overflow-x: visible;

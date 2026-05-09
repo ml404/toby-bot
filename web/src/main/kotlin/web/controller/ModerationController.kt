@@ -51,12 +51,79 @@ class ModerationController(
         return "moderation-guilds"
     }
 
+    /**
+     * Bare per-guild URL is a stable redirect into the most-used sub-page
+     * (Users). Old bookmarks still land somewhere sensible; the actual
+     * tabs each have their own route now so admins can deep-link into a
+     * single section.
+     */
     @GetMapping("/{guildId}")
-    fun moderationPage(
+    fun moderationLanding(@PathVariable guildId: Long): String =
+        "redirect:/moderation/$guildId/users"
+
+    @GetMapping("/{guildId}/users")
+    fun usersPage(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
         ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/users")
+
+    @GetMapping("/{guildId}/settings")
+    fun settingsPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/settings")
+
+    @GetMapping("/{guildId}/voice")
+    fun voicePage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/voice")
+
+    @GetMapping("/{guildId}/poll")
+    fun pollPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/poll")
+
+    @GetMapping("/{guildId}/casino")
+    fun casinoPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/casino")
+
+    @GetMapping("/{guildId}/lottery")
+    fun lotteryPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/lottery")
+
+    /**
+     * Shared resolver for every per-tab sub-page: runs the same access
+     * check + overview fetch + model-population the old single-page
+     * handler did, then returns the supplied [viewName]. The full
+     * [GuildOverview] is added on every sub-page even when only some
+     * fields are read by the template — it's one JDA call already, and
+     * sharing the model keeps the sub-templates plug-and-play with the
+     * `moderationHeader` fragment.
+     */
+    private fun renderSubPage(
+        guildId: Long,
+        user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes,
+        viewName: String,
     ): String = WebGuildAccess.requireForPage(
         user, guildId, ra, lobbyPath = "/moderation/guilds",
         check = moderationWebService::canModerate,
@@ -72,7 +139,7 @@ class ModerationController(
         model.addAttribute("username", user.displayName())
         model.addAttribute("actorDiscordId", discordId.toString())
         model.addAttribute("jackpotPool", moderationWebService.getJackpotPool(guildId))
-        "moderation"
+        viewName
     }
 
     @PostMapping("/{guildId}/user/{targetDiscordId}/permission", consumes = ["application/json"])

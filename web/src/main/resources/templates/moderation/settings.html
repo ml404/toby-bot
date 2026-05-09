@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Moderation', '/css/moderation.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Settings', '/css/moderation.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -10,129 +10,9 @@
                data-actor-id=${actorDiscordId},
                data-is-owner=${isOwner}">
 
-    <div class="mod-header">
-        <div>
-            <a class="back-link" th:href="@{/moderation/guilds}">&larr; All servers</a>
-            <h1 th:text="${overview.guildName}">Guild Name</h1>
-            <p class="muted" th:if="${isOwner}">You are the server owner.</p>
-            <p class="muted" th:unless="${isOwner}">You are a TobyBot superuser.</p>
-        </div>
-    </div>
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'settings')}"></div>
 
-    <div th:replace="~{fragments/alerts :: error}"></div>
-
-    <div class="tabs" role="tablist">
-        <button class="tab-btn active" data-tab="users" role="tab" aria-selected="true">Users</button>
-        <button class="tab-btn" data-tab="config" role="tab" aria-selected="false">Config</button>
-        <button class="tab-btn" data-tab="voice" role="tab" aria-selected="false">Voice</button>
-        <button class="tab-btn" data-tab="poll" role="tab" aria-selected="false">Poll</button>
-        <button class="tab-btn" data-tab="casino" role="tab" aria-selected="false">Casino</button>
-        <button class="tab-btn" data-tab="lottery" role="tab" aria-selected="false">Lottery</button>
-    </div>
-
-    <!-- USERS TAB -->
-    <section class="tab-panel active" data-panel="users">
-        <p class="muted mb-4">
-            Toggle TobyBot permissions for members of this server. Server owners
-            can also toggle SUPERUSER, adjust social credit, and kick members.
-            View the full credit standings on the
-            <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}">leaderboard page</a>.
-        </p>
-        <div class="mod-search">
-            <label for="user-search" class="sr-only">Search members</label>
-            <input id="user-search"
-                   type="search"
-                   class="mod-search-input"
-                   placeholder="Search members by name…"
-                   autocomplete="off"
-                   aria-describedby="user-search-count">
-            <span id="user-search-count" class="mod-search-count" aria-live="polite"></span>
-        </div>
-        <div class="mod-table-wrap">
-            <table class="mod-table">
-                <thead>
-                <tr>
-                    <th>Member</th>
-                    <th>Music</th>
-                    <th>Meme</th>
-                    <th>Dig</th>
-                    <th>Superuser</th>
-                    <th>Credit</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="m : ${overview.members}"
-                    th:attr="data-member-id=${m.id}">
-                    <td data-label="Member">
-                        <div class="member-cell">
-                            <img th:if="${m.avatarUrl != null}"
-                                 th:src="${m.avatarUrl}"
-                                 th:alt="${m.name} + ' avatar'"
-                                 class="avatar">
-                            <span th:text="${m.name}">Name</span>
-                            <span class="badge owner" th:if="${m.isOwner}">owner</span>
-                        </div>
-                    </td>
-                    <td data-label="Music">
-                        <button type="button" class="toggle-btn"
-                                th:classappend="${m.musicPermission} ? ' on' : ''"
-                                th:attr="data-permission='MUSIC',
-                                         data-owner=${m.isOwner}"
-                                th:title="'Music: ' + (${m.musicPermission} ? 'On' : 'Off')"
-                                th:aria-label="'Toggle Music permission for ' + ${m.name}"
-                                th:text="${m.musicPermission} ? 'On' : 'Off'">On</button>
-                    </td>
-                    <td data-label="Meme">
-                        <button type="button" class="toggle-btn"
-                                th:classappend="${m.memePermission} ? ' on' : ''"
-                                th:attr="data-permission='MEME',
-                                         data-owner=${m.isOwner}"
-                                th:title="'Meme: ' + (${m.memePermission} ? 'On' : 'Off')"
-                                th:aria-label="'Toggle Meme permission for ' + ${m.name}"
-                                th:text="${m.memePermission} ? 'On' : 'Off'">On</button>
-                    </td>
-                    <td data-label="Dig">
-                        <button type="button" class="toggle-btn"
-                                th:classappend="${m.digPermission} ? ' on' : ''"
-                                th:attr="data-permission='DIG',
-                                         data-owner=${m.isOwner}"
-                                th:title="'Dig: ' + (${m.digPermission} ? 'On' : 'Off')"
-                                th:aria-label="'Toggle Dig permission for ' + ${m.name}"
-                                th:text="${m.digPermission} ? 'On' : 'Off'">On</button>
-                    </td>
-                    <td data-label="Superuser">
-                        <button type="button" class="toggle-btn"
-                                th:classappend="${m.superUser} ? ' on' : ''"
-                                th:attr="data-permission='SUPERUSER',
-                                         data-owner=${m.isOwner},
-                                         data-owner-only='true'"
-                                th:disabled="${!isOwner}"
-                                th:title="'Superuser: ' + (${m.superUser} ? 'On' : 'Off')"
-                                th:aria-label="'Toggle Superuser permission for ' + ${m.name}"
-                                th:text="${m.superUser} ? 'On' : 'Off'">Off</button>
-                    </td>
-                    <td data-label="Credit">
-                        <div class="sc-adjust" th:if="${isOwner}">
-                            <span class="sc-score" th:text="${m.socialCredit}">0</span>
-                            <input type="number" value="0" step="1" aria-label="Delta">
-                            <button type="button" class="btn sc-apply">Apply</button>
-                        </div>
-                        <span th:unless="${isOwner}" class="sc-score" th:text="${m.socialCredit}">0</span>
-                    </td>
-                    <td data-label="Actions">
-                        <button type="button" class="btn-danger kick-btn"
-                                th:attr="data-name=${m.name}"
-                                th:disabled="${m.isOwner}">Kick</button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- CONFIG TAB -->
-    <section class="tab-panel" data-panel="config">
+    <section class="mod-panel" data-panel="settings">
         <div class="alert alert-error" th:if="${!isOwner}" style="margin-bottom: 16px;">
             <strong>Read-only.</strong> Only the server owner can change guild
             config. You're a TobyBot superuser, which lets you moderate
@@ -140,6 +20,18 @@
             the server owner to change these, or take ownership of the server
             first.
         </div>
+
+        <div class="mod-search config-search-bar">
+            <label for="config-search" class="sr-only">Search settings</label>
+            <input id="config-search"
+                   type="search"
+                   class="mod-search-input"
+                   placeholder="Search settings (e.g. jackpot, RTP, ante)…"
+                   autocomplete="off"
+                   aria-describedby="config-search-count">
+            <span id="config-search-count" class="mod-search-count" aria-live="polite"></span>
+        </div>
+
         <details class="config-section" open>
             <summary>Audio &amp; moves</summary>
             <div class="config-grid">
@@ -256,7 +148,7 @@
         </details>
 
         <details class="config-section">
-            <summary>Economy &amp; casino</summary>
+            <summary>Economy</summary>
             <div class="config-grid">
                 <div class="config-row" data-key="UBI_DAILY_AMOUNT">
                     <label>UBI daily amount (credits granted to every user once per UTC day; 0 disables)</label>
@@ -272,28 +164,6 @@
                            th:value="${overview.config['DAILY_CREDIT_CAP']}"
                            placeholder="90"
                            th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
-                    <label>Jackpot loss tribute (% of every lost casino stake)</label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_WIN_PCT">
-                    <label>Jackpot win chance (% per casino-game win, decimals allowed)</label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50" step="0.01"
-                               th:value="${overview.config['JACKPOT_WIN_PCT']}"
-                               placeholder="1"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
@@ -318,54 +188,161 @@
                     </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
-                <div class="config-group">
-                    <h4>Anti-autoclicker</h4>
-                    <p class="muted">
-                        Suspected autoclickers (same screen pixel clicked
-                        repeatedly with no cursor motion between bets) get
-                        a per-(user, guild) "streak" that ramps the house
-                        edge by 2.5 percentage points per consecutive
-                        bot-like click, capped per game by the values
-                        below. The cap is the forced-loss probability
-                        applied on top of the fair game; the suspect's
-                        effective RTP becomes <code>(1 − cap/100) × fair RTP</code>.
-                        Legitimate play never trips the detector. Set 0
-                        to disable a game's gate entirely. Discord call
-                        paths are unaffected (no mouse signal).
-                    </p>
-                    <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
-                        <label>Coinflip — max bot-suspicion house edge. Fair RTP 100 % → suspect RTP <code>100 − cap</code> %. Default 30 → suspect RTP 70 %. 0 disables.</label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="50"
-                                   th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
-                                   placeholder="30"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="DICE_BOT_EDGE_MAX_PCT">
-                        <label>Dice — max bot-suspicion house edge. Fair RTP ≈ 83 % → suspect RTP ≈ <code>83 × (1 − cap/100)</code> %. Default 30 → suspect RTP ≈ 58 %. 0 disables.</label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="50"
-                                   th:value="${overview.config['DICE_BOT_EDGE_MAX_PCT']}"
-                                   placeholder="30"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="SLOTS_BOT_EDGE_MAX_PCT">
-                        <label>Slots — max bot-suspicion house edge. Fair RTP ≈ 89 % → suspect RTP ≈ <code>89 × (1 − cap/100)</code> %. Default 30 → suspect RTP ≈ 62 %. 0 disables.</label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="50"
-                                   th:value="${overview.config['SLOTS_BOT_EDGE_MAX_PCT']}"
-                                   placeholder="30"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
+            </div>
+        </details>
+
+        <details class="config-section">
+            <summary>Jackpot</summary>
+            <p class="muted mb-2">
+                Jackpot pool tuning. The pool grows from loss tributes and
+                trade fees and pays out on a small chance per casino-game win.
+                Use the eligibility gates below (RTP cap, winner cooldown,
+                activity window) to keep the pool from being swept by
+                high-RTP games or low-activity edge cases. Set
+                <code>JACKPOT_WIN_PCT</code> to <code>0</code> to disable
+                jackpot wins entirely; set <code>JACKPOT_RTP_MAX_PCT</code>
+                to a value below a game's canonical RTP to disable jackpots
+                just for that game.
+            </p>
+            <div class="config-grid">
+                <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
+                    <label>Loss tribute (% of every lost casino stake routed to the pool; default 10)</label>
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50"
+                               th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
+                               placeholder="10"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_WIN_PCT">
+                    <label>Win chance (% per casino-game win; decimals allowed; 0 disables jackpots; default 1)</label>
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50" step="0.01"
+                               th:value="${overview.config['JACKPOT_WIN_PCT']}"
+                               placeholder="1"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_PAYOUT_PCT">
+                    <label>Payout (% of pool paid on a winning roll; e.g. 30 leaves the rest to re-seed; default 100)</label>
+                    <span class="config-input-group">
+                        <input type="number" min="1" max="100"
+                               th:value="${overview.config['JACKPOT_PAYOUT_PCT']}"
+                               placeholder="100"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_RTP_MAX_PCT">
+                    <label>Max game RTP eligible for jackpot (0 disables the gate; recommended 95 to exclude blackjack/coinflip/baccarat/roulette)</label>
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="100"
+                               th:value="${overview.config['JACKPOT_RTP_MAX_PCT']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_WINNER_COOLDOWN_DAYS">
+                    <label>Winner cooldown (days a recent winner is ineligible; 0 disables; recommended 14)</label>
+                    <input type="number" min="0" max="365"
+                           th:value="${overview.config['JACKPOT_WINNER_COOLDOWN_DAYS']}"
+                           placeholder="0"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_ACTIVITY_WINDOW_DAYS">
+                    <label>Activity window (trailing-day window for the eligibility check; 0 disables the gate; recommended 7)</label>
+                    <input type="number" min="0" max="90"
+                           th:value="${overview.config['JACKPOT_ACTIVITY_WINDOW_DAYS']}"
+                           placeholder="0"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_ACTIVITY_MIN_DAYS">
+                    <label>Activity minimum (distinct active days required within the window; default 1; ignored when window is 0)</label>
+                    <input type="number" min="1" max="90"
+                           th:value="${overview.config['JACKPOT_ACTIVITY_MIN_DAYS']}"
+                           placeholder="1"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="JACKPOT_STAKE_ANCHOR">
+                    <label>Stake anchor (reference stake for jackpot probability scaling; default 500)</label>
+                    <input type="number" min="1"
+                           th:value="${overview.config['JACKPOT_STAKE_ANCHOR']}"
+                           placeholder="500"
+                           th:disabled="${!isOwner}">
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="config-section">
+            <summary>Anti-autoclicker</summary>
+            <p class="muted mb-2">
+                Suspected autoclickers (same screen pixel clicked
+                repeatedly with no cursor motion between bets) get
+                a per-(user, guild) "streak" that ramps the house
+                edge by 2.5 percentage points per consecutive
+                bot-like click, capped per game by the values
+                below. The cap is the forced-loss probability
+                applied on top of the fair game; the suspect's
+                effective RTP becomes <code>(1 − cap/100) × fair RTP</code>.
+                Legitimate play never trips the detector. Set 0
+                to disable a game's gate entirely. Discord call
+                paths are unaffected (no mouse signal).
+            </p>
+            <div class="config-grid">
+                <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
+                    <label>Coinflip — max bot-suspicion house edge. Fair RTP 100 % → suspect RTP <code>100 − cap</code> %. Default 30 → suspect RTP 70 %. 0 disables.</label>
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50"
+                               th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
+                               placeholder="30"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="DICE_BOT_EDGE_MAX_PCT">
+                    <label>Dice — max bot-suspicion house edge. Fair RTP ≈ 83 % → suspect RTP ≈ <code>83 × (1 − cap/100)</code> %. Default 30 → suspect RTP ≈ 58 %. 0 disables.</label>
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50"
+                               th:value="${overview.config['DICE_BOT_EDGE_MAX_PCT']}"
+                               placeholder="30"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="SLOTS_BOT_EDGE_MAX_PCT">
+                    <label>Slots — max bot-suspicion house edge. Fair RTP ≈ 89 % → suspect RTP ≈ <code>89 × (1 − cap/100)</code> %. Default 30 → suspect RTP ≈ 62 %. 0 disables.</label>
+                    <span class="config-input-group">
+                        <input type="number" min="0" max="50"
+                               th:value="${overview.config['SLOTS_BOT_EDGE_MAX_PCT']}"
+                               placeholder="30"
+                               th:disabled="${!isOwner}">
+                        <span class="config-suffix">%</span>
+                    </span>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                </div>
+                <div class="config-row" data-key="CASINO_MODLOG_CHANNEL_ID">
+                    <label>Casino mod-log channel (where anti-autoclicker session embeds post; falls back to system channel)</label>
+                    <select th:disabled="${!isOwner}">
+                        <option value="">&mdash; system channel &mdash;</option>
+                        <option th:each="tc : ${overview.textChannels}"
+                                th:value="${tc.id}"
+                                th:text="'#' + ${tc.name}"
+                                th:selected="${overview.config['CASINO_MODLOG_CHANNEL_ID'] == tc.id}"></option>
+                    </select>
+                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
             </div>
         </details>
@@ -471,22 +448,10 @@
             <p class="muted mb-2">
                 Stake and buy-in bounds for every casino game in one place. Set any maximum to
                 <code>0</code> to remove the cap. Jackpot win probability scales by
-                <code>stake / anchor</code>, so the anchor stays a stable reference even when
-                stakes go large; bets at or above the anchor roll at the full
-                <code>JACKPOT_WIN_PCT</code> base probability.
+                <code>stake / anchor</code>; the anchor lives in the
+                <strong>Jackpot</strong> section above.
             </p>
             <div class="config-grid">
-                <div class="config-group">
-                    <h4>Jackpot scaling</h4>
-                    <div class="config-row" data-key="JACKPOT_STAKE_ANCHOR">
-                        <label>Jackpot stake anchor (reference stake for jackpot probability scaling; default 500)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['JACKPOT_STAKE_ANCHOR']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
                 <div class="config-group">
                     <h4>Dice</h4>
                     <div class="config-row" data-key="DICE_MIN_STAKE">
@@ -750,336 +715,11 @@
             </div>
         </details>
     </section>
-
-    <!-- VOICE TAB -->
-    <section class="tab-panel" data-panel="voice">
-        <p class="muted mb-4">
-            Pick a voice channel to mass-mute, unmute, or move its occupants.
-            Requires the bot and you to have the Mute Members / Move Members
-            permissions.
-        </p>
-        <div class="voice-grid">
-            <div class="voice-card" th:each="vc : ${overview.voiceChannels}"
-                 th:attr="data-channel-id=${vc.id}">
-                <header>
-                    <span class="vc-name" th:text="${vc.name}">#channel</span>
-                    <span class="vc-count"
-                          th:text="${#lists.size(vc.memberIds)} + ' in channel'">0 in channel</span>
-                </header>
-                <div class="voice-actions">
-                    <button type="button" class="btn mute-btn" data-mute="true">Shh</button>
-                    <button type="button" class="btn mute-btn" data-mute="false">Talk</button>
-                </div>
-            </div>
-        </div>
-
-        <h2 class="mt-5">Move members</h2>
-        <form class="move-form">
-            <label>
-                Destination
-                <select name="targetChannelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="vc : ${overview.voiceChannels}"
-                            th:value="${vc.id}"
-                            th:text="${vc.name}"></option>
-                </select>
-            </label>
-            <label>
-                Members (ctrl+click for multi)
-                <select name="memberIds" multiple size="6" required>
-                    <option th:each="m : ${overview.members}"
-                            th:if="${!m.isBot}"
-                            th:value="${m.id}"
-                            th:text="${m.name}"></option>
-                </select>
-            </label>
-            <button type="submit" class="btn">Move</button>
-        </form>
-    </section>
-
-    <!-- POLL TAB -->
-    <section class="tab-panel" data-panel="poll">
-        <p class="muted mb-4">
-            Post an emoji-reaction poll in a text channel. Up to 10 options.
-        </p>
-        <form class="poll-form">
-            <label>
-                Channel
-                <select name="channelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="tc : ${overview.textChannels}"
-                            th:value="${tc.id}"
-                            th:text="'#' + ${tc.name}"></option>
-                </select>
-            </label>
-            <label>
-                Question
-                <input type="text" name="question" maxlength="256" required>
-            </label>
-            <div class="poll-options">
-                <label>Option 1 <input type="text" maxlength="100" class="poll-option" required></label>
-                <label>Option 2 <input type="text" maxlength="100" class="poll-option" required></label>
-                <label>Option 3 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 4 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 5 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 6 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 7 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 8 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 9 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 10 <input type="text" maxlength="100" class="poll-option"></label>
-            </div>
-            <button type="submit" class="btn">Post poll</button>
-        </form>
-    </section>
-
-    <!-- CASINO TAB -->
-    <section class="tab-panel" data-panel="casino">
-        <p class="muted mb-4">
-            Casino remediation. Use these when a player has farmed the
-            jackpot via spam or another exploit. Per-stake jackpot
-            scaling is in place, but you can still drain a contaminated
-            pool or claw an exploit refund back into it.
-        </p>
-        <div class="mod-card-grid">
-            <div class="mod-card">
-                <h3>Current pool</h3>
-                <p class="big-number">
-                    <span id="jackpot-pool" th:text="${jackpotPool}">0</span>
-                    <span class="muted">credits</span>
-                </p>
-            </div>
-            <div class="mod-card">
-                <h3>Reset jackpot pool</h3>
-                <p class="muted">Zero the pool. The drained amount is logged.</p>
-                <button id="jackpot-reset" type="button" class="btn btn-danger">Reset pool</button>
-            </div>
-        </div>
-        <div class="mod-card mod-card-wide">
-            <h3>Refund from user</h3>
-            <p class="muted">
-                Debit a user's social credit by the given amount and
-                deposit it back into the jackpot pool. Use after a
-                clawback when the player profited from a spent pool.
-            </p>
-            <form class="jackpot-refund-form" autocomplete="off">
-                <label>
-                    User
-                    <select name="sourceDiscordId" required>
-                        <option value="" disabled selected>Select a member…</option>
-                        <option th:each="m : ${overview.members}"
-                                th:value="${m.id}"
-                                th:attr="data-credit=${m.socialCredit}"
-                                th:text="${m.name} + ' — ' + ${m.socialCredit} + ' credits'">
-                        </option>
-                    </select>
-                </label>
-                <p class="muted jackpot-refund-balance" hidden>
-                    Current balance: <span class="jackpot-refund-balance-value">0</span> credits
-                </p>
-                <label>
-                    Amount
-                    <input type="number" name="amount" min="1" required>
-                </label>
-                <button type="submit" class="btn">Refund to jackpot</button>
-            </form>
-        </div>
-    </section>
-
-    <!-- LOTTERY TAB -->
-    <!--
-        Daily lottery configuration: opt-in toggle + game mode + per-day
-        parameters + force draw. Lives in its own tab (not Casino) because
-        the daily lottery has enough configuration depth to deserve a
-        dedicated page rather than competing with jackpot remediation
-        cards for vertical space.
-
-        Each row uses the canonical .config-row pattern (label / input
-        or select / Save button) so moderation.js's existing handler
-        picks them up automatically. Without the Save button the row
-        is read-only and the admin can't actually persist anything.
-    -->
-    <section class="tab-panel" data-panel="lottery">
-        <p class="muted mb-4">
-            Auto-runs at 00:00 UTC: closes the prior day's draw, pays prizes,
-            opens a fresh one seeded from the jackpot pool. Doubles as a credit
-            sink — a configurable slice of every ticket sale routes back to the
-            jackpot, chipping the pool down through many small wins.
-        </p>
-        <div class="mod-card mod-card-wide lottery-admin-card">
-            <details class="config-section" open>
-                <summary>Toggle &amp; mode</summary>
-                <div class="config-grid">
-                    <div class="config-row" data-key="LOTTERY_DAILY_ENABLED">
-                        <label>Enable daily lottery</label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="false"
-                                    th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == null or overview.config['LOTTERY_DAILY_ENABLED'] != 'true'}">
-                                Disabled
-                            </option>
-                            <option value="true"
-                                    th:selected="${overview.config['LOTTERY_DAILY_ENABLED'] == 'true'}">
-                                Enabled
-                            </option>
-                        </select>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="LOTTERY_DAILY_MODE">
-                        <label>
-                            Game mode
-                            <span class="config-hint">
-                                NUMBER_MATCH for high-traffic servers (≥30 tickets/day);
-                                WEIGHTED guarantees a winner every draw — best for &lt;30 active users.
-                            </span>
-                        </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="NUMBER_MATCH"
-                                    th:selected="${overview.config['LOTTERY_DAILY_MODE'] == null or overview.config['LOTTERY_DAILY_MODE'] != 'WEIGHTED'}">
-                                Pick 5 of 49
-                            </option>
-                            <option value="WEIGHTED"
-                                    th:selected="${overview.config['LOTTERY_DAILY_MODE'] == 'WEIGHTED'}">
-                                Top-3 weighted draw
-                            </option>
-                        </select>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-            </details>
-
-            <details class="config-section" open>
-                <summary>Daily prize parameters</summary>
-                <div class="config-grid">
-                    <div class="config-row" data-key="LOTTERY_DAILY_TICKET_PRICE">
-                        <label>
-                            Ticket price
-                            <span class="config-hint">Credits per ticket. Default 50.</span>
-                        </label>
-                        <input type="number" min="1" max="1000000"
-                               th:value="${overview.config['LOTTERY_DAILY_TICKET_PRICE']}"
-                               placeholder="50"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="LOTTERY_DAILY_SEED_PCT">
-                        <label>
-                            Daily seed
-                            <span class="config-hint">
-                                Percent of the jackpot pool pulled into the prize pool at 00:00 UTC. Default 5.
-                            </span>
-                        </label>
-                        <span class="config-input-group">
-                            <input type="number" min="1" max="100"
-                                   th:value="${overview.config['LOTTERY_DAILY_SEED_PCT']}"
-                                   placeholder="5"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="LOTTERY_DAILY_REVENUE_JACKPOT_PCT">
-                        <label>
-                            Ticket revenue &rarr; jackpot
-                            <span class="config-hint">
-                                Percent of every ticket sale routed back into the jackpot pool. Default 30.
-                            </span>
-                        </label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="100"
-                                   th:value="${overview.config['LOTTERY_DAILY_REVENUE_JACKPOT_PCT']}"
-                                   placeholder="30"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="LOTTERY_DAILY_MIN_BUYERS">
-                        <label>
-                            Minimum distinct buyers per draw
-                            <span class="config-hint">
-                                Below this count the daily cancels and refunds — prevents a single
-                                user sweeping the seeded pool. 1 disables the safeguard. Default 2.
-                            </span>
-                        </label>
-                        <input type="number" min="1" max="50"
-                               th:value="${overview.config['LOTTERY_DAILY_MIN_BUYERS']}"
-                               placeholder="2"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="LOTTERY_CHANNEL">
-                        <label>
-                            Announce channel
-                            <span class="config-hint">
-                                Daily close+open posts land here. Leave on
-                                "fall back" to use LEADERBOARD_CHANNEL, then
-                                the guild's system channel.
-                            </span>
-                        </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; fall back to leaderboard / system &mdash;</option>
-                            <option th:each="tc : ${overview.textChannels}"
-                                    th:value="${tc.id}"
-                                    th:text="'#' + ${tc.name}"
-                                    th:selected="${overview.config['LOTTERY_CHANNEL'] == tc.id}"></option>
-                        </select>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-create-channel">
-                        <div class="config-create-channel-text">
-                            <strong>Create a read-only lottery channel</strong>
-                            <p class="muted">
-                                Creates a new text channel where @everyone can read but
-                                only TobyBot can post; auto-sets the announce channel
-                                above to it. Bot needs the Manage Channels permission.
-                            </p>
-                        </div>
-                        <form class="config-create-channel-form"
-                              data-target-config="LOTTERY_CHANNEL"
-                              data-default-name="lottery-results">
-                            <label class="config-create-channel-field">
-                                <span>Channel name</span>
-                                <input type="text" name="name" value="lottery-results"
-                                       maxlength="90" th:disabled="${!isOwner}">
-                            </label>
-                            <label class="config-create-channel-field">
-                                <span>Category</span>
-                                <select name="parentCategoryId" th:disabled="${!isOwner}">
-                                    <option value="">&mdash; top-level &mdash;</option>
-                                    <option th:each="cat : ${overview.categories}"
-                                            th:value="${cat.id}"
-                                            th:text="${cat.name}"></option>
-                                </select>
-                            </label>
-                            <label class="config-create-channel-field">
-                                <span>or new category name</span>
-                                <input type="text" name="newCategoryName"
-                                       maxlength="100" placeholder="(blank = use existing)"
-                                       th:disabled="${!isOwner}">
-                            </label>
-                            <button type="submit" class="btn config-create-channel-btn"
-                                    th:disabled="${!isOwner}">Create</button>
-                        </form>
-                    </div>
-                </div>
-            </details>
-
-            <div class="lottery-admin-actions">
-                <div class="lottery-admin-actions-text">
-                    <strong>Force draw now</strong>
-                    <p class="muted">
-                        Closes any open draw, pays prizes, opens a fresh one — useful for
-                        testing or recovering from a missed cron.
-                    </p>
-                </div>
-                <button id="lottery-force-draw" type="button" class="btn"
-                        th:disabled="${!isOwner}">Force draw now</button>
-            </div>
-        </div>
-    </section>
 </main>
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
-<script th:src="@{/js/moderation.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/settings.js}"></script>
 </body>
 </html>
