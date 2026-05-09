@@ -118,7 +118,7 @@ class CoinflipService(
         return if (flip.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, random,
+                stake, JackpotGame.COINFLIP, random,
             )
             FlipOutcome.Win(
                 stake = stake,

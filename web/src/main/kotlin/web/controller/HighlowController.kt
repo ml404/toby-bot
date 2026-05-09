@@ -4,6 +4,7 @@ import common.casino.CasinoCommonFailure
 import database.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
+import database.service.JackpotGame
 import jakarta.servlet.http.HttpSession
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -46,7 +47,8 @@ class HighlowController(
         model: Model,
         ra: RedirectAttributes
     ): String = pageContext.renderMinigamePage(
-        user, guildId, economyWebService, model, ra, template = "highlow"
+        user, guildId, economyWebService, model, ra, template = "highlow",
+        game = JackpotGame.HIGHLOW,
     ) {
         // Stake commits first, anchor is dealt after the player locks it.
         // If a round is already locked in this session, surface it so the

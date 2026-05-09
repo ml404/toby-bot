@@ -118,7 +118,7 @@ class DiceService(
         return if (roll.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, random,
+                stake, JackpotGame.DICE, random,
             )
             RollOutcome.Win(
                 stake = stake,

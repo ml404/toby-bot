@@ -8,15 +8,22 @@
     game in one edit.
 -->
 <div th:fragment="jackpotBanner" class="casino-jackpot-banner"
+     th:classappend="${jackpotIneligible} ? ' casino-jackpot-banner--ineligible'"
      title="Anti-cheat is on. Detected automation accrues forced losses up to a configured cap.">
     🎰 Jackpot pool:
     <strong th:text="${jackpotPool}">0</strong> credits
-    <span class="muted">
+    <span class="muted" th:unless="${jackpotIneligible}">
         — win any minigame for up to
         <span th:text="${jackpotWinPct}">1</span>%
         chance to bank the pool. The chance scales with your stake against a
         <span th:text="${jackpotStakeAnchor}">500</span>-credit reference;
         bets at or above that get the full rate, smaller bets scale linearly down.
+    </span>
+    <span class="muted" th:if="${jackpotIneligible}">
+        — this game doesn't roll for the jackpot: its RTP is above the
+        configured ceiling of
+        <span th:text="${jackpotRtpMax}">95</span>%. Wins still pay out
+        normally, but won't bank the pool.
     </span>
 </div>
 </body>

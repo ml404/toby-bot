@@ -168,6 +168,8 @@ class SetConfigCommand @Autowired constructor(
                     config = ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS, gameLabel = "Jackpot", label = "activity window days", range = 0..365)
                 ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.JACKPOT_ACTIVITY_MIN_DAYS, gameLabel = "Jackpot", label = "activity min days", range = 1..365)
+                ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
+                    config = ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT, gameLabel = "Jackpot", label = "max RTP percent (0 disables)", range = 0..100)
                 ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT, gameLabel = "Coinflip",
                     label = "bot-suspicion max edge percent", range = 0..50)

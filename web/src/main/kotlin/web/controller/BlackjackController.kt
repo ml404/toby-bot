@@ -5,6 +5,7 @@ import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.service.BlackjackService
 import database.service.BlackjackService.MultiActionOutcome
+import database.service.JackpotGame
 import database.service.BlackjackService.MultiCreateOutcome
 import database.service.BlackjackService.MultiJoinOutcome
 import database.service.BlackjackService.MultiLeaveOutcome
@@ -101,7 +102,8 @@ class BlackjackController(
         ra: RedirectAttributes,
     ): String = pageContext.renderMinigamePage(
         user, guildId, economyWebService, model, ra,
-        template = "blackjack-lobby", lobbyPath = "/blackjack/guilds"
+        template = "blackjack-lobby", lobbyPath = "/blackjack/guilds",
+        game = JackpotGame.BLACKJACK,
     ) {
         val (minAnte, maxAnte) = stakeBounds.blackjackSolo(guildId)
         addAttribute("minAnte", minAnte)
@@ -119,7 +121,7 @@ class BlackjackController(
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/blackjack/guilds"
     ) { discordId ->
-        pageContext.populate(model, guildId, discordId, user) ?: run {
+        pageContext.populate(model, guildId, discordId, user, game = JackpotGame.BLACKJACK) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/blackjack/guilds"
         }
@@ -145,7 +147,7 @@ class BlackjackController(
             ra.addFlashAttribute("error", "That blackjack table no longer exists.")
             return@requireMemberForPage "redirect:/blackjack/$guildId"
         }
-        pageContext.populate(model, guildId, discordId, user) ?: run {
+        pageContext.populate(model, guildId, discordId, user, game = JackpotGame.BLACKJACK) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/blackjack/guilds"
         }

@@ -81,6 +81,35 @@ class CasinoJackpotBannerFragmentTest {
     }
 
     @Test
+    fun `jackpot banner gates the eligible explanation behind jackpotIneligible`() {
+        // When the per-guild RTP ceiling marks this game as ineligible to
+        // roll, the banner must not still claim "win any minigame for X%
+        // chance" — that's misleading. The eligible blurb is rendered
+        // with th:unless so it's hidden whenever the model marks the
+        // game ineligible.
+        assertTrue(
+            fragmentHtml.contains("th:unless=\"\${jackpotIneligible}\""),
+            "fragment must hide the eligible-by-default blurb when jackpotIneligible is true"
+        )
+    }
+
+    @Test
+    fun `jackpot banner shows an ineligibility explanation when gated out`() {
+        // Symmetric branch — the banner explains *why* the game won't
+        // roll (RTP above the configured ceiling) instead of going
+        // silent. Includes the configured ceiling so the user can map
+        // it to the admin's setting if they ask.
+        assertTrue(
+            fragmentHtml.contains("th:if=\"\${jackpotIneligible}\""),
+            "fragment must render an ineligibility blurb when jackpotIneligible is true"
+        )
+        assertTrue(
+            fragmentHtml.contains("jackpotRtpMax"),
+            "ineligibility blurb must surface the configured RTP ceiling"
+        )
+    }
+
+    @Test
     fun `jackpot banner exposes anti-cheat tooltip via title attribute`() {
         // Hover-discoverable note about the bot-suspicion / forced-loss
         // system (see CasinoBotSuspicionService + CasinoEdgeService.applyBotEdge).

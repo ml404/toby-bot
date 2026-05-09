@@ -91,6 +91,25 @@ class JackpotService(
     fun stakeAnchor(guildId: Long): Long =
         JackpotHelper.stakeAnchor(configService, guildId)
 
+    /**
+     * Live RTP-eligibility ceiling for [guildId] in whole-number percent
+     * (0-100; 0 = gate disabled). Surfaced so the casino-page banner can
+     * name the configured ceiling when explaining why a particular game
+     * isn't eligible to roll.
+     */
+    fun rtpMaxPct(guildId: Long): Long =
+        JackpotHelper.rtpMaxPct(configService, guildId)
+
+    /**
+     * Returns true when [game] is eligible to roll for the jackpot in
+     * [guildId] under the configured RTP ceiling, or when the gate is
+     * disabled (`JACKPOT_RTP_MAX_PCT` = 0). Banner-side mirror of the
+     * gate inside [JackpotHelper.rollOnWin] so the page can warn the
+     * user up front instead of only at win-time.
+     */
+    fun isEligibleByRtp(guildId: Long, game: JackpotGame): Boolean =
+        JackpotHelper.isEligibleByRtp(game, configService, guildId)
+
     companion object {
         // 4dp covers the smallest probability the saved-percent / 100
         // round-trip can express meaningfully — e.g. an admin saving

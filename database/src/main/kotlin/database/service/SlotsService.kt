@@ -123,7 +123,7 @@ class SlotsService(
         return if (pull.isWin) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, random,
+                stake, JackpotGame.SLOTS, random,
             )
             SpinOutcome.Win(
                 stake = stake,

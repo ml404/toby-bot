@@ -4,6 +4,7 @@ import common.casino.CasinoCommonFailure
 import database.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
+import database.service.JackpotGame
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -52,7 +53,8 @@ class CoinflipController(
         model: Model,
         ra: RedirectAttributes
     ): String = pageContext.renderMinigamePage(
-        user, guildId, economyWebService, model, ra, template = "coinflip"
+        user, guildId, economyWebService, model, ra, template = "coinflip",
+        game = JackpotGame.COINFLIP,
     ) {
         val (minStake, maxStake) = stakeBounds.coinflip(guildId)
         addAttribute("minStake", minStake)

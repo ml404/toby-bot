@@ -84,7 +84,7 @@ class ScratchService(
         return if (result.isWin && result.winningSymbol != null) {
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
-                stake, random,
+                stake, JackpotGame.SCRATCH, random,
             )
             ScratchOutcome.Win(
                 stake = stake,

@@ -214,7 +214,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.001)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
         assertEquals(500L, won)
@@ -231,7 +231,7 @@ class JackpotHelperTest {
         // 0.5 is far above the 0.01 threshold.
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.5)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.5)
         )
 
         assertEquals(0L, won)
@@ -250,11 +250,11 @@ class JackpotHelperTest {
 
         val hit = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userHit, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.004)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.004)
         )
         val miss = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userMiss, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.006)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.006)
         )
 
         assertEquals(1_000L, hit, "0.004 < 0.005 should hit")
@@ -270,7 +270,7 @@ class JackpotHelperTest {
         // Even an absurdly small roll can't beat a 0.0 threshold (`< 0.0` is unreachable).
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.0)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.0)
         )
 
         assertEquals(0L, won)
@@ -287,11 +287,11 @@ class JackpotHelperTest {
 
         val hit = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userHit, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.49)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.49)
         )
         val miss = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userMiss, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.51)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.51)
         )
 
         assertEquals(50L, hit)
@@ -307,7 +307,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.001)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
         assertEquals(0L, won)
@@ -327,11 +327,11 @@ class JackpotHelperTest {
 
         val hit = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userHit, guildId,
-            stake = 10L, random = stubRandom(0.00009)
+            stake = 10L, game = JackpotGame.SLOTS, random = stubRandom(0.00009)
         )
         val miss = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userMiss, guildId,
-            stake = 10L, random = stubRandom(0.0001)
+            stake = 10L, game = JackpotGame.SLOTS, random = stubRandom(0.0001)
         )
 
         assertEquals(1_000L, hit, "0.00009 < 0.0001 should hit")
@@ -348,11 +348,11 @@ class JackpotHelperTest {
 
         val hit = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userHit, guildId,
-            stake = 1_000L, random = stubRandom(0.009)
+            stake = 1_000L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
         val miss = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, userMiss, guildId,
-            stake = 1_000L, random = stubRandom(0.011)
+            stake = 1_000L, game = JackpotGame.SLOTS, random = stubRandom(0.011)
         )
 
         assertEquals(1_000L, hit)
@@ -372,7 +372,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = 10_000L, random = stubRandom(0.009)
+            stake = 10_000L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
 
         assertEquals(100L, won)
@@ -388,7 +388,7 @@ class JackpotHelperTest {
         // stake/anchor = 500/500 = 1.0 → effective = 1 %; 0.009 < 0.01 hits.
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = 500L, random = stubRandom(0.009)
+            stake = 500L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
 
         assertEquals(1L, won)
@@ -406,7 +406,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = 100L, random = stubRandom(0.009)
+            stake = 100L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
 
         assertEquals(100L, won)
@@ -423,7 +423,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.001)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
         assertEquals(0L, won, "blocked by cooldown gate")
@@ -441,7 +441,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.001)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
         assertEquals(0L, won, "blocked by activity gate")
@@ -458,7 +458,7 @@ class JackpotHelperTest {
 
         val won = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.001)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
         assertEquals(250L, won)
@@ -474,7 +474,7 @@ class JackpotHelperTest {
 
         JackpotHelper.rollOnWin(
             jackpotService, configService, userService, user, guildId,
-            stake = MAX_STAKE, random = stubRandom(0.001)
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
         verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
@@ -558,6 +558,144 @@ class JackpotHelperTest {
             )
         } returns null
         assertEquals(0L, JackpotHelper.activityWindowDays(configService, guildId))
+    }
+
+    // ---- rtpMaxPct / isEligibleByRtp / RTP gate ----
+
+    private fun rtpConfigReturns(value: String?) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT.configValue,
+                guildId.toString()
+            )
+        } returns value?.let { ConfigDto(name = "x", value = it, guildId = guildId.toString()) }
+    }
+
+    @Test
+    fun `rtpMaxPct returns 0 (disabled) when no config row exists`() {
+        rtpConfigReturns(null)
+
+        assertEquals(JackpotHelper.DEFAULT_RTP_MAX_PCT, JackpotHelper.rtpMaxPct(configService, guildId))
+    }
+
+    @Test
+    fun `rtpMaxPct parses a whole-number percent`() {
+        rtpConfigReturns("95")
+
+        assertEquals(95L, JackpotHelper.rtpMaxPct(configService, guildId))
+    }
+
+    @Test
+    fun `rtpMaxPct clamps above 100 and below 0`() {
+        rtpConfigReturns("250")
+        assertEquals(100L, JackpotHelper.rtpMaxPct(configService, guildId))
+
+        rtpConfigReturns("-5")
+        assertEquals(0L, JackpotHelper.rtpMaxPct(configService, guildId))
+    }
+
+    @Test
+    fun `rtpMaxPct falls back to default on unparseable values`() {
+        rtpConfigReturns("bogus")
+
+        assertEquals(JackpotHelper.DEFAULT_RTP_MAX_PCT, JackpotHelper.rtpMaxPct(configService, guildId))
+    }
+
+    @Test
+    fun `isEligibleByRtp returns true for every game when the gate is disabled`() {
+        rtpConfigReturns(null)  // 0 = disabled
+
+        for (game in JackpotGame.values()) {
+            assertEquals(
+                true,
+                JackpotHelper.isEligibleByRtp(game, configService, guildId),
+                "$game should be eligible when gate disabled"
+            )
+        }
+    }
+
+    @Test
+    fun `isEligibleByRtp blocks high-RTP games above the configured ceiling`() {
+        rtpConfigReturns("95")  // ceiling 95 % blocks Coinflip, Blackjack, Baccarat, Roulette
+
+        assertEquals(false, JackpotHelper.isEligibleByRtp(JackpotGame.COINFLIP, configService, guildId))
+        assertEquals(false, JackpotHelper.isEligibleByRtp(JackpotGame.BLACKJACK, configService, guildId))
+        assertEquals(false, JackpotHelper.isEligibleByRtp(JackpotGame.BACCARAT, configService, guildId))
+        assertEquals(false, JackpotHelper.isEligibleByRtp(JackpotGame.ROULETTE, configService, guildId))
+    }
+
+    @Test
+    fun `isEligibleByRtp keeps low-RTP games eligible at a 95 percent ceiling`() {
+        rtpConfigReturns("95")
+
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.SLOTS, configService, guildId))
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.SCRATCH, configService, guildId))
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.DICE, configService, guildId))
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.KENO, configService, guildId))
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.HIGHLOW, configService, guildId))
+    }
+
+    @Test
+    fun `isEligibleByRtp treats RTP equal to ceiling as eligible (inclusive bound)`() {
+        // Ceiling 89 == SLOTS RTP 0.890 ⇒ SLOTS still eligible (≤, not <).
+        rtpConfigReturns("89")
+
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.SLOTS, configService, guildId))
+        // SCRATCH (0.875) is strictly below the ceiling, also eligible.
+        assertEquals(true, JackpotHelper.isEligibleByRtp(JackpotGame.SCRATCH, configService, guildId))
+        // ROULETTE (0.973) is above the ceiling, blocked.
+        assertEquals(false, JackpotHelper.isEligibleByRtp(JackpotGame.ROULETTE, configService, guildId))
+    }
+
+    @Test
+    fun `rollOnWin blocks payout when game RTP exceeds the configured ceiling`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        rtpConfigReturns("95")  // blocks COINFLIP (1.0)
+        val user = freshUser(initial = 100L)
+
+        // Probability roll would otherwise hit; the RTP gate is what stops it.
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, game = JackpotGame.COINFLIP, random = stubRandom(0.001)
+        )
+
+        assertEquals(0L, won, "blocked by RTP gate")
+        assertEquals(100L, user.socialCredit, "balance untouched on blocked gate")
+        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `rollOnWin allows payout for low-RTP games even when ceiling is set`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        rtpConfigReturns("95")  // SLOTS (0.890) stays eligible
+        every { jackpotService.awardJackpot(guildId) } returns 750L
+        val user = freshUser()
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
+        )
+
+        assertEquals(750L, won)
+    }
+
+    @Test
+    fun `rollOnWin preserves legacy behaviour for every game when RTP gate disabled`() {
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        rtpConfigReturns(null)  // 0 = disabled — even Coinflip rolls normally
+        every { jackpotService.awardJackpot(guildId) } returns 50L
+        val user = freshUser()
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, game = JackpotGame.COINFLIP, random = stubRandom(0.001)
+        )
+
+        assertEquals(50L, won, "gate disabled — Coinflip wins still roll")
     }
 
     @Test
