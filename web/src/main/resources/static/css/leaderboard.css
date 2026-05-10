@@ -230,6 +230,21 @@
     .lb-podium-1 { order: -1; }
 }
 
+/* Phone-portrait sizing for the podium — 96/72px avatars feel
+   oversized at 360px, and the larger 1st-place padding pushes the
+   card past the viewport. Shrink to 72/56px and trim the extra
+   1st-place padding so each podium card sits flush. */
+@media (max-width: 480px) {
+    .lb-podium-avatar { width: 56px; height: 56px; }
+    .lb-podium-1 .lb-podium-avatar { width: 72px; height: 72px; }
+    .lb-podium-1 {
+        padding-top: var(--space-4);
+        padding-bottom: var(--space-4);
+    }
+    .lb-podium-medal { font-size: 1.6rem; }
+    .lb-podium-1 .lb-podium-name { font-size: 1.05rem; }
+}
+
 /* -- Sort toggle (This month / Lifetime) -- */
 .lb-sort {
     display: inline-flex;
@@ -323,37 +338,8 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 }
 .lb-collapse-body .mod-table-wrap { margin: 0; }
 
-/* -- Rank badges shared between both tables -- */
-.lb-rank {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: 0.9rem;
-    background: var(--bg);
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-    font-variant-numeric: tabular-nums;
-}
-.lb-rank-1 {
-    background: linear-gradient(135deg, #FFE066, #FFA500);
-    color: #1a1a1a;
-    border-color: #FFD700;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
-}
-.lb-rank-2 {
-    background: linear-gradient(135deg, #E5E7EB, #9CA3AF);
-    color: #1a1a1a;
-    border-color: #C0C0C0;
-}
-.lb-rank-3 {
-    background: linear-gradient(135deg, #CD7F32, #8B4513);
-    color: #fff;
-    border-color: #CD7F32;
-}
+/* `.lb-rank` + `.lb-rank-1/2/3` live in base.css now (shared with
+   the lottery top-holders list). */
 
 /* -- Table flourish shared between both tables -- */
 .lb-standings-table tbody tr {
@@ -368,23 +354,8 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 .lb-standings-table .lb-col-rank { width: 60px; text-align: left; }
 .lb-standings-table .lb-col-value { text-align: right; font-variant-numeric: tabular-nums; }
 .lb-standings-table thead th { letter-spacing: 0.02em; }
-.lb-standings-table .lb-name { font-weight: 600; }
-
-/* Value accents */
-.lb-value { font-size: 1rem; }
-.lb-value-credits { color: #FFD700; }
-.lb-value-toby { color: #57F287; }
-.lb-value-portfolio { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.lb-value-month { color: #2ECC71; font-weight: 600; }
-.lb-value-month-down { color: #ED4245; font-weight: 600; }
-
-/* -- Title pill -- */
-.lb-title-pill {
-    display: inline-block;
-    padding: 2px 8px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 0.8rem;
-    background: var(--bg);
-    color: var(--text);
-}
+/* `.lb-name`, `.lb-title-pill`, and the `.lb-value*` numeric accents
+   all live in base.css now — shared with the lottery top-holders +
+   moderation user list, and with the mobile 2-row standings grid that
+   re-lays the cards as `(rank | member | title) / (m1 | m2 | m3)` so
+   the metrics read as a set rather than three stacked headlines. */

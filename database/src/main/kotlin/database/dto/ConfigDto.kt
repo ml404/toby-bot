@@ -264,7 +264,14 @@ class ConfigDto(
         // when blank/unset the announcer falls back to LEADERBOARD_CHANNEL,
         // then the guild's system channel. Resolution mirrors the
         // monthly leaderboard job's pattern.
-        LOTTERY_CHANNEL("LOTTERY_CHANNEL");
+        LOTTERY_CHANNEL("LOTTERY_CHANNEL"),
+
+        // Wide-ping mode for the daily lottery announcement. One of
+        // "OFF" (no wide ping — winners still pinged), "HERE" (@here —
+        // online members only), or "EVERYONE" (@everyone — all members).
+        // Defaults to "EVERYONE" so a fresh-install guild gets the most
+        // visible nudge to buy tickets; admins can dial it down per-server.
+        LOTTERY_PING_MODE("LOTTERY_PING_MODE");
     }
 
     override fun toString(): String {

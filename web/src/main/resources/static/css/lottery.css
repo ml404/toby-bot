@@ -212,10 +212,71 @@
     width: 120px;
 }
 
+/* Top-holders list — uses the shared `.lb-rank` / `.lb-title-pill` /
+   `.member-cell` / `.avatar` primitives from base.css for visual
+   parity with the leaderboard standings. The list-specific styling
+   (per-row card, top-1 lottery-gold ring, ticket pill) lives here. */
 .lottery-top-holders {
-    list-style: decimal;
-    padding-left: var(--space-5);
+    list-style: none;
+    padding: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.lottery-top-holders li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    min-width: 0;
+}
+/* Top-1 inherits the lottery's gold palette (matches the embed colour
+   #F1C40F + the drawn-number cell glow) so the leader visually pops. */
+.lottery-top-holders li.lottery-rank-1 {
+    border-color: rgba(241, 196, 15, 0.6);
+    box-shadow: 0 0 12px rgba(241, 196, 15, 0.25);
+}
+.lottery-top-holders li.lottery-rank-1 .avatar {
+    box-shadow: 0 0 0 2px #f1c40f, 0 0 12px rgba(241, 196, 15, 0.55);
+}
+.lottery-top-holders .member-cell {
+    flex: 1 1 auto;
+}
+
+/* Ticket count pill — casino-card-face style + tabular-nums for column
+   alignment across rows. */
+.lottery-ticket-pill {
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #fdfdfd 0%, #e8e8e8 100%);
+    color: #1a1a1a;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+.lottery-ticket-pill .muted {
+    color: rgba(26, 26, 26, 0.6);
+}
+
+/* Mobile: drop the title + ticket pills onto a second row so a long
+   display name + medal + avatar still fit on one line. Avatar / rank
+   badge / title pill shrinking is handled by the shared rules in
+   base.css. */
+@media (max-width: 480px) {
+    .lottery-top-holders li {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+    .lottery-ticket-pill {
+        margin-left: 0;
+    }
 }
 
 /* ============================================================ */

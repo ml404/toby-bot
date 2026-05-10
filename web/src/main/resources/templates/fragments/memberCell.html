@@ -1,0 +1,18 @@
+<!--
+  Shared "avatar + display name" cell. Used by the leaderboard
+  standings tables and the lottery top-holders list so the two pages
+  render the same Discord-member projection.
+
+  Styling lives in static/css/moderation.css (.member-cell, .avatar)
+  and static/css/leaderboard.css (.lb-name); the fragment is a pure
+  markup refactor.
+-->
+<div xmlns:th="http://www.thymeleaf.org"
+     th:fragment="cell(name, avatarUrl)"
+     class="member-cell">
+    <img th:if="${avatarUrl != null}"
+         th:src="${avatarUrl}"
+         class="avatar"
+         alt="">
+    <span class="lb-name" th:text="${name}">Name</span>
+</div>
