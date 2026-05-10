@@ -679,6 +679,114 @@ td { font-size: 0.95rem; }
     flex-shrink: 0;
 }
 
+/* -- Numeric value accents shared by both standings tables (credits +
+   tobycoin) on the leaderboard. Lives here so a future page that wants
+   to surface a coloured numeric pill can reuse the same set without
+   re-importing leaderboard.css. -- */
+.lb-value { font-size: 1rem; }
+.lb-value-credits { color: #FFD700; }
+.lb-value-toby { color: #57F287; }
+.lb-value-portfolio { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lb-value-month { color: #2ECC71; font-weight: 600; }
+.lb-value-month-down { color: #ED4245; font-weight: 600; }
+
+/* ============================================================
+   Mobile: tighter standings cards.
+   The shared .mod-table mobile rules in moderation.css turn each
+   row into a card and stack each cell as its own label-left /
+   value-right flex strip. For the leaderboard's 6-column standings
+   that produced a tower of bulky rows on a phone — the user reported
+   "items not aligned, twice the size they should be".
+   This block re-lays the standings card as a 2-row grid:
+     Row 1: rank + member cell + title pill, horizontally
+     Row 2: the three numeric metrics in a 3-column grid, each as
+            a small "label / value" pair so they read as a set
+            instead of three separate stacked rows.
+   The column-area mappings reference the data-label values the
+   leaderboard template emits ("#", "Member", "Title", and the per-
+   table metric labels — Credits/TOBY/This month/Voice/Portfolio).
+   Other mod-table consumers don't carry those labels so the grid
+   override never fires for them.
+   ============================================================ */
+@media (max-width: 640px) {
+    .lb-standings-table.mod-table tr {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+            "rank   member  title"
+            "m1     m2      m3";
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+    }
+    .lb-standings-table.mod-table td {
+        display: block;
+        width: auto;
+        padding: 0;
+        border: 0;
+        font-size: inherit;
+    }
+    .lb-standings-table.mod-table td::before { display: none; }
+
+    .lb-standings-table.mod-table td[data-label="#"] { grid-area: rank; }
+    .lb-standings-table.mod-table td[data-label="Member"] { grid-area: member; min-width: 0; }
+    .lb-standings-table.mod-table td[data-label="Title"] { grid-area: title; justify-self: end; }
+
+    /* Each metric cell becomes a tight label/value stack — three
+       cells across the bottom row, one grid area each. The
+       align-items differs per cell so the leftmost metric
+       left-aligns under the rank/member, the centre aligns under
+       the member, and the rightmost right-aligns under the title. */
+    .lb-standings-table.mod-table td[data-label="Credits"],
+    .lb-standings-table.mod-table td[data-label="TOBY"],
+    .lb-standings-table.mod-table td[data-label="This month"],
+    .lb-standings-table.mod-table td[data-label="Voice"],
+    .lb-standings-table.mod-table td[data-label="Portfolio"] {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+    .lb-standings-table.mod-table td[data-label="Credits"],
+    .lb-standings-table.mod-table td[data-label="TOBY"] {
+        grid-area: m1;
+        align-items: flex-start;
+    }
+    .lb-standings-table.mod-table td[data-label="This month"] {
+        grid-area: m2;
+        align-items: center;
+        text-align: center;
+    }
+    .lb-standings-table.mod-table td[data-label="Voice"],
+    .lb-standings-table.mod-table td[data-label="Portfolio"] {
+        grid-area: m3;
+        align-items: flex-end;
+        text-align: right;
+    }
+    .lb-standings-table.mod-table td[data-label="Credits"]::before,
+    .lb-standings-table.mod-table td[data-label="TOBY"]::before,
+    .lb-standings-table.mod-table td[data-label="This month"]::before,
+    .lb-standings-table.mod-table td[data-label="Voice"]::before,
+    .lb-standings-table.mod-table td[data-label="Portfolio"]::before {
+        display: block;
+        content: attr(data-label);
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    /* Halve the value type weight so the bottom row reads as
+       supporting metrics, not three competing headlines. */
+    .lb-standings-table .lb-value,
+    .lb-standings-table .lb-value-month,
+    .lb-standings-table .lb-value-month-down {
+        font-size: 0.85rem;
+    }
+}
+
 @media (max-width: 480px) {
     .avatar { width: 24px; height: 24px; }
     .lb-rank { width: 24px; height: 24px; font-size: 0.8rem; }

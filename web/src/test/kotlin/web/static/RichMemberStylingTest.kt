@@ -47,6 +47,13 @@ class RichMemberStylingTest {
      * pages all reference. Each must be defined as a top-level rule
      * in [baseCss] so every page picks it up via the always-loaded
      * base stylesheet.
+     *
+     * The numeric `.lb-value*` accents joined the list when the
+     * standings cards got their mobile redesign — moving them out of
+     * leaderboard.css means a future page that wants a coloured
+     * value pill can reuse them without re-importing leaderboard.css,
+     * AND the mobile shrink in the 640px standings-grid block always
+     * lines up with the right rule.
      */
     private val sharedPrimitives = listOf(
         ".member-cell",
@@ -57,6 +64,12 @@ class RichMemberStylingTest {
         ".lb-rank-2",
         ".lb-rank-3",
         ".lb-title-pill",
+        ".lb-value",
+        ".lb-value-credits",
+        ".lb-value-toby",
+        ".lb-value-portfolio",
+        ".lb-value-month",
+        ".lb-value-month-down",
     )
 
     @Test
@@ -118,6 +131,61 @@ class RichMemberStylingTest {
                     "dropping it lets a long name + medal + pill overflow the viewport on a 360px phone."
             )
         }
+    }
+
+    @Test
+    fun `standings table mobile redesign is centralised in base css`() {
+        // The standings cards used to render at 6 stacked label/value
+        // rows per row at desktop font sizes — bulky and visually
+        // disconnected on a phone. The 640px override re-lays each
+        // card as a 2-row grid (rank/member/title on top, three
+        // metrics on the bottom). The user explicitly asked for the
+        // fix to live in a shared/central location, not as a
+        // leaderboard.css one-off.
+        val mobileBlocks = extractAllMediaBlocks(baseCss, "max-width: 640px")
+        assertTrue(
+            mobileBlocks.isNotEmpty(),
+            "base.css must contain a `@media (max-width: 640px)` block " +
+                "carrying the standings 2-row grid override."
+        )
+        val combined = mobileBlocks.joinToString("\n")
+        assertTrue(
+            combined.contains(".lb-standings-table.mod-table tr") &&
+                combined.contains("display: grid") &&
+                combined.contains("grid-template-areas"),
+            "base.css 640px block must declare a CSS-grid layout for " +
+                "`.lb-standings-table.mod-table tr` so the standings cards " +
+                "show member info on top + metrics on the bottom — not a " +
+                "tower of stacked label/value strips."
+        )
+        // Each metric label that exists in the leaderboard template
+        // must be mapped to a grid area. If a future column rename
+        // (e.g. "Voice" -> "Voice (mo)") slips through, the cell will
+        // collapse onto the rank row and ruin the layout.
+        listOf(
+            "data-label=\"Credits\"",
+            "data-label=\"TOBY\"",
+            "data-label=\"This month\"",
+            "data-label=\"Voice\"",
+            "data-label=\"Portfolio\"",
+        ).forEach { selector ->
+            assertTrue(
+                combined.contains(selector),
+                "base.css 640px standings grid must map `$selector` to a " +
+                    "grid area; otherwise the metric collapses out of the " +
+                    "two-row layout when the data-label changes."
+            )
+        }
+
+        // And the leaderboard.css override should NOT exist — that's the
+        // "centralise it" half of the user's ask. Page-local overrides
+        // would defeat the point of moving the rule to base.css.
+        assertFalse(
+            leaderboardCss.contains(".lb-standings-table.mod-table tr") ||
+                leaderboardCss.contains("grid-template-areas"),
+            "leaderboard.css must NOT redefine the standings mobile grid; " +
+                "the centralised rule lives in base.css."
+        )
     }
 
     @Test

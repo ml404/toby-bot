@@ -354,15 +354,8 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 .lb-standings-table .lb-col-rank { width: 60px; text-align: left; }
 .lb-standings-table .lb-col-value { text-align: right; font-variant-numeric: tabular-nums; }
 .lb-standings-table thead th { letter-spacing: 0.02em; }
-/* `.lb-name` lives in base.css now (also used by lottery top-holders +
-   moderation user list). */
-
-/* Value accents */
-.lb-value { font-size: 1rem; }
-.lb-value-credits { color: #FFD700; }
-.lb-value-toby { color: #57F287; }
-.lb-value-portfolio { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.lb-value-month { color: #2ECC71; font-weight: 600; }
-.lb-value-month-down { color: #ED4245; font-weight: 600; }
-
-/* `.lb-title-pill` lives in base.css now (shared with lottery top-holders). */
+/* `.lb-name`, `.lb-title-pill`, and the `.lb-value*` numeric accents
+   all live in base.css now — shared with the lottery top-holders +
+   moderation user list, and with the mobile 2-row standings grid that
+   re-lays the cards as `(rank | member | title) / (m1 | m2 | m3)` so
+   the metrics read as a set rather than three stacked headlines. */

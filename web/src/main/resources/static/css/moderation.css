@@ -482,22 +482,23 @@ details.config-section.is-hidden { display: none; }
         background: var(--bg-elevated);
         border: 1px solid var(--border);
         border-radius: var(--radius-md);
-        padding: 8px 12px;
-        margin-bottom: var(--space-3);
+        padding: 6px 10px;
+        margin-bottom: var(--space-2);
     }
     .mod-table tr:last-child td { border-bottom: 1px solid var(--border); }
     .mod-table td {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         border-bottom: 1px solid var(--border);
-        padding: 8px 0;
+        padding: 5px 0;
+        font-size: 0.85rem;
     }
     .mod-table td:last-child { border-bottom: 0; }
     .mod-table td::before {
         content: attr(data-label);
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--text-muted);
