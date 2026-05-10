@@ -212,6 +212,10 @@
     width: 120px;
 }
 
+/* Top-holders list — uses the shared `.lb-rank` / `.lb-title-pill` /
+   `.member-cell` / `.avatar` primitives from base.css for visual
+   parity with the leaderboard standings. The list-specific styling
+   (per-row card, top-1 lottery-gold ring, ticket pill) lives here. */
 .lottery-top-holders {
     list-style: none;
     padding: 0;
@@ -240,61 +244,7 @@
     box-shadow: 0 0 0 2px #f1c40f, 0 0 12px rgba(241, 196, 15, 0.55);
 }
 .lottery-top-holders .member-cell {
-    min-width: 0;
     flex: 1 1 auto;
-}
-.lottery-top-holders .member-cell .lb-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Rank badge — same shape + medal colours as the leaderboard's .lb-rank
-   family. Duplicated here because lottery.html only loads lottery.css; a
-   future refactor can promote both to a shared stylesheet. */
-.lottery-rank {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: 0.85rem;
-    background: var(--bg);
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-}
-.lottery-rank.lottery-rank-1 {
-    background: linear-gradient(135deg, #FFE066, #FFA500);
-    color: #1a1a1a;
-    border-color: #FFD700;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
-}
-.lottery-rank.lottery-rank-2 {
-    background: linear-gradient(135deg, #E5E7EB, #9CA3AF);
-    color: #1a1a1a;
-    border-color: #C0C0C0;
-}
-.lottery-rank.lottery-rank-3 {
-    background: linear-gradient(135deg, #CD7F32, #8B4513);
-    color: #fff;
-    border-color: #CD7F32;
-}
-
-/* Title pill — visual match to leaderboard's .lb-title-pill (same class
-   name so the design intent is obvious). */
-.lottery-top-holders .lb-title-pill {
-    display: inline-block;
-    padding: 2px 8px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 0.8rem;
-    background: var(--bg);
-    color: var(--text);
-    flex-shrink: 0;
 }
 
 /* Ticket count pill — casino-card-face style + tabular-nums for column
@@ -316,21 +266,13 @@
 }
 
 /* Mobile: drop the title + ticket pills onto a second row so a long
-   display name + medal + avatar still fit on one line. Mirrors the
-   leaderboard podium's <600px stack pattern. */
+   display name + medal + avatar still fit on one line. Avatar / rank
+   badge / title pill shrinking is handled by the shared rules in
+   base.css. */
 @media (max-width: 480px) {
     .lottery-top-holders li {
         flex-wrap: wrap;
         gap: var(--space-2);
-    }
-    .lottery-top-holders .avatar {
-        width: 24px;
-        height: 24px;
-    }
-    .lottery-rank {
-        width: 24px;
-        height: 24px;
-        font-size: 0.8rem;
     }
     .lottery-ticket-pill {
         margin-left: 0;

@@ -597,3 +597,90 @@ td { font-size: 0.95rem; }
     input[type=text], input[type=url], input[type=number], input[type=search],
     input[type=email], input[type=password], select { min-height: 40px; }
 }
+
+/* ============================================================
+   Rich member display primitives — avatar + name + title pill
+   + rank badge.
+   ============================================================
+   Used by the leaderboard standings tables, the moderation user
+   listing, and the lottery top-holders list. Hoisted here from
+   moderation.css/leaderboard.css so every page that loads base.css
+   (i.e. all of them) renders the same Discord-member projection
+   at the same sizes. Mobile breakpoint at 480px shrinks the
+   avatar/badge and forces ellipsis truncation on the name so a
+   long display name + medal + value pill still fits one line on
+   a 360px screen. */
+
+.member-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--border);
+    flex-shrink: 0;
+}
+.lb-name {
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Circular rank badge with optional gold/silver/bronze gradient
+   for top-3 positions. Used by leaderboard standings + lottery
+   top-holders so a "1st place" element looks the same across pages. */
+.lb-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+.lb-rank-1 {
+    background: linear-gradient(135deg, #FFE066, #FFA500);
+    color: #1a1a1a;
+    border-color: #FFD700;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+}
+.lb-rank-2 {
+    background: linear-gradient(135deg, #E5E7EB, #9CA3AF);
+    color: #1a1a1a;
+    border-color: #C0C0C0;
+}
+.lb-rank-3 {
+    background: linear-gradient(135deg, #CD7F32, #8B4513);
+    color: #fff;
+    border-color: #CD7F32;
+}
+
+.lb-title-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    background: var(--bg);
+    color: var(--text);
+    flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+    .avatar { width: 24px; height: 24px; }
+    .lb-rank { width: 24px; height: 24px; font-size: 0.8rem; }
+    .lb-title-pill { font-size: 0.75rem; padding: 1px 6px; }
+}

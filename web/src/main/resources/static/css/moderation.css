@@ -117,16 +117,9 @@ details.config-section.is-hidden { display: none; }
 }
 .mod-table tr:last-child td { border-bottom: 0; }
 
-.member-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.avatar {
-    width: 28px; height: 28px; border-radius: 50%;
-    object-fit: cover;
-    background: var(--border);
-}
+/* `.member-cell` + `.avatar` live in base.css now (shared with the
+   leaderboard + lottery pages). Keeping the badge.owner rule here
+   since it's specific to the moderation user listing. */
 .badge.owner {
     background: var(--accent-soft);
     color: var(--accent);
