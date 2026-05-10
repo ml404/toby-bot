@@ -213,6 +213,9 @@ class SetConfigCommand @Autowired constructor(
                 ConfigDto.Configurations.LOTTERY_CHANNEL -> setLotteryChannel(
                     event, optionMapping, deleteDelay
                 )
+                ConfigDto.Configurations.LOTTERY_PING_MODE -> setLotteryPingMode(
+                    event, optionMapping, deleteDelay
+                )
                 // Anti-autoclicker session log channel — managed primarily
                 // via the /moderation web tab; arm stays exhaustive in case
                 // the option is registered manually.
@@ -322,6 +325,25 @@ class SetConfigCommand @Autowired constructor(
             ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue, raw, guildId
         )
         event.hook.sendMessage("Daily lottery mode set to $raw.")
+            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun setLotteryPingMode(
+        event: SlashCommandInteractionEvent,
+        optionMapping: OptionMapping,
+        deleteDelay: Int,
+    ) {
+        val raw = optionMapping.asString.trim().uppercase()
+        if (raw !in setOf("OFF", "HERE", "EVERYONE")) {
+            event.hook.sendMessage("Lottery ping mode must be OFF, HERE, or EVERYONE.")
+                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+        val guildId = event.guild?.id ?: return
+        configService.upsertConfig(
+            ConfigDto.Configurations.LOTTERY_PING_MODE.configValue, raw, guildId
+        )
+        event.hook.sendMessage("Lottery announcement ping set to $raw.")
             .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
