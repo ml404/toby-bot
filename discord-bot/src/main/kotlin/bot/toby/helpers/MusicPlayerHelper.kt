@@ -10,8 +10,8 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.discord.embed
 import common.logging.DiscordLogger
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
+import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import database.dto.MusicDto
 import database.dto.UserDto
 import net.dv8tion.jda.api.components.actionrow.ActionRow
@@ -107,8 +107,7 @@ object MusicPlayerHelper {
                 description = "There is no track playing currently",
                 color = Color.RED,
             )
-            hook.sendMessageEmbeds(noTrackEmbed).setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyEphemeralEmbedAndDelete(noTrackEmbed, deleteDelay)
             true
         } else {
             false
@@ -202,8 +201,7 @@ object MusicPlayerHelper {
                     description = "You're not too bright, but thanks for trying",
                     color = Color.RED,
                 )
-                hook.sendMessageEmbeds(invalidSkipEmbed).setEphemeral(true)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                hook.replyEphemeralEmbedAndDelete(invalidSkipEmbed, deleteDelay)
                 return
             }
         }

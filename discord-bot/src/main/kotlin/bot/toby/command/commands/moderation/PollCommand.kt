@@ -1,7 +1,7 @@
 package bot.toby.command.commands.moderation
 
 import bot.toby.emote.Emotes
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -24,8 +24,10 @@ class PollCommand : ModerationCommand {
             val pollArgs = choiceOption.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
             if (pollArgs.size > 10) {
-                hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", event.guild!!.jda.getEmojiById(Emotes.TOBY))
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                hook.replyAndDelete(
+                    "Please keep the poll size under 10 items, or else ${event.guild!!.jda.getEmojiById(Emotes.TOBY)}.",
+                    deleteDelay,
+                )
                 return
             }
 
@@ -45,7 +47,7 @@ class PollCommand : ModerationCommand {
                 }
             }
         } else {
-            hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyAndDelete(description, deleteDelay)
         }
     }
 

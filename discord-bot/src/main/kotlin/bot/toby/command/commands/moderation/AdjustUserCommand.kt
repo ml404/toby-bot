@@ -2,7 +2,7 @@ package bot.toby.command.commands.moderation
 
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.stringOption
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
@@ -51,14 +51,13 @@ class AdjustUserCommand @Autowired constructor(
 
         if (requesterCanAdjustPermissions && isSameGuild) {
             validateArgumentsAndUpdateUser(event, targetUserDto, member!!.isOwner, deleteDelay)
-            event.hook.sendMessageFormat("Updated user %s's permissions", targetMember.effectiveName)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Updated user ${targetMember.effectiveName}'s permissions", deleteDelay)
         } else {
-            event.hook.sendMessageFormat(
-                "User '%s' is not allowed to adjust the permissions of user '%s'.",
-                member!!.effectiveName,
-                targetMember.effectiveName
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(
+                "User '${member!!.effectiveName}' is not allowed to adjust the permissions of user " +
+                    "'${targetMember.effectiveName}'.",
+                deleteDelay,
+            )
         }
     }
 
@@ -99,10 +98,11 @@ class AdjustUserCommand @Autowired constructor(
     private fun createNewUser(event: SlashCommandInteractionEvent, targetMember: Member, deleteDelay: Int) {
         val newDto = UserDto(targetMember.idLong, targetMember.guild.idLong)
         userService.createNewUser(newDto)
-        event.hook.sendMessageFormat(
-            "User %s's permissions did not exist in this server's database, they have now been created",
-            targetMember.effectiveName
-        ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "User ${targetMember.effectiveName}'s permissions did not exist in this server's database, " +
+                "they have now been created",
+            deleteDelay,
+        )
     }
 
     private fun channelAndArgumentValidation(

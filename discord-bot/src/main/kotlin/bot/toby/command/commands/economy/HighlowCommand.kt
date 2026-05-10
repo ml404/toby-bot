@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.economy.Highlow
@@ -75,7 +75,6 @@ class HighlowCommand @Autowired constructor(
         message: String,
         deleteDelay: Int
     ) {
-        event.hook.sendMessageEmbeds(HighlowEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(HighlowEmbeds.errorEmbed(message), deleteDelay)
     }
 }

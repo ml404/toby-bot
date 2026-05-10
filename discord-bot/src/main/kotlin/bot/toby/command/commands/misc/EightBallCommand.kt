@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.UserService
@@ -39,15 +39,15 @@ class EightBallCommand @Autowired constructor(private val userService: UserServi
             else -> "I fucked up, please try again"
         }
         if (requestingUserDto.discordId == TOMS_DISCORD_ID) {
-            event.hook.sendMessage("MAGIC 8-BALL SAYS: Don't fucking talk to me.").queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("MAGIC 8-BALL SAYS: Don't fucking talk to me.", deleteDelay)
             val socialCredit = requestingUserDto.socialCredit
             val deductedSocialCredit = -5 * choice
             requestingUserDto.socialCredit = socialCredit?.plus(deductedSocialCredit)
-            event.hook.sendMessage("Deducted: $deductedSocialCredit social credit.").queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Deducted: $deductedSocialCredit social credit.", deleteDelay)
             userService.updateUser(requestingUserDto)
             return
         }
-        event.hook.sendMessage("MAGIC 8-BALL SAYS: $response.").queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("MAGIC 8-BALL SAYS: $response.", deleteDelay)
     }
 
     override val name: String

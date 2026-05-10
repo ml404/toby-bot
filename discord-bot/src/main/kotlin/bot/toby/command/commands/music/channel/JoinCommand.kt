@@ -3,7 +3,7 @@ package bot.toby.command.commands.music.channel
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.voice.LastConnectedChannelTracker
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
@@ -54,7 +54,10 @@ class JoinCommand(
         val defaultVolume = databaseConfig?.value?.toInt() ?: 100
         instance.getMusicManager(event.guild!!).audioPlayer.volume = defaultVolume
 
-        event.hook.sendMessage("Connecting to `\uD83D\uDD0A ${memberChannel.name}` with volume '$defaultVolume'").queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "Connecting to `\uD83D\uDD0A ${memberChannel.name}` with volume '$defaultVolume'",
+            deleteDelay,
+        )
     }
 
     private fun doJoinChannelValidation(ctx: CommandContext, deleteDelay: Int): GuildVoiceState? {

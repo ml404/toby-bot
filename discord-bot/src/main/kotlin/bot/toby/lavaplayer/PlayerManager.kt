@@ -10,7 +10,7 @@ import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceMan
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import dev.lavalink.youtube.YoutubeAudioSourceManager
 import dev.lavalink.youtube.YoutubeSourceOptions
 import dev.lavalink.youtube.clients.Android
@@ -112,13 +112,11 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             }
 
             override fun noMatches() {
-                event?.hook?.sendMessageFormat("Nothing found for the link '%s'", trackUrl)?.queue(invokeDeleteOnMessageResponse(deleteDelay)
-                )
+                event?.hook?.replyAndDelete("Nothing found for the link '$trackUrl'", deleteDelay)
             }
 
             override fun loadFailed(exception: FriendlyException) {
-                event?.hook?.sendMessageFormat("Could not play: %s", exception.message)?.queue(invokeDeleteOnMessageResponse(deleteDelay)
-                )
+                event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
             }
         }
     }

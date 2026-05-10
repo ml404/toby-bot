@@ -1,6 +1,7 @@
 package bot.toby.command.commands.economy
 
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
@@ -141,11 +142,12 @@ class BlackjackCommand @Autowired constructor(
             is SoloDealOutcome.Resolved -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Hand vanished.", deleteDelay)
-                event.hook.sendMessageEmbeds(
+                event.hook.replyEmbedAndDelete(
                     BlackjackEmbeds.soloResolvedEmbed(
                         table, outcome.result, outcome.newBalance, outcome.jackpotPayout, outcome.lossTribute
-                    )
-                ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    ),
+                    deleteDelay,
+                )
                 blackjackService.closeSoloTable(outcome.tableId)
             }
             is SoloDealOutcome.InvalidStake -> replyFailure(
@@ -180,8 +182,7 @@ class BlackjackCommand @Autowired constructor(
             is MultiCreateOutcome.Ok -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)
-                event.hook.sendMessageEmbeds(BlackjackEmbeds.lobbyEmbed(table))
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEmbedAndDelete(BlackjackEmbeds.lobbyEmbed(table), deleteDelay)
             }
             is MultiCreateOutcome.InvalidAnte -> replyFailure(
                 event, WagerCommandFailure.InvalidStake(outcome.min, outcome.max), deleteDelay
@@ -275,18 +276,20 @@ class BlackjackCommand @Autowired constructor(
             replyError(event, "Table id is required.", deleteDelay); return
         }
         when (val outcome = blackjackService.leaveMultiTable(userDto.discordId, guildId, tableId)) {
-            is MultiLeaveOutcome.Ok -> event.hook.sendMessageEmbeds(
+            is MultiLeaveOutcome.Ok -> event.hook.replyEmbedAndDelete(
                 BlackjackEmbeds.infoEmbed(
                     "<@${userDto.discordId}> left table #$tableId — refunded **${outcome.refund}** credits. " +
                         "Balance: ${outcome.newBalance}."
-                )
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            is MultiLeaveOutcome.QueuedForEndOfHand -> event.hook.sendMessageEmbeds(
+                ),
+                deleteDelay,
+            )
+            is MultiLeaveOutcome.QueuedForEndOfHand -> event.hook.replyEmbedAndDelete(
                 BlackjackEmbeds.infoEmbed(
                     "<@${userDto.discordId}> is leaving — auto-standing for the rest of this hand. " +
                         "Your **${outcome.stakeHeld}** credits at risk settle when the hand resolves."
-                )
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                ),
+                deleteDelay,
+            )
             MultiLeaveOutcome.AlreadyLeaving ->
                 replyError(event, "You've already asked to leave this hand.", deleteDelay)
             MultiLeaveOutcome.NotSeated ->
@@ -304,20 +307,20 @@ class BlackjackCommand @Autowired constructor(
         val tables = tableRegistry.listForGuild(guildId)
             .filter { it.mode == BlackjackTable.Mode.MULTI }
         if (tables.isEmpty()) {
-            event.hook.sendMessageEmbeds(
+            event.hook.replyEmbedAndDelete(
                 BlackjackEmbeds.infoEmbed(
                     "No active blackjack tables in this server. " +
                         "`/blackjack create ante:<amount>` to start one."
-                )
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                ),
+                deleteDelay,
+            )
             return
         }
         val description = tables.joinToString("\n") {
             "• Table #${it.id} — ${it.seats.size}/${it.maxSeats} seats, " +
                 "ante ${it.ante}, host <@${it.hostDiscordId}>, ${it.phase}"
         }
-        event.hook.sendMessageEmbeds(BlackjackEmbeds.infoEmbed(description))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(BlackjackEmbeds.infoEmbed(description), deleteDelay)
     }
 
     private fun handlePeek(
@@ -355,8 +358,7 @@ class BlackjackCommand @Autowired constructor(
         } else {
             "Server" to blackjackService.recentHandsForGuild(guildId, limit)
         }
-        event.hook.sendMessageEmbeds(BlackjackEmbeds.historyEmbed(scope, hands))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(BlackjackEmbeds.historyEmbed(scope, hands), deleteDelay)
     }
 
     private fun soloActionRow(tableId: Long, allowDouble: Boolean, allowSplit: Boolean): ActionRow {
@@ -390,8 +392,7 @@ class BlackjackCommand @Autowired constructor(
         message: String,
         deleteDelay: Int
     ) {
-        event.hook.sendMessageEmbeds(BlackjackEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(BlackjackEmbeds.errorEmbed(message), deleteDelay)
     }
 
     private fun replyFailure(
@@ -399,8 +400,7 @@ class BlackjackCommand @Autowired constructor(
         failure: WagerCommandFailure,
         deleteDelay: Int
     ) {
-        event.hook.sendMessageEmbeds(WagerCommandEmbeds.failureEmbed("🂡 Blackjack", failure))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(WagerCommandEmbeds.failureEmbed("🂡 Blackjack", failure), deleteDelay)
     }
 
 }

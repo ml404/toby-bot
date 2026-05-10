@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
@@ -22,14 +22,14 @@ class HelpCommand @Autowired constructor(private val commands: List<core.command
         if (args.isEmpty()) {
             val helpMessage =
                 "For a list of all available commands, visit the [Toby Bot Commands Wiki](https://github.com/ml404/toby-bot/wiki/Commands)"
-            event.hook.sendMessage(helpMessage).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(helpMessage, deleteDelay)
             return
         }
 
         val searchOptional = event.getOption(COMMAND)?.asString
         val command = getCommand(searchOptional!!)
         if (command == null) {
-            event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Nothing found for command '$searchOptional'", deleteDelay)
             return
         }
         event.hook.replyEphemeralAndDelete(command.description, deleteDelay)

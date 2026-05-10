@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
@@ -73,11 +73,12 @@ class LotteryCommand @Autowired constructor(
             replyError(event, "Specify a ticket count.", deleteDelay); return
         }
         when (val r = jackpotLotteryService.buyTickets(guildId, user.discordId, count)) {
-            is BuyOutcome.Ok -> event.hook.sendMessage(
+            is BuyOutcome.Ok -> event.hook.replyAndDelete(
                 "Bought **$count** tickets. You now hold **${r.ticketCount}** tickets " +
                     "(spent ${r.totalSpent} credits total). Prize pool: **${r.newPool}** credits. " +
-                    "Your balance: **${r.newBalance}** credits."
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    "Your balance: **${r.newBalance}** credits.",
+                deleteDelay,
+            )
             BuyOutcome.NoOpenLottery ->
                 replyError(event, "No lottery is open right now.", deleteDelay)
             is BuyOutcome.InvalidCount ->
@@ -96,8 +97,7 @@ class LotteryCommand @Autowired constructor(
         deleteDelay: Int,
     ) {
         val lottery = jackpotLotteryService.getOpenWeighted(guildId) ?: run {
-            event.hook.sendMessage("No lottery is open right now.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("No lottery is open right now.", deleteDelay)
             return
         }
         val tickets = jackpotLotteryService.ticketsForOpenWeighted(guildId)
@@ -114,7 +114,7 @@ class LotteryCommand @Autowired constructor(
             else -> "${remaining.toMinutes().coerceAtLeast(0)}m remaining (informational)"
         }
 
-        event.hook.sendMessage(
+        event.hook.replyAndDelete(
             "**Lottery status**\n" +
                 "Prize pool: **${lottery.poolAmount}** credits\n" +
                 "Ticket price: **${lottery.ticketPrice}** credits each\n" +
@@ -122,8 +122,9 @@ class LotteryCommand @Autowired constructor(
                 "Winners: **${lottery.winnerCount}**\n" +
                 "Your tickets: **${mine?.ticketCount ?: 0}**\n" +
                 "Closes at: $remainingLabel\n\n" +
-                "Top holders:\n$top"
-        ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                "Top holders:\n$top",
+            deleteDelay,
+        )
     }
 
     private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {

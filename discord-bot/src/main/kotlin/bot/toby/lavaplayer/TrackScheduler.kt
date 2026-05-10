@@ -12,6 +12,7 @@ import com.sedmelluq.discord.lavaplayer.track.TrackMarker
 import com.sedmelluq.discord.lavaplayer.track.TrackMarkerHandler
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -28,9 +29,10 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
     fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
         val endNote = endPosition?.let { " (clipped to $it ms)" }.orEmpty()
-        event?.hook
-            ?.sendMessage("Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms'$endNote with volume '$volume'")
-            ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event?.hook?.replyAndDelete(
+            "Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms'$endNote with volume '$volume'",
+            deleteDelay,
+        )
         track.position = startPosition
         track.userData = volume
         if (endPosition != null && endPosition > startPosition) {
@@ -58,9 +60,10 @@ class TrackScheduler(val player: AudioPlayer, private val guildId: Long, var del
 
     fun queueTrackList(playList: AudioPlaylist, volume: Int) {
         logger.info { "Adding ${playList.name} to the queue for guild $guildId" }
-        event?.hook
-            ?.sendMessage("Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`")
-            ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event?.hook?.replyAndDelete(
+            "Adding to queue: `${playList.tracks.size} tracks from playlist ${playList.name}`",
+            deleteDelay,
+        )
         playList.tracks.forEach { track ->
             track.userData = volume
             if (!player.startTrack(track, true)) {

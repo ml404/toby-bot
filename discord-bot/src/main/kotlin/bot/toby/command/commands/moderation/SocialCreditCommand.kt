@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.TitleService
@@ -56,15 +56,16 @@ class SocialCreditCommand @Autowired constructor(
 
         if (requestingMember?.isOwner == true && requestingUserDto.guildId == targetUserDto.guildId) {
             event.getOption(SOCIAL_CREDIT)?.asLong?.takeIf { it != Long.MIN_VALUE }?.let { socialCreditScore ->                val updatedUser = updateUserSocialCredit(targetUserDto, socialCreditScore)
-                event.hook.sendMessage("Updated user ${user.effectiveName}'s social credit by $socialCreditScore. New score is: ${updatedUser.socialCredit}")
-                    .setEphemeral(true)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "Updated user ${user.effectiveName}'s social credit by $socialCreditScore. New score is: ${updatedUser.socialCredit}",
+                    deleteDelay,
+                )
             } ?: listSocialCreditScore(event, targetUserDto, user.effectiveName, deleteDelay)
         } else {
-            event.hook
-                .sendMessage("User '${requestingMember?.effectiveName ?: "Unknown"}' is not allowed to adjust the social credit of user '${user.effectiveName}'.")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "User '${requestingMember?.effectiveName ?: "Unknown"}' is not allowed to adjust the social credit of user '${user.effectiveName}'.",
+                deleteDelay,
+            )
         }
     }
 
@@ -92,9 +93,7 @@ class SocialCreditCommand @Autowired constructor(
             append(leaderboard.joinToString("\n"))
         }
 
-        event.hook.sendMessage(message)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 
     private fun formatDuration(seconds: Long): String {
@@ -111,9 +110,10 @@ class SocialCreditCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         val socialCredit = userDto?.socialCredit ?: 0L
-        event.hook.sendMessage("${mentionedName}'s social credit is: $socialCredit")
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(
+            "${mentionedName}'s social credit is: $socialCredit",
+            deleteDelay,
+        )
     }
 
     private fun updateUserSocialCredit(

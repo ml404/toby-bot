@@ -2,7 +2,8 @@ package bot.toby.command.commands.economy
 
 import web.service.TitleRoleResult
 import web.service.TitleRoleService
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
+import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.TitleService
@@ -50,15 +51,11 @@ class TitleCommand @Autowired constructor(
         event.deferReply(true).queue()
 
         val guild = event.guild ?: run {
-            event.hook.sendMessage("This command can only be used in a server.")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete("This command can only be used in a server.", deleteDelay)
             return
         }
         val member = event.member ?: run {
-            event.hook.sendMessage("Could not resolve your member info.")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete("Could not resolve your member info.", deleteDelay)
             return
         }
 
@@ -68,9 +65,7 @@ class TitleCommand @Autowired constructor(
             "equip" -> handleEquip(event, guild, member, requestingUserDto, deleteDelay)
             "unequip" -> handleUnequip(event, guild, member, requestingUserDto, deleteDelay)
             "list" -> handleList(event, requestingUserDto, deleteDelay)
-            else -> event.hook.sendMessage("Unknown subcommand.")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            else -> event.hook.replyEphemeralAndDelete("Unknown subcommand.", deleteDelay)
         }
     }
 
@@ -89,9 +84,7 @@ class TitleCommand @Autowired constructor(
             .setDescription(body)
             .setFooter("Buy with /title buy <exact label>")
             .build()
-        event.hook.sendMessageEmbeds(embed)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralEmbedAndDelete(embed, deleteDelay)
     }
 
     private fun handleBuy(event: SlashCommandInteractionEvent, userDto: UserDto, deleteDelay: Int) {
@@ -193,8 +186,6 @@ class TitleCommand @Autowired constructor(
     }
 
     private fun reply(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessage(message)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 }

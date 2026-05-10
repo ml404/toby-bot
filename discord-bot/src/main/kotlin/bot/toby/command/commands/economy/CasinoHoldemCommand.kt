@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.poker.CasinoHoldem
@@ -95,8 +95,7 @@ class CasinoHoldemCommand @Autowired constructor(
         message: String,
         deleteDelay: Int,
     ) {
-        event.hook.sendMessageEmbeds(CasinoHoldemEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(CasinoHoldemEmbeds.errorEmbed(message), deleteDelay)
     }
 
     private fun replyFailure(
@@ -104,7 +103,9 @@ class CasinoHoldemCommand @Autowired constructor(
         failure: WagerCommandFailure,
         deleteDelay: Int,
     ) {
-        event.hook.sendMessageEmbeds(WagerCommandEmbeds.failureEmbed(CasinoHoldemEmbeds.TITLE, failure))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(
+            WagerCommandEmbeds.failureEmbed(CasinoHoldemEmbeds.TITLE, failure),
+            deleteDelay,
+        )
     }
 }

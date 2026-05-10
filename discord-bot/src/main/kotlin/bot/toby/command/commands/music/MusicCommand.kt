@@ -4,7 +4,7 @@ import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.util.formatTime
 import core.command.Command
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
@@ -48,15 +48,17 @@ interface MusicCommand : Command {
         ) {
             val queueSize = musicManager.scheduler.queue.size
             if (queueSize > 0) {
-                interactionHook
-                    .sendMessage("Our daddy taught us not to be ashamed of our playlists")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                interactionHook.replyAndDelete(
+                    "Our daddy taught us not to be ashamed of our playlists",
+                    deleteDelay,
+                )
             } else {
                 val duration = musicManager.audioPlayer.playingTrack.duration
                 val songDuration = formatTime(duration)
-                interactionHook
-                    .sendMessage("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR $songDuration, $songDuration OF PLAYTIME!")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                interactionHook.replyAndDelete(
+                    "HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR $songDuration, $songDuration OF PLAYTIME!",
+                    deleteDelay,
+                )
             }
         }
 

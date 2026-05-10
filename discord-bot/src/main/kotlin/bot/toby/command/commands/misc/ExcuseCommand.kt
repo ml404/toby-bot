@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.ExcuseDto
 import database.dto.UserDto
@@ -37,14 +37,11 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
     private fun listAllExcuses(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
         val excuseDtos = excuseService.listApprovedGuildExcuses(guildId)
         if (excuseDtos.isEmpty()) {
-            event.hook.sendMessage("There are no approved excuses, consider submitting some.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("There are no approved excuses, consider submitting some.", deleteDelay)
             return
         }
         val excusesMessage = buildExcusesMessage(excuseDtos)
-        event.hook.sendMessage(excusesMessage).queue(
-            invokeDeleteOnMessageResponse(deleteDelay)
-        )
+        event.hook.replyAndDelete(excusesMessage, deleteDelay)
     }
 
     private fun buildExcusesMessage(excuseDtos: List<ExcuseDto?>): String {
@@ -67,10 +64,9 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
             if (!excuseById.approved) {
                 excuseById.approved = true
                 excuseService.updateExcuse(excuseById)
-                event.hook.sendMessageFormat("Approved excuse '%s'.", excuseById.excuse)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyAndDelete("Approved excuse '${excuseById.excuse}'.", deleteDelay)
             } else {
-                event.hook.sendMessage(EXISTING_EXCUSE_MESSAGE).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyAndDelete(EXISTING_EXCUSE_MESSAGE, deleteDelay)
             }
         } else {
             sendErrorMessage(event, deleteDelay)
@@ -80,18 +76,14 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
     private fun lookupExcuse(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val excuseDtos = excuseService.listApprovedGuildExcuses(event.guild!!.idLong)
         if (excuseDtos.isEmpty()) {
-            event.hook.sendMessage("There are no approved excuses, consider submitting some.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("There are no approved excuses, consider submitting some.", deleteDelay)
             return
         }
         val randomExcuse = excuseDtos.random()
-        event.hook.sendMessageFormat(
-            "Excuse #%d: '%s' - %s.",
-            randomExcuse?.id,
-            randomExcuse?.excuse,
-            randomExcuse?.author
+        event.hook.replyAndDelete(
+            "Excuse #${randomExcuse?.id}: '${randomExcuse?.excuse}' - ${randomExcuse?.author}.",
+            deleteDelay,
         )
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     private fun createNewExcuse(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -100,7 +92,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
         val author = event.getOption(AUTHOR)?.asMember?.effectiveName ?: event.user.name
         val existingExcuse = excuseService.listAllGuildExcuses(guildId).find { it?.excuse == excuseMessage }
         if (existingExcuse != null) {
-            event.hook.sendMessage(EXISTING_EXCUSE_MESSAGE).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(EXISTING_EXCUSE_MESSAGE, deleteDelay)
         } else {
             val excuseDto = ExcuseDto().apply {
                 this.guildId = guildId
@@ -109,24 +101,21 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
             }
 
             val newExcuse = excuseService.createNewExcuse(excuseDto)
-            event.hook.sendMessageFormat(
-                "Submitted new excuse '%s' - %s with id '%d' for approval.",
-                excuseMessage,
-                author,
-                newExcuse?.id
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(
+                "Submitted new excuse '$excuseMessage' - $author with id '${newExcuse?.id}' for approval.",
+                deleteDelay,
+            )
         }
     }
 
     private fun lookupPendingExcuses(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
         val excuseDtos = excuseService.listPendingGuildExcuses(guildId)
         if (excuseDtos.isEmpty()) {
-            event.hook.sendMessage("There are no excuses pending approval, consider submitting some.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("There are no excuses pending approval, consider submitting some.", deleteDelay)
             return
         }
         val excusesMessage = buildExcusesMessage(excuseDtos)
-        event.hook.sendMessage(excusesMessage).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(excusesMessage, deleteDelay)
     }
 
     private fun deleteExcuse(
@@ -137,7 +126,7 @@ class ExcuseCommand @Autowired constructor(private val excuseService: ExcuseServ
         if (requestingUserDto?.superUser == true) {
             val excuseId = event.getOption(EXCUSE_ID)?.asLong ?: return
             excuseService.deleteExcuseById(excuseId)
-            event.hook.sendMessageFormat("Deleted excuse with id '%d'.", excuseId).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Deleted excuse with id '$excuseId'.", deleteDelay)
         } else {
             sendErrorMessage(event, deleteDelay)
         }

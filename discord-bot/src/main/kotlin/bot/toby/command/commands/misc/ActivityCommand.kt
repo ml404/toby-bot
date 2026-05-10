@@ -1,7 +1,8 @@
 package bot.toby.command.commands.misc
 
 import bot.toby.activity.ActivityTrackingService
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
+import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.ActivityMonthlyRollupService
@@ -94,9 +95,7 @@ class ActivityCommand @Autowired constructor(
                 }
             )
             .build()
-        event.hook.sendMessageEmbeds(embed)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralEmbedAndDelete(embed, deleteDelay)
     }
 
     private fun showServer(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
@@ -130,9 +129,7 @@ class ActivityCommand @Autowired constructor(
                 else "${optedOut.size} user(s) have opted out and are not counted."
             )
             .build()
-        event.hook.sendMessageEmbeds(embed)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralEmbedAndDelete(embed, deleteDelay)
     }
 
     private fun setOptOut(event: SlashCommandInteractionEvent, userDto: UserDto, optOut: Boolean, deleteDelay: Int) {
@@ -153,8 +150,6 @@ class ActivityCommand @Autowired constructor(
     }
 
     private fun reply(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessage(message)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 }

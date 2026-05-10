@@ -2,6 +2,7 @@ package bot.toby.command.commands.economy
 
 import bot.toby.economy.TobyCoinChartRenderer
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.TobyCoinMarketDto
@@ -230,6 +231,6 @@ class TobyCoinCommand @Autowired constructor(
     }
 
     private fun reply(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(message, deleteDelay)
     }
 }

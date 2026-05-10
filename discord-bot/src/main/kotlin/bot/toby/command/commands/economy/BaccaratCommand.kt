@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.economy.Baccarat
@@ -72,7 +72,6 @@ class BaccaratCommand @Autowired constructor(
         message: String,
         deleteDelay: Int
     ) {
-        event.hook.sendMessageEmbeds(BaccaratEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(BaccaratEmbeds.errorEmbed(message), deleteDelay)
     }
 }

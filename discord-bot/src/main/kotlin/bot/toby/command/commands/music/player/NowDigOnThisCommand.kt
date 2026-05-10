@@ -4,7 +4,7 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.URLHelper
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.util.adjustTrackPlayingTimes
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -40,9 +40,7 @@ class NowDigOnThisCommand : MusicCommand {
 
         val linkOption = event.getOption(LINK)?.asString
         if (linkOption.isNullOrBlank()) {
-            event.hook
-                .sendMessage("Correct usage is `/nowdigonthis <youtube link>`")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Correct usage is `/nowdigonthis <youtube link>`", deleteDelay)
             return
         }
 
@@ -70,8 +68,7 @@ class NowDigOnThisCommand : MusicCommand {
     override fun getErrorMessage(name: String?): String = "I'm gonna put some dirt in your eye $name"
 
     override fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int) {
-        event.hook.sendMessage(getErrorMessage(event.member!!.effectiveName))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(getErrorMessage(event.member!!.effectiveName), deleteDelay)
     }
 
     override val optionData: List<OptionData>

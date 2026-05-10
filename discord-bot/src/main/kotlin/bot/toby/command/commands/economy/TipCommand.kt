@@ -2,6 +2,7 @@ package bot.toby.command.commands.economy
 
 import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.TipService
@@ -119,12 +120,10 @@ class TipCommand @Autowired constructor(
 
             is TipOutcome.Ok -> error("unreachable") // handled above
         }
-        event.hook.sendMessageEmbeds(TipEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(TipEmbeds.errorEmbed(message), deleteDelay)
     }
 
     private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessageEmbeds(TipEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(TipEmbeds.errorEmbed(message), deleteDelay)
     }
 }

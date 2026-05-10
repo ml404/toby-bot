@@ -5,7 +5,7 @@ import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.charactersheet.CharacterSheetProvider
 import bot.toby.helpers.charactersheet.CharacterSheetProvider.FetchResult
 import common.helpers.parseDndBeyondCharacterId
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import kotlinx.coroutines.CoroutineDispatcher
@@ -44,8 +44,10 @@ class LinkCharacterCommand @Autowired constructor(
         val characterId = parseDndBeyondCharacterId(input)
 
         if (characterId == null) {
-            hook.sendMessage("Could not extract a valid character ID from: `$input`. Please provide a D&D Beyond character URL or numeric ID.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyAndDelete(
+                "Could not extract a valid character ID from: `$input`. Please provide a D&D Beyond character URL or numeric ID.",
+                deleteDelay,
+            )
             return
         }
 
@@ -68,17 +70,19 @@ class LinkCharacterCommand @Autowired constructor(
                     hook.sendMessageEmbeds(embed).queue()
                 }
                 FetchResult.Forbidden -> {
-                    hook.sendMessage(
+                    hook.replyAndDelete(
                         "❌ Character `$characterId` is private. " +
-                        "Open it on D&D Beyond → **Home** → **Privacy** and set it to **Public** " +
-                        "(or **Campaign Only** if your DM has a paid subscription), then run `/linkcharacter` again. " +
-                        "Your existing link was not changed."
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                            "Open it on D&D Beyond → **Home** → **Privacy** and set it to **Public** " +
+                            "(or **Campaign Only** if your DM has a paid subscription), then run `/linkcharacter` again. " +
+                            "Your existing link was not changed.",
+                        deleteDelay,
+                    )
                 }
                 FetchResult.NotFound -> {
-                    hook.sendMessage(
-                        "❌ No D&D Beyond character found with ID `$characterId`. Double-check the URL or ID and try again."
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    hook.replyAndDelete(
+                        "❌ No D&D Beyond character found with ID `$characterId`. Double-check the URL or ID and try again.",
+                        deleteDelay,
+                    )
                 }
                 is FetchResult.Unavailable -> {
                     requestingUserDto.dndBeyondCharacterId = characterId

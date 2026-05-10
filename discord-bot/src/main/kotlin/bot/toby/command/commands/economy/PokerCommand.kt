@@ -2,6 +2,7 @@ package bot.toby.command.commands.economy
 
 import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.poker.PokerTable
@@ -142,8 +143,7 @@ class PokerCommand @Autowired constructor(
             is CreateOutcome.Ok -> {
                 val table = tableRegistry.get(outcome.tableId)
                     ?: return replyError(event, "Table vanished.", deleteDelay)
-                event.hook.sendMessageEmbeds(PokerEmbeds.lobbyEmbed(table))
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEmbedAndDelete(PokerEmbeds.lobbyEmbed(table), deleteDelay)
             }
             is CreateOutcome.InvalidBuyIn ->
                 replyError(event, "Buy-in must be between ${outcome.min} and ${outcome.max} credits.", deleteDelay)
@@ -236,18 +236,20 @@ class PokerCommand @Autowired constructor(
             replyError(event, "Table id is required.", deleteDelay); return
         }
         when (val outcome = pokerService.cashOut(userDto.discordId, guildId, tableId)) {
-            is CashOutOutcome.Ok -> event.hook.sendMessageEmbeds(
+            is CashOutOutcome.Ok -> event.hook.replyEmbedAndDelete(
                 PokerEmbeds.infoEmbed(
                     "<@${userDto.discordId}> cashed out **${outcome.chipsReturned}** chips. " +
                         "New balance: ${outcome.newBalance} credits."
-                )
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
-            is CashOutOutcome.QueuedForEndOfHand -> event.hook.sendMessageEmbeds(
+                ),
+                deleteDelay,
+            )
+            is CashOutOutcome.QueuedForEndOfHand -> event.hook.replyEmbedAndDelete(
                 PokerEmbeds.infoEmbed(
                     "<@${userDto.discordId}> is leaving — auto-folding for the rest of this hand. " +
                         "Your **${outcome.chipsHeld}** chips will return to your balance once the hand resolves."
-                )
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                ),
+                deleteDelay,
+            )
             CashOutOutcome.AlreadyLeaving ->
                 replyError(event, "You've already asked to leave this hand.", deleteDelay)
             CashOutOutcome.HandInProgress ->
@@ -273,12 +275,13 @@ class PokerCommand @Autowired constructor(
         }
         userDtoHelper.calculateUserDto(userDto.discordId, guildId)
         when (val outcome = pokerService.rebuy(userDto.discordId, guildId, tableId, amount)) {
-            is RebuyOutcome.Ok -> event.hook.sendMessageEmbeds(
+            is RebuyOutcome.Ok -> event.hook.replyEmbedAndDelete(
                 PokerEmbeds.infoEmbed(
                     "<@${userDto.discordId}> rebought **$amount** chips. " +
                         "Stack: ${outcome.seatChips} • Balance: ${outcome.newBalance}."
-                )
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                ),
+                deleteDelay,
+            )
             is RebuyOutcome.InvalidAmount ->
                 replyError(event, "Rebuy must be between ${outcome.min} and ${outcome.max} credits.", deleteDelay)
             is RebuyOutcome.StackCapped ->
@@ -316,8 +319,7 @@ class PokerCommand @Autowired constructor(
         } else {
             "Server" to pokerService.recentHandsForGuild(guildId, limit)
         }
-        event.hook.sendMessageEmbeds(PokerEmbeds.historyEmbed(scope, hands))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(PokerEmbeds.historyEmbed(scope, hands), deleteDelay)
     }
 
     private fun handleTables(
@@ -327,16 +329,16 @@ class PokerCommand @Autowired constructor(
     ) {
         val tables = tableRegistry.listForGuild(guildId)
         if (tables.isEmpty()) {
-            event.hook.sendMessageEmbeds(
-                PokerEmbeds.infoEmbed("No active poker tables in this server. `/poker create chips:<amount>` to start one.")
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEmbedAndDelete(
+                PokerEmbeds.infoEmbed("No active poker tables in this server. `/poker create chips:<amount>` to start one."),
+                deleteDelay,
+            )
             return
         }
         val description = tables.joinToString("\n") {
             "• Table #${it.id} — ${it.seats.size}/${it.maxSeats} seats, host <@${it.hostDiscordId}>, phase ${it.phase}"
         }
-        event.hook.sendMessageEmbeds(PokerEmbeds.infoEmbed(description))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(PokerEmbeds.infoEmbed(description), deleteDelay)
     }
 
     private fun handlePeek(
@@ -382,7 +384,6 @@ class PokerCommand @Autowired constructor(
         message: String,
         deleteDelay: Int
     ) {
-        event.hook.sendMessageEmbeds(PokerEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(PokerEmbeds.errorEmbed(message), deleteDelay)
     }
 }

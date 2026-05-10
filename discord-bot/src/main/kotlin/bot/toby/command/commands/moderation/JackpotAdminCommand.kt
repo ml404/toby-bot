@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
@@ -159,9 +159,10 @@ class JackpotAdminCommand @Autowired constructor(
                     "${idx + 1}. <@${p.discordId}> — **${p.amount}** credits (${p.ticketCount} tickets)"
                 }
                 val body = if (lines.isEmpty()) "_No winners drawn._" else lines.joinToString("\n")
-                event.hook.sendMessage(
-                    "Lottery drawn. Total paid: **${result.totalPaid}** of **${result.drained}** credits.\n$body"
-                ).setEphemeral(false).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyAndDelete(
+                    "Lottery drawn. Total paid: **${result.totalPaid}** of **${result.drained}** credits.\n$body",
+                    deleteDelay,
+                )
             }
             JackpotLotteryService.DrawOutcome.NoOpenLottery ->
                 replyError(event, "No open lottery to draw.", deleteDelay)

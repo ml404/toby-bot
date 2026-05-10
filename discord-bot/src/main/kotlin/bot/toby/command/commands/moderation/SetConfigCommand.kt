@@ -1,7 +1,7 @@
 package bot.toby.command.commands.moderation
 
 import bot.toby.activity.ActivityTrackingNotifier
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
@@ -39,7 +39,7 @@ class SetConfigCommand @Autowired constructor(
     private fun validateArgumentsAndUpdateConfigs(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val options = event.options
         if (options.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(description, deleteDelay)
             return
         }
         options.forEach { optionMapping ->
@@ -269,7 +269,7 @@ class SetConfigCommand @Autowired constructor(
         } else {
             "Anti-autoclick session events will post to <#$resolved>."
         }
-        event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(msg, deleteDelay)
     }
 
     /**
@@ -313,7 +313,7 @@ class SetConfigCommand @Autowired constructor(
         } else {
             "Daily lottery announcements will post to <#$resolved>."
         }
-        event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(msg, deleteDelay)
     }
 
     /**
@@ -337,8 +337,7 @@ class SetConfigCommand @Autowired constructor(
         configService.upsertConfig(
             ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue, raw, guildId
         )
-        event.hook.sendMessage("Daily lottery mode set to $raw.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Daily lottery mode set to $raw.", deleteDelay)
     }
 
     private fun setLotteryPingMode(
@@ -358,8 +357,7 @@ class SetConfigCommand @Autowired constructor(
         configService.upsertConfig(
             ConfigDto.Configurations.LOTTERY_PING_MODE.configValue, raw, guildId
         )
-        event.hook.sendMessage("Lottery announcement ping set to $raw.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Lottery announcement ping set to $raw.", deleteDelay)
     }
 
     /**
@@ -388,8 +386,7 @@ class SetConfigCommand @Autowired constructor(
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, value.toString(), guildId)
-        event.hook.sendMessage("$gameLabel $label set to $value for new tables.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("$gameLabel $label set to $value for new tables.", deleteDelay)
     }
 
     /**
@@ -418,8 +415,7 @@ class SetConfigCommand @Autowired constructor(
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, value.toString(), guildId)
-        event.hook.sendMessage("$gameLabel $label set to $value $unit for new tables.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("$gameLabel $label set to $value $unit for new tables.", deleteDelay)
     }
 
     private fun setBlackjackBool(
@@ -432,8 +428,7 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, value.toString(), guildId)
         val rule = if (value) "hit on soft 17 (H17)" else "stand on all 17 (S17)"
-        event.hook.sendMessage("Blackjack dealer will now $rule.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Blackjack dealer will now $rule.", deleteDelay)
     }
 
     /**
@@ -452,8 +447,7 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, value.toString(), guildId)
         val state = if (value) "enabled" else "disabled"
-        event.hook.sendMessage("$label is now $state.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("$label is now $state.", deleteDelay)
     }
 
     private fun setLeaderboardChannel(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -529,7 +523,7 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
 
         configService.upsertConfig(configValue, newValue.toString(), guildId)
-        event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(messageToSend, deleteDelay)
     }
 
     private fun setJackpotLossTribute(
@@ -548,8 +542,7 @@ class SetConfigCommand @Autowired constructor(
         val configValue = ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Jackpot loss-tribute set to $pct % of every lost casino stake.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Jackpot loss-tribute set to $pct % of every lost casino stake.", deleteDelay)
     }
 
     private fun setTradeFeePct(
@@ -569,8 +562,10 @@ class SetConfigCommand @Autowired constructor(
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Toby Coin $label fee set to $pct % per leg (routed into the jackpot pool).")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "Toby Coin $label fee set to $pct % per leg (routed into the jackpot pool).",
+            deleteDelay,
+        )
     }
 
     private fun setJackpotWinPct(
@@ -589,8 +584,7 @@ class SetConfigCommand @Autowired constructor(
         val configValue = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Jackpot win chance set to $pct % per casino-game win.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Jackpot win chance set to $pct % per casino-game win.", deleteDelay)
     }
 
     private fun setPokerRake(
@@ -609,8 +603,7 @@ class SetConfigCommand @Autowired constructor(
         val configValue = ConfigDto.Configurations.POKER_RAKE_PCT.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Poker rake set to $pct % of every settled pot.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Poker rake set to $pct % of every settled pot.", deleteDelay)
     }
 
     private fun setUbiDailyAmount(
@@ -634,7 +627,7 @@ class SetConfigCommand @Autowired constructor(
         } else {
             "UBI set to $amount credits per user per day. The grant runs at 00:00 UTC and bypasses the daily cap."
         }
-        event.hook.sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(message, deleteDelay)
     }
 
     private fun setDailyCreditCap(
@@ -653,9 +646,10 @@ class SetConfigCommand @Autowired constructor(
         val configValue = ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, cap.toString(), guildId)
-        event.hook.sendMessage(
-            "Daily social-credit cap set to $cap credits (covers voice, command, intro, and UI-trade earnings)."
-        ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "Daily social-credit cap set to $cap credits (covers voice, command, intro, and UI-trade earnings).",
+            deleteDelay,
+        )
     }
 
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
