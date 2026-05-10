@@ -5,6 +5,7 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.util.formatTime
 import core.command.Command
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -68,10 +69,10 @@ interface MusicCommand : Command {
             val event = ctx.event
 
             if (!selfVoiceState.inAudioChannel()) {
-                event.hook
-                    .sendMessage("I need to be in a voice channel for this to work")
-                    .setEphemeral(true)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "I need to be in a voice channel for this to work",
+                    deleteDelay,
+                )
                 return true
             }
 
@@ -81,9 +82,7 @@ interface MusicCommand : Command {
                 } else {
                     "You need to be in the same voice channel as me for this to work"
                 }
-                event.hook
-                    .sendMessage(errorMessage)
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(errorMessage, deleteDelay)
                 return true
             }
             return false

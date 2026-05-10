@@ -2,6 +2,7 @@ package bot.toby.command.commands.economy
 
 import bot.toby.economy.TobyCoinChartRenderer
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
@@ -110,7 +111,7 @@ class TobyCoinCommand @Autowired constructor(
             .setColor(priceColor(change))
             .setFooter("Try /tobycoin chart to see the market")
             .build()
-        event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(embed, deleteDelay)
     }
 
     private fun handleBalance(
@@ -129,7 +130,7 @@ class TobyCoinCommand @Autowired constructor(
             .addField("Social credit", "$credits credits", true)
             .setFooter("Market price: %.2f credits / coin".format(market.price))
             .build()
-        event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(embed, deleteDelay)
     }
 
     private fun handleBuy(

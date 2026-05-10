@@ -1,6 +1,7 @@
 package bot.toby.command.commands.misc
 
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -31,7 +32,7 @@ class HelpCommand @Autowired constructor(private val commands: List<core.command
             event.hook.sendMessage("Nothing found for command '$searchOptional'").queue(invokeDeleteOnMessageResponse(deleteDelay))
             return
         }
-        event.hook.sendMessage(command.description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(command.description, deleteDelay)
     }
 
     private fun getCommand(searchOptional: String) = commands.find { it.name.lowercase() == searchOptional }

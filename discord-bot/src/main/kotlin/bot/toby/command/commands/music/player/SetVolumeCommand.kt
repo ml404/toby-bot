@@ -4,6 +4,7 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.emote.Emotes
 import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
@@ -47,7 +48,7 @@ class SetVolumeCommand : MusicCommand {
             if (instance.isCurrentlyStoppable || requestingUserDto!!.superUser) {
                 val audioPlayer = musicManager.audioPlayer
                 if (volumeArg > 100) {
-                    hook.sendMessage(description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    hook.replyEphemeralAndDelete(description, deleteDelay)
                     return
                 }
                 val oldVolume = audioPlayer.volume
@@ -67,11 +68,7 @@ class SetVolumeCommand : MusicCommand {
             } else {
                 sendErrorMessage(event, deleteDelay)
             }
-        } else hook.sendMessage(description).setEphemeral(true).queue(
-            invokeDeleteOnMessageResponse(
-                deleteDelay
-            )
-        )
+        } else hook.replyEphemeralAndDelete(description, deleteDelay)
     }
 
     override fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int) {

@@ -1,6 +1,7 @@
 package bot.toby.command.commands.economy
 
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.JackpotLotteryService
@@ -126,8 +127,7 @@ class LotteryCommand @Autowired constructor(
     }
 
     private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessage(message).setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 
     companion object {

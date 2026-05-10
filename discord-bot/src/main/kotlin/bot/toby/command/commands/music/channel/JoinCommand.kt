@@ -4,6 +4,7 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.voice.LastConnectedChannelTracker
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
 import database.dto.UserDto
@@ -62,7 +63,7 @@ class JoinCommand(
         val event = ctx.event
 
         if (selfVoiceState?.inAudioChannel() == true) {
-            event.hook.sendMessage("I'm already in a voice channel").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete("I'm already in a voice channel", deleteDelay)
             return null
         }
 
@@ -70,7 +71,10 @@ class JoinCommand(
         val memberVoiceState = member.voiceState
 
         if (memberVoiceState?.inAudioChannel() != true) {
-            event.hook.sendMessage("You need to be in a voice channel for this command to work").setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "You need to be in a voice channel for this command to work",
+                deleteDelay,
+            )
             return null
         }
 
