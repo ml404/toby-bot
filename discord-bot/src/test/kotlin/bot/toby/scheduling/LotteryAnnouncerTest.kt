@@ -40,6 +40,7 @@ class LotteryAnnouncerTest {
 
     private val guildId = 100L
     private lateinit var configService: ConfigService
+    private lateinit var jackpotLotteryService: JackpotLotteryService
     private lateinit var guild: Guild
     private lateinit var jda: JDA
     private lateinit var bot: SelfMember
@@ -50,6 +51,7 @@ class LotteryAnnouncerTest {
     @BeforeEach
     fun setup() {
         configService = mockk(relaxed = true)
+        jackpotLotteryService = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         bot = mockk(relaxed = true)
@@ -72,12 +74,20 @@ class LotteryAnnouncerTest {
         every { restAction.complete() } returns emptyList()
         every { bot.hasPermission(channel, *anyVararg<Permission>()) } returns true
         every { channel.id } returns "777"
+        every { channel.idLong } returns 777L
         every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns sendAction
         every { sendAction.addContent(any()) } returns sendAction
         every { sendAction.setAllowedMentions(any<Collection<Message.MentionType>>()) } returns sendAction
         every { sendAction.queue() } just Runs
+        // The two-callback `queue(success, failure)` overload is used by
+        // [LotteryAnnouncer.announceCycle] to capture the posted message
+        // id; tests don't drive the success path so a no-op stub keeps
+        // verification on `channel.sendMessageEmbeds` working unchanged.
+        every {
+            sendAction.queue(any<java.util.function.Consumer<Message>>(), any())
+        } just Runs
 
-        announcer = LotteryAnnouncer(configService)
+        announcer = LotteryAnnouncer(configService, jackpotLotteryService)
     }
 
     private fun stubChannelConfig(key: ConfigDto.Configurations, value: String?) {

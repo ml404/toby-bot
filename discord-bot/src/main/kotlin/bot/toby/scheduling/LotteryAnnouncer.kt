@@ -2,6 +2,7 @@ package bot.toby.scheduling
 
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
+import database.dto.JackpotLotteryDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.LotteryHelper
@@ -12,6 +13,8 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.exceptions.ErrorResponseException
+import net.dv8tion.jda.api.requests.ErrorResponse
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.awt.Color
@@ -50,6 +53,7 @@ import java.awt.Color
 @Component
 class LotteryAnnouncer @Autowired constructor(
     private val configService: ConfigService,
+    private val jackpotLotteryService: JackpotLotteryService,
 ) {
 
     /**
@@ -83,16 +87,129 @@ class LotteryAnnouncer @Autowired constructor(
         }
         val embed = buildEmbed(guild, mode, priorOutcome, openOutcome)
         val content = buildAnnouncementContent(guild, priorOutcome)
+        val lotteryId = (openOutcome as? OpenSummary.Ok)?.lotteryId
+        val poolAmount = (openOutcome as? OpenSummary.Ok)?.poolAmount
         runCatching {
             val send = channel.sendMessageEmbeds(embed)
                 .setAllowedMentions(allowedMentionTypes(content))
             if (content.isNotBlank()) {
                 send.addContent(content)
             }
-            send.queue()
+            send.queue({ message ->
+                if (lotteryId != null && poolAmount != null) {
+                    runCatching {
+                        jackpotLotteryService.recordAnnouncement(
+                            lotteryId = lotteryId,
+                            channelId = channel.idLong,
+                            messageId = message.idLong,
+                            pool = poolAmount,
+                        )
+                    }.onFailure {
+                        logger.warn(
+                            "Could not persist lottery announcement reference for " +
+                                "lottery $lotteryId (guild ${guild.idLong}): ${it.message}"
+                        )
+                    }
+                }
+            }, { failure ->
+                logger.error("Could not post lottery announcement to ${channel.id}: ${failure.message}")
+            })
         }.onFailure {
             logger.error("Could not post lottery announcement to ${channel.id}: ${it.message}")
         }
+    }
+
+    /**
+     * Edit the previously-posted announcement embed when [lottery]'s
+     * pool has grown since the last announce/refresh tick. Called by
+     * [LotteryRefreshJob]. Short-circuits when there's nothing to edit
+     * (no message id stored, pool unchanged). On `UNKNOWN_MESSAGE` the
+     * announcement reference is cleared so future ticks don't retry.
+     *
+     * Edits the "Today's draw" field of the existing embed in place;
+     * any other fields (e.g. yesterday's recap) are preserved as the
+     * mod team last saw them. Embed layout / footer / colour stay
+     * identical so the message doesn't visibly flicker on edit.
+     */
+    fun refreshAnnouncement(guild: Guild, lottery: JackpotLotteryDto) {
+        val lotteryId = lottery.id ?: return
+        val messageId = lottery.announcementMessageId ?: return
+        val channelId = lottery.announcementChannelId ?: return
+        val announcedPool = lottery.announcedPoolAmount
+        if (announcedPool == lottery.poolAmount) return
+
+        val channel = guild.getTextChannelById(channelId) ?: run {
+            logger.warn(
+                "Lottery announcement channel $channelId vanished for guild ${guild.idLong}; " +
+                    "clearing announcement ref."
+            )
+            runCatching { jackpotLotteryService.clearAnnouncement(lotteryId) }
+            return
+        }
+
+        channel.retrieveMessageById(messageId).queue({ existing ->
+            val previous = existing.embeds.firstOrNull()
+            if (previous == null) {
+                logger.warn("Lottery announcement message $messageId has no embeds; clearing ref.")
+                runCatching { jackpotLotteryService.clearAnnouncement(lotteryId) }
+                return@queue
+            }
+            val rebuilt = rebuildWithUpdatedTodaysDraw(previous, lottery)
+            existing.editMessageEmbeds(rebuilt).queue({
+                runCatching { jackpotLotteryService.updateAnnouncedPool(lotteryId, lottery.poolAmount) }
+                    .onFailure {
+                        logger.warn(
+                            "Edited lottery announcement $messageId but failed to persist new " +
+                                "pool watermark: ${it.message}"
+                        )
+                    }
+            }, { failure ->
+                handleRefreshFailure(failure, lotteryId, messageId, guild.idLong)
+            })
+        }, { failure ->
+            handleRefreshFailure(failure, lotteryId, messageId, guild.idLong)
+        })
+    }
+
+    private fun handleRefreshFailure(failure: Throwable, lotteryId: Long, messageId: Long, guildId: Long) {
+        if (failure is ErrorResponseException && failure.errorResponse == ErrorResponse.UNKNOWN_MESSAGE) {
+            logger.info {
+                "Lottery announcement $messageId in guild $guildId was deleted; clearing ref."
+            }
+            runCatching { jackpotLotteryService.clearAnnouncement(lotteryId) }
+            return
+        }
+        logger.warn(
+            "Could not refresh lottery announcement $messageId in guild $guildId: ${failure.message}"
+        )
+    }
+
+    /**
+     * Re-render the "Today's draw" field on [previous] with values from
+     * the live [lottery] row. Other fields and the embed chrome
+     * (title / colour / footer) are preserved verbatim — the only thing
+     * that should drift between announce and refresh is the pool value.
+     */
+    private fun rebuildWithUpdatedTodaysDraw(
+        previous: MessageEmbed,
+        lottery: JackpotLotteryDto,
+    ): MessageEmbed {
+        val builder = EmbedBuilder(previous).clearFields()
+        val freshSummary = OpenSummary.Ok(
+            lotteryId = lottery.id,
+            seeded = 0L,                         // unused in renderOpenSummary
+            ticketPrice = lottery.ticketPrice,
+            poolAmount = lottery.poolAmount,
+        )
+        val freshTodayBody = renderOpenSummary(lottery.mode, freshSummary)
+        previous.fields.forEach { field ->
+            if (field.name == TODAYS_DRAW_FIELD) {
+                builder.addField(TODAYS_DRAW_FIELD, freshTodayBody, false)
+            } else {
+                builder.addField(field)
+            }
+        }
+        return builder.build()
     }
 
     /**
@@ -127,7 +244,20 @@ class LotteryAnnouncer @Autowired constructor(
      * collapses to a single-flag variant.
      */
     sealed interface OpenSummary {
-        data class Ok(val seeded: Long, val ticketPrice: Long, val poolAmount: Long) : OpenSummary
+        /**
+         * [lotteryId] is the row id of the OPEN lottery just opened. Used
+         * by [announceCycle] to call [JackpotLotteryService.recordAnnouncement]
+         * after the embed ships, so [LotteryRefreshJob] can later edit
+         * the same message when the prize pool grows. Nullable for
+         * cycles where the lottery couldn't be persisted (defensive —
+         * the daily job populates it from the open call's `lottery.id`).
+         */
+        data class Ok(
+            val lotteryId: Long? = null,
+            val seeded: Long,
+            val ticketPrice: Long,
+            val poolAmount: Long,
+        ) : OpenSummary
         data object Skipped : OpenSummary
     }
 
@@ -166,12 +296,12 @@ class LotteryAnnouncer @Autowired constructor(
 
         if (priorOutcome != null) {
             builder.addField(
-                "Yesterday's draw",
+                YESTERDAYS_DRAW_FIELD,
                 renderPriorOutcome(priorOutcome),
                 false
             )
         }
-        builder.addField("Today's draw", renderOpenSummary(mode, openOutcome), false)
+        builder.addField(TODAYS_DRAW_FIELD, renderOpenSummary(mode, openOutcome), false)
         builder.setFooter(
             when (mode) {
                 LotteryHelper.MODE_WEIGHTED -> "Top-3 weighted draw • 50/30/20 share"
@@ -301,5 +431,12 @@ class LotteryAnnouncer @Autowired constructor(
         private val REQUIRED_PERMS = arrayOf(Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
         private const val LOTTERY_COMMAND_NAME = "lottery"
         private const val LOTTERY_BUY_SUBCOMMAND = "buy"
+
+        // Embed field titles. The refresh job swaps in a fresh
+        // [TODAYS_DRAW_FIELD] body when the pool grows, leaving the
+        // yesterday-recap untouched, so these need to round-trip
+        // exactly with what [buildEmbed] writes.
+        const val TODAYS_DRAW_FIELD = "Today's draw"
+        const val YESTERDAYS_DRAW_FIELD = "Yesterday's draw"
     }
 }

@@ -23,6 +23,9 @@ interface JackpotLotteryPersistence {
 
     fun upsert(lottery: JackpotLotteryDto): JackpotLotteryDto
 
+    /** Direct primary-key lookup. Used by the announcement-bookkeeping helpers. */
+    fun findById(lotteryId: Long): JackpotLotteryDto?
+
     /** SELECT … FOR UPDATE on a single ticket row, or null if absent. */
     fun getTicketForUpdate(lotteryId: Long, discordId: Long): JackpotLotteryTicketDto?
 
