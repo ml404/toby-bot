@@ -2,7 +2,7 @@ package bot.toby.command.commands.economy
 
 import database.duel.PendingDuelRegistry
 import bot.toby.helpers.UserDtoHelper
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.DuelService
@@ -83,8 +83,7 @@ class DuelCommand @Autowired constructor(
             stake = stake
         )
         if (start !is StartOutcome.Ok) {
-            event.hook.sendMessageEmbeds(DuelEmbeds.startErrorEmbed(start))
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEmbedAndDelete(DuelEmbeds.startErrorEmbed(start), deleteDelay)
             return
         }
 
@@ -127,7 +126,6 @@ class DuelCommand @Autowired constructor(
         message: String,
         deleteDelay: Int
     ) {
-        event.hook.sendMessageEmbeds(DuelEmbeds.errorEmbed(message))
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(DuelEmbeds.errorEmbed(message), deleteDelay)
     }
 }

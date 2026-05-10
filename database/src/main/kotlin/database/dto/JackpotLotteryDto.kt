@@ -85,6 +85,27 @@ class JackpotLotteryDto(
      */
     @Column(name = "drawn_numbers")
     var drawnNumbers: String? = null,
+
+    /**
+     * Discord channel + message ids of the announce embed posted by
+     * [LotteryAnnouncer.announceCycle]. Captured after the first send so
+     * a periodic refresh job can edit the embed when [poolAmount] grows.
+     * Cleared back to null when the message is found-not-found on edit
+     * (admin/user deleted it).
+     */
+    @Column(name = "announcement_channel_id")
+    var announcementChannelId: Long? = null,
+
+    @Column(name = "announcement_message_id")
+    var announcementMessageId: Long? = null,
+
+    /**
+     * Last [poolAmount] value pushed to the announce embed. Lets the
+     * refresh job short-circuit when the pool hasn't grown — no
+     * round-trip to Discord on quiet ticks.
+     */
+    @Column(name = "announced_pool_amount")
+    var announcedPoolAmount: Long? = null,
 ) : Serializable {
 
     companion object {

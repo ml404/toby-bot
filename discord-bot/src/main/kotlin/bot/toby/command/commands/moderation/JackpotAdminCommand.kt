@@ -1,6 +1,7 @@
 package bot.toby.command.commands.moderation
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.CasinoAdminService
@@ -61,14 +62,11 @@ class JackpotAdminCommand @Autowired constructor(
         val event = ctx.event
         event.deferReply(true).queue()
         val guildId = event.guild?.idLong ?: run {
-            event.hook.sendMessage("Guild only.").setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete("Guild only.", deleteDelay)
             return
         }
         if (!isAuthorised(ctx, requestingUserDto)) {
-            event.hook.sendMessage("Server owner or superuser only.")
-                .setEphemeral(true)
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete("Server owner or superuser only.", deleteDelay)
             return
         }
         when (event.subcommandName) {
@@ -78,10 +76,11 @@ class JackpotAdminCommand @Autowired constructor(
             SUB_LOTTERY_OPEN -> handleLotteryOpen(event, guildId, deleteDelay)
             SUB_LOTTERY_DRAW -> handleLotteryDraw(event, guildId, deleteDelay)
             SUB_LOTTERY_CANCEL -> handleLotteryCancel(event, guildId, deleteDelay)
-            else -> event.hook.sendMessage(
+            else -> event.hook.replyEphemeralAndDelete(
                 "Pick a subcommand: $SUB_RESET / $SUB_REFUND / $SUB_POOL / " +
-                    "$SUB_LOTTERY_OPEN / $SUB_LOTTERY_DRAW / $SUB_LOTTERY_CANCEL."
-            ).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    "$SUB_LOTTERY_OPEN / $SUB_LOTTERY_DRAW / $SUB_LOTTERY_CANCEL.",
+                deleteDelay,
+            )
         }
     }
 
@@ -92,8 +91,7 @@ class JackpotAdminCommand @Autowired constructor(
         val drained = casinoAdminService.resetJackpot(guildId)
         val message = if (drained == 0L) "Jackpot pool was already empty."
             else "Reset jackpot pool. Drained **$drained** credits."
-        event.hook.sendMessage(message).setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 
     private fun handleRefund(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
@@ -104,10 +102,11 @@ class JackpotAdminCommand @Autowired constructor(
             replyError(event, "Amount option missing.", deleteDelay); return
         }
         when (val result = casinoAdminService.refundToJackpot(target.idLong, guildId, amount)) {
-            is CasinoAdminService.RefundOutcome.Ok -> event.hook.sendMessage(
+            is CasinoAdminService.RefundOutcome.Ok -> event.hook.replyEphemeralAndDelete(
                 "Refunded **${result.drained}** credits from ${target.asMention} into the jackpot. " +
-                    "New pool: **${result.newPool}**. New balance: **${result.newSourceBalance}**."
-            ).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    "New pool: **${result.newPool}**. New balance: **${result.newSourceBalance}**.",
+                deleteDelay,
+            )
             is CasinoAdminService.RefundOutcome.Insufficient ->
                 replyError(
                     event,
@@ -121,9 +120,7 @@ class JackpotAdminCommand @Autowired constructor(
 
     private fun handlePool(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
         val pool = jackpotService.getPool(guildId)
-        event.hook.sendMessage("Current jackpot pool: **$pool** credits.")
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete("Current jackpot pool: **$pool** credits.", deleteDelay)
     }
 
     private fun handleLotteryOpen(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
@@ -140,11 +137,12 @@ class JackpotAdminCommand @Autowired constructor(
         when (val result = jackpotLotteryService.openLottery(
             guildId, ticketPrice, duration, winners, drainPct
         )) {
-            is JackpotLotteryService.OpenOutcome.Ok -> event.hook.sendMessage(
+            is JackpotLotteryService.OpenOutcome.Ok -> event.hook.replyEphemeralAndDelete(
                 "Opened lottery. Seeded with **${result.seeded}** credits from the jackpot pool. " +
                     "Tickets: **$ticketPrice** credits each. Winners: **$winners**. " +
-                    "Closes after **$duration** hours (admin must run `/jackpotadmin lottery_draw`)."
-            ).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    "Closes after **$duration** hours (admin must run `/jackpotadmin lottery_draw`).",
+                deleteDelay,
+            )
             JackpotLotteryService.OpenOutcome.AlreadyOpen ->
                 replyError(event, "A lottery is already open for this guild. Draw or cancel it first.", deleteDelay)
             JackpotLotteryService.OpenOutcome.EmptyPool ->
@@ -161,9 +159,10 @@ class JackpotAdminCommand @Autowired constructor(
                     "${idx + 1}. <@${p.discordId}> — **${p.amount}** credits (${p.ticketCount} tickets)"
                 }
                 val body = if (lines.isEmpty()) "_No winners drawn._" else lines.joinToString("\n")
-                event.hook.sendMessage(
-                    "Lottery drawn. Total paid: **${result.totalPaid}** of **${result.drained}** credits.\n$body"
-                ).setEphemeral(false).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyAndDelete(
+                    "Lottery drawn. Total paid: **${result.totalPaid}** of **${result.drained}** credits.\n$body",
+                    deleteDelay,
+                )
             }
             JackpotLotteryService.DrawOutcome.NoOpenLottery ->
                 replyError(event, "No open lottery to draw.", deleteDelay)
@@ -182,18 +181,18 @@ class JackpotAdminCommand @Autowired constructor(
 
     private fun handleLotteryCancel(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
         when (val result = jackpotLotteryService.cancelLottery(guildId)) {
-            is JackpotLotteryService.CancelOutcome.Ok -> event.hook.sendMessage(
+            is JackpotLotteryService.CancelOutcome.Ok -> event.hook.replyEphemeralAndDelete(
                 "Cancelled lottery. Refunded **${result.refundedTotal}** credits to **${result.refundedUsers}** users. " +
-                    "Returned **${result.returnedToPool}** credits to the jackpot pool."
-            ).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    "Returned **${result.returnedToPool}** credits to the jackpot pool.",
+                deleteDelay,
+            )
             JackpotLotteryService.CancelOutcome.NoOpenLottery ->
                 replyError(event, "No open lottery to cancel.", deleteDelay)
         }
     }
 
     private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.sendMessage(message).setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 
     companion object {

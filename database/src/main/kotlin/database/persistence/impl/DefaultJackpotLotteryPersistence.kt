@@ -58,6 +58,9 @@ class DefaultJackpotLotteryPersistence : JackpotLotteryPersistence {
         return saved
     }
 
+    override fun findById(lotteryId: Long): JackpotLotteryDto? =
+        entityManager.find(JackpotLotteryDto::class.java, lotteryId)
+
     override fun getTicketForUpdate(lotteryId: Long, discordId: Long): JackpotLotteryTicketDto? {
         return entityManager.find(
             JackpotLotteryTicketDto::class.java,

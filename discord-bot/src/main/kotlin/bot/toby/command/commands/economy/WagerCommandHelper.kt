@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEmbedAndDelete
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -15,7 +15,7 @@ import java.awt.Color
  *   - a private `errorEmbed(message)` that built an EmbedBuilder with
  *     the game's title prefix and the shared error red color
  *   - a private `replyError()` that wrapped `errorEmbed` in
- *     `event.hook.sendMessageEmbeds(...).queue(invokeDeleteOnMessageResponse(...))`
+ *     `event.hook.replyEmbedAndDelete(errorEmbed(...), ...)`
  *   - the same four error-case strings ("Not enough credits…",
  *     "Stake must be between…", etc.) repeated verbatim per game
  *
@@ -122,7 +122,7 @@ internal object WagerCommandEmbeds {
 
     /** Send [embed] as the reply to [event] and schedule the delete-after. */
     fun reply(event: SlashCommandInteractionEvent, embed: MessageEmbed, deleteDelay: Int) {
-        event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEmbedAndDelete(embed, deleteDelay)
     }
 
     /**

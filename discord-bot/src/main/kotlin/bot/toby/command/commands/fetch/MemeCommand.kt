@@ -4,7 +4,7 @@ import bot.toby.dto.web.RedditAPIDto
 import bot.toby.dto.web.RedditAPIDto.TimePeriod
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -60,11 +60,7 @@ class MemeCommand : FetchCommand {
 
         if (subredditArg == "sneakybackgroundfeet") {
             logger.info("Requested subreddit 'sneakybackgroundfeet'")
-            event.hook.sendMessageFormat("Don't talk to me.").queue(
-                invokeDeleteOnMessageResponse(
-                    deleteDelay
-                )
-            )
+            event.hook.replyAndDelete("Don't talk to me.", deleteDelay)
         } else {
             val embed = fetchRedditPost(result, event, deleteDelay, httpClient)
             if (embed != null) {
@@ -72,8 +68,7 @@ class MemeCommand : FetchCommand {
                 event.hook.sendMessageEmbeds(embed).queue()
             } else {
                 logger.warn("Failed to fetch meme from subreddit: $subredditArg")
-                event.hook.sendMessage("Failed to fetch meme. Please try again later.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyAndDelete("Failed to fetch meme. Please try again later.", deleteDelay)
             }
         }
     }
@@ -108,8 +103,7 @@ class MemeCommand : FetchCommand {
 
                 if (children.size() == 0) {
                     logger.info("No memes found in subreddit: ${result.subredditArg}")
-                    event.hook.sendMessageFormat("No memes found in the subreddit.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    event.hook.replyAndDelete("No memes found in the subreddit.", deleteDelay)
                     return null
                 }
 
@@ -118,15 +112,17 @@ class MemeCommand : FetchCommand {
 
                 if (redditAPIDto.isNsfw == true) {
                     logger.warn("NSFW meme detected from subreddit: ${result.subredditArg}")
-                    event.hook.sendMessageFormat(
-                        "I received a NSFW subreddit from %s, or reddit gave me a NSFW meme, either way somebody shoot that guy",
-                        event.member
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    event.hook.replyAndDelete(
+                        "I received a NSFW subreddit from ${event.member}, or reddit gave me a NSFW meme, either way somebody shoot that guy",
+                        deleteDelay,
+                    )
                     return null
                 } else if (redditAPIDto.video == true) {
                     logger.warn("Video meme detected from subreddit: ${result.subredditArg}")
-                    event.hook.sendMessageFormat("I pulled back a video, whoops. Try again maybe? Or not, up to you.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    event.hook.replyAndDelete(
+                        "I pulled back a video, whoops. Try again maybe? Or not, up to you.",
+                        deleteDelay,
+                    )
                     return null
                 }
 

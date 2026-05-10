@@ -2,7 +2,7 @@ package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.charactersheet.CharacterSheetProvider
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import kotlinx.coroutines.CoroutineDispatcher
@@ -51,7 +51,7 @@ class CharacterCommand @Autowired constructor(
             } else {
                 "${targetMember.effectiveName} doesn't have a character linked."
             }
-            hook.sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyAndDelete(message, deleteDelay)
             return
         }
 
@@ -61,15 +61,18 @@ class CharacterCommand @Autowired constructor(
                 if (character != null) {
                     hook.sendMessageEmbeds(character.toEmbed()).queue()
                 } else {
-                    hook.sendMessage(
+                    hook.replyAndDelete(
                         "No cached sheet for character `$characterId`. " +
-                        "Run `/linkcharacter` again while D&D Beyond is reachable to populate the cache. " +
-                        "View on D&D Beyond: https://www.dndbeyond.com/characters/$characterId"
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                            "Run `/linkcharacter` again while D&D Beyond is reachable to populate the cache. " +
+                            "View on D&D Beyond: https://www.dndbeyond.com/characters/$characterId",
+                        deleteDelay,
+                    )
                 }
             }.onFailure {
-                hook.sendMessage("An error occurred while loading the cached character sheet. Please try again later.")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                hook.replyAndDelete(
+                    "An error occurred while loading the cached character sheet. Please try again later.",
+                    deleteDelay,
+                )
             }
         }
     }

@@ -2,7 +2,7 @@ package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.charactersheet.CharacterSheetProvider
 import bot.toby.helpers.charactersheet.CharacterSheetProvider.FetchResult
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import kotlinx.coroutines.CoroutineDispatcher
@@ -28,8 +28,7 @@ class RefreshCharacterCommand @Autowired constructor(
 
         val characterId = requestingUserDto.dndBeyondCharacterId
         if (characterId == null) {
-            hook.sendMessage("You don't have a character linked. Use `/linkcharacter` first.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyAndDelete("You don't have a character linked. Use `/linkcharacter` first.", deleteDelay)
             return
         }
 
@@ -40,19 +39,23 @@ class RefreshCharacterCommand @Autowired constructor(
                     hook.sendMessageEmbeds(result.sheet.toEmbed()).queue()
                 }
                 FetchResult.Forbidden -> {
-                    hook.sendMessage(
+                    hook.replyAndDelete(
                         "❌ Character `$characterId` is private on D&D Beyond. " +
-                        "Set it to **Public** (or **Campaign Only**) in the character's Privacy settings, then try again."
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                            "Set it to **Public** (or **Campaign Only**) in the character's Privacy settings, then try again.",
+                        deleteDelay,
+                    )
                 }
                 FetchResult.NotFound -> {
-                    hook.sendMessage(
-                        "❌ D&D Beyond could not find character `$characterId`. Re-link with `/linkcharacter`."
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    hook.replyAndDelete(
+                        "❌ D&D Beyond could not find character `$characterId`. Re-link with `/linkcharacter`.",
+                        deleteDelay,
+                    )
                 }
                 is FetchResult.Unavailable -> {
-                    hook.sendMessage("⚠️ D&D Beyond is unreachable right now — please try again shortly.")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    hook.replyAndDelete(
+                        "⚠️ D&D Beyond is unreachable right now — please try again shortly.",
+                        deleteDelay,
+                    )
                 }
             }
         }

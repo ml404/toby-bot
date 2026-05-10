@@ -109,7 +109,7 @@ internal class PollCommandTest : CommandTest {
             CommandTest.messageChannelUnion.sendMessageEmbeds(any<MessageEmbed>())
         }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat("Please keep the poll size under 10 items, or else %s.", tobyEmote)
+            event.hook.sendMessage("Please keep the poll size under 10 items, or else $tobyEmote.")
         }
     }
 }

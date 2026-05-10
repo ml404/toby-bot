@@ -4,7 +4,7 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.voice.LastConnectedChannelTracker
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
 import database.dto.UserDto
@@ -74,9 +74,10 @@ class LeaveCommand(
         audioManager.closeAudioConnection()
         lastConnectedChannelTracker.clear(event.guild!!.idLong)
 
-        event.hook
-            .sendMessage("Disconnecting from `\uD83D\uDD0A ${selfVoiceState?.channel?.name}`")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "Disconnecting from `\uD83D\uDD0A ${selfVoiceState?.channel?.name}`",
+            deleteDelay,
+        )
     }
 
     override val name: String
@@ -92,8 +93,7 @@ class LeaveCommand(
             selfVoiceState: GuildVoiceState?
         ): Boolean {
             return if (!selfVoiceState?.inAudioChannel()!!) {
-                event.hook.sendMessage("I'm not in a voice channel, somebody shoot this guy")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyAndDelete("I'm not in a voice channel, somebody shoot this guy", deleteDelay)
                 true
             } else {
                 false

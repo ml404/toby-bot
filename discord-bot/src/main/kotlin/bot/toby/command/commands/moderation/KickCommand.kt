@@ -1,6 +1,6 @@
 package bot.toby.command.commands.moderation
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.Permission
@@ -27,35 +27,28 @@ class KickCommand : ModerationCommand {
             ?.members
 
         if (mentionedMembers.isNullOrEmpty()) {
-            event.hook.sendMessage("You must mention 1 or more Users to kick.").queue(invokeDeleteOnMessageResponse(
-                deleteDelay
-            ))
+            event.hook.replyAndDelete("You must mention 1 or more Users to kick.", deleteDelay)
             return
         }
 
         mentionedMembers.forEach { target ->
             when {
                 !member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS) -> {
-                    event.hook
-                        .sendMessage("You can't kick ${target.effectiveName}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    event.hook.replyAndDelete("You can't kick ${target.effectiveName}", deleteDelay)
                 }
                 !botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS) -> {
-                    event.hook
-                        .sendMessage("I'm not allowed to kick ${target.effectiveName}")
-                        .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    event.hook.replyAndDelete("I'm not allowed to kick ${target.effectiveName}", deleteDelay)
                 }
                 else -> {
                     guild.kick(target).reason("because you told me to.").queue(
                         {
-                            event.hook.sendMessage("Shot hit the mark... something about fortnite?").queue(
-                                invokeDeleteOnMessageResponse(deleteDelay)
+                            event.hook.replyAndDelete(
+                                "Shot hit the mark... something about fortnite?",
+                                deleteDelay,
                             )
                         },
                         { error ->
-                            event.hook.sendMessage("Could not kick: ${error.message}").queue(
-                                invokeDeleteOnMessageResponse(deleteDelay)
-                            )
+                            event.hook.replyAndDelete("Could not kick: ${error.message}", deleteDelay)
                         }
                     )
                 }

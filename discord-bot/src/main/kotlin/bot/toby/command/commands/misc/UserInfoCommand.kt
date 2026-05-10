@@ -2,7 +2,7 @@ package bot.toby.command.commands.misc
 
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
@@ -35,8 +35,10 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
                 val memberList = event.getOption(USERS)?.mentions?.members ?: emptyList()
                 memberList.forEach { member -> member.listUserInfoForMember(event, deleteDelay) }
             } else {
-                event.hook.sendMessage("You do not have permission to view user permissions, if this is a mistake talk to the server owner")
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "You do not have permission to view user permissions, if this is a mistake talk to the server owner",
+                    deleteDelay,
+                )
             }
         }
     }
@@ -52,10 +54,7 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
             val introMessage = produceMusicFileDataStringForPrinting(event.member!!, userSearched)
             "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $introMessage"
         }
-        event.hook
-            .sendMessage(userInfoMessage)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(userInfoMessage, deleteDelay)
     }
 
     override val name: String = "userinfo"

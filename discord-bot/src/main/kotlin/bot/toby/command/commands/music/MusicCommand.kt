@@ -4,7 +4,8 @@ import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.util.formatTime
 import core.command.Command
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -47,15 +48,17 @@ interface MusicCommand : Command {
         ) {
             val queueSize = musicManager.scheduler.queue.size
             if (queueSize > 0) {
-                interactionHook
-                    .sendMessage("Our daddy taught us not to be ashamed of our playlists")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                interactionHook.replyAndDelete(
+                    "Our daddy taught us not to be ashamed of our playlists",
+                    deleteDelay,
+                )
             } else {
                 val duration = musicManager.audioPlayer.playingTrack.duration
                 val songDuration = formatTime(duration)
-                interactionHook
-                    .sendMessage("HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR $songDuration, $songDuration OF PLAYTIME!")
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                interactionHook.replyAndDelete(
+                    "HEY FREAK-SHOW! YOU AIN’T GOIN’ NOWHERE. I GOTCHA’ FOR $songDuration, $songDuration OF PLAYTIME!",
+                    deleteDelay,
+                )
             }
         }
 
@@ -68,10 +71,10 @@ interface MusicCommand : Command {
             val event = ctx.event
 
             if (!selfVoiceState.inAudioChannel()) {
-                event.hook
-                    .sendMessage("I need to be in a voice channel for this to work")
-                    .setEphemeral(true)
-                    .queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "I need to be in a voice channel for this to work",
+                    deleteDelay,
+                )
                 return true
             }
 
@@ -81,9 +84,7 @@ interface MusicCommand : Command {
                 } else {
                     "You need to be in the same voice channel as me for this to work"
                 }
-                event.hook
-                    .sendMessage(errorMessage)
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(errorMessage, deleteDelay)
                 return true
             }
             return false

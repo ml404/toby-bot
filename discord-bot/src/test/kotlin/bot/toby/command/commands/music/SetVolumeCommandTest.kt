@@ -54,11 +54,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         // Assert
         verify(exactly = 1) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                "Changing volume from '%s' to '%s' \uD83D\uDD0A",
-                oldVolume,
-                volumeArg
-            )
+            event.hook.sendMessage("Changing volume from '$oldVolume' to '$volumeArg' \uD83D\uDD0A")
         }
     }
 
@@ -86,9 +82,8 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         // Assert
         verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                "New volume and old volume are the same value, somebody shoot %s",
-                "Effective Name"
+            event.hook.sendMessage(
+                "New volume and old volume are the same value, somebody shoot Effective Name"
             )
         }
     }
@@ -180,10 +175,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         // Assert
         verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                "You aren't allowed to change the volume kid %s",
-                tobyEmote
-            )
+            event.hook.sendMessage("You aren't allowed to change the volume kid $tobyEmote")
         }
     }
 
@@ -215,10 +207,7 @@ internal class SetVolumeCommandTest : MusicCommandTest {
         // Assert
         verify(exactly = 0) { MusicCommandTest.mockAudioPlayer.volume = volumeArg }
         verify(exactly = 1) {
-            hook.sendMessageFormat(
-                "You aren't allowed to change the volume kid %s",
-                tobyEmote
-            )
+            hook.sendMessage("You aren't allowed to change the volume kid $tobyEmote")
         }
     }
 }

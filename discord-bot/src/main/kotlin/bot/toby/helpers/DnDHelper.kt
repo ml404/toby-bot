@@ -7,6 +7,7 @@ import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SPELL_NAME
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
 import common.logging.DiscordLogger
+import core.command.Command.Companion.replyEphemeralAndDelete
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -120,9 +121,10 @@ class DnDHelper(
                 .editMessageEmbeds(messageEmbed)
                 .setComponents(ActionRow.of(initButtons.prev, initButtons.clear, initButtons.next))
                 .queue()
-            hook.setEphemeral(true)
-                .sendMessage("Next turn: ${state.sortedEntries[state.initiativeIndex.get()].name}")
-                .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
+            hook.replyEphemeralAndDelete(
+                "Next turn: ${state.sortedEntries[state.initiativeIndex.get()].name}",
+                deleteDelay,
+            )
         }
     }
 

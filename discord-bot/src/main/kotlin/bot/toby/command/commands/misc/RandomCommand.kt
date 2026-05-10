@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -16,11 +16,11 @@ class RandomCommand : MiscCommand {
         val event = ctx.event
         event.deferReply().queue()
         if (event.options.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(description, deleteDelay)
             return
         }
         val stringList = event.getOption(LIST)?.asString?.split(",")?.dropLastWhile { it.isEmpty() }?.toList()
-        event.hook.sendMessage(stringList?.random() ?: "").queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(stringList?.random() ?: "", deleteDelay)
     }
 
     override val name: String

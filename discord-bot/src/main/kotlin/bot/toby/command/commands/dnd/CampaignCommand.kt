@@ -3,7 +3,7 @@ package bot.toby.command.commands.dnd
 import bot.toby.BOT_WEB_URL
 import bot.toby.helpers.UserDtoHelper
 import common.events.CampaignEventType
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.CampaignDto
 import database.dto.CampaignPlayerDto
@@ -48,14 +48,12 @@ class CampaignCommand(
         event.deferReply().queue()
 
         val guild = event.guild ?: run {
-            event.hook.sendMessage("This command can only be used in a server.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("This command can only be used in a server.", deleteDelay)
             return
         }
 
         val member = ctx.member ?: run {
-            event.hook.sendMessage("Could not resolve your member info.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Could not resolve your member info.", deleteDelay)
             return
         }
 
@@ -67,8 +65,7 @@ class CampaignCommand(
             "leave"  -> handleLeave(ctx, guild, callerDto, deleteDelay)
             "status" -> handleStatus(ctx, guild, deleteDelay)
             "end"    -> handleEnd(ctx, guild, callerDto, deleteDelay)
-            else -> event.hook.sendMessage("Unknown subcommand.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            else -> event.hook.replyAndDelete("Unknown subcommand.", deleteDelay)
         }
     }
 
@@ -76,10 +73,11 @@ class CampaignCommand(
         val event = ctx.event
         val existingCampaign = campaignService.getActiveCampaignForGuild(guild.idLong)
         if (existingCampaign != null) {
-            event.hook.sendMessage(
+            event.hook.replyAndDelete(
                 "There is already an active campaign: **${existingCampaign.name}**. " +
-                "Use `/campaign end` to close it first."
-            ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    "Use `/campaign end` to close it first.",
+                deleteDelay,
+            )
             return
         }
 
@@ -110,21 +108,24 @@ class CampaignCommand(
     private fun handleJoin(ctx: CommandContext, guild: Guild, callerDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val campaign = campaignService.getActiveCampaignForGuild(guild.idLong) ?: run {
-            event.hook.sendMessage("There is no active campaign in this server. Use `/campaign create` to start one.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(
+                "There is no active campaign in this server. Use `/campaign create` to start one.",
+                deleteDelay,
+            )
             return
         }
 
         if (callerDto.discordId == campaign.dmDiscordId) {
-            event.hook.sendMessage("You are the DM of this campaign and cannot join as a player.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(
+                "You are the DM of this campaign and cannot join as a player.",
+                deleteDelay,
+            )
             return
         }
 
         val playerId = CampaignPlayerId(campaign.id, callerDto.discordId)
         if (campaignPlayerService.getPlayer(playerId) != null) {
-            event.hook.sendMessage("You are already in this campaign.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("You are already in this campaign.", deleteDelay)
             return
         }
 
@@ -162,15 +163,13 @@ class CampaignCommand(
     private fun handleLeave(ctx: CommandContext, guild: Guild, callerDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val campaign = campaignService.getActiveCampaignForGuild(guild.idLong) ?: run {
-            event.hook.sendMessage("There is no active campaign in this server.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("There is no active campaign in this server.", deleteDelay)
             return
         }
 
         val playerId = CampaignPlayerId(campaign.id, callerDto.discordId)
         if (campaignPlayerService.getPlayer(playerId) == null) {
-            event.hook.sendMessage("You are not in this campaign.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("You are not in this campaign.", deleteDelay)
             return
         }
 
@@ -183,15 +182,16 @@ class CampaignCommand(
             actorName = ctx.member?.effectiveName
         )
 
-        event.hook.sendMessage("You have left the campaign **${campaign.name}**.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("You have left the campaign **${campaign.name}**.", deleteDelay)
     }
 
     private fun handleStatus(ctx: CommandContext, guild: Guild, deleteDelay: Int) {
         val event = ctx.event
         val campaign = campaignService.getActiveCampaignForGuild(guild.idLong) ?: run {
-            event.hook.sendMessage("There is no active campaign in this server. Use `/campaign create` to start one.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(
+                "There is no active campaign in this server. Use `/campaign create` to start one.",
+                deleteDelay,
+            )
             return
         }
 
@@ -226,14 +226,12 @@ class CampaignCommand(
     private fun handleEnd(ctx: CommandContext, guild: Guild, callerDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val campaign = campaignService.getActiveCampaignForGuild(guild.idLong) ?: run {
-            event.hook.sendMessage("There is no active campaign in this server.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("There is no active campaign in this server.", deleteDelay)
             return
         }
 
         if (callerDto.discordId != campaign.dmDiscordId && !callerDto.superUser) {
-            event.hook.sendMessage("Only the Dungeon Master can end the campaign.")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete("Only the Dungeon Master can end the campaign.", deleteDelay)
             return
         }
 

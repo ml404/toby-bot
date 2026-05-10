@@ -1,7 +1,8 @@
 package bot.toby.command.commands.moderation
 
 import bot.toby.activity.ActivityTrackingNotifier
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
 import database.dto.UserDto
@@ -26,8 +27,10 @@ class SetConfigCommand @Autowired constructor(
         event.deferReply(true).queue()
         val member = ctx.member
         if (member?.isOwner != true) {
-            event.hook.sendMessage("This is currently reserved for the owner of the server only, this may change in future")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "This is currently reserved for the owner of the server only, this may change in future",
+                deleteDelay
+            )
             return
         }
         validateArgumentsAndUpdateConfigs(event, deleteDelay)
@@ -36,7 +39,7 @@ class SetConfigCommand @Autowired constructor(
     private fun validateArgumentsAndUpdateConfigs(event: SlashCommandInteractionEvent, deleteDelay: Int) {
         val options = event.options
         if (options.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(description, deleteDelay)
             return
         }
         options.forEach { optionMapping ->
@@ -243,13 +246,17 @@ class SetConfigCommand @Autowired constructor(
             ""
         } else {
             val id = raw.toLongOrNull() ?: run {
-                event.hook.sendMessage("Channel id must be numeric (or empty / 0 to clear).")
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "Channel id must be numeric (or empty / 0 to clear).",
+                    deleteDelay,
+                )
                 return
             }
             guild.getTextChannelById(id) ?: run {
-                event.hook.sendMessage("No text channel with id $id exists in this server.")
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "No text channel with id $id exists in this server.",
+                    deleteDelay,
+                )
                 return
             }
             id.toString()
@@ -262,7 +269,7 @@ class SetConfigCommand @Autowired constructor(
         } else {
             "Anti-autoclick session events will post to <#$resolved>."
         }
-        event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(msg, deleteDelay)
     }
 
     /**
@@ -283,13 +290,17 @@ class SetConfigCommand @Autowired constructor(
             ""
         } else {
             val id = raw.toLongOrNull() ?: run {
-                event.hook.sendMessage("Channel id must be numeric (or empty / 0 to clear).")
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "Channel id must be numeric (or empty / 0 to clear).",
+                    deleteDelay,
+                )
                 return
             }
             guild.getTextChannelById(id) ?: run {
-                event.hook.sendMessage("No text channel with id $id exists in this server.")
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                event.hook.replyEphemeralAndDelete(
+                    "No text channel with id $id exists in this server.",
+                    deleteDelay,
+                )
                 return
             }
             id.toString()
@@ -302,7 +313,7 @@ class SetConfigCommand @Autowired constructor(
         } else {
             "Daily lottery announcements will post to <#$resolved>."
         }
-        event.hook.sendMessage(msg).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(msg, deleteDelay)
     }
 
     /**
@@ -316,16 +327,17 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val raw = optionMapping.asString.trim().uppercase()
         if (raw !in setOf("NUMBER_MATCH", "WEIGHTED")) {
-            event.hook.sendMessage("Daily lottery mode must be NUMBER_MATCH or WEIGHTED.")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Daily lottery mode must be NUMBER_MATCH or WEIGHTED.",
+                deleteDelay,
+            )
             return
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(
             ConfigDto.Configurations.LOTTERY_DAILY_MODE.configValue, raw, guildId
         )
-        event.hook.sendMessage("Daily lottery mode set to $raw.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Daily lottery mode set to $raw.", deleteDelay)
     }
 
     private fun setLotteryPingMode(
@@ -335,16 +347,17 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val raw = optionMapping.asString.trim().uppercase()
         if (raw !in setOf("OFF", "HERE", "EVERYONE")) {
-            event.hook.sendMessage("Lottery ping mode must be OFF, HERE, or EVERYONE.")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Lottery ping mode must be OFF, HERE, or EVERYONE.",
+                deleteDelay,
+            )
             return
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(
             ConfigDto.Configurations.LOTTERY_PING_MODE.configValue, raw, guildId
         )
-        event.hook.sendMessage("Lottery announcement ping set to $raw.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Lottery announcement ping set to $raw.", deleteDelay)
     }
 
     /**
@@ -365,14 +378,15 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val value = optionMapping.asInt
         if (value !in range) {
-            event.hook.sendMessage("$gameLabel $label must be between ${range.first} and ${range.last}.")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "$gameLabel $label must be between ${range.first} and ${range.last}.",
+                deleteDelay,
+            )
             return
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, value.toString(), guildId)
-        event.hook.sendMessage("$gameLabel $label set to $value for new tables.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("$gameLabel $label set to $value for new tables.", deleteDelay)
     }
 
     /**
@@ -393,14 +407,15 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val value = optionMapping.asLong
         if (value < min) {
-            event.hook.sendMessage("$gameLabel $label must be at least $min.")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "$gameLabel $label must be at least $min.",
+                deleteDelay,
+            )
             return
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, value.toString(), guildId)
-        event.hook.sendMessage("$gameLabel $label set to $value $unit for new tables.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("$gameLabel $label set to $value $unit for new tables.", deleteDelay)
     }
 
     private fun setBlackjackBool(
@@ -413,8 +428,7 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, value.toString(), guildId)
         val rule = if (value) "hit on soft 17 (H17)" else "stand on all 17 (S17)"
-        event.hook.sendMessage("Blackjack dealer will now $rule.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Blackjack dealer will now $rule.", deleteDelay)
     }
 
     /**
@@ -433,8 +447,7 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, value.toString(), guildId)
         val state = if (value) "enabled" else "disabled"
-        event.hook.sendMessage("$label is now $state.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("$label is now $state.", deleteDelay)
     }
 
     private fun setLeaderboardChannel(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -444,13 +457,17 @@ class SetConfigCommand @Autowired constructor(
             ConfigDto.Configurations.LEADERBOARD_CHANNEL.name.lowercase(Locale.getDefault())
         )?.asChannel
         if (channel == null) {
-            event.hook.sendMessage("No valid text channel was mentioned, so config was not updated")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "No valid text channel was mentioned, so config was not updated",
+                deleteDelay,
+            )
             return
         }
         configService.upsertConfig(configValue, channel.id, guildId)
-        event.hook.sendMessage("Monthly leaderboards will now post in <#${channel.id}> on the 1st of each month.")
-            .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(
+            "Monthly leaderboards will now post in <#${channel.id}> on the 1st of each month.",
+            deleteDelay,
+        )
     }
 
     private fun setActivityTracking(
@@ -479,9 +496,7 @@ class SetConfigCommand @Autowired constructor(
             "Disabled game-activity tracking for this server. Existing rollups are retained but no new activity " +
                     "will be recorded."
         }
-        event.hook.sendMessage(message)
-            .setEphemeral(true)
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
 
         if (enabled && !previouslyEnabled) {
             event.guild?.let { activityTrackingNotifier.notifyMembersOnFirstEnable(it) }
@@ -496,8 +511,10 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val newValue = optionMapping.asInt.takeIf { it >= 0 }
         if (newValue == null) {
-            event.hook.sendMessage("Value given invalid (a whole number representing percent)")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Value given invalid (a whole number representing percent)",
+                deleteDelay,
+            )
             return
         }
 
@@ -506,7 +523,7 @@ class SetConfigCommand @Autowired constructor(
         val guildId = event.guild?.id ?: return
 
         configService.upsertConfig(configValue, newValue.toString(), guildId)
-        event.hook.sendMessage(messageToSend).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(messageToSend, deleteDelay)
     }
 
     private fun setJackpotLossTribute(
@@ -516,15 +533,16 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val pct = optionMapping.asInt
         if (pct !in 0..50) {
-            event.hook.sendMessage("Tribute percent must be between 0 and 50 (default 10).")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Tribute percent must be between 0 and 50 (default 10).",
+                deleteDelay,
+            )
             return
         }
         val configValue = ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Jackpot loss-tribute set to $pct % of every lost casino stake.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Jackpot loss-tribute set to $pct % of every lost casino stake.", deleteDelay)
     }
 
     private fun setTradeFeePct(
@@ -536,14 +554,18 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val pct = optionMapping.asDouble
         if (pct.isNaN() || pct.isInfinite() || pct < 0.0 || pct > 25.0) {
-            event.hook.sendMessage("Trade $label fee percent must be between 0 and 25 (default 1).")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Trade $label fee percent must be between 0 and 25 (default 1).",
+                deleteDelay,
+            )
             return
         }
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(config.configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Toby Coin $label fee set to $pct % per leg (routed into the jackpot pool).")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "Toby Coin $label fee set to $pct % per leg (routed into the jackpot pool).",
+            deleteDelay,
+        )
     }
 
     private fun setJackpotWinPct(
@@ -553,15 +575,16 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val pct = optionMapping.asDouble
         if (pct.isNaN() || pct.isInfinite() || pct < 0.0 || pct > 50.0) {
-            event.hook.sendMessage("Jackpot win percent must be between 0 and 50 (default 1).")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Jackpot win percent must be between 0 and 50 (default 1).",
+                deleteDelay,
+            )
             return
         }
         val configValue = ConfigDto.Configurations.JACKPOT_WIN_PCT.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Jackpot win chance set to $pct % per casino-game win.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Jackpot win chance set to $pct % per casino-game win.", deleteDelay)
     }
 
     private fun setPokerRake(
@@ -571,15 +594,16 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val pct = optionMapping.asInt
         if (pct !in 0..20) {
-            event.hook.sendMessage("Poker rake must be between 0 and 20 (default 5).")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Poker rake must be between 0 and 20 (default 5).",
+                deleteDelay,
+            )
             return
         }
         val configValue = ConfigDto.Configurations.POKER_RAKE_PCT.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, pct.toString(), guildId)
-        event.hook.sendMessage("Poker rake set to $pct % of every settled pot.")
-            .queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete("Poker rake set to $pct % of every settled pot.", deleteDelay)
     }
 
     private fun setUbiDailyAmount(
@@ -589,8 +613,10 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val amount = optionMapping.asInt
         if (amount !in 0..1000) {
-            event.hook.sendMessage("UBI daily amount must be between 0 and 1000 (0 disables UBI).")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "UBI daily amount must be between 0 and 1000 (0 disables UBI).",
+                deleteDelay,
+            )
             return
         }
         val configValue = ConfigDto.Configurations.UBI_DAILY_AMOUNT.configValue
@@ -601,7 +627,7 @@ class SetConfigCommand @Autowired constructor(
         } else {
             "UBI set to $amount credits per user per day. The grant runs at 00:00 UTC and bypasses the daily cap."
         }
-        event.hook.sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(message, deleteDelay)
     }
 
     private fun setDailyCreditCap(
@@ -611,16 +637,19 @@ class SetConfigCommand @Autowired constructor(
     ) {
         val cap = optionMapping.asInt
         if (cap !in 0..10000) {
-            event.hook.sendMessage("Daily credit cap must be between 0 and 10000 (default 90).")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Daily credit cap must be between 0 and 10000 (default 90).",
+                deleteDelay,
+            )
             return
         }
         val configValue = ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue
         val guildId = event.guild?.id ?: return
         configService.upsertConfig(configValue, cap.toString(), guildId)
-        event.hook.sendMessage(
-            "Daily social-credit cap set to $cap credits (covers voice, command, intro, and UI-trade earnings)."
-        ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(
+            "Daily social-credit cap set to $cap credits (covers voice, command, intro, and UI-trade earnings).",
+            deleteDelay,
+        )
     }
 
     private fun setMove(event: SlashCommandInteractionEvent, deleteDelay: Int) {
@@ -631,11 +660,15 @@ class SetConfigCommand @Autowired constructor(
 
         if (newDefaultMoveChannel != null) {
             configService.upsertConfig(movePropertyName, newDefaultMoveChannel.name, guildId)
-            event.hook.sendMessage("Set default move channel to '${newDefaultMoveChannel.name}'")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "Set default move channel to '${newDefaultMoveChannel.name}'",
+                deleteDelay,
+            )
         } else {
-            event.hook.sendMessage("No valid channel was mentioned, so config was not updated")
-                .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyEphemeralAndDelete(
+                "No valid channel was mentioned, so config was not updated",
+                deleteDelay,
+            )
         }
     }
 

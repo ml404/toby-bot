@@ -578,6 +578,58 @@ class JackpotLotteryService(
     }
 
     // ===================================================================
+    // Announcement-message bookkeeping (used by LotteryAnnouncer +
+    // LotteryRefreshJob to track the Discord message we posted so we
+    // can edit it later when the pool grows).
+    // ===================================================================
+
+    /**
+     * Persist the channel + message ids of the announce embed and the
+     * pool value at announce time. Called once per cycle by
+     * [bot.toby.scheduling.LotteryAnnouncer.announceCycle] after the
+     * message ships. No-op when [lotteryId] no longer points at a row
+     * (the close-then-reopen tick already moved on).
+     */
+    fun recordAnnouncement(lotteryId: Long, channelId: Long, messageId: Long, pool: Long) {
+        val lottery = lotteryPersistence.findById(lotteryId) ?: return
+        lottery.announcementChannelId = channelId
+        lottery.announcementMessageId = messageId
+        lottery.announcedPoolAmount = pool
+        lotteryPersistence.upsert(lottery)
+    }
+
+    /**
+     * Clear the announcement reference. Called by the refresh job when
+     * an edit attempt returns UNKNOWN_MESSAGE — the moderator deleted
+     * the announce, so further refresh attempts would be wasted.
+     */
+    fun clearAnnouncement(lotteryId: Long) {
+        val lottery = lotteryPersistence.findById(lotteryId) ?: return
+        lottery.announcementChannelId = null
+        lottery.announcementMessageId = null
+        lottery.announcedPoolAmount = null
+        lotteryPersistence.upsert(lottery)
+    }
+
+    /**
+     * Bump the announced-pool watermark after a successful refresh edit
+     * so subsequent ticks short-circuit until the pool grows again.
+     */
+    fun updateAnnouncedPool(lotteryId: Long, pool: Long) {
+        val lottery = lotteryPersistence.findById(lotteryId) ?: return
+        lottery.announcedPoolAmount = pool
+        lotteryPersistence.upsert(lottery)
+    }
+
+    /**
+     * All open lotteries for [guildId] across both modes. Used by
+     * [bot.toby.scheduling.LotteryRefreshJob] to fan out the per-guild
+     * refresh tick.
+     */
+    fun getOpenLotteriesForRefresh(guildId: Long): List<JackpotLotteryDto> =
+        listOfNotNull(getOpenWeighted(guildId), getOpenMatch(guildId))
+
+    // ===================================================================
     // Internal helpers (testable)
     // ===================================================================
 

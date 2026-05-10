@@ -1,6 +1,6 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
@@ -19,7 +19,7 @@ class TeamCommand : MiscCommand {
 
         val args = event.options
         if (args.isEmpty()) {
-            event.hook.sendMessage(description).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.hook.replyAndDelete(description, deleteDelay)
             return
         }
         if (event.getOption(CLEANUP)?.asBoolean == true) {
@@ -40,7 +40,7 @@ class TeamCommand : MiscCommand {
             team.forEach { target -> guild.moveVoiceMember(target!!, createdVoiceChannel).queue() }
         }
 
-        event.hook.sendMessage(sb.toString()).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        event.hook.replyAndDelete(sb.toString(), deleteDelay)
     }
 
     private fun cleanupTemporaryChannels(channels: List<GuildChannel>) {

@@ -61,10 +61,7 @@ internal class AdjustUserCommandTest : CommandTest {
         verify(exactly = 1) { userService.getUserById(any(), any()) }
         verify(exactly = 1) { userService.updateUser(targetUserDto) }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                "Updated user %s's permissions",
-                "Target Effective Name"
-            )
+            event.hook.sendMessage("Updated user Target Effective Name's permissions")
         }
     }
 
@@ -93,9 +90,9 @@ internal class AdjustUserCommandTest : CommandTest {
         verify(exactly = 1) { userService.getUserById(any(), any()) }
         verify(exactly = 1) { userService.createNewUser(any()) }
         verify(exactly = 1) {
-            event.hook.sendMessageFormat(
-                "User %s's permissions did not exist in this server's database, they have now been created",
-                "Target Effective Name"
+            event.hook.sendMessage(
+                "User Target Effective Name's permissions did not exist in this server's database, " +
+                    "they have now been created"
             )
         }
     }

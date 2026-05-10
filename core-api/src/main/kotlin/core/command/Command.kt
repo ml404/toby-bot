@@ -57,19 +57,27 @@ interface Command {
         }
 
         /**
-         * Embed-and-ephemeral wrappers for the
+         * Reply-and-delete wrappers for the
          * `event.hook.sendMessage*(...).queue(invokeDeleteOnMessageResponse(d))`
-         * pattern. The non-ephemeral plain-text variant is intentionally
-         * not provided — most plain-text replies use `sendMessageFormat(...)`
-         * with positional arguments where a wrapper would force callers
-         * to pre-build the format string at the call site.
+         * pattern. Four shapes covered: plain text / ephemeral text /
+         * embed / ephemeral embed. Callers using `sendMessageFormat`
+         * pre-format with a Kotlin string template at the call site —
+         * the helpers take `String` only.
          */
-        fun InteractionHook.replyEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
-            sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        fun InteractionHook.replyAndDelete(message: String, deleteDelay: Int) {
+            sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
 
         fun InteractionHook.replyEphemeralAndDelete(message: String, deleteDelay: Int) {
             sendMessage(message).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        }
+
+        fun InteractionHook.replyEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
+            sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        }
+
+        fun InteractionHook.replyEphemeralEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
+            sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
     }
 }

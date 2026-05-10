@@ -3,7 +3,7 @@ package bot.toby.command.commands.music.player
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.emote.Emotes
 import bot.toby.lavaplayer.PlayerManager
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
+import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Member
@@ -47,38 +47,34 @@ class SetVolumeCommand : MusicCommand {
             if (instance.isCurrentlyStoppable || requestingUserDto!!.superUser) {
                 val audioPlayer = musicManager.audioPlayer
                 if (volumeArg > 100) {
-                    hook.sendMessage(description).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    hook.replyEphemeralAndDelete(description, deleteDelay)
                     return
                 }
                 val oldVolume = audioPlayer.volume
                 if (volumeArg == oldVolume) {
-                    hook.sendMessageFormat(
-                        "New volume and old volume are the same value, somebody shoot %s",
-                        member!!.effectiveName
-                    ).setEphemeral(true).queue(
-                        invokeDeleteOnMessageResponse(deleteDelay)
+                    hook.replyEphemeralAndDelete(
+                        "New volume and old volume are the same value, somebody shoot ${member!!.effectiveName}",
+                        deleteDelay,
                     )
                     return
                 }
                 instance.setPreviousVolume(oldVolume)
                 audioPlayer.volume = volumeArg
-                hook.sendMessageFormat("Changing volume from '%s' to '%s' \uD83D\uDD0A", oldVolume, volumeArg)
-                    .setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                hook.replyEphemeralAndDelete(
+                    "Changing volume from '$oldVolume' to '$volumeArg' \uD83D\uDD0A",
+                    deleteDelay,
+                )
             } else {
                 sendErrorMessage(event, deleteDelay)
             }
-        } else hook.sendMessage(description).setEphemeral(true).queue(
-            invokeDeleteOnMessageResponse(
-                deleteDelay
-            )
-        )
+        } else hook.replyEphemeralAndDelete(description, deleteDelay)
     }
 
     override fun sendErrorMessage(event: SlashCommandInteractionEvent, deleteDelay: Int) {
-        event.hook.sendMessageFormat("You aren't allowed to change the volume kid %s", event.guild!!.jda.getEmojiById(
-            Emotes.TOBY
+        event.hook.replyEphemeralAndDelete(
+            "You aren't allowed to change the volume kid ${event.guild!!.jda.getEmojiById(Emotes.TOBY)}",
+            deleteDelay,
         )
-        ).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
     override val name: String

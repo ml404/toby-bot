@@ -152,6 +152,7 @@ class LotteryDailyJob @Autowired constructor(
                         "seeded=${open.seeded} seedPct=$seedPct"
                 }
                 LotteryAnnouncer.OpenSummary.Ok(
+                    lotteryId = open.lottery.id,
                     seeded = open.seeded,
                     ticketPrice = ticketPrice,
                     poolAmount = open.lottery.poolAmount,
@@ -231,6 +232,7 @@ class LotteryDailyJob @Autowired constructor(
                         "seeded=${open.seeded} seedPct=$seedPct winners=${LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT}"
                 }
                 LotteryAnnouncer.OpenSummary.Ok(
+                    lotteryId = open.lottery.id,
                     seeded = open.seeded,
                     ticketPrice = ticketPrice,
                     poolAmount = open.lottery.poolAmount,
