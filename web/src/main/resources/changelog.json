@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Live-refresh announcement embed + thorough Command-helper rollout",
+    "summary": "Two independent changes, one per commit. ### 1. Lottery announcement embed periodically refreshes when the pool grows The daily-lottery announce embed posts a \"Today's draw — N credits in the pool\" line, but post-announce ticket sales silently grew the pool with no visible feedback. Players had to run `/lottery status` to see the live number. `V29__lottery_announcement_message.sql` adds three nullable columns to `toby_coin_jackpot_lottery` (`announcement_channel_id`, `anno…",
+    "emoji": "🎰",
+    "prNumber": 434
+  },
+  {
+    "date": "May 2026",
     "title": "Wide-ping + clickable buy CTA on daily announcement, rich top-holders on web",
     "summary": "Two improvements to the daily lottery so non-winners actually notice it and can act on it. ### Bot side — louder, clickable announcement The daily lottery embed used to post silently and only ping winners — anyone who hadn't bought a ticket had no signal that a new draw had opened. Now the announcement carries: **A configurable wide ping** — new `LOTTERY_PING_MODE` config (off / here / everyone, default everyone). Surfaced on `moderation/lottery.html` next to the announce-…",
     "emoji": "🎟️",
