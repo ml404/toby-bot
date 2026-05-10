@@ -16,6 +16,8 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.SelfMember
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.interactions.commands.Command
+import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -59,9 +61,15 @@ class LotteryAnnouncerTest {
         every { guild.name } returns "Test Guild"
         every { guild.selfMember } returns bot
         every { guild.jda } returns jda
-        // Slash-command id resolution falls back to plain `/lottery buy`
-        // text when retrieval fails — simplest stub for tests.
-        every { jda.retrieveCommands() } throws RuntimeException("test: skip slash mention resolution")
+        // Slash-command id resolution: stub the full chain to return an
+        // empty command list so `firstOrNull { name == "lottery" }` is
+        // null and the announcer falls back to plain `/lottery buy` text.
+        // Using an explicit stub rather than `throws` because mockk's
+        // handling of default interface methods (retrieveCommands has a
+        // default impl) can vary between versions.
+        val restAction: RestAction<List<Command>> = mockk(relaxed = true)
+        every { jda.retrieveCommands() } returns restAction
+        every { restAction.complete() } returns emptyList()
         every { bot.hasPermission(channel, *anyVararg<Permission>()) } returns true
         every { channel.id } returns "777"
         every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns sendAction
