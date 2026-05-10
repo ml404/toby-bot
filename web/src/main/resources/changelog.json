@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Wide-ping + clickable buy CTA on daily announcement, rich top-holders on web",
+    "summary": "Two improvements to the daily lottery so non-winners actually notice it and can act on it. ### Bot side — louder, clickable announcement The daily lottery embed used to post silently and only ping winners — anyone who hadn't bought a ticket had no signal that a new draw had opened. Now the announcement carries: **A configurable wide ping** — new `LOTTERY_PING_MODE` config (off / here / everyone, default everyone). Surfaced on `moderation/lottery.html` next to the announce-…",
+    "emoji": "🎟️",
+    "prNumber": 433
+  },
+  {
+    "date": "May 2026",
     "title": "Batch changelog entries into one PR (main is protected)",
     "summary": "The changelog automation added in #426 has been silently failing on every merged PR since it landed — #427, #428, #429 all triggered it, and every run failed in ~5 seconds at the final `git push origin main` step. No `chore(changelog)` commit has ever landed. **Root cause:** `main` is branch-protected, so the default `GITHUB_TOKEN` can never push there. The previous design's \"direct-push to main with `[skip ci]`\" was rejected by branch protection on every run. The prepend-…",
     "emoji": "🔨",
