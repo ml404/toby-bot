@@ -221,15 +221,17 @@ data class LotteryViewModel(
     )
 
     /** View projection of a weighted-lottery top holder — Discord
-     *  display name + avatar URL come from [LotteryWebService.TopHolder]
-     *  so the lottery page renders the same member cell as the
-     *  leaderboard. Falls back to a `Player <last-4>` placeholder when
-     *  the holder has left the guild. */
+     *  display name + avatar URL + purchased title come from
+     *  [LotteryWebService.TopHolder] so the lottery page renders the
+     *  same member cell + title pill as the leaderboard. Falls back
+     *  to a `Player <last-4>` placeholder when the holder has left
+     *  the guild; `title` is null when unset / unresolvable (no pill). */
     data class TopHolder(
         val discordId: Long,
         val ticketCount: Int,
         val name: String,
         val avatarUrl: String?,
+        val title: String?,
     )
 
     companion object {
@@ -262,7 +264,7 @@ data class LotteryViewModel(
                     myTickets = snap.weightedMyTicket?.ticketCount ?: 0,
                     mySpent = snap.weightedMyTicket?.spent ?: 0L,
                     topHolders = snap.weightedTopHolders.map {
-                        TopHolder(it.discordId, it.ticketCount, it.name, it.avatarUrl)
+                        TopHolder(it.discordId, it.ticketCount, it.name, it.avatarUrl, it.title)
                     },
                 )
             }

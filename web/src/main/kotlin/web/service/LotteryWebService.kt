@@ -5,6 +5,8 @@ import database.dto.JackpotLotteryTicketDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.LotteryHelper
+import database.service.TitleService
+import database.service.UserService
 import org.springframework.stereotype.Service
 
 /**
@@ -21,6 +23,8 @@ class LotteryWebService(
     private val jackpotLotteryService: JackpotLotteryService,
     private val configService: ConfigService,
     private val memberLookupHelper: MemberLookupHelper,
+    private val userService: UserService,
+    private val titleService: TitleService,
 ) {
 
     /**
@@ -54,13 +58,16 @@ class LotteryWebService(
      * Display projection for a single weighted-lottery top holder.
      * Carries the Discord display name + avatar URL alongside the
      * ticket count so the lottery page can render the same
-     * avatar-and-name member cell as the leaderboard.
+     * avatar-and-name + title-pill member cell as the leaderboard.
+     * `title` is the user's purchased active title (same source as the
+     * leaderboard's `lb-title-pill`); null when unset or unresolvable.
      */
     data class TopHolder(
         val discordId: Long,
         val ticketCount: Int,
         val name: String,
         val avatarUrl: String?,
+        val title: String?,
     )
 
     fun snapshot(guildId: Long, discordId: Long): LotteryPageSnapshot {
@@ -78,11 +85,21 @@ class LotteryWebService(
         val displays = memberLookupHelper.resolveAll(guildId, weightedTopRaw.map { it.discordId })
         val weightedTop = weightedTopRaw.map { ticket ->
             val display = displays[ticket.discordId]
+            // Mirrors LeaderboardWebService.buildTobyCoinLeaders: a missing /
+            // stale title id must not break the snapshot, so swallow with
+            // runCatching and fall back to null (no pill rendered).
+            val title = runCatching {
+                userService.getUserById(ticket.discordId, guildId)
+                    ?.activeTitleId
+                    ?.let { titleService.getById(it) }
+                    ?.label
+            }.getOrNull()
             TopHolder(
                 discordId = ticket.discordId,
                 ticketCount = ticket.ticketCount,
                 name = display?.name ?: memberLookupHelper.fallbackName(ticket.discordId),
                 avatarUrl = display?.avatarUrl,
+                title = title,
             )
         }
         val weightedTotal = weightedTickets.sumOf { it.ticketCount.toLong() }

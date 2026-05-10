@@ -133,6 +133,12 @@
                                th:disabled="${!isOwner}">
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Announcements</summary>
+                <div class="config-grid">
                     <div class="config-row" data-key="LOTTERY_PING_MODE">
                         <label>
                             Announcement ping

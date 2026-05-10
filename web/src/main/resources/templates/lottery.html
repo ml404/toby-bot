@@ -219,10 +219,16 @@
              th:if="${snapshot.weighted != null and !#lists.isEmpty(snapshot.weighted.topHolders)}">
             <h3>Top holders</h3>
             <ol class="lottery-top-holders">
-                <li th:each="h : ${snapshot.weighted.topHolders}">
+                <li th:each="h, iter : ${snapshot.weighted.topHolders}"
+                    th:classappend="${'lottery-rank-' + iter.count}">
+                    <span class="lottery-rank"
+                          th:classappend="${iter.count == 1 ? 'lottery-rank-1' : (iter.count == 2 ? 'lottery-rank-2' : (iter.count == 3 ? 'lottery-rank-3' : ''))}"
+                          th:text="${iter.count}">1</span>
                     <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
-                    <span class="lottery-top-holder-tickets">
-                        <strong th:text="${h.ticketCount}">0</strong> tickets
+                    <span th:if="${h.title != null}" class="lb-title-pill" th:text="${h.title}"></span>
+                    <span class="lottery-ticket-pill">
+                        <strong th:text="${h.ticketCount}">0</strong>
+                        <span class="muted">tickets</span>
                     </span>
                 </li>
             </ol>
@@ -276,10 +282,16 @@
         <div class="lottery-weighted-holders" th:if="${!#lists.isEmpty(snapshot.weighted.topHolders)}">
             <h3>Top holders</h3>
             <ol class="lottery-top-holders">
-                <li th:each="h : ${snapshot.weighted.topHolders}">
+                <li th:each="h, iter : ${snapshot.weighted.topHolders}"
+                    th:classappend="${'lottery-rank-' + iter.count}">
+                    <span class="lottery-rank"
+                          th:classappend="${iter.count == 1 ? 'lottery-rank-1' : (iter.count == 2 ? 'lottery-rank-2' : (iter.count == 3 ? 'lottery-rank-3' : ''))}"
+                          th:text="${iter.count}">1</span>
                     <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
-                    <span class="lottery-top-holder-tickets">
-                        <strong th:text="${h.ticketCount}">0</strong> tickets
+                    <span th:if="${h.title != null}" class="lb-title-pill" th:text="${h.title}"></span>
+                    <span class="lottery-ticket-pill">
+                        <strong th:text="${h.ticketCount}">0</strong>
+                        <span class="muted">tickets</span>
                     </span>
                 </li>
             </ol>
