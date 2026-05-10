@@ -9,12 +9,15 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.SelfMember
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.SelfMember
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,7 +28,10 @@ import org.junit.jupiter.api.Test
  * Tests focus on:
  *   - Resolution chain: LOTTERY_CHANNEL → LEADERBOARD_CHANNEL → system
  *   - Embed body: per-PriorOutcome variant produces distinct copy
- *   - Pings: addContent only fires when there's a winner to mention
+ *   - Content: wide ping prefix from LOTTERY_PING_MODE (off / here /
+ *     everyone), CTA with `/lottery buy` mention, winner pings
+ *   - AllowedMentions: USER always, EVERYONE only when content has the
+ *     wide ping (otherwise Discord silently strips it)
  *   - No-op when no writable channel resolves
  */
 class LotteryAnnouncerTest {
@@ -33,6 +39,7 @@ class LotteryAnnouncerTest {
     private val guildId = 100L
     private lateinit var configService: ConfigService
     private lateinit var guild: Guild
+    private lateinit var jda: JDA
     private lateinit var bot: SelfMember
     private lateinit var channel: TextChannel
     private lateinit var sendAction: MessageCreateAction
@@ -42,6 +49,7 @@ class LotteryAnnouncerTest {
     fun setup() {
         configService = mockk(relaxed = true)
         guild = mockk(relaxed = true)
+        jda = mockk(relaxed = true)
         bot = mockk(relaxed = true)
         channel = mockk(relaxed = true)
         sendAction = mockk(relaxed = true)
@@ -50,10 +58,15 @@ class LotteryAnnouncerTest {
         every { guild.id } returns guildId.toString()
         every { guild.name } returns "Test Guild"
         every { guild.selfMember } returns bot
+        every { guild.jda } returns jda
+        // Slash-command id resolution falls back to plain `/lottery buy`
+        // text when retrieval fails — simplest stub for tests.
+        every { jda.retrieveCommands() } throws RuntimeException("test: skip slash mention resolution")
         every { bot.hasPermission(channel, *anyVararg<Permission>()) } returns true
         every { channel.id } returns "777"
         every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns sendAction
         every { sendAction.addContent(any()) } returns sendAction
+        every { sendAction.setAllowedMentions(any<Collection<Message.MentionType>>()) } returns sendAction
         every { sendAction.queue() } just Runs
 
         announcer = LotteryAnnouncer(configService)
@@ -172,11 +185,13 @@ class LotteryAnnouncerTest {
     }
 
     @Test
-    fun `BelowMinBuyers shows have-need copy and skips the addContent ping`() {
+    fun `BelowMinBuyers shows have-need copy and still posts CTA + wide ping`() {
         stubChannelConfig(ConfigDto.Configurations.LOTTERY_CHANNEL, "777")
         every { guild.getTextChannelById(777L) } returns channel
         val embedSlot = slot<MessageEmbed>()
+        val contentSlot = slot<String>()
         every { channel.sendMessageEmbeds(capture(embedSlot)) } returns sendAction
+        every { sendAction.addContent(capture(contentSlot)) } returns sendAction
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
@@ -189,16 +204,22 @@ class LotteryAnnouncerTest {
         val embedDescription = embedSlot.captured.fields.joinToString(" ") { (it.value ?: "") }
         assertTrue(embedDescription.contains("1") && embedDescription.contains("2"))
         assertTrue(embedDescription.lowercase().contains("buyer"))
-        // No winners → no addContent ping at all.
-        verify(exactly = 0) { sendAction.addContent(any()) }
+        // Default ping mode = EVERYONE → wide ping + CTA still goes out
+        // (this is exactly the case where we want to nudge people to buy).
+        assertTrue(contentSlot.captured.contains("@everyone"))
+        assertTrue(contentSlot.captured.contains("/lottery buy"))
+        // No winners → no per-winner mention line.
+        assertFalse(contentSlot.captured.contains("Congrats:"))
     }
 
     @Test
-    fun `NoTickets renders a distinct copy and skips the ping`() {
+    fun `NoTickets renders a distinct copy and still posts CTA + wide ping`() {
         stubChannelConfig(ConfigDto.Configurations.LOTTERY_CHANNEL, "777")
         every { guild.getTextChannelById(777L) } returns channel
         val embedSlot = slot<MessageEmbed>()
+        val contentSlot = slot<String>()
         every { channel.sendMessageEmbeds(capture(embedSlot)) } returns sendAction
+        every { sendAction.addContent(capture(contentSlot)) } returns sendAction
 
         announcer.announceCycle(
             guild, mode = "NUMBER_MATCH",
@@ -210,7 +231,92 @@ class LotteryAnnouncerTest {
 
         val embedDescription = embedSlot.captured.fields.joinToString(" ") { (it.value ?: "") }
         assertTrue(embedDescription.lowercase().contains("no tickets"))
-        verify(exactly = 0) { sendAction.addContent(any()) }
+        assertTrue(contentSlot.captured.contains("@everyone"))
+        assertTrue(contentSlot.captured.contains("/lottery buy"))
+        assertFalse(contentSlot.captured.contains("Congrats:"))
+    }
+
+    // ---- ping-mode dispatch ----
+
+    @Test
+    fun `PING_MODE=HERE uses @here prefix instead of @everyone`() {
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_CHANNEL, "777")
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_PING_MODE, "HERE")
+        every { guild.getTextChannelById(777L) } returns channel
+        val contentSlot = slot<String>()
+        every { sendAction.addContent(capture(contentSlot)) } returns sendAction
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        assertTrue(contentSlot.captured.contains("@here"))
+        assertFalse(contentSlot.captured.contains("@everyone"))
+    }
+
+    @Test
+    fun `PING_MODE=OFF still posts CTA but no wide ping`() {
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_CHANNEL, "777")
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_PING_MODE, "OFF")
+        every { guild.getTextChannelById(777L) } returns channel
+        val contentSlot = slot<String>()
+        every { sendAction.addContent(capture(contentSlot)) } returns sendAction
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        assertFalse(contentSlot.captured.contains("@everyone"))
+        assertFalse(contentSlot.captured.contains("@here"))
+        assertTrue(contentSlot.captured.contains("/lottery buy"))
+    }
+
+    @Test
+    fun `allowed mentions include EVERYONE only when wide ping is in content`() {
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_CHANNEL, "777")
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_PING_MODE, "OFF")
+        every { guild.getTextChannelById(777L) } returns channel
+        val mentionsSlot = slot<Collection<Message.MentionType>>()
+        every { sendAction.setAllowedMentions(capture(mentionsSlot)) } returns sendAction
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        assertTrue(mentionsSlot.captured.contains(Message.MentionType.USER))
+        assertFalse(mentionsSlot.captured.contains(Message.MentionType.EVERYONE))
+    }
+
+    @Test
+    fun `allowed mentions include EVERYONE when @everyone is in content`() {
+        stubChannelConfig(ConfigDto.Configurations.LOTTERY_CHANNEL, "777")
+        // No PING_MODE set → default EVERYONE.
+        every { guild.getTextChannelById(777L) } returns channel
+        val mentionsSlot = slot<Collection<Message.MentionType>>()
+        every { sendAction.setAllowedMentions(capture(mentionsSlot)) } returns sendAction
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        assertTrue(mentionsSlot.captured.contains(Message.MentionType.EVERYONE))
+        assertTrue(mentionsSlot.captured.contains(Message.MentionType.USER))
     }
 
     @Test

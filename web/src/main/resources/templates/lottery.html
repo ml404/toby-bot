@@ -220,8 +220,10 @@
             <h3>Top holders</h3>
             <ol class="lottery-top-holders">
                 <li th:each="h : ${snapshot.weighted.topHolders}">
-                    <span class="muted">User #<span th:text="${h.discordId}">…</span></span>
-                    — <strong th:text="${h.ticketCount}">0</strong> tickets
+                    <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
+                    <span class="lottery-top-holder-tickets">
+                        <strong th:text="${h.ticketCount}">0</strong> tickets
+                    </span>
                 </li>
             </ol>
         </div>
@@ -275,8 +277,10 @@
             <h3>Top holders</h3>
             <ol class="lottery-top-holders">
                 <li th:each="h : ${snapshot.weighted.topHolders}">
-                    <span class="muted">User #<span th:text="${h.discordId}">…</span></span>
-                    — <strong th:text="${h.ticketCount}">0</strong> tickets
+                    <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
+                    <span class="lottery-top-holder-tickets">
+                        <strong th:text="${h.ticketCount}">0</strong> tickets
+                    </span>
                 </li>
             </ol>
         </div>

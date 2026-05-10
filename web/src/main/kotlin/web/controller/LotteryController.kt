@@ -1,7 +1,6 @@
 package web.controller
 
 import database.dto.JackpotLotteryDto
-import database.dto.JackpotLotteryTicketDto
 import database.service.JackpotLotteryService.BuyMatchOutcome
 import database.service.JackpotLotteryService.BuyOutcome
 import org.springframework.http.ResponseEntity
@@ -221,7 +220,17 @@ data class LotteryViewModel(
         val topHolders: List<TopHolder>,
     )
 
-    data class TopHolder(val discordId: Long, val ticketCount: Int)
+    /** View projection of a weighted-lottery top holder — Discord
+     *  display name + avatar URL come from [LotteryWebService.TopHolder]
+     *  so the lottery page renders the same member cell as the
+     *  leaderboard. Falls back to a `Player <last-4>` placeholder when
+     *  the holder has left the guild. */
+    data class TopHolder(
+        val discordId: Long,
+        val ticketCount: Int,
+        val name: String,
+        val avatarUrl: String?,
+    )
 
     companion object {
         fun from(snap: LotteryWebService.LotteryPageSnapshot): LotteryViewModel {
@@ -253,7 +262,7 @@ data class LotteryViewModel(
                     myTickets = snap.weightedMyTicket?.ticketCount ?: 0,
                     mySpent = snap.weightedMyTicket?.spent ?: 0L,
                     topHolders = snap.weightedTopHolders.map {
-                        TopHolder(it.discordId, it.ticketCount)
+                        TopHolder(it.discordId, it.ticketCount, it.name, it.avatarUrl)
                     },
                 )
             }
@@ -274,9 +283,5 @@ data class LotteryViewModel(
             if (csv.isNullOrBlank()) return emptyList()
             return csv.split(',').mapNotNull { it.trim().toIntOrNull() }
         }
-
-        // Suppress unused parameter warning — used by Thymeleaf via reflection.
-        @Suppress("unused")
-        private fun unused(t: JackpotLotteryTicketDto) = t
     }
 }

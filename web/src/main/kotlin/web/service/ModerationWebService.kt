@@ -1021,6 +1021,13 @@ class ModerationWebService(
                 if (n !in 1..50) return "Value must be between 1 and 50."
                 n.toString()
             }
+            ConfigDto.Configurations.LOTTERY_PING_MODE -> {
+                val v = rawValue.trim().uppercase()
+                if (v !in setOf("OFF", "HERE", "EVERYONE")) {
+                    return "Value must be OFF, HERE, or EVERYONE."
+                }
+                v
+            }
             ConfigDto.Configurations.LOTTERY_CHANNEL,
             ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID -> {
                 val v = rawValue.trim()

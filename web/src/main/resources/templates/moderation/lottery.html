@@ -133,6 +133,32 @@
                                th:disabled="${!isOwner}">
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
+                    <div class="config-row" data-key="LOTTERY_PING_MODE">
+                        <label>
+                            Announcement ping
+                            <span class="config-hint">
+                                How loudly to nudge members when the daily announcement
+                                posts. EVERYONE pings the whole server (default — most
+                                visible); HERE only pings online members; OFF skips the
+                                wide ping (winners are still pinged individually).
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="EVERYONE"
+                                    th:selected="${overview.config['LOTTERY_PING_MODE'] == null or overview.config['LOTTERY_PING_MODE'] == 'EVERYONE'}">
+                                @everyone
+                            </option>
+                            <option value="HERE"
+                                    th:selected="${overview.config['LOTTERY_PING_MODE'] == 'HERE'}">
+                                @here
+                            </option>
+                            <option value="OFF"
+                                    th:selected="${overview.config['LOTTERY_PING_MODE'] == 'OFF'}">
+                                Off (winners only)
+                            </option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
                     <div class="config-row" data-key="LOTTERY_CHANNEL">
                         <label>
                             Announce channel

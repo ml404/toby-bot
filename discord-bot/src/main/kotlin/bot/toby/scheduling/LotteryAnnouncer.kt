@@ -6,8 +6,10 @@ import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.LotteryHelper
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import org.springframework.beans.factory.annotation.Autowired
@@ -26,16 +28,38 @@ import java.awt.Color
  *   3. `guild.systemChannel` if writable
  *   4. Skip with warn log if none
  *
- * Pings: winners' discord ids appear in the message **content** via
- * [`MessageCreateAction.addContent`] (loud notification) and again in
- * the embed body for visual context (silent there). Non-winning
- * variants (BelowMinBuyers, NoTickets) skip the addContent ping
- * entirely so a buyer-less day stays quiet.
+ * Message content layout (each line is optional except the call-to-action):
+ *   ```
+ *   @everyone | @here | (none)   ← LOTTERY_PING_MODE per guild
+ *   🎟️ A new draw is open — buy with </lottery buy:ID>
+ *   Congrats: <@winner1> <@winner2>            ← only when there are winners
+ *   ```
+ *
+ * The wide ping defaults to `@everyone` so a fresh-install guild gets
+ * the loudest possible nudge to actually buy tickets; admins dial it
+ * down via the `LOTTERY_PING_MODE` config (see [LotteryHelper.lotteryPingMode]).
+ * The slash-command mention is a clickable shortcut into `/lottery buy`;
+ * if JDA can't resolve the command id (cold start, retrieval failure)
+ * we fall back to a plain `` `/lottery buy` `` so the embed still ships.
+ *
+ * `setAllowedMentions` is set explicitly on every send: USER is always
+ * allowed (so winners get pinged), and EVERYONE is added only when the
+ * content actually contains `@everyone`/`@here`. Without that, Discord
+ * silently strips the wide ping.
  */
 @Component
 class LotteryAnnouncer @Autowired constructor(
     private val configService: ConfigService,
 ) {
+
+    /**
+     * Lazily-resolved id of the global `lottery` slash command. Cached
+     * for process lifetime — command ids only change on a fresh
+     * `updateCommands` call (i.e. another process restart). Volatile
+     * so a happens-before relationship is established between the
+     * resolver thread and any later announce-thread reader.
+     */
+    @Volatile private var cachedLotteryCommandId: Long? = null
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     /**
@@ -58,11 +82,12 @@ class LotteryAnnouncer @Autowired constructor(
             return
         }
         val embed = buildEmbed(guild, mode, priorOutcome, openOutcome)
-        val pingIds = winnerPingIds(priorOutcome)
+        val content = buildAnnouncementContent(guild, priorOutcome)
         runCatching {
             val send = channel.sendMessageEmbeds(embed)
-            if (pingIds.isNotEmpty()) {
-                send.addContent(pingIds.joinToString(" ") { "<@$it>" })
+                .setAllowedMentions(allowedMentionTypes(content))
+            if (content.isNotBlank()) {
+                send.addContent(content)
             }
             send.queue()
         }.onFailure {
@@ -204,7 +229,77 @@ class LotteryAnnouncer @Autowired constructor(
         else -> emptyList()
     }
 
+    // ---- announcement content (wide ping + buy CTA + winner pings) ----
+
+    /**
+     * Assemble the message content posted alongside the embed. Always
+     * includes a call-to-action with a clickable `/lottery buy` mention;
+     * optionally prefixes a wide ping per [LotteryHelper.lotteryPingMode];
+     * appends per-winner pings on a third line when the prior outcome had
+     * winners. Newline-separated so Discord renders each on its own row.
+     */
+    private fun buildAnnouncementContent(guild: Guild, prior: PriorOutcome?): String {
+        val lines = mutableListOf<String>()
+        val cta = "🎟️ A new daily lottery is open — buy in with ${slashBuyMention(guild.jda)}!"
+        val pingPrefix = widePingPrefix(guild)
+        lines += if (pingPrefix != null) "$pingPrefix $cta" else cta
+        val winners = winnerPingIds(prior)
+        if (winners.isNotEmpty()) {
+            lines += "Congrats: " + winners.joinToString(" ") { "<@$it>" }
+        }
+        return lines.joinToString("\n")
+    }
+
+    /** `@everyone` / `@here` / `null`, per the guild's `LOTTERY_PING_MODE`. */
+    private fun widePingPrefix(guild: Guild): String? =
+        when (LotteryHelper.lotteryPingMode(configService, guild.idLong)) {
+            LotteryHelper.PING_HERE -> "@here"
+            LotteryHelper.PING_EVERYONE -> "@everyone"
+            else -> null  // PING_OFF
+        }
+
+    /**
+     * Render a clickable `</lottery buy:ID>` slash-command mention, or
+     * fall back to plain `` `/lottery buy` `` when the id is unresolvable
+     * (cold start, retrieval failure). Falling back keeps the embed
+     * shipping rather than failing the whole announce.
+     */
+    private fun slashBuyMention(jda: JDA): String {
+        val id = lotteryBuyCommandId(jda)
+        return if (id != null) "</$LOTTERY_COMMAND_NAME $LOTTERY_BUY_SUBCOMMAND:$id>" else "`/$LOTTERY_COMMAND_NAME $LOTTERY_BUY_SUBCOMMAND`"
+    }
+
+    private fun lotteryBuyCommandId(jda: JDA): Long? {
+        cachedLotteryCommandId?.let { return it }
+        val resolved = runCatching {
+            jda.retrieveCommands().complete()
+                .firstOrNull { it.name == LOTTERY_COMMAND_NAME }
+                ?.idLong
+        }.onFailure {
+            logger.warn("Could not resolve /$LOTTERY_COMMAND_NAME slash command id: ${it.message}")
+        }.getOrNull()
+        if (resolved != null) cachedLotteryCommandId = resolved
+        return resolved
+    }
+
+    /**
+     * Always allow USER mentions (winner pings); only allow EVERYONE
+     * (which covers both `@everyone` and `@here` in JDA) when the
+     * content actually contains one. JDA's default would silently strip
+     * `@everyone`/`@here` from `addContent`, so omitting this call would
+     * make `LOTTERY_PING_MODE` a no-op.
+     */
+    private fun allowedMentionTypes(content: String): Set<Message.MentionType> {
+        val types = mutableSetOf(Message.MentionType.USER)
+        if (content.contains("@everyone") || content.contains("@here")) {
+            types += Message.MentionType.EVERYONE
+        }
+        return types
+    }
+
     companion object {
         private val REQUIRED_PERMS = arrayOf(Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
+        private const val LOTTERY_COMMAND_NAME = "lottery"
+        private const val LOTTERY_BUY_SUBCOMMAND = "buy"
     }
 }

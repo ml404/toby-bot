@@ -169,4 +169,27 @@ object LotteryHelper {
         )
         return cfg?.value?.trim()?.takeIf { it.isNotEmpty() }?.toLongOrNull()
     }
+
+    /** Wide-ping modes for the daily lottery announcement. */
+    const val PING_OFF: String = "OFF"
+    const val PING_HERE: String = "HERE"
+    const val PING_EVERYONE: String = "EVERYONE"
+    const val DEFAULT_PING_MODE: String = PING_EVERYONE
+
+    /**
+     * Live wide-ping mode for the daily lottery announcement. Returns
+     * one of [PING_OFF], [PING_HERE], [PING_EVERYONE]; unknown / unset
+     * values fall back to [DEFAULT_PING_MODE] so a fresh guild gets the
+     * loudest possible nudge.
+     */
+    fun lotteryPingMode(configService: ConfigService, guildId: Long): String {
+        val raw = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_PING_MODE.configValue,
+            guildId.toString()
+        )?.value?.trim()?.uppercase()
+        return when (raw) {
+            PING_OFF, PING_HERE, PING_EVERYONE -> raw
+            else -> DEFAULT_PING_MODE
+        }
+    }
 }

@@ -169,13 +169,7 @@
                                   th:text="${row.rank}">4</span>
                         </td>
                         <td data-label="Member">
-                            <div class="member-cell">
-                                <img th:if="${row.avatarUrl != null}"
-                                     th:src="${row.avatarUrl}"
-                                     class="avatar"
-                                     alt="">
-                                <span class="lb-name" th:text="${row.name}">Name</span>
-                            </div>
+                            <div th:replace="~{fragments/memberCell :: cell(${row.name}, ${row.avatarUrl})}"></div>
                         </td>
                         <td data-label="Title">
                             <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
@@ -232,13 +226,7 @@
                                   th:text="${row.rank}">1</span>
                         </td>
                         <td data-label="Member">
-                            <div class="member-cell">
-                                <img th:if="${row.avatarUrl != null}"
-                                     th:src="${row.avatarUrl}"
-                                     class="avatar"
-                                     alt="">
-                                <span class="lb-name" th:text="${row.name}">Name</span>
-                            </div>
+                            <div th:replace="~{fragments/memberCell :: cell(${row.name}, ${row.avatarUrl})}"></div>
                         </td>
                         <td data-label="Title">
                             <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>

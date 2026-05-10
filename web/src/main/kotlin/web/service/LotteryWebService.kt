@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service
 class LotteryWebService(
     private val jackpotLotteryService: JackpotLotteryService,
     private val configService: ConfigService,
+    private val memberLookupHelper: MemberLookupHelper,
 ) {
 
     /**
@@ -39,7 +40,7 @@ class LotteryWebService(
         val dailyTicketBuyers: Int,
         val weightedOpen: JackpotLotteryDto?,
         val weightedMyTicket: JackpotLotteryTicketDto?,
-        val weightedTopHolders: List<JackpotLotteryTicketDto>,
+        val weightedTopHolders: List<TopHolder>,
         val weightedTotalTickets: Long,
         val pickCount: Int,
         val numberMax: Int,
@@ -47,6 +48,19 @@ class LotteryWebService(
         val revenueJackpotPct: Long,
         val dailyMode: String,
         val dailyEnabled: Boolean,
+    )
+
+    /**
+     * Display projection for a single weighted-lottery top holder.
+     * Carries the Discord display name + avatar URL alongside the
+     * ticket count so the lottery page can render the same
+     * avatar-and-name member cell as the leaderboard.
+     */
+    data class TopHolder(
+        val discordId: Long,
+        val ticketCount: Int,
+        val name: String,
+        val avatarUrl: String?,
     )
 
     fun snapshot(guildId: Long, discordId: Long): LotteryPageSnapshot {
@@ -60,7 +74,17 @@ class LotteryWebService(
         val weightedOpen = jackpotLotteryService.getOpenWeighted(guildId)
         val weightedTickets = jackpotLotteryService.ticketsForOpenWeighted(guildId)
         val weightedMyTicket = weightedTickets.firstOrNull { it.discordId == discordId }
-        val weightedTop = weightedTickets.sortedByDescending { it.ticketCount }.take(5)
+        val weightedTopRaw = weightedTickets.sortedByDescending { it.ticketCount }.take(5)
+        val displays = memberLookupHelper.resolveAll(guildId, weightedTopRaw.map { it.discordId })
+        val weightedTop = weightedTopRaw.map { ticket ->
+            val display = displays[ticket.discordId]
+            TopHolder(
+                discordId = ticket.discordId,
+                ticketCount = ticket.ticketCount,
+                name = display?.name ?: memberLookupHelper.fallbackName(ticket.discordId),
+                avatarUrl = display?.avatarUrl,
+            )
+        }
         val weightedTotal = weightedTickets.sumOf { it.ticketCount.toLong() }
 
         return LotteryPageSnapshot(
