@@ -51,11 +51,8 @@ internal class ExcuseCommandTest : CommandTest {
 
         // Assert
         verify {
-            event.hook.sendMessageFormat(
-                "Excuse #%d: '%s' - %s.",
-                excuseDto.id,
-                excuseDto.excuse,
-                excuseDto.author
+            event.hook.sendMessage(
+                "Excuse #${excuseDto.id}: '${excuseDto.excuse}' - ${excuseDto.author}."
             )
         }
     }
@@ -134,7 +131,7 @@ internal class ExcuseCommandTest : CommandTest {
         verify {
             excuseService.listAllGuildExcuses(1L)
             excuseService.createNewExcuse(any())
-            event.hook.sendMessageFormat(any(), excuseToCreate.excuse, excuseToCreate.author, excuseToCreate.id)
+            event.hook.sendMessage(any<String>())
         }
     }
 
@@ -198,7 +195,7 @@ internal class ExcuseCommandTest : CommandTest {
         verify {
             excuseService.getExcuseById(excuseToBeReturnedByUpdate.id)
             excuseService.updateExcuse(any())
-            event.hook.sendMessageFormat(any(), excuseToBeReturnedByUpdate.excuse)
+            event.hook.sendMessage("Approved excuse '${excuseToBeReturnedByUpdate.excuse}'.")
         }
     }
 
@@ -300,7 +297,7 @@ internal class ExcuseCommandTest : CommandTest {
         // Assert
         verify {
             excuseService.deleteExcuseById(any())
-            event.hook.sendMessageFormat(any(), excuseToBeReturnedByUpdate.id)
+            event.hook.sendMessage("Deleted excuse with id '${excuseToBeReturnedByUpdate.id}'.")
         }
     }
 

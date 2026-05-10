@@ -116,6 +116,7 @@ internal class DnDHelperTest {
         every { hook.deleteOriginal() } returns mockk<RestAction<Void>>()
         every { hook.setEphemeral(true) } returns hook
         every { hook.sendMessage(any<String>()) } returns webhookMessageCreateAction
+        every { webhookMessageCreateAction.setEphemeral(true) } returns webhookMessageCreateAction
 
         every { userDto1.discordId } returns 1L
         every { userDto2.discordId } returns 2L
@@ -257,8 +258,8 @@ internal class DnDHelperTest {
         verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { messageEditAction.setComponents(any<ActionRow>()) }
         verify(exactly = 1) { messageEditAction.queue() }
-        verify(exactly = 1) { hook.setEphemeral(true) }
         verify(exactly = 1) { hook.sendMessage(any<String>()) }
+        verify(exactly = 1) { webhookMessageCreateAction.setEphemeral(true) }
     }
 
     @Test
