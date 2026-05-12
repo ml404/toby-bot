@@ -5,6 +5,7 @@ import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
+import core.managers.ModalManager
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.entities.Guild
@@ -24,12 +25,14 @@ class MessageEventHandlerTest {
     private val commandManager: CommandManager = mockk()
     private val buttonManager: ButtonManager = mockk()
     private val menuManager: MenuManager = mockk()
+    private val modalManager: ModalManager = mockk()
     private val autocompleteManager: AutocompleteManager = mockk()
     private val handler = spyk(
         MessageEventHandler(
             commandManager,
             buttonManager,
             menuManager,
+            modalManager,
             autocompleteManager
         )
     )

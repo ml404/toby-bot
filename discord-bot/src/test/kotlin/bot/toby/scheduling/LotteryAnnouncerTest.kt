@@ -1,6 +1,7 @@
 package bot.toby.scheduling
 
 import database.dto.ConfigDto
+import database.dto.JackpotLotteryDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
 import io.mockk.Runs
@@ -9,6 +10,8 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
@@ -16,12 +19,16 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.SelfMember
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.exceptions.ErrorResponseException
 import net.dv8tion.jda.api.interactions.commands.Command
+import net.dv8tion.jda.api.requests.ErrorResponse
 import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 /**
@@ -365,5 +372,142 @@ class LotteryAnnouncerTest {
         assertTrue(embedDescription.contains("3") && embedDescription.contains("42"))
         assertTrue(embedDescription.contains("<@1>"))
         assertTrue(contentSlot.captured.contains("<@1>"))
+    }
+
+    // ---- refreshAnnouncement ----
+
+    private fun openLottery(
+        id: Long = 1L,
+        poolAmount: Long = 1_500L,
+        announcedPoolAmount: Long? = 1_000L,
+        announcementMessageId: Long? = 999L,
+        announcementChannelId: Long? = 777L,
+        mode: String = JackpotLotteryDto.MODE_NUMBER_MATCH,
+    ) = JackpotLotteryDto(
+        id = id,
+        guildId = guildId,
+        ticketPrice = 50L,
+        poolAmount = poolAmount,
+        mode = mode,
+    ).also {
+        it.announcementMessageId = announcementMessageId
+        it.announcementChannelId = announcementChannelId
+        it.announcedPoolAmount = announcedPoolAmount
+    }
+
+    @Nested
+    inner class RefreshAnnouncement {
+
+        @Test
+        fun `short-circuits when announcementMessageId is null`() {
+            val lottery = openLottery(announcementMessageId = null)
+
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 0) { guild.getTextChannelById(any<Long>()) }
+            verify(exactly = 0) { jackpotLotteryService.updateAnnouncedPool(any(), any()) }
+        }
+
+        @Test
+        fun `short-circuits when announcementChannelId is null`() {
+            val lottery = openLottery(announcementChannelId = null)
+
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 0) { guild.getTextChannelById(any<Long>()) }
+        }
+
+        @Test
+        fun `short-circuits when announcedPoolAmount equals poolAmount`() {
+            val lottery = openLottery(poolAmount = 1_000L, announcedPoolAmount = 1_000L)
+
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 0) { guild.getTextChannelById(any<Long>()) }
+        }
+
+        @Test
+        fun `clears announcement ref when channel vanishes`() {
+            every { guild.getTextChannelById(777L) } returns null
+            val lottery = openLottery()
+
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 1) { jackpotLotteryService.clearAnnouncement(1L) }
+        }
+
+        @Test
+        fun `edits embed and updates watermark when pool has grown`() {
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val previousEmbed = EmbedBuilder()
+                .setTitle("🎟️ Daily Lottery — Test Guild")
+                .addField(
+                    LotteryAnnouncer.YESTERDAYS_DRAW_FIELD,
+                    "No tickets bought. Seed returned to jackpot.",
+                    false,
+                )
+                .addField(
+                    LotteryAnnouncer.TODAYS_DRAW_FIELD,
+                    "**1000** credits in the pool · Ticket: **50** · Mode: **Pick 5 of 49** · Closes 24h.",
+                    false,
+                )
+                .build()
+            val message: Message = mockk(relaxed = true)
+            every { message.embeds } returns listOf(previousEmbed)
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val editAction: MessageEditAction = mockk(relaxed = true)
+            val editedEmbedSlot = slot<MessageEmbed>()
+            every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
+            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every {
+                editAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val lottery = openLottery(poolAmount = 1_500L, announcedPoolAmount = 1_000L)
+            announcer.refreshAnnouncement(guild, lottery)
+
+            val todayField = editedEmbedSlot.captured.fields.first { it.name == LotteryAnnouncer.TODAYS_DRAW_FIELD }
+            assertTrue(todayField.value!!.contains("1500"), "embed should show updated pool: ${todayField.value}")
+            assertFalse(todayField.value!!.contains("1000"), "embed should not show stale pool: ${todayField.value}")
+
+            val yesterdayField = editedEmbedSlot.captured.fields.first { it.name == LotteryAnnouncer.YESTERDAYS_DRAW_FIELD }
+            assertTrue(yesterdayField.value!!.contains("No tickets"), "yesterday's field should be preserved")
+
+            verify(exactly = 1) { jackpotLotteryService.updateAnnouncedPool(1L, 1_500L) }
+        }
+
+        @Test
+        fun `clears announcement ref on UNKNOWN_MESSAGE error`() {
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+
+            val errorResponse: ErrorResponseException = mockk(relaxed = true)
+            every { errorResponse.errorResponse } returns ErrorResponse.UNKNOWN_MESSAGE
+
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                secondArg<java.util.function.Consumer<Throwable>>().accept(errorResponse)
+            }
+
+            val lottery = openLottery()
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 1) { jackpotLotteryService.clearAnnouncement(1L) }
+            verify(exactly = 0) { jackpotLotteryService.updateAnnouncedPool(any(), any()) }
+        }
     }
 }

@@ -5,13 +5,16 @@ import bot.toby.managers.DefaultAutoCompleteManager
 import bot.toby.managers.DefaultButtonManager
 import bot.toby.managers.DefaultCommandManager
 import bot.toby.managers.DefaultMenuManager
+import bot.toby.managers.DefaultModalManager
 import core.autocomplete.AutocompleteHandler
 import core.button.Button
 import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
+import core.managers.ModalManager
 import core.menu.Menu
+import core.modal.Modal
 import database.service.ConfigService
 import database.service.SocialCreditAwardService
 import org.springframework.context.annotation.Bean
@@ -52,6 +55,14 @@ class ManagerConfig {
         buttons: List<Button>
     ): ButtonManager {
         return DefaultButtonManager(configService, userDtoHelper, buttons)
+    }
+
+    @Bean
+    fun modalManager(
+        configService: ConfigService,
+        modals: List<Modal>
+    ): ModalManager {
+        return DefaultModalManager(configService, modals)
     }
 
     @Bean
