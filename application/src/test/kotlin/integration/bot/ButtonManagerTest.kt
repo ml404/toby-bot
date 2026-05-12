@@ -78,6 +78,7 @@ class ButtonManagerTest {
             InitiativeClearButton::class.java,
             InitiativeNextButton::class.java,
             InitiativePreviousButton::class.java,
+            LotteryBuyButton::class.java,
             PausePlayButton::class.java,
             PokerActionButton::class.java,
             ResendLastRequestButton::class.java,
@@ -86,7 +87,7 @@ class ButtonManagerTest {
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
-        assertEquals(13, buttonManager.buttons.size)
+        assertEquals(14, buttonManager.buttons.size)
     }
 
     @Test
@@ -114,6 +115,7 @@ class ButtonManagerTest {
             every { channel } returns mockChannel
             every { componentId } returns "stop"
             every { hook } returns mockHook
+            every { deferReply(any<Boolean>()) } returns mockk { every { queue() } just Runs }
             every { user } returns mockk {
                 every { idLong } returns 1L
             }
@@ -175,6 +177,7 @@ class ButtonManagerTest {
             every { channel } returns mockChannel
             every { componentId } returns "pause/play"
             every { hook } returns mockHook
+            every { deferReply(any<Boolean>()) } returns mockk { every { queue() } just Runs }
             every { user } returns mockk {
                 every { idLong } returns 1L
             }
