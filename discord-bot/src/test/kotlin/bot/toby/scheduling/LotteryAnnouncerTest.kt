@@ -488,6 +488,64 @@ class LotteryAnnouncerTest {
         }
 
         @Test
+        fun `weighted refresh renders the weighted mode label, not the number-match one`() {
+            // Regression: rebuildWithUpdatedTodaysDraw used to pass
+            // lottery.mode (the DTO column value "TICKET_WEIGHTED")
+            // straight to renderOpenSummary, which expects the runtime
+            // constant "WEIGHTED". The comparison fell through and
+            // emitted "Pick 5 of 49" for refreshed weighted draws.
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val previousEmbed = EmbedBuilder()
+                .setTitle("🎟️ Daily Lottery — Test Guild")
+                .addField(
+                    LotteryAnnouncer.TODAYS_DRAW_FIELD,
+                    "**1000** credits in the pool · Ticket: **50** · Mode: **Top-3 weighted** · Closes 24h.",
+                    false,
+                )
+                .build()
+            val message: Message = mockk(relaxed = true)
+            every { message.embeds } returns listOf(previousEmbed)
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val editAction: MessageEditAction = mockk(relaxed = true)
+            val editedEmbedSlot = slot<MessageEmbed>()
+            every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
+            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every {
+                editAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val lottery = openLottery(
+                poolAmount = 2_000L,
+                announcedPoolAmount = 1_000L,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+            )
+            announcer.refreshAnnouncement(guild, lottery)
+
+            val todayField = editedEmbedSlot.captured.fields.first {
+                it.name == LotteryAnnouncer.TODAYS_DRAW_FIELD
+            }
+            assertTrue(
+                todayField.value!!.contains("Top-3 weighted"),
+                "weighted refresh should render the weighted label: ${todayField.value}",
+            )
+            assertFalse(
+                todayField.value!!.contains("Pick 5 of 49"),
+                "weighted refresh should not render the number-match label: ${todayField.value}",
+            )
+        }
+
+        @Test
         fun `clears announcement ref on UNKNOWN_MESSAGE error`() {
             every { guild.getTextChannelById(777L) } returns channel
 
