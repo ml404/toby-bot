@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Make testcontainers work on Windows with Docker Engine 29",
+    "summary": "Upgrade testcontainers to 1.21.1 and set docker-java API version to 1.44 for Docker Engine 29 compatibility Override `DOCKER_HOST` on Windows to use Docker Desktop's named pipe (`npipe:////./pipe/dockerDesktopLinuxEngine`) Share a single PostgreSQL container across Spring contexts via a static companion object, reducing 3 containers down to 1 Make `data.sql` idempotent with `ON CONFLICT DO NOTHING` to support container reuse Fix two `IntroWebServiceTest` failures by stubbi…",
+    "emoji": "🔨",
+    "prNumber": 437
+  },
+  {
+    "date": "May 2026",
     "title": "Interactive buy button on announcement embed + modal infrastructure",
     "summary": "**Buy Tickets button** on weighted lottery announcement embeds — opens a modal for ticket count, processes the purchase via `buyTickets` service, replies ephemeral **Pick Numbers link button** on number match lottery embeds — opens the web lottery page (`/casino/{guildId}/lottery`), gracefully hidden when `APP_BASE_URL` is not set **Buttons persist across refresh edits** — `refreshAnnouncement` re-adds the action row via `setComponents` so buttons survive the 5-minute pool…",
     "emoji": "🎰",
