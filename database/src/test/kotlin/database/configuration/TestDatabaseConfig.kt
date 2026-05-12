@@ -22,9 +22,10 @@ import org.testcontainers.utility.DockerImageName
  * package of `@SpringBootApplication` (i.e. `app`), so DTOs in
  * `database.dto` and their `@NamedQuery`s would silently fail to register.
  *
- * Container lifecycle: started lazily on first context-load, reused across
- * test classes (testcontainers-jvm reuses containers tagged with the same
- * image when reuse is enabled), destroyed on JVM exit.
+ * Container lifecycle: the companion object holds a single started container
+ * shared across every Spring context in the JVM. `.withReuse(true)` lets
+ * testcontainers keep it alive across Gradle module boundaries too (requires
+ * `testcontainers.reuse.enable=true` in test-resources).
  */
 @Profile("test")
 @ComponentScan(basePackages = ["database"])
@@ -32,9 +33,15 @@ import org.testcontainers.utility.DockerImageName
 @TestConfiguration(proxyBeanMethods = false)
 open class TestDatabaseConfig {
 
+    companion object {
+        @JvmStatic
+        val postgres: PostgreSQLContainer<*> =
+            PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
+                .withReuse(true)
+                .apply { start() }
+    }
+
     @Bean
     @ServiceConnection
-    open fun postgresContainer(): PostgreSQLContainer<*> {
-        return PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
-    }
+    open fun postgresContainer(): PostgreSQLContainer<*> = postgres
 }

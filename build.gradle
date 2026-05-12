@@ -43,6 +43,7 @@ allprojects {
     // fallback for configurations the dep-management plugin doesn't reach.
     ext['jackson-bom.version'] = '2.18.2'           // GHSA-72hv-8253-57qq (jackson-core <2.18.x)
     ext['commons-lang3.version'] = '3.18.0'         // CVE-2025-48924 (commons-lang3 <3.18.0)
+    ext['testcontainers.version'] = '1.21.1'        // Docker Engine 29 requires API ≥1.44 (1.19.8 sends ~1.32)
 
     repositories {
         mavenCentral()
@@ -91,6 +92,9 @@ subprojects {
 
         tasks.withType(Test).configureEach {
             failOnNoDiscoveredTests = false
+            if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+                environment 'DOCKER_HOST', 'npipe:////./pipe/dockerDesktopLinuxEngine'
+            }
         }
     }
 }

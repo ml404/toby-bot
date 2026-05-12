@@ -365,8 +365,10 @@ class IntroWebServiceTest {
             musicDtos = mutableListOf(existing)
         }
         every { userService.getUserById(discordId, guildId) } returns user
+        val spyService = spyk(service)
+        every { spyService.fetchYouTubePreview(any()) } returns null
 
-        val error = service.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
+        val error = spyService.setIntroByUrl(discordId, guildId, url, 90, null, null, null)
         assertNotNull(error)
         assertTrue(error!!.contains("slot 2"))
         verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
@@ -389,8 +391,10 @@ class IntroWebServiceTest {
             musicDtos = mutableListOf(existing)
         }
         every { userService.getUserById(discordId, guildId) } returns user
+        val spyService = spyk(service)
+        every { spyService.fetchYouTubePreview(any()) } returns null
 
-        val error = service.setIntroByUrl(discordId, guildId, watchUrl, 90, null, null, null)
+        val error = spyService.setIntroByUrl(discordId, guildId, watchUrl, 90, null, null, null)
         assertNotNull(error)
         assertTrue(error!!.contains("slot 1"))
         verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
