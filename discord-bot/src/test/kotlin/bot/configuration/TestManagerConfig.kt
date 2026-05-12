@@ -4,6 +4,7 @@ import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
+import core.managers.ModalManager
 import io.mockk.mockk
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -25,6 +26,11 @@ open class TestManagerConfig {
 
     @Bean
     open fun buttonManager(): ButtonManager {
+        return mockk(relaxed = true)
+    }
+
+    @Bean
+    open fun modalManager(): ModalManager {
         return mockk(relaxed = true)
     }
 
