@@ -212,7 +212,16 @@ class LotteryAnnouncer @Autowired constructor(
             ticketPrice = lottery.ticketPrice,
             poolAmount = lottery.poolAmount,
         )
-        val freshTodayBody = renderOpenSummary(lottery.mode, freshSummary)
+        // [renderOpenSummary] expects the runtime mode string from
+        // [LotteryHelper] (e.g. "WEIGHTED"), but [lottery.mode] holds
+        // the DTO column value ("TICKET_WEIGHTED" / "NUMBER_MATCH").
+        // Translate explicitly so a refreshed weighted draw doesn't
+        // fall through to the "Pick 5 of 49" else branch.
+        val runtimeMode = when (lottery.mode) {
+            JackpotLotteryDto.MODE_TICKET_WEIGHTED -> LotteryHelper.MODE_WEIGHTED
+            else -> LotteryHelper.MODE_NUMBER_MATCH
+        }
+        val freshTodayBody = renderOpenSummary(runtimeMode, freshSummary)
         previous.fields.forEach { field ->
             if (field.name == TODAYS_DRAW_FIELD) {
                 builder.addField(TODAYS_DRAW_FIELD, freshTodayBody, false)
