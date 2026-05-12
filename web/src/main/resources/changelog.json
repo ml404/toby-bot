@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Interactive buy button on announcement embed + modal infrastructure",
+    "summary": "**Buy Tickets button** on weighted lottery announcement embeds — opens a modal for ticket count, processes the purchase via `buyTickets` service, replies ephemeral **Pick Numbers link button** on number match lottery embeds — opens the web lottery page (`/casino/{guildId}/lottery`), gracefully hidden when `APP_BASE_URL` is not set **Buttons persist across refresh edits** — `refreshAnnouncement` re-adds the action row via `setComponents` so buttons survive the 5-minute pool…",
+    "emoji": "🎰",
+    "prNumber": 436
+  },
+  {
+    "date": "May 2026",
     "title": "Live-refresh announcement embed + thorough Command-helper rollout",
     "summary": "Two independent changes, one per commit. ### 1. Lottery announcement embed periodically refreshes when the pool grows The daily-lottery announce embed posts a \"Today's draw — N credits in the pool\" line, but post-announce ticket sales silently grew the pool with no visible feedback. Players had to run `/lottery status` to see the live number. `V29__lottery_announcement_message.sql` adds three nullable columns to `toby_coin_jackpot_lottery` (`announcement_channel_id`, `anno…",
     "emoji": "🎰",
