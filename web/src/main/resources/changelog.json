@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Use runtime mode constant when refreshing announcement embed",
+    "summary": "The lottery refresh job has been overwriting weighted-mode announcement embeds with the wrong \"Today's draw\" mode label (`Pick 5 of 49`) while the footer + yesterday's recap correctly say it's a weighted draw. Root cause: `rebuildWithUpdatedTodaysDraw` passes `lottery.mode` (the DTO column value `\"TICKET_WEIGHTED\"`) straight to `renderOpenSummary`, which expects the runtime config string from `LotteryHelper.MODE_WEIGHTED` (`\"WEIGHTED\"`). The comparison falls through to the…",
+    "emoji": "🎟️",
+    "prNumber": 438
+  },
+  {
+    "date": "May 2026",
     "title": "Make testcontainers work on Windows with Docker Engine 29",
     "summary": "Upgrade testcontainers to 1.21.1 and set docker-java API version to 1.44 for Docker Engine 29 compatibility Override `DOCKER_HOST` on Windows to use Docker Desktop's named pipe (`npipe:////./pipe/dockerDesktopLinuxEngine`) Share a single PostgreSQL container across Spring contexts via a static companion object, reducing 3 containers down to 1 Make `data.sql` idempotent with `ON CONFLICT DO NOTHING` to support container reuse Fix two `IntroWebServiceTest` failures by stubbi…",
     "emoji": "🔨",
