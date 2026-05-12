@@ -14,8 +14,11 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.ErrorResponse
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.awt.Color
 
@@ -54,6 +57,7 @@ import java.awt.Color
 class LotteryAnnouncer @Autowired constructor(
     private val configService: ConfigService,
     private val jackpotLotteryService: JackpotLotteryService,
+    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
 
     /**
@@ -89,11 +93,15 @@ class LotteryAnnouncer @Autowired constructor(
         val content = buildAnnouncementContent(guild, priorOutcome)
         val lotteryId = (openOutcome as? OpenSummary.Ok)?.lotteryId
         val poolAmount = (openOutcome as? OpenSummary.Ok)?.poolAmount
+        val actionRow = announcementActionRow(mode, guild.idLong)
         runCatching {
             val send = channel.sendMessageEmbeds(embed)
                 .setAllowedMentions(allowedMentionTypes(content))
             if (content.isNotBlank()) {
                 send.addContent(content)
+            }
+            if (actionRow != null) {
+                send.addComponents(actionRow)
             }
             send.queue({ message ->
                 if (lotteryId != null && poolAmount != null) {
@@ -155,7 +163,10 @@ class LotteryAnnouncer @Autowired constructor(
                 return@queue
             }
             val rebuilt = rebuildWithUpdatedTodaysDraw(previous, lottery)
-            existing.editMessageEmbeds(rebuilt).queue({
+            val actionRow = announcementActionRow(lottery.mode, guild.idLong)
+            existing.editMessageEmbeds(rebuilt)
+                .setComponents(listOfNotNull(actionRow))
+                .queue({
                 runCatching { jackpotLotteryService.updateAnnouncedPool(lotteryId, lottery.poolAmount) }
                     .onFailure {
                         logger.warn(
@@ -259,6 +270,17 @@ class LotteryAnnouncer @Autowired constructor(
             val poolAmount: Long,
         ) : OpenSummary
         data object Skipped : OpenSummary
+    }
+
+    // ---- action row ----
+
+    private fun announcementActionRow(mode: String, guildId: Long): ActionRow? = when (mode) {
+        LotteryHelper.MODE_WEIGHTED -> ActionRow.of(
+            Button.primary("lottery_buy", "🎫 Buy Tickets")
+        )
+        else -> webBaseUrl.takeIf { it.isNotBlank() }?.let { base ->
+            ActionRow.of(Button.link("$base/casino/$guildId/lottery", "🎯 Pick Numbers"))
+        }
     }
 
     // ---- channel resolution ----

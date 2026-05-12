@@ -8,6 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.NamedQueries
 import jakarta.persistence.NamedQuery
 import jakarta.persistence.Table
+import org.hibernate.annotations.DynamicUpdate
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 import java.time.Instant
@@ -41,6 +42,7 @@ import java.time.Instant
     )
 )
 @Entity
+@DynamicUpdate
 @Table(name = "toby_coin_jackpot_lottery", schema = "public")
 @Transactional
 class JackpotLotteryDto(

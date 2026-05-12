@@ -6,10 +6,12 @@ import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
+import core.managers.ModalManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -25,6 +27,7 @@ class MessageEventHandler @Autowired constructor(
     private val commandManager: CommandManager,
     private val buttonManager: ButtonManager,
     private val menuManager: MenuManager,
+    private val modalManager: ModalManager,
     private val autocompleteManager: AutocompleteManager
 ) : ListenerAdapter(), CoroutineScope {
 
@@ -99,10 +102,18 @@ class MessageEventHandler @Autowired constructor(
     }
 
     override fun onButtonInteraction(event: ButtonInteractionEvent) {
-        event.deferReply(true).queue()
         if (!event.user.isBot) {
             launch {
                 buttonManager.handle(event)
+            }
+        }
+    }
+
+    override fun onModalInteraction(event: ModalInteractionEvent) {
+        event.deferReply(true).queue()
+        if (!event.user.isBot) {
+            launch {
+                modalManager.handle(event)
             }
         }
     }

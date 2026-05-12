@@ -29,13 +29,14 @@ class DefaultButtonManager @Autowired constructor(
         } ?: return
 
 
-        val btn = getButton(event.componentId.lowercase())
+        val btn = getButton(event.componentId.lowercase()) ?: return
 
-        btn?.let {
-            event.channel.sendTyping().queue()
-            val ctx = DefaultButtonContext(event)
-            requestingUserDto.let { userDto -> it.handle(ctx, userDto, deleteDelay) }
+        if (btn.defersReply) {
+            event.deferReply(true).queue()
         }
+        event.channel.sendTyping().queue()
+        val ctx = DefaultButtonContext(event)
+        btn.handle(ctx, requestingUserDto, deleteDelay)
     }
 
     // Component IDs may be stateful (e.g. "highlow:HIGHER:9:50:6", "duel:accept:1:42").
