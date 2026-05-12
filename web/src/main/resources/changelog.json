@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Preserve action-row buttons on refresh for weighted mode",
+    "summary": "Companion fix to #438. After that PR the **mode label** on refreshed weighted-draw embeds was right, but the **action-row buttons** still disappeared. Same root cause, second site: `refreshAnnouncement` at line 166 was passing `lottery.mode` (the DTO column value `\"TICKET_WEIGHTED\"`) to `announcementActionRow`, which compares against `LotteryHelper.MODE_WEIGHTED` (`\"WEIGHTED\"`). The comparison missed, fell through to the URL-button else branch, and that branch returned `nu…",
+    "emoji": "🎟️",
+    "prNumber": 439
+  },
+  {
+    "date": "May 2026",
     "title": "Use runtime mode constant when refreshing announcement embed",
     "summary": "The lottery refresh job has been overwriting weighted-mode announcement embeds with the wrong \"Today's draw\" mode label (`Pick 5 of 49`) while the footer + yesterday's recap correctly say it's a weighted draw. Root cause: `rebuildWithUpdatedTodaysDraw` passes `lottery.mode` (the DTO column value `\"TICKET_WEIGHTED\"`) straight to `renderOpenSummary`, which expects the runtime config string from `LotteryHelper.MODE_WEIGHTED` (`\"WEIGHTED\"`). The comparison falls through to the…",
     "emoji": "🎟️",
