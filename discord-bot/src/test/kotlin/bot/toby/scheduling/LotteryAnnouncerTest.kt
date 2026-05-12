@@ -517,8 +517,9 @@ class LotteryAnnouncerTest {
 
             val editAction: MessageEditAction = mockk(relaxed = true)
             val editedEmbedSlot = slot<MessageEmbed>()
+            val componentsSlot = slot<Collection<MessageTopLevelComponent>>()
             every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
-            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every { editAction.setComponents(capture(componentsSlot)) } returns editAction
             every {
                 editAction.queue(any<java.util.function.Consumer<Message>>(), any())
             } answers {
@@ -542,6 +543,17 @@ class LotteryAnnouncerTest {
             assertFalse(
                 todayField.value!!.contains("Pick 5 of 49"),
                 "weighted refresh should not render the number-match label: ${todayField.value}",
+            )
+            // Regression: refresh used to pass lottery.mode (the DTO
+            // column "TICKET_WEIGHTED") to announcementActionRow, which
+            // compares against LotteryHelper.MODE_WEIGHTED ("WEIGHTED").
+            // The comparison missed, fell through to the URL-button
+            // branch, and that branch returned null when webBaseUrl was
+            // blank — stripping the "Buy Tickets" button on every refresh.
+            assertTrue(
+                componentsSlot.captured.isNotEmpty(),
+                "weighted refresh should preserve the Buy Tickets action row, " +
+                    "got: ${componentsSlot.captured}",
             )
         }
 

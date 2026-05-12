@@ -163,7 +163,7 @@ class LotteryAnnouncer @Autowired constructor(
                 return@queue
             }
             val rebuilt = rebuildWithUpdatedTodaysDraw(previous, lottery)
-            val actionRow = announcementActionRow(lottery.mode, guild.idLong)
+            val actionRow = announcementActionRow(runtimeMode(lottery.mode), guild.idLong)
             existing.editMessageEmbeds(rebuilt)
                 .setComponents(listOfNotNull(actionRow))
                 .queue({
@@ -217,11 +217,7 @@ class LotteryAnnouncer @Autowired constructor(
         // the DTO column value ("TICKET_WEIGHTED" / "NUMBER_MATCH").
         // Translate explicitly so a refreshed weighted draw doesn't
         // fall through to the "Pick 5 of 49" else branch.
-        val runtimeMode = when (lottery.mode) {
-            JackpotLotteryDto.MODE_TICKET_WEIGHTED -> LotteryHelper.MODE_WEIGHTED
-            else -> LotteryHelper.MODE_NUMBER_MATCH
-        }
-        val freshTodayBody = renderOpenSummary(runtimeMode, freshSummary)
+        val freshTodayBody = renderOpenSummary(runtimeMode(lottery.mode), freshSummary)
         previous.fields.forEach { field ->
             if (field.name == TODAYS_DRAW_FIELD) {
                 builder.addField(TODAYS_DRAW_FIELD, freshTodayBody, false)
@@ -282,6 +278,20 @@ class LotteryAnnouncer @Autowired constructor(
     }
 
     // ---- action row ----
+
+    /**
+     * Translate the DTO `mode` column value
+     * ([JackpotLotteryDto.MODE_TICKET_WEIGHTED] / [JackpotLotteryDto.MODE_NUMBER_MATCH])
+     * to the runtime mode string used by config + render code
+     * ([LotteryHelper.MODE_WEIGHTED] / [LotteryHelper.MODE_NUMBER_MATCH]).
+     * The two systems exist for separate reasons (storage vs admin input)
+     * and differ for the weighted case (`TICKET_WEIGHTED` vs `WEIGHTED`);
+     * the refresh path is the only place that has to bridge them.
+     */
+    private fun runtimeMode(dtoMode: String): String = when (dtoMode) {
+        JackpotLotteryDto.MODE_TICKET_WEIGHTED -> LotteryHelper.MODE_WEIGHTED
+        else -> LotteryHelper.MODE_NUMBER_MATCH
+    }
 
     private fun announcementActionRow(mode: String, guildId: Long): ActionRow? = when (mode) {
         LotteryHelper.MODE_WEIGHTED -> ActionRow.of(
