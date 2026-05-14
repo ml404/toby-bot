@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Structurally exclude HighLow wins from rolling",
+    "summary": "The per-guild `JACKPOT_RTP_MAX_PCT` gate uses RTP as a proxy for \"deserves a jackpot sweetener\". That proxy correctly blocks Coinflip/Blackjack/Baccarat/Roulette/Holdem at the recommended ceiling of 95, but it **breaks for HighLow**: an honest 12/13 ≈ 0.923 RTP, yet the player can pick direction against an anchor dealt from 2..12 and win ~85% of plays at the extremes (anchor=12 LOWER, anchor=2 HIGHER). `JackpotHelper.rollOnWin` fires **per winning play**, not per credit of…",
+    "emoji": "🎰",
+    "prNumber": 440
+  },
+  {
+    "date": "May 2026",
     "title": "Preserve action-row buttons on refresh for weighted mode",
     "summary": "Companion fix to #438. After that PR the **mode label** on refreshed weighted-draw embeds was right, but the **action-row buttons** still disappeared. Same root cause, second site: `refreshAnnouncement` at line 166 was passing `lottery.mode` (the DTO column value `\"TICKET_WEIGHTED\"`) to `announcementActionRow`, which compares against `LotteryHelper.MODE_WEIGHTED` (`\"WEIGHTED\"`). The comparison missed, fell through to the URL-button else branch, and that branch returned `nu…",
     "emoji": "🎟️",
