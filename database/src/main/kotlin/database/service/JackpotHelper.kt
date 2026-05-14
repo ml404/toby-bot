@@ -6,20 +6,31 @@ import kotlin.random.Random
 
 /**
  * Casino games that feed the jackpot pool, paired with their canonical
- * RTP. The value is the highest plausible RTP across that game's bet
- * variants (Banker for Baccarat, basic-strategy for Blackjack, etc.) —
- * the RTP eligibility gate uses it to decide whether a game is "too
- * generous" to also pay a jackpot. Pinned alongside the per-game test
- * suites in `database.economy` / `database.blackjack`; if a game's
- * payout schedule is tuned, the value here moves with it.
+ * RTP and a [eligibleForJackpot] policy flag. RTP is the highest
+ * plausible value across the game's bet variants (Banker for Baccarat,
+ * basic-strategy for Blackjack, etc.) — the per-guild RTP eligibility
+ * gate uses it to decide whether a game is "too generous" to also pay
+ * a jackpot. Pinned alongside the per-game test suites in
+ * `database.economy` / `database.blackjack`; if a game's payout
+ * schedule is tuned, the value here moves with it.
+ *
+ * [eligibleForJackpot] is a global structural carve-out for games
+ * where the RTP gate isn't the right proxy. HighLow honestly returns
+ * 12/13 RTP, but the player can pick direction against an anchor
+ * dealt from 2..12 — at the extremes that wins ~85 % of the time
+ * with a tiny multiplier. `rollOnWin` fires per *win*, not per credit
+ * of house edge, so HighLow lets a player rack up free jackpot rolls
+ * while bleeding only the honest 7.7 % edge. The flag disables the
+ * win-roll while leaving `divertOnLoss` untouched — losses still feed
+ * the pool, wins just don't claim from it.
  */
-enum class JackpotGame(val rtp: Double) {
+enum class JackpotGame(val rtp: Double, val eligibleForJackpot: Boolean = true) {
     COINFLIP(1.0),     // 50/50 fair, 2× payout — no house edge by design.
     BLACKJACK(0.99),   // Basic strategy hovers ~99-100%; conservatively 0.99.
     BACCARAT(0.99),    // Banker ~98.94%, Player ~98.76% — pin to the higher.
     ROULETTE(0.973),   // 36/37 European wheel — uniform across bet types.
     HOLDEM(0.97),      // Casino Hold'em vs dealer; ~2-3% edge industry-wide.
-    HIGHLOW(0.923),    // 12/13 ≈ deckSize-1/deckSize regardless of direction.
+    HIGHLOW(0.923, eligibleForJackpot = false), // Honest 12/13 RTP but ~85 % win rate at extreme anchors farms rolls; loss-tribute only.
     KENO(0.92),        // 0.83-0.92 band; pin to the top so the gate is honest.
     SLOTS(0.890),      // ~11% house edge; closed-form pinned by SlotMachineTest.
     SCRATCH(0.875),    // ~12.5% edge; pinned by ScratchCard.expectedRtp().
@@ -157,6 +168,11 @@ internal object JackpotHelper {
      * the anchor cap at full base probability. Decoupled from each
      * game's max stake so admins can raise stakes arbitrarily without
      * shrinking jackpot odds.
+     *
+     * Games carrying [JackpotGame.eligibleForJackpot] = `false` skip
+     * the roll entirely — they're hard-coded ineligible regardless of
+     * RTP or any per-guild config, because the RTP gate is the wrong
+     * proxy for them (typically high-win-rate, honest-edge designs).
      */
     fun rollOnWin(
         jackpotService: JackpotService,
@@ -168,6 +184,7 @@ internal object JackpotHelper {
         game: JackpotGame,
         random: Random
     ): Long {
+        if (!game.eligibleForJackpot) return 0L
         val baseProbability = winProbability(configService, guildId)
         val anchor = stakeAnchor(configService, guildId)
         val scale = (stake.toDouble() / anchor.toDouble()).coerceIn(0.0, 1.0)

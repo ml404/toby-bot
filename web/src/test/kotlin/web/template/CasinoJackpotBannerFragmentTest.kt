@@ -94,18 +94,35 @@ class CasinoJackpotBannerFragmentTest {
     }
 
     @Test
-    fun `jackpot banner shows an ineligibility explanation when gated out`() {
+    fun `jackpot banner shows an ineligibility explanation when gated out by per-guild RTP`() {
         // Symmetric branch — the banner explains *why* the game won't
         // roll (RTP above the configured ceiling) instead of going
         // silent. Includes the configured ceiling so the user can map
         // it to the admin's setting if they ask.
         assertTrue(
-            fragmentHtml.contains("th:if=\"\${jackpotIneligible}\""),
-            "fragment must render an ineligibility blurb when jackpotIneligible is true"
+            fragmentHtml.contains("jackpotIneligibleReason == 'rtp'"),
+            "fragment must guard the RTP-reason blurb on jackpotIneligibleReason"
         )
         assertTrue(
             fragmentHtml.contains("jackpotRtpMax"),
-            "ineligibility blurb must surface the configured RTP ceiling"
+            "RTP-reason blurb must surface the configured RTP ceiling"
+        )
+    }
+
+    @Test
+    fun `jackpot banner shows a structural-reason explanation for hard-coded carve-outs`() {
+        // HighLow's RTP is honest but its win rate is so high that
+        // `rollOnWin` would farm rolls; `JackpotGame.eligibleForJackpot=false`
+        // disables the win-roll regardless of per-guild config. The banner
+        // explains this with a separate, RTP-free message so the player
+        // doesn't think the admin configured a ceiling that bites HighLow.
+        assertTrue(
+            fragmentHtml.contains("jackpotIneligibleReason == 'structural'"),
+            "fragment must guard the structural-reason blurb on jackpotIneligibleReason"
+        )
+        assertTrue(
+            fragmentHtml.contains("win rate is too"),
+            "structural-reason blurb must explain it's win-rate driven, not RTP driven"
         )
     }
 

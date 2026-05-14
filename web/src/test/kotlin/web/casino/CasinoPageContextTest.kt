@@ -82,7 +82,7 @@ class CasinoPageContextTest {
     }
 
     @Test
-    fun `populate stamps ineligibility attrs when the game is gated out`() {
+    fun `populate stamps RTP-reason ineligibility attrs when the per-guild RTP gate blocks the game`() {
         every { jackpotService.isEligibleByRtp(guildId, JackpotGame.COINFLIP) } returns false
         every { jackpotService.rtpMaxPct(guildId) } returns 95L
         val model = ConcurrentModel()
@@ -90,6 +90,24 @@ class CasinoPageContextTest {
         ctx.populate(model, guildId, discordId, user, game = JackpotGame.COINFLIP)
 
         assertEquals(true, model.getAttribute("jackpotIneligible"))
+        assertEquals("rtp", model.getAttribute("jackpotIneligibleReason"))
         assertEquals(95L, model.getAttribute("jackpotRtpMax"))
+    }
+
+    @Test
+    fun `populate stamps structural-reason ineligibility for HIGHLOW regardless of RTP gate`() {
+        // HIGHLOW carries JackpotGame.eligibleForJackpot=false. The RTP gate
+        // never matters for it — banner shows the win-rate reason instead.
+        val model = ConcurrentModel()
+
+        ctx.populate(model, guildId, discordId, user, game = JackpotGame.HIGHLOW)
+
+        assertEquals(true, model.getAttribute("jackpotIneligible"))
+        assertEquals("structural", model.getAttribute("jackpotIneligibleReason"))
+        assertEquals(false, model.containsAttribute("jackpotRtpMax"))
+        // The RTP gate was not even consulted — the structural carve-out
+        // short-circuits before the per-guild check.
+        verify(exactly = 0) { jackpotService.isEligibleByRtp(any(), any()) }
+        verify(exactly = 0) { jackpotService.rtpMaxPct(any()) }
     }
 }
