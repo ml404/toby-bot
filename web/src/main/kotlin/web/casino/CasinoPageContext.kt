@@ -52,13 +52,28 @@ class CasinoPageContext(
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
         model.addAttribute("jackpotStakeAnchor", jackpotService.stakeAnchor(guildId))
-        // Per-game RTP eligibility — only set when caller declares which
-        // game this page is for. Lottery / poker pages share the banner
-        // but don't roll for the jackpot themselves, so they leave `game`
+        // Per-game eligibility — only set when caller declares which game
+        // this page is for. Lottery / poker pages share the banner but
+        // don't roll for the jackpot themselves, so they leave `game`
         // null and the banner stays in its eligible-by-default form.
-        if (game != null && !jackpotService.isEligibleByRtp(guildId, game)) {
-            model.addAttribute("jackpotIneligible", true)
-            model.addAttribute("jackpotRtpMax", jackpotService.rtpMaxPct(guildId))
+        // Two ineligibility paths:
+        //   - "structural": the game is globally carved out via
+        //     `JackpotGame.eligibleForJackpot=false` (HighLow's case —
+        //     honest RTP but win-rate would farm rolls). Wins skip the
+        //     jackpot, losses still tribute.
+        //   - "rtp": the per-guild `JACKPOT_RTP_MAX_PCT` ceiling gates
+        //     this game out. Same player-facing effect, different reason.
+        // The structural reason wins when both apply, since it's the
+        // stronger (admin can't loosen it via config).
+        if (game != null) {
+            if (!game.eligibleForJackpot) {
+                model.addAttribute("jackpotIneligible", true)
+                model.addAttribute("jackpotIneligibleReason", "structural")
+            } else if (!jackpotService.isEligibleByRtp(guildId, game)) {
+                model.addAttribute("jackpotIneligible", true)
+                model.addAttribute("jackpotIneligibleReason", "rtp")
+                model.addAttribute("jackpotRtpMax", jackpotService.rtpMaxPct(guildId))
+            }
         }
         model.addAttribute("username", user.displayName())
         return guild

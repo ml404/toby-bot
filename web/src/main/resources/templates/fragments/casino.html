@@ -19,12 +19,19 @@
         <span th:text="${jackpotStakeAnchor}">500</span>-credit reference;
         bets at or above that get the full rate, smaller bets scale linearly down.
     </span>
-    <span class="muted" th:if="${jackpotIneligible}">
-        — this game doesn't roll for the jackpot: its RTP is above the
-        configured ceiling of
-        <span th:text="${jackpotRtpMax}">95</span>%. Wins still pay out
-        normally, but won't bank the pool.
-    </span>
+    <th:block th:if="${jackpotIneligible}">
+        <span class="muted" th:if="${jackpotIneligibleReason == 'rtp'}">
+            — this game doesn't roll for the jackpot: its RTP is above the
+            configured ceiling of
+            <span th:text="${jackpotRtpMax}">95</span>%. Wins still pay out
+            normally, but won't bank the pool.
+        </span>
+        <span class="muted" th:if="${jackpotIneligibleReason == 'structural'}">
+            — this game doesn't roll for the jackpot: its win rate is too
+            high to be a fair contributor. Wins still pay out normally,
+            but won't bank the pool. Losses still tribute as usual.
+        </span>
+    </th:block>
 </div>
 </body>
 </html>

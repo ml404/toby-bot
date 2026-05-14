@@ -141,6 +141,28 @@ class HighlowServiceTest {
     }
 
     @Test
+    fun `win never rolls the jackpot — HIGHLOW carries the global eligibility carve-out`() {
+        // Even with a forced-hit RNG and a non-empty pool, a HighLow win
+        // must surface jackpotPayout=0 and never touch the pool.
+        // `JackpotGame.HIGHLOW.eligibleForJackpot = false` short-circuits
+        // `JackpotHelper.rollOnWin` regardless of config.
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { highlow.play(Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
+            anchor = 7, next = 10, direction = Highlow.Direction.HIGHER, multiplier = 2.0
+        )
+        every { userService.updateUser(any()) } returns user
+        every { jackpotService.awardJackpot(guildId) } returns 9_999L  // would be banked if HIGHLOW were eligible
+
+        val outcome = service.play(discordId, guildId, stake = 100L, direction = Highlow.Direction.HIGHER)
+
+        val win = assertInstanceOf(HighlowService.PlayOutcome.Win::class.java, outcome)
+        assertEquals(0L, win.jackpotPayout)
+        assertEquals(1_100L, win.newBalance, "newBalance must not include any jackpot top-up")
+        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+    }
+
+    @Test
     fun `loss tributes 10 percent of the stake into the jackpot pool`() {
         val user = userWithBalance(500L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user

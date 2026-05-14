@@ -698,6 +698,54 @@ class JackpotHelperTest {
         assertEquals(50L, won, "gate disabled — Coinflip wins still roll")
     }
 
+    // ---- eligibleForJackpot global carve-out ----
+
+    @Test
+    fun `rollOnWin returns zero for games carrying eligibleForJackpot=false`() {
+        // HIGHLOW is the only game with the flag today — it has an honest
+        // 12/13 RTP but the player can pick direction against an extreme
+        // anchor to win ~85 % of plays, which would farm jackpot rolls
+        // even though the RTP gate considers it eligible.
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        rtpConfigReturns(null)  // gate disabled — proves the carve-out is independent
+        val user = freshUser(initial = 100L)
+
+        val won = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, user, guildId,
+            stake = MAX_STAKE, game = JackpotGame.HIGHLOW, random = stubRandom(0.0)
+        )
+
+        assertEquals(0L, won, "HIGHLOW wins must never roll for the jackpot")
+        assertEquals(100L, user.socialCredit, "balance untouched on carve-out")
+        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
+        verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `rollOnWin still allows other eligible games when one game is carved out`() {
+        // Sanity check that the global flag short-circuits per-game rather
+        // than per-call — a HIGHLOW play returning zero must not poison the
+        // subsequent SLOTS play.
+        winConfigReturns("1")
+        anchorConfigReturns(MAX_STAKE.toString())
+        rtpConfigReturns(null)
+        every { jackpotService.awardJackpot(guildId) } returns 500L
+
+        val highlow = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, freshUser(), guildId,
+            stake = MAX_STAKE, game = JackpotGame.HIGHLOW, random = stubRandom(0.001)
+        )
+        val slots = JackpotHelper.rollOnWin(
+            jackpotService, configService, userService, freshUser(), guildId,
+            stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
+        )
+
+        assertEquals(0L, highlow)
+        assertEquals(500L, slots)
+    }
+
     @Test
     fun `activityMinDays coerces to at least 1`() {
         every {
