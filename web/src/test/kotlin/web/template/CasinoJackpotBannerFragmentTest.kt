@@ -110,6 +110,22 @@ class CasinoJackpotBannerFragmentTest {
     }
 
     @Test
+    fun `jackpot banner does not use SpEL 'and' on the nullable jackpotIneligible attribute`() {
+        // Regression guard for the PageRenderSmokeIT failure on PR #440:
+        // `th:if="${jackpotIneligible and jackpotIneligibleReason == 'rtp'}"`
+        // throws SpelEvaluationException on every eligible-game page because
+        // `jackpotIneligible` is null there and SpEL's `and` does not
+        // short-circuit on null. The reason-branches must be guarded by a
+        // nested `th:block th:if="${jackpotIneligible}"` so they only
+        // evaluate when the attribute is truthy. Substring guard is tight:
+        // any future "${jackpotIneligible and ..." is the exact bug.
+        assertFalse(
+            fragmentHtml.contains("\${jackpotIneligible and"),
+            "fragment must not chain SpEL 'and' on the nullable jackpotIneligible — wrap inner branches in <th:block th:if=\"\${jackpotIneligible}\"> instead"
+        )
+    }
+
+    @Test
     fun `jackpot banner shows a structural-reason explanation for hard-coded carve-outs`() {
         // HighLow's RTP is honest but its win rate is so high that
         // `rollOnWin` would farm rolls; `JackpotGame.eligibleForJackpot=false`
