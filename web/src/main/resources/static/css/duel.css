@@ -46,6 +46,12 @@
     padding-top: 1rem;
 }
 
+.duel-form-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 .duel-pending-list {
     display: grid;
     gap: 0.5rem;
@@ -85,4 +91,213 @@
 .duel-pending-actions {
     display: flex;
     gap: 0.5rem;
+}
+
+/* Resolution animation — modal overlay that plays on Accept. Mirrors the
+   jackpot-wheel overlay pattern: fixed full-screen, dark backdrop,
+   centred content, click/Esc to dismiss. */
+.duel-resolution-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    display: grid;
+    grid-template-rows: 1fr auto auto auto;
+    place-items: center;
+    gap: 1rem;
+    padding: 2rem 1rem;
+    z-index: 1000;
+    animation: fade-in 200ms ease-out both;
+    cursor: pointer;
+}
+
+.duel-resolution-overlay.is-dismissing {
+    animation: fade-in 200ms ease-in reverse both;
+}
+
+.duel-arena {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    width: min(36rem, 100%);
+    align-self: end;
+}
+
+.duel-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transform-origin: 50% 80%;
+}
+
+.duel-figure-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--border, #2a2d35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    display: grid;
+    place-items: center;
+}
+
+.duel-figure-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.duel-figure-avatar.is-fallback {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.duel-figure-avatar.is-fallback::before { content: attr(data-initial); }
+
+.duel-figure-name {
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+/* Two animations per figure — first the walk-out, then either a fall or a
+   winner glow. Using the `animation` shorthand twice keeps each side's
+   timings explicit and avoids brittle property-list cascade merging. */
+.duel-figure--left.is-loser {
+    animation:
+        duel-walk-left  1.3s ease-in-out 0.3s both,
+        duel-fall-left  0.7s ease-in     1.9s forwards;
+}
+.duel-figure--right.is-loser {
+    animation:
+        duel-walk-right 1.3s ease-in-out 0.3s both,
+        duel-fall-right 0.7s ease-in     1.9s forwards;
+}
+.duel-figure--left.is-winner {
+    --win-x: -80px;
+    animation:
+        duel-walk-left   1.3s ease-in-out 0.3s both,
+        duel-winner-glow 1.4s ease-out    1.9s both;
+}
+.duel-figure--right.is-winner {
+    --win-x: 80px;
+    animation:
+        duel-walk-right  1.3s ease-in-out 0.3s both,
+        duel-winner-glow 1.4s ease-out    1.9s both;
+}
+
+.duel-flash {
+    font-size: 4rem;
+    line-height: 1;
+    opacity: 0;
+    animation: duel-flash 0.45s ease-out 1.7s both;
+}
+
+.duel-credits-pill {
+    background: linear-gradient(135deg, #f5c542, #c98c1a);
+    color: #1a1410;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(245, 197, 66, 0.35);
+    opacity: 0;
+    animation: duel-credits-fly 1.0s ease-out 2.0s both;
+}
+
+.duel-credits-pill.flies-left  { --duel-pill-x: -180px; }
+.duel-credits-pill.flies-right { --duel-pill-x:  180px; }
+
+.duel-result-line {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    animation: fade-in 400ms ease-out 2.4s both;
+}
+
+.duel-dismiss-hint {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+    opacity: 0;
+    animation: fade-in 400ms ease-out 2.8s both;
+}
+
+/* Walk-out keyframes: both figures start close to centre (each pulled 40px
+   toward the other from their natural flex position) and walk apart with
+   a small step-bob. End at ±80px from natural, which the fall + glow
+   keyframes match. */
+@keyframes duel-walk-left {
+    0%   { transform: translateX(40px) translateY(0); }
+    25%  { transform: translateX(10px) translateY(-3px); }
+    50%  { transform: translateX(-20px) translateY(0); }
+    75%  { transform: translateX(-50px) translateY(-3px); }
+    100% { transform: translateX(-80px) translateY(0); }
+}
+
+@keyframes duel-walk-right {
+    0%   { transform: translateX(-40px) translateY(0); }
+    25%  { transform: translateX(-10px) translateY(-3px); }
+    50%  { transform: translateX(20px) translateY(0); }
+    75%  { transform: translateX(50px) translateY(-3px); }
+    100% { transform: translateX(80px) translateY(0); }
+}
+
+@keyframes duel-flash {
+    0%   { opacity: 0; transform: scale(0.4); }
+    40%  { opacity: 1; transform: scale(1.3); }
+    100% { opacity: 0; transform: scale(1.6); }
+}
+
+@keyframes duel-fall-left {
+    0%   { transform: translateX(-80px) rotate(0deg); opacity: 1; }
+    100% { transform: translateX(-80px) translateY(20px) rotate(-70deg); opacity: 0.35; }
+}
+
+@keyframes duel-fall-right {
+    0%   { transform: translateX(80px) rotate(0deg); opacity: 1; }
+    100% { transform: translateX(80px) translateY(20px) rotate(70deg); opacity: 0.35; }
+}
+
+@keyframes duel-winner-glow {
+    0%   { filter: drop-shadow(0 0 0 rgba(245, 197, 66, 0)); transform: translateX(var(--win-x, 0)) scale(1); }
+    30%  { filter: drop-shadow(0 0 16px rgba(245, 197, 66, 0.8)); transform: translateX(var(--win-x, 0)) scale(1.05); }
+    100% { filter: drop-shadow(0 0 8px rgba(245, 197, 66, 0.5)); transform: translateX(var(--win-x, 0)) scale(1); }
+}
+@keyframes duel-credits-fly {
+    0%   { opacity: 0; transform: translate(0, 12px) scale(0.7); }
+    30%  { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--duel-pill-x, 0), -120px) scale(0.85); }
+}
+
+/* Reduced-motion fallback: skip the choreography, show a static card with
+   the same content (both avatars + result line) immediately. */
+.duel-resolution-overlay.is-reduced .duel-figure,
+.duel-resolution-overlay.is-reduced .duel-flash,
+.duel-resolution-overlay.is-reduced .duel-credits-pill,
+.duel-resolution-overlay.is-reduced .duel-result-line,
+.duel-resolution-overlay.is-reduced .duel-dismiss-hint {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+}
+.duel-resolution-overlay.is-reduced .duel-flash { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .duel-resolution-overlay .duel-figure,
+    .duel-resolution-overlay .duel-flash,
+    .duel-resolution-overlay .duel-credits-pill,
+    .duel-resolution-overlay .duel-result-line,
+    .duel-resolution-overlay .duel-dismiss-hint {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
+    .duel-resolution-overlay .duel-flash { display: none; }
 }

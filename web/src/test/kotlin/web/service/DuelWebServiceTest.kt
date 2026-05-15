@@ -1,6 +1,7 @@
 package web.service
 
 import database.duel.PendingDuelRegistry
+import database.duel.RecentDuelResolutions
 import database.dto.UserDto
 import database.service.UserService
 import io.mockk.every
@@ -21,6 +22,7 @@ class DuelWebServiceTest {
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
     private lateinit var userService: UserService
     private lateinit var memberLookup: MemberLookupHelper
+    private lateinit var recentDuelResolutions: RecentDuelResolutions
     private lateinit var service: DuelWebService
 
     @BeforeEach
@@ -31,7 +33,10 @@ class DuelWebServiceTest {
             every { resolveAll(any(), any()) } returns emptyMap()
             every { fallbackName(any()) } answers { "Player ${firstArg<Long>().toString().takeLast(4)}" }
         }
-        service = DuelWebService(pendingDuelRegistry, userService, memberLookup)
+        recentDuelResolutions = mockk {
+            every { consumeForInitiator(any(), any()) } returns emptyList()
+        }
+        service = DuelWebService(pendingDuelRegistry, userService, memberLookup, recentDuelResolutions)
     }
 
     @Test
@@ -107,6 +112,98 @@ class DuelWebServiceTest {
         val rows = service.pendingForInitiator(opponentId, guildId)
 
         assertTrue(rows.isEmpty())
+        verify(exactly = 0) { memberLookup.resolveAll(any(), any()) }
+    }
+
+    @Test
+    fun `outgoingPayload bundles pending offers and recent resolutions`() {
+        val initiatorId = 100L
+        val createdAt = Instant.ofEpochSecond(1_700_000_000L)
+        every { pendingDuelRegistry.pendingForInitiator(initiatorId, guildId) } returns listOf(
+            PendingDuelRegistry.PendingDuel(
+                id = 7L, guildId = guildId,
+                initiatorDiscordId = initiatorId, opponentDiscordId = opponentId,
+                stake = 50L, createdAt = createdAt
+            )
+        )
+        every { recentDuelResolutions.consumeForInitiator(initiatorId, guildId) } returns listOf(
+            RecentDuelResolutions.Resolution(
+                guildId = guildId,
+                initiatorDiscordId = initiatorId,
+                opponentDiscordId = opponentId,
+                winnerDiscordId = opponentId,
+                loserDiscordId = initiatorId,
+                stake = 25L,
+                pot = 50L,
+                lossTribute = 5L,
+                resolvedAt = createdAt,
+            )
+        )
+        // Two distinct lookups happen — one for pending, one for resolutions.
+        every { memberLookup.resolveAll(guildId, setOf(initiatorId, opponentId)) } returns mapOf(
+            initiatorId to MemberLookupHelper.MemberDisplay(name = "Alice", avatarUrl = "https://cdn/a.png"),
+            opponentId to MemberLookupHelper.MemberDisplay(name = "Bob", avatarUrl = "https://cdn/b.png"),
+        )
+
+        val payload = service.outgoingPayload(initiatorId, guildId)
+
+        // Pending side
+        assertEquals(1, payload.pending.size)
+        assertEquals("Alice", payload.pending[0].initiatorName)
+        assertEquals("Bob", payload.pending[0].opponentName)
+        // Resolutions side
+        assertEquals(1, payload.resolutions.size)
+        val r = payload.resolutions[0]
+        assertEquals(initiatorId.toString(), r.initiatorDiscordId)
+        assertEquals("Alice", r.initiatorName)
+        assertEquals("https://cdn/a.png", r.initiatorAvatarUrl)
+        assertEquals(opponentId.toString(), r.opponentDiscordId)
+        assertEquals("Bob", r.opponentName)
+        assertEquals(opponentId.toString(), r.winnerDiscordId)
+        assertEquals(50L, r.pot)
+        assertEquals(5L, r.lossTribute)
+    }
+
+    @Test
+    fun `outgoingPayload falls back to Player XXXX when a participant left the guild`() {
+        val initiatorId = 100L
+        every { pendingDuelRegistry.pendingForInitiator(initiatorId, guildId) } returns emptyList()
+        every { recentDuelResolutions.consumeForInitiator(initiatorId, guildId) } returns listOf(
+            RecentDuelResolutions.Resolution(
+                guildId = guildId,
+                initiatorDiscordId = initiatorId,
+                opponentDiscordId = opponentId,
+                winnerDiscordId = initiatorId,
+                loserDiscordId = opponentId,
+                stake = 25L,
+                pot = 50L,
+                lossTribute = 5L,
+                resolvedAt = Instant.ofEpochSecond(1_700_000_000L),
+            )
+        )
+        // JDA returns nothing — both members fall back.
+        every { memberLookup.resolveAll(guildId, setOf(initiatorId, opponentId)) } returns emptyMap()
+
+        val payload = service.outgoingPayload(initiatorId, guildId)
+
+        assertEquals(1, payload.resolutions.size)
+        assertEquals("Player 100", payload.resolutions[0].initiatorName)
+        assertEquals("Player 200", payload.resolutions[0].opponentName)
+        assertNull(payload.resolutions[0].initiatorAvatarUrl)
+    }
+
+    @Test
+    fun `outgoingPayload short-circuits the resolution lookup when none are pending`() {
+        val initiatorId = 100L
+        every { pendingDuelRegistry.pendingForInitiator(initiatorId, guildId) } returns emptyList()
+        every { recentDuelResolutions.consumeForInitiator(initiatorId, guildId) } returns emptyList()
+
+        val payload = service.outgoingPayload(initiatorId, guildId)
+
+        assertTrue(payload.pending.isEmpty())
+        assertTrue(payload.resolutions.isEmpty())
+        // pendingForInitiator's project() guards on its own; resolutions
+        // path's resolveAll call should NOT fire when nothing is to resolve.
         verify(exactly = 0) { memberLookup.resolveAll(any(), any()) }
     }
 

@@ -6,7 +6,13 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <main id="main" class="container"
-      th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}, data-ttl-seconds=${ttlSeconds}">
+      th:attr="data-guild-id=${guildId},
+               data-min-stake=${minStake},
+               data-max-stake=${maxStake},
+               data-ttl-seconds=${ttlSeconds},
+               data-user-id=${currentUserId},
+               data-user-name=${currentUserName},
+               data-user-avatar=${currentUserAvatarUrl}">
 
     <div class="duel-header">
         <a class="back-link" th:href="@{/duel/guilds}">&larr; All servers</a>
@@ -42,7 +48,10 @@
             <input id="duel-stake" name="stake" type="number"
                    th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
 
-            <button type="submit" id="duel-send" class="btn-primary">Send challenge</button>
+            <div class="duel-form-actions">
+                <button type="submit" id="duel-send" class="btn-primary">Send challenge</button>
+                <button type="button" id="duel-preview" class="btn-secondary">Preview animation</button>
+            </div>
         </form>
 
         <div class="duel-balance">
@@ -55,7 +64,15 @@
         <div id="duel-pending-list" class="duel-pending-list">
             <div th:if="${#lists.isEmpty(pending)}" class="muted">No pending duels right now.</div>
             <div class="duel-pending-row" th:each="p : ${pending}"
-                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}, data-created-at=${p.createdAtEpochSeconds}">
+                 th:attr="data-duel-id=${p.duelId},
+                          data-stake=${p.stake},
+                          data-created-at=${p.createdAtEpochSeconds},
+                          data-initiator-discord-id=${p.initiatorDiscordId},
+                          data-initiator-name=${p.initiatorName},
+                          data-initiator-avatar=${p.initiatorAvatarUrl},
+                          data-opponent-discord-id=${p.opponentDiscordId},
+                          data-opponent-name=${p.opponentName},
+                          data-opponent-avatar=${p.opponentAvatarUrl}">
                 <div class="duel-pending-info">
                     <div class="duel-pending-who">
                         <span class="muted">From</span>

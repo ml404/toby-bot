@@ -2,6 +2,7 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.DuelLogDto
+import database.duel.RecentDuelResolutions
 import database.economy.Coinflip
 import database.persistence.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,6 +42,7 @@ class DuelService @Autowired constructor(
     private val jackpotService: JackpotService,
     private val configService: ConfigService,
     private val duelLogPersistence: DuelLogPersistence,
+    private val recentDuelResolutions: RecentDuelResolutions = RecentDuelResolutions(),
     private val random: Random = Random.Default,
 ) {
     sealed interface StartOutcome {
@@ -163,7 +165,7 @@ class DuelService @Autowired constructor(
             )
         )
 
-        return AcceptOutcome.Win(
+        val outcome = AcceptOutcome.Win(
             winnerDiscordId = winner.discordId,
             loserDiscordId = loser.discordId,
             stake = stake,
@@ -172,6 +174,23 @@ class DuelService @Autowired constructor(
             loserNewBalance = loser.socialCredit ?: 0L,
             lossTribute = tribute,
         )
+        // Surface the resolution to whoever's polling the initiator's
+        // outgoing-offers feed (web UI replays the accept animation).
+        // In-memory, short-TTL — see RecentDuelResolutions.
+        recentDuelResolutions.record(
+            RecentDuelResolutions.Resolution(
+                guildId = guildId,
+                initiatorDiscordId = initiatorDiscordId,
+                opponentDiscordId = opponentDiscordId,
+                winnerDiscordId = outcome.winnerDiscordId,
+                loserDiscordId = outcome.loserDiscordId,
+                stake = outcome.stake,
+                pot = outcome.pot,
+                lossTribute = outcome.lossTribute,
+                resolvedAt = at,
+            )
+        )
+        return outcome
     }
 
     companion object {

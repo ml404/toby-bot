@@ -3,6 +3,7 @@ package database.service
 import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.dto.UserDto
+import database.duel.RecentDuelResolutions
 import database.persistence.DuelLogPersistence
 import io.mockk.every
 import io.mockk.mockk
@@ -24,6 +25,7 @@ class DuelServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var configService: ConfigService
     private lateinit var duelLogPersistence: RecordingDuelLogPersistence
+    private lateinit var recentDuelResolutions: RecentDuelResolutions
 
     @BeforeEach
     fun setup() {
@@ -31,6 +33,10 @@ class DuelServiceTest {
         jackpotService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         duelLogPersistence = RecordingDuelLogPersistence()
+        // Capture-only scheduler — we don't actually want eviction to run
+        // in the JVM thread pool during tests.
+        val noopScheduler = mockk<java.util.concurrent.ScheduledExecutorService>(relaxed = true)
+        recentDuelResolutions = RecentDuelResolutions(scheduler = noopScheduler)
 
         // Default tribute config: empty → JackpotHelper falls back to 10%.
         every {
@@ -42,7 +48,14 @@ class DuelServiceTest {
     }
 
     private fun service(random: Random = AlwaysHeadsRandom): DuelService =
-        DuelService(userService, jackpotService, configService, duelLogPersistence, random = random)
+        DuelService(
+            userService,
+            jackpotService,
+            configService,
+            duelLogPersistence,
+            recentDuelResolutions = recentDuelResolutions,
+            random = random,
+        )
 
     @Test
     fun `startDuel returns Ok when both players have enough credits`() {
@@ -113,6 +126,39 @@ class DuelServiceTest {
         assertEquals(1, duelLogPersistence.inserted.size)
         assertEquals(5L, duelLogPersistence.inserted[0].lossTribute)
         assertEquals(100L, duelLogPersistence.inserted[0].pot)
+    }
+
+    @Test
+    fun `acceptDuel publishes the win to RecentDuelResolutions for the initiator's poll to pick up`() {
+        userService.seed(UserDto(initiator, guildId).apply { socialCredit = 200L })
+        userService.seed(UserDto(opponent, guildId).apply { socialCredit = 100L })
+
+        service().acceptDuel(initiator, opponent, guildId, stake = 50L, at = now)
+
+        val resolutions = recentDuelResolutions.consumeForInitiator(initiator, guildId)
+        assertEquals(1, resolutions.size)
+        val r = resolutions[0]
+        assertEquals(guildId, r.guildId)
+        assertEquals(initiator, r.initiatorDiscordId)
+        assertEquals(opponent, r.opponentDiscordId)
+        // AlwaysHeadsRandom → initiator wins
+        assertEquals(initiator, r.winnerDiscordId)
+        assertEquals(opponent, r.loserDiscordId)
+        assertEquals(50L, r.stake)
+        assertEquals(100L, r.pot)
+        assertEquals(5L, r.lossTribute)
+        assertEquals(now, r.resolvedAt)
+    }
+
+    @Test
+    fun `acceptDuel does not publish a resolution when the offer fails balance check`() {
+        userService.seed(UserDto(initiator, guildId).apply { socialCredit = 30L })
+        userService.seed(UserDto(opponent, guildId).apply { socialCredit = 100L })
+
+        val outcome = service().acceptDuel(initiator, opponent, guildId, stake = 50L, at = now)
+
+        assertTrue(outcome is DuelService.AcceptOutcome.InitiatorInsufficient)
+        assertTrue(recentDuelResolutions.consumeForInitiator(initiator, guildId).isEmpty())
     }
 
     @Test
