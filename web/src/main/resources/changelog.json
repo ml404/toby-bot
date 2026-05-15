@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Replace campaign features with lookup page",
+    "summary": "DnD Beyond now ships an official Discord bot that does campaign management, initiative tracking, encounter building and character-sheet integration better than TobyBot can. This strips all of that and replaces the `/dnd/campaign` web page with a small `/dnd` lookups page that exposes the same SRD search the existing `/dnd` Discord command already uses. ### Removed Discord-bot commands: `/campaign`, `/initiative`, `/character`, `/linkcharacter`, `/refreshcharacter` Initiati…",
+    "emoji": "🐉",
+    "prNumber": 441
+  },
+  {
+    "date": "May 2026",
     "title": "Structurally exclude HighLow wins from rolling",
     "summary": "The per-guild `JACKPOT_RTP_MAX_PCT` gate uses RTP as a proxy for \"deserves a jackpot sweetener\". That proxy correctly blocks Coinflip/Blackjack/Baccarat/Roulette/Holdem at the recommended ceiling of 95, but it **breaks for HighLow**: an honest 12/13 ≈ 0.923 RTP, yet the player can pick direction against an anchor dealt from 2..12 and win ~85% of plays at the extremes (anchor=12 LOWER, anchor=2 HIGHER). `JackpotHelper.rollOnWin` fires **per winning play**, not per credit of…",
     "emoji": "🎰",
