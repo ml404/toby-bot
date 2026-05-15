@@ -1,6 +1,146 @@
 [
   {
     "date": "May 2026",
+    "title": "Play a resolution animation when an offer is accepted on the web",
+    "summary": "Follow-on to #452 (which enriched the recipient + per-offer expiry on the web inbox). When the acceptor clicks **Accept**, the silent toast is replaced with a modal overlay that animates the two duelists: they walk apart, a 💥 flashes between them, the loser tips over, the winner gets a gold glow, and the `+pot credits` pill flies to the winner. Click anywhere, hit <kbd>Esc</kbd>, or wait 6s to dismiss — at which point `refreshAll()` runs and the inbox/balance update norma…",
+    "emoji": "💰",
+    "prNumber": 453
+  },
+  {
+    "date": "May 2026",
+    "title": "Show opponent name + avatar and per-offer expiry on web inbox",
+    "summary": "The web `/duel/{guildId}` page previously showed each pending offer's recipient as a raw 18-digit Discord ID (e.g. `123456789012345678`) and gave no per-row expiry indication — only a static \"offers expire after 3m\" footer. This PR enriches `PendingDuelView` so both the outgoing and incoming offer lists render the member's server nickname and avatar and a live countdown of how long the offer has left. `DuelWebService` now injects `MemberLookupHelper` (same pattern Poker/Bl…",
+    "emoji": "💰",
+    "prNumber": 452
+  },
+  {
+    "date": "May 2026",
+    "title": "Route web intro preview through proxy + surface validation errors",
+    "summary": "PR #448 already routed lavaplayer + `HttpHelper` (Ktor) through the optional YouTube proxy, but missed two paths. The **web-UI intro page preview** uses raw `java.net.HttpURLConnection` and bypasses every proxy hook from #448 — that's the symptom you actually reported. The Discord-side intro validation also swallowed its async catch silently. This PR closes both gaps.",
+    "emoji": "🎵",
+    "prNumber": 451
+  },
+  {
+    "date": "May 2026",
+    "title": "Centralised searchable user picker for every user dropdown",
+    "summary": "Every form that lets you pick a member — tip recipient, duel opponent, excuse attribution, intro management, voice move targets, casino jackpot refund — used a plain `<select>` populated with `${members}`. On servers with lots of members those dropdowns are a long scroll. This PR replaces all of them with a single searchable typeahead component. New fragment `templates/fragments/userPicker.html` — one signature handles single-select, multi-select with chips, optional pre-s…",
+    "emoji": "🛡️",
+    "prNumber": 450
+  },
+  {
+    "date": "May 2026",
+    "title": "Route YouTube traffic through optional rotating HTTP proxy",
+    "summary": "YouTube intermittently IP-blocks the dyno, breaking both `/play` and intro-clip validation until the Heroku app is manually restarted in the hope of pulling a non-blocked IP. Restarting Heroku is just IP-pool roulette — this PR replaces it with two real fixes: **Surface OAuth2 status at startup.** Authenticated requests via `GOOGLE_REFRESH_TOKEN` (already wired in `PlayerManager`) are far less prone to anonymous-IP blocks. The bot now logs a clear WARN at boot when the tok…",
+    "emoji": "🎵",
+    "prNumber": 448
+  },
+  {
+    "date": "May 2026",
+    "title": "Resolve author to current Discord name at display time",
+    "summary": "Follow-up to #443. The previous PR stored `author_discord_id` at submission but kept rendering the **snapshot** `author` string everywhere, so a user changing their server nickname left stale names attached to old excuses. This PR resolves the author through JDA at display time. Render ladder, applied identically by `ExcuseCommand.resolveDisplayAuthor` (slash) and `ExcuseWebService.resolveDisplayAuthor` (web): 1. `guild.getMemberById(authorDiscordId)?.effectiveName` — pick…",
+    "emoji": "✨",
+    "prNumber": 447
+  },
+  {
+    "date": "May 2026",
+    "title": "Render monster and equipment images in lookups",
+    "summary": "The dnd5eapi exposes an `image` field on **monsters** (e.g. `/api/images/monsters/goblin.png`) and **equipment** (e.g. `/api/images/equipment/longsword.png`). Other endpoints don't. Discord embeds for those two types now set a **thumbnail** (corner image), keeping the dense HP/AC/actions fields readable. The web `/dnd` card now renders an **inline `<img>`** floated right on desktop, centred on mobile. Both fall back gracefully — many real entries omit the field, and the re…",
+    "emoji": "✨",
+    "prNumber": 446
+  },
+  {
+    "date": "May 2026",
+    "title": "Expand lookup to all 18 SRD categories with smart autocomplete",
+    "summary": "Discord `/dnd` and the `/dnd` web page now cover **all 18** dnd5eapi.co 5e SRD categories (was 4) — adds monsters, classes, races, equipment, traits, ability scores, skills, and the rest. The Discord command's `query` option is now a **live autocomplete** that hits `/api/{type}?name={input}` as the user types, so they pick from a dropdown instead of guessing slugs. The web page gets an equivalent **custom dropdown** with arrow-key nav, debouncing, and `AbortController` so…",
+    "emoji": "🐉",
+    "prNumber": 444
+  },
+  {
+    "date": "May 2026",
+    "title": "Premium spoke wheel with mobile sizing + click-to-spin",
+    "summary": "Three problems with the jackpot payout wheel (introduced in #442): **Mobile sizing.** `width: 320px; max-width: 90vw` with no responsive rules made the wheel dominate phone screens and visually crash into the stake input above and the banner description below. **\"MS painty\" visual.** Flat hex fills, a `▼` text-glyph pointer, a plain `<circle>` hub — looked nothing like the rest of the casino's `casino-felt` tables. **Auto-spin cutscene.** The wheel rotated the moment it ap…",
+    "emoji": "🎲",
+    "prNumber": 445
+  },
+  {
+    "date": "May 2026",
+    "title": "Subcommand rewrite + per-guild web UI",
+    "summary": "Polishes the excuse service end-to-end: **`/excuse` rewrite** to real Discord subcommands: `random`, `submit`, `list`, `search`, `approve`, `delete`. Replaces the previous free-form `action` option that silently fell through to \"create\" when no known action was matched. **Per-guild web UI** at `/excuses` — the \"excuse maker and finder\": Finder card with a 🎲 Spin button (AJAX) and search box. Approved / Pending tabs (pending superuser-only). Per-row Approve/Delete buttons;…",
+    "emoji": "✨",
+    "prNumber": 443
+  },
+  {
+    "date": "May 2026",
+    "title": "Tiered payout wheel replaces fixed-pct payout",
+    "summary": "A \"compromise\" jackpot mechanic — high win chance but small slices most of the time, rare jackpots for the big hit. **Backend**: `JackpotHelper.rollOnWin` returns a `JackpotRoll(amount, tierIndex, tierPayoutPct)`. On a successful trigger it spins the per-guild `JackpotWheel` for a tier and credits that fraction of the pool. **Default wheel** `80:1, 10:5, 5:10, 4:20, 1:50` — 80% of jackpot wins pay 1% of the pool (pity), 1% pay 50% (mega). EV per win ≈ 3.1% — well below the…",
+    "emoji": "🎰",
+    "prNumber": 442
+  },
+  {
+    "date": "May 2026",
+    "title": "Replace campaign features with lookup page",
+    "summary": "DnD Beyond now ships an official Discord bot that does campaign management, initiative tracking, encounter building and character-sheet integration better than TobyBot can. This strips all of that and replaces the `/dnd/campaign` web page with a small `/dnd` lookups page that exposes the same SRD search the existing `/dnd` Discord command already uses. ### Removed Discord-bot commands: `/campaign`, `/initiative`, `/character`, `/linkcharacter`, `/refreshcharacter` Initiati…",
+    "emoji": "🐉",
+    "prNumber": 441
+  },
+  {
+    "date": "May 2026",
+    "title": "Structurally exclude HighLow wins from rolling",
+    "summary": "The per-guild `JACKPOT_RTP_MAX_PCT` gate uses RTP as a proxy for \"deserves a jackpot sweetener\". That proxy correctly blocks Coinflip/Blackjack/Baccarat/Roulette/Holdem at the recommended ceiling of 95, but it **breaks for HighLow**: an honest 12/13 ≈ 0.923 RTP, yet the player can pick direction against an anchor dealt from 2..12 and win ~85% of plays at the extremes (anchor=12 LOWER, anchor=2 HIGHER). `JackpotHelper.rollOnWin` fires **per winning play**, not per credit of…",
+    "emoji": "🎰",
+    "prNumber": 440
+  },
+  {
+    "date": "May 2026",
+    "title": "Preserve action-row buttons on refresh for weighted mode",
+    "summary": "Companion fix to #438. After that PR the **mode label** on refreshed weighted-draw embeds was right, but the **action-row buttons** still disappeared. Same root cause, second site: `refreshAnnouncement` at line 166 was passing `lottery.mode` (the DTO column value `\"TICKET_WEIGHTED\"`) to `announcementActionRow`, which compares against `LotteryHelper.MODE_WEIGHTED` (`\"WEIGHTED\"`). The comparison missed, fell through to the URL-button else branch, and that branch returned `nu…",
+    "emoji": "🎟️",
+    "prNumber": 439
+  },
+  {
+    "date": "May 2026",
+    "title": "Use runtime mode constant when refreshing announcement embed",
+    "summary": "The lottery refresh job has been overwriting weighted-mode announcement embeds with the wrong \"Today's draw\" mode label (`Pick 5 of 49`) while the footer + yesterday's recap correctly say it's a weighted draw. Root cause: `rebuildWithUpdatedTodaysDraw` passes `lottery.mode` (the DTO column value `\"TICKET_WEIGHTED\"`) straight to `renderOpenSummary`, which expects the runtime config string from `LotteryHelper.MODE_WEIGHTED` (`\"WEIGHTED\"`). The comparison falls through to the…",
+    "emoji": "🎟️",
+    "prNumber": 438
+  },
+  {
+    "date": "May 2026",
+    "title": "Make testcontainers work on Windows with Docker Engine 29",
+    "summary": "Upgrade testcontainers to 1.21.1 and set docker-java API version to 1.44 for Docker Engine 29 compatibility Override `DOCKER_HOST` on Windows to use Docker Desktop's named pipe (`npipe:////./pipe/dockerDesktopLinuxEngine`) Share a single PostgreSQL container across Spring contexts via a static companion object, reducing 3 containers down to 1 Make `data.sql` idempotent with `ON CONFLICT DO NOTHING` to support container reuse Fix two `IntroWebServiceTest` failures by stubbi…",
+    "emoji": "🔨",
+    "prNumber": 437
+  },
+  {
+    "date": "May 2026",
+    "title": "Interactive buy button on announcement embed + modal infrastructure",
+    "summary": "**Buy Tickets button** on weighted lottery announcement embeds — opens a modal for ticket count, processes the purchase via `buyTickets` service, replies ephemeral **Pick Numbers link button** on number match lottery embeds — opens the web lottery page (`/casino/{guildId}/lottery`), gracefully hidden when `APP_BASE_URL` is not set **Buttons persist across refresh edits** — `refreshAnnouncement` re-adds the action row via `setComponents` so buttons survive the 5-minute pool…",
+    "emoji": "🎰",
+    "prNumber": 436
+  },
+  {
+    "date": "May 2026",
+    "title": "Live-refresh announcement embed + thorough Command-helper rollout",
+    "summary": "Two independent changes, one per commit. ### 1. Lottery announcement embed periodically refreshes when the pool grows The daily-lottery announce embed posts a \"Today's draw — N credits in the pool\" line, but post-announce ticket sales silently grew the pool with no visible feedback. Players had to run `/lottery status` to see the live number. `V29__lottery_announcement_message.sql` adds three nullable columns to `toby_coin_jackpot_lottery` (`announcement_channel_id`, `anno…",
+    "emoji": "🎰",
+    "prNumber": 434
+  },
+  {
+    "date": "May 2026",
+    "title": "Wide-ping + clickable buy CTA on daily announcement, rich top-holders on web",
+    "summary": "Two improvements to the daily lottery so non-winners actually notice it and can act on it. ### Bot side — louder, clickable announcement The daily lottery embed used to post silently and only ping winners — anyone who hadn't bought a ticket had no signal that a new draw had opened. Now the announcement carries: **A configurable wide ping** — new `LOTTERY_PING_MODE` config (off / here / everyone, default everyone). Surfaced on `moderation/lottery.html` next to the announce-…",
+    "emoji": "🎟️",
+    "prNumber": 433
+  },
+  {
+    "date": "May 2026",
+    "title": "Batch changelog entries into one PR (main is protected)",
+    "summary": "The changelog automation added in #426 has been silently failing on every merged PR since it landed — #427, #428, #429 all triggered it, and every run failed in ~5 seconds at the final `git push origin main` step. No `chore(changelog)` commit has ever landed. **Root cause:** `main` is branch-protected, so the default `GITHUB_TOKEN` can never push there. The previous design's \"direct-push to main with `[skip ci]`\" was rejected by branch protection on every run. The prepend-…",
+    "emoji": "🔨",
+    "prNumber": 431
+  },
+  {
+    "date": "May 2026",
     "title": "Moderation page split + searchable settings",
     "summary": "The single moderation page became six focused sub-pages (Users, Settings, Voice, Poll, Casino, Lottery). The Settings page got a sticky search box and a dedicated Jackpot section exposing five eligibility/payout configs that were previously backend-only. A new CI guard fails the build if a future config key is added without a UI row.",
     "emoji": "🧹",
