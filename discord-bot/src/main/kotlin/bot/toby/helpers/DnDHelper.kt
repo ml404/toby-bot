@@ -1,9 +1,24 @@
 package bot.toby.helpers
 
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.ABILITY_SCORE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.CLASS_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.CONDITION_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.DAMAGE_TYPE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.EQUIPMENT_CATEGORY_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.EQUIPMENT_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.FEATURE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.LANGUAGE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.MAGIC_SCHOOL_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.MONSTER_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.PROFICIENCY_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.RACE_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.RULE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SKILL_NAME
 import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SPELL_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SUBCLASS_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SUBRACE_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.TRAIT_NAME
+import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.WEAPON_PROPERTY_NAME
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
 import common.logging.DiscordLogger
@@ -24,7 +39,7 @@ class DnDHelper {
         query: String,
         httpHelper: HttpHelper
     ): DnDResponse? {
-        val url = "https://www.dnd5eapi.co/api/$typeValue/${query.replaceSpaceWithDash()}"
+        val url = "$BASE_URL/$typeValue/${query.replaceSpaceWithDash()}"
         logger.info("Fetching data from '$url'")
         val responseData = httpHelper.fetchFromGet(url)
         return when (typeName) {
@@ -32,6 +47,21 @@ class DnDHelper {
             CONDITION_NAME -> JsonParser.parseJsonToCondition(responseData)
             RULE_NAME -> JsonParser.parseJsonToRule(responseData)
             FEATURE_NAME -> JsonParser.parseJsonToFeature(responseData)
+            ABILITY_SCORE_NAME -> JsonParser.parseJsonToAbilityScore(responseData)
+            CLASS_NAME -> JsonParser.parseJsonToDnDClass(responseData)
+            DAMAGE_TYPE_NAME -> JsonParser.parseJsonToDamageTypeInfo(responseData)
+            EQUIPMENT_CATEGORY_NAME -> JsonParser.parseJsonToEquipmentCategory(responseData)
+            EQUIPMENT_NAME -> JsonParser.parseJsonToEquipment(responseData)
+            LANGUAGE_NAME -> JsonParser.parseJsonToLanguage(responseData)
+            MAGIC_SCHOOL_NAME -> JsonParser.parseJsonToMagicSchool(responseData)
+            MONSTER_NAME -> JsonParser.parseJsonToMonster(responseData)
+            PROFICIENCY_NAME -> JsonParser.parseJsonToProficiency(responseData)
+            RACE_NAME -> JsonParser.parseJsonToRace(responseData)
+            SKILL_NAME -> JsonParser.parseJsonToSkill(responseData)
+            SUBCLASS_NAME -> JsonParser.parseJsonToSubclass(responseData)
+            SUBRACE_NAME -> JsonParser.parseJsonToSubrace(responseData)
+            TRAIT_NAME -> JsonParser.parseJsonToTrait(responseData)
+            WEAPON_PROPERTY_NAME -> JsonParser.parseJsonToWeaponProperty(responseData)
             else -> null
         }
     }
@@ -41,7 +71,7 @@ class DnDHelper {
         query: String,
         httpHelper: HttpHelper
     ): QueryResult? {
-        val queryUrl = "https://www.dnd5eapi.co/api/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
+        val queryUrl = "$BASE_URL/$typeValue?name=${query.replaceSpaceWithUrlEncode()}"
         logger.info("Fetching data from '$queryUrl'")
         val queryResponseData = httpHelper.fetchFromGet(queryUrl)
         return JsonParser.parseJsonToQueryResult(queryResponseData)
@@ -49,4 +79,8 @@ class DnDHelper {
 
     private fun String.replaceSpaceWithDash(): String = this.replace(" ", "-")
     private fun String.replaceSpaceWithUrlEncode(): String = this.replace(" ", "%20")
+
+    companion object {
+        const val BASE_URL = "https://www.dnd5eapi.co/api"
+    }
 }

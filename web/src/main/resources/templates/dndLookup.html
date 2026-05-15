@@ -10,22 +10,42 @@
     <p class="muted mb-5">
         Search the
         <a href="https://www.dnd5eapi.co" target="_blank" rel="noopener">D&amp;D 5e SRD</a>
-        for spells, conditions, rules and class features. Same data the
-        <code>/dnd</code> Discord command uses, no login required.
+        for spells, monsters, classes, races, conditions, equipment and more.
+        Same data the <code>/dnd</code> Discord command uses, no login required.
     </p>
 
     <section class="lookup-card">
-        <form class="lookup-form" data-form="lookup">
+        <form class="lookup-form" data-form="lookup" autocomplete="off">
             <label>Type
                 <select name="type" required>
                     <option value="spells">Spell</option>
+                    <option value="monsters">Monster</option>
+                    <option value="classes">Class</option>
+                    <option value="subclasses">Subclass</option>
+                    <option value="races">Race</option>
+                    <option value="subraces">Subrace</option>
                     <option value="conditions">Condition</option>
                     <option value="rule-sections">Rule</option>
                     <option value="features">Feature</option>
+                    <option value="traits">Trait</option>
+                    <option value="equipment">Equipment</option>
+                    <option value="equipment-categories">Equipment Category</option>
+                    <option value="weapon-properties">Weapon Property</option>
+                    <option value="ability-scores">Ability Score</option>
+                    <option value="skills">Skill</option>
+                    <option value="proficiencies">Proficiency</option>
+                    <option value="languages">Language</option>
+                    <option value="magic-schools">Magic School</option>
+                    <option value="damage-types">Damage Type</option>
                 </select>
             </label>
             <label class="lookup-query">Query
-                <input type="text" name="query" placeholder="e.g. fireball" required autocomplete="off">
+                <div class="lookup-query-wrap">
+                    <input type="text" name="query" placeholder="e.g. fireball" required autocomplete="off"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false"
+                           aria-controls="lookup-autocomplete" data-input="query">
+                    <ul class="lookup-autocomplete" id="lookup-autocomplete" data-autocomplete role="listbox" hidden></ul>
+                </div>
             </label>
             <button type="submit" class="btn">Look up</button>
         </form>
