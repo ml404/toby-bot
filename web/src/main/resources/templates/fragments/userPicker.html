@@ -1,0 +1,39 @@
+<!--
+  Searchable user picker. Renders a native <select> (so the form
+  still posts the same field with no JS) which userPicker.js
+  progressively enhances into a typeahead combobox — and into a
+  chip-style multi-select when `multiple=true`.
+
+  Params (use named args at the call site):
+    name             form field name (matches existing <select name=…>)
+    id               DOM id used by the <label for="…">
+    members          iterable of objects exposing .id, .name (and
+                     optional .avatarUrl, .socialCredit)
+    selectedId       pre-selected member id; pass null for none
+    placeholder      text shown when nothing is picked
+    emptyLabel       label for the empty-string option, e.g. "(Yourself)".
+                     Pass null to omit — required selects rely on that.
+    required         boolean — forwards to the <select>
+    multiple         boolean — multi-select + chip UI
+    showSocialCredit boolean — appends " — N credits" and a data-credit
+                     attribute so the casino refund picker can display
+                     and read balances without a separate template.
+-->
+<div xmlns:th="http://www.thymeleaf.org"
+     th:fragment="userPicker(name, id, members, selectedId, placeholder, emptyLabel, required, multiple, showSocialCredit)"
+     class="user-picker"
+     th:attr="data-placeholder=${placeholder}">
+    <select th:id="${id}"
+            th:name="${name}"
+            th:required="${required}"
+            th:multiple="${multiple}"
+            data-user-picker>
+        <option th:if="${emptyLabel != null}" value="" th:text="${emptyLabel}"></option>
+        <option th:each="m : ${members}"
+                th:value="${m.id}"
+                th:attr="data-avatar=${m.avatarUrl},
+                         data-credit=${showSocialCredit ? m.socialCredit : null}"
+                th:text="${showSocialCredit ? m.name + ' — ' + m.socialCredit + ' credits' : m.name}"
+                th:selected="${selectedId != null and m.id == selectedId.toString()}"></option>
+    </select>
+</div>

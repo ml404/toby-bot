@@ -41,13 +41,16 @@
     <section th:if="${isSuperUser}" class="member-picker-card" aria-labelledby="manage-for">
         <div class="picker-row">
             <label id="manage-for" for="memberSelect" style="margin:0;">Manage intros for</label>
-            <select id="memberSelect" name="memberSelect">
-                <option value="">(Yourself)</option>
-                <option th:each="m : ${members}"
-                        th:value="${m.id}"
-                        th:text="${m.name}"
-                        th:selected="${targetDiscordId != null and m.id == targetDiscordId.toString()}"></option>
-            </select>
+            <div th:replace="~{fragments/userPicker :: userPicker(
+                    name='memberSelect',
+                    id='memberSelect',
+                    members=${members},
+                    selectedId=${targetDiscordId},
+                    placeholder='(Yourself)',
+                    emptyLabel='(Yourself)',
+                    required=false,
+                    multiple=false,
+                    showSocialCredit=false)}"></div>
             <span th:if="${targetDiscordId != null}" class="target-badge">Super-user mode</span>
         </div>
     </section>
@@ -329,6 +332,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
 <script th:src="@{/js/modal.js}"></script>
 <script th:src="@{/js/intros.js}"></script>
 <script th:src="@{/js/home.js}"></script>

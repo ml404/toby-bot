@@ -24,10 +24,16 @@
         <h2>Challenge someone</h2>
         <form id="duel-challenge" autocomplete="off">
             <label for="duel-opponent">Opponent</label>
-            <select id="duel-opponent" name="opponentDiscordId" required>
-                <option value="">Pick an opponent…</option>
-                <option th:each="m : ${members}" th:value="${m.id}" th:text="${m.name}"></option>
-            </select>
+            <div th:replace="~{fragments/userPicker :: userPicker(
+                    name='opponentDiscordId',
+                    id='duel-opponent',
+                    members=${members},
+                    selectedId=null,
+                    placeholder='Pick an opponent…',
+                    emptyLabel=null,
+                    required=true,
+                    multiple=false,
+                    showSocialCredit=false)}"></div>
             <p th:if="${#lists.isEmpty(members)}" class="muted">
                 No other members found in this server. Try again in a moment if the bot just connected.
             </p>
@@ -85,6 +91,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
 <script th:src="@{/js/duel.js}"></script>
 </body>
 </html>
