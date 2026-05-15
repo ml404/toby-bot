@@ -17,7 +17,8 @@
     through this fragment would add too many conditionals here.
 
     Each fragment is on an `<html>` element so the caller's
-    th:replace swaps in the whole document.
+    `<html th:replace="~{... :: name(...)}">` swaps in the whole
+    document.
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="en"
       th:fragment="singleAction(pageTitle, cssPath, emoji, headingTitle, description,

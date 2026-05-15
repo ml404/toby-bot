@@ -77,7 +77,7 @@ class FragmentSignatureTest {
         val regex = Regex("""th:fragment="(\w+)(?:\(([^"]*)\))?"""")
         val out = HashMap<String, FragmentDefinition>()
         eachTemplate { path ->
-            val text = Files.readString(path)
+            val text = stripHtmlComments(Files.readString(path))
             for (match in regex.findAll(text)) {
                 val name = match.groupValues[1]
                 val params = match.groupValues[2]
@@ -101,7 +101,7 @@ class FragmentSignatureTest {
         // Quick prefilter then a targeted scan — keeps the regex simple.
         val callPrefix = Regex("""~\{[^}]*?::\s*(\w+)\(""")
         eachTemplate { path ->
-            val text = Files.readString(path)
+            val text = stripHtmlComments(Files.readString(path))
             for (match in callPrefix.findAll(text)) {
                 val name = match.groupValues[1]
                 val openParen = match.range.last // position of the `(`
@@ -117,6 +117,37 @@ class FragmentSignatureTest {
             }
         }
         return out
+    }
+
+    /**
+     * Blanks out the body of every `<!-- ... -->` HTML comment so the
+     * regex scans below don't false-positive on documentation snippets
+     * that quote Thymeleaf syntax (e.g. a comment showing
+     * `~{... :: name(...)}` as an example of how to call the fragment).
+     *
+     * The comment delimiters and inner characters are replaced with
+     * spaces; newlines are preserved so `lineOf` still reports the
+     * original line numbers. Length is preserved so other char offsets
+     * stay correct too.
+     */
+    private fun stripHtmlComments(text: String): String {
+        val sb = StringBuilder(text.length)
+        var i = 0
+        while (i < text.length) {
+            val start = text.indexOf("<!--", i)
+            if (start < 0) {
+                sb.append(text, i, text.length)
+                break
+            }
+            sb.append(text, i, start)
+            val endMarker = text.indexOf("-->", start + 4)
+            val end = if (endMarker < 0) text.length else endMarker + 3
+            for (j in start until end) {
+                sb.append(if (text[j] == '\n') '\n' else ' ')
+            }
+            i = end
+        }
+        return sb.toString()
     }
 
     private fun eachTemplate(block: (Path) -> Unit) {
