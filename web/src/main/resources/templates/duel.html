@@ -6,7 +6,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <main id="main" class="container"
-      th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}">
+      th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}, data-ttl-seconds=${ttlSeconds}">
 
     <div class="duel-header">
         <a class="back-link" th:href="@{/duel/guilds}">&larr; All servers</a>
@@ -55,10 +55,16 @@
         <div id="duel-pending-list" class="duel-pending-list">
             <div th:if="${#lists.isEmpty(pending)}" class="muted">No pending duels right now.</div>
             <div class="duel-pending-row" th:each="p : ${pending}"
-                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}">
-                <div>
-                    <span>From <strong th:text="${p.initiatorDiscordId}">user</strong></span>
-                    <span> for <strong th:text="${p.stake}">100</strong> credits</span>
+                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}, data-created-at=${p.createdAtEpochSeconds}">
+                <div class="duel-pending-info">
+                    <div class="duel-pending-who">
+                        <span class="muted">From</span>
+                        <div th:replace="~{fragments/memberCell :: cell(${p.initiatorName}, ${p.initiatorAvatarUrl})}"></div>
+                    </div>
+                    <div class="duel-pending-meta">
+                        <span>for <strong th:text="${p.stake}">100</strong> credits</span>
+                        <span class="duel-expiry muted">expires soon</span>
+                    </div>
                 </div>
                 <div class="duel-pending-actions">
                     <button class="btn-primary duel-accept" type="button">Accept</button>
@@ -74,10 +80,16 @@
         <div id="duel-outgoing-list" class="duel-pending-list">
             <div th:if="${#lists.isEmpty(outgoing)}" class="muted">No outgoing challenges right now.</div>
             <div class="duel-pending-row" th:each="p : ${outgoing}"
-                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}">
-                <div>
-                    <span>To <strong th:text="${p.opponentDiscordId}">user</strong></span>
-                    <span> for <strong th:text="${p.stake}">100</strong> credits</span>
+                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}, data-created-at=${p.createdAtEpochSeconds}">
+                <div class="duel-pending-info">
+                    <div class="duel-pending-who">
+                        <span class="muted">To</span>
+                        <div th:replace="~{fragments/memberCell :: cell(${p.opponentName}, ${p.opponentAvatarUrl})}"></div>
+                    </div>
+                    <div class="duel-pending-meta">
+                        <span>for <strong th:text="${p.stake}">100</strong> credits</span>
+                        <span class="duel-expiry muted">expires soon</span>
+                    </div>
                 </div>
                 <div class="duel-pending-actions">
                     <button class="btn-secondary duel-cancel" type="button">Cancel</button>

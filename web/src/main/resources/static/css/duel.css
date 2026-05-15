@@ -61,6 +61,27 @@
     border-radius: 0.5rem;
 }
 
+.duel-pending-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.duel-pending-who {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.duel-pending-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
 .duel-pending-actions {
     display: flex;
     gap: 0.5rem;
