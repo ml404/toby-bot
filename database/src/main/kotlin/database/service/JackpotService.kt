@@ -19,11 +19,11 @@ import java.time.ZoneOffset
  *
  * The pool is fed by a flat fee on every Toby Coin trade (see
  * [EconomyTradeService]). Casino minigame wins roll a small chance to
- * hit the jackpot — on a hit the player banks a configurable share of
- * the pool ([JackpotHelper.payoutPct]; default 100 %, can be lowered to
- * leave a re-seed remainder), and the pool counter drops accordingly.
+ * hit the jackpot — on a hit the per-guild [database.economy.JackpotWheel]
+ * is spun for a tier and the player banks that fraction of the pool
+ * (default tiers `80:1,10:5,5:10,4:20,1:50` — EV ~3.1% per win).
  *
- * Three structural gates layer on top of the basic roll:
+ * Two structural gates layer on top of the basic roll:
  *  - [isOnCooldown] blocks a recent winner from sweeping again within
  *    `JACKPOT_WINNER_COOLDOWN_DAYS`. Each successful win records the
  *    timestamp via [recordWin].
@@ -31,8 +31,6 @@ import java.time.ZoneOffset
  *    around in the last `JACKPOT_ACTIVITY_WINDOW_DAYS` (sourced from
  *    `voice_credit_daily`). A drive-by user with one bet can't run the
  *    pool dry.
- *  - [JackpotHelper.payoutPct] caps the share of the pool paid out on a
- *    single roll.
  *
  * All defaults match the historic single-winner-takes-all behaviour, so
  * a guild that never touches the new configs sees no change.
@@ -110,6 +108,24 @@ class JackpotService(
     fun isEligibleByRtp(guildId: Long, game: JackpotGame): Boolean =
         JackpotHelper.isEligibleByRtp(game, configService, guildId)
 
+    /**
+     * Parsed payout-wheel segments for [guildId] — reads the
+     * `JACKPOT_WHEEL_SEGMENTS` config and falls back to
+     * [database.economy.JackpotWheel.DEFAULT_SEGMENTS] when unset or
+     * malformed. Surfaced for the casino page so the wheel UI can
+     * render the same segments the server spins.
+     */
+    fun wheelSegments(guildId: Long): List<database.economy.JackpotWheel.Segment> =
+        database.economy.JackpotWheel.parse(JackpotHelper.wheelSegmentsConfig(configService, guildId))
+
+    /**
+     * Raw `JACKPOT_WHEEL_SEGMENTS` config value for [guildId] (or null
+     * when unset). Used by the moderation UI to populate the editor —
+     * a null result tells the page "show the default placeholder".
+     */
+    fun wheelSegmentsConfigValue(guildId: Long): String? =
+        JackpotHelper.wheelSegmentsConfig(configService, guildId)
+
     companion object {
         // 4dp covers the smallest probability the saved-percent / 100
         // round-trip can express meaningfully — e.g. an admin saving
@@ -132,16 +148,19 @@ class JackpotService(
     }
 
     /**
-     * Pay out a share of the pool atomically. The share is configurable
-     * via `JACKPOT_PAYOUT_PCT` (default 100 % = full pool). Returns the
-     * amount paid; caller is responsible for crediting the winner.
-     * The remainder stays in the pool and re-seeds the next cycle.
+     * Pay out a share of the pool atomically. The caller supplies
+     * [payoutFraction] in `(0, 1]` — picked by [JackpotWheel.spin] on
+     * the rolling-win path or fixed by the lottery service for draws.
+     * Returns the amount paid; the caller is responsible for crediting
+     * the winner. The remainder stays in the pool and re-seeds the
+     * next cycle.
      */
-    fun awardJackpot(guildId: Long): Long {
+    fun awardJackpot(guildId: Long, payoutFraction: Double): Long {
         val row = lockOrCreate(guildId)
         if (row.pool == 0L) return 0L
-        val pct = JackpotHelper.payoutPct(configService, guildId)
-        val won = kotlin.math.floor(row.pool * pct).toLong().coerceAtMost(row.pool).coerceAtLeast(0L)
+        val fraction = payoutFraction.coerceIn(0.0, 1.0)
+        if (fraction <= 0.0) return 0L
+        val won = kotlin.math.floor(row.pool * fraction).toLong().coerceAtMost(row.pool).coerceAtLeast(0L)
         if (won == 0L) return 0L
         row.pool -= won
         persistence.upsert(row)

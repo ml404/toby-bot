@@ -587,6 +587,72 @@ td { font-size: 0.95rem; }
     font-size: 0.85rem;
 }
 
+/* Spinning-payout-wheel overlay shown when a jackpot roll hits. The
+   wheel decides what fraction of the pool a winning roll pays. Sized
+   to feel like an event without consuming the whole page; absolutely
+   positioned over the page so the underlying game state is preserved
+   when the wheel closes. */
+.jackpot-wheel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.jackpot-wheel-overlay[hidden] { display: none; }
+.jackpot-wheel-stage {
+    position: relative;
+    width: 320px;
+    max-width: 90vw;
+    aspect-ratio: 1 / 1.15;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.jackpot-wheel-pointer {
+    font-size: 2rem;
+    line-height: 1;
+    color: #ffe066;
+    text-shadow: 0 0 6px rgba(241, 196, 15, 0.6);
+}
+.jackpot-wheel-svg {
+    width: 100%;
+    height: auto;
+    flex: 1;
+}
+.jackpot-wheel-rotor {
+    transform-origin: 0 0;
+    transition: transform 3.2s cubic-bezier(0.18, 0.6, 0.18, 1);
+}
+.jackpot-wheel-hub {
+    fill: #ffe066;
+    stroke: rgba(0, 0, 0, 0.6);
+    stroke-width: 2;
+}
+.jackpot-wheel-segment {
+    stroke: rgba(0, 0, 0, 0.5);
+    stroke-width: 1;
+}
+.jackpot-wheel-segment-label {
+    fill: #1a1a1a;
+    font-size: 13px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+.jackpot-wheel-result {
+    margin-top: var(--space-2);
+    min-height: 1.4em;
+    text-align: center;
+    color: #ffe066;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-shadow: 0 0 6px rgba(241, 196, 15, 0.5);
+}
+
 /* Grow tap targets on any touch device without ballooning desktop buttons */
 @media (hover: none) and (pointer: coarse) {
     .btn-sm { padding: 8px 14px; min-height: 40px; }

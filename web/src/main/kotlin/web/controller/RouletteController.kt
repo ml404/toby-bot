@@ -97,6 +97,8 @@ class RouletteController(
                     newBalance = outcome.newBalance,
                     win = true,
                     jackpotPayout = outcome.jackpotPayout.positiveOrNull(),
+                    jackpotTierIndex = outcome.jackpotTierIndex.takeIf { it >= 0 },
+                    jackpotTierPayoutPct = outcome.jackpotTierPayoutPct.takeIf { it > 0.0 },
                     soldTobyCoins = outcome.soldTobyCoins.positiveOrNull(),
                     newPrice = outcome.newPrice,
                 )
@@ -184,6 +186,8 @@ data class RouletteSpinResponse(
     val newBalance: Long? = null,
     val win: Boolean? = null,
     val jackpotPayout: Long? = null,
+    val jackpotTierIndex: Int? = null,
+    val jackpotTierPayoutPct: Double? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null,

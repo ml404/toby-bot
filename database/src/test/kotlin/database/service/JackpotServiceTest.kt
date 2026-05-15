@@ -44,14 +44,6 @@ class JackpotServiceTest {
                 guildId.toString()
             )
         } returns null
-        // Default: no `JACKPOT_PAYOUT_PCT` row → full pool payout (matches
-        // pre-rebalance behaviour for unconfigured guilds).
-        every {
-            configService.getConfigByName(
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
-                guildId.toString()
-            )
-        } returns null
         // Default: cooldown / activity gates disabled.
         every {
             configService.getConfigByName(
@@ -135,30 +127,24 @@ class JackpotServiceTest {
     }
 
     @Test
-    fun `awardJackpot pays the entire pool when JACKPOT_PAYOUT_PCT is unset`() {
+    fun `awardJackpot pays the entire pool when fraction is 1`() {
         val existing = TobyCoinJackpotDto(guildId = guildId, pool = 1_500L)
         every { persistence.getByGuildForUpdate(guildId) } returns existing
         every { persistence.upsert(any()) } answers { firstArg() }
 
-        val won = service.awardJackpot(guildId)
+        val won = service.awardJackpot(guildId, 1.0)
 
-        assertEquals(1_500L, won, "default payout pct = 100% pays the entire pool")
+        assertEquals(1_500L, won, "fraction = 1.0 pays the entire pool")
         assertEquals(0L, existing.pool, "pool resets in the same transaction")
     }
 
     @Test
-    fun `awardJackpot pays a configured fraction and re-seeds the remainder`() {
-        every {
-            configService.getConfigByName(
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
-                guildId.toString()
-            )
-        } returns ConfigDto(name = "x", value = "30", guildId = guildId.toString())
+    fun `awardJackpot pays the supplied fraction and re-seeds the remainder`() {
         val existing = TobyCoinJackpotDto(guildId = guildId, pool = 1_000L)
         every { persistence.getByGuildForUpdate(guildId) } returns existing
         every { persistence.upsert(any()) } answers { firstArg() }
 
-        val won = service.awardJackpot(guildId)
+        val won = service.awardJackpot(guildId, 0.30)
 
         assertEquals(300L, won, "30% of 1000 paid out")
         assertEquals(700L, existing.pool, "remainder re-seeds the next cycle")
@@ -169,8 +155,18 @@ class JackpotServiceTest {
         val empty = TobyCoinJackpotDto(guildId = guildId, pool = 0L)
         every { persistence.getByGuildForUpdate(guildId) } returns empty
 
-        assertEquals(0L, service.awardJackpot(guildId))
+        assertEquals(0L, service.awardJackpot(guildId, 1.0))
         verify(exactly = 0) { persistence.upsert(any()) }
+    }
+
+    @Test
+    fun `awardJackpot is a no-op when the supplied fraction is non-positive`() {
+        val existing = TobyCoinJackpotDto(guildId = guildId, pool = 1_000L)
+        every { persistence.getByGuildForUpdate(guildId) } returns existing
+
+        assertEquals(0L, service.awardJackpot(guildId, 0.0))
+        assertEquals(0L, service.awardJackpot(guildId, -0.5))
+        assertEquals(1_000L, existing.pool, "pool unchanged on no-op fractions")
     }
 
     @Test

@@ -51,6 +51,8 @@ class BaccaratService(
             val multiplier: Double,
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
+            val jackpotTierIndex: Int = -1,
+            val jackpotTierPayoutPct: Double = 0.0,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null
         ) : PlayOutcome
@@ -147,8 +149,10 @@ class BaccaratService(
                     isPlayerNatural = hand.isPlayerNatural,
                     isBankerNatural = hand.isBankerNatural,
                     multiplier = hand.multiplier,
-                    newBalance = wager.newBalance + jackpot,
-                    jackpotPayout = jackpot,
+                    newBalance = wager.newBalance + jackpot.amount,
+                    jackpotPayout = jackpot.amount,
+                    jackpotTierIndex = jackpot.tierIndex,
+                    jackpotTierPayoutPct = jackpot.tierPayoutPct,
                     soldTobyCoins = resolved.soldCoins,
                     newPrice = resolved.newPrice
                 )

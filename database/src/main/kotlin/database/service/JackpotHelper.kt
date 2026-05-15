@@ -2,7 +2,40 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.UserDto
+import database.economy.JackpotWheel
 import kotlin.random.Random
+
+/**
+ * Outcome of a jackpot win-roll. [amount] is the credits awarded
+ * (0 on miss); [tierIndex] / [tierPayoutPct] identify which wheel
+ * segment was picked on a hit (-1 / 0.0 on miss) so the web layer can
+ * animate the wheel landing on the right wedge.
+ */
+data class JackpotRoll(
+    val amount: Long,
+    val tierIndex: Int,
+    val tierPayoutPct: Double,
+) {
+    companion object {
+        val MISS: JackpotRoll = JackpotRoll(0L, -1, 0.0)
+    }
+
+    /**
+     * Combine two rolls — used by CasinoHoldem where ante and call
+     * legs each get their own roll. Amounts sum; the tier shown is
+     * the one from the higher-paying hit (so a stacked win surfaces
+     * the bigger slice in the UI).
+     */
+    operator fun plus(other: JackpotRoll): JackpotRoll {
+        if (other.amount <= 0L) return this
+        if (this.amount <= 0L) return other
+        return if (other.amount >= this.amount) {
+            JackpotRoll(this.amount + other.amount, other.tierIndex, other.tierPayoutPct)
+        } else {
+            JackpotRoll(this.amount + other.amount, this.tierIndex, this.tierPayoutPct)
+        }
+    }
+}
 
 /**
  * Casino games that feed the jackpot pool, paired with their canonical
@@ -41,7 +74,10 @@ enum class JackpotGame(val rtp: Double, val eligibleForJackpot: Boolean = true) 
  * Two casino-side feeders for the per-guild jackpot pool:
  *
  *   - [rollOnWin] — on every minigame WIN, roll a small probability
- *     to bank the entire pool and reset it to zero.
+ *     and on a hit spin the per-guild [JackpotWheel] for a tier-based
+ *     share of the pool. Returns a [JackpotRoll] carrying the awarded
+ *     amount and the picked tier so the casino UI can animate the
+ *     wheel landing on the matching wedge.
  *   - [divertOnLoss] — on every minigame LOSS, deposit a fraction of
  *     the lost stake into the pool. The remaining fraction keeps
  *     vanishing as house edge; tribute is the visible chunk that
@@ -81,15 +117,6 @@ internal object JackpotHelper {
      * for house edge."
      */
     const val DEFAULT_RTP_MAX_PCT: Long = 0L
-
-    /**
-     * Default share of the pool paid on a winning roll when the server
-     * hasn't overridden the value via the `JACKPOT_PAYOUT_PCT` config
-     * entry. 100 % preserves the historic behaviour (winner banks the
-     * entire pool); guilds that have suffered a runaway pool can lower
-     * this so the remainder re-seeds the next cycle.
-     */
-    const val DEFAULT_PAYOUT_PCT: Double = 1.0
 
     /**
      * Default cooldown in days during which a prior jackpot winner is
@@ -153,15 +180,18 @@ internal object JackpotHelper {
     const val MAX_LOSS_TRIBUTE: Double = 0.50
 
     /**
-     * If the random roll hits and the pool is non-empty, atomically
-     * pull the entire pool, credit it to [user] (already locked by
-     * [WagerHelper.checkAndLock]), persist, and return the amount
-     * awarded. Returns `0L` on miss or empty pool. The hit probability
-     * is per-guild configurable via `JACKPOT_WIN_PCT`; defaults to
-     * [DEFAULT_WIN_PROBABILITY].
+     * If the random roll hits, spin the per-guild payout wheel (see
+     * [JackpotWheel]) for a tier and atomically credit that share of
+     * the pool to [user] (already locked by [WagerHelper.checkAndLock]).
+     * Returns [JackpotRoll.MISS] on miss / empty pool / failed gate;
+     * otherwise a [JackpotRoll] carrying the amount won, the picked
+     * segment's index, and its payout fraction so the casino UI can
+     * animate the wheel landing on the right wedge.
      *
-     * The base probability is scaled linearly by `stake / anchor`,
-     * where `anchor` is the per-guild `JACKPOT_STAKE_ANCHOR` config
+     * The hit probability is per-guild configurable via
+     * `JACKPOT_WIN_PCT`; defaults to [DEFAULT_WIN_PROBABILITY]. The
+     * base probability is scaled linearly by `stake / anchor`, where
+     * `anchor` is the per-guild `JACKPOT_STAKE_ANCHOR` config
      * (default [DEFAULT_STAKE_ANCHOR]). A min-wager autoclicker can't
      * farm the pool — a 10-credit play against a 500 anchor rolls at
      * 0.02 % even when the configured base is 1 %. Bets at or above
@@ -183,28 +213,43 @@ internal object JackpotHelper {
         stake: Long,
         game: JackpotGame,
         random: Random
-    ): Long {
-        if (!game.eligibleForJackpot) return 0L
+    ): JackpotRoll {
+        if (!game.eligibleForJackpot) return JackpotRoll.MISS
         val baseProbability = winProbability(configService, guildId)
         val anchor = stakeAnchor(configService, guildId)
         val scale = (stake.toDouble() / anchor.toDouble()).coerceIn(0.0, 1.0)
         val effective = baseProbability * scale
-        if (random.nextDouble() >= effective) return 0L
+        if (random.nextDouble() >= effective) return JackpotRoll.MISS
 
         // Post-fraud structural gates. Each defaults to "disabled" so an
         // unconfigured guild's behaviour is unchanged. When enabled, a
         // failed gate looks identical to a missed roll — pool keeps
         // growing, no payout, no exception thrown into the wager service.
-        if (jackpotService.isOnCooldown(guildId, user.discordId)) return 0L
-        if (!jackpotService.isActive(guildId, user.discordId)) return 0L
-        if (!isEligibleByRtp(game, configService, guildId)) return 0L
+        if (jackpotService.isOnCooldown(guildId, user.discordId)) return JackpotRoll.MISS
+        if (!jackpotService.isActive(guildId, user.discordId)) return JackpotRoll.MISS
+        if (!isEligibleByRtp(game, configService, guildId)) return JackpotRoll.MISS
 
-        val won = jackpotService.awardJackpot(guildId)
-        if (won == 0L) return 0L
+        val segments = JackpotWheel.parse(wheelSegmentsConfig(configService, guildId))
+        val spin = JackpotWheel.spin(segments, random)
+        val won = jackpotService.awardJackpot(guildId, spin.payoutPct)
+        if (won == 0L) return JackpotRoll.MISS
         jackpotService.recordWin(guildId, user.discordId, won)
         user.socialCredit = (user.socialCredit ?: 0L) + won
         userService.updateUser(user)
-        return won
+        return JackpotRoll(amount = won, tierIndex = spin.tierIndex, tierPayoutPct = spin.payoutPct)
+    }
+
+    /**
+     * Raw [JACKPOT_WHEEL_SEGMENTS] config value for [guildId], or null
+     * when unset. Lets [JackpotWheel.parse] handle the default-on-miss
+     * fallback in one place.
+     */
+    fun wheelSegmentsConfig(configService: ConfigService, guildId: Long): String? {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS.configValue,
+            guildId.toString()
+        )
+        return cfg?.value
     }
 
     /**
@@ -275,23 +320,6 @@ internal object JackpotHelper {
         )
         val pct = cfg?.value?.toDoubleOrNull() ?: return DEFAULT_LOSS_TRIBUTE
         return (pct / 100.0).coerceIn(0.0, MAX_LOSS_TRIBUTE)
-    }
-
-    /**
-     * Live payout fraction for [guildId] — admin-set whole-number percent
-     * (1-100) parsed from `JACKPOT_PAYOUT_PCT`. Returns [DEFAULT_PAYOUT_PCT]
-     * (1.0 = full pool) when unset or unparseable; clamps to (0, 1].
-     * 0 is treated as missing and falls back to the default to avoid
-     * silently disabling all jackpot payouts via a fat-fingered config row.
-     */
-    fun payoutPct(configService: ConfigService, guildId: Long): Double {
-        val cfg = configService.getConfigByName(
-            ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
-            guildId.toString()
-        )
-        val pct = cfg?.value?.toDoubleOrNull() ?: return DEFAULT_PAYOUT_PCT
-        if (pct.isNaN() || pct.isInfinite() || pct <= 0.0) return DEFAULT_PAYOUT_PCT
-        return (pct / 100.0).coerceIn(0.0, 1.0).let { if (it == 0.0) DEFAULT_PAYOUT_PCT else it }
     }
 
     /**

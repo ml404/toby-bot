@@ -163,8 +163,17 @@ class SetConfigCommand @Autowired constructor(
                 // (admins use the /moderation web tab) but keep the
                 // dispatch exhaustive in case the option is registered
                 // manually.
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT -> setRangedIntConfig(event, optionMapping, deleteDelay,
-                    config = ConfigDto.Configurations.JACKPOT_PAYOUT_PCT, gameLabel = "Jackpot", label = "payout percent", range = 1..100)
+                ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS -> {
+                    // No simple int range — admins edit the wheel via
+                    // the /moderation web tab. Surface a friendly error
+                    // if someone tries to set it via /setconfig so the
+                    // dispatch stays exhaustive but doesn't pretend to
+                    // validate the CSV here.
+                    event.hook.replyAndDelete(
+                        "Edit the payout wheel via the moderation web tab — the CSV format needs the dedicated editor.",
+                        deleteDelay,
+                    )
+                }
                 ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS, gameLabel = "Jackpot", label = "winner cooldown days", range = 0..365)
                 ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,

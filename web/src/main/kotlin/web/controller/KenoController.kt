@@ -107,6 +107,8 @@ class KenoController(
                     newBalance = outcome.newBalance,
                     win = true,
                     jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                    jackpotTierIndex = outcome.jackpotTierIndex.takeIf { it >= 0 },
+                    jackpotTierPayoutPct = outcome.jackpotTierPayoutPct.takeIf { it > 0.0 },
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice,
                 )
@@ -158,6 +160,8 @@ data class KenoPlayResponse(
     val newBalance: Long? = null,
     val win: Boolean? = null,
     val jackpotPayout: Long? = null,
+    val jackpotTierIndex: Int? = null,
+    val jackpotTierPayoutPct: Double? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,
     val lossTribute: Long? = null,

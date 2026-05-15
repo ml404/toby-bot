@@ -76,6 +76,10 @@ class CasinoHoldemService @Autowired constructor(
             val newBalance: Long,
             val jackpotPayout: Long,
             val lossTribute: Long,
+            // Tier fields appended so existing positional callers keep
+            // compiling.
+            val jackpotTierIndex: Int = -1,
+            val jackpotTierPayoutPct: Double = 0.0,
         ) : ActionOutcome
         data object HandNotFound : ActionOutcome
         data object NotYourHand : ActionOutcome
@@ -259,12 +263,14 @@ class CasinoHoldemService @Autowired constructor(
         // Per-leg jackpot rolls / tributes. WIN legs roll once each (so
         // a hand can produce up to two rolls); LOSE legs feed the pool
         // their own at-risk stake; PUSH legs are no-ops on both axes.
-        var jackpotPayout = 0L
+        // [JackpotRoll.plus] combines the two legs, surfacing the
+        // higher-paying tier when both hit.
+        var jackpot = JackpotRoll.MISS
         var lossTribute = 0L
 
         when (resolution.anteResult) {
             CasinoHoldem.AnteResult.WIN ->
-                jackpotPayout += JackpotHelper.rollOnWin(
+                jackpot += JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, user, guildId,
                     table.stake, JackpotGame.HOLDEM, random,
                 )
@@ -283,7 +289,7 @@ class CasinoHoldemService @Autowired constructor(
             CasinoHoldem.CallResult.WIN_FLUSH,
             CasinoHoldem.CallResult.WIN_STRAIGHT,
             CasinoHoldem.CallResult.WIN_OTHER ->
-                jackpotPayout += JackpotHelper.rollOnWin(
+                jackpot += JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, user, guildId,
                     callStake, JackpotGame.HOLDEM, random,
                 )
@@ -321,7 +327,9 @@ class CasinoHoldemService @Autowired constructor(
             tableId = table.id,
             result = handResult,
             newBalance = newBalance,
-            jackpotPayout = jackpotPayout,
+            jackpotPayout = jackpot.amount,
+            jackpotTierIndex = jackpot.tierIndex,
+            jackpotTierPayoutPct = jackpot.tierPayoutPct,
             lossTribute = lossTribute,
         )
     }

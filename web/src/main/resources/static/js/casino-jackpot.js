@@ -10,9 +10,22 @@
         return !!(body && typeof body.jackpotPayout === 'number' && body.jackpotPayout > 0);
     }
 
-    function jackpotPrefixHtml(payout) {
+    /**
+     * Tier label keyed off the percentage of pool the wheel picked.
+     * Mirrors `casino-jackpot-wheel.js#tierLabel` so the result line
+     * and the wheel's settle text say the same thing.
+     */
+    function tierLabel(payoutPct) {
+        if (typeof payoutPct !== 'number' || payoutPct <= 0) return '🎰 JACKPOT!';
+        if (payoutPct >= 30) return '🎰 MEGA JACKPOT!';
+        if (payoutPct >= 10) return '🎰 BIG WIN!';
+        if (payoutPct >= 2)  return '💰 Nice payout!';
+        return '🎟️ Pity prize';
+    }
+
+    function jackpotPrefixHtml(payout, payoutPct) {
         if (typeof payout !== 'number' || payout <= 0) return '';
-        return '🎰 <strong>JACKPOT!</strong> +' + payout + ' credits<br>';
+        return tierLabel(payoutPct) + ' +' + payout + ' credits<br>';
     }
 
     // Hold/release lock used by per-game JS to keep the pool banner in
@@ -70,7 +83,35 @@
     function renderWinHtml(resultEl, body, jackpotClassName, winLineHtml) {
         if (!isJackpotHit(body)) return winLineHtml;
         if (resultEl && jackpotClassName) resultEl.classList.add(jackpotClassName);
-        return jackpotPrefixHtml(body.jackpotPayout) + winLineHtml;
+        // `jackpotTierPayoutPct` arrives as a fraction (0..1) from the
+        // backend; render the percent so it matches the wheel's labels.
+        const pct = typeof body.jackpotTierPayoutPct === 'number'
+            ? body.jackpotTierPayoutPct * 100
+            : 0;
+        return jackpotPrefixHtml(body.jackpotPayout, pct) + winLineHtml;
+    }
+
+    /**
+     * Spin the visual wheel to the server-picked tier. No-op when the
+     * response isn't a jackpot hit or the wheel module isn't loaded
+     * (e.g. test harnesses, mid-migration pages). `onSettle` fires
+     * once the wheel stops so the caller can paint its result line in
+     * sync with the wheel reveal.
+     */
+    function spinWheelFor(body, onSettle) {
+        if (!isJackpotHit(body) || typeof body.jackpotTierIndex !== 'number' || body.jackpotTierIndex < 0) {
+            if (typeof onSettle === 'function') onSettle();
+            return;
+        }
+        const wheel = root && root.TobyJackpotWheel;
+        if (!wheel || typeof wheel.spinTo !== 'function') {
+            if (typeof onSettle === 'function') onSettle();
+            return;
+        }
+        const pct = typeof body.jackpotTierPayoutPct === 'number'
+            ? Math.round(body.jackpotTierPayoutPct * 100)
+            : 0;
+        wheel.spinTo(body.jackpotTierIndex, body.jackpotPayout, pct, onSettle);
     }
 
     /**
@@ -87,7 +128,9 @@
     const api = {
         isJackpotHit,
         jackpotPrefixHtml,
+        tierLabel,
         renderWinHtml,
+        spinWheelFor,
         lossTributeSuffix,
         updatePoolBanner,
         holdPoolBanner,

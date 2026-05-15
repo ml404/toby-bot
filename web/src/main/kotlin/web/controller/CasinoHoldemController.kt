@@ -147,6 +147,8 @@ class CasinoHoldemController(
                         resolved = true,
                         newBalance = outcome.newBalance,
                         jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                        jackpotTierIndex = outcome.jackpotTierIndex.takeIf { it >= 0 },
+                        jackpotTierPayoutPct = outcome.jackpotTierPayoutPct.takeIf { it > 0.0 },
                         lossTribute = outcome.lossTribute.takeIf { it > 0L },
                     )
                 )
@@ -179,6 +181,8 @@ data class CasinoHoldemActionResponse(
     val resolved: Boolean? = null,
     val newBalance: Long? = null,
     val jackpotPayout: Long? = null,
+    val jackpotTierIndex: Int? = null,
+    val jackpotTierPayoutPct: Double? = null,
     val lossTribute: Long? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,

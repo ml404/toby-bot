@@ -1202,7 +1202,7 @@ class ModerationWebServiceTest {
             guildId = guildId,
             rawName = "x",
             // Real enum entry but NOT in CHANNEL_CONFIG_ALLOWLIST.
-            targetConfigName = "JACKPOT_PAYOUT_PCT",
+            targetConfigName = "JACKPOT_WHEEL_SEGMENTS",
         )
         assertTrue(r is ModerationWebService.CreateChannelOutcome.Error)
         r as ModerationWebService.CreateChannelOutcome.Error

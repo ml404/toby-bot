@@ -37,6 +37,8 @@ class ScratchService(
             val matchCount: Int,
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
+            val jackpotTierIndex: Int = -1,
+            val jackpotTierPayoutPct: Double = 0.0,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
         ) : ScratchOutcome
@@ -93,8 +95,10 @@ class ScratchService(
                 cells = result.cells,
                 winningSymbol = result.winningSymbol,
                 matchCount = result.matchCount,
-                newBalance = wager.newBalance + jackpot,
-                jackpotPayout = jackpot,
+                newBalance = wager.newBalance + jackpot.amount,
+                jackpotPayout = jackpot.amount,
+                jackpotTierIndex = jackpot.tierIndex,
+                jackpotTierPayoutPct = jackpot.tierPayoutPct,
                 soldTobyCoins = resolved.soldCoins,
                 newPrice = resolved.newPrice,
             )

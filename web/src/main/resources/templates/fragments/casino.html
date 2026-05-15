@@ -7,7 +7,8 @@
     HTML; centralising it means a copy/styling change ripples to every
     game in one edit.
 -->
-<div th:fragment="jackpotBanner" class="casino-jackpot-banner"
+<th:block th:fragment="jackpotBanner">
+<div class="casino-jackpot-banner"
      th:classappend="${jackpotIneligible} ? ' casino-jackpot-banner--ineligible'"
      title="Anti-cheat is on. Detected automation accrues forced losses up to a configured cap.">
     🎰 Jackpot pool:
@@ -15,9 +16,11 @@
     <span class="muted" th:unless="${jackpotIneligible}">
         — win any minigame for up to
         <span th:text="${jackpotWinPct}">1</span>%
-        chance to bank the pool. The chance scales with your stake against a
+        chance to spin the payout wheel. The chance scales with your stake against a
         <span th:text="${jackpotStakeAnchor}">500</span>-credit reference;
         bets at or above that get the full rate, smaller bets scale linearly down.
+        The wheel decides what fraction of the pool you take — most spins are
+        small pity prizes, rare spins drain a meaningful share.
     </span>
     <th:block th:if="${jackpotIneligible}">
         <span class="muted" th:if="${jackpotIneligibleReason == 'rtp'}">
@@ -33,5 +36,30 @@
         </span>
     </th:block>
 </div>
+
+<!--
+    Spinning-wheel overlay shown when a jackpot roll hits. Hidden by
+    default and revealed by `casino-jackpot-wheel.js` on a winning
+    response. Segments are server-rendered as a JSON blob so the JS
+    renders the exact wheel the server spun against. Rides along with
+    every jackpotBanner include so each casino page automatically gets
+    the overlay without per-page edits.
+-->
+<div id="jackpot-wheel-overlay" class="jackpot-wheel-overlay" hidden>
+    <div class="jackpot-wheel-stage">
+        <div class="jackpot-wheel-pointer">▼</div>
+        <svg class="jackpot-wheel-svg" viewBox="-110 -110 220 220" aria-hidden="true">
+            <g class="jackpot-wheel-rotor"></g>
+            <circle cx="0" cy="0" r="14" class="jackpot-wheel-hub"></circle>
+        </svg>
+        <div class="jackpot-wheel-result" aria-live="polite"></div>
+    </div>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.__jackpotWheel = /*[[${jackpotWheelSegments}]]*/ [];
+        /*]]>*/
+    </script>
+</div>
+</th:block>
 </body>
 </html>

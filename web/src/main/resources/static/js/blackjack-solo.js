@@ -385,10 +385,17 @@
         var jackpot = window.TobyJackpot;
         var body = (jackpot && lastResolutionBody &&
             lastResolutionBody.handNumber === r.handNumber) ? lastResolutionBody : null;
+        var jackpotPct = (body && typeof body.jackpotTierPayoutPct === "number")
+            ? body.jackpotTierPayoutPct * 100 : 0;
         var jackpotPrefixHtml = (body && jackpot)
-            ? jackpot.jackpotPrefixHtml(body.jackpotPayout) : "";
+            ? jackpot.jackpotPrefixHtml(body.jackpotPayout, jackpotPct) : "";
         var lossTributeSuffixHtml = (body && jackpot)
             ? jackpot.lossTributeSuffix(body) : "";
+        // Spin the visual wheel once per resolution if the server picked
+        // a tier. No-op when the response isn't a jackpot hit.
+        if (body && jackpot && typeof jackpot.spinWheelFor === "function") {
+            jackpot.spinWheelFor(body);
+        }
 
         // For a split round, seatResults only carries hand 0's outcome —
         // see BlackjackService.settleSolo (firstHandResult). Surface every

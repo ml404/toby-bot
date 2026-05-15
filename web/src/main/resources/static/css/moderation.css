@@ -290,6 +290,75 @@ details.config-section.is-hidden { display: none; }
     .config-row .save-config { grid-column: 2; }
 }
 
+/* Wide row variant — the wheel editor needs full width for its
+   paired (weight, payout) inputs and the explainer block. */
+.config-row-wide {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-3);
+}
+.config-row-wide > label,
+.config-row-wide > .config-explainer,
+.config-row-wide > .jackpot-wheel-editor {
+    grid-column: 1 / -1;
+}
+.config-row-wide > .jackpot-wheel-save {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
+}
+
+.jackpot-wheel-editor-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-2) 0;
+}
+.jackpot-wheel-editor-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 130px) minmax(0, 160px) auto;
+    align-items: center;
+    column-gap: var(--space-3);
+}
+.jackpot-wheel-editor-row .jackpot-wheel-row-label {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.jackpot-wheel-editor-row label {
+    grid-column: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.jackpot-wheel-editor-row input {
+    flex: 1 1 auto;
+    min-width: 0;
+    grid-column: auto;
+    width: 80px;
+}
+.jackpot-wheel-editor-row .config-suffix {
+    color: var(--text-muted);
+}
+.jackpot-wheel-editor-row .jw-remove {
+    padding: 2px 10px;
+}
+.jackpot-wheel-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+.jackpot-wheel-ev {
+    font-size: 0.9rem;
+}
+.jackpot-wheel-error {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    margin: var(--space-2) 0 0;
+}
+
 /* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
    Coinflip / Poker / etc. sub-groups). Each `.config-group` carries a
    small uppercase `<h4>` heading and a hairline divider between groups
