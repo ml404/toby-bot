@@ -96,13 +96,12 @@ tasks.withType(KotlinCompile).configureEach {
 
 test {
     useJUnitPlatform()
-    // Belt-and-braces watchdog so a hung test prints its class name in CI logs
-    // instead of stalling the build until the 6h job timeout. 5m is loose
-    // enough that no honest test should trip it.
+    // Belt-and-braces watchdog so a hung test fails with a clear timeout
+    // exception instead of stalling the build until the 6h job timeout.
+    // 5m is loose enough that no honest test should trip it.
     systemProperty 'junit.jupiter.execution.timeout.default', '5m'
     testLogging {
-        events 'started', 'passed', 'failed', 'skipped'
-        showStandardStreams = false
+        events 'failed', 'skipped'
         exceptionFormat = 'full'
     }
 }
