@@ -1,29 +1,30 @@
 package bot.toby.command.commands.economy
 
-import bot.toby.helpers.UserDtoHelper
-import core.command.Command.Companion.invokeDeleteOnMessageResponse
-import core.command.Command.Companion.replyEmbedAndDelete
+import bot.toby.modal.modals.TipMessageModal
 import core.command.CommandContext
 import database.dto.UserDto
 import database.service.TipService
-import database.service.TipService.TipOutcome
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.components.label.Label
+import net.dv8tion.jda.api.components.textinput.TextInput
+import net.dv8tion.jda.api.components.textinput.TextInputStyle
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
-import org.springframework.beans.factory.annotation.Autowired
+import net.dv8tion.jda.api.modals.Modal
 import org.springframework.stereotype.Component
 
 /**
- * `/tip user:<member> amount:<int> message:<text?>` — peer-to-peer
- * social-credit transfer. Goes through the same [TipService] the web
- * UI uses, so the per-sender daily outgoing cap and the audit log
- * stay consistent across surfaces.
+ * `/tip user:<member> amount:<int>` — peer-to-peer social-credit
+ * transfer. After validating the recipient + amount, opens
+ * [TipMessageModal] which collects the optional note and executes the
+ * tip via [TipService.tip] (same service path the web UI uses, so
+ * daily cap and audit-log semantics stay consistent across surfaces).
+ *
+ * The note used to be a third slash option — easy to miss and rarely
+ * filled in. Moving it into a dedicated form field encourages
+ * personalised tips and clears clutter from the slash UX.
  */
 @Component
-class TipCommand @Autowired constructor(
-    private val tipService: TipService,
-    private val userDtoHelper: UserDtoHelper,
-) : EconomyCommand {
+class TipCommand : EconomyCommand {
 
     override val name: String = "tip"
     override val description: String =
@@ -32,7 +33,6 @@ class TipCommand @Autowired constructor(
     companion object {
         private const val OPT_USER = "user"
         private const val OPT_AMOUNT = "amount"
-        private const val OPT_MESSAGE = "message"
     }
 
     override val optionData: List<OptionData> = listOf(
@@ -45,85 +45,46 @@ class TipCommand @Autowired constructor(
         )
             .setMinValue(TipService.MIN_TIP)
             .setMaxValue(TipService.MAX_TIP),
-        OptionData(OptionType.STRING, OPT_MESSAGE, "Optional note", false)
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
-        val guild = event.guild ?: run {
-            replyError(event, "This command can only be used in a server.", deleteDelay); return
+        if (event.guild == null) {
+            event.reply("This command can only be used in a server.").setEphemeral(true).queue()
+            return
         }
         val targetUser = event.getOption(OPT_USER)?.asUser ?: run {
-            replyError(event, "You must specify a recipient.", deleteDelay); return
+            event.reply("You must specify a recipient.").setEphemeral(true).queue()
+            return
         }
         if (targetUser.isBot) {
-            replyError(event, "You can't tip a bot.", deleteDelay); return
+            event.reply("You can't tip a bot.").setEphemeral(true).queue()
+            return
         }
         if (targetUser.idLong == requestingUserDto.discordId) {
-            replyError(event, "You can't tip yourself.", deleteDelay); return
+            event.reply("You can't tip yourself.").setEphemeral(true).queue()
+            return
         }
         val amount = event.getOption(OPT_AMOUNT)?.asLong ?: run {
-            replyError(event, "You must specify an amount.", deleteDelay); return
-        }
-        val note = event.getOption(OPT_MESSAGE)?.asString
-
-        // Lazy-create the recipient row so we can credit them even if they've
-        // never run a TobyBot command before.
-        userDtoHelper.calculateUserDto(targetUser.idLong, guild.idLong)
-
-        val outcome = tipService.tip(
-            senderDiscordId = requestingUserDto.discordId,
-            recipientDiscordId = targetUser.idLong,
-            guildId = guild.idLong,
-            amount = amount,
-            note = note
-        )
-        replyOutcome(event, outcome, deleteDelay)
-    }
-
-    private fun replyOutcome(
-        event: SlashCommandInteractionEvent,
-        outcome: TipOutcome,
-        deleteDelay: Int
-    ) {
-        if (outcome is TipOutcome.Ok) {
-            // addContent on the message (not the embed description) so the
-            // <@recipient> mention actually pings — embed-mention pings are silent.
-            event.hook.sendMessageEmbeds(TipEmbeds.okEmbed(outcome))
-                .addContent("<@${outcome.recipient}>")
-                .queue(invokeDeleteOnMessageResponse(deleteDelay))
+            event.reply("You must specify an amount.").setEphemeral(true).queue()
             return
         }
 
-        val message = when (outcome) {
-            is TipOutcome.InvalidAmount ->
-                "Tip amount must be between ${outcome.min} and ${outcome.max} credits."
-
-            is TipOutcome.InvalidRecipient -> when (outcome.reason) {
-                TipOutcome.InvalidRecipient.Reason.SELF -> "You can't tip yourself."
-                TipOutcome.InvalidRecipient.Reason.BOT -> "You can't tip a bot."
-                TipOutcome.InvalidRecipient.Reason.MISSING -> "Recipient does not exist."
-            }
-
-            is TipOutcome.InsufficientCredits ->
-                "You only have ${outcome.have} credits but tried to send ${outcome.needed}."
-
-            is TipOutcome.DailyCapExceeded ->
-                "Daily tip cap reached. You've sent ${outcome.sentToday}/${outcome.cap} today; " +
-                    "${outcome.cap - outcome.sentToday} credits of headroom remain."
-
-            TipOutcome.UnknownSender -> "No user record yet. Try another TobyBot command first."
-
-            TipOutcome.UnknownRecipient -> "Recipient has no user record in this guild yet."
-
-            is TipOutcome.Ok -> error("unreachable") // handled above
-        }
-        event.hook.replyEmbedAndDelete(TipEmbeds.errorEmbed(message), deleteDelay)
+        event.replyModal(buildTipMessageModal(targetUser.idLong, amount)).queue()
     }
 
-    private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
-        event.hook.replyEmbedAndDelete(TipEmbeds.errorEmbed(message), deleteDelay)
+    private fun buildTipMessageModal(recipientDiscordId: Long, amount: Long): Modal {
+        val noteInput = TextInput.create(TipMessageModal.FIELD_NOTE, TextInputStyle.PARAGRAPH)
+            .setPlaceholder("Optional note that ships with the tip.")
+            .setRequired(false)
+            .setRequiredRange(0, TipService.MAX_NOTE_LENGTH)
+            .build()
+        return Modal.create(
+            TipMessageModal.customId(recipientDiscordId, amount),
+            "Tip $amount credits",
+        )
+            .addComponents(Label.of("Note (optional, max ${TipService.MAX_NOTE_LENGTH} chars)", noteInput))
+            .build()
     }
 }
