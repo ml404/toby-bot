@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Tighter walk-and-shoot choreography + mobile-friendly overlay",
+    "summary": "Two follow-up tweaks to the duel resolution animation that merged in #453. **Choreography.** The figures now begin overlapping at the arena centre and walk apart back-to-back. The winner half-flips (`scaleX(-1)`) just before the flash, and the loser falls without flipping. Reads as the classic Western duel arc — together, walk apart, turn, shoot — instead of the previous \"just start a bit close and walk out\" beat. The flip lives on `.duel-figure-avatar` (the disc only) rat…",
+    "emoji": "💰",
+    "prNumber": 454
+  },
+  {
+    "date": "May 2026",
     "title": "Play a resolution animation when an offer is accepted on the web",
     "summary": "Follow-on to #452 (which enriched the recipient + per-offer expiry on the web inbox). When the acceptor clicks **Accept**, the silent toast is replaced with a modal overlay that animates the two duelists: they walk apart, a 💥 flashes between them, the loser tips over, the winner gets a gold glow, and the `+pot credits` pill flies to the winner. Click anywhere, hit <kbd>Esc</kbd>, or wait 6s to dismiss — at which point `refreshAll()` runs and the inbox/balance update norma…",
     "emoji": "💰",
