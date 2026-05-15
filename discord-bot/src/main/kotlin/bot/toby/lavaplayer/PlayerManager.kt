@@ -1,6 +1,6 @@
 package bot.toby.lavaplayer
 
-import bot.configuration.YoutubeProxySettings
+import common.configuration.YoutubeProxySettings
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager

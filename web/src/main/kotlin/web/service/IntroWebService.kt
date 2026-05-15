@@ -2,6 +2,7 @@ package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Caffeine
+import common.configuration.YoutubeProxySettings
 import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
@@ -11,8 +12,12 @@ import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.net.URI
 import java.net.URL
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 @Service
@@ -456,8 +461,11 @@ class IntroWebService(
         return try {
             val apiUrl = "https://www.googleapis.com/youtube/v3/videos" +
                 "?id=$videoId&part=snippet,contentDetails&key=$apiKey"
-            val connection = URL(apiUrl).openConnection() as HttpURLConnection
+            val connection = openYouTubeDataApiConnection(apiUrl)
             if (connection.responseCode != 200) {
+                logger.warn {
+                    "YouTube Data API preview returned HTTP ${connection.responseCode} for videoId=$videoId"
+                }
                 return YouTubePreview(
                     videoId = videoId,
                     title = null,
@@ -475,7 +483,10 @@ class IntroWebService(
             } ?: "https://img.youtube.com/vi/$videoId/mqdefault.jpg"
             val duration = parseIsoDurationSeconds(item.path("contentDetails").path("duration").asText())
             YouTubePreview(videoId, title, thumb, duration)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            logger.warn {
+                "fetchYouTubePreview failed for videoId=$videoId: ${e::class.simpleName}: ${e.message}"
+            }
             YouTubePreview(
                 videoId = videoId,
                 title = null,
@@ -483,6 +494,23 @@ class IntroWebService(
                 durationSeconds = null
             )
         }
+    }
+
+    private fun openYouTubeDataApiConnection(apiUrl: String): HttpURLConnection {
+        val proxy = YoutubeProxySettings.fromEnv()
+        val connection = if (proxy != null) {
+            val javaProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
+            (URL(apiUrl).openConnection(javaProxy) as HttpURLConnection).also {
+                if (proxy.hasAuth) {
+                    val cred = Base64.getEncoder()
+                        .encodeToString("${proxy.user}:${proxy.pass}".toByteArray(StandardCharsets.UTF_8))
+                    it.setRequestProperty("Proxy-Authorization", "Basic $cred")
+                }
+            }
+        } else {
+            URL(apiUrl).openConnection() as HttpURLConnection
+        }
+        return connection
     }
 
     /**
