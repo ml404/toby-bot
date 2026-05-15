@@ -1,5 +1,6 @@
 package bot.toby.lavaplayer
 
+import bot.configuration.YoutubeProxySettings
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
@@ -10,6 +11,7 @@ import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceMan
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import common.logging.DiscordLogger
 import core.command.Command.Companion.replyAndDelete
 import dev.lavalink.youtube.YoutubeAudioSourceManager
 import dev.lavalink.youtube.YoutubeSourceOptions
@@ -20,10 +22,16 @@ import dev.lavalink.youtube.clients.TvHtml5Simply
 import dev.lavalink.youtube.clients.Web
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import org.apache.http.HttpHost
+import org.apache.http.auth.AuthScope
+import org.apache.http.auth.UsernamePasswordCredentials
+import org.apache.http.impl.client.BasicCredentialsProvider
 
 private const val CIPHER_API_URL = "https://cipher.kikkia.dev/api"
 
 private const val GOOGLE_REFRESH_TOKEN = "GOOGLE_REFRESH_TOKEN"
+
+private val logger: DiscordLogger = DiscordLogger.createLogger(PlayerManager::class.java)
 
 class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     private val musicManagers: MutableMap<Long, GuildMusicManager> = HashMap()
@@ -37,6 +45,16 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         val youtubeAudioSourceManager = YoutubeAudioSourceManager(youtubeSourceOptions, Tv(), TvHtml5Simply(), Web(), Music(), Android())
         val refreshToken = System.getenv(GOOGLE_REFRESH_TOKEN)?.takeIf { it.isNotBlank() }
         youtubeAudioSourceManager.useOauth2(refreshToken, refreshToken != null)
+        if (refreshToken != null) {
+            logger.info { "YouTube OAuth2 enabled via $GOOGLE_REFRESH_TOKEN." }
+        } else {
+            logger.warn {
+                "$GOOGLE_REFRESH_TOKEN not set — YouTube requests will be anonymous and more likely to be IP-blocked. " +
+                        "See README for how to obtain a refresh token."
+            }
+        }
+
+        configureYoutubeProxy(youtubeAudioSourceManager)
 
         audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
         audioPlayerManager.registerSourceManager(TwitchStreamAudioSourceManager())
@@ -119,6 +137,25 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
                 event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
             }
         }
+    }
+
+    private fun configureYoutubeProxy(manager: YoutubeAudioSourceManager) {
+        val proxy = YoutubeProxySettings.fromEnv() ?: return
+        val httpHost = HttpHost(proxy.host, proxy.port)
+        val credentialsProvider = if (proxy.hasAuth) {
+            BasicCredentialsProvider().apply {
+                setCredentials(
+                    AuthScope(proxy.host, proxy.port),
+                    UsernamePasswordCredentials(proxy.user, proxy.pass)
+                )
+            }
+        } else null
+
+        manager.httpInterfaceManager.configureBuilder { builder ->
+            builder.setProxy(httpHost)
+            credentialsProvider?.let { builder.setDefaultCredentialsProvider(it) }
+        }
+        logger.info { "YouTube HTTP proxy enabled: ${proxy.host}:${proxy.port} (auth=${proxy.hasAuth})" }
     }
 
     fun destroyMusicManager(guildId: Long) {

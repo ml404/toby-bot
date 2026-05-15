@@ -60,7 +60,11 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
    | `TOKEN` | Yes | Discord bot token |
    | `DATABASE_URL` | Yes | PostgreSQL URL (`postgresql://user:pass@host:5432/db`) |
    | `YOUTUBE_API_KEY` | No | YouTube Data API key |
-   | `GOOGLE_REFRESH_TOKEN` | No | OAuth2 refresh token for YouTube playback |
+   | `GOOGLE_REFRESH_TOKEN` | No | OAuth2 refresh token for YouTube playback. See [lavaplayer-youtube OAuth2 docs](https://github.com/lavalink-devs/youtube-source#oauth-tokens) for how to mint one. Authenticated requests are far less likely to be IP-blocked. |
+   | `YOUTUBE_PROXY_HOST` | No | Hostname of an HTTP proxy to route YouTube traffic through (both lavaplayer playback and YouTube Data API). Use a rotating residential proxy provider (Webshare, IPRoyal, Bright Data, etc.) to avoid YouTube IP blocks without manually restarting the dyno. |
+   | `YOUTUBE_PROXY_PORT` | No | Port for the proxy above. Required if `YOUTUBE_PROXY_HOST` is set. |
+   | `YOUTUBE_PROXY_USER` | No | Username for proxy basic auth. Optional. |
+   | `YOUTUBE_PROXY_PASS` | No | Password for proxy basic auth. Optional. |
 
    **Option A — `.env` file** (copy the example and fill in your values):
 
