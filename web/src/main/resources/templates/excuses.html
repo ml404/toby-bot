@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Excuses · ' + ${guildName}, '/css/excuses.css')}"></head>
+<body th:attr="data-guild-id=${guildId}">
+
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- Flash messages rendered invisibly; toasts.js picks them up on load -->
+<div th:if="${success}" data-flash="success" class="sr-only" th:text="${success}"></div>
+<div th:if="${error}" data-flash="error" class="sr-only" th:text="${error}"></div>
+
+<main id="main" class="container">
+
+    <div class="excuse-header">
+        <h1>Excuses — <span th:text="${guildName}">Server</span></h1>
+        <span class="excuse-count"
+              th:text="${totalCount} + ' total'">0 total</span>
+    </div>
+
+    <!-- Finder: spin a random approved excuse without reloading -->
+    <section class="finder-card" aria-labelledby="finder-h">
+        <h2 id="finder-h">Finder</h2>
+        <p class="muted">Spin for a random approved excuse, or search for something specific.</p>
+        <div class="finder-controls">
+            <button type="button" id="spinBtn" class="btn btn-spin"
+                    th:attr="data-random-url=@{/excuses/{gid}/random(gid=${guildId})}">🎲 Spin</button>
+            <form method="get" th:action="@{/excuses/{gid}(gid=${guildId})}" class="finder-search">
+                <input type="hidden" name="tab" th:value="${activeTab}">
+                <input type="search" name="q" th:value="${query}"
+                       placeholder="Search approved excuses…" aria-label="Search excuses">
+                <button type="submit" class="btn btn-sm">Search</button>
+                <a th:if="${query != null and query != ''}"
+                   th:href="@{/excuses/{gid}(gid=${guildId},tab=${activeTab})}"
+                   class="btn btn-sm btn-secondary">Clear</a>
+            </form>
+        </div>
+        <div id="randomResult" class="random-result" aria-live="polite" hidden>
+            <blockquote class="random-quote">
+                <span class="quote-text" id="randomText"></span>
+                <footer>— <span id="randomAuthor"></span> · <span class="muted">#<span id="randomId"></span></span></footer>
+            </blockquote>
+        </div>
+    </section>
+
+    <!-- Tabs: Approved / Pending (pending only when superuser) -->
+    <section class="tabs-row" aria-label="Filter by approval state">
+        <a class="tab"
+           th:href="@{/excuses/{gid}(gid=${guildId},tab='approved',q=${query})}"
+           th:classappend="${activeTab == 'approved'} ? ' active'"
+           aria-current="${activeTab == 'approved'} ? 'page'">
+            Approved
+        </a>
+        <a class="tab"
+           th:if="${isSuperUser}"
+           th:href="@{/excuses/{gid}(gid=${guildId},tab='pending')}"
+           th:classappend="${activeTab == 'pending'} ? ' active'"
+           aria-current="${activeTab == 'pending'} ? 'page'">
+            Pending
+        </a>
+    </section>
+
+    <!-- Rows -->
+    <section class="excuse-list" aria-labelledby="list-h">
+        <h2 id="list-h" class="sr-only">Excuses</h2>
+
+        <div th:if="${#lists.isEmpty(rows)}" class="empty-hero">
+            <span class="emoji" aria-hidden="true">🤷</span>
+            <p th:if="${query != null and query != ''}">
+                No approved excuses match '<span th:text="${query}"></span>'.
+            </p>
+            <p th:if="${query == null or query == ''}"
+               th:text="${activeTab == 'pending'}
+                        ? 'Nothing pending right now.'
+                        : 'No approved excuses yet — submit one below to get started.'">
+                No excuses.
+            </p>
+        </div>
+
+        <ul th:unless="${#lists.isEmpty(rows)}" class="excuse-cards">
+            <li th:each="row : ${rows}"
+                class="excuse-card"
+                th:classappend="${row.approved} ? ' approved' : ' pending'"
+                th:attr="data-excuse-id=${row.id}">
+                <div class="excuse-text" th:text="${row.text}">Excuse text</div>
+                <div class="excuse-meta">
+                    <span class="excuse-author" th:text="${row.author}">Author</span>
+                    <span class="excuse-id" th:text="'#' + ${row.id}">#1</span>
+                    <span class="excuse-state" th:if="${row.approved}">Approved</span>
+                    <span class="excuse-state pending" th:unless="${row.approved}">Pending</span>
+                </div>
+                <div class="excuse-actions">
+                    <button type="button" class="btn btn-sm"
+                            th:if="${row.canApprove}"
+                            th:attr="data-action='approve',
+                                     data-id=${row.id},
+                                     data-url=@{/excuses/{gid}/{id}/approve(gid=${guildId},id=${row.id})}">
+                        ✓ Approve
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger"
+                            th:if="${row.canDelete}"
+                            th:attr="data-action='delete',
+                                     data-id=${row.id},
+                                     data-url=@{/excuses/{gid}/{id}/delete(gid=${guildId},id=${row.id})}">
+                        🗑 Delete
+                    </button>
+                </div>
+            </li>
+        </ul>
+
+        <!-- Pager -->
+        <nav class="pager" th:if="${totalPages > 1}" aria-label="Pagination">
+            <a class="btn btn-sm"
+               th:href="@{/excuses/{gid}(gid=${guildId},tab=${activeTab},q=${query},page=${page - 1})}"
+               th:classappend="${not hasPrev} ? ' disabled'"
+               th:attr="aria-disabled=${not hasPrev}">⬅️ Prev</a>
+            <span class="pager-info" th:text="'Page ' + ${page} + ' / ' + ${totalPages}">Page 1 / 1</span>
+            <a class="btn btn-sm"
+               th:href="@{/excuses/{gid}(gid=${guildId},tab=${activeTab},q=${query},page=${page + 1})}"
+               th:classappend="${not hasNext} ? ' disabled'"
+               th:attr="aria-disabled=${not hasNext}">Next ➡️</a>
+        </nav>
+    </section>
+
+    <!-- Maker: submit form -->
+    <section class="maker-card" aria-labelledby="maker-h">
+        <h2 id="maker-h">Maker</h2>
+        <p class="muted">Submit a new excuse for approval. Max <span th:text="${maxLength}">200</span> characters.</p>
+        <form method="post" th:action="@{/excuses/{gid}/submit(gid=${guildId})}" class="maker-form">
+            <input type="hidden" name="tab" th:value="${activeTab}">
+            <input type="hidden" name="q" th:value="${query}">
+
+            <div class="form-group">
+                <label for="excuseText">Excuse</label>
+                <textarea id="excuseText" name="text" required
+                          th:maxlength="${maxLength}"
+                          rows="2"
+                          placeholder="e.g. The dog ate my homework."></textarea>
+                <div class="char-counter">
+                    <span id="charCount">0</span> / <span th:text="${maxLength}">200</span>
+                </div>
+            </div>
+
+            <!-- Superuser override: attribute to another member -->
+            <div class="form-group" th:if="${isSuperUser}">
+                <label for="authorSelect">Attribute to (superuser only)</label>
+                <select id="authorSelect" name="authorDiscordId">
+                    <option value="">(Yourself)</option>
+                    <option th:each="m : ${members}"
+                            th:value="${m.id}"
+                            th:text="${m.name}"></option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn">Submit for approval</button>
+        </form>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/excuses.js}"></script>
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>

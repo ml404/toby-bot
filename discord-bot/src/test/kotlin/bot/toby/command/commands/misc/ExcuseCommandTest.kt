@@ -6,22 +6,21 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
 import database.dto.ExcuseDto
 import database.service.ExcuseService
+import database.service.PagedExcuses
 import io.mockk.*
-import io.mockk.InternalPlatformDsl.toStr
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class ExcuseCommandTest : CommandTest {
-    lateinit var excuseCommand: ExcuseCommand
-
-    lateinit var excuseService: ExcuseService
+    private lateinit var excuseCommand: ExcuseCommand
+    private lateinit var excuseService: ExcuseService
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        excuseService = mockk()
+        excuseService = mockk(relaxed = true)
         excuseCommand = ExcuseCommand(excuseService)
     }
 
@@ -30,305 +29,331 @@ internal class ExcuseCommandTest : CommandTest {
         tearDownCommonMocks()
     }
 
+    // /excuse random
+
     @Test
-    fun aRandomApprovedExcuse_WhenNoOptionsUsed() {
-        // Arrange
+    fun `random returns approved excuse when there is at least one`() {
         val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
+        val approved = ExcuseDto(id = 1L, guildId = 1L, author = "Alice", excuse = "the dog ate it", approved = true)
+        every { event.subcommandName } returns ExcuseCommand.RANDOM
+        every { excuseService.listApprovedGuildExcuses(1L) } returns listOf(approved)
 
-        // Mock the behavior of the excuseService when listing approved guild excuses
-        val excuseDto = ExcuseDto(1, 1L, "TestAuthor", "Excuse 1", true)
-        val excuseDtos: List<ExcuseDto?> = listOf(excuseDto)
-        val optionMapping = mockk<OptionMapping>()
-        every { event.options } returns emptyList()
-        every { event.getOption("action") } returns optionMapping
-        every { optionMapping.asString } returns "all"
-        every { excuseService.listApprovedGuildExcuses(any()) } returns excuseDtos
+        excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
         verify {
-            event.hook.sendMessage(
-                "Excuse #${excuseDto.id}: '${excuseDto.excuse}' - ${excuseDto.author}."
-            )
+            event.hook.sendMessage("Excuse #1: 'the dog ate it' - Alice.")
         }
     }
 
     @Test
-    fun listAllApprovedExcuses_WithValidApprovedOnes() {
-        // Arrange
+    fun `random falls back to message when there are no approved excuses`() {
         val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
+        every { event.subcommandName } returns ExcuseCommand.RANDOM
+        every { excuseService.listApprovedGuildExcuses(1L) } returns emptyList()
 
-        // Mock the behavior of the excuseService when listing approved guild excuses
-        val excuseDtos: List<ExcuseDto?> = listOf(
-            ExcuseDto(1, 1L, "TestAuthor", "Excuse 1", true),
-            ExcuseDto(2, 1L, "TestAuthor", "Excuse 2", true),
-            ExcuseDto(3, 1L, "TestAuthor", "Excuse 3", true)
-        )
-        val optionMapping = mockk<OptionMapping>()
-        every { event.options } returns listOf(optionMapping)
-        every { event.getOption("action") } returns optionMapping
-        every { optionMapping.asString } returns "all"
-        every { excuseService.listApprovedGuildExcuses(any()) } returns excuseDtos
+        excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
-        verify { event.hook.sendMessage(any<String>()) }
-    }
-
-    @Test
-    fun listAllApprovedExcuses_WithNoValidApprovedOnes() {
-        // Arrange
-        val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-
-        // Mock the behavior of the excuseService when listing approved guild excuses
-        val optionMapping = mockk<OptionMapping>()
-        every { event.options } returns emptyList()
-        every { event.getOption("action") } returns optionMapping
-        every { optionMapping.asString } returns "all"
-        every { excuseService.listApprovedGuildExcuses(any()) } returns emptyList<ExcuseDto>()
-
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
         verify { event.hook.sendMessage("There are no approved excuses, consider submitting some.") }
     }
 
     @Test
-    fun createNewExcuse() {
-        // Arrange
+    fun `null subcommand defaults to random for muscle-memory`() {
         val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-        val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
-        val excuseMapping = mockk<OptionMapping>()
-        val actionMapping = mockk<OptionMapping>()
-        val authorMapping = mockk<OptionMapping>()
-        every { event.getOption("excuse") } returns excuseMapping
-        every { event.getOption("action") } returns actionMapping
-        every { event.getOption("author") } returns authorMapping
-        every { event.options } returns listOf(excuseMapping)
-        every { actionMapping.asString } returns null.toStr()
-        every { excuseMapping.asString } returns "Excuse 1"
-        every { authorMapping.asMember } returns null
-        every { excuseService.listAllGuildExcuses(1L) } returns emptyList<ExcuseDto>()
-        every { excuseService.createNewExcuse(any()) } returns excuseToCreate
+        val approved = ExcuseDto(id = 7L, guildId = 1L, author = "Bob", excuse = "traffic was bad", approved = true)
+        every { event.subcommandName } returns null
+        every { excuseService.listApprovedGuildExcuses(1L) } returns listOf(approved)
 
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
+        excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        // Assert
+        verify { event.hook.sendMessage("Excuse #7: 'traffic was bad' - Bob.") }
+    }
+
+    // /excuse submit
+
+    @Test
+    fun `submit creates a new pending excuse with author from user`() {
+        val ctx = DefaultCommandContext(event)
+        val saved = ExcuseDto(id = 10L, guildId = 1L, author = "UserName", excuse = "I forgot", approved = false)
+        val textOption = mockk<OptionMapping> { every { asString } returns "I forgot" }
+        every { event.subcommandName } returns ExcuseCommand.SUBMIT
+        every { event.getOption("text") } returns textOption
+        every { event.getOption("author") } returns null
+        every { excuseService.listAllGuildExcuses(1L) } returns emptyList()
+        every { excuseService.createNewExcuse(any()) } returns saved
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
         verify {
-            excuseService.listAllGuildExcuses(1L)
-            excuseService.createNewExcuse(any())
-            event.hook.sendMessage(any<String>())
+            excuseService.createNewExcuse(withArg<ExcuseDto> {
+                assert(it.guildId == 1L)
+                assert(it.excuse == "I forgot")
+                assert(it.authorDiscordId == 1L) // from event.user.idLong in CommandTest
+                assert(!it.approved)
+            })
+            event.hook.sendMessage("Submitted excuse 'I forgot' - UserName with id '10' for approval.")
         }
     }
 
     @Test
-    fun createNewExcuse_thatExists_throwsError() {
-        // Arrange
+    fun `submit rejects duplicates case-insensitively`() {
         val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
+        val existing = ExcuseDto(id = 1L, guildId = 1L, author = "Bob", excuse = "I FORGOT", approved = true)
+        val textOption = mockk<OptionMapping> { every { asString } returns "i forgot" }
+        every { event.subcommandName } returns ExcuseCommand.SUBMIT
+        every { event.getOption("text") } returns textOption
+        every { event.getOption("author") } returns null
+        every { excuseService.listAllGuildExcuses(1L) } returns listOf(existing)
 
-        val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
-        val excuseDtos: List<ExcuseDto?> = listOf(excuseToCreate)
-        val excuseMapping = mockk<OptionMapping>()
-        val actionMapping = mockk<OptionMapping>()
-        val authorMapping = mockk<OptionMapping>()
-        every { event.getOption("excuse") } returns excuseMapping
-        every { event.getOption("action") } returns actionMapping
-        every { event.getOption("author") } returns authorMapping
-        every { actionMapping.asString } returns null.toString()
-        every { authorMapping.asMember } returns null
-        every { event.options } returns listOf(excuseMapping)
-        every { excuseMapping.asString } returns "Excuse 1"
-        every { excuseService.listAllGuildExcuses(1L) } returns excuseDtos
-        every { excuseService.createNewExcuse(any()) } returns excuseToCreate
+        excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
-        verify {
-            excuseService.listAllGuildExcuses(1L)
-            event.hook.sendMessage("I've heard that one before, keep up.")
-        }
+        verify { event.hook.sendMessage(ExcuseCommand.EXISTING_EXCUSE_MESSAGE) }
         verify(exactly = 0) { excuseService.createNewExcuse(any()) }
     }
 
     @Test
-    fun approvePendingExcuse_asSuperUser() {
-        // Arrange
+    fun `submit blank text complains and does not create`() {
         val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-        val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
-        val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = mockk<OptionMapping>()
-        val actionMapping = mockk<OptionMapping>()
-        every { event.getOption("id") } returns excuseMapping
-        every { event.getOption("action") }.returns(actionMapping)
-        every { event.options } returns listOf(excuseMapping)
-        every { userDto.superUser } returns true
-        every { excuseMapping.asInt } returns 1
-        every { excuseMapping.asLong } returns 1
-        every { actionMapping.asString } returns "approve"
-        every { excuseService.getExcuseById(1) } returns preUpdatedExcuse
-        every { excuseService.updateExcuse(any()) } returns excuseToBeReturnedByUpdate
+        val textOption = mockk<OptionMapping> { every { asString } returns "   " }
+        every { event.subcommandName } returns ExcuseCommand.SUBMIT
+        every { event.getOption("text") } returns textOption
+        every { event.getOption("author") } returns null
 
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
+        excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        // Assert
+        verify { event.hook.sendMessage("Provide some excuse text.") }
+        verify(exactly = 0) { excuseService.createNewExcuse(any()) }
+    }
+
+    // /excuse approve
+
+    @Test
+    fun `approve as superuser flips approval and replies with text`() {
+        val ctx = DefaultCommandContext(event)
+        val pending = ExcuseDto(id = 5L, guildId = 1L, author = "Alice", excuse = "rain delay", approved = false)
+        val approved = ExcuseDto(id = 5L, guildId = 1L, author = "Alice", excuse = "rain delay", approved = true)
+        val idOption = mockk<OptionMapping> { every { asLong } returns 5L }
+        every { event.subcommandName } returns ExcuseCommand.APPROVE
+        every { event.getOption("id") } returns idOption
+        every { requestingUserDto.superUser } returns true
+        every { excuseService.getExcuseById(5L) } returns pending
+        every { excuseService.approveExcuse(5L) } returns approved
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
         verify {
-            excuseService.getExcuseById(excuseToBeReturnedByUpdate.id)
-            excuseService.updateExcuse(any())
-            event.hook.sendMessage("Approved excuse '${excuseToBeReturnedByUpdate.excuse}'.")
+            excuseService.approveExcuse(5L)
+            event.hook.sendMessage("Approved excuse 'rain delay'.")
         }
     }
 
     @Test
-    fun approvePendingExcuse_asNonAuthorisedUser() {
-        // Arrange
+    fun `approve as non-superuser is denied`() {
         val ctx = DefaultCommandContext(event)
-        val deleteDelay = 0
-        val excuseToCreate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = mockk<OptionMapping>()
-        val actionMapping = mockk<OptionMapping>()
-        every { event.getOption("id") } returns excuseMapping
-        every { event.getOption("action") } returns actionMapping
-        every { event.options } returns listOf(excuseMapping)
-        every { excuseMapping.asInt } returns 1
-        every { actionMapping.asString } returns "approve"
-        every { excuseService.getExcuseById(1) } returns excuseToCreate
-        every { excuseService.updateExcuse(any()) } returns excuseToCreate
-        every { CommandTest.guild.owner } returns CommandTest.member
-        every { CommandTest.member.effectiveName } returns "Effective Name"
+        val idOption = mockk<OptionMapping> { every { asLong } returns 5L }
+        every { event.subcommandName } returns ExcuseCommand.APPROVE
+        every { event.getOption("id") } returns idOption
         every { requestingUserDto.superUser } returns false
-
-        // Act
-        excuseCommand.handle(ctx, requestingUserDto, deleteDelay)
-
-        // Assert
-        verify {
-            event.hook.sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
-        }
-    }
-
-    @Test
-    fun listAllPendingExcuses_WithValidPendingOnes() {
-        // Arrange
-        val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-
-        // Mock the behavior of the excuseService when listing approved guild excuses
-        val excuseDtos: List<ExcuseDto?> = listOf(
-            ExcuseDto(1, 1L, "TestAuthor", "Excuse 1", true),
-            ExcuseDto(2, 1L, "TestAuthor", "Excuse 2", true),
-            ExcuseDto(3, 1L, "TestAuthor", "Excuse 3", true)
-        )
-        val optionMapping = mockk<OptionMapping>()
-        every { event.options } returns listOf(optionMapping)
-        every { event.getOption("action") } returns optionMapping
-        every { optionMapping.asString } returns "pending"
-        every { excuseService.listPendingGuildExcuses(any()) } returns excuseDtos
-
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
-        verify { event.hook.sendMessage(any<String>()) }
-    }
-
-    @Test
-    fun listAllPendingExcuses_WithNoValidPendingOnes() {
-        // Arrange
-        val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-
-        // Mock the behavior of the excuseService when listing approved guild excuses
-        val optionMapping = mockk<OptionMapping>()
-        every { event.options } returns listOf(optionMapping)
-        every { event.getOption("action") } returns optionMapping
-        every { optionMapping.asString } returns "pending"
-        every { excuseService.listPendingGuildExcuses(any()) } returns emptyList<ExcuseDto>()
-
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
-        verify { event.hook.sendMessage("There are no excuses pending approval, consider submitting some.") }
-    }
-
-    @Test
-    fun deleteExcuse_asValidUser() {
-        // Arrange
-        val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-        val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = mockk<OptionMapping>()
-        val actionMapping = mockk<OptionMapping>()
-        every { event.getOption("id") } returns excuseMapping
-        every { event.getOption("action") } returns actionMapping
-        every { event.options } returns listOf(excuseMapping)
-        every { userDto.superUser } returns true
-        every { excuseMapping.asLong } returns 1
-        every { actionMapping.asString } returns "delete"
-        every { excuseService.deleteExcuseById(1L) } just Runs
-
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
-
-        // Assert
-        verify {
-            excuseService.deleteExcuseById(any())
-            event.hook.sendMessage("Deleted excuse with id '${excuseToBeReturnedByUpdate.id}'.")
-        }
-    }
-
-    @Test
-    fun deleteExcuse_asInvalidUser() {
-        // Arrange
-        val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
-        val deleteDelay = 0
-        val preUpdatedExcuse = ExcuseDto(1, 1L, "UserName", "Excuse 1", false)
-        val excuseToBeReturnedByUpdate = ExcuseDto(1, 1L, "UserName", "Excuse 1", true)
-        val excuseMapping = mockk<OptionMapping>()
-        val actionMapping = mockk<OptionMapping>()
-        every { event.getOption("id") } returns excuseMapping
-        every { event.getOption("action") } returns actionMapping
-        every { event.options } returns listOf(excuseMapping)
-        every { userDto.superUser } returns false
-        every { excuseMapping.asInt } returns 1
-        every { actionMapping.asString } returns "delete"
         every { CommandTest.guild.owner } returns CommandTest.member
-        every { CommandTest.member.effectiveName } returns "Effective Name"
-        every { excuseService.getExcuseById(1) } returns preUpdatedExcuse
-        every { excuseService.updateExcuse(any()) } returns excuseToBeReturnedByUpdate
+        every { CommandTest.member.effectiveName } returns "OwnerName"
 
-        // Act
-        excuseCommand.handle(ctx, userDto, deleteDelay)
+        excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        // Assert
         verify {
-            event.hook.sendMessageFormat("You do not have adequate permissions to use this command, if you believe this is a mistake talk to Effective Name")
+            event.hook.sendMessageFormat(
+                "You do not have adequate permissions to use this command, if you believe this is a mistake talk to OwnerName"
+            )
         }
-        verify(exactly = 0) { excuseService.deleteExcuseById(1) }
+        verify(exactly = 0) { excuseService.approveExcuse(any()) }
+    }
+
+    @Test
+    fun `approve of already-approved row returns the heard-it-before message`() {
+        val ctx = DefaultCommandContext(event)
+        val alreadyApproved = ExcuseDto(id = 5L, guildId = 1L, author = "Alice", excuse = "rain delay", approved = true)
+        val idOption = mockk<OptionMapping> { every { asLong } returns 5L }
+        every { event.subcommandName } returns ExcuseCommand.APPROVE
+        every { event.getOption("id") } returns idOption
+        every { requestingUserDto.superUser } returns true
+        every { excuseService.getExcuseById(5L) } returns alreadyApproved
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify { event.hook.sendMessage(ExcuseCommand.EXISTING_EXCUSE_MESSAGE) }
+        verify(exactly = 0) { excuseService.approveExcuse(any()) }
+    }
+
+    // /excuse delete
+
+    @Test
+    fun `delete as superuser succeeds`() {
+        val ctx = DefaultCommandContext(event)
+        val idOption = mockk<OptionMapping> { every { asLong } returns 5L }
+        every { event.subcommandName } returns ExcuseCommand.DELETE
+        every { event.getOption("id") } returns idOption
+        every { requestingUserDto.superUser } returns true
+        every { excuseService.deleteExcuseById(5L) } just Runs
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify {
+            excuseService.deleteExcuseById(5L)
+            event.hook.sendMessage("Deleted excuse with id '5'.")
+        }
+    }
+
+    @Test
+    fun `delete as author of own pending excuse succeeds`() {
+        val ctx = DefaultCommandContext(event)
+        val idOption = mockk<OptionMapping> { every { asLong } returns 5L }
+        every { event.subcommandName } returns ExcuseCommand.DELETE
+        every { event.getOption("id") } returns idOption
+        every { requestingUserDto.superUser } returns false
+        every { excuseService.canRequesterDeleteOwnPending(5L, 1L) } returns true
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify {
+            excuseService.deleteExcuseById(5L)
+            event.hook.sendMessage("Deleted excuse with id '5'.")
+        }
+    }
+
+    @Test
+    fun `delete by random user is denied`() {
+        val ctx = DefaultCommandContext(event)
+        val idOption = mockk<OptionMapping> { every { asLong } returns 5L }
+        every { event.subcommandName } returns ExcuseCommand.DELETE
+        every { event.getOption("id") } returns idOption
+        every { requestingUserDto.superUser } returns false
+        every { excuseService.canRequesterDeleteOwnPending(5L, 1L) } returns false
+        every { CommandTest.guild.owner } returns CommandTest.member
+        every { CommandTest.member.effectiveName } returns "OwnerName"
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify {
+            event.hook.sendMessageFormat(
+                "You do not have adequate permissions to use this command, if you believe this is a mistake talk to OwnerName"
+            )
+        }
+        verify(exactly = 0) { excuseService.deleteExcuseById(any()) }
+    }
+
+    // /excuse list
+
+    @Test
+    fun `list approved with no results sends empty message`() {
+        val ctx = DefaultCommandContext(event)
+        every { event.subcommandName } returns ExcuseCommand.LIST
+        every { event.getOption("scope") } returns null
+        every { event.getOption("page") } returns null
+        every {
+            excuseService.listApprovedPaged(1L, 1, ExcuseCommand.EXCUSES_PER_PAGE)
+        } returns PagedExcuses(emptyList(), 1, ExcuseCommand.EXCUSES_PER_PAGE, 0L)
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify { event.hook.sendMessage("There are no approved excuses, consider submitting some.") }
+    }
+
+    @Test
+    fun `list pending is denied for non-superusers`() {
+        val ctx = DefaultCommandContext(event)
+        val scopeOption = mockk<OptionMapping> { every { asString } returns ExcuseCommand.SCOPE_PENDING }
+        every { event.subcommandName } returns ExcuseCommand.LIST
+        every { event.getOption("scope") } returns scopeOption
+        every { event.getOption("page") } returns null
+        every { requestingUserDto.superUser } returns false
+        every { CommandTest.guild.owner } returns CommandTest.member
+        every { CommandTest.member.effectiveName } returns "OwnerName"
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify {
+            event.hook.sendMessageFormat(
+                "You do not have adequate permissions to use this command, if you believe this is a mistake talk to OwnerName"
+            )
+        }
+        verify(exactly = 0) { excuseService.listPendingPaged(any(), any(), any()) }
+    }
+
+    @Test
+    fun `list approved with rows sends an embed reply`() {
+        val ctx = DefaultCommandContext(event)
+        every { event.subcommandName } returns ExcuseCommand.LIST
+        every { event.getOption("scope") } returns null
+        every { event.getOption("page") } returns null
+        every {
+            excuseService.listApprovedPaged(1L, 1, ExcuseCommand.EXCUSES_PER_PAGE)
+        } returns PagedExcuses(
+            rows = listOf(
+                ExcuseDto(id = 1L, guildId = 1L, author = "Alice", excuse = "rain", approved = true),
+                ExcuseDto(id = 2L, guildId = 1L, author = "Bob", excuse = "snow", approved = true),
+            ),
+            page = 1,
+            pageSize = ExcuseCommand.EXCUSES_PER_PAGE,
+            totalCount = 2L,
+        )
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        // 2 rows fit on one page so the embed-and-delete shortcut fires.
+        verify { event.hook.sendMessageEmbeds(any<net.dv8tion.jda.api.entities.MessageEmbed>(), *anyVararg()) }
+    }
+
+    // /excuse search
+
+    @Test
+    fun `search with empty query complains`() {
+        val ctx = DefaultCommandContext(event)
+        val queryOption = mockk<OptionMapping> { every { asString } returns "   " }
+        every { event.subcommandName } returns ExcuseCommand.SEARCH
+        every { event.getOption("query") } returns queryOption
+        every { event.getOption("page") } returns null
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify { event.hook.sendMessage("Provide a search query.") }
+        verify(exactly = 0) { excuseService.searchApproved(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `search empty results returns query-aware message`() {
+        val ctx = DefaultCommandContext(event)
+        val queryOption = mockk<OptionMapping> { every { asString } returns "alpaca" }
+        every { event.subcommandName } returns ExcuseCommand.SEARCH
+        every { event.getOption("query") } returns queryOption
+        every { event.getOption("page") } returns null
+        every {
+            excuseService.searchApproved(1L, "alpaca", 1, ExcuseCommand.EXCUSES_PER_PAGE)
+        } returns PagedExcuses(emptyList(), 1, ExcuseCommand.EXCUSES_PER_PAGE, 0L)
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify { event.hook.sendMessage("No approved excuses match 'alpaca'.") }
+    }
+
+    // round-trip on the page-button id encoder/decoder
+
+    @Test
+    fun `encodePageButton round-trips through decodePageButton`() {
+        val encoded = ExcuseCommand.encodePageButton(
+            scope = ExcuseCommand.SCOPE_SEARCH,
+            guildId = 42L,
+            page = 3,
+            query = "tricky:value with spaces",
+        )
+        val decoded = ExcuseCommand.decodePageButton(encoded)!!
+        assert(decoded.scope == ExcuseCommand.SCOPE_SEARCH)
+        assert(decoded.guildId == 42L)
+        assert(decoded.page == 3)
+        assert(decoded.query == "tricky:value with spaces")
+    }
+
+    @Test
+    fun `decodePageButton returns null for unrelated component ids`() {
+        assert(ExcuseCommand.decodePageButton("init:next") == null)
+        assert(ExcuseCommand.decodePageButton("excuse-page:noop") == null)
+        assert(ExcuseCommand.decodePageButton("excuse-page:approved:notanumber:1:") == null)
     }
 }
