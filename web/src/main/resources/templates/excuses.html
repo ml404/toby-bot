@@ -144,12 +144,16 @@
             <!-- Superuser override: attribute to another member -->
             <div class="form-group" th:if="${isSuperUser}">
                 <label for="authorSelect">Attribute to (superuser only)</label>
-                <select id="authorSelect" name="authorDiscordId">
-                    <option value="">(Yourself)</option>
-                    <option th:each="m : ${members}"
-                            th:value="${m.id}"
-                            th:text="${m.name}"></option>
-                </select>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='authorDiscordId',
+                        id='authorSelect',
+                        members=${members},
+                        selectedId=null,
+                        placeholder='(Yourself)',
+                        emptyLabel='(Yourself)',
+                        required=false,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
             </div>
 
             <button type="submit" class="btn">Submit for approval</button>
@@ -159,6 +163,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
 <script th:src="@{/js/excuses.js}"></script>
 <script th:src="@{/js/home.js}"></script>
 </body>

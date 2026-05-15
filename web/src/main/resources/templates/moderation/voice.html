@@ -44,15 +44,17 @@
                             th:text="${vc.name}"></option>
                 </select>
             </label>
-            <label>
-                Members (ctrl+click for multi)
-                <select name="memberIds" multiple size="6" required>
-                    <option th:each="m : ${overview.members}"
-                            th:if="${!m.isBot}"
-                            th:value="${m.id}"
-                            th:text="${m.name}"></option>
-                </select>
-            </label>
+            <label for="move-members">Members</label>
+            <div th:replace="~{fragments/userPicker :: userPicker(
+                    name='memberIds',
+                    id='move-members',
+                    members=${overview.members},
+                    selectedId=null,
+                    placeholder='Pick members to move…',
+                    emptyLabel=null,
+                    required=true,
+                    multiple=true,
+                    showSocialCredit=false)}"></div>
             <button type="submit" class="btn">Move</button>
         </form>
     </section>
@@ -60,6 +62,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/voice.js}"></script>
 </body>

@@ -44,17 +44,17 @@
                 clawback when the player profited from a spent pool.
             </p>
             <form class="jackpot-refund-form" autocomplete="off">
-                <label>
-                    User
-                    <select name="sourceDiscordId" required>
-                        <option value="" disabled selected>Select a member…</option>
-                        <option th:each="m : ${overview.members}"
-                                th:value="${m.id}"
-                                th:attr="data-credit=${m.socialCredit}"
-                                th:text="${m.name} + ' — ' + ${m.socialCredit} + ' credits'">
-                        </option>
-                    </select>
-                </label>
+                <label for="jackpot-refund-user">User</label>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='sourceDiscordId',
+                        id='jackpot-refund-user',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Select a member…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=true)}"></div>
                 <p class="muted jackpot-refund-balance" hidden>
                     Current balance: <span class="jackpot-refund-balance-value">0</span> credits
                 </p>
@@ -70,6 +70,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/casino.js}"></script>
 </body>

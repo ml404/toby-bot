@@ -966,3 +966,144 @@ td { font-size: 0.95rem; }
     .lb-rank { width: 24px; height: 24px; font-size: 0.8rem; }
     .lb-title-pill { font-size: 0.75rem; padding: 1px 6px; }
 }
+
+/* ---- Searchable user picker (templates/fragments/userPicker.html
+   + static/js/userPicker.js). Lives in base.css so every page that
+   includes the fragment gets the styling without an extra <link>. ---- */
+.user-picker { position: relative; }
+.user-picker__native {
+    position: absolute;
+    left: 0; top: 0;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+.user-picker__field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    cursor: text;
+    font-size: 0.95rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.user-picker__field:hover { border-color: var(--accent); }
+.user-picker__field:focus,
+.user-picker__field[aria-expanded="true"] {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+}
+.user-picker__chips { display: contents; }
+.user-picker__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--space-2);
+    font-size: 0.85rem;
+    max-width: 220px;
+}
+.user-picker__chip > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-picker__chip-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+.user-picker__chip-remove:hover { color: #fff; background: var(--accent); }
+.user-picker__value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-picker__value--placeholder { color: var(--text-muted); }
+.user-picker__caret {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: var(--space-2);
+}
+.user-picker__panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.user-picker__panel[hidden] { display: none; }
+.user-picker__input {
+    background: var(--bg-input);
+    color: var(--text);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.95rem;
+    font-family: inherit;
+    width: 100%;
+}
+.user-picker__input::placeholder { color: var(--text-muted); }
+.user-picker__input:focus { outline: none; }
+.user-picker__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+}
+.user-picker__option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+}
+.user-picker__option.is-highlighted { background: var(--accent-soft); }
+.user-picker__option.is-selected { color: var(--accent); font-weight: 500; }
+.user-picker__option-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-picker__avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+.user-picker__check { color: var(--accent); }
+.user-picker__empty {
+    padding: var(--space-3);
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 0.85rem;
+}
