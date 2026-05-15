@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Premium spoke wheel with mobile sizing + click-to-spin",
+    "summary": "Three problems with the jackpot payout wheel (introduced in #442): **Mobile sizing.** `width: 320px; max-width: 90vw` with no responsive rules made the wheel dominate phone screens and visually crash into the stake input above and the banner description below. **\"MS painty\" visual.** Flat hex fills, a `▼` text-glyph pointer, a plain `<circle>` hub — looked nothing like the rest of the casino's `casino-felt` tables. **Auto-spin cutscene.** The wheel rotated the moment it ap…",
+    "emoji": "🎲",
+    "prNumber": 445
+  },
+  {
+    "date": "May 2026",
     "title": "Subcommand rewrite + per-guild web UI",
     "summary": "Polishes the excuse service end-to-end: **`/excuse` rewrite** to real Discord subcommands: `random`, `submit`, `list`, `search`, `approve`, `delete`. Replaces the previous free-form `action` option that silently fell through to \"create\" when no known action was matched. **Per-guild web UI** at `/excuses` — the \"excuse maker and finder\": Finder card with a 🎲 Spin button (AJAX) and search box. Approved / Pending tabs (pending superuser-only). Per-row Approve/Delete buttons;…",
     "emoji": "✨",
