@@ -169,9 +169,10 @@ class SetConfigCommand @Autowired constructor(
                     // if someone tries to set it via /setconfig so the
                     // dispatch stays exhaustive but doesn't pretend to
                     // validate the CSV here.
-                    event.hook.sendMessage(
-                        "Edit the payout wheel via the moderation web tab — the CSV format needs the dedicated editor."
-                    ).queue(invokeDeleteOnMessageResponse(deleteDelay))
+                    event.hook.replyAndDelete(
+                        "Edit the payout wheel via the moderation web tab — the CSV format needs the dedicated editor.",
+                        deleteDelay,
+                    )
                 }
                 ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS -> setRangedIntConfig(event, optionMapping, deleteDelay,
                     config = ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS, gameLabel = "Jackpot", label = "winner cooldown days", range = 0..365)
