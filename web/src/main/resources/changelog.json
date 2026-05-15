@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Centralised searchable user picker for every user dropdown",
+    "summary": "Every form that lets you pick a member — tip recipient, duel opponent, excuse attribution, intro management, voice move targets, casino jackpot refund — used a plain `<select>` populated with `${members}`. On servers with lots of members those dropdowns are a long scroll. This PR replaces all of them with a single searchable typeahead component. New fragment `templates/fragments/userPicker.html` — one signature handles single-select, multi-select with chips, optional pre-s…",
+    "emoji": "🛡️",
+    "prNumber": 450
+  },
+  {
+    "date": "May 2026",
     "title": "Route YouTube traffic through optional rotating HTTP proxy",
     "summary": "YouTube intermittently IP-blocks the dyno, breaking both `/play` and intro-clip validation until the Heroku app is manually restarted in the hope of pulling a non-blocked IP. Restarting Heroku is just IP-pool roulette — this PR replaces it with two real fixes: **Surface OAuth2 status at startup.** Authenticated requests via `GOOGLE_REFRESH_TOKEN` (already wired in `PlayerManager`) are far less prone to anonymous-IP blocks. The bot now logs a clear WARN at boot when the tok…",
     "emoji": "🎵",
