@@ -77,9 +77,12 @@ class BlackjackService @Autowired constructor(
             val result: BlackjackTable.HandResult,
             val newBalance: Long,
             val jackpotPayout: Long,
+            val lossTribute: Long,
+            // Tier fields are new, appended after the original positional
+            // params so existing positional callers (Discord-bot tests)
+            // keep compiling.
             val jackpotTierIndex: Int = -1,
             val jackpotTierPayoutPct: Double = 0.0,
-            val lossTribute: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null
         ) : SoloDealOutcome
@@ -103,9 +106,11 @@ class BlackjackService @Autowired constructor(
             val result: BlackjackTable.HandResult,
             val newBalance: Long,
             val jackpotPayout: Long,
+            val lossTribute: Long,
+            // Tier fields appended so existing positional callers
+            // (Discord-bot tests) keep compiling.
             val jackpotTierIndex: Int = -1,
             val jackpotTierPayoutPct: Double = 0.0,
-            val lossTribute: Long
         ) : SoloActionOutcome
         data object HandNotFound : SoloActionOutcome
         data object NotYourHand : SoloActionOutcome

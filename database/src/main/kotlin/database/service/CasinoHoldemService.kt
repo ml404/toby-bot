@@ -75,9 +75,11 @@ class CasinoHoldemService @Autowired constructor(
             val result: CasinoHoldemTable.HandResult,
             val newBalance: Long,
             val jackpotPayout: Long,
+            val lossTribute: Long,
+            // Tier fields appended so existing positional callers keep
+            // compiling.
             val jackpotTierIndex: Int = -1,
             val jackpotTierPayoutPct: Double = 0.0,
-            val lossTribute: Long,
         ) : ActionOutcome
         data object HandNotFound : ActionOutcome
         data object NotYourHand : ActionOutcome
