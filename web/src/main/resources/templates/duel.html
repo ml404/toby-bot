@@ -55,7 +55,15 @@
         <div id="duel-pending-list" class="duel-pending-list">
             <div th:if="${#lists.isEmpty(pending)}" class="muted">No pending duels right now.</div>
             <div class="duel-pending-row" th:each="p : ${pending}"
-                 th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}, data-created-at=${p.createdAtEpochSeconds}">
+                 th:attr="data-duel-id=${p.duelId},
+                          data-stake=${p.stake},
+                          data-created-at=${p.createdAtEpochSeconds},
+                          data-initiator-discord-id=${p.initiatorDiscordId},
+                          data-initiator-name=${p.initiatorName},
+                          data-initiator-avatar=${p.initiatorAvatarUrl},
+                          data-opponent-discord-id=${p.opponentDiscordId},
+                          data-opponent-name=${p.opponentName},
+                          data-opponent-avatar=${p.opponentAvatarUrl}">
                 <div class="duel-pending-info">
                     <div class="duel-pending-who">
                         <span class="muted">From</span>
