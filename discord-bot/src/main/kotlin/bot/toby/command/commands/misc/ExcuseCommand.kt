@@ -1,5 +1,6 @@
 package bot.toby.command.commands.misc
 
+import bot.toby.modal.modals.ExcuseSubmitModal
 import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
@@ -11,10 +12,14 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
+import net.dv8tion.jda.api.components.label.Label
+import net.dv8tion.jda.api.components.textinput.TextInput
+import net.dv8tion.jda.api.components.textinput.TextInputStyle
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
+import net.dv8tion.jda.api.modals.Modal
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.awt.Color
@@ -29,15 +34,7 @@ class ExcuseCommand @Autowired constructor(
 
     override val subCommands: List<SubcommandData> = listOf(
         SubcommandData(RANDOM, "Get a random approved excuse for this server."),
-        SubcommandData(SUBMIT, "Submit a new excuse for approval (max 200 characters).")
-            .addOptions(
-                OptionData(OptionType.STRING, OPT_TEXT, "The excuse text", true)
-                    .setMaxLength(MAX_EXCUSE_LENGTH),
-                OptionData(
-                    OptionType.USER, OPT_AUTHOR,
-                    "Attribute the excuse to this user instead of yourself", false
-                )
-            ),
+        SubcommandData(SUBMIT, "Open a form to submit a new excuse for approval (max 200 characters)."),
         SubcommandData(LIST, "Browse the server's excuses with pagination.")
             .addOptions(
                 OptionData(OptionType.STRING, OPT_SCOPE, "Approved (default) or pending — pending is superuser-only")
@@ -62,8 +59,20 @@ class ExcuseCommand @Autowired constructor(
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
+        // The `submit` subcommand opens a modal — that has to be the FIRST
+        // response on the interaction, before any deferReply. All other
+        // subcommands defer-and-reply through `event.hook`.
+        if (event.subcommandName == SUBMIT) {
+            if (event.guild == null) {
+                event.reply("This command can only be used in a server.").setEphemeral(true).queue()
+                return
+            }
+            event.replyModal(buildSubmitModal()).queue()
+            return
+        }
+
+        event.deferReply().queue()
         val guildId = event.guild?.idLong ?: run {
             event.hook.replyAndDelete("This command can only be used in a server.", deleteDelay)
             return
@@ -71,7 +80,6 @@ class ExcuseCommand @Autowired constructor(
 
         when (event.subcommandName) {
             RANDOM, null -> handleRandom(event, guildId, deleteDelay)
-            SUBMIT -> handleSubmit(event, guildId, requestingUserDto, deleteDelay)
             LIST -> handleList(event, guildId, requestingUserDto, deleteDelay)
             SEARCH -> handleSearch(event, guildId, deleteDelay)
             APPROVE -> handleApprove(event, requestingUserDto, deleteDelay)
@@ -81,6 +89,17 @@ class ExcuseCommand @Autowired constructor(
                 deleteDelay,
             )
         }
+    }
+
+    private fun buildSubmitModal(): Modal {
+        val textInput = TextInput.create(ExcuseSubmitModal.FIELD_TEXT, TextInputStyle.PARAGRAPH)
+            .setPlaceholder("Some elaborate, world-saving reason you were late.")
+            .setRequiredRange(1, MAX_EXCUSE_LENGTH)
+            .setRequired(true)
+            .build()
+        return Modal.create(ExcuseSubmitModal.MODAL_NAME, "Submit an excuse")
+            .addComponents(Label.of("Excuse text (max $MAX_EXCUSE_LENGTH chars)", textInput))
+            .build()
     }
 
     private fun handleRandom(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
@@ -93,43 +112,6 @@ class ExcuseCommand @Autowired constructor(
         val displayAuthor = resolveDisplayAuthor(event.jda, guildId, pick)
         event.hook.replyAndDelete(
             "Excuse #${pick.id}: '${pick.excuse}' - $displayAuthor.",
-            deleteDelay,
-        )
-    }
-
-    private fun handleSubmit(
-        event: SlashCommandInteractionEvent,
-        guildId: Long,
-        requesterDto: UserDto,
-        deleteDelay: Int,
-    ) {
-        val excuseText = event.getOption(OPT_TEXT)?.asString?.trim()
-        if (excuseText.isNullOrBlank()) {
-            event.hook.replyAndDelete("Provide some excuse text.", deleteDelay)
-            return
-        }
-
-        val authorMember = event.getOption(OPT_AUTHOR)?.asMember
-        val authorName = authorMember?.effectiveName ?: event.user.name
-        val authorDiscordId = authorMember?.idLong ?: event.user.idLong
-
-        val existing = excuseService.listAllGuildExcuses(guildId)
-            .filterNotNull()
-            .firstOrNull { it.excuse.equals(excuseText, ignoreCase = true) }
-        if (existing != null) {
-            event.hook.replyAndDelete(EXISTING_EXCUSE_MESSAGE, deleteDelay)
-            return
-        }
-
-        val dto = ExcuseDto(
-            guildId = guildId,
-            author = authorName,
-            excuse = excuseText,
-            authorDiscordId = authorDiscordId,
-        )
-        val saved = excuseService.createNewExcuse(dto)
-        event.hook.replyAndDelete(
-            "Submitted excuse '$excuseText' - $authorName with id '${saved?.id}' for approval.",
             deleteDelay,
         )
     }
@@ -280,8 +262,6 @@ class ExcuseCommand @Autowired constructor(
         const val SCOPE_PENDING = "pending"
         const val SCOPE_SEARCH = "search"
 
-        private const val OPT_TEXT = "text"
-        private const val OPT_AUTHOR = "author"
         private const val OPT_SCOPE = "scope"
         private const val OPT_PAGE = "page"
         private const val OPT_QUERY = "query"

@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.event.WebTipSentEvent
 import web.service.EconomyWebService
 import web.service.TipWebService
+import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
 import java.time.LocalDate
@@ -96,19 +97,21 @@ class TipController(
         @PathVariable guildId: Long,
         @RequestBody request: TipRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<TipResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(TipResponse(false, error = "Not signed in."))
-        if (!economyWebService.isMember(discordId, guildId)) {
-            return ResponseEntity.status(403).body(TipResponse(false, error = "You are not a member of that server."))
-        }
-
+    ): ResponseEntity<TipResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            val message = if (status == 401) "Not signed in." else "You are not a member of that server."
+            ResponseEntity.status(status).body(TipResponse(false, error = message))
+        },
+    ) { discordId ->
         val recipientDiscordId = request.recipientDiscordId.toLong()
         if (recipientDiscordId == discordId) {
-            return ResponseEntity.badRequest().body(TipResponse(false, error = "You can't tip yourself."))
+            return@requireMemberForJson ResponseEntity.badRequest()
+                .body(TipResponse(false, error = "You can't tip yourself."))
         }
         if (!economyWebService.isMember(recipientDiscordId, guildId)) {
-            return ResponseEntity.badRequest().body(TipResponse(false, error = "Pick someone from this server."))
+            return@requireMemberForJson ResponseEntity.badRequest()
+                .body(TipResponse(false, error = "Pick someone from this server."))
         }
 
         // Ensure recipient row exists (lazy-create through the helper-style path).
@@ -121,7 +124,7 @@ class TipController(
             amount = request.amount,
             note = request.note?.takeIf { it.isNotBlank() }
         )
-        return when (outcome) {
+        when (outcome) {
             is TipOutcome.Ok -> {
                 eventPublisher.publishEvent(
                     WebTipSentEvent(

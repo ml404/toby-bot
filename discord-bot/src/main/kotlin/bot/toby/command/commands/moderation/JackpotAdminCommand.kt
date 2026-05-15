@@ -1,5 +1,6 @@
 package bot.toby.command.commands.moderation
 
+import bot.toby.modal.modals.JackpotAdminModal
 import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
@@ -7,10 +8,14 @@ import database.dto.UserDto
 import database.service.CasinoAdminService
 import database.service.JackpotLotteryService
 import database.service.JackpotService
+import net.dv8tion.jda.api.components.label.Label
+import net.dv8tion.jda.api.components.textinput.TextInput
+import net.dv8tion.jda.api.components.textinput.TextInputStyle
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
+import net.dv8tion.jda.api.modals.Modal
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -42,24 +47,29 @@ class JackpotAdminCommand @Autowired constructor(
                     .setMinValue(1L),
             ),
         SubcommandData(SUB_POOL, "Show the current jackpot pool size."),
-        SubcommandData(SUB_LOTTERY_OPEN, "Open a multi-winner ticketed lottery seeded from the jackpot pool.")
-            .addOptions(
-                OptionData(OptionType.INTEGER, OPT_TICKET_PRICE, "Credits per ticket", true).setMinValue(1L),
-                OptionData(OptionType.INTEGER, OPT_DURATION_HOURS, "How many hours the sale stays open", true)
-                    .setMinValue(1L),
-                OptionData(OptionType.INTEGER, OPT_WINNER_COUNT, "How many winners share the prize", true)
-                    .setMinValue(1L)
-                    .setMaxValue(10L),
-                OptionData(OptionType.INTEGER, OPT_DRAIN_PCT, "Percent of pool to seed the lottery (1-100)", true)
-                    .setMinValue(1L)
-                    .setMaxValue(100L),
-            ),
+        SubcommandData(SUB_LOTTERY_OPEN, "Open a multi-winner ticketed lottery seeded from the jackpot pool (form)."),
         SubcommandData(SUB_LOTTERY_DRAW, "Close the open lottery and pay weighted winners."),
         SubcommandData(SUB_LOTTERY_CANCEL, "Cancel the open lottery (refund tickets, return seed to pool)."),
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
+
+        // The `lottery_open` subcommand opens a modal — must be the first
+        // response on the interaction, before any deferReply. All other
+        // subcommands defer-and-reply through `event.hook`.
+        if (event.subcommandName == SUB_LOTTERY_OPEN) {
+            val guildPresent = event.guild != null
+            val authorised = isAuthorised(ctx, requestingUserDto)
+            if (!guildPresent || !authorised) {
+                val message = if (!guildPresent) "Guild only." else "Server owner or superuser only."
+                event.reply(message).setEphemeral(true).queue()
+                return
+            }
+            event.replyModal(buildLotteryOpenModal()).queue()
+            return
+        }
+
         event.deferReply(true).queue()
         val guildId = event.guild?.idLong ?: run {
             event.hook.replyEphemeralAndDelete("Guild only.", deleteDelay)
@@ -73,7 +83,6 @@ class JackpotAdminCommand @Autowired constructor(
             SUB_RESET -> handleReset(event, guildId, deleteDelay)
             SUB_REFUND -> handleRefund(event, guildId, deleteDelay)
             SUB_POOL -> handlePool(event, guildId, deleteDelay)
-            SUB_LOTTERY_OPEN -> handleLotteryOpen(event, guildId, deleteDelay)
             SUB_LOTTERY_DRAW -> handleLotteryDraw(event, guildId, deleteDelay)
             SUB_LOTTERY_CANCEL -> handleLotteryCancel(event, guildId, deleteDelay)
             else -> event.hook.replyEphemeralAndDelete(
@@ -82,6 +91,23 @@ class JackpotAdminCommand @Autowired constructor(
                 deleteDelay,
             )
         }
+    }
+
+    private fun buildLotteryOpenModal(): Modal {
+        val builder = Modal.create(JackpotAdminModal.MODAL_NAME, "Open Lottery Event")
+        val ticketPrice = TextInput.create(JackpotAdminModal.FIELD_TICKET_PRICE, TextInputStyle.SHORT)
+            .setPlaceholder("100").setRequired(true).setRequiredRange(1, 6).build()
+        val duration = TextInput.create(JackpotAdminModal.FIELD_DURATION_HOURS, TextInputStyle.SHORT)
+            .setPlaceholder("24").setRequired(true).setRequiredRange(1, 4).build()
+        val winners = TextInput.create(JackpotAdminModal.FIELD_WINNER_COUNT, TextInputStyle.SHORT)
+            .setPlaceholder("1-10").setRequired(true).setRequiredRange(1, 2).build()
+        val drainPct = TextInput.create(JackpotAdminModal.FIELD_DRAIN_PCT, TextInputStyle.SHORT)
+            .setPlaceholder("1-100").setRequired(true).setRequiredRange(1, 3).build()
+        builder.addComponents(Label.of("Ticket price (credits)", ticketPrice))
+        builder.addComponents(Label.of("Duration (hours)", duration))
+        builder.addComponents(Label.of("Winner count (1-10)", winners))
+        builder.addComponents(Label.of("Drain percent (1-100)", drainPct))
+        return builder.build()
     }
 
     private fun isAuthorised(ctx: CommandContext, requestingUserDto: UserDto): Boolean =
@@ -121,35 +147,6 @@ class JackpotAdminCommand @Autowired constructor(
     private fun handlePool(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
         val pool = jackpotService.getPool(guildId)
         event.hook.replyEphemeralAndDelete("Current jackpot pool: **$pool** credits.", deleteDelay)
-    }
-
-    private fun handleLotteryOpen(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
-        val ticketPrice = event.getOption(OPT_TICKET_PRICE)?.asLong
-            ?: return replyError(event, "Ticket price option missing.", deleteDelay)
-        val duration = event.getOption(OPT_DURATION_HOURS)?.asLong
-            ?: return replyError(event, "Duration option missing.", deleteDelay)
-        val winners = event.getOption(OPT_WINNER_COUNT)?.asLong?.toInt()
-            ?: return replyError(event, "Winner count option missing.", deleteDelay)
-        val drainPctRaw = event.getOption(OPT_DRAIN_PCT)?.asLong
-            ?: return replyError(event, "Drain pct option missing.", deleteDelay)
-        val drainPct = drainPctRaw.coerceIn(1L, 100L) / 100.0
-
-        when (val result = jackpotLotteryService.openLottery(
-            guildId, ticketPrice, duration, winners, drainPct
-        )) {
-            is JackpotLotteryService.OpenOutcome.Ok -> event.hook.replyEphemeralAndDelete(
-                "Opened lottery. Seeded with **${result.seeded}** credits from the jackpot pool. " +
-                    "Tickets: **$ticketPrice** credits each. Winners: **$winners**. " +
-                    "Closes after **$duration** hours (admin must run `/jackpotadmin lottery_draw`).",
-                deleteDelay,
-            )
-            JackpotLotteryService.OpenOutcome.AlreadyOpen ->
-                replyError(event, "A lottery is already open for this guild. Draw or cancel it first.", deleteDelay)
-            JackpotLotteryService.OpenOutcome.EmptyPool ->
-                replyError(event, "Jackpot pool is empty — nothing to seed the lottery with.", deleteDelay)
-            is JackpotLotteryService.OpenOutcome.InvalidParams ->
-                replyError(event, "Invalid params: ${result.reason}.", deleteDelay)
-        }
     }
 
     private fun handleLotteryDraw(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
@@ -204,9 +201,5 @@ class JackpotAdminCommand @Autowired constructor(
         const val SUB_LOTTERY_CANCEL = "lottery_cancel"
         const val OPT_USER = "user"
         const val OPT_AMOUNT = "amount"
-        const val OPT_TICKET_PRICE = "ticket_price"
-        const val OPT_DURATION_HOURS = "duration_hours"
-        const val OPT_WINNER_COUNT = "winner_count"
-        const val OPT_DRAIN_PCT = "drain_pct"
     }
 }

@@ -4,12 +4,16 @@ import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
+import bot.toby.modal.modals.ExcuseSubmitModal
 import database.dto.ExcuseDto
 import database.service.ExcuseService
 import database.service.PagedExcuses
 import io.mockk.*
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.modals.Modal
+import net.dv8tion.jda.api.requests.restaction.interactions.ModalCallbackAction
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -68,60 +72,22 @@ internal class ExcuseCommandTest : CommandTest {
         verify { event.hook.sendMessage("Excuse #7: 'traffic was bad' - Bob.") }
     }
 
-    // /excuse submit
+    // /excuse submit — now opens a modal; the actual submit happens in ExcuseSubmitModal
 
     @Test
-    fun `submit creates a new pending excuse with author from user`() {
+    fun `submit opens the excuse-submit modal`() {
         val ctx = DefaultCommandContext(event)
-        val saved = ExcuseDto(id = 10L, guildId = 1L, author = "UserName", excuse = "I forgot", approved = false)
-        val textOption = mockk<OptionMapping> { every { asString } returns "I forgot" }
+        val modalCallback = mockk<ModalCallbackAction>(relaxed = true)
+        val captured = slot<Modal>()
         every { event.subcommandName } returns ExcuseCommand.SUBMIT
-        every { event.getOption("text") } returns textOption
-        every { event.getOption("author") } returns null
-        every { excuseService.listAllGuildExcuses(1L) } returns emptyList()
-        every { excuseService.createNewExcuse(any()) } returns saved
+        every { event.replyModal(capture(captured)) } returns modalCallback
+        every { modalCallback.queue() } just Runs
 
         excuseCommand.handle(ctx, requestingUserDto, 0)
 
-        verify {
-            excuseService.createNewExcuse(withArg<ExcuseDto> {
-                assert(it.guildId == 1L)
-                assert(it.excuse == "I forgot")
-                assert(it.authorDiscordId == 1L) // from event.user.idLong in CommandTest
-                assert(!it.approved)
-            })
-            event.hook.sendMessage("Submitted excuse 'I forgot' - UserName with id '10' for approval.")
-        }
-    }
-
-    @Test
-    fun `submit rejects duplicates case-insensitively`() {
-        val ctx = DefaultCommandContext(event)
-        val existing = ExcuseDto(id = 1L, guildId = 1L, author = "Bob", excuse = "I FORGOT", approved = true)
-        val textOption = mockk<OptionMapping> { every { asString } returns "i forgot" }
-        every { event.subcommandName } returns ExcuseCommand.SUBMIT
-        every { event.getOption("text") } returns textOption
-        every { event.getOption("author") } returns null
-        every { excuseService.listAllGuildExcuses(1L) } returns listOf(existing)
-
-        excuseCommand.handle(ctx, requestingUserDto, 0)
-
-        verify { event.hook.sendMessage(ExcuseCommand.EXISTING_EXCUSE_MESSAGE) }
+        verify { event.replyModal(any<Modal>()) }
         verify(exactly = 0) { excuseService.createNewExcuse(any()) }
-    }
-
-    @Test
-    fun `submit blank text complains and does not create`() {
-        val ctx = DefaultCommandContext(event)
-        val textOption = mockk<OptionMapping> { every { asString } returns "   " }
-        every { event.subcommandName } returns ExcuseCommand.SUBMIT
-        every { event.getOption("text") } returns textOption
-        every { event.getOption("author") } returns null
-
-        excuseCommand.handle(ctx, requestingUserDto, 0)
-
-        verify { event.hook.sendMessage("Provide some excuse text.") }
-        verify(exactly = 0) { excuseService.createNewExcuse(any()) }
+        assertEquals(ExcuseSubmitModal.MODAL_NAME, captured.captured.id)
     }
 
     // /excuse approve

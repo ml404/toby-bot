@@ -47,15 +47,13 @@ class DiceCommand @Autowired constructor(
         val event = ctx.event
         event.deferReply().queue()
 
-        val guild = event.guild ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "This command can only be used in a server.", deleteDelay); return
-        }
-        val predicted = event.getOption(OPT_PREDICTION)?.asLong?.toInt() ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "Pick a number 1-6.", deleteDelay); return
-        }
-        val stake = event.getOption(OPT_STAKE)?.asLong ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "You must specify a stake.", deleteDelay); return
-        }
+        val guild = WagerCommandEmbeds.requireGuild(event, TITLE, deleteDelay) ?: return
+        val predicted = WagerCommandEmbeds.requireOption(
+            event, TITLE, OPT_PREDICTION, "Pick a number 1-6.", deleteDelay
+        )?.asLong?.toInt() ?: return
+        val stake = WagerCommandEmbeds.requireOption(
+            event, TITLE, OPT_STAKE, "You must specify a stake.", deleteDelay
+        )?.asLong ?: return
 
         val outcome = diceService.roll(requestingUserDto.discordId, guild.idLong, stake, predicted)
         WagerCommandEmbeds.reply(event, embedFor(outcome), deleteDelay)

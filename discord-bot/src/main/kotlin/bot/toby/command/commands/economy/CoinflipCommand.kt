@@ -47,15 +47,13 @@ class CoinflipCommand @Autowired constructor(
         val event = ctx.event
         event.deferReply().queue()
 
-        val guild = event.guild ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "This command can only be used in a server.", deleteDelay); return
-        }
+        val guild = WagerCommandEmbeds.requireGuild(event, TITLE, deleteDelay) ?: return
         val side = parseSide(event.getOption(OPT_SIDE)?.asString) ?: run {
             WagerCommandEmbeds.replyError(event, TITLE, "Pick a side: heads or tails.", deleteDelay); return
         }
-        val stake = event.getOption(OPT_STAKE)?.asLong ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "You must specify a stake.", deleteDelay); return
-        }
+        val stake = WagerCommandEmbeds.requireOption(
+            event, TITLE, OPT_STAKE, "You must specify a stake.", deleteDelay
+        )?.asLong ?: return
 
         val outcome = coinflipService.flip(requestingUserDto.discordId, guild.idLong, stake, side)
         WagerCommandEmbeds.reply(event, embedFor(outcome), deleteDelay)

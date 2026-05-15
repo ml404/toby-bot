@@ -1,10 +1,9 @@
 package core.modal
 
-import common.logging.DiscordLogger
+import core.log.Loggable
 
-interface Modal {
+interface Modal : Loggable {
     val name: String
-    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
 
     fun handle(ctx: ModalContext, deleteDelay: Int)
 }

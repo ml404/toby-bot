@@ -1,9 +1,8 @@
 package core.menu
 
-import common.logging.DiscordLogger
+import core.log.Loggable
 
-interface Menu {
+interface Menu : Loggable {
     fun handle(ctx: MenuContext, deleteDelay: Int)
     val name: String
-    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
 }
