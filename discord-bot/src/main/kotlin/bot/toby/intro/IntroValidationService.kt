@@ -53,8 +53,8 @@ class IntroValidationService(
         scope.launch {
             try {
                 onResult(checkForOverlyLongIntroDuration(url))
-            } catch (_: Exception) {
-                logger.error { "Error checking intro length for '$url'" }
+            } catch (e: Exception) {
+                logger.error { "Error checking intro length for '$url': ${e::class.simpleName}: ${e.message}" }
                 onResult(true)
             }
         }

@@ -1,4 +1,4 @@
-package bot.configuration
+package common.configuration
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

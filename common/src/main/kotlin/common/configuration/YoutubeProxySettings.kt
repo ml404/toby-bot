@@ -1,4 +1,4 @@
-package bot.configuration
+package common.configuration
 
 data class YoutubeProxySettings(
     val host: String,
