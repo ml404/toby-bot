@@ -92,8 +92,8 @@ class DnDExpansionEmbedTest {
         val e = JsonParser.parseJsonToEquipmentCategory(DnDExpansionFixtures.EQUIPMENT_CATEGORY_SIMPLE_WEAPONS)!!
         val embed = e.toEmbed()
         assertEquals("Simple Weapons", embed.title)
-        val field = embed.fields.first { it.name.startsWith("Equipment") }
-        assertTrue(field.name.contains("(2)"))
+        val field = embed.fields.first { it.name?.startsWith("Equipment") == true }
+        assertTrue(field.name!!.contains("(2)"))
         assertTrue(field.value!!.contains("Club"))
         assertTrue(field.value!!.contains("Dagger"))
     }
@@ -262,7 +262,7 @@ class DnDExpansionEmbedTest {
         val json = """{"index":"big","name":"Big","equipment":[$items],"url":"/api/equipment-categories/big"}"""
         val e = JsonParser.parseJsonToEquipmentCategory(json)!!
         val embed = e.toEmbed()
-        val field = embed.fields.first { it.name.startsWith("Equipment") }
+        val field = embed.fields.first { it.name?.startsWith("Equipment") == true }
         assertTrue(field.value!!.length <= 1024, "Field value should be truncated to <= 1024 chars")
     }
 }
