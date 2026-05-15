@@ -44,15 +44,61 @@
     renders the exact wheel the server spun against. Rides along with
     every jackpotBanner include so each casino page automatically gets
     the overlay without per-page edits.
+    The wheel doesn't auto-spin: the player presses SPIN to start the
+    rotation. Clicking the backdrop (outside the felt panel) dismisses
+    cleanly — the underlying result line is already painted on the
+    page so nothing's gated on the spin.
 -->
 <div id="jackpot-wheel-overlay" class="jackpot-wheel-overlay" hidden>
-    <div class="jackpot-wheel-stage">
-        <div class="jackpot-wheel-pointer">▼</div>
-        <svg class="jackpot-wheel-svg" viewBox="-110 -110 220 220" aria-hidden="true">
-            <g class="jackpot-wheel-rotor"></g>
-            <circle cx="0" cy="0" r="14" class="jackpot-wheel-hub"></circle>
-        </svg>
-        <div class="jackpot-wheel-result" aria-live="polite"></div>
+    <div class="jackpot-wheel-panel">
+        <div class="jackpot-wheel-stage">
+            <svg class="jackpot-wheel-svg" viewBox="-120 -120 240 240" aria-hidden="true">
+                <defs>
+                    <linearGradient id="jackpot-wheel-rim-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#f7d46a"/>
+                        <stop offset="50%" stop-color="#b07d1f"/>
+                        <stop offset="100%" stop-color="#f7d46a"/>
+                    </linearGradient>
+                    <radialGradient id="jackpot-wheel-vignette" cx="0.5" cy="0.5" r="0.5">
+                        <stop offset="60%" stop-color="rgba(0,0,0,0)"/>
+                        <stop offset="100%" stop-color="rgba(0,0,0,0.55)"/>
+                    </radialGradient>
+                    <linearGradient id="jackpot-wheel-hub-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#fff1b0"/>
+                        <stop offset="55%" stop-color="#e0a93a"/>
+                        <stop offset="100%" stop-color="#7a4f10"/>
+                    </linearGradient>
+                    <linearGradient id="jackpot-wheel-pointer-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#fff1b0"/>
+                        <stop offset="60%" stop-color="#e0a93a"/>
+                        <stop offset="100%" stop-color="#7a4f10"/>
+                    </linearGradient>
+                    <filter id="jackpot-wheel-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.55)"/>
+                    </filter>
+                </defs>
+                <!-- Outer brass rim -->
+                <circle cx="0" cy="0" r="106" class="jackpot-wheel-rim-outer"/>
+                <!-- Dark seat between rim and wedges so the wedges look
+                     recessed into the brass -->
+                <circle cx="0" cy="0" r="101" class="jackpot-wheel-rim-inner"/>
+                <!-- Wedges spin inside the rim -->
+                <g class="jackpot-wheel-rotor"></g>
+                <!-- Vignette overlays the spokes for depth -->
+                <circle cx="0" cy="0" r="100" fill="url(#jackpot-wheel-vignette)" pointer-events="none"/>
+                <!-- Brass hub: outer ring + inner medallion -->
+                <circle cx="0" cy="0" r="18" class="jackpot-wheel-hub-outer"/>
+                <circle cx="0" cy="0" r="13" class="jackpot-wheel-hub-inner"/>
+                <!-- Pointer at top: gold arrow pointing DOWN at the
+                     wheel. Apex sits at the peg radius so spinning pegs
+                     visually flick past the tip. -->
+                <path class="jackpot-wheel-pointer-arrow"
+                      d="M 0 -94 L -9 -116 L 9 -116 Z"
+                      filter="url(#jackpot-wheel-shadow)"/>
+            </svg>
+            <button type="button" class="jackpot-wheel-spin-btn">SPIN</button>
+            <div class="jackpot-wheel-result" aria-live="polite"></div>
+        </div>
     </div>
     <script th:inline="javascript">
         /*<![CDATA[*/

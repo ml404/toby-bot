@@ -1,14 +1,15 @@
 // Coverage for the JS-side wheel renderer + spin animation. We exercise
-// the read/parse path (`readSegments`), the SVG render math, the tier
-// labelling, and the `spinTo` lifecycle (overlay show, pool-banner
-// hold, transitionend settle, dismiss). The animation timing is
-// shortcut by directly firing `transitionend` rather than waiting on
+// the read/parse path (`readSegments`), the spoke-allocation +
+// placement math, the tier labelling, and the `spinTo` lifecycle
+// (overlay reveal, SPIN-button gating, pool-banner hold/release on
+// click, transitionend settle, dismiss-without-spin). Animation timing
+// is shortcut by directly firing `transitionend` rather than waiting on
 // real CSS transitions (jsdom doesn't run them anyway).
 
 const wheel = require('../../main/resources/static/js/casino-jackpot-wheel');
 const jackpot = require('../../main/resources/static/js/casino-jackpot');
 
-const { readSegments, render, tierLabel, spinTo } = wheel;
+const { readSegments, allocateSpokes, placeSpokes, render, tierLabel, spinTo, SPOKE_COUNT } = wheel;
 
 describe('readSegments', () => {
     afterEach(() => { delete window.__jackpotWheel; });
@@ -56,8 +57,61 @@ describe('tierLabel', () => {
     });
 });
 
+describe('allocateSpokes', () => {
+    test('distributes the default segments to SPOKE_COUNT total spokes', () => {
+        const counts = allocateSpokes([
+            { weight: 80, payoutPct: 1 },
+            { weight: 10, payoutPct: 5 },
+            { weight: 5, payoutPct: 10 },
+            { weight: 4, payoutPct: 20 },
+            { weight: 1, payoutPct: 50 },
+        ]);
+        expect(counts.reduce((s, c) => s + c, 0)).toBe(SPOKE_COUNT);
+        // Every tier with weight > 0 gets at least one spoke so rare
+        // tiers stay visible on the rim.
+        counts.forEach(c => expect(c).toBeGreaterThanOrEqual(1));
+        // Heaviest tier gets most spokes.
+        expect(counts[0]).toBeGreaterThan(counts[1]);
+        expect(counts[0]).toBeGreaterThan(counts[4]);
+    });
+
+    test('returns [] when segments are empty or weights are zero', () => {
+        expect(allocateSpokes([])).toEqual([]);
+        expect(allocateSpokes([{ weight: 0, payoutPct: 1 }])).toEqual([]);
+    });
+
+    test('handles single-tier wheels', () => {
+        const counts = allocateSpokes([{ weight: 1, payoutPct: 30 }]);
+        expect(counts).toEqual([SPOKE_COUNT]);
+    });
+});
+
+describe('placeSpokes', () => {
+    test('places exactly the requested spoke counts', () => {
+        const slots = placeSpokes([19, 2, 1, 1, 1]);
+        expect(slots).toHaveLength(24);
+        const seen = [0, 0, 0, 0, 0];
+        slots.forEach(s => seen[s]++);
+        expect(seen).toEqual([19, 2, 1, 1, 1]);
+    });
+
+    test('interleaves small tiers so they are not adjacent', () => {
+        // Two evenly-sized tiers should alternate around the rim
+        // rather than clumping into two halves.
+        const slots = placeSpokes([12, 12]);
+        // No more than 2 adjacent slots should share the same tier.
+        let maxRun = 0, run = 0, prev = -1;
+        for (const s of slots) {
+            if (s === prev) run++; else run = 1;
+            if (run > maxRun) maxRun = run;
+            prev = s;
+        }
+        expect(maxRun).toBeLessThanOrEqual(2);
+    });
+});
+
 describe('render', () => {
-    test('emits one path + one label per segment, sized by weight', () => {
+    test('emits SPOKE_COUNT paths and labels', () => {
         const rotor = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         const segments = [
             { weight: 80, payoutPct: 1 },
@@ -66,18 +120,27 @@ describe('render', () => {
             { weight: 4, payoutPct: 20 },
             { weight: 1, payoutPct: 50 },
         ];
-        const angles = render(segments, rotor);
-        expect(rotor.querySelectorAll('path').length).toBe(5);
-        expect(rotor.querySelectorAll('text').length).toBe(5);
-        // 80/100 = 288 degrees for the first wedge.
-        expect(angles[0].end - angles[0].start).toBeCloseTo(288, 1);
-        expect(angles[4].end - angles[4].start).toBeCloseTo(3.6, 1);
+        const spokes = render(segments, rotor);
+        expect(spokes).toHaveLength(SPOKE_COUNT);
+        expect(rotor.querySelectorAll('path').length).toBe(SPOKE_COUNT);
+        expect(rotor.querySelectorAll('text').length).toBe(SPOKE_COUNT);
+        // Every tier with weight > 0 must be represented at least once.
+        const tierSet = new Set(spokes.map(s => s.tierIndex));
+        expect(tierSet.size).toBe(segments.length);
     });
 
-    test('shows the payout pct on each label', () => {
+    test('labels each spoke with its tier payout pct', () => {
         const rotor = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         render([{ weight: 1, payoutPct: 30 }], rotor);
-        expect(rotor.querySelector('text').textContent).toBe('30%');
+        const labels = rotor.querySelectorAll('text');
+        labels.forEach(t => expect(t.textContent).toBe('30%'));
+    });
+
+    test('emits a brass peg at each spoke boundary so pegs spin with the wheel', () => {
+        const rotor = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        render([{ weight: 1, payoutPct: 30 }], rotor);
+        const pegs = rotor.querySelectorAll('.jackpot-wheel-peg');
+        expect(pegs.length).toBe(SPOKE_COUNT);
     });
 });
 
@@ -85,10 +148,15 @@ describe('spinTo', () => {
     beforeEach(() => {
         document.body.innerHTML = `
             <div id="jackpot-wheel-overlay" hidden>
-                <svg viewBox="-110 -110 220 220">
-                    <g class="jackpot-wheel-rotor"></g>
-                </svg>
-                <div class="jackpot-wheel-result"></div>
+                <div class="jackpot-wheel-panel">
+                    <div class="jackpot-wheel-stage">
+                        <svg viewBox="-120 -120 240 240">
+                            <g class="jackpot-wheel-rotor"></g>
+                        </svg>
+                        <button type="button" class="jackpot-wheel-spin-btn">SPIN</button>
+                        <div class="jackpot-wheel-result"></div>
+                    </div>
+                </div>
             </div>
             <div class="casino-jackpot-banner"><strong>0</strong></div>
         `;
@@ -103,32 +171,63 @@ describe('spinTo', () => {
         // it the wheel's pool-banner coordination wouldn't fire.
         window.TobyJackpot = jackpot;
         // Stub requestAnimationFrame to run synchronously so the
-        // rotation-set step in `spinTo` actually fires under jsdom.
+        // rotation-set step in `startSpin` actually fires under jsdom.
         window.requestAnimationFrame = cb => cb(0);
+        // Default to no reduced-motion preference.
+        window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
     });
 
     afterEach(() => {
         delete window.__jackpotWheel;
         delete window.TobyJackpot;
         delete window.requestAnimationFrame;
+        delete window.matchMedia;
     });
 
-    test('reveals the overlay and rotates the rotor to the target wedge', () => {
+    test('reveals the overlay but does not rotate before SPIN is clicked', () => {
         const overlay = document.getElementById('jackpot-wheel-overlay');
+        const rotor = overlay.querySelector('.jackpot-wheel-rotor');
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
         spinTo(4, 500, 50, () => {});
         expect(overlay.hidden).toBe(false);
+        // Rotor snapped to 0 — no rotation applied yet.
+        expect(rotor.style.transform).toBe('rotate(0deg)');
+        // Button is enabled and ready.
+        expect(spinBtn.disabled).toBe(false);
+    });
+
+    test('rotates the rotor to a target spoke for the chosen tier after click', () => {
+        const overlay = document.getElementById('jackpot-wheel-overlay');
         const rotor = overlay.querySelector('.jackpot-wheel-rotor');
-        // Final angle = 4 full rotations - target midpoint angle.
-        // Tier 4 (the 1-weight 50% segment) midpoint is at ~358.2°.
-        // Rotation should therefore be around 4*360 - 358.2 = 1081.8°.
-        expect(rotor.style.transform).toMatch(/rotate\(108[0-9](\.\d+)?deg\)/);
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
+        spinTo(4, 500, 50, () => {});
+        spinBtn.click();
+        // Final angle = 4 full rotations - the target spoke's midpoint.
+        // With 24 spokes the midpoint is one of (i + 0.5) * 15 = 7.5,
+        // 22.5, 37.5, … 352.5°. So the rotation should end as
+        // 1440 - one of those — i.e. 1432.5° down to 1087.5°.
+        const m = rotor.style.transform.match(/rotate\(([-\d.]+)deg\)/);
+        expect(m).not.toBeNull();
+        const angle = parseFloat(m[1]);
+        expect(angle).toBeGreaterThanOrEqual(1080);
+        expect(angle).toBeLessThanOrEqual(1440);
+    });
+
+    test('disables the SPIN button while spinning', () => {
+        const overlay = document.getElementById('jackpot-wheel-overlay');
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
+        spinTo(0, 12, 1, () => {});
+        spinBtn.click();
+        expect(spinBtn.disabled).toBe(true);
     });
 
     test('paints the tier label on the result element when settled', () => {
         const overlay = document.getElementById('jackpot-wheel-overlay');
         const resultEl = overlay.querySelector('.jackpot-wheel-result');
         const rotor = overlay.querySelector('.jackpot-wheel-rotor');
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
         spinTo(0, 12, 1, () => {});
+        spinBtn.click();
         // Force the settle path manually — jsdom doesn't dispatch
         // transitionend on its own.
         rotor.dispatchEvent(new Event('transitionend'));
@@ -139,8 +238,10 @@ describe('spinTo', () => {
     test('invokes onSettle exactly once on transitionend', () => {
         const overlay = document.getElementById('jackpot-wheel-overlay');
         const rotor = overlay.querySelector('.jackpot-wheel-rotor');
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
         const settled = jest.fn();
         spinTo(2, 100, 10, settled);
+        spinBtn.click();
         rotor.dispatchEvent(new Event('transitionend'));
         // The internal fallback timeout might also call settle, but the
         // module's `settled` guard dedupes so onSettle fires once.
@@ -162,18 +263,94 @@ describe('spinTo', () => {
         expect(overlay.hidden).toBe(true);
     });
 
-    test('holds the pool banner while spinning and releases on settle', () => {
+    test('clicking the backdrop before SPIN dismisses and calls onSettle', () => {
+        const overlay = document.getElementById('jackpot-wheel-overlay');
+        const settled = jest.fn();
+        spinTo(0, 50, 1, settled);
+        // Simulate backdrop click — target must be the overlay itself.
+        const ev = new Event('click', { bubbles: true });
+        Object.defineProperty(ev, 'target', { value: overlay });
+        overlay.dispatchEvent(ev);
+        expect(overlay.hidden).toBe(true);
+        expect(settled).toHaveBeenCalledTimes(1);
+    });
+
+    test('clicking SPIN holds the pool banner; settle releases it', () => {
         const overlay = document.getElementById('jackpot-wheel-overlay');
         const rotor = overlay.querySelector('.jackpot-wheel-rotor');
-        // Force-release any prior held state.
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
         jackpot.releasePoolBanner();
         spinTo(0, 50, 1, () => {});
-        // Banner is held — an update queues, doesn't paint.
-        jackpot.updatePoolBanner({ jackpotPool: 999 });
+        // Before the player clicks SPIN, the banner is NOT held — an
+        // update flows through normally so the page stays live.
+        jackpot.updatePoolBanner({ jackpotPool: 500 });
         const strong = document.querySelector('.casino-jackpot-banner strong');
-        expect(strong.textContent).toBe('0');
+        expect(strong.textContent).toBe('500');
+        // Once SPIN is pressed, the hold kicks in.
+        spinBtn.click();
+        jackpot.updatePoolBanner({ jackpotPool: 999 });
+        expect(strong.textContent).toBe('500'); // still held
         rotor.dispatchEvent(new Event('transitionend'));
-        // After settle the queued value is flushed.
-        expect(strong.textContent).toBe('999');
+        expect(strong.textContent).toBe('999'); // released + flushed
+    });
+
+    test('schedules tick sounds during the spin, decelerating with the easing', () => {
+        jest.useFakeTimers();
+        const play = jest.fn();
+        window.CasinoSounds = { play };
+        try {
+            const spinBtn = document.querySelector('.jackpot-wheel-spin-btn');
+            spinTo(0, 12, 1, () => {});
+            spinBtn.click();
+            // Advance through the spin and let every tick timeout fire.
+            jest.advanceTimersByTime(3300);
+            const tickCalls = play.mock.calls.filter(c => c[0] === 'tick');
+            // 24 spokes × 4 turns = 96 peg passes. The exact count
+            // depends on the target spoke (extra fractional turn), but
+            // it should be roughly in that range.
+            expect(tickCalls.length).toBeGreaterThan(80);
+            expect(tickCalls.length).toBeLessThanOrEqual(96);
+        } finally {
+            delete window.CasinoSounds;
+            jest.useRealTimers();
+        }
+    });
+
+    test('cancels pending tick sounds when the overlay is dismissed mid-spin', () => {
+        jest.useFakeTimers();
+        const play = jest.fn();
+        window.CasinoSounds = { play };
+        try {
+            const overlay = document.getElementById('jackpot-wheel-overlay');
+            const rotor = overlay.querySelector('.jackpot-wheel-rotor');
+            const spinBtn = document.querySelector('.jackpot-wheel-spin-btn');
+            spinTo(0, 12, 1, () => {});
+            spinBtn.click();
+            jest.advanceTimersByTime(200);
+            rotor.dispatchEvent(new Event('transitionend')); // early settle
+            const ticksAtSettle = play.mock.calls.filter(c => c[0] === 'tick').length;
+            jest.advanceTimersByTime(3200);
+            const ticksAfterDrain = play.mock.calls.filter(c => c[0] === 'tick').length;
+            expect(ticksAfterDrain).toBe(ticksAtSettle);
+        } finally {
+            delete window.CasinoSounds;
+            jest.useRealTimers();
+        }
+    });
+
+    test('reduced-motion: SPIN click settles immediately without transition', () => {
+        window.matchMedia = (q) => ({
+            matches: q === '(prefers-reduced-motion: reduce)',
+            addEventListener() {}, removeEventListener() {}
+        });
+        const overlay = document.getElementById('jackpot-wheel-overlay');
+        const resultEl = overlay.querySelector('.jackpot-wheel-result');
+        const spinBtn = overlay.querySelector('.jackpot-wheel-spin-btn');
+        const settled = jest.fn();
+        spinTo(0, 12, 1, settled);
+        spinBtn.click();
+        // Result line is painted synchronously; no transitionend needed.
+        expect(resultEl.textContent).toContain('Pity prize');
+        expect(settled).toHaveBeenCalledTimes(1);
     });
 });
