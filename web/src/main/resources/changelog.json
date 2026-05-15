@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Expand lookup to all 18 SRD categories with smart autocomplete",
+    "summary": "Discord `/dnd` and the `/dnd` web page now cover **all 18** dnd5eapi.co 5e SRD categories (was 4) — adds monsters, classes, races, equipment, traits, ability scores, skills, and the rest. The Discord command's `query` option is now a **live autocomplete** that hits `/api/{type}?name={input}` as the user types, so they pick from a dropdown instead of guessing slugs. The web page gets an equivalent **custom dropdown** with arrow-key nav, debouncing, and `AbortController` so…",
+    "emoji": "🐉",
+    "prNumber": 444
+  },
+  {
+    "date": "May 2026",
     "title": "Premium spoke wheel with mobile sizing + click-to-spin",
     "summary": "Three problems with the jackpot payout wheel (introduced in #442): **Mobile sizing.** `width: 320px; max-width: 90vw` with no responsive rules made the wheel dominate phone screens and visually crash into the stake input above and the banner description below. **\"MS painty\" visual.** Flat hex fills, a `▼` text-glyph pointer, a plain `<circle>` hub — looked nothing like the rest of the casino's `casino-felt` tables. **Auto-spin cutscene.** The wheel rotated the moment it ap…",
     "emoji": "🎲",
