@@ -3,6 +3,7 @@ package bot.toby.command.commands.economy
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
+import bot.toby.command.CommandTest.Companion.replyCallbackAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.modal.modals.TipMessageModal
 import database.dto.UserDto
@@ -38,6 +39,12 @@ internal class TipCommandTest : CommandTest {
         every { guild.idLong } returns guildId
         every { event.replyModal(any<Modal>()) } returns modalCallback
         every { modalCallback.queue() } just runs
+        // CommandTest's shared mock has `event.reply(any<String>())` set to
+        // `just awaits` (suspends forever). TipCommand uses `event.reply(...)`
+        // for early-out validation — it can't `deferReply()` first because the
+        // happy path opens a modal, and modals can't follow a defer. Override
+        // the hang-stub with the working reply chain.
+        every { event.reply(any<String>()) } returns replyCallbackAction
     }
 
     @AfterEach
