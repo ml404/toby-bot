@@ -1,8 +1,145 @@
 // /duel — challenge form posts to /duel/{guildId}/challenge; the
 // inbox panel polls /duel/{guildId}/pending every 5 seconds and posts
 // to /accept or /decline via the shared CSRF-aware fetch wrapper.
-(function () {
+//
+// UMD-style export: `playDuelResolution`, `makeFigure`, and `formatExpiry`
+// are pulled out for unit testing (see casino-jackpot-wheel.js for the
+// same pattern). Page-init code only runs when a real `document` with
+// the duel page DOM is present.
+(function (root) {
     'use strict';
+
+    function makeFigure(name, avatarUrl, side, doc) {
+        const d = doc || (root && root.document);
+        const fig = d.createElement('div');
+        fig.className = 'duel-figure duel-figure--' + side;
+        const av = d.createElement('div');
+        av.className = 'duel-figure-avatar';
+        if (avatarUrl) {
+            const img = d.createElement('img');
+            img.src = avatarUrl;
+            img.alt = '';
+            img.loading = 'lazy';
+            av.appendChild(img);
+        } else {
+            // Mirror the CSS-rendered initial fallback the casino uses when
+            // a member has no avatar URL.
+            av.classList.add('is-fallback');
+            av.dataset.initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
+        }
+        fig.appendChild(av);
+        const cap = d.createElement('div');
+        cap.className = 'duel-figure-name';
+        cap.textContent = name || 'Unknown';
+        fig.appendChild(cap);
+        return fig;
+    }
+
+    function formatExpiry(createdAtSeconds, ttlSeconds, nowMs) {
+        if (!createdAtSeconds || !ttlSeconds) return '';
+        const now = nowMs == null ? Date.now() : nowMs;
+        const expiresAtMs = (createdAtSeconds + ttlSeconds) * 1000;
+        const remaining = Math.max(0, Math.round((expiresAtMs - now) / 1000));
+        if (remaining <= 0) return 'expiring…';
+        if (remaining < 60) return 'expires in ' + remaining + 's';
+        const minutes = Math.floor(remaining / 60);
+        const seconds = remaining % 60;
+        return seconds > 0
+            ? 'expires in ' + minutes + 'm ' + seconds + 's'
+            : 'expires in ' + minutes + 'm';
+    }
+
+    function playDuelResolution(row, resp, opts) {
+        opts = opts || {};
+        const doc = opts.doc || (root && root.document);
+        const win = opts.window || root;
+        const onDismiss = typeof opts.onDismiss === 'function' ? opts.onDismiss : function () {};
+        const autoDismissMs = opts.autoDismissMs == null ? 6000 : opts.autoDismissMs;
+        const fadeOutMs = opts.fadeOutMs == null ? 200 : opts.fadeOutMs;
+
+        const initiatorName = row.dataset.initiatorName || 'Challenger';
+        const initiatorAvatar = row.dataset.initiatorAvatar || null;
+        const opponentName = row.dataset.opponentName || 'You';
+        const opponentAvatar = row.dataset.opponentAvatar || null;
+        const winnerId = resp.winnerDiscordId;
+        const initiatorWon = winnerId === row.dataset.initiatorDiscordId;
+        const winnerName = initiatorWon ? initiatorName : opponentName;
+
+        const reduceMotion = !!(win && win.matchMedia &&
+            win.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+        const overlay = doc.createElement('div');
+        overlay.className = 'duel-resolution-overlay';
+        if (reduceMotion) overlay.classList.add('is-reduced');
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-label', 'Duel result');
+
+        const arena = doc.createElement('div');
+        arena.className = 'duel-arena';
+
+        const left = makeFigure(initiatorName, initiatorAvatar, 'left', doc);
+        const right = makeFigure(opponentName, opponentAvatar, 'right', doc);
+        if (initiatorWon) left.classList.add('is-winner'); else left.classList.add('is-loser');
+        if (initiatorWon) right.classList.add('is-loser'); else right.classList.add('is-winner');
+
+        const flash = doc.createElement('div');
+        flash.className = 'duel-flash';
+        flash.textContent = '💥';
+
+        arena.appendChild(left);
+        arena.appendChild(flash);
+        arena.appendChild(right);
+        overlay.appendChild(arena);
+
+        const pill = doc.createElement('div');
+        pill.className = 'duel-credits-pill';
+        pill.textContent = '+' + resp.pot + ' credits';
+        if (initiatorWon) pill.classList.add('flies-left'); else pill.classList.add('flies-right');
+        overlay.appendChild(pill);
+
+        const resultLine = doc.createElement('div');
+        resultLine.className = 'duel-result-line';
+        resultLine.textContent = 'Winner: ' + winnerName + ' took ' + resp.pot +
+            ' credits (' + resp.lossTribute + ' to jackpot)';
+        overlay.appendChild(resultLine);
+
+        const hint = doc.createElement('div');
+        hint.className = 'duel-dismiss-hint';
+        hint.textContent = 'Click anywhere or press Esc to continue';
+        overlay.appendChild(hint);
+
+        let dismissed = false;
+        let autoDismiss;
+        function dismiss() {
+            if (dismissed) return;
+            dismissed = true;
+            clearTimeout(autoDismiss);
+            doc.removeEventListener('keydown', onKey);
+            overlay.classList.add('is-dismissing');
+            // Brief fade-out so it doesn't pop off.
+            setTimeout(function () {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                onDismiss();
+            }, fadeOutMs);
+        }
+        function onKey(e) { if (e.key === 'Escape') dismiss(); }
+        overlay.addEventListener('click', dismiss);
+        doc.addEventListener('keydown', onKey);
+        autoDismiss = setTimeout(dismiss, autoDismissMs);
+
+        doc.body.appendChild(overlay);
+        return { overlay: overlay, dismiss: dismiss };
+    }
+
+    const api = { playDuelResolution: playDuelResolution, makeFigure: makeFigure, formatExpiry: formatExpiry };
+    if (root) root.TobyDuel = api;
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = api;
+    }
+
+    // Page-init: only run in the browser when the duel page DOM is present.
+    if (!root || !root.document) return;
+    const document = root.document;
 
     const main = document.getElementById('main');
     if (!main) return;
@@ -34,19 +171,6 @@
         nameEl.textContent = name || '';
         cell.appendChild(nameEl);
         return cell;
-    }
-
-    function formatExpiry(createdAtSeconds) {
-        if (!createdAtSeconds || !ttlSeconds) return '';
-        const expiresAtMs = (createdAtSeconds + ttlSeconds) * 1000;
-        const remaining = Math.max(0, Math.round((expiresAtMs - Date.now()) / 1000));
-        if (remaining <= 0) return 'expiring…';
-        if (remaining < 60) return 'expires in ' + remaining + 's';
-        const minutes = Math.floor(remaining / 60);
-        const seconds = remaining % 60;
-        return seconds > 0
-            ? 'expires in ' + minutes + 'm ' + seconds + 's'
-            : 'expires in ' + minutes + 'm';
     }
 
     function buildRow(row, opts) {
@@ -91,7 +215,7 @@
 
         const expiry = document.createElement('span');
         expiry.className = 'duel-expiry muted';
-        expiry.textContent = formatExpiry(row.createdAtEpochSeconds);
+        expiry.textContent = formatExpiry(row.createdAtEpochSeconds, ttlSeconds);
         meta.appendChild(expiry);
         info.appendChild(meta);
 
@@ -179,7 +303,7 @@
             const createdAt = parseInt(row.dataset.createdAt, 10);
             if (!createdAt) return;
             const label = row.querySelector('.duel-expiry');
-            if (label) label.textContent = formatExpiry(createdAt);
+            if (label) label.textContent = formatExpiry(createdAt, ttlSeconds);
         });
     }
 
@@ -235,7 +359,7 @@
                     return;
                 }
                 if (isAccept && resp.winnerDiscordId) {
-                    playDuelResolution(row, resp);
+                    playDuelResolution(row, resp, { onDismiss: refreshAll });
                     // refreshAll() fires on dismiss so the inbox row doesn't
                     // vanish mid-animation.
                     return;
@@ -268,107 +392,9 @@
         });
     }
 
-    function makeFigure(name, avatarUrl, side) {
-        const fig = document.createElement('div');
-        fig.className = 'duel-figure duel-figure--' + side;
-        const av = document.createElement('div');
-        av.className = 'duel-figure-avatar';
-        if (avatarUrl) {
-            const img = document.createElement('img');
-            img.src = avatarUrl;
-            img.alt = '';
-            img.loading = 'lazy';
-            av.appendChild(img);
-        } else {
-            // Mirror the CSS-rendered initial fallback the casino uses when
-            // a member has no avatar URL.
-            av.classList.add('is-fallback');
-            av.dataset.initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
-        }
-        fig.appendChild(av);
-        const cap = document.createElement('div');
-        cap.className = 'duel-figure-name';
-        cap.textContent = name || 'Unknown';
-        fig.appendChild(cap);
-        return fig;
-    }
-
-    function playDuelResolution(row, resp) {
-        const initiatorName = row.dataset.initiatorName || 'Challenger';
-        const initiatorAvatar = row.dataset.initiatorAvatar || null;
-        const opponentName = row.dataset.opponentName || 'You';
-        const opponentAvatar = row.dataset.opponentAvatar || null;
-        const winnerId = resp.winnerDiscordId;
-        const initiatorWon = winnerId === row.dataset.initiatorDiscordId;
-        const winnerName = initiatorWon ? initiatorName : opponentName;
-
-        const reduceMotion = window.matchMedia &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'duel-resolution-overlay';
-        if (reduceMotion) overlay.classList.add('is-reduced');
-        overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-label', 'Duel result');
-
-        const arena = document.createElement('div');
-        arena.className = 'duel-arena';
-
-        const left = makeFigure(initiatorName, initiatorAvatar, 'left');
-        const right = makeFigure(opponentName, opponentAvatar, 'right');
-        if (initiatorWon) left.classList.add('is-winner'); else left.classList.add('is-loser');
-        if (initiatorWon) right.classList.add('is-loser'); else right.classList.add('is-winner');
-
-        const flash = document.createElement('div');
-        flash.className = 'duel-flash';
-        flash.textContent = '💥';
-
-        arena.appendChild(left);
-        arena.appendChild(flash);
-        arena.appendChild(right);
-        overlay.appendChild(arena);
-
-        const pill = document.createElement('div');
-        pill.className = 'duel-credits-pill';
-        pill.textContent = '+' + resp.pot + ' credits';
-        if (initiatorWon) pill.classList.add('flies-left'); else pill.classList.add('flies-right');
-        overlay.appendChild(pill);
-
-        const resultLine = document.createElement('div');
-        resultLine.className = 'duel-result-line';
-        resultLine.textContent = 'Winner: ' + winnerName + ' took ' + resp.pot +
-            ' credits (' + resp.lossTribute + ' to jackpot)';
-        overlay.appendChild(resultLine);
-
-        const hint = document.createElement('div');
-        hint.className = 'duel-dismiss-hint';
-        hint.textContent = 'Click anywhere or press Esc to continue';
-        overlay.appendChild(hint);
-
-        let dismissed = false;
-        function dismiss() {
-            if (dismissed) return;
-            dismissed = true;
-            clearTimeout(autoDismiss);
-            document.removeEventListener('keydown', onKey);
-            overlay.classList.add('is-dismissing');
-            // Brief fade-out so it doesn't pop off.
-            setTimeout(function () {
-                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                refreshAll();
-            }, 200);
-        }
-        function onKey(e) { if (e.key === 'Escape') dismiss(); }
-        overlay.addEventListener('click', dismiss);
-        document.addEventListener('keydown', onKey);
-        const autoDismiss = setTimeout(dismiss, 6000);
-
-        document.body.appendChild(overlay);
-    }
-
     // Initial expiry pass on the server-rendered rows so the placeholder
     // "expires soon" text is replaced immediately on page load.
     tickExpiries();
     setInterval(tickExpiries, 1000);
     setInterval(refreshAll, 5000);
-})();
+})(typeof window !== 'undefined' ? window : null);
