@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Render monster and equipment images in lookups",
+    "summary": "The dnd5eapi exposes an `image` field on **monsters** (e.g. `/api/images/monsters/goblin.png`) and **equipment** (e.g. `/api/images/equipment/longsword.png`). Other endpoints don't. Discord embeds for those two types now set a **thumbnail** (corner image), keeping the dense HP/AC/actions fields readable. The web `/dnd` card now renders an **inline `<img>`** floated right on desktop, centred on mobile. Both fall back gracefully — many real entries omit the field, and the re…",
+    "emoji": "✨",
+    "prNumber": 446
+  },
+  {
+    "date": "May 2026",
     "title": "Expand lookup to all 18 SRD categories with smart autocomplete",
     "summary": "Discord `/dnd` and the `/dnd` web page now cover **all 18** dnd5eapi.co 5e SRD categories (was 4) — adds monsters, classes, races, equipment, traits, ability scores, skills, and the rest. The Discord command's `query` option is now a **live autocomplete** that hits `/api/{type}?name={input}` as the user types, so they pick from a dropdown instead of guessing slugs. The web page gets an equivalent **custom dropdown** with arrow-key nav, debouncing, and `AbortController` so…",
     "emoji": "🐉",
