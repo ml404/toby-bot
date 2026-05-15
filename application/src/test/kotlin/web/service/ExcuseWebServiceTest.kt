@@ -351,4 +351,115 @@ class ExcuseWebServiceTest {
 
         assertNull(service.getRandomApproved(guildId))
     }
+
+    // resolveDisplayAuthor (exercised through getRandomApproved + getPage)
+
+    @Test
+    fun `getRandomApproved resolves author to current member effective name`() {
+        val row = ExcuseDto(
+            id = 9L,
+            guildId = guildId,
+            author = "OldSnapshot",
+            excuse = "the dog ate it",
+            approved = true,
+            authorDiscordId = authorDiscordId,
+        )
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild>()
+        val member = mockk<net.dv8tion.jda.api.entities.Member>()
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(authorDiscordId) } returns member
+        every { member.effectiveName } returns "CurrentNick"
+        every { excuseService.listApprovedGuildExcuses(guildId) } returns listOf(row)
+
+        val pick = service.getRandomApproved(guildId)
+
+        assertNotNull(pick)
+        assertEquals("CurrentNick", pick!!.author)
+    }
+
+    @Test
+    fun `getRandomApproved falls back to JDA user name when member has left`() {
+        val row = ExcuseDto(
+            id = 9L,
+            guildId = guildId,
+            author = "OldSnapshot",
+            excuse = "x",
+            approved = true,
+            authorDiscordId = authorDiscordId,
+        )
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild>()
+        val user = mockk<net.dv8tion.jda.api.entities.User>()
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(authorDiscordId) } returns null
+        every { jda.getUserById(authorDiscordId) } returns user
+        every { user.name } returns "GlobalName"
+        every { excuseService.listApprovedGuildExcuses(guildId) } returns listOf(row)
+
+        val pick = service.getRandomApproved(guildId)
+
+        assertEquals("GlobalName", pick!!.author)
+    }
+
+    @Test
+    fun `getRandomApproved falls back to snapshot when JDA lookups all miss`() {
+        val row = ExcuseDto(
+            id = 9L,
+            guildId = guildId,
+            author = "Legacy",
+            excuse = "x",
+            approved = true,
+            authorDiscordId = authorDiscordId,
+        )
+        every { jda.getGuildById(guildId) } returns null
+        every { jda.getUserById(authorDiscordId) } returns null
+        every { excuseService.listApprovedGuildExcuses(guildId) } returns listOf(row)
+
+        val pick = service.getRandomApproved(guildId)
+
+        assertEquals("Legacy", pick!!.author)
+    }
+
+    @Test
+    fun `getRandomApproved uses snapshot for legacy rows without authorDiscordId`() {
+        val row = ExcuseDto(
+            id = 9L,
+            guildId = guildId,
+            author = "Legacy",
+            excuse = "x",
+            approved = true,
+            authorDiscordId = null,
+        )
+        every { excuseService.listApprovedGuildExcuses(guildId) } returns listOf(row)
+
+        val pick = service.getRandomApproved(guildId)
+
+        assertEquals("Legacy", pick!!.author)
+    }
+
+    @Test
+    fun `getPage row view model uses current member name when authorDiscordId resolves`() {
+        val row = ExcuseDto(
+            id = 9L,
+            guildId = guildId,
+            author = "OldSnapshot",
+            excuse = "x",
+            approved = true,
+            authorDiscordId = authorDiscordId,
+        )
+        every { userService.getUserById(authorDiscordId, guildId) } returns mockk<UserDto> {
+            every { superUser } returns false
+        }
+        every {
+            excuseService.listApprovedPaged(guildId, 1, ExcuseWebService.PAGE_SIZE)
+        } returns PagedExcuses(listOf(row), 1, ExcuseWebService.PAGE_SIZE, 1L)
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild>()
+        val member = mockk<net.dv8tion.jda.api.entities.Member>()
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(authorDiscordId) } returns member
+        every { member.effectiveName } returns "CurrentNick"
+
+        val result = service.getPage(guildId, "approved", null, 1, authorDiscordId)
+
+        assertEquals("CurrentNick", result.rows.first().author)
+    }
 }
