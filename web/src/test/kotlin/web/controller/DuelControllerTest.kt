@@ -18,6 +18,7 @@ import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
+import web.service.MemberLookupHelper
 import java.time.Instant
 
 class DuelControllerTest {
@@ -35,6 +36,7 @@ class DuelControllerTest {
     private lateinit var jda: JDA
     private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var stakeBounds: StakeBounds
+    private lateinit var memberLookup: MemberLookupHelper
     private lateinit var user: OAuth2User
     private lateinit var controller: DuelController
 
@@ -48,6 +50,7 @@ class DuelControllerTest {
         jda = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
         stakeBounds = mockk(relaxed = true)
+        memberLookup = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
             every { getAttribute<String>("username") } returns "tester"
@@ -56,7 +59,8 @@ class DuelControllerTest {
         every { economyWebService.isMember(opponentId, guildId) } returns true
         controller = DuelController(
             duelService, duelWebService, pendingDuelRegistry,
-            economyWebService, userService, jda, eventPublisher, stakeBounds
+            economyWebService, userService, jda, eventPublisher, stakeBounds,
+            memberLookup
         )
     }
 

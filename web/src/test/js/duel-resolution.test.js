@@ -284,4 +284,35 @@ describe('playDuelResolution', () => {
         expect(left.textContent).toBe('Challenger');
         expect(right.textContent).toBe('You');
     });
+
+    test('works with an offscreen synthetic row (the preview-button path)', () => {
+        // The preview button builds an unattached <div> with the same eight
+        // data attributes the live accept handler reads off the inbox row.
+        // Verify the animation renders identically regardless of whether
+        // the row is parented to anything.
+        const row = document.createElement('div');
+        row.dataset.initiatorName = 'Me';
+        row.dataset.initiatorAvatar = 'https://cdn/me.png';
+        row.dataset.initiatorDiscordId = '100';
+        row.dataset.opponentName = 'Carol';
+        row.dataset.opponentAvatar = 'https://cdn/carol.png';
+        row.dataset.opponentDiscordId = '300';
+        expect(row.parentNode).toBeNull(); // unattached on purpose
+
+        playDuelResolution(row, {
+            winnerDiscordId: '300',
+            loserDiscordId: '100',
+            stake: 25,
+            pot: 50,
+            lossTribute: 2,
+        });
+
+        const overlay = document.querySelector('.duel-resolution-overlay');
+        expect(overlay).not.toBeNull();
+        expect(overlay.querySelector('.duel-figure--right.is-winner')).not.toBeNull();
+        expect(overlay.querySelector('.duel-figure--left.is-loser')).not.toBeNull();
+        expect(overlay.querySelector('.duel-result-line').textContent)
+            .toBe('Winner: Carol took 50 credits (2 to jackpot)');
+        expect(overlay.querySelector('.duel-credits-pill.flies-right')).not.toBeNull();
+    });
 });

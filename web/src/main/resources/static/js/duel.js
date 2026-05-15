@@ -151,6 +151,7 @@
     const challengeForm = document.getElementById('duel-challenge');
     const pendingList = document.getElementById('duel-pending-list');
     const outgoingList = document.getElementById('duel-outgoing-list');
+    const previewBtn = document.getElementById('duel-preview');
 
     function makeMemberCell(name, avatarUrl) {
         const cell = document.createElement('div');
@@ -389,6 +390,50 @@
                     refreshOutgoing();
                 })
                 .catch(function () { toast('error', 'Network error.'); });
+        });
+    }
+
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function () {
+            const picker = document.getElementById('duel-opponent');
+            const opponentId = picker && picker.value;
+            if (!opponentId) {
+                toast('error', 'Pick someone to duel first.');
+                return;
+            }
+            const opt = picker.options[picker.selectedIndex];
+            const opponentName = (opt && opt.textContent ? opt.textContent : 'Opponent').trim();
+            const opponentAvatar = opt && opt.dataset ? (opt.dataset.avatar || null) : null;
+
+            const me = main.dataset;
+            const stakeRaw = parseInt(document.getElementById('duel-stake').value, 10);
+            const stake = Number.isFinite(stakeRaw) && stakeRaw > 0
+                ? stakeRaw
+                : parseInt(main.dataset.minStake, 10) || 0;
+
+            const row = document.createElement('div');
+            row.dataset.initiatorDiscordId = me.userId || '';
+            row.dataset.initiatorName = me.userName || 'You';
+            if (me.userAvatar) row.dataset.initiatorAvatar = me.userAvatar;
+            row.dataset.opponentDiscordId = String(opponentId);
+            row.dataset.opponentName = opponentName;
+            if (opponentAvatar) row.dataset.opponentAvatar = opponentAvatar;
+
+            // Coin-flip the winner so re-clicking shows both halves of the
+            // choreography. lossTribute is illustrative — the real value
+            // comes from the per-guild jackpot setting on the server side,
+            // which we don't surface to the client.
+            const initiatorWins = Math.random() < 0.5;
+            const pot = stake * 2;
+            const resp = {
+                winnerDiscordId: initiatorWins ? row.dataset.initiatorDiscordId : row.dataset.opponentDiscordId,
+                loserDiscordId: initiatorWins ? row.dataset.opponentDiscordId : row.dataset.initiatorDiscordId,
+                stake: stake,
+                pot: pot,
+                lossTribute: Math.max(0, Math.floor(stake * 0.1)),
+            };
+
+            playDuelResolution(row, resp);
         });
     }
 

@@ -20,6 +20,7 @@ import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
+import web.service.MemberLookupHelper
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -40,6 +41,7 @@ class DuelController(
     private val jda: JDA,
     private val eventPublisher: ApplicationEventPublisher,
     private val stakeBounds: StakeBounds,
+    private val memberLookup: MemberLookupHelper,
 ) {
     @GetMapping("/guilds")
     fun guildList(
@@ -87,6 +89,13 @@ class DuelController(
         model.addAttribute("ttlLabel", PendingDuelRegistry.formatTtl(pendingDuelRegistry.ttl))
         model.addAttribute("ttlSeconds", pendingDuelRegistry.ttl.seconds)
         model.addAttribute("members", members)
+        // Plumb the current user's display info so the Preview-animation
+        // button on /duel can render the same Discord avatar + nickname
+        // the inbox already shows for the initiator side.
+        val me = memberLookup.resolve(guildId, discordId)
+        model.addAttribute("currentUserId", discordId.toString())
+        model.addAttribute("currentUserName", me?.name ?: memberLookup.fallbackName(discordId))
+        model.addAttribute("currentUserAvatarUrl", me?.avatarUrl)
         model.addAttribute("username", user.displayName())
         "duel"
     }

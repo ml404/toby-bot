@@ -46,6 +46,12 @@
     padding-top: 1rem;
 }
 
+.duel-form-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 .duel-pending-list {
     display: grid;
     gap: 0.5rem;
