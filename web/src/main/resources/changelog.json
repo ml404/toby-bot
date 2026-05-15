@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Tiered payout wheel replaces fixed-pct payout",
+    "summary": "A \"compromise\" jackpot mechanic — high win chance but small slices most of the time, rare jackpots for the big hit. **Backend**: `JackpotHelper.rollOnWin` returns a `JackpotRoll(amount, tierIndex, tierPayoutPct)`. On a successful trigger it spins the per-guild `JackpotWheel` for a tier and credits that fraction of the pool. **Default wheel** `80:1, 10:5, 5:10, 4:20, 1:50` — 80% of jackpot wins pay 1% of the pool (pity), 1% pay 50% (mega). EV per win ≈ 3.1% — well below the…",
+    "emoji": "🎰",
+    "prNumber": 442
+  },
+  {
+    "date": "May 2026",
     "title": "Replace campaign features with lookup page",
     "summary": "DnD Beyond now ships an official Discord bot that does campaign management, initiative tracking, encounter building and character-sheet integration better than TobyBot can. This strips all of that and replaces the `/dnd/campaign` web page with a small `/dnd` lookups page that exposes the same SRD search the existing `/dnd` Discord command already uses. ### Removed Discord-bot commands: `/campaign`, `/initiative`, `/character`, `/linkcharacter`, `/refreshcharacter` Initiati…",
     "emoji": "🐉",
