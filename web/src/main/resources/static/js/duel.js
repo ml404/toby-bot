@@ -84,6 +84,10 @@
 
         const flash = doc.createElement('div');
         flash.className = 'duel-flash';
+        // Position the bang near the winner's muzzle, not centred between
+        // the two figures — CSS reads `from-left` / `from-right` and
+        // sets a translateX offset toward that side.
+        flash.classList.add(initiatorWon ? 'from-left' : 'from-right');
         flash.textContent = '💥';
 
         arena.appendChild(left);
