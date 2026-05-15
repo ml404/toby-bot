@@ -294,6 +294,50 @@ describe('spinTo', () => {
         expect(strong.textContent).toBe('999'); // released + flushed
     });
 
+    test('schedules tick sounds during the spin, decelerating with the easing', () => {
+        jest.useFakeTimers();
+        const play = jest.fn();
+        window.CasinoSounds = { play };
+        try {
+            const spinBtn = document.querySelector('.jackpot-wheel-spin-btn');
+            spinTo(0, 12, 1, () => {});
+            spinBtn.click();
+            // Advance through the spin and let every tick timeout fire.
+            jest.advanceTimersByTime(3300);
+            const tickCalls = play.mock.calls.filter(c => c[0] === 'tick');
+            // 24 spokes × 4 turns = 96 peg passes. The exact count
+            // depends on the target spoke (extra fractional turn), but
+            // it should be roughly in that range.
+            expect(tickCalls.length).toBeGreaterThan(80);
+            expect(tickCalls.length).toBeLessThanOrEqual(96);
+        } finally {
+            delete window.CasinoSounds;
+            jest.useRealTimers();
+        }
+    });
+
+    test('cancels pending tick sounds when the overlay is dismissed mid-spin', () => {
+        jest.useFakeTimers();
+        const play = jest.fn();
+        window.CasinoSounds = { play };
+        try {
+            const overlay = document.getElementById('jackpot-wheel-overlay');
+            const rotor = overlay.querySelector('.jackpot-wheel-rotor');
+            const spinBtn = document.querySelector('.jackpot-wheel-spin-btn');
+            spinTo(0, 12, 1, () => {});
+            spinBtn.click();
+            jest.advanceTimersByTime(200);
+            rotor.dispatchEvent(new Event('transitionend')); // early settle
+            const ticksAtSettle = play.mock.calls.filter(c => c[0] === 'tick').length;
+            jest.advanceTimersByTime(3200);
+            const ticksAfterDrain = play.mock.calls.filter(c => c[0] === 'tick').length;
+            expect(ticksAfterDrain).toBe(ticksAtSettle);
+        } finally {
+            delete window.CasinoSounds;
+            jest.useRealTimers();
+        }
+    });
+
     test('reduced-motion: SPIN click settles immediately without transition', () => {
         window.matchMedia = (q) => ({
             matches: q === '(prefers-reduced-motion: reduce)',

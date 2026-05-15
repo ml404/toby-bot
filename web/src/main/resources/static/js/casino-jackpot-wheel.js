@@ -34,6 +34,30 @@
     const SPIN_DURATION_MS = 3200;
     const SPIN_ROTATIONS = 4;
     const SPOKE_COUNT = 24;
+    // CSS easing curve for the rotor transition. Tick scheduling
+    // inverts this so peg-pass clicks fire in lockstep with the visual
+    // — fast at first, slowing as the wheel decelerates.
+    const EASE_X1 = 0.18, EASE_Y1 = 0.6, EASE_X2 = 0.18, EASE_Y2 = 1.0;
+
+    function bezierY(u, y1, y2) {
+        const u2 = 1 - u;
+        return 3 * u2 * u2 * u * y1 + 3 * u2 * u * u * y2 + u * u * u;
+    }
+    function bezierX(u, x1, x2) {
+        const u2 = 1 - u;
+        return 3 * u2 * u2 * u * x1 + 3 * u2 * u * u * x2 + u * u * u;
+    }
+    // Find the time-fraction (X) at which the easing reaches Y =
+    // targetY. Y(u) is monotonic for our curve so binary search is
+    // safe and 24 iterations gets us well below per-frame precision.
+    function easedTimeAtValue(targetY) {
+        let lo = 0, hi = 1;
+        for (let i = 0; i < 24; i++) {
+            const mid = (lo + hi) / 2;
+            if (bezierY(mid, EASE_Y1, EASE_Y2) < targetY) lo = mid; else hi = mid;
+        }
+        return bezierX((lo + hi) / 2, EASE_X1, EASE_X2);
+    }
     // Casino-leaning palette — slightly desaturated vs the original
     // neon set so the wheel reads as "felt-and-brass" rather than
     // arcade. Cycles per tier (not per spoke) so each tier has one
@@ -267,10 +291,16 @@
 
         let settled = false;
         let spinStarted = false;
+        const tickTimeouts = [];
+
+        const clearTicks = () => {
+            while (tickTimeouts.length) clearTimeout(tickTimeouts.pop());
+        };
 
         const settle = () => {
             if (settled) return;
             settled = true;
+            clearTicks();
             rotor.removeEventListener('transitionend', settle);
             if (resultEl) resultEl.textContent = tierLabel(payoutPct) + ' +' + payoutAmount + ' credits';
             if (root && root.TobyJackpot && typeof root.TobyJackpot.releasePoolBanner === 'function') {
@@ -317,6 +347,21 @@
             // Belt-and-braces fallback in case transitionend doesn't
             // fire (overlay torn down mid-spin, GPU stalls, etc.).
             setTimeout(settle, SPIN_DURATION_MS + 600);
+            // Schedule a "tick" sound for every peg the pointer passes,
+            // timed against the same easing curve as the rotor so the
+            // clicks decelerate with the wheel. Cancelled in settle so
+            // stragglers don't fire after a fast dismiss.
+            const pegStep = 360 / SPOKE_COUNT;
+            const numTicks = Math.floor(finalAngle / pegStep);
+            for (let k = 1; k <= numTicks; k++) {
+                const eased = (k * pegStep) / finalAngle;
+                const ms = easedTimeAtValue(eased) * SPIN_DURATION_MS;
+                tickTimeouts.push(setTimeout(() => {
+                    if (root && root.CasinoSounds && typeof root.CasinoSounds.play === 'function') {
+                        root.CasinoSounds.play('tick');
+                    }
+                }, ms));
+            }
             requestAnimationFrame(() => {
                 rotor.style.transform = 'rotate(' + finalAngle.toFixed(2) + 'deg)';
             });
@@ -330,6 +375,7 @@
             if (ev.target !== overlay || spinStarted) return;
             overlay.removeEventListener('click', backdropDismiss);
             if (spinBtn) spinBtn.removeEventListener('click', startSpin);
+            clearTicks();
             overlay.hidden = true;
             if (typeof onSettle === 'function') onSettle();
         };
