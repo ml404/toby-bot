@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Route YouTube traffic through optional rotating HTTP proxy",
+    "summary": "YouTube intermittently IP-blocks the dyno, breaking both `/play` and intro-clip validation until the Heroku app is manually restarted in the hope of pulling a non-blocked IP. Restarting Heroku is just IP-pool roulette — this PR replaces it with two real fixes: **Surface OAuth2 status at startup.** Authenticated requests via `GOOGLE_REFRESH_TOKEN` (already wired in `PlayerManager`) are far less prone to anonymous-IP blocks. The bot now logs a clear WARN at boot when the tok…",
+    "emoji": "🎵",
+    "prNumber": 448
+  },
+  {
+    "date": "May 2026",
     "title": "Resolve author to current Discord name at display time",
     "summary": "Follow-up to #443. The previous PR stored `author_discord_id` at submission but kept rendering the **snapshot** `author` string everywhere, so a user changing their server nickname left stale names attached to old excuses. This PR resolves the author through JDA at display time. Render ladder, applied identically by `ExcuseCommand.resolveDisplayAuthor` (slash) and `ExcuseWebService.resolveDisplayAuthor` (web): 1. `guild.getMemberById(authorDiscordId)?.effectiveName` — pick…",
     "emoji": "✨",
