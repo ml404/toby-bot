@@ -171,11 +171,13 @@
         duel-fall-right 0.7s ease-in     1.9s forwards;
 }
 .duel-figure--left.is-winner {
+    --win-x: -80px;
     animation:
         duel-walk-left   1.3s ease-in-out 0.3s both,
         duel-winner-glow 1.4s ease-out    1.9s both;
 }
 .duel-figure--right.is-winner {
+    --win-x: 80px;
     animation:
         duel-walk-right  1.3s ease-in-out 0.3s both,
         duel-winner-glow 1.4s ease-out    1.9s both;
@@ -260,9 +262,6 @@
     30%  { filter: drop-shadow(0 0 16px rgba(245, 197, 66, 0.8)); transform: translateX(var(--win-x, 0)) scale(1.05); }
     100% { filter: drop-shadow(0 0 8px rgba(245, 197, 66, 0.5)); transform: translateX(var(--win-x, 0)) scale(1); }
 }
-.duel-figure--left.is-winner  { --win-x: -80px; }
-.duel-figure--right.is-winner { --win-x:  80px; }
-
 @keyframes duel-credits-fly {
     0%   { opacity: 0; transform: translate(0, 12px) scale(0.7); }
     30%  { opacity: 1; transform: translate(0, 0) scale(1); }
