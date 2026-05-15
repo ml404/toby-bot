@@ -129,7 +129,9 @@ data class Monster(
     }
 
     private fun formatMod(score: Int): String {
-        val mod = (score - 10) / 2
+        // D&D ability modifier is floor((score - 10) / 2). Kotlin/Java integer
+        // division truncates toward zero, so use Math.floorDiv for correct negatives.
+        val mod = Math.floorDiv(score - 10, 2)
         return if (mod >= 0) "+$mod" else "$mod"
     }
 

@@ -214,9 +214,10 @@ internal class JsonParserExpansionTest {
     fun `parseJsonToMonster handles senses map with mixed numeric and string values`() {
         val m = JsonParser.parseJsonToMonster(DnDExpansionFixtures.MONSTER_GOBLIN)
         assertNotNull(m?.senses)
-        assertEquals("60 ft.", m!!.senses!!["darkvision"])
+        val senses = m!!.senses!!
+        assertEquals("60 ft.", senses["darkvision"])
         // Gson parses numeric senses as Double; the embed renderer normalises this
-        assertEquals(9.0, m.senses!!["passive_perception"])
+        assertEquals(9.0, senses["passive_perception"])
     }
 
     @Test
