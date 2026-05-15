@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Resolve author to current Discord name at display time",
+    "summary": "Follow-up to #443. The previous PR stored `author_discord_id` at submission but kept rendering the **snapshot** `author` string everywhere, so a user changing their server nickname left stale names attached to old excuses. This PR resolves the author through JDA at display time. Render ladder, applied identically by `ExcuseCommand.resolveDisplayAuthor` (slash) and `ExcuseWebService.resolveDisplayAuthor` (web): 1. `guild.getMemberById(authorDiscordId)?.effectiveName` — pick…",
+    "emoji": "✨",
+    "prNumber": 447
+  },
+  {
+    "date": "May 2026",
     "title": "Render monster and equipment images in lookups",
     "summary": "The dnd5eapi exposes an `image` field on **monsters** (e.g. `/api/images/monsters/goblin.png`) and **equipment** (e.g. `/api/images/equipment/longsword.png`). Other endpoints don't. Discord embeds for those two types now set a **thumbnail** (corner image), keeping the dense HP/AC/actions fields readable. The web `/dnd` card now renders an **inline `<img>`** floated right on desktop, centred on mobile. Both fall back gracefully — many real entries omit the field, and the re…",
     "emoji": "✨",
