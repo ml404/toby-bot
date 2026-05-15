@@ -7,136 +7,16 @@ import bot.toby.command.commands.dnd.DnDSearchCommand.Companion.SPELL_NAME
 import bot.toby.dto.web.dnd.DnDResponse
 import bot.toby.dto.web.dnd.QueryResult
 import common.logging.DiscordLogger
-import core.command.Command.Companion.replyEphemeralAndDelete
-import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Member
-import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
-import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.buttons.Button
 import org.springframework.stereotype.Service
-import web.service.InitiativeResolver
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
 @Service
-class DnDHelper(
-    private val userDtoHelper: UserDtoHelper,
-    private val initiativeResolver: InitiativeResolver
-) {
+class DnDHelper {
 
     private val logger = DiscordLogger(this::class.java)
-    private val states: ConcurrentHashMap<Long, InitiativeState> = ConcurrentHashMap()
-
-    val initButtons = TableButtons(
-        Button.primary("init:prev", "⬅️"),
-        Button.primary("init:clear", "❌"),
-        Button.primary("init:next", "➡️")
-    )
-
-    /** Returns (creating if absent) the per-guild initiative state. */
-    fun stateFor(guildId: Long): InitiativeState =
-        states.computeIfAbsent(guildId) { InitiativeState() }
-
-    /** Snapshot of every guild that currently has active initiative state. */
-    fun activeSnapshots(): Map<Long, InitiativeStateSnapshot> =
-        states.filterValues { it.isActive() }.mapValues { (_, v) -> v.snapshot() }
-
-    /** Replace (or seed) the state for the given guild from a snapshot. */
-    fun restore(guildId: Long, snapshot: InitiativeStateSnapshot) {
-        stateFor(guildId).restoreFrom(snapshot)
-    }
-
-    /**
-     * Seed the per-guild initiative tracker with a pre-rolled, pre-sorted roster
-     * (players + monsters). Used by the web-side initiative composer; Discord's
-     * voice-channel / name-list paths continue through [rollInitiativeForMembers]
-     * and [rollInitiativeForString].
-     */
-    fun seedInitiative(guildId: Long, entries: List<RolledEntry>) {
-        val sorted = entries.sortedByDescending { it.roll }
-        stateFor(guildId).seedFromSorted(sorted)
-    }
-
-    fun rollInitiativeForMembers(
-        guildId: Long,
-        memberList: List<Member>,
-        dm: Member,
-        initiativeMap: MutableMap<String, Int>
-    ) {
-        val nonDmMembers = memberList.filter { it != dm }.nonBots()
-        nonDmMembers.forEach { target ->
-            val userDto = userDtoHelper.calculateUserDto(target.idLong, target.guild.idLong, target.isOwner)
-            rollAndAddToMap(initiativeMap, target.user.effectiveName, initiativeResolver.resolve(userDto) ?: 0)
-        }
-        stateFor(guildId).sortMap(initiativeMap)
-    }
-
-    fun rollInitiativeForString(
-        guildId: Long,
-        nameList: List<String>,
-        initiativeMap: MutableMap<String, Int>
-    ) {
-        nameList.forEach { name -> rollAndAddToMap(initiativeMap, name, 0) }
-        stateFor(guildId).sortMap(initiativeMap)
-    }
-
-    private fun rollAndAddToMap(initiativeMap: MutableMap<String, Int>, name: String, modifier: Int) {
-        initiativeMap[name] = rollDiceWithModifier(20, 1, modifier)
-    }
-
-    fun rollDiceWithModifier(diceValue: Int, diceToRoll: Int, modifier: Int): Int =
-        rollDice(diceValue, diceToRoll) + modifier
 
     fun rollDice(diceValue: Int, diceToRoll: Int): Int =
         (0 until diceToRoll).sumOf { Random.nextInt(1, diceValue + 1) }
-
-    fun incrementTurnTable(guildId: Long, hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int) {
-        val state = stateFor(guildId)
-        state.incrementIndex()
-        sendOrEditInitiativeMessage(guildId, hook, state.initiativeEmbedBuilder, event, deleteDelay)
-    }
-
-    fun decrementTurnTable(guildId: Long, hook: InteractionHook, event: ButtonInteractionEvent?, deleteDelay: Int) {
-        val state = stateFor(guildId)
-        state.decrementIndex()
-        sendOrEditInitiativeMessage(guildId, hook, state.initiativeEmbedBuilder, event, deleteDelay)
-    }
-
-    fun sendOrEditInitiativeMessage(
-        guildId: Long,
-        hook: InteractionHook,
-        embedBuilder: EmbedBuilder,
-        event: ButtonInteractionEvent?,
-        deleteDelay: Int
-    ) {
-        val state = stateFor(guildId)
-        val messageEmbed = embedBuilder.build()
-        if (event == null) {
-            hook.sendMessageEmbeds(messageEmbed)
-                .setComponents(ActionRow.of(initButtons.prev, initButtons.clear, initButtons.next))
-                .queue()
-        } else {
-            event.message
-                .editMessageEmbeds(messageEmbed)
-                .setComponents(ActionRow.of(initButtons.prev, initButtons.clear, initButtons.next))
-                .queue()
-            hook.replyEphemeralAndDelete(
-                "Next turn: ${state.sortedEntries[state.initiativeIndex.get()].name}",
-                deleteDelay,
-            )
-        }
-    }
-
-    fun clearInitiative(guildId: Long) {
-        stateFor(guildId).clear()
-    }
-
-    fun clearInitiative(guildId: Long, hook: InteractionHook, event: ButtonInteractionEvent) {
-        event.message.delete().queue()
-        stateFor(guildId).clear()
-        hook.deleteOriginal().queue()
-    }
 
     suspend fun doInitialLookup(
         typeName: String?,
@@ -169,6 +49,4 @@ class DnDHelper(
 
     private fun String.replaceSpaceWithDash(): String = this.replace(" ", "-")
     private fun String.replaceSpaceWithUrlEncode(): String = this.replace(" ", "%20")
-
-    data class TableButtons(val prev: Button, val clear: Button, val next: Button)
 }

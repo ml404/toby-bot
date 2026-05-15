@@ -4,7 +4,6 @@ import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.intOption
 import common.discord.embed
 import common.discord.field
-import common.events.CampaignEventType
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.UserDto
@@ -17,13 +16,11 @@ import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import web.service.SessionLogPublisher
 import java.awt.Color
 
 @Component
 class RollCommand @Autowired constructor(
     private val dndHelper: DnDHelper,
-    private val sessionLog: SessionLogPublisher
 ) : DnDCommand {
     companion object {
         private const val DICE_NUMBER = "number"
@@ -46,7 +43,6 @@ class RollCommand @Autowired constructor(
     ): WebhookMessageCreateAction<Message> {
         event.deferReply().queue()
         val rollTotal = dndHelper.rollDice(diceValue, diceToRoll)
-        publishRollEvent(event, diceValue, diceToRoll, modifier, rollTotal)
         val rollSummary = String.format(
             "Your final roll total was '%d' (%d + %d).",
             rollTotal + modifier, rollTotal, modifier
@@ -65,29 +61,6 @@ class RollCommand @Autowired constructor(
         return event.hook
             .sendMessageEmbeds(rollEmbed)
             .addComponents(ActionRow.of(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4))
-    }
-
-    private fun publishRollEvent(
-        event: IReplyCallback,
-        diceValue: Int,
-        diceToRoll: Int,
-        modifier: Int,
-        rawTotal: Int
-    ) {
-        val guild = event.guild ?: return
-        sessionLog.publish(
-            guildId = guild.idLong,
-            type = CampaignEventType.ROLL,
-            actorDiscordId = event.user.idLong,
-            actorName = event.member?.effectiveName ?: event.user.effectiveName,
-            payload = mapOf(
-                "sides" to diceValue,
-                "count" to diceToRoll,
-                "modifier" to modifier,
-                "rawTotal" to rawTotal,
-                "total" to rawTotal + modifier
-            )
-        )
     }
 
     override val name: String

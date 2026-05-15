@@ -2,12 +2,7 @@ package integration.bot
 
 import app.Application
 import bot.configuration.*
-import bot.toby.command.commands.dnd.CampaignCommand
-import bot.toby.command.commands.dnd.CharacterCommand
 import bot.toby.command.commands.dnd.DnDSearchCommand
-import bot.toby.command.commands.dnd.InitiativeCommand
-import bot.toby.command.commands.dnd.LinkCharacterCommand
-import bot.toby.command.commands.dnd.RefreshCharacterCommand
 import bot.toby.command.commands.dnd.RollCommand
 import bot.toby.command.commands.economy.BaccaratCommand
 import bot.toby.command.commands.economy.BlackjackCommand
@@ -104,7 +99,6 @@ class CommandManagerTest {
             RollCommand::class.java,
             MemeCommand::class.java,
             DnDSearchCommand::class.java,
-            InitiativeCommand::class.java,
             HelloThereCommand::class.java,
             BrotherCommand::class.java,
             ChCommand::class.java,
@@ -137,10 +131,6 @@ class CommandManagerTest {
             JackpotAdminCommand::class.java,
             TeamCommand::class.java,
             EightBallCommand::class.java,
-            LinkCharacterCommand::class.java,
-            CharacterCommand::class.java,
-            RefreshCharacterCommand::class.java,
-            CampaignCommand::class.java,
             TitleCommand::class.java,
             TobyCoinCommand::class.java,
             SlotsCommand::class.java,
@@ -161,8 +151,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(61, commandManager.allCommands.size)
-        Assertions.assertEquals(61, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(56, commandManager.allCommands.size)
+        Assertions.assertEquals(56, commandManager.allSlashCommands.size)
     }
 
     @Test

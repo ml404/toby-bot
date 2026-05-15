@@ -134,11 +134,10 @@ object WebGuildAccess {
 
     /**
      * Auth-only wrapper for page handlers that don't need a guild
-     * membership check — e.g. CampaignController where membership is
-     * implicit in the campaign service, or IntroWebController where the
-     * superuser branch needs to bypass the standard member guard.
-     * Anonymous callers redirect to [lobbyPath]; signed-in callers
-     * invoke [block] with their resolved Discord id.
+     * membership check — e.g. IntroWebController where the superuser
+     * branch needs to bypass the standard member guard. Anonymous
+     * callers redirect to [lobbyPath]; signed-in callers invoke [block]
+     * with their resolved Discord id.
      */
     inline fun requireSignedInForPage(
         user: OAuth2User?,

@@ -7,8 +7,6 @@ import bot.toby.command.commands.fetch.TestHttpHelperHelper.ERROR_NOT_FOUND_RESP
 import bot.toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RESPONSE
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
-import bot.toby.helpers.UserDtoHelper
-import web.service.InitiativeResolver
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -28,17 +26,14 @@ class DnDCommandQueryHandlerTest {
 
     private lateinit var queryHandler: DnDCommandQueryHandler
     private lateinit var httpHelper: HttpHelper
-    private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var dndHelper: DnDHelper
     private val hook = mockk<InteractionHook>(relaxed = true)
     private val deleteDelay = 0
 
     @BeforeEach
     fun setUp() {
-        userDtoHelper = mockk(relaxed = true)
         httpHelper = mockk(relaxed = true)
-        dndHelper = DnDHelper(userDtoHelper, mockk<InitiativeResolver>(relaxed = true))
-
+        dndHelper = DnDHelper()
     }
 
     @AfterEach

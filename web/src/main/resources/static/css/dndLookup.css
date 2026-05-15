@@ -1,0 +1,108 @@
+.lookup-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    max-width: 720px;
+}
+
+.lookup-form {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(140px, 1fr) 2fr auto;
+    align-items: end;
+    margin-bottom: var(--space-3);
+}
+
+.lookup-form label {
+    display: grid;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.lookup-form select,
+.lookup-form input {
+    padding: 6px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font: inherit;
+}
+
+.lookup-form .btn {
+    height: fit-content;
+}
+
+@media (max-width: 600px) {
+    .lookup-form {
+        grid-template-columns: 1fr;
+    }
+    .lookup-form .btn {
+        justify-self: start;
+    }
+}
+
+.lookup-status:empty {
+    display: none;
+}
+
+.lookup-suggestions {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-3) 0 0 0;
+    display: grid;
+    gap: 6px;
+}
+
+.lookup-suggestions-heading {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.lookup-suggestion {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    width: 100%;
+}
+
+.lookup-suggestion:hover,
+.lookup-suggestion:focus-visible {
+    background: var(--bg-elevated);
+    border-color: var(--accent, var(--border-strong));
+}
+
+.lookup-result {
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.lookup-result h2 {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.lookup-result h3 {
+    margin-top: var(--space-3);
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+}
+
+.lookup-result p {
+    margin: 0 0 var(--space-2) 0;
+    line-height: 1.5;
+}
+
+.lookup-result p:last-child {
+    margin-bottom: 0;
+}

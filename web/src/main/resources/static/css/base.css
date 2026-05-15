@@ -107,10 +107,8 @@ a:hover { color: var(--accent-hover); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* `.btn-primary` is the semantic alias for `.btn` — game templates have
-   long used `class="btn-primary"` for action buttons (Deal, Hit, Bet)
-   and were rendering as plain unstyled browser controls because the
-   class was only defined inside home.css / campaign.css scopes. Same
-   visual + interaction as `.btn`. */
+   long used `class="btn-primary"` for action buttons (Deal, Hit, Bet).
+   Same visual + interaction as `.btn`. */
 .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -353,7 +351,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
 /* ---- Page header ----
    Standard "back-link → h1 → optional muted lede" stack used by every
    per-guild detail page (moderation, profile, leaderboard, economy,
-   intros, campaign, etc.). Hoisted here so individual page CSS files
+   intros, etc.). Hoisted here so individual page CSS files
    stop redefining the same rhythm with slightly different margins. */
 .page-header {
     margin-bottom: var(--space-5);

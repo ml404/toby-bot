@@ -7,8 +7,6 @@ import bot.toby.command.commands.fetch.TestHttpHelperHelper.FIREBALL_INITIAL_RES
 import bot.toby.command.commands.fetch.TestHttpHelperHelper.GRAPPLED_INITIAL_RESPONSE
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
-import bot.toby.helpers.UserDtoHelper
-import web.service.InitiativeResolver
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -28,14 +26,12 @@ class DndApiCoroutineHandlerTest {
 
     private lateinit var handler: DndApiCoroutineHandler
     private lateinit var httpHelper: HttpHelper
-    private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var dndHelper: DnDHelper
 
     @BeforeEach
     fun setup() {
         httpHelper = mockk(relaxed = true)
-        userDtoHelper = mockk(relaxed = true)
-        dndHelper = DnDHelper(userDtoHelper, mockk<InitiativeResolver>(relaxed = true))
+        dndHelper = DnDHelper()
     }
 
     @AfterEach
