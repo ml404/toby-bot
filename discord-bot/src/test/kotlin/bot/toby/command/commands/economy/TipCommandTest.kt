@@ -3,25 +3,30 @@ package bot.toby.command.commands.economy
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
-import bot.toby.command.CommandTest.Companion.user
+import bot.toby.command.CommandTest.Companion.replyCallbackAction
 import bot.toby.command.DefaultCommandContext
-import bot.toby.helpers.UserDtoHelper
+import bot.toby.modal.modals.TipMessageModal
 import database.dto.UserDto
-import database.service.TipService
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
+import net.dv8tion.jda.api.modals.Modal
+import net.dv8tion.jda.api.requests.restaction.interactions.ModalCallbackAction
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class TipCommandTest : CommandTest {
-    private lateinit var tipService: TipService
-    private lateinit var userDtoHelper: UserDtoHelper
     private lateinit var command: TipCommand
+    private val modalCallback: ModalCallbackAction = mockk(relaxed = true)
 
     private val senderId = 1L
     private val recipientId = 2L
@@ -30,10 +35,16 @@ internal class TipCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        tipService = mockk(relaxed = true)
-        userDtoHelper = mockk(relaxed = true)
-        command = TipCommand(tipService, userDtoHelper)
+        command = TipCommand()
         every { guild.idLong } returns guildId
+        every { event.replyModal(any<Modal>()) } returns modalCallback
+        every { modalCallback.queue() } just runs
+        // CommandTest's shared mock has `event.reply(any<String>())` set to
+        // `just awaits` (suspends forever). TipCommand uses `event.reply(...)`
+        // for early-out validation — it can't `deferReply()` first because the
+        // happy path opens a modal, and modals can't follow a defer. Override
+        // the hang-stub with the working reply chain.
+        every { event.reply(any<String>()) } returns replyCallbackAction
     }
 
     @AfterEach
@@ -54,12 +65,6 @@ internal class TipCommandTest : CommandTest {
         return o
     }
 
-    private fun strOpt(value: String): OptionMapping {
-        val o = mockk<OptionMapping>(relaxed = true)
-        every { o.asString } returns value
-        return o
-    }
-
     private fun targetUser(idLong: Long, isBot: Boolean = false): User {
         val u = mockk<User>(relaxed = true)
         every { u.idLong } returns idLong
@@ -68,32 +73,23 @@ internal class TipCommandTest : CommandTest {
     }
 
     @Test
-    fun `delegates to TipService with parsed args`() {
+    fun `opens tip-message modal with recipient and amount encoded in id`() {
         val sender = UserDto(discordId = senderId, guildId = guildId).apply { socialCredit = 200L }
         val target = targetUser(recipientId)
         every { event.getOption("user") } returns userOpt(target)
         every { event.getOption("amount") } returns intOpt(50L)
-        every { event.getOption("message") } returns strOpt("thanks")
-        every {
-            tipService.tip(senderId, recipientId, guildId, 50L, "thanks", any(), any())
-        } returns TipService.TipOutcome.Ok(
-            sender = senderId, recipient = recipientId, amount = 50L, note = "thanks",
-            senderNewBalance = 150L, recipientNewBalance = 50L,
-            sentTodayAfter = 50L, dailyCap = 500L
-        )
+        val captured = slot<Modal>()
+        every { event.replyModal(capture(captured)) } returns modalCallback
 
         command.handle(DefaultCommandContext(event), sender, 5)
 
-        verify(exactly = 1) {
-            tipService.tip(senderId, recipientId, guildId, 50L, "thanks", any(), any())
-        }
-        verify(exactly = 1) {
-            userDtoHelper.calculateUserDto(recipientId, guildId, false)
-        }
+        verify { event.replyModal(any<Modal>()) }
+        assertEquals(TipMessageModal.customId(recipientId, 50L), captured.captured.id)
+        // No service call — TipMessageModal owns execution.
     }
 
     @Test
-    fun `rejects bot recipient before calling service`() {
+    fun `rejects bot recipient before opening modal`() {
         val sender = UserDto(discordId = senderId, guildId = guildId).apply { socialCredit = 200L }
         val bot = targetUser(recipientId, isBot = true)
         every { event.getOption("user") } returns userOpt(bot)
@@ -101,11 +97,12 @@ internal class TipCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), sender, 5)
 
-        verify(exactly = 0) { tipService.tip(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { event.replyModal(any<Modal>()) }
+        // No service call — TipMessageModal owns execution.
     }
 
     @Test
-    fun `rejects self recipient before calling service`() {
+    fun `rejects self recipient before opening modal`() {
         val sender = UserDto(discordId = senderId, guildId = guildId).apply { socialCredit = 200L }
         val self = targetUser(senderId)
         every { event.getOption("user") } returns userOpt(self)
@@ -113,34 +110,16 @@ internal class TipCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), sender, 5)
 
-        verify(exactly = 0) { tipService.tip(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { event.replyModal(any<Modal>()) }
+        // No service call — TipMessageModal owns execution.
     }
 
     @Test
-    fun `renders embed for each TipOutcome variant`() {
-        val sender = UserDto(discordId = senderId, guildId = guildId).apply { socialCredit = 200L }
-        val target = targetUser(recipientId)
-        every { event.getOption("user") } returns userOpt(target)
-        every { event.getOption("amount") } returns intOpt(50L)
-        every { event.getOption("message") } returns null
-
-        val outcomes = listOf(
-            TipService.TipOutcome.Ok(senderId, recipientId, 50L, null, 150L, 50L, 50L, 500L),
-            TipService.TipOutcome.InvalidAmount(10L, 500L),
-            TipService.TipOutcome.InvalidRecipient(TipService.TipOutcome.InvalidRecipient.Reason.SELF),
-            TipService.TipOutcome.InsufficientCredits(have = 30L, needed = 50L),
-            TipService.TipOutcome.DailyCapExceeded(sentToday = 480L, cap = 500L, attempted = 50L),
-            TipService.TipOutcome.UnknownSender,
-            TipService.TipOutcome.UnknownRecipient,
-        )
-
-        outcomes.forEach { variant ->
-            every {
-                tipService.tip(senderId, recipientId, guildId, 50L, null, any(), any())
-            } returns variant
-
-            // Should not throw on any variant.
-            command.handle(DefaultCommandContext(event), sender, 5)
-        }
+    fun `customId round-trips through TipMessageModal helper`() {
+        val id = TipMessageModal.customId(123L, 250L)
+        assertTrue(id.startsWith("${TipMessageModal.MODAL_NAME}:"))
+        val parts = id.split(':')
+        assertEquals(123L, parts[1].toLong())
+        assertEquals(250L, parts[2].toLong())
     }
 }

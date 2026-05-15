@@ -8,6 +8,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.DefaultCommandContext
+import bot.toby.command.DefaultPermissionValidator
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
@@ -26,7 +27,7 @@ internal class KickCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        kickCommand = KickCommand()
+        kickCommand = KickCommand(DefaultPermissionValidator())
     }
 
     @AfterEach

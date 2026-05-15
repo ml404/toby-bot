@@ -7,6 +7,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.DefaultCommandContext
+import bot.toby.command.DefaultPermissionValidator
 import database.dto.ConfigDto
 import database.service.ConfigService
 import io.mockk.*
@@ -34,7 +35,7 @@ internal class MoveCommandTest : CommandTest {
         configService = mockk()
         every { configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, "1") } returns
                 ConfigDto(ConfigDto.Configurations.MOVE.configValue, "CHANNEL", "1")
-        moveCommand = MoveCommand(configService)
+        moveCommand = MoveCommand(configService, DefaultPermissionValidator())
     }
 
     @AfterEach

@@ -1,6 +1,6 @@
 package core.command
 
-import common.logging.DiscordLogger
+import core.log.Loggable
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -13,11 +13,10 @@ import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
-interface Command {
+interface Command : Loggable {
     fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int)
     val name: String
     val description: String
-    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
 
     fun getErrorMessage(serverOwner: String?): String {
         return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to $serverOwner"

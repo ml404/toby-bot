@@ -177,6 +177,11 @@ tasks.withType(KotlinCompile).configureEach {
 
 test {
     useJUnitPlatform()
+    systemProperty 'junit.jupiter.execution.timeout.default', '5m'
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat = 'full'
+    }
 }
 
 kotlin {

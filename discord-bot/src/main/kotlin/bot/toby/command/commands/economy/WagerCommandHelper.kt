@@ -2,8 +2,10 @@ package bot.toby.command.commands.economy
 
 import core.command.Command.Companion.replyEmbedAndDelete
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import java.awt.Color
 
 /**
@@ -137,5 +139,36 @@ internal object WagerCommandEmbeds {
         deleteDelay: Int
     ) {
         reply(event, errorEmbed(title, message), deleteDelay)
+    }
+
+    /**
+     * Themed early-return helper: returns the guild if the command was
+     * invoked in one, otherwise sends the standard "server only" error
+     * embed and returns null. Replaces the `event.guild ?: run { … }`
+     * boilerplate that every economy command was repeating.
+     */
+    fun requireGuild(event: SlashCommandInteractionEvent, title: String, deleteDelay: Int): Guild? {
+        val guild = event.guild
+        if (guild == null) {
+            replyError(event, title, "This command can only be used in a server.", deleteDelay)
+            return null
+        }
+        return guild
+    }
+
+    /** Themed early-return for a required slash option. */
+    fun requireOption(
+        event: SlashCommandInteractionEvent,
+        title: String,
+        name: String,
+        message: String,
+        deleteDelay: Int,
+    ): OptionMapping? {
+        val option = event.getOption(name)
+        if (option == null) {
+            replyError(event, title, message, deleteDelay)
+            return null
+        }
+        return option
     }
 }

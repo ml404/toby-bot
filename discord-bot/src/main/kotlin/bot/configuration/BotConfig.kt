@@ -1,7 +1,6 @@
 package bot.configuration
 
 import bot.toby.handler.EventWaiter
-import bot.toby.handler.MessageEventHandler
 import bot.toby.handler.StartUpHandler
 import bot.toby.handler.VoiceEventHandler
 import moe.kyokobot.libdave.NativeDaveFactory
@@ -26,7 +25,6 @@ class BotConfig {
     fun jda(
         startUpHandler: StartUpHandler,
         voiceEventHandler: VoiceEventHandler,
-        messageEventHandler: MessageEventHandler,
         eventWaiter: EventWaiter
     ): JDA {
         val discordToken = System.getenv("TOKEN") ?: throw MissingEnvironmentVariableException("TOKEN environment variable is not set.")

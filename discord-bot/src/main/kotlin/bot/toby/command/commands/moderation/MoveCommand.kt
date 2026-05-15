@@ -1,5 +1,6 @@
 package bot.toby.command.commands.moderation
 
+import bot.toby.command.PermissionValidator
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
@@ -15,7 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class MoveCommand @Autowired constructor(private val configService: ConfigService) : ModerationCommand {
+class MoveCommand @Autowired constructor(
+    private val configService: ConfigService,
+    private val permissionValidator: PermissionValidator,
+) : ModerationCommand {
 
     companion object {
         private const val USERS = "users"
@@ -42,7 +46,7 @@ class MoveCommand @Autowired constructor(private val configService: ConfigServic
         }
 
         memberList.forEach { target ->
-            if (!validateChannel(event, botMember, member, target, deleteDelay)) {
+            if (canMove(event, botMember, member, target, deleteDelay)) {
                 guild.moveVoiceMember(target, voiceChannel).queue(
                     {
                         event.hook.replyAndDelete(
@@ -66,31 +70,27 @@ class MoveCommand @Autowired constructor(private val configService: ConfigServic
             ?: configService.getConfigByName(ConfigDto.Configurations.MOVE.configValue, guild.id)
                 ?.let { config -> guild.getVoiceChannelsByName(config.value ?: "", true).firstOrNull() }
 
-    private fun validateChannel(
+    private fun canMove(
         event: SlashCommandInteractionEvent,
         botMember: Member,
         member: Member,
         target: Member,
-        deleteDelay: Int
+        deleteDelay: Int,
     ): Boolean {
-        return when {
-            target.voiceState?.inAudioChannel() == false -> {
-                event.hook.replyAndDelete(
-                    "Mentioned user '${target.effectiveName}' is not connected to a voice channel currently, so cannot be moved.",
-                    deleteDelay,
-                )
-                true
-            }
-            !member.canInteract(target) || !member.hasPermission(Permission.VOICE_MOVE_OTHERS) -> {
-                event.hook.replyAndDelete("You can't move '${target.effectiveName}'", deleteDelay)
-                true
-            }
-            !botMember.hasPermission(Permission.VOICE_MOVE_OTHERS) -> {
-                event.hook.replyAndDelete("I'm not allowed to move ${target.effectiveName}", deleteDelay)
-                true
-            }
-            else -> false
+        if (target.voiceState?.inAudioChannel() == false) {
+            event.hook.replyAndDelete(
+                "Mentioned user '${target.effectiveName}' is not connected to a voice channel currently, so cannot be moved.",
+                deleteDelay,
+            )
+            return false
         }
+        if (!permissionValidator.actorMayActOn(
+                event, member, target, Permission.VOICE_MOVE_OTHERS, "move", deleteDelay
+            )
+        ) return false
+        return permissionValidator.botMayAct(
+            event, botMember, target, Permission.VOICE_MOVE_OTHERS, "move", deleteDelay,
+        )
     }
 
     override val name: String

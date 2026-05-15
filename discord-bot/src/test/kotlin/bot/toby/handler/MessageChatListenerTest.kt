@@ -1,41 +1,25 @@
 package bot.toby.handler
 
 import bot.toby.emote.Emotes
-import core.managers.AutocompleteManager
-import core.managers.ButtonManager
-import core.managers.CommandManager
-import core.managers.MenuManager
-import core.managers.ModalManager
-import io.mockk.*
-import io.mockk.junit5.MockKExtension
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji
-import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import io.mockk.junit5.MockKExtension
 
 @ExtendWith(MockKExtension::class)
-class MessageEventHandlerTest {
+class MessageChatListenerTest {
 
-    private val commandManager: CommandManager = mockk()
-    private val buttonManager: ButtonManager = mockk()
-    private val menuManager: MenuManager = mockk()
-    private val modalManager: ModalManager = mockk()
-    private val autocompleteManager: AutocompleteManager = mockk()
-    private val handler = spyk(
-        MessageEventHandler(
-            commandManager,
-            buttonManager,
-            menuManager,
-            modalManager,
-            autocompleteManager
-        )
-    )
+    private val listener = spyk(MessageChatListener())
 
     @Test
     fun `onMessageReceived should respond correctly to toby message`() {
@@ -64,7 +48,7 @@ class MessageEventHandlerTest {
         every { channel.sendMessageFormat(any(), any(), any()).queue() } returns mockk()
         every { message.addReaction(tobyEmote).queue() } returns mockk()
 
-        handler.onMessageReceived(event)
+        listener.onMessageReceived(event)
 
         verify {
             channel.sendMessageFormat(any(), any(), any())
@@ -98,7 +82,7 @@ class MessageEventHandlerTest {
 
         every { channel.sendMessageFormat("Hey %s, what's up champ?", "Matt", jessEmote).queue() } returns mockk()
 
-        handler.onMessageReceived(event)
+        listener.onMessageReceived(event)
 
         verify {
             channel.sendMessageFormat("Hey %s, what's up champ?", "Matt", any())
@@ -125,20 +109,10 @@ class MessageEventHandlerTest {
 
         every { channel.sendMessage("YEAH????").queue() } returns mockk()
 
-        handler.onMessageReceived(event)
+        listener.onMessageReceived(event)
 
         verify {
             channel.sendMessage("YEAH????")
         }
-    }
-
-    @Test
-    fun `onCommandAutoCompleteInteraction delegates to autocompleteManager`() {
-        val event = mockk<CommandAutoCompleteInteractionEvent>()
-        every { autocompleteManager.handle(event) } just Runs
-
-        handler.onCommandAutoCompleteInteraction(event)
-
-        verify { autocompleteManager.handle(event) }
     }
 }

@@ -1,8 +1,13 @@
 package bot.configuration
 
 import bot.toby.handler.ActivityEventHandler
+import bot.toby.handler.AutocompleteEventListener
+import bot.toby.handler.ButtonEventListener
 import bot.toby.handler.EventWaiter
-import bot.toby.handler.MessageEventHandler
+import bot.toby.handler.MenuEventListener
+import bot.toby.handler.MessageChatListener
+import bot.toby.handler.ModalEventListener
+import bot.toby.handler.SlashCommandEventListener
 import bot.toby.handler.StartUpHandler
 import bot.toby.handler.VoiceEventHandler
 import io.mockk.mockk
@@ -14,32 +19,44 @@ class JdaListenerRegistrarTest {
 
     @Test
     fun `should register all event listeners with JDA`() {
-        // Arrange
         val jda = mockk<JDA>(relaxed = true)
         val startUpHandler = mockk<StartUpHandler>()
         val voiceEventHandler = mockk<VoiceEventHandler>()
-        val messageEventHandler = mockk<MessageEventHandler>()
+        val messageChatListener = mockk<MessageChatListener>()
+        val slashCommandEventListener = mockk<SlashCommandEventListener>()
+        val buttonEventListener = mockk<ButtonEventListener>()
+        val menuEventListener = mockk<MenuEventListener>()
+        val modalEventListener = mockk<ModalEventListener>()
+        val autocompleteEventListener = mockk<AutocompleteEventListener>()
         val activityEventHandler = mockk<ActivityEventHandler>()
         val eventWaiter = mockk<EventWaiter>()
 
-        // Act
         JdaListenerRegistrar(
             jda,
             startUpHandler,
             voiceEventHandler,
-            messageEventHandler,
+            messageChatListener,
+            slashCommandEventListener,
+            buttonEventListener,
+            menuEventListener,
+            modalEventListener,
+            autocompleteEventListener,
             activityEventHandler,
-            eventWaiter
+            eventWaiter,
         )
 
-        // Assert
         verify {
             jda.addEventListener(
                 startUpHandler,
                 voiceEventHandler,
-                messageEventHandler,
+                messageChatListener,
+                slashCommandEventListener,
+                buttonEventListener,
+                menuEventListener,
+                modalEventListener,
+                autocompleteEventListener,
                 activityEventHandler,
-                eventWaiter
+                eventWaiter,
             )
         }
     }

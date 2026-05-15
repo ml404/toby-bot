@@ -1,15 +1,19 @@
 package bot.toby.command.commands.moderation
 
+import bot.toby.command.PermissionValidator
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class KickCommand : ModerationCommand {
+class KickCommand @Autowired constructor(
+    private val permissionValidator: PermissionValidator,
+) : ModerationCommand {
     companion object {
         private const val USERS = "users"
     }
@@ -32,27 +36,26 @@ class KickCommand : ModerationCommand {
         }
 
         mentionedMembers.forEach { target ->
-            when {
-                !member.canInteract(target) || !member.hasPermission(Permission.KICK_MEMBERS) -> {
-                    event.hook.replyAndDelete("You can't kick ${target.effectiveName}", deleteDelay)
-                }
-                !botMember.canInteract(target) || !botMember.hasPermission(Permission.KICK_MEMBERS) -> {
-                    event.hook.replyAndDelete("I'm not allowed to kick ${target.effectiveName}", deleteDelay)
-                }
-                else -> {
-                    guild.kick(target).reason("because you told me to.").queue(
-                        {
-                            event.hook.replyAndDelete(
-                                "Shot hit the mark... something about fortnite?",
-                                deleteDelay,
-                            )
-                        },
-                        { error ->
-                            event.hook.replyAndDelete("Could not kick: ${error.message}", deleteDelay)
-                        }
+            val actorOk = permissionValidator.actorMayActOn(
+                event, member, target, Permission.KICK_MEMBERS, "kick", deleteDelay
+            )
+            if (!actorOk) return@forEach
+            val botOk = permissionValidator.botMayAct(
+                event, botMember, target, Permission.KICK_MEMBERS, "kick", deleteDelay,
+                requireCanInteract = true,
+            )
+            if (!botOk) return@forEach
+            guild.kick(target).reason("because you told me to.").queue(
+                {
+                    event.hook.replyAndDelete(
+                        "Shot hit the mark... something about fortnite?",
+                        deleteDelay,
                     )
+                },
+                { error ->
+                    event.hook.replyAndDelete("Could not kick: ${error.message}", deleteDelay)
                 }
-            }
+            )
         }
     }
 

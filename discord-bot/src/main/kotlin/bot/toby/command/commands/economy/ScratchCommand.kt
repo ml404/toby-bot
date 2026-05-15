@@ -42,12 +42,10 @@ class ScratchCommand @Autowired constructor(
         val event = ctx.event
         event.deferReply().queue()
 
-        val guild = event.guild ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "This command can only be used in a server.", deleteDelay); return
-        }
-        val stake = event.getOption(OPT_STAKE)?.asLong ?: run {
-            WagerCommandEmbeds.replyError(event, TITLE, "You must specify a stake.", deleteDelay); return
-        }
+        val guild = WagerCommandEmbeds.requireGuild(event, TITLE, deleteDelay) ?: return
+        val stake = WagerCommandEmbeds.requireOption(
+            event, TITLE, OPT_STAKE, "You must specify a stake.", deleteDelay
+        )?.asLong ?: return
 
         val outcome = scratchService.scratch(requestingUserDto.discordId, guild.idLong, stake)
         WagerCommandEmbeds.reply(event, embedFor(outcome), deleteDelay)

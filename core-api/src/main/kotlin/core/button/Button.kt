@@ -1,13 +1,12 @@
 package core.button
 
-import common.logging.DiscordLogger
+import core.log.Loggable
 import database.dto.UserDto
 
-interface Button {
+interface Button : Loggable {
     val name: String
     val description: String
     val defersReply: Boolean get() = true
-    val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)
 
     fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int)
 }
