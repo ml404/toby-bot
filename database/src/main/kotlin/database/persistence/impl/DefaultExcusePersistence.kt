@@ -58,13 +58,13 @@ class DefaultExcusePersistence internal constructor() : database.persistence.Exc
     }
 
     override fun countApproved(guildId: Long?): Long {
-        val q = entityManager.createNamedQuery("ExcuseDto.countApproved", java.lang.Long::class.java)
+        val q = entityManager.createNamedQuery("ExcuseDto.countApproved", Long::class.javaObjectType)
         q.setParameter("guildId", guildId)
         return q.singleResult.toLong()
     }
 
     override fun countPending(guildId: Long?): Long {
-        val q = entityManager.createNamedQuery("ExcuseDto.countPending", java.lang.Long::class.java)
+        val q = entityManager.createNamedQuery("ExcuseDto.countPending", Long::class.javaObjectType)
         q.setParameter("guildId", guildId)
         return q.singleResult.toLong()
     }
@@ -76,7 +76,7 @@ class DefaultExcusePersistence internal constructor() : database.persistence.Exc
         val q = entityManager.createQuery(
             "select count(e) from ExcuseDto e where e.guildId = :guildId and e.approved = true " +
                 "and lower(e.excuse) like lower(concat('%', :q, '%'))",
-            java.lang.Long::class.java
+            Long::class.javaObjectType
         )
         q.setParameter("guildId", guildId)
         q.setParameter("q", query)

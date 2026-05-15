@@ -31,7 +31,7 @@ class ExcuseCommand @Autowired constructor(
         SubcommandData(SUBMIT, "Submit a new excuse for approval (max 200 characters).")
             .addOptions(
                 OptionData(OptionType.STRING, OPT_TEXT, "The excuse text", true)
-                    .setMaxLength(MAX_EXCUSE_LENGTH.toLong()),
+                    .setMaxLength(MAX_EXCUSE_LENGTH),
                 OptionData(
                     OptionType.USER, OPT_AUTHOR,
                     "Attribute the excuse to this user instead of yourself", false
