@@ -23,6 +23,7 @@ data class Equipment(
     val strMinimum: Int?,
     val stealthDisadvantage: Boolean?,
     val desc: List<String>?,
+    val image: String?,
     val url: String?
 ) : DnDResponse {
     override fun isValidReturnObject(): Boolean =
@@ -34,6 +35,7 @@ data class Equipment(
     override fun toEmbed(): MessageEmbed {
         val embedBuilder = EmbedBuilder()
         name?.let { embedBuilder.setTitle(it) }
+        image?.let { embedBuilder.setThumbnail("https://www.dnd5eapi.co$it") }
         if (!desc.isNullOrEmpty()) {
             embedBuilder.setDescription(desc.transformListToString())
         }
