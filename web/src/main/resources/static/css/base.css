@@ -669,6 +669,11 @@ td { font-size: 0.95rem; }
     stroke-width: 0.75;
     stroke-linejoin: round;
 }
+.jackpot-wheel-peg {
+    fill: url(#jackpot-wheel-hub-grad);
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.4;
+}
 .jackpot-wheel-segment {
     stroke: rgba(0, 0, 0, 0.55);
     stroke-width: 0.75;

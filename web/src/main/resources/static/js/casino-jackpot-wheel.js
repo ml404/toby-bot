@@ -185,6 +185,22 @@
 
             spokes.push({ tierIndex, mid });
         }
+        // Brass pegs at every spoke boundary, riding inside the rotor
+        // so they spin with the wheel. The pointer's tip sits at the
+        // peg radius, so visually each peg flicks past the pointer as
+        // the wheel rotates — that's the "real wheel" cue.
+        const pegRadius = 94;
+        for (let s = 0; s < N; s++) {
+            const angle = s * sweep;
+            const px = Math.cos((angle - 90) * Math.PI / 180) * pegRadius;
+            const py = Math.sin((angle - 90) * Math.PI / 180) * pegRadius;
+            const peg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            peg.setAttribute('cx', px.toFixed(2));
+            peg.setAttribute('cy', py.toFixed(2));
+            peg.setAttribute('r', '2.6');
+            peg.setAttribute('class', 'jackpot-wheel-peg');
+            rotor.appendChild(peg);
+        }
         return spokes;
     }
 

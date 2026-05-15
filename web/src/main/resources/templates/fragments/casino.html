@@ -89,9 +89,11 @@
                 <!-- Brass hub: outer ring + inner medallion -->
                 <circle cx="0" cy="0" r="18" class="jackpot-wheel-hub-outer"/>
                 <circle cx="0" cy="0" r="13" class="jackpot-wheel-hub-inner"/>
-                <!-- Pointer at top: gold arrow with shadow -->
+                <!-- Pointer at top: gold arrow pointing DOWN at the
+                     wheel. Apex sits at the peg radius so spinning pegs
+                     visually flick past the tip. -->
                 <path class="jackpot-wheel-pointer-arrow"
-                      d="M 0 -112 L -10 -94 L 10 -94 Z"
+                      d="M 0 -94 L -9 -116 L 9 -116 Z"
                       filter="url(#jackpot-wheel-shadow)"/>
             </svg>
             <button type="button" class="jackpot-wheel-spin-btn">SPIN</button>

@@ -135,6 +135,13 @@ describe('render', () => {
         const labels = rotor.querySelectorAll('text');
         labels.forEach(t => expect(t.textContent).toBe('30%'));
     });
+
+    test('emits a brass peg at each spoke boundary so pegs spin with the wheel', () => {
+        const rotor = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        render([{ weight: 1, payoutPct: 30 }], rotor);
+        const pegs = rotor.querySelectorAll('.jackpot-wheel-peg');
+        expect(pegs.length).toBe(SPOKE_COUNT);
+    });
 });
 
 describe('spinTo', () => {
