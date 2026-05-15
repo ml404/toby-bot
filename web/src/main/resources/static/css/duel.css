@@ -317,11 +317,13 @@
     .duel-figure--right { --start-x: -40px; --end-x:  60px; }
     .duel-arena { gap: 1rem; }
     .duel-flash { font-size: 2.5rem; }
-    /* Offset is ~85% of the walk-end (±60) so the bang lands inside
-       the winner's 64px avatar disc rather than in the gap between
-       the avatar and the arena centre. */
-    .duel-flash.from-left  { --flash-x: -52px; }
-    .duel-flash.from-right { --flash-x:  52px; }
+    /* Mobile flex layout has the flash sitting in a noticeable slot
+       between the two figures; a small translateX leaves it well shy
+       of the winner. Push it close to the winner's avatar centre
+       (winner ends at ~±128 from the flash's natural slot; ±100
+       lands the bang inside the winner's 64px disc). */
+    .duel-flash.from-left  { --flash-x: -100px; }
+    .duel-flash.from-right { --flash-x:  100px; }
     .duel-credits-pill.flies-left  { --duel-pill-x: -110px; }
     .duel-credits-pill.flies-right { --duel-pill-x:  110px; }
     .duel-credits-pill { padding: 0.4rem 0.8rem; }
