@@ -5,7 +5,7 @@
 // the timers fire fast under jest fake timers.
 
 const duel = require('../../main/resources/static/js/duel');
-const { playDuelResolution, makeFigure, formatExpiry } = duel;
+const { playDuelResolution, makeFigure, formatExpiry, playFromResolution } = duel;
 
 function makeRow({
     initiatorName = 'Alice',
@@ -297,7 +297,7 @@ describe('playDuelResolution', () => {
         row.dataset.opponentName = 'Carol';
         row.dataset.opponentAvatar = 'https://cdn/carol.png';
         row.dataset.opponentDiscordId = '300';
-        expect(row.parentNode).toBeNull(); // unattached on purpose
+        expect(row.parentNode).toBeNull();
 
         playDuelResolution(row, {
             winnerDiscordId: '300',
@@ -316,3 +316,79 @@ describe('playDuelResolution', () => {
         expect(overlay.querySelector('.duel-credits-pill.flies-right')).not.toBeNull();
     });
 });
+
+describe('playFromResolution', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+        jest.useRealTimers();
+    });
+
+    const resBase = {
+        initiatorDiscordId: '100',
+        initiatorName: 'Alice',
+        initiatorAvatarUrl: 'https://cdn/a.png',
+        opponentDiscordId: '200',
+        opponentName: 'Bob',
+        opponentAvatarUrl: 'https://cdn/b.png',
+        winnerDiscordId: '100',
+        pot: 100,
+        lossTribute: 10,
+    };
+
+    test('returns null and renders nothing when winnerDiscordId is missing', () => {
+        const handle = playFromResolution({ initiatorDiscordId: '100' });
+        expect(handle).toBeNull();
+        expect(document.querySelector('.duel-resolution-overlay')).toBeNull();
+    });
+
+    test('returns null when the resolution payload is null', () => {
+        const handle = playFromResolution(null);
+        expect(handle).toBeNull();
+    });
+
+    test('marks the initiator as winner when winnerDiscordId matches initiator', () => {
+        playFromResolution({ ...resBase, winnerDiscordId: '100' });
+
+        expect(document.querySelector('.duel-figure--left.is-winner')).not.toBeNull();
+        expect(document.querySelector('.duel-figure--right.is-loser')).not.toBeNull();
+        expect(document.querySelector('.duel-credits-pill.flies-left')).not.toBeNull();
+        expect(document.querySelector('.duel-result-line').textContent)
+            .toBe('Winner: Alice took 100 credits (10 to jackpot)');
+    });
+
+    test('marks the opponent as winner when winnerDiscordId matches opponent', () => {
+        playFromResolution({ ...resBase, winnerDiscordId: '200' });
+
+        expect(document.querySelector('.duel-figure--left.is-loser')).not.toBeNull();
+        expect(document.querySelector('.duel-figure--right.is-winner')).not.toBeNull();
+        expect(document.querySelector('.duel-credits-pill.flies-right')).not.toBeNull();
+        expect(document.querySelector('.duel-result-line').textContent)
+            .toBe('Winner: Bob took 100 credits (10 to jackpot)');
+    });
+
+    test('renders fallback initials when an avatar URL is missing', () => {
+        playFromResolution({ ...resBase, initiatorAvatarUrl: null });
+        const left = document.querySelector('.duel-figure--left .duel-figure-avatar');
+        expect(left.classList.contains('is-fallback')).toBe(true);
+    });
+
+    test('forwards opts (e.g. onDismiss) to playDuelResolution', () => {
+        const onDismiss = jest.fn();
+        const handle = playFromResolution(resBase, {
+            onDismiss,
+            autoDismissMs: 100,
+            fadeOutMs: 20,
+        });
+        expect(handle).not.toBeNull();
+
+        // Auto-dismiss + fade-out should fire onDismiss.
+        jest.advanceTimersByTime(100 + 20);
+        expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+});
+

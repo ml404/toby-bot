@@ -131,7 +131,43 @@
         return { overlay: overlay, dismiss: dismiss };
     }
 
-    const api = { playDuelResolution: playDuelResolution, makeFigure: makeFigure, formatExpiry: formatExpiry };
+    // Build the same offscreen-row + fake-resp shape the live accept
+    // handler and the preview button use, then hand it to
+    // playDuelResolution. Lets the initiator's browser replay the
+    // acceptor's animation when their `/outgoing` poll surfaces a
+    // freshly-resolved duel from the server-side resolution cache.
+    function playFromResolution(res, opts) {
+        if (!res || !res.winnerDiscordId) return null;
+        opts = opts || {};
+        const doc = opts.doc || (root && root.document);
+        const row = doc.createElement('div');
+        row.dataset.initiatorDiscordId = String(res.initiatorDiscordId);
+        row.dataset.initiatorName = res.initiatorName || '';
+        if (res.initiatorAvatarUrl) row.dataset.initiatorAvatar = res.initiatorAvatarUrl;
+        row.dataset.opponentDiscordId = String(res.opponentDiscordId);
+        row.dataset.opponentName = res.opponentName || '';
+        if (res.opponentAvatarUrl) row.dataset.opponentAvatar = res.opponentAvatarUrl;
+
+        const winnerId = String(res.winnerDiscordId);
+        const loserDiscordId = winnerId === String(res.initiatorDiscordId)
+            ? String(res.opponentDiscordId)
+            : String(res.initiatorDiscordId);
+        const resp = {
+            winnerDiscordId: winnerId,
+            loserDiscordId: loserDiscordId,
+            stake: res.pot ? Math.floor(res.pot / 2) : 0,
+            pot: res.pot || 0,
+            lossTribute: res.lossTribute || 0,
+        };
+        return playDuelResolution(row, resp, opts);
+    }
+
+    const api = {
+        playDuelResolution: playDuelResolution,
+        makeFigure: makeFigure,
+        formatExpiry: formatExpiry,
+        playFromResolution: playFromResolution,
+    };
     if (root) root.TobyDuel = api;
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
@@ -290,8 +326,13 @@
 
     function refreshOutgoing() {
         fetch('/duel/' + guildId + '/outgoing', { credentials: 'same-origin' })
-            .then(function (r) { return r.ok ? r.json() : []; })
-            .then(renderOutgoing)
+            .then(function (r) {
+                return r.ok ? r.json() : { pending: [], resolutions: [] };
+            })
+            .then(function (payload) {
+                renderOutgoing(payload.pending || []);
+                (payload.resolutions || []).forEach(playFromResolution);
+            })
             .catch(function () { /* keep last known state */ });
     }
 

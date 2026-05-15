@@ -257,8 +257,8 @@ class DuelControllerTest {
     }
 
     @Test
-    fun `outgoingForMe returns the initiator's pending offers`() {
-        val view = DuelWebService.PendingDuelView(
+    fun `outgoingForMe returns the initiator's pending offers and recent resolutions`() {
+        val pending = DuelWebService.PendingDuelView(
             duelId = duelId,
             initiatorDiscordId = discordId.toString(),
             initiatorName = "Me",
@@ -269,11 +269,26 @@ class DuelControllerTest {
             stake = 50L,
             createdAtEpochSeconds = 1_700_000_000L,
         )
-        every { duelWebService.pendingForInitiator(discordId, guildId) } returns listOf(view)
+        val resolution = DuelWebService.ResolutionView(
+            initiatorDiscordId = discordId.toString(),
+            initiatorName = "Me",
+            initiatorAvatarUrl = null,
+            opponentDiscordId = opponentId.toString(),
+            opponentName = "Bob",
+            opponentAvatarUrl = "https://cdn/bob.png",
+            winnerDiscordId = opponentId.toString(),
+            pot = 100L,
+            lossTribute = 10L,
+        )
+        val payload = DuelWebService.OutgoingPayload(
+            pending = listOf(pending),
+            resolutions = listOf(resolution),
+        )
+        every { duelWebService.outgoingPayload(discordId, guildId) } returns payload
 
         val response = controller.outgoingForMe(guildId, user)
 
         assertEquals(200, response.statusCode.value())
-        assertEquals(listOf(view), response.body)
+        assertEquals(payload, response.body)
     }
 }

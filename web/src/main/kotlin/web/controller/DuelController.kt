@@ -116,10 +116,10 @@ class DuelController(
     fun outgoingForMe(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<List<DuelWebService.PendingDuelView>> = WebGuildAccess.requireMemberForJsonNoBody(
+    ): ResponseEntity<DuelWebService.OutgoingPayload> = WebGuildAccess.requireMemberForJsonNoBody(
         user, guildId, economyWebService
     ) { discordId ->
-        ResponseEntity.ok(duelWebService.pendingForInitiator(discordId, guildId))
+        ResponseEntity.ok(duelWebService.outgoingPayload(discordId, guildId))
     }
 
     @PostMapping("/{guildId}/challenge")
