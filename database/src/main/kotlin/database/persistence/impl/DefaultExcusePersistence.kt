@@ -102,6 +102,16 @@ class DefaultExcusePersistence internal constructor() : database.persistence.Exc
     override fun updateExcuse(excuseDto: ExcuseDto): ExcuseDto {
         val dbExcuse = getExcuseById(excuseDto.id)
 
+        // Hibernate merge copies every field from the detached entity, including
+        // nulls — so a caller that builds a fresh ExcuseDto with only the
+        // editable fields populated would nullify created_at and trip the
+        // NOT NULL constraint. Preserve the immutable audit fields from the
+        // loaded row when the caller hasn't supplied them.
+        if (dbExcuse != null) {
+            if (excuseDto.createdAt == null) excuseDto.createdAt = dbExcuse.createdAt
+            if (excuseDto.authorDiscordId == null) excuseDto.authorDiscordId = dbExcuse.authorDiscordId
+        }
+
         if (excuseDto != dbExcuse) {
             entityManager.merge(excuseDto)
             entityManager.flush()
