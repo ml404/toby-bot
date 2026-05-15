@@ -420,7 +420,7 @@ internal class ExcuseCommandTest : CommandTest {
     @Test
     fun `resolveDisplayAuthor returns Unknown when everything is null`() {
         val jda = mockk<net.dv8tion.jda.api.JDA>()
-        every { jda.getGuildById(any()) } returns null
+        every { jda.getGuildById(any<Long>()) } returns null
         every { jda.getUserById(any<Long>()) } returns null
 
         val row = ExcuseDto(id = 1L, guildId = 1L, author = null, authorDiscordId = 42L)
