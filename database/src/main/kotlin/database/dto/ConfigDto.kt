@@ -152,13 +152,15 @@ class ConfigDto(
         // freely without shrinking jackpot odds. Default 500.
         JACKPOT_STAKE_ANCHOR("JACKPOT_STAKE_ANCHOR"),
 
-        // Whole-number percentage (1-100) of the per-guild jackpot pool
-        // paid out on a winning roll. Defaults to 100 when unset (current
-        // behaviour: winner banks the entire pool). Set to e.g. 30 so a
-        // single roll never sweeps the whole pool — the remainder stays
-        // in and re-seeds the next cycle, preventing one lucky bet from
-        // unbalancing the server economy.
-        JACKPOT_PAYOUT_PCT("JACKPOT_PAYOUT_PCT"),
+        // CSV defining the per-guild jackpot payout wheel —
+        // "weight:pct,weight:pct,...". Weights are relative positive
+        // integers (frequency of the segment being landed on), payout
+        // pcts are whole-number percent of the pool (1-100) paid when
+        // the segment is picked. Default `80:1,10:5,5:10,4:20,1:50`
+        // gives 80% of jackpot wins a 1% slice and 1% a 50% slice —
+        // EV ~3.1% per win. Setting a single segment (e.g. `1:30`)
+        // expresses the historic "flat fixed-pct" payout.
+        JACKPOT_WHEEL_SEGMENTS("JACKPOT_WHEEL_SEGMENTS"),
 
         // Whole-number days a prior jackpot winner is ineligible for
         // another payout. 0 (default) disables the cooldown; recommended

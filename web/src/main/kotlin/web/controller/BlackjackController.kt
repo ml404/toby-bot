@@ -200,6 +200,8 @@ class BlackjackController(
                     ok = true, tableId = outcome.tableId, resolved = true,
                     newBalance = outcome.newBalance,
                     jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                    jackpotTierIndex = outcome.jackpotTierIndex.takeIf { it >= 0 },
+                    jackpotTierPayoutPct = outcome.jackpotTierPayoutPct.takeIf { it > 0.0 },
                     lossTribute = outcome.lossTribute.takeIf { it > 0L },
                     soldTobyCoins = outcome.soldTobyCoins.takeIf { it > 0L },
                     newPrice = outcome.newPrice
@@ -243,6 +245,8 @@ class BlackjackController(
                         ok = true, tableId = tableId, resolved = true,
                         newBalance = outcome.newBalance,
                         jackpotPayout = outcome.jackpotPayout.takeIf { it > 0L },
+                        jackpotTierIndex = outcome.jackpotTierIndex.takeIf { it >= 0 },
+                        jackpotTierPayoutPct = outcome.jackpotTierPayoutPct.takeIf { it > 0.0 },
                         lossTribute = outcome.lossTribute.takeIf { it > 0L }
                     )
                 )
@@ -456,6 +460,8 @@ data class BlackjackActionResponse(
     val refund: Long? = null,
     val queued: Boolean? = null,
     val jackpotPayout: Long? = null,
+    val jackpotTierIndex: Int? = null,
+    val jackpotTierPayoutPct: Double? = null,
     val lossTribute: Long? = null,
     val soldTobyCoins: Long? = null,
     val newPrice: Double? = null,

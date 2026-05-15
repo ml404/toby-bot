@@ -77,6 +77,8 @@ class BlackjackService @Autowired constructor(
             val result: BlackjackTable.HandResult,
             val newBalance: Long,
             val jackpotPayout: Long,
+            val jackpotTierIndex: Int = -1,
+            val jackpotTierPayoutPct: Double = 0.0,
             val lossTribute: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null
@@ -101,6 +103,8 @@ class BlackjackService @Autowired constructor(
             val result: BlackjackTable.HandResult,
             val newBalance: Long,
             val jackpotPayout: Long,
+            val jackpotTierIndex: Int = -1,
+            val jackpotTierPayoutPct: Double = 0.0,
             val lossTribute: Long
         ) : SoloActionOutcome
         data object HandNotFound : SoloActionOutcome
@@ -318,6 +322,8 @@ class BlackjackService @Autowired constructor(
                     result = settlement.handResult,
                     newBalance = settlement.newBalance,
                     jackpotPayout = settlement.jackpotPayout,
+                    jackpotTierIndex = settlement.jackpotTierIndex,
+                    jackpotTierPayoutPct = settlement.jackpotTierPayoutPct,
                     lossTribute = settlement.lossTribute,
                     soldTobyCoins = soldCoins,
                     newPrice = soldNewPrice
@@ -413,6 +419,8 @@ class BlackjackService @Autowired constructor(
                     result = settlement.handResult,
                     newBalance = settlement.newBalance,
                     jackpotPayout = settlement.jackpotPayout,
+                    jackpotTierIndex = settlement.jackpotTierIndex,
+                    jackpotTierPayoutPct = settlement.jackpotTierPayoutPct,
                     lossTribute = settlement.lossTribute
                 )
             }
@@ -605,6 +613,8 @@ class BlackjackService @Autowired constructor(
         val handResult: BlackjackTable.HandResult,
         val newBalance: Long,
         val jackpotPayout: Long,
+        val jackpotTierIndex: Int,
+        val jackpotTierPayoutPct: Double,
         val lossTribute: Long
     )
 
@@ -655,8 +665,9 @@ class BlackjackService @Autowired constructor(
 
         // One jackpot roll per winning hand-slot, one loss tribute per
         // losing hand-slot — split = more wagers, so naturally more
-        // chances at both. Pushes are no-ops on both axes.
-        var jackpotPayout = 0L
+        // chances at both. Pushes are no-ops on both axes. Multiple hits
+        // surface the higher-paying tier through [JackpotRoll.plus].
+        var jackpot = JackpotRoll.MISS
         var lossTribute = 0L
         if (user != null) {
             for (hand in perHand) {
@@ -666,8 +677,8 @@ class BlackjackService @Autowired constructor(
                             jackpotService, configService, userService, user, guildId,
                             hand.stake, JackpotGame.BLACKJACK, random,
                         )
-                        if (rolled > 0L) {
-                            jackpotPayout += rolled
+                        if (rolled.amount > 0L) {
+                            jackpot += rolled
                             newBalance = user.socialCredit ?: newBalance
                         }
                     }
@@ -698,7 +709,7 @@ class BlackjackService @Autowired constructor(
             table.lastActivityAt = Instant.now()
         }
         persistHandLog(table, handResult)
-        return SoloSettlement(handResult, newBalance, jackpotPayout, lossTribute)
+        return SoloSettlement(handResult, newBalance, jackpot.amount, jackpot.tierIndex, jackpot.tierPayoutPct, lossTribute)
     }
 
     /**

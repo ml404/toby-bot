@@ -1,7 +1,9 @@
 const {
     isJackpotHit,
     jackpotPrefixHtml,
+    tierLabel,
     renderWinHtml,
+    spinWheelFor,
     lossTributeSuffix,
     updatePoolBanner,
     holdPoolBanner,
@@ -38,25 +40,92 @@ describe('isJackpotHit', () => {
 // jackpotPrefixHtml
 // ---------------------------------------------------------------------------
 
+describe('tierLabel', () => {
+    test('falls back to a generic JACKPOT label when no pct supplied', () => {
+        expect(tierLabel(undefined)).toBe('🎰 JACKPOT!');
+        expect(tierLabel(0)).toBe('🎰 JACKPOT!');
+    });
+    test('returns the pity label for sub-2% tiers', () => {
+        expect(tierLabel(1)).toContain('Pity prize');
+    });
+    test('returns the nice label for 2-9% tiers', () => {
+        expect(tierLabel(2)).toContain('Nice payout');
+        expect(tierLabel(5)).toContain('Nice payout');
+        expect(tierLabel(9)).toContain('Nice payout');
+    });
+    test('returns the big-win label for 10-29% tiers', () => {
+        expect(tierLabel(10)).toContain('BIG WIN');
+        expect(tierLabel(20)).toContain('BIG WIN');
+    });
+    test('returns the mega label for 30%+ tiers', () => {
+        expect(tierLabel(30)).toContain('MEGA JACKPOT');
+        expect(tierLabel(50)).toContain('MEGA JACKPOT');
+    });
+});
+
 describe('jackpotPrefixHtml', () => {
-    test('renders the JACKPOT banner with payout amount and a trailing <br>', () => {
-        const html = jackpotPrefixHtml(1234);
+    test('renders a tiered JACKPOT banner with the payout amount and trailing <br>', () => {
+        const html = jackpotPrefixHtml(1234, 50);
         expect(html).toContain('🎰');
-        expect(html).toContain('<strong>JACKPOT!</strong>');
+        expect(html).toContain('MEGA JACKPOT');
         expect(html).toContain('+1234 credits');
         expect(html).toContain('<br>');
     });
 
+    test('honours pity vs big tier', () => {
+        expect(jackpotPrefixHtml(50, 1)).toContain('Pity prize');
+        expect(jackpotPrefixHtml(100, 10)).toContain('BIG WIN');
+    });
+
     test('returns empty string when payout is 0', () => {
-        expect(jackpotPrefixHtml(0)).toBe('');
+        expect(jackpotPrefixHtml(0, 50)).toBe('');
     });
 
     test('returns empty string when payout is undefined', () => {
-        expect(jackpotPrefixHtml(undefined)).toBe('');
+        expect(jackpotPrefixHtml(undefined, 50)).toBe('');
     });
 
     test('returns empty string when payout is negative', () => {
-        expect(jackpotPrefixHtml(-50)).toBe('');
+        expect(jackpotPrefixHtml(-50, 50)).toBe('');
+    });
+});
+
+describe('spinWheelFor', () => {
+    let wheelCalls;
+
+    beforeEach(() => {
+        wheelCalls = [];
+        window.TobyJackpotWheel = {
+            spinTo: (idx, amount, pct, cb) => {
+                wheelCalls.push({ idx: idx, amount: amount, pct: pct });
+                if (typeof cb === 'function') cb();
+            },
+        };
+    });
+
+    afterEach(() => { delete window.TobyJackpotWheel; });
+
+    test('delegates to TobyJackpotWheel.spinTo with the picked tier and amount', () => {
+        spinWheelFor({ jackpotPayout: 500, jackpotTierIndex: 2, jackpotTierPayoutPct: 0.10 });
+        expect(wheelCalls.length).toBe(1);
+        expect(wheelCalls[0]).toEqual({ idx: 2, amount: 500, pct: 10 });
+    });
+
+    test('is a no-op when no jackpot was hit', () => {
+        spinWheelFor({ jackpotPayout: 0, jackpotTierIndex: 0, jackpotTierPayoutPct: 0.01 });
+        expect(wheelCalls.length).toBe(0);
+    });
+
+    test('is a no-op when tier index is missing', () => {
+        spinWheelFor({ jackpotPayout: 500 });
+        expect(wheelCalls.length).toBe(0);
+    });
+
+    test('calls onSettle when the wheel module is absent', () => {
+        delete window.TobyJackpotWheel;
+        const settled = jest.fn();
+        spinWheelFor({ jackpotPayout: 500, jackpotTierIndex: 0, jackpotTierPayoutPct: 0.01 }, settled);
+        expect(settled).toHaveBeenCalled();
     });
 });
 
@@ -83,15 +152,27 @@ describe('renderWinHtml', () => {
     test('prepends the jackpot prefix and adds the jackpot class on a hit', () => {
         const html = renderWinHtml(
             resultEl,
-            { jackpotPayout: 500 },
+            { jackpotPayout: 500, jackpotTierPayoutPct: 0.50 },
             'slots-result-jackpot',
             winLine,
         );
 
         expect(html.startsWith('🎰')).toBe(true);
+        expect(html).toContain('MEGA JACKPOT');
         expect(html).toContain('+500 credits');
         expect(html.endsWith(winLine)).toBe(true);
         expect(resultEl.classList.contains('slots-result-jackpot')).toBe(true);
+    });
+
+    test('renders the matching tier label for a low-pct hit', () => {
+        const html = renderWinHtml(
+            resultEl,
+            { jackpotPayout: 12, jackpotTierPayoutPct: 0.01 },
+            'slots-result-jackpot',
+            winLine,
+        );
+        expect(html).toContain('Pity prize');
+        expect(html).toContain('+12 credits');
     });
 
     test('honours per-game class names', () => {

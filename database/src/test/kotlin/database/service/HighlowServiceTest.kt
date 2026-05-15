@@ -152,14 +152,14 @@ class HighlowServiceTest {
             anchor = 7, next = 10, direction = Highlow.Direction.HIGHER, multiplier = 2.0
         )
         every { userService.updateUser(any()) } returns user
-        every { jackpotService.awardJackpot(guildId) } returns 9_999L  // would be banked if HIGHLOW were eligible
+        every { jackpotService.awardJackpot(guildId, any()) } returns 9_999L  // would be banked if HIGHLOW were eligible
 
         val outcome = service.play(discordId, guildId, stake = 100L, direction = Highlow.Direction.HIGHER)
 
         val win = assertInstanceOf(HighlowService.PlayOutcome.Win::class.java, outcome)
         assertEquals(0L, win.jackpotPayout)
         assertEquals(1_100L, win.newBalance, "newBalance must not include any jackpot top-up")
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
     }
 
     @Test

@@ -51,8 +51,8 @@ class ModerationWebService(
          * Channel-config keys eligible for the
          * [createReadOnlyChannel] flow. Hard-coded allow-list so a
          * malformed (or maliciously crafted) request can't point the
-         * `targetConfig` at, say, `JACKPOT_PAYOUT_PCT` and clobber a
-         * percentage value with a channel id.
+         * `targetConfig` at, say, `JACKPOT_WHEEL_SEGMENTS` and clobber a
+         * non-channel-id value with a channel id.
          */
         private val CHANNEL_CONFIG_ALLOWLIST: Set<ConfigDto.Configurations> = setOf(
             ConfigDto.Configurations.LOTTERY_CHANNEL,
@@ -947,11 +947,17 @@ class ModerationWebService(
                 if (n !in 0..10000) return "Value must be between 0 and 10000 (default 90)."
                 n.toString()
             }
-            ConfigDto.Configurations.JACKPOT_PAYOUT_PCT -> {
-                val n = rawValue.trim().toIntOrNull()
-                    ?: return "Value must be a whole number percentage (1-100; default 100)."
-                if (n !in 1..100) return "Value must be between 1 and 100."
-                n.toString()
+            ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS -> {
+                // Empty resets to default. Otherwise must parse cleanly via
+                // [JackpotWheel.validateConfigString] — the live reader uses
+                // the same parser so "saved OK" implies "read OK".
+                val trimmed = rawValue.trim()
+                if (trimmed.isEmpty()) {
+                    ""
+                } else {
+                    database.economy.JackpotWheel.validateConfigString(trimmed)?.let { return it }
+                    trimmed
+                }
             }
             ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS -> {
                 val n = rawValue.trim().toIntOrNull()

@@ -227,16 +227,31 @@
                     </span>
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
-                <div class="config-row" data-key="JACKPOT_PAYOUT_PCT">
-                    <label>Payout (% of pool paid on a winning roll; e.g. 30 leaves the rest to re-seed; default 100)</label>
-                    <span class="config-input-group">
-                        <input type="number" min="1" max="100"
-                               th:value="${overview.config['JACKPOT_PAYOUT_PCT']}"
-                               placeholder="100"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                <div class="config-row config-row-wide" data-key="JACKPOT_WHEEL_SEGMENTS">
+                    <label>Payout wheel segments</label>
+                    <p class="muted config-explainer">
+                        Each segment is a wedge of the spinning wheel that's
+                        spun when a player wins the jackpot. <strong>Weight</strong>
+                        is how often it's picked (positive integer; relative,
+                        not %). <strong>Payout %</strong> is how much of the pool
+                        the winner takes when the wheel lands there.
+                        Default <code>80:1,10:5,5:10,4:20,1:50</code> — most
+                        wins give a small pity prize, a rare 1-in-100 spin
+                        pays out half the pool. For a flat fixed-percent
+                        payout, set a single segment (e.g. <code>1:30</code>
+                        for "always 30% of the pool").
+                    </p>
+                    <div class="jackpot-wheel-editor"
+                         th:attr="data-current=${overview.config['JACKPOT_WHEEL_SEGMENTS']}">
+                        <div class="jackpot-wheel-editor-rows"></div>
+                        <div class="jackpot-wheel-editor-actions">
+                            <button type="button" class="btn btn-sm jackpot-wheel-add"
+                                    th:disabled="${!isOwner}">+ Add segment</button>
+                            <span class="muted jackpot-wheel-ev"></span>
+                        </div>
+                        <p class="jackpot-wheel-error error-text" hidden></p>
+                    </div>
+                    <button type="button" class="btn jackpot-wheel-save" th:disabled="${!isOwner}">Save</button>
                 </div>
                 <div class="config-row" data-key="JACKPOT_RTP_MAX_PCT">
                     <label>Max game RTP eligible for jackpot (0 disables the gate; recommended 95 to exclude blackjack/coinflip/baccarat/roulette)</label>
@@ -759,5 +774,6 @@
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/settings.js}"></script>
+<script th:src="@{/js/moderation/jackpot-wheel.js}"></script>
 </body>
 </html>

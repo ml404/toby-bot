@@ -238,6 +238,13 @@
                 if (typeof b.newBalance === "number") {
                     window.TobyBalance.update(balanceEl, b.newBalance);
                 }
+                // Spin the wheel off the action response — the state-
+                // poll projection doesn't carry tier info, so this is
+                // the only path that can drive the animation.
+                if (b.jackpotPayout > 0 && window.TobyJackpot &&
+                    typeof window.TobyJackpot.spinWheelFor === "function") {
+                    window.TobyJackpot.spinWheelFor(b);
+                }
                 refreshState();
             })
             .catch(function () { errorToast("Network error."); })

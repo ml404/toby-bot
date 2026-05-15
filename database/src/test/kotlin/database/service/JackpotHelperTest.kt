@@ -61,9 +61,14 @@ class JackpotHelperTest {
         } returns value?.let { ConfigDto(name = "x", value = it, guildId = guildId.toString()) }
     }
 
-    private fun stubRandom(value: Double): Random {
+    private fun stubRandom(value: Double, tierPick: Int = 0): Random {
         val r = mockk<Random>()
         every { r.nextDouble() } returns value
+        // `JackpotWheel.spin` calls `random.nextInt(totalWeight)` to pick
+        // a tier on a hit. Stub it to a small value that lands in the
+        // first segment of the default wheel; tests that need a specific
+        // tier override this with their own [tierPick].
+        every { r.nextInt(any()) } returns tierPick
         return r
     }
 
@@ -209,7 +214,7 @@ class JackpotHelperTest {
     fun `rollOnWin uses default 1 percent when config unset and roll lands inside threshold`() {
         winConfigReturns(null)
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.awardJackpot(guildId) } returns 500L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 500L
         val user = freshUser(initial = 100L)
 
         val won = JackpotHelper.rollOnWin(
@@ -217,7 +222,7 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(500L, won)
+        assertEquals(500L, won.amount)
         assertEquals(600L, user.socialCredit)
         verify(exactly = 1) { userService.updateUser(user) }
     }
@@ -234,9 +239,9 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.5)
         )
 
-        assertEquals(0L, won)
+        assertEquals(0L, won.amount)
         assertEquals(100L, user.socialCredit)
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
         verify(exactly = 0) { userService.updateUser(any()) }
     }
 
@@ -244,7 +249,7 @@ class JackpotHelperTest {
     fun `rollOnWin honours a sub-1 percent admin override`() {
         winConfigReturns("0.5")  // 0.005
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.awardJackpot(guildId) } returns 1_000L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 1_000L
         val userHit = freshUser()
         val userMiss = freshUser()
 
@@ -257,8 +262,8 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.006)
         )
 
-        assertEquals(1_000L, hit, "0.004 < 0.005 should hit")
-        assertEquals(0L, miss, "0.006 >= 0.005 should miss")
+        assertEquals(1_000L, hit.amount, "0.004 < 0.005 should hit")
+        assertEquals(0L, miss.amount, "0.006 >= 0.005 should miss")
     }
 
     @Test
@@ -273,15 +278,15 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.0)
         )
 
-        assertEquals(0L, won)
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        assertEquals(0L, won.amount)
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
     }
 
     @Test
     fun `rollOnWin clamps above MAX_WIN_PROBABILITY`() {
         winConfigReturns("100")  // clamps to 0.50
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.awardJackpot(guildId) } returns 50L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 50L
         val userHit = freshUser()
         val userMiss = freshUser()
 
@@ -294,15 +299,15 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.51)
         )
 
-        assertEquals(50L, hit)
-        assertEquals(0L, miss)
+        assertEquals(50L, hit.amount)
+        assertEquals(0L, miss.amount)
     }
 
     @Test
     fun `rollOnWin returns zero and does not credit user when pool is empty`() {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.awardJackpot(guildId) } returns 0L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 0L
         val user = freshUser(initial = 100L)
 
         val won = JackpotHelper.rollOnWin(
@@ -310,7 +315,7 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(0L, won)
+        assertEquals(0L, won.amount)
         assertEquals(100L, user.socialCredit, "balance must be untouched when pool was empty")
         verify(exactly = 0) { userService.updateUser(any()) }
     }
@@ -321,7 +326,7 @@ class JackpotHelperTest {
     fun `rollOnWin scales by stake fraction so a min-wager autoclick is effectively zero`() {
         winConfigReturns("1") // 1 % base → 10/1000 → 0.01 % effective
         anchorConfigReturns("1000")
-        every { jackpotService.awardJackpot(guildId) } returns 1_000L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 1_000L
         val userHit = freshUser()
         val userMiss = freshUser()
 
@@ -334,15 +339,15 @@ class JackpotHelperTest {
             stake = 10L, game = JackpotGame.SLOTS, random = stubRandom(0.0001)
         )
 
-        assertEquals(1_000L, hit, "0.00009 < 0.0001 should hit")
-        assertEquals(0L, miss, "0.0001 >= 0.0001 should miss")
+        assertEquals(1_000L, hit.amount, "0.00009 < 0.0001 should hit")
+        assertEquals(0L, miss.amount, "0.0001 >= 0.0001 should miss")
     }
 
     @Test
     fun `rollOnWin at the anchor stake rolls at the unscaled base probability`() {
         winConfigReturns("1") // 1 % base → 1000/1000 → 1 % effective
         anchorConfigReturns("1000")
-        every { jackpotService.awardJackpot(guildId) } returns 1_000L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 1_000L
         val userHit = freshUser()
         val userMiss = freshUser()
 
@@ -355,8 +360,8 @@ class JackpotHelperTest {
             stake = 1_000L, game = JackpotGame.SLOTS, random = stubRandom(0.011)
         )
 
-        assertEquals(1_000L, hit)
-        assertEquals(0L, miss)
+        assertEquals(1_000L, hit.amount)
+        assertEquals(0L, miss.amount)
     }
 
     @Test
@@ -367,7 +372,7 @@ class JackpotHelperTest {
         // probability also unbounded-scaling.
         winConfigReturns("1") // base 1 %
         anchorConfigReturns("1000")
-        every { jackpotService.awardJackpot(guildId) } returns 100L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 100L
         val user = freshUser()
 
         val won = JackpotHelper.rollOnWin(
@@ -375,14 +380,14 @@ class JackpotHelperTest {
             stake = 10_000L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
 
-        assertEquals(100L, won)
+        assertEquals(100L, won.amount)
     }
 
     @Test
     fun `rollOnWin defaults the anchor to 500 when config row missing`() {
         winConfigReturns("1")        // 1 % base
         anchorConfigReturns(null)    // fall through to DEFAULT_STAKE_ANCHOR (500)
-        every { jackpotService.awardJackpot(guildId) } returns 1L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 1L
         val user = freshUser()
 
         // stake/anchor = 500/500 = 1.0 → effective = 1 %; 0.009 < 0.01 hits.
@@ -391,7 +396,7 @@ class JackpotHelperTest {
             stake = 500L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
 
-        assertEquals(1L, won)
+        assertEquals(1L, won.amount)
     }
 
     @Test
@@ -401,7 +406,7 @@ class JackpotHelperTest {
         // stake >= 1 trivially saturates the scale to 1.
         winConfigReturns("1")
         anchorConfigReturns("0")
-        every { jackpotService.awardJackpot(guildId) } returns 100L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 100L
         val user = freshUser()
 
         val won = JackpotHelper.rollOnWin(
@@ -409,7 +414,7 @@ class JackpotHelperTest {
             stake = 100L, game = JackpotGame.SLOTS, random = stubRandom(0.009)
         )
 
-        assertEquals(100L, won)
+        assertEquals(100L, won.amount)
     }
 
     // ---- post-fraud gates: cooldown, activity, recordWin ----
@@ -426,9 +431,9 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(0L, won, "blocked by cooldown gate")
+        assertEquals(0L, won.amount, "blocked by cooldown gate")
         assertEquals(100L, user.socialCredit, "balance untouched on blocked gate")
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
         verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
@@ -444,8 +449,8 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(0L, won, "blocked by activity gate")
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        assertEquals(0L, won.amount, "blocked by activity gate")
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
         verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
@@ -453,7 +458,7 @@ class JackpotHelperTest {
     fun `rollOnWin records the win for cooldown tracking on a successful payout`() {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.awardJackpot(guildId) } returns 250L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 250L
         val user = freshUser()
 
         val won = JackpotHelper.rollOnWin(
@@ -461,7 +466,7 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(250L, won)
+        assertEquals(250L, won.amount)
         verify(exactly = 1) { jackpotService.recordWin(guildId, discordId, 250L, any()) }
     }
 
@@ -469,7 +474,7 @@ class JackpotHelperTest {
     fun `rollOnWin does not record a no-op award (empty pool)`() {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
-        every { jackpotService.awardJackpot(guildId) } returns 0L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 0L
         val user = freshUser()
 
         JackpotHelper.rollOnWin(
@@ -480,47 +485,32 @@ class JackpotHelperTest {
         verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
-    // ---- payoutPct ----
+    // ---- wheelSegmentsConfig ----
 
     @Test
-    fun `payoutPct returns the default fraction when no config row exists`() {
+    fun `wheelSegmentsConfig returns null when no config row exists`() {
         every {
             configService.getConfigByName(
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS.configValue,
                 guildId.toString()
             )
         } returns null
-        assertEquals(JackpotHelper.DEFAULT_PAYOUT_PCT, JackpotHelper.payoutPct(configService, guildId), 1e-9)
+        // Null is the expected "use defaults" sentinel the live reader
+        // hands to [JackpotWheel.parse].
+        org.junit.jupiter.api.Assertions.assertNull(
+            JackpotHelper.wheelSegmentsConfig(configService, guildId)
+        )
     }
 
     @Test
-    fun `payoutPct parses whole-number percent and clamps to 1 at 100 percent`() {
+    fun `wheelSegmentsConfig echoes the admin-set CSV verbatim`() {
         every {
             configService.getConfigByName(
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
+                ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS.configValue,
                 guildId.toString()
             )
-        } returns ConfigDto(name = "x", value = "30", guildId = guildId.toString())
-        assertEquals(0.30, JackpotHelper.payoutPct(configService, guildId), 1e-9)
-    }
-
-    @Test
-    fun `payoutPct treats zero or negative as missing (falls back to default)`() {
-        every {
-            configService.getConfigByName(
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
-                guildId.toString()
-            )
-        } returns ConfigDto(name = "x", value = "0", guildId = guildId.toString())
-        assertEquals(JackpotHelper.DEFAULT_PAYOUT_PCT, JackpotHelper.payoutPct(configService, guildId), 1e-9)
-
-        every {
-            configService.getConfigByName(
-                ConfigDto.Configurations.JACKPOT_PAYOUT_PCT.configValue,
-                guildId.toString()
-            )
-        } returns ConfigDto(name = "x", value = "-10", guildId = guildId.toString())
-        assertEquals(JackpotHelper.DEFAULT_PAYOUT_PCT, JackpotHelper.payoutPct(configService, guildId), 1e-9)
+        } returns ConfigDto(name = "x", value = "50:5,50:10", guildId = guildId.toString())
+        assertEquals("50:5,50:10", JackpotHelper.wheelSegmentsConfig(configService, guildId))
     }
 
     // ---- winnerCooldownDays ----
@@ -660,9 +650,9 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.COINFLIP, random = stubRandom(0.001)
         )
 
-        assertEquals(0L, won, "blocked by RTP gate")
+        assertEquals(0L, won.amount, "blocked by RTP gate")
         assertEquals(100L, user.socialCredit, "balance untouched on blocked gate")
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
         verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
     }
 
@@ -671,7 +661,7 @@ class JackpotHelperTest {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
         rtpConfigReturns("95")  // SLOTS (0.890) stays eligible
-        every { jackpotService.awardJackpot(guildId) } returns 750L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 750L
         val user = freshUser()
 
         val won = JackpotHelper.rollOnWin(
@@ -679,7 +669,7 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(750L, won)
+        assertEquals(750L, won.amount)
     }
 
     @Test
@@ -687,7 +677,7 @@ class JackpotHelperTest {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
         rtpConfigReturns(null)  // 0 = disabled — even Coinflip rolls normally
-        every { jackpotService.awardJackpot(guildId) } returns 50L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 50L
         val user = freshUser()
 
         val won = JackpotHelper.rollOnWin(
@@ -695,7 +685,7 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.COINFLIP, random = stubRandom(0.001)
         )
 
-        assertEquals(50L, won, "gate disabled — Coinflip wins still roll")
+        assertEquals(50L, won.amount, "gate disabled — Coinflip wins still roll")
     }
 
     // ---- eligibleForJackpot global carve-out ----
@@ -716,9 +706,9 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.HIGHLOW, random = stubRandom(0.0)
         )
 
-        assertEquals(0L, won, "HIGHLOW wins must never roll for the jackpot")
+        assertEquals(0L, won.amount, "HIGHLOW wins must never roll for the jackpot")
         assertEquals(100L, user.socialCredit, "balance untouched on carve-out")
-        verify(exactly = 0) { jackpotService.awardJackpot(any()) }
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
         verify(exactly = 0) { jackpotService.recordWin(any(), any(), any(), any()) }
         verify(exactly = 0) { userService.updateUser(any()) }
     }
@@ -731,7 +721,7 @@ class JackpotHelperTest {
         winConfigReturns("1")
         anchorConfigReturns(MAX_STAKE.toString())
         rtpConfigReturns(null)
-        every { jackpotService.awardJackpot(guildId) } returns 500L
+        every { jackpotService.awardJackpot(guildId, any()) } returns 500L
 
         val highlow = JackpotHelper.rollOnWin(
             jackpotService, configService, userService, freshUser(), guildId,
@@ -742,8 +732,8 @@ class JackpotHelperTest {
             stake = MAX_STAKE, game = JackpotGame.SLOTS, random = stubRandom(0.001)
         )
 
-        assertEquals(0L, highlow)
-        assertEquals(500L, slots)
+        assertEquals(0L, highlow.amount)
+        assertEquals(500L, slots.amount)
     }
 
     @Test

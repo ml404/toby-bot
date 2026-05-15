@@ -184,7 +184,6 @@ class ModerationTemplateRowsTest {
         val percentKeys = listOf(
             ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT,
             ConfigDto.Configurations.JACKPOT_WIN_PCT,
-            ConfigDto.Configurations.JACKPOT_PAYOUT_PCT,
             ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT,
             ConfigDto.Configurations.TRADE_BUY_FEE_PCT,
             ConfigDto.Configurations.TRADE_SELL_FEE_PCT,
@@ -221,7 +220,7 @@ class ModerationTemplateRowsTest {
         val jackpotKeys = listOf(
             ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT,
             ConfigDto.Configurations.JACKPOT_WIN_PCT,
-            ConfigDto.Configurations.JACKPOT_PAYOUT_PCT,
+            ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS,
             ConfigDto.Configurations.JACKPOT_RTP_MAX_PCT,
             ConfigDto.Configurations.JACKPOT_WINNER_COOLDOWN_DAYS,
             ConfigDto.Configurations.JACKPOT_ACTIVITY_WINDOW_DAYS,

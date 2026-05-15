@@ -52,6 +52,16 @@ class CasinoPageContext(
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
         model.addAttribute("jackpotStakeAnchor", jackpotService.stakeAnchor(guildId))
+        // Serialised as a JSON array `[{weight, payoutPct}, ...]` for the
+        // wheel renderer. Payout fractions become whole-number percents
+        // for display; weights are positive ints already.
+        model.addAttribute(
+            "jackpotWheelSegments",
+            jackpotService.wheelSegments(guildId).map { mapOf(
+                "weight" to it.weight,
+                "payoutPct" to (it.payoutPct * 100.0).toInt(),
+            ) }
+        )
         // Per-game eligibility — only set when caller declares which game
         // this page is for. Lottery / poker pages share the banner but
         // don't roll for the jackpot themselves, so they leave `game`

@@ -40,6 +40,14 @@
                 ? root.TobyJackpot.renderWinHtml(el, opts.body, prefix + '-result-jackpot', opts.winLineHtml)
                 : opts.winLineHtml;
             el.innerHTML = topUpPrefix + withJackpot;
+            // Fire-and-forget the wheel overlay — it does its own
+            // hold/release on the pool banner and dismisses itself
+            // after a short reveal. No-op when the response isn't a
+            // jackpot hit, so non-jackpot wins behave exactly as
+            // before.
+            if (root && root.TobyJackpot && typeof root.TobyJackpot.spinWheelFor === 'function') {
+                root.TobyJackpot.spinWheelFor(opts.body);
+            }
         } else {
             el.classList.add(prefix + '-result-lose');
             const tributeSuffix = (root && root.TobyJackpot)

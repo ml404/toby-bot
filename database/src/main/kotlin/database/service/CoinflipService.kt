@@ -46,6 +46,8 @@ class CoinflipService(
             val predicted: Coinflip.Side,
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
+            val jackpotTierIndex: Int = -1,
+            val jackpotTierPayoutPct: Double = 0.0,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
         ) : FlipOutcome
@@ -126,8 +128,10 @@ class CoinflipService(
                 net = wager.net,
                 landed = flip.landed,
                 predicted = flip.predicted,
-                newBalance = wager.newBalance + jackpot,
-                jackpotPayout = jackpot,
+                newBalance = wager.newBalance + jackpot.amount,
+                jackpotPayout = jackpot.amount,
+                jackpotTierIndex = jackpot.tierIndex,
+                jackpotTierPayoutPct = jackpot.tierPayoutPct,
                 soldTobyCoins = resolved.soldCoins,
                 newPrice = resolved.newPrice,
             )
