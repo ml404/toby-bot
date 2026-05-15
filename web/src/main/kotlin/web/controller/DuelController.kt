@@ -85,6 +85,7 @@ class DuelController(
         model.addAttribute("pending", pending)
         model.addAttribute("outgoing", outgoing)
         model.addAttribute("ttlLabel", PendingDuelRegistry.formatTtl(pendingDuelRegistry.ttl))
+        model.addAttribute("ttlSeconds", pendingDuelRegistry.ttl.seconds)
         model.addAttribute("members", members)
         model.addAttribute("username", user.displayName())
         "duel"
