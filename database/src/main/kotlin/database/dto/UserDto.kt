@@ -48,9 +48,6 @@ class UserDto(
     @Column(name = "toby_coins", nullable = false)
     var tobyCoins: Long = 0L,
 
-    @Column(name = "dnd_beyond_character_id")
-    var dndBeyondCharacterId: Long? = null,
-
     @Column(name = "active_title_id")
     var activeTitleId: Long? = null,
 

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - D&D lookups', '/css/dndLookup.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">D&amp;D lookups</h1>
+    <p class="muted mb-5">
+        Search the
+        <a href="https://www.dnd5eapi.co" target="_blank" rel="noopener">D&amp;D 5e SRD</a>
+        for spells, conditions, rules and class features. Same data the
+        <code>/dnd</code> Discord command uses, no login required.
+    </p>
+
+    <section class="lookup-card">
+        <form class="lookup-form" data-form="lookup">
+            <label>Type
+                <select name="type" required>
+                    <option value="spells">Spell</option>
+                    <option value="conditions">Condition</option>
+                    <option value="rule-sections">Rule</option>
+                    <option value="features">Feature</option>
+                </select>
+            </label>
+            <label class="lookup-query">Query
+                <input type="text" name="query" placeholder="e.g. fireball" required autocomplete="off">
+            </label>
+            <button type="submit" class="btn">Look up</button>
+        </form>
+        <p class="lookup-status muted" data-status aria-live="polite"></p>
+        <ul class="lookup-suggestions" data-suggestions hidden></ul>
+        <article class="lookup-result" data-result hidden></article>
+    </section>
+</main>
+
+<script th:src="@{/js/dndLookup.js}"></script>
+</body>
+</html>

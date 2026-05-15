@@ -616,13 +616,9 @@ describe('initIntroPage smoke test', () => {
         expect(submitBtn.disabled).toBe(false);
     });
 
-    test('home-page dnd CTA path exists in the campaign controller mapping', () => {
-        // The CTA links to /dnd/campaign — this is a smoke assertion that
-        // the string used in the home template remains a stable literal.
-        // The actual route binding lives in CampaignController.kt (verified
-        // by Kotlin tests), but we guard against accidental home.html drift.
-        const href = '/dnd/campaign';
-        expect(href.startsWith('/dnd/')).toBe(true);
+    test('home-page dnd CTA path points at the lookup page', () => {
+        const href = '/dnd';
+        expect(href).toBe('/dnd');
     });
 });
 

@@ -20,10 +20,10 @@ class WebSecurityConfig {
                     "/commands", "/commands/**", "/actuator/**",
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
                     "/images/**", "/js/**", "/css/**",
+                    "/dnd", "/dnd/**",
                     "/sitemap.xml", "/robots.txt"
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
-                auth.requestMatchers("/dnd/**").authenticated()
                 auth.requestMatchers("/moderation/**").authenticated()
                 auth.requestMatchers("/economy/**").authenticated()
                 auth.requestMatchers("/tip/**").authenticated()
