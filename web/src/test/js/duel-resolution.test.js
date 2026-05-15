@@ -141,6 +141,9 @@ describe('playDuelResolution', () => {
         expect(right.classList.contains('is-loser')).toBe(true);
         expect(right.classList.contains('is-winner')).toBe(false);
         expect(document.querySelector('.duel-credits-pill.flies-left')).not.toBeNull();
+        // The bang originates from the winner's side (left here).
+        expect(document.querySelector('.duel-flash.from-left')).not.toBeNull();
+        expect(document.querySelector('.duel-flash.from-right')).toBeNull();
     });
 
     test('marks the opponent as winner when winnerDiscordId matches opponent', () => {
@@ -154,6 +157,9 @@ describe('playDuelResolution', () => {
         expect(document.querySelector('.duel-credits-pill.flies-right')).not.toBeNull();
         expect(document.querySelector('.duel-result-line').textContent)
             .toContain('Winner: Bob');
+        // The bang now originates from the winner's side (right here).
+        expect(document.querySelector('.duel-flash.from-right')).not.toBeNull();
+        expect(document.querySelector('.duel-flash.from-left')).toBeNull();
     });
 
     test('adds .is-reduced when prefers-reduced-motion matches', () => {
