@@ -66,7 +66,7 @@ class ExcuseWebService(
             else -> excuseService.listApprovedPaged(guildId, page, PAGE_SIZE)
         }
 
-        val rows = paged.rows.map { it.toRowViewModel(requesterDiscordId, isSuper) }
+        val rows = paged.rows.map { it.toRowViewModel(guildId, requesterDiscordId, isSuper) }
 
         return ExcusePageViewModel(
             rows = rows,
@@ -85,8 +85,26 @@ class ExcuseWebService(
         return RandomExcuseViewModel(
             id = pick.id ?: 0L,
             text = pick.excuse.orEmpty(),
-            author = pick.author.orEmpty(),
+            author = resolveDisplayAuthor(guildId, pick),
         )
+    }
+
+    /**
+     * Author rendering ladder: prefer the current guild-member effective name
+     * (picks up nickname changes), fall back to the cached Discord user name
+     * (member left the guild), then the snapshot recorded at submission
+     * (legacy rows from before authorDiscordId was a column), then a generic
+     * placeholder if everything is null. Mirrors ExcuseCommand.resolveDisplayAuthor.
+     */
+    private fun resolveDisplayAuthor(guildId: Long, row: ExcuseDto): String {
+        val authorId = row.authorDiscordId
+        if (authorId != null) {
+            val current = jda.getGuildById(guildId)?.getMemberById(authorId)
+                ?.effectiveName?.takeIf { it.isNotBlank() }
+                ?: jda.getUserById(authorId)?.name?.takeIf { it.isNotBlank() }
+            if (current != null) return current
+        }
+        return row.author?.takeIf { it.isNotBlank() } ?: "Unknown"
     }
 
     /**
@@ -150,14 +168,18 @@ class ExcuseWebService(
         return null
     }
 
-    private fun ExcuseDto.toRowViewModel(requesterDiscordId: Long, isSuper: Boolean): ExcuseRowViewModel {
+    private fun ExcuseDto.toRowViewModel(
+        guildId: Long,
+        requesterDiscordId: Long,
+        isSuper: Boolean,
+    ): ExcuseRowViewModel {
         val isAuthor = authorDiscordId != null && authorDiscordId == requesterDiscordId
         val canDelete = isSuper || (!approved && isAuthor)
         val canApprove = isSuper && !approved
         return ExcuseRowViewModel(
             id = id ?: 0L,
             text = excuse.orEmpty(),
-            author = author.orEmpty(),
+            author = resolveDisplayAuthor(guildId, this),
             approved = approved,
             createdAt = createdAt,
             approvedAt = approvedAt,

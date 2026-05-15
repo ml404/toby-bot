@@ -356,4 +356,103 @@ internal class ExcuseCommandTest : CommandTest {
         assert(ExcuseCommand.decodePageButton("excuse-page:noop") == null)
         assert(ExcuseCommand.decodePageButton("excuse-page:approved:notanumber:1:") == null)
     }
+
+    // resolveDisplayAuthor
+
+    @Test
+    fun `resolveDisplayAuthor returns current member effective name when member exists`() {
+        val jda = mockk<net.dv8tion.jda.api.JDA>()
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild>()
+        val member = mockk<net.dv8tion.jda.api.entities.Member>()
+        every { jda.getGuildById(1L) } returns guild
+        every { guild.getMemberById(42L) } returns member
+        every { member.effectiveName } returns "CurrentNick"
+
+        val row = ExcuseDto(id = 1L, guildId = 1L, author = "OldSnapshot", authorDiscordId = 42L)
+
+        val resolved = ExcuseCommand.resolveDisplayAuthor(jda, 1L, row)
+
+        assert(resolved == "CurrentNick") { "expected CurrentNick, got '$resolved'" }
+    }
+
+    @Test
+    fun `resolveDisplayAuthor falls back to user name when member has left the guild`() {
+        val jda = mockk<net.dv8tion.jda.api.JDA>()
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild>()
+        val user = mockk<net.dv8tion.jda.api.entities.User>()
+        every { jda.getGuildById(1L) } returns guild
+        every { guild.getMemberById(42L) } returns null
+        every { jda.getUserById(42L) } returns user
+        every { user.name } returns "GlobalName"
+
+        val row = ExcuseDto(id = 1L, guildId = 1L, author = "OldSnapshot", authorDiscordId = 42L)
+
+        val resolved = ExcuseCommand.resolveDisplayAuthor(jda, 1L, row)
+
+        assert(resolved == "GlobalName") { "expected GlobalName, got '$resolved'" }
+    }
+
+    @Test
+    fun `resolveDisplayAuthor falls back to snapshot when both JDA lookups miss`() {
+        val jda = mockk<net.dv8tion.jda.api.JDA>()
+        every { jda.getGuildById(1L) } returns null
+        every { jda.getUserById(42L) } returns null
+
+        val row = ExcuseDto(id = 1L, guildId = 1L, author = "Legacy", authorDiscordId = 42L)
+
+        val resolved = ExcuseCommand.resolveDisplayAuthor(jda, 1L, row)
+
+        assert(resolved == "Legacy") { "expected Legacy, got '$resolved'" }
+    }
+
+    @Test
+    fun `resolveDisplayAuthor uses snapshot directly for legacy rows without authorDiscordId`() {
+        val jda = mockk<net.dv8tion.jda.api.JDA>()
+        // No JDA stubs needed — the resolver shouldn't touch JDA when authorDiscordId is null.
+
+        val row = ExcuseDto(id = 1L, guildId = 1L, author = "Legacy", authorDiscordId = null)
+
+        val resolved = ExcuseCommand.resolveDisplayAuthor(jda, 1L, row)
+
+        assert(resolved == "Legacy") { "expected Legacy, got '$resolved'" }
+    }
+
+    @Test
+    fun `resolveDisplayAuthor returns Unknown when everything is null`() {
+        val jda = mockk<net.dv8tion.jda.api.JDA>()
+        every { jda.getGuildById(any()) } returns null
+        every { jda.getUserById(any<Long>()) } returns null
+
+        val row = ExcuseDto(id = 1L, guildId = 1L, author = null, authorDiscordId = 42L)
+
+        val resolved = ExcuseCommand.resolveDisplayAuthor(jda, 1L, row)
+
+        assert(resolved == "Unknown") { "expected Unknown, got '$resolved'" }
+    }
+
+    @Test
+    fun `random uses current member name when authorDiscordId resolves`() {
+        val ctx = DefaultCommandContext(event)
+        val approved = ExcuseDto(
+            id = 5L,
+            guildId = 1L,
+            author = "OldSnapshot",
+            excuse = "the cat sat on it",
+            approved = true,
+            authorDiscordId = 99L,
+        )
+        every { event.subcommandName } returns ExcuseCommand.RANDOM
+        every { excuseService.listApprovedGuildExcuses(1L) } returns listOf(approved)
+
+        // Wire the JDA chain so resolveDisplayAuthor returns "NewNick".
+        val freshMember = mockk<net.dv8tion.jda.api.entities.Member>()
+        every { freshMember.effectiveName } returns "NewNick"
+        every { CommandTest.guild.getMemberById(99L) } returns freshMember
+        every { event.jda } returns CommandTest.jda
+        every { CommandTest.jda.getGuildById(1L) } returns CommandTest.guild
+
+        excuseCommand.handle(ctx, requestingUserDto, 0)
+
+        verify { event.hook.sendMessage("Excuse #5: 'the cat sat on it' - NewNick.") }
+    }
 }

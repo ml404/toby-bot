@@ -53,7 +53,7 @@ class ExcuseListPageButton @Autowired constructor(
             return
         }
 
-        val embed = ExcuseCommand.buildPageEmbed(paged, parsed.scope, parsed.query)
+        val embed = ExcuseCommand.buildPageEmbed(event.jda, guildId, paged, parsed.scope, parsed.query)
         val prevId = ExcuseCommand.encodePageButton(parsed.scope, guildId, paged.page - 1, parsed.query)
         val nextId = ExcuseCommand.encodePageButton(parsed.scope, guildId, paged.page + 1, parsed.query)
 

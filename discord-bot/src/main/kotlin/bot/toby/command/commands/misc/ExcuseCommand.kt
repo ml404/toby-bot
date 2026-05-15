@@ -8,6 +8,7 @@ import database.dto.UserDto
 import database.service.ExcuseService
 import database.service.PagedExcuses
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -89,8 +90,9 @@ class ExcuseCommand @Autowired constructor(
             return
         }
         val pick = approved.random()
+        val displayAuthor = resolveDisplayAuthor(event.jda, guildId, pick)
         event.hook.replyAndDelete(
-            "Excuse #${pick.id}: '${pick.excuse}' - ${pick.author}.",
+            "Excuse #${pick.id}: '${pick.excuse}' - $displayAuthor.",
             deleteDelay,
         )
     }
@@ -240,7 +242,7 @@ class ExcuseCommand @Autowired constructor(
             return
         }
 
-        val embed = buildPageEmbed(paged, scope, query)
+        val embed = buildPageEmbed(event.jda, guildId, paged, scope, query)
 
         if (paged.totalPages <= 1) {
             event.hook.replyEmbedAndDelete(embed, deleteDelay)
@@ -285,7 +287,13 @@ class ExcuseCommand @Autowired constructor(
         private const val OPT_QUERY = "query"
         private const val OPT_ID = "id"
 
-        fun buildPageEmbed(paged: PagedExcuses, scope: String, query: String?): net.dv8tion.jda.api.entities.MessageEmbed {
+        fun buildPageEmbed(
+            jda: JDA,
+            guildId: Long,
+            paged: PagedExcuses,
+            scope: String,
+            query: String?,
+        ): net.dv8tion.jda.api.entities.MessageEmbed {
             val title = when (scope) {
                 SCOPE_PENDING -> "Pending excuses"
                 SCOPE_SEARCH -> "Search results for '${query.orEmpty()}'"
@@ -296,13 +304,31 @@ class ExcuseCommand @Autowired constructor(
                 .setColor(Color(88, 101, 242))
             paged.rows.forEach { row ->
                 builder.addField(
-                    "#${row.id} — ${row.author ?: "Unknown"}",
+                    "#${row.id} — ${resolveDisplayAuthor(jda, guildId, row)}",
                     row.excuse.orEmpty().ifBlank { "(no text)" },
                     false,
                 )
             }
             builder.setFooter("Page ${paged.page} / ${paged.totalPages} · ${paged.totalCount} total")
             return builder.build()
+        }
+
+        /**
+         * Author rendering ladder: prefer the current guild-member effective
+         * name (picks up nickname changes), fall back to the cached Discord
+         * user name (member left the guild), then the snapshot recorded at
+         * submission (legacy rows from before authorDiscordId was a column),
+         * then a generic placeholder if everything is null.
+         */
+        fun resolveDisplayAuthor(jda: JDA, guildId: Long, row: ExcuseDto): String {
+            val authorId = row.authorDiscordId
+            if (authorId != null) {
+                val current = jda.getGuildById(guildId)?.getMemberById(authorId)
+                    ?.effectiveName?.takeIf { it.isNotBlank() }
+                    ?: jda.getUserById(authorId)?.name?.takeIf { it.isNotBlank() }
+                if (current != null) return current
+            }
+            return row.author?.takeIf { it.isNotBlank() } ?: "Unknown"
         }
 
         /**
