@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Show opponent name + avatar and per-offer expiry on web inbox",
+    "summary": "The web `/duel/{guildId}` page previously showed each pending offer's recipient as a raw 18-digit Discord ID (e.g. `123456789012345678`) and gave no per-row expiry indication — only a static \"offers expire after 3m\" footer. This PR enriches `PendingDuelView` so both the outgoing and incoming offer lists render the member's server nickname and avatar and a live countdown of how long the offer has left. `DuelWebService` now injects `MemberLookupHelper` (same pattern Poker/Bl…",
+    "emoji": "💰",
+    "prNumber": 452
+  },
+  {
+    "date": "May 2026",
     "title": "Route web intro preview through proxy + surface validation errors",
     "summary": "PR #448 already routed lavaplayer + `HttpHelper` (Ktor) through the optional YouTube proxy, but missed two paths. The **web-UI intro page preview** uses raw `java.net.HttpURLConnection` and bypasses every proxy hook from #448 — that's the symptom you actually reported. The Discord-side intro validation also swallowed its async catch silently. This PR closes both gaps.",
     "emoji": "🎵",
