@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Play a resolution animation when an offer is accepted on the web",
+    "summary": "Follow-on to #452 (which enriched the recipient + per-offer expiry on the web inbox). When the acceptor clicks **Accept**, the silent toast is replaced with a modal overlay that animates the two duelists: they walk apart, a 💥 flashes between them, the loser tips over, the winner gets a gold glow, and the `+pot credits` pill flies to the winner. Click anywhere, hit <kbd>Esc</kbd>, or wait 6s to dismiss — at which point `refreshAll()` runs and the inbox/balance update norma…",
+    "emoji": "💰",
+    "prNumber": 453
+  },
+  {
+    "date": "May 2026",
     "title": "Show opponent name + avatar and per-offer expiry on web inbox",
     "summary": "The web `/duel/{guildId}` page previously showed each pending offer's recipient as a raw 18-digit Discord ID (e.g. `123456789012345678`) and gave no per-row expiry indication — only a static \"offers expire after 3m\" footer. This PR enriches `PendingDuelView` so both the outgoing and incoming offer lists render the member's server nickname and avatar and a live countdown of how long the offer has left. `DuelWebService` now injects `MemberLookupHelper` (same pattern Poker/Bl…",
     "emoji": "💰",
