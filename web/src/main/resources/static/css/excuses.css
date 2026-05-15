@@ -1,0 +1,281 @@
+/* Excuses page — finder, list, maker. Built on the same CSS variables
+   as the rest of the site so theme tweaks propagate automatically. */
+
+/* ------------------------------ Guild picker ------------------------------ */
+/* Re-use the shared guild grid layout from guilds.html — these styles are
+   the per-page tweaks (different count badge color than the intro page). */
+.guild-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: var(--space-4);
+}
+.guild-card {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    text-align: center;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s, transform 0.1s;
+    display: block;
+}
+.guild-card:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--text); }
+.guild-icon, .guild-icon-placeholder {
+    width: 64px; height: 64px; border-radius: 50%;
+    margin: 0 auto 12px; display: block;
+}
+.guild-icon-placeholder {
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.5rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.guild-name {
+    font-weight: 600; font-size: 0.95rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.guild-count {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: var(--border);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+.guild-count.has-rows { background: var(--accent-soft); color: var(--accent); }
+
+.search-row {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    align-items: center;
+}
+.search-row input { flex: 1; max-width: 420px; }
+.no-results { color: var(--text-muted); padding: 24px; text-align: center; display: none; }
+
+/* ------------------------------ Header ------------------------------ */
+.excuse-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+    flex-wrap: wrap;
+}
+.excuse-count {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ------------------------------ Finder card ------------------------------ */
+.finder-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+.finder-card h2 { margin-top: 0; }
+.finder-controls {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: var(--space-4);
+}
+.btn-spin {
+    font-size: 1rem;
+    padding: 10px 20px;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+}
+.btn-spin:hover { background: var(--accent-hover); }
+.btn-spin:active { transform: scale(0.97); }
+.btn-spin.spinning { opacity: 0.7; pointer-events: none; }
+.finder-search {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    flex: 1;
+    min-width: 260px;
+}
+.finder-search input[type="search"] { flex: 1; min-width: 0; }
+.random-result {
+    margin-top: var(--space-5);
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+}
+.random-quote { margin: 0; }
+.quote-text {
+    display: block;
+    font-size: 1.15rem;
+    font-style: italic;
+    margin-bottom: var(--space-2);
+}
+.random-quote footer { color: var(--text-muted); font-size: 0.9rem; }
+
+/* ------------------------------ Tabs ------------------------------ */
+.tabs-row {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
+}
+.tab {
+    padding: 10px 18px;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.12s, border-color 0.12s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* ------------------------------ Excuse list ------------------------------ */
+.excuse-list { margin-bottom: var(--space-6); }
+.excuse-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-3);
+}
+.excuse-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-5);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2) var(--space-4);
+    align-items: start;
+    transition: border-color 0.15s, opacity 0.3s;
+}
+.excuse-card.removing { opacity: 0; transform: translateX(20px); }
+.excuse-card.pending { border-left: 3px solid var(--accent); }
+.excuse-text {
+    grid-column: 1 / 2;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--text);
+}
+.excuse-meta {
+    grid-column: 1 / 2;
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.excuse-author { color: var(--text); font-weight: 600; }
+.excuse-id { color: var(--text-dim); }
+.excuse-state {
+    background: var(--success-bg);
+    color: var(--success);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.excuse-state.pending {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+.excuse-actions {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    display: flex;
+    gap: var(--space-2);
+    align-items: flex-start;
+}
+
+/* ------------------------------ Pager ------------------------------ */
+.pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+}
+.pager .disabled {
+    pointer-events: none;
+    opacity: 0.45;
+}
+.pager-info {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* ------------------------------ Maker card ------------------------------ */
+.maker-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+}
+.maker-card h2 { margin-top: 0; }
+.maker-form {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+}
+.maker-form textarea {
+    resize: vertical;
+    min-height: 56px;
+    font-family: inherit;
+    line-height: 1.4;
+}
+.char-counter {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+}
+.char-counter.over { color: var(--danger); font-weight: 600; }
+
+/* ------------------------------ Empty state ------------------------------ */
+.empty-hero {
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+.empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
+.empty-hero h2 { color: var(--text); margin-bottom: 10px; }
+
+/* ------------------------------ Responsive ------------------------------ */
+@media (max-width: 600px) {
+    .guild-grid { grid-template-columns: 1fr; gap: 12px; }
+    .guild-card { padding: 14px 16px; }
+    .excuse-header { flex-direction: column; align-items: stretch; }
+    .finder-controls { flex-direction: column; align-items: stretch; }
+    .btn-spin { width: 100%; }
+    .finder-search { width: 100%; }
+    .excuse-card { grid-template-columns: 1fr; }
+    .excuse-actions { grid-column: 1 / 2; grid-row: auto; }
+}
