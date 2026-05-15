@@ -131,6 +131,14 @@
     transform-origin: 50% 80%;
 }
 
+/* --start-x / --end-x parameterise the walk so the keyframes and the
+   mobile breakpoint can share a single direction-agnostic animation.
+   Start values put both centres at the arena midpoint at t=0 so the
+   figures visually overlap before walking apart. --fall-rotate is the
+   loser's tilt direction. Computed once: (96 + 24) / 2 = 60. */
+.duel-figure--left  { --start-x:  60px; --end-x: -80px; --fall-rotate: -70deg; }
+.duel-figure--right { --start-x: -60px; --end-x:  80px; --fall-rotate:  70deg; }
+
 .duel-figure-avatar {
     width: 96px;
     height: 96px;
@@ -163,30 +171,22 @@
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
-/* Two animations per figure — first the walk-out, then either a fall or a
-   winner glow. Using the `animation` shorthand twice keeps each side's
-   timings explicit and avoids brittle property-list cascade merging. */
-.duel-figure--left.is-loser {
+/* Loser: walk out, then tilt + fade. Winner: walk out, the avatar
+   alone turns + glows (turn + glow on the avatar child keep the name
+   caption upright instead of mirroring it). Direction-agnostic — per-side
+   --start-x / --end-x do the work. */
+.duel-figure.is-loser {
     animation:
-        duel-walk-left  1.3s ease-in-out 0.3s both,
-        duel-fall-left  0.7s ease-in     1.9s forwards;
+        duel-walk 1.3s ease-in-out 0.3s both,
+        duel-fall 0.7s ease-in     1.9s forwards;
 }
-.duel-figure--right.is-loser {
-    animation:
-        duel-walk-right 1.3s ease-in-out 0.3s both,
-        duel-fall-right 0.7s ease-in     1.9s forwards;
+.duel-figure.is-winner {
+    animation: duel-walk 1.3s ease-in-out 0.3s both;
 }
-.duel-figure--left.is-winner {
-    --win-x: -80px;
+.duel-figure.is-winner > .duel-figure-avatar {
     animation:
-        duel-walk-left   1.3s ease-in-out 0.3s both,
-        duel-winner-glow 1.4s ease-out    1.9s both;
-}
-.duel-figure--right.is-winner {
-    --win-x: 80px;
-    animation:
-        duel-walk-right  1.3s ease-in-out 0.3s both,
-        duel-winner-glow 1.4s ease-out    1.9s both;
+        duel-turn        0.3s ease-out 1.6s both,
+        duel-winner-glow 1.4s ease-out 1.9s both;
 }
 
 .duel-flash {
@@ -227,24 +227,23 @@
     animation: fade-in 400ms ease-out 2.8s both;
 }
 
-/* Walk-out keyframes: both figures start close to centre (each pulled 40px
-   toward the other from their natural flex position) and walk apart with
-   a small step-bob. End at ±80px from natural, which the fall + glow
-   keyframes match. */
-@keyframes duel-walk-left {
-    0%   { transform: translateX(40px) translateY(0); }
-    25%  { transform: translateX(10px) translateY(-3px); }
-    50%  { transform: translateX(-20px) translateY(0); }
-    75%  { transform: translateX(-50px) translateY(-3px); }
-    100% { transform: translateX(-80px) translateY(0); }
+/* Walk-out: both figures start at centre (centres overlap) and walk
+   apart to ±--end-x with a step-bob. Direction-agnostic — the per-side
+   --start-x / --end-x vars do the work, including on mobile. */
+@keyframes duel-walk {
+    0%   { transform: translateX(var(--start-x)) translateY(0); }
+    25%  { transform: translateX(calc(var(--start-x) * 0.6 + var(--end-x) * 0.4)) translateY(-3px); }
+    50%  { transform: translateX(calc(var(--start-x) * 0.3 + var(--end-x) * 0.7)) translateY(0); }
+    75%  { transform: translateX(calc(var(--start-x) * 0.1 + var(--end-x) * 0.9)) translateY(-3px); }
+    100% { transform: translateX(var(--end-x)) translateY(0); }
 }
 
-@keyframes duel-walk-right {
-    0%   { transform: translateX(-40px) translateY(0); }
-    25%  { transform: translateX(-10px) translateY(-3px); }
-    50%  { transform: translateX(20px) translateY(0); }
-    75%  { transform: translateX(50px) translateY(-3px); }
-    100% { transform: translateX(80px) translateY(0); }
+/* Winner only — half-flip and hold. Applied to the avatar disc, NOT
+   the figure, so the name caption stays upright instead of mirroring. */
+@keyframes duel-turn {
+    0%   { transform: scaleX(1); }
+    50%  { transform: scaleX(-1); }
+    100% { transform: scaleX(-1); }
 }
 
 @keyframes duel-flash {
@@ -253,20 +252,17 @@
     100% { opacity: 0; transform: scale(1.6); }
 }
 
-@keyframes duel-fall-left {
-    0%   { transform: translateX(-80px) rotate(0deg); opacity: 1; }
-    100% { transform: translateX(-80px) translateY(20px) rotate(-70deg); opacity: 0.35; }
+@keyframes duel-fall {
+    0%   { transform: translateX(var(--end-x)) rotate(0deg); opacity: 1; }
+    100% { transform: translateX(var(--end-x)) translateY(20px) rotate(var(--fall-rotate)); opacity: 0.35; }
 }
 
-@keyframes duel-fall-right {
-    0%   { transform: translateX(80px) rotate(0deg); opacity: 1; }
-    100% { transform: translateX(80px) translateY(20px) rotate(70deg); opacity: 0.35; }
-}
-
+/* Runs on the avatar disc (post-turn), so transforms stay simple —
+   the figure parent is already at translateX(--end-x) from the walk. */
 @keyframes duel-winner-glow {
-    0%   { filter: drop-shadow(0 0 0 rgba(245, 197, 66, 0)); transform: translateX(var(--win-x, 0)) scale(1); }
-    30%  { filter: drop-shadow(0 0 16px rgba(245, 197, 66, 0.8)); transform: translateX(var(--win-x, 0)) scale(1.05); }
-    100% { filter: drop-shadow(0 0 8px rgba(245, 197, 66, 0.5)); transform: translateX(var(--win-x, 0)) scale(1); }
+    0%   { filter: drop-shadow(0 0 0 rgba(245, 197, 66, 0));    transform: scaleX(-1) scale(1); }
+    30%  { filter: drop-shadow(0 0 16px rgba(245, 197, 66, 0.8)); transform: scaleX(-1) scale(1.05); }
+    100% { filter: drop-shadow(0 0 8px rgba(245, 197, 66, 0.5)); transform: scaleX(-1) scale(1); }
 }
 @keyframes duel-credits-fly {
     0%   { opacity: 0; transform: translate(0, 12px) scale(0.7); }
@@ -275,8 +271,11 @@
 }
 
 /* Reduced-motion fallback: skip the choreography, show a static card with
-   the same content (both avatars + result line) immediately. */
+   the same content (both avatars + result line) immediately. The
+   .duel-figure-avatar entry covers the new turn + glow that run on the
+   avatar child. */
 .duel-resolution-overlay.is-reduced .duel-figure,
+.duel-resolution-overlay.is-reduced .duel-figure-avatar,
 .duel-resolution-overlay.is-reduced .duel-flash,
 .duel-resolution-overlay.is-reduced .duel-credits-pill,
 .duel-resolution-overlay.is-reduced .duel-result-line,
@@ -290,6 +289,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .duel-resolution-overlay .duel-figure,
+    .duel-resolution-overlay .duel-figure-avatar,
     .duel-resolution-overlay .duel-flash,
     .duel-resolution-overlay .duel-credits-pill,
     .duel-resolution-overlay .duel-result-line,
@@ -300,4 +300,21 @@
         filter: none;
     }
     .duel-resolution-overlay .duel-flash { display: none; }
+}
+
+/* Phone-portrait breakpoint — same 480px the casino + leaderboard pages
+   already use. Shrinks the avatar disc and overrides --start-x / --end-x
+   so the walk-out fits comfortably inside a 320px viewport. */
+@media (max-width: 480px) {
+    .duel-figure-avatar { width: 64px; height: 64px; }
+    .duel-figure-avatar.is-fallback { font-size: 1.8rem; }
+    .duel-figure--left  { --start-x:  40px; --end-x: -60px; }
+    .duel-figure--right { --start-x: -40px; --end-x:  60px; }
+    .duel-arena { gap: 1rem; }
+    .duel-flash { font-size: 2.5rem; }
+    .duel-credits-pill.flies-left  { --duel-pill-x: -110px; }
+    .duel-credits-pill.flies-right { --duel-pill-x:  110px; }
+    .duel-credits-pill { padding: 0.4rem 0.8rem; }
+    .duel-result-line { font-size: 0.95rem; padding: 0 0.5rem; }
+    .duel-resolution-overlay { padding: 1rem 0.5rem; }
 }
