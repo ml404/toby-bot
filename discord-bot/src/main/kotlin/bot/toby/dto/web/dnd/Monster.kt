@@ -33,6 +33,7 @@ data class Monster(
     val specialAbilities: List<MonsterAction>?,
     val actions: List<MonsterAction>?,
     val legendaryActions: List<MonsterAction>?,
+    val image: String?,
     val url: String?
 ) : DnDResponse {
     override fun isValidReturnObject(): Boolean =
@@ -46,6 +47,7 @@ data class Monster(
     override fun toEmbed(): MessageEmbed {
         val embedBuilder = EmbedBuilder()
         name?.let { embedBuilder.setTitle(it) }
+        image?.let { embedBuilder.setThumbnail("https://www.dnd5eapi.co$it") }
 
         val header = listOfNotNull(
             size,

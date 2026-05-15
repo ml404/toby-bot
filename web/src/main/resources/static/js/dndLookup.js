@@ -183,6 +183,16 @@
         resultEl.appendChild(p);
     }
 
+    function appendImage(data) {
+        if (!data.image) return;
+        const img = document.createElement('img');
+        img.className = 'lookup-image';
+        img.src = `https://www.dnd5eapi.co${data.image}`;
+        img.alt = data.name || '';
+        img.loading = 'lazy';
+        resultEl.appendChild(img);
+    }
+
     function descArray(data) {
         return Array.isArray(data.desc) ? data.desc
             : Array.isArray(data.description) ? data.description
@@ -207,6 +217,7 @@
     }
 
     function renderMonster(data) {
+        appendImage(data);
         const header = [data.size, data.type, data.alignment].filter(Boolean).join(', ');
         if (header) appendMeta([header]);
 
@@ -298,6 +309,7 @@
     }
 
     function renderEquipment(data) {
+        appendImage(data);
         if (data.equipment_category?.name) appendField('Category', data.equipment_category.name);
         if (data.cost) appendField('Cost', `${data.cost.quantity} ${data.cost.unit}`);
         if (data.weight != null) appendField('Weight', `${data.weight} lb`);

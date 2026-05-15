@@ -85,6 +85,7 @@ object DnDExpansionFixtures {
          "properties":[
             {"index":"versatile","name":"Versatile","url":"/api/weapon-properties/versatile"}
          ],
+         "image":"/api/images/equipment/longsword.png",
          "url":"/api/equipment/longsword"}
     """
 
@@ -167,6 +168,7 @@ object DnDExpansionFixtures {
          "actions":[{"name":"Scimitar","desc":"Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage."},
                     {"name":"Shortbow","desc":"Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage."}],
          "legendary_actions":[],
+         "image":"/api/images/monsters/goblin.png",
          "url":"/api/monsters/goblin"}
     """
 

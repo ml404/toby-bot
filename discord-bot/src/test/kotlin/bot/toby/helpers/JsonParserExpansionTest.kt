@@ -118,6 +118,7 @@ internal class JsonParserExpansionTest {
         assertEquals(3.0, e.weight)
         assertEquals(1, e.properties?.size)
         assertEquals("Versatile", e.properties?.first()?.name)
+        assertEquals("/api/images/equipment/longsword.png", e.image)
         assertTrue(e.isValidReturnObject())
     }
 
@@ -131,6 +132,7 @@ internal class JsonParserExpansionTest {
         assertEquals(false, e.armorClass?.dexBonus)
         assertEquals(15, e.strMinimum)
         assertEquals(true, e.stealthDisadvantage)
+        assertNull(e.image, "Plate fixture intentionally omits image; field should be null")
         assertTrue(e.isValidReturnObject())
     }
 
@@ -207,6 +209,7 @@ internal class JsonParserExpansionTest {
         assertEquals("Nimble Escape", m.specialAbilities?.first()?.name)
         assertEquals(2, m.actions?.size)
         assertEquals("Scimitar", m.actions?.first()?.name)
+        assertEquals("/api/images/monsters/goblin.png", m.image)
         assertTrue(m.isValidReturnObject())
     }
 

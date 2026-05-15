@@ -108,6 +108,7 @@ class DnDExpansionEmbedTest {
         assertEquals("1d8 Slashing", embed.fields.first { it.name == "Damage" }.value)
         assertEquals("1d10 Slashing", embed.fields.first { it.name == "Two-Handed Damage" }.value)
         assertEquals("Versatile", embed.fields.first { it.name == "Properties" }.value)
+        assertEquals("https://www.dnd5eapi.co/api/images/equipment/longsword.png", embed.thumbnail?.url)
     }
 
     @Test
@@ -119,6 +120,7 @@ class DnDExpansionEmbedTest {
         assertEquals("18", embed.fields.first { it.name == "Armor Class" }.value)
         assertEquals("15", embed.fields.first { it.name == "Strength Min" }.value)
         assertEquals("Disadvantage", embed.fields.first { it.name == "Stealth" }.value)
+        assertNull(embed.thumbnail, "Plate fixture has no image, embed should have no thumbnail")
     }
 
     @Test
@@ -207,6 +209,16 @@ class DnDExpansionEmbedTest {
 
         val specials = embed.fields.first { it.name == "Special Abilities" }.value!!
         assertTrue(specials.contains("Nimble Escape"))
+
+        assertEquals("https://www.dnd5eapi.co/api/images/monsters/goblin.png", embed.thumbnail?.url)
+    }
+
+    @Test
+    fun `Monster embed omits thumbnail when image field is absent`() {
+        val json = DnDExpansionFixtures.MONSTER_GOBLIN.replace(""""image":"/api/images/monsters/goblin.png",""", "")
+        val m = JsonParser.parseJsonToMonster(json)!!
+        val embed = m.toEmbed()
+        assertNull(embed.thumbnail, "no image field => no thumbnail")
     }
 
     @Test

@@ -139,3 +139,20 @@
 .lookup-result p:last-child {
     margin-bottom: 0;
 }
+
+.lookup-image {
+    float: right;
+    max-width: 180px;
+    max-height: 220px;
+    margin: 0 0 var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+}
+
+@media (max-width: 600px) {
+    .lookup-image {
+        float: none;
+        display: block;
+        margin: 0 auto var(--space-2) auto;
+    }
+}
