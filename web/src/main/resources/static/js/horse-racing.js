@@ -85,7 +85,7 @@ function renderHorseRacingResult(resultEl, body) {
         runners.forEach(function (r) {
             if (!r) return;
             r.style.transition = 'none';
-            r.style.transform = 'translateX(0%)';
+            r.style.left = '0';
             r.classList.remove('hr-runner-finished');
         });
         // Force reflow so the next transition takes effect.
@@ -104,12 +104,22 @@ function renderHorseRacingResult(resultEl, body) {
         if (window.CasinoSounds) window.CasinoSounds.play('deal');
         // Kick every horse off with a slow trot toward the finish — they
         // settle to their actual finishing spots once the server reply
-        // arrives. If the server is slow we just keep advancing slowly
-        // so the lanes are visibly active.
-        runners.forEach(function (r, i) {
+        // arrives. `left` is animated (not transform) because percentage
+        // transforms are relative to the runner element's own width
+        // (~26px) and would barely budge the horse; `left` is relative
+        // to the rail's containing block, which is what we want.
+        // The `calc(60% - 1.6rem)` accounts for the runner's width so it
+        // doesn't visually overshoot the rail on the lead-in.
+        // Also scroll the track into view on mobile so the user actually
+        // sees the race after tapping Race — the bet form lives below
+        // the track and the action can otherwise happen off-screen.
+        if (track && typeof track.scrollIntoView === 'function') {
+            track.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        runners.forEach(function (r) {
             if (!r) return;
-            r.style.transition = 'transform ' + RACE_MS + 'ms cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-            r.style.transform = 'translateX(60%)';
+            r.style.transition = 'left ' + RACE_MS + 'ms cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+            r.style.left = 'calc(60% - 1.6rem)';
         });
         return null;
     }
@@ -122,14 +132,16 @@ function renderHorseRacingResult(resultEl, body) {
         // Assign each horse a finishing tick based on its rank. The
         // winner crosses first (RACE_MS), each subsequent place is
         // STAGGER_MS later, so the visual finish order matches the
-        // server result regardless of the jittered run-up.
+        // server result regardless of the jittered run-up. The
+        // `calc(100% - 2rem)` leaves room for the runner emoji itself
+        // so it stops at the flag rather than disappearing off the edge.
         body.finishingOrder.forEach(function (horseIdx, rank) {
             const runner = runners[horseIdx - 1];
             if (!runner) return;
             const delay = rank * STAGGER_MS;
             const timer = setTimeout(function () {
-                runner.style.transition = 'transform 500ms cubic-bezier(0.2, 0.7, 0.3, 1)';
-                runner.style.transform = 'translateX(100%)';
+                runner.style.transition = 'left 500ms cubic-bezier(0.2, 0.7, 0.3, 1)';
+                runner.style.left = 'calc(100% - 2rem)';
                 runner.classList.add('hr-runner-finished');
             }, delay);
             animationTimers.push(timer);

@@ -66,9 +66,12 @@
     left: 0;
     font-size: 1.6rem;
     line-height: 1;
-    transform: translate(0, -50%);
-    transition: transform 0.4s linear;
-    will-change: transform;
+    /* Vertical centering only — horizontal travel is driven by the
+       `left` property (animated by horse-racing.js) so the percentage
+       is measured against the rail's width, not the runner's own. */
+    transform: translateY(-50%);
+    transition: left 0.4s linear;
+    will-change: left;
 }
 
 .hr-runner-finished {
@@ -285,13 +288,46 @@
 .hr-rules strong { color: #fff; }
 
 @media (max-width: 600px) {
-    .hr-lane { grid-template-columns: 110px 1fr 28px; }
+    /* Compact track: shorter labels (just "H1"), tighter rail height so
+       all six lanes fit on a single screen above the bet form. */
+    .hr-lane { grid-template-columns: 44px 1fr 24px; gap: var(--space-2); }
     .hr-lane-name { display: none; }
-    .hr-horse-picker > div { grid-template-columns: repeat(2, 1fr); }
+    .hr-lane-rail { height: 26px; }
+    .hr-runner { font-size: 1.4rem; }
+    .hr-lane-finish-flag { font-size: 1rem; }
+
+    /* Horse picker collapses to a single-line card grid: emoji + label
+       + odds in one row. Three columns × two rows fits the six horses
+       in roughly the same vertical footprint as the desktop two-row
+       layout, freeing space for the bet-type picker + Race button to
+       land on the same mobile screen as the track. */
+    .hr-horse-picker > div { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .hr-horse {
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto;
+        padding: 6px 8px;
+        gap: 2px 6px;
+    }
+    .hr-horse-emoji { grid-row: 1; font-size: 1.2rem; }
+    .hr-horse-name { font-size: 0.85rem; line-height: 1.15; }
+    .hr-horse-name span:not(:first-child) { display: none; }
+    .hr-horse-odds {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        font-size: 0.7rem;
+    }
+
     .hr-bet-picker > div { grid-template-columns: repeat(3, 1fr); }
+    .hr-bet-type { padding: 6px 4px; }
+    .hr-bet-type > span:first-of-type { font-size: 0.9rem; }
+    .hr-bet-type > span.muted { font-size: 0.65rem; }
 }
 
 @media (max-width: 380px) {
     .hr-bet { max-width: 100%; }
-    .hr-lane { grid-template-columns: 70px 1fr 24px; }
+    .hr-lane { grid-template-columns: 36px 1fr 20px; }
+    .hr-lane-rail { height: 22px; }
+    .hr-runner { font-size: 1.2rem; }
+    .hr-horse-name { font-size: 0.8rem; }
 }
