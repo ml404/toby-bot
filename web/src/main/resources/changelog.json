@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Add Plinko + Wheel of Fortune (low-RTP jackpot feeders)",
+    "summary": "Two new jackpot-eligible casino games that sit in the sub-92% RTP band (where only Slots, Scratch, and Dice currently live). Both fund the per-guild jackpot pool via loss tribute and roll for it on a win — and unlike Coinflip / Blackjack / Baccarat / Roulette, they're tight enough on RTP that the `JACKPOT_RTP_MAX_PCT` gate will still let them roll when a guild dials the ceiling down. ### Plinko (canonical RTP ≈ 0.89) 8 peg rows, 9 buckets. Three risk profiles (`LOW`, `MEDI…",
+    "emoji": "🎰",
+    "prNumber": 461
+  },
+  {
+    "date": "May 2026",
     "title": "Honor [hidden] on .btn-primary and .btn-secondary",
     "summary": "Follow-up to #458. The user noticed the previous fix didn't actually hide the \"Buy (sell N TOBY)\" button on scratch even when their balance comfortably covered the stake (screenshot: balance ~100k, stake 100, button still visible reading \"sell 0 TOBY\"). Same story for the \"Reveal all\" button on initial page load. **Root cause:** `.btn-primary` and `.btn-secondary` in `base.css:118-152` set explicit `display: inline-flex`, which outranks the user-agent stylesheet's `[hidden…",
     "emoji": "🔨",
