@@ -153,6 +153,16 @@ function renderPlinkoResult(resultEl, body) {
         if (rect) rect.classList.add('plinko-bucket-landed');
     }
 
+    // Highlight the active risk's column in the payouts table — same
+    // info the SVG buckets show, but the table-form is the comparison
+    // view across all three profiles. Tinting the active column makes
+    // it obvious which row of multipliers the player is actually playing.
+    function highlightPayoutColumn(risk) {
+        document.querySelectorAll('.plinko-payouts-table [data-risk]').forEach(el => {
+            el.classList.toggle('plinko-payout-active', el.getAttribute('data-risk') === risk);
+        });
+    }
+
     /**
      * Build a sequence of `ROWS` left/right decisions (-1 / +1) that
      * sum to `K - ROWS/2` right-shifts, picking K out of ROWS as right.
@@ -232,6 +242,7 @@ function renderPlinkoResult(resultEl, body) {
     // Initial paint.
     renderPegs();
     renderBuckets(selectedRisk());
+    highlightPayoutColumn(selectedRisk());
 
     // Re-paint bucket labels when the risk profile changes so the player
     // sees the multipliers they're actually playing for before pressing Drop.
@@ -239,6 +250,7 @@ function renderPlinkoResult(resultEl, body) {
         input.addEventListener('change', () => {
             clearLandedHighlight();
             renderBuckets(selectedRisk());
+            highlightPayoutColumn(selectedRisk());
         });
     });
 

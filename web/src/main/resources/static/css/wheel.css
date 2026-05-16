@@ -210,18 +210,49 @@
     line-height: 1.7;
 }
 .wheel-rules strong { color: #fff; }
-.wheel-weights table {
+.wheel-weights-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.wheel-weights-table {
     width: 100%;
     border-collapse: collapse;
     font-variant-numeric: tabular-nums;
     font-size: 0.9rem;
 }
-.wheel-weights th, .wheel-weights td {
+.wheel-weights-table th,
+.wheel-weights-table td {
     padding: 6px 8px;
     text-align: center;
     border-bottom: 1px solid var(--border);
 }
-.wheel-weights th { color: var(--text-muted); font-weight: 600; }
+.wheel-weights-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    vertical-align: bottom;
+}
+/* Allow long header labels ("Hit chance", "Per-pick RTP") to wrap onto
+   two lines on narrow viewports without overflowing the cell. */
+.wheel-weights-table th > span {
+    display: inline-block;
+    line-height: 1.2;
+    word-break: keep-all;
+    hyphens: none;
+}
+
+@media (max-width: 480px) {
+    .wheel-weights-table {
+        font-size: 0.82rem;
+    }
+    .wheel-weights-table th,
+    .wheel-weights-table td {
+        padding: 6px 4px;
+    }
+    .wheel-weights-table th {
+        font-size: 0.72rem;
+        letter-spacing: 0;
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .wheel-rotor { transition: none !important; }

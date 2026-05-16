@@ -124,24 +124,31 @@
 
     <section class="wheel-weights">
         <h2>Wheel composition</h2>
-        <table>
-            <thead>
-            <tr>
-                <th>Multiplier</th>
-                <th>Slots</th>
-                <th>Hit chance</th>
-                <th>Per-pick RTP</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="w : ${wheelWeights}">
-                <td th:text="${w.multiplier} + '×'">2×</td>
-                <td th:text="${w.slots}">44</td>
-                <td th:text="${#numbers.formatDecimal(w.slots * 100.0 / slotCount, 1, 1)} + '%'">44.0%</td>
-                <td th:text="${#numbers.formatDecimal(w.slots * w.multiplier * 1.0 / slotCount, 1, 2)}">0.88</td>
-            </tr>
-            </tbody>
-        </table>
+        <!--
+            Two-line headers with explicit <span> wrapping so the column
+            label wraps cleanly on narrow viewports (otherwise "Hit chance"
+            and "Per-pick RTP" split awkwardly mid-word).
+        -->
+        <div class="wheel-weights-table-wrap">
+            <table class="wheel-weights-table">
+                <thead>
+                <tr>
+                    <th><span>Multiplier</span></th>
+                    <th><span>Slots</span></th>
+                    <th><span>Hit chance</span></th>
+                    <th><span>Per-pick RTP</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="w : ${wheelWeights}">
+                    <td th:text="${w.multiplier} + '×'">2×</td>
+                    <td th:text="${w.slots}">44</td>
+                    <td th:text="${#numbers.formatDecimal(w.slots * 100.0 / slotCount, 1, 1)} + '%'">44.0%</td>
+                    <td th:text="${#numbers.formatDecimal(w.slots * w.multiplier * 1.0 / slotCount, 1, 2)}">0.88</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 </main>
 

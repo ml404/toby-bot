@@ -175,15 +175,46 @@
     line-height: 1.7;
 }
 .plinko-rules strong { color: #fff; }
-.plinko-payouts table {
+/* The transposed table is 4 columns (Bucket + LOW/MEDIUM/HIGH) — fits
+   on mobile without a horizontal scroll. The wrapper keeps a scroll
+   fallback for very narrow screens / dynamic font sizing. */
+.plinko-payouts-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: var(--space-3);
+}
+.plinko-payouts-table {
     width: 100%;
     border-collapse: collapse;
     font-variant-numeric: tabular-nums;
     font-size: 0.9rem;
 }
-.plinko-payouts th, .plinko-payouts td {
+.plinko-payouts-table th,
+.plinko-payouts-table td {
     padding: 6px 8px;
     text-align: center;
     border-bottom: 1px solid var(--border);
+    transition: background 0.2s ease, color 0.2s ease;
 }
-.plinko-payouts th { color: var(--text-muted); font-weight: 600; }
+.plinko-payouts-table th { color: var(--text-muted); font-weight: 600; }
+/* Active risk profile gets a gold-tinted column so the player can
+   spot it at a glance. Bucket column (no data-risk) stays neutral. */
+.plinko-payouts-table th.plinko-payout-active {
+    color: var(--casino-gold);
+    text-shadow: 0 0 6px rgba(247, 212, 106, 0.4);
+}
+.plinko-payouts-table td.plinko-payout-active {
+    color: #fff;
+    font-weight: 700;
+    background: rgba(247, 212, 106, 0.08);
+}
+
+@media (max-width: 480px) {
+    .plinko-payouts-table {
+        font-size: 0.85rem;
+    }
+    .plinko-payouts-table th,
+    .plinko-payouts-table td {
+        padding: 6px 6px;
+    }
+}

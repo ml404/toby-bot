@@ -104,20 +104,30 @@
 
     <section class="plinko-payouts">
         <h2>Payout tables (× stake)</h2>
-        <table>
-            <thead>
-            <tr>
-                <th>Risk</th>
-                <th th:each="i : ${#numbers.sequence(0, buckets - 1)}" th:text="${i}">0</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="r : ${risks}">
-                <td th:text="${r}">LOW</td>
-                <td th:each="m : ${payoutTables.get(r)}" th:text="${m}">1.0</td>
-            </tr>
-            </tbody>
-        </table>
+        <!--
+            Transposed: rows are buckets, columns are risk profiles.
+            On mobile that's 4 columns instead of 10, and the active risk's
+            column is highlighted by plinko.js (data-risk + .plinko-payout-active)
+            so the player can compare profiles at a glance.
+        -->
+        <div class="plinko-payouts-table-wrap">
+            <table class="plinko-payouts-table">
+                <thead>
+                <tr>
+                    <th>Bucket</th>
+                    <th th:each="r : ${risks}" th:text="${r}" th:attr="data-risk=${r}">LOW</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i : ${#numbers.sequence(0, buckets - 1)}">
+                    <td th:text="${i}">0</td>
+                    <td th:each="r : ${risks}"
+                        th:text="${payoutTables.get(r)[i]}"
+                        th:attr="data-risk=${r}">1.9</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
         <p class="muted">All three profiles target ~0.90 RTP. Outer buckets pay big;
             center buckets refund (×1), partially lose (×0.4–0.7), or bust (×0).</p>
     </section>
