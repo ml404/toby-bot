@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Add Horse Racing minigame (Win/Place/Show on 6-horse field)",
+    "summary": "New casino minigame: `/horse-racing` slash command + `/casino/{guildId}/horse-racing` web page with an animated six-lane track. Six horses, named with distinct win odds (favourite H1 to longshot H6); three bet types — **Win** (1st only), **Place** (top 2), **Show** (top 3). **Pure logic** (`HorseRacing.kt`) uses Plackett–Luce sampling: each horse's \"strength\" is its stated win probability, so favourites land on the podium more often than just their win rate suggests — exac…",
+    "emoji": "🎰",
+    "prNumber": 462
+  },
+  {
+    "date": "May 2026",
     "title": "Add Plinko + Wheel of Fortune (low-RTP jackpot feeders)",
     "summary": "Two new jackpot-eligible casino games that sit in the sub-92% RTP band (where only Slots, Scratch, and Dice currently live). Both fund the per-guild jackpot pool via loss tribute and roll for it on a win — and unlike Coinflip / Blackjack / Baccarat / Roulette, they're tight enough on RTP that the `JACKPOT_RTP_MAX_PCT` gate will still let them roll when a guild dials the ceiling down. ### Plinko (canonical RTP ≈ 0.89) 8 peg rows, 9 buckets. Three risk profiles (`LOW`, `MEDI…",
     "emoji": "🎰",
