@@ -25,8 +25,7 @@ class HorseRacingCommand @Autowired constructor(
 
     override val name: String = "horse-racing"
     override val description: String =
-        "Race six horses; bet Win, Place (top 2) or Show (top 3) on a single horse. " +
-            "Stake bounds are per-guild (default ${HorseRacing.MIN_STAKE}-${HorseRacing.MAX_STAKE})."
+        "Race six horses; bet Win (1st), Place (top 2), or Show (top 3) on a single horse."
 
     companion object {
         private const val OPT_STAKE = "stake"
