@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Split into subcommand-per-category modals",
+    "summary": "Splits the monolithic `/setconfig` slash command into 12 subcommands, each opening a category-scoped modal pre-populated with the guild's current values. Replaces the previous 25-flat-option form that was hitting Discord's hard option cap and forcing ~45 other config keys to be web-only.",
+    "emoji": "🎰",
+    "prNumber": 457
+  },
+  {
+    "date": "May 2026",
     "title": "Lock buy buttons through reveal + refresh TOBY button on balance changes",
     "summary": "Two scratch-card UX gaps that diverged from how the other casino games (slots, dice, coinflip, keno, etc.) behave: **Buy buttons re-enabled mid-reveal.** The \"Buy ticket\" / \"Buy (sell N TOBY)\" buttons flipped back to enabled the moment the server returned a card — before the player had finished scratching cells. A fast-clicker (or autoclicker) could submit a second buy on top of a half-revealed card. Fix: convert scratch's `renderResult` from a no-op to a Promise resolved…",
     "emoji": "🎲",
