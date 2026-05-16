@@ -242,29 +242,21 @@ function renderPlinkoResult(resultEl, body) {
         });
     });
 
-    let pendingResolve = null;
-
     function startAnimation() {
         clearLandedHighlight();
         if (window.CasinoSounds) window.CasinoSounds.play('deal');
-        // The drop animation can't start until we know which bucket to
-        // aim for — we kick it off from stopAnimation once the server
-        // response arrives. Here we just clear stale state.
+        // The drop animation runs in renderResult so it kicks off the
+        // moment the response lands (not after a minSettleMs wait). We
+        // just clear stale state here so the previous bucket highlight
+        // goes away the instant the player presses Drop again.
         return null;
     }
 
-    function stopAnimation(_intervalId, body) {
-        if (!body || typeof body.bucket !== 'number') return;
-        animateDrop(body.bucket).then(() => {
-            highlightLanded(body.bucket);
-            if (window.CasinoSounds) window.CasinoSounds.play('click');
-            if (pendingResolve) {
-                const r = pendingResolve;
-                pendingResolve = null;
-                r();
-            }
-        });
-    }
+    // The settle / result-line paint is driven by renderResult — see
+    // the TobyCasinoGame.init config below. stopAnimation has nothing
+    // to clean up: startAnimation didn't allocate anything, and the
+    // animation is owned by the renderResult Promise.
+    function stopAnimation() {}
 
     window.TobyCasinoGame.init({
         guildId: els.guildId,
@@ -277,7 +269,14 @@ function renderPlinkoResult(resultEl, body) {
         resultEl: els.resultEl,
         tobyCoins: els.tobyCoins,
         marketPrice: els.marketPrice,
-        minSettleMs: DROP_MS,
+        // minSettleMs: 0 so casino-game.js fires renderResult the moment
+        // the response lands. The drop animation runs inside renderResult
+        // and returns a Promise that casino-game.js's finishSettle awaits
+        // before bumping the balance and dropping the chip flourish.
+        // Without this, the animation would queue behind a minSettleMs
+        // wait that sits empty (no startAnimation visuals), and the
+        // ball appears to "not move" for the first ~DROP_MS of the round.
+        minSettleMs: 0,
         failureMessage: 'Drop failed.',
         validate: function () {
             if (!selectedRisk()) return 'Pick a risk profile first.';
@@ -292,7 +291,20 @@ function renderPlinkoResult(resultEl, body) {
         },
         startAnimation: startAnimation,
         stopAnimation: stopAnimation,
-        renderResult: function (body) { renderPlinkoResult(els.resultEl, body); },
+        renderResult: function (body) {
+            // Drop, then highlight the bucket, then paint the result line.
+            // The returned Promise gates finishSettle so the chip flourish
+            // and balance bump land after the ball does — no spoiler.
+            if (!body || typeof body.bucket !== 'number') {
+                renderPlinkoResult(els.resultEl, body);
+                return undefined;
+            }
+            return animateDrop(body.bucket).then(() => {
+                highlightLanded(body.bucket);
+                if (window.CasinoSounds) window.CasinoSounds.play('click');
+                renderPlinkoResult(els.resultEl, body);
+            });
+        },
         flashTarget: tableEl,
     });
 })();

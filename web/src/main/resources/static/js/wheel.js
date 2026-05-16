@@ -217,6 +217,13 @@ function renderWheelResult(resultEl, body) {
         return checked ? parseInt(checked.value, 10) : null;
     }
 
+    // Cumulative rotation — every spin adds SPIN_ROTATIONS full turns
+    // plus the delta to bring the target wedge under the pointer. One
+    // transform write per spin against the CSS-defined transition (no
+    // snap-back, no inline transition juggling), so browsers reliably
+    // animate the forward jump.
+    let currentRotation = 0;
+
     function startAnimation() {
         if (statusEl) statusEl.textContent = 'Spinning…';
         if (window.CasinoSounds) window.CasinoSounds.play('deal');
@@ -227,26 +234,19 @@ function renderWheelResult(resultEl, body) {
         if (!currentSpokes.length) return Promise.resolve();
         const target = currentSpokes.find(s => s.multiplier === landed);
         if (!target) return Promise.resolve();
-        // Pointer sits at angle 0 (top of the wheel). To bring the wedge
-        // midpoint under it we rotate by `360 - mid`, plus full rotations
-        // for drama. Snap rotor back to 0 first so successive spins
-        // start from a known transform — same dance casino-jackpot-wheel
-        // uses to avoid accumulated-rotation drift. The CSS transition
-        // is owned by `.wheel-rotor` (not inline) so the browser keeps a
-        // stable starting state across both the snap and the spin.
-        const finalAngle = SPIN_ROTATIONS * 360 + (360 - (target.mid % 360));
-        rotor.style.transition = 'none';
-        rotor.style.transform = 'rotate(0deg)';
-        // Force a layout read so the browser registers the snap-back
-        // as a discrete style change before the CSS transition kicks
-        // in. Without this, the browser collapses both transform writes
-        // into the easing curve and the wheel "spins" by zero degrees.
-        // eslint-disable-next-line no-unused-expressions
-        rotor.getBoundingClientRect();
-        rotor.style.transition = '';  // restore the CSS transition
+        // Where the target wedge currently sits relative to the pointer
+        // (angle 0, top of the wheel). Modulo 360 + add-360-and-mod to
+        // keep the value in [0, 360) regardless of currentRotation sign.
+        const currentWedgeAngle = ((target.mid + currentRotation) % 360 + 360) % 360;
+        // Forward rotation needed to bring the wedge to the top.
+        const deltaToTop = (360 - currentWedgeAngle) % 360;
+        currentRotation += SPIN_ROTATIONS * 360 + deltaToTop;
+
         if (prefersReducedMotion()) {
-            rotor.style.transition = 'none';
-            rotor.style.transform = 'rotate(' + finalAngle + 'deg)';
+            // Skip the easing — go straight to the resting angle. CSS's
+            // reduced-motion rule already disables the transition, so the
+            // jump is instant.
+            rotor.style.transform = 'rotate(' + currentRotation + 'deg)';
             return Promise.resolve();
         }
         return new Promise(resolve => {
@@ -262,25 +262,15 @@ function renderWheelResult(resultEl, body) {
                 resolve();
             }, SPIN_DURATION_MS + 400);
             requestAnimationFrame(() => {
-                rotor.style.transform = 'rotate(' + finalAngle + 'deg)';
+                rotor.style.transform = 'rotate(' + currentRotation + 'deg)';
             });
         });
     }
 
-    function stopAnimation(_intervalId, body) {
-        if (!body || body.landed == null) {
-            if (statusEl) statusEl.textContent = 'Pick a multiplier and press Spin.';
-            return;
-        }
-        spinToMultiplier(body.landed).then(() => {
-            if (statusEl) {
-                statusEl.textContent = body.win
-                    ? 'Landed ' + body.landed + '× — match!'
-                    : 'Landed ' + body.landed + '× — no match.';
-            }
-            if (window.CasinoSounds) window.CasinoSounds.play('click');
-        });
-    }
+    // The settle / result-line paint is driven by renderResult below;
+    // stopAnimation has nothing to clean up (startAnimation didn't
+    // allocate anything and the spin lives inside renderResult's Promise).
+    function stopAnimation() {}
 
     window.TobyCasinoGame.init({
         guildId: els.guildId,
@@ -293,7 +283,14 @@ function renderWheelResult(resultEl, body) {
         resultEl: els.resultEl,
         tobyCoins: els.tobyCoins,
         marketPrice: els.marketPrice,
-        minSettleMs: SPIN_DURATION_MS,
+        // minSettleMs: 0 so casino-game.js fires renderResult the moment
+        // the response lands. The spin animation runs inside renderResult
+        // and returns a Promise that casino-game.js's finishSettle awaits
+        // before bumping the balance and dropping the chip flourish.
+        // Without this, the wheel would queue behind a SPIN_DURATION_MS
+        // wait that sits empty, and the rotor only starts moving after
+        // the wait — exactly the "freezes and moves at the end" symptom.
+        minSettleMs: 0,
         failureMessage: 'Spin failed.',
         validate: function () {
             if (!selectedPick()) return 'Pick a multiplier first.';
@@ -308,7 +305,22 @@ function renderWheelResult(resultEl, body) {
         },
         startAnimation: startAnimation,
         stopAnimation: stopAnimation,
-        renderResult: function (body) { renderWheelResult(els.resultEl, body); },
+        renderResult: function (body) {
+            if (!body || body.landed == null) {
+                if (statusEl) statusEl.textContent = 'Pick a multiplier and press Spin.';
+                renderWheelResult(els.resultEl, body);
+                return undefined;
+            }
+            return spinToMultiplier(body.landed).then(() => {
+                if (statusEl) {
+                    statusEl.textContent = body.win
+                        ? 'Landed ' + body.landed + '× — match!'
+                        : 'Landed ' + body.landed + '× — no match.';
+                }
+                if (window.CasinoSounds) window.CasinoSounds.play('click');
+                renderWheelResult(els.resultEl, body);
+            });
+        },
         flashTarget: tableEl,
     });
 })();
