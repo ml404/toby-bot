@@ -39,7 +39,10 @@
             <fieldset class="hr-horse-picker">
                 <legend>Horse</legend>
                 <div role="radiogroup" aria-label="Horse to bet on">
-                    <label class="hr-horse" th:each="h, iter : ${horses}">
+                    <label class="hr-horse" th:each="h, iter : ${horses}"
+                           th:attr="data-win-mult=${h.winMult},
+                                    data-place-mult=${h.placeMult},
+                                    data-show-mult=${h.showMult}">
                         <input type="radio" name="horse" th:value="${h.index}" th:checked="${iter.index == 0}">
                         <span class="hr-horse-emoji" th:text="${h.emoji}">🐎</span>
                         <span class="hr-horse-name">H<span th:text="${h.index}">1</span>

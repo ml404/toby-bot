@@ -20,6 +20,38 @@ const HR_FIELD_SIZE = 6;
 // result-line reveal delay and the renderResult Promise resolve gate.
 const HR_MAX_FINISH_MS = HR_RACE_MS + (HR_FIELD_SIZE - 1) * HR_STAGGER_MS;
 
+/**
+ * Repaints the per-horse odds label inside each `.hr-horse` card so it
+ * shows the multiplier for the currently-selected bet type. Each horse
+ * card carries all three multipliers on `data-{win|place|show}-mult`
+ * attributes (server-rendered from `HorseRacing.HORSES`), so the swap
+ * is purely client-side — no fetch round-trip on bet-radio change.
+ *
+ * Hoisted so the jest test can drive it without booting the IIFE.
+ */
+function updateHorseOdds(horseCards, betType) {
+    if (!horseCards || !horseCards.length) return;
+    // Normalise the bet type. Anything outside the known set falls back
+    // to WIN so a future server-side bet type added before the
+    // frontend catches up doesn't leave blank labels on the cards.
+    const raw = (typeof betType === 'string' ? betType : '').toLowerCase();
+    const known = raw === 'win' || raw === 'place' || raw === 'show';
+    const keySuffix = known ? raw : 'win';
+    // Walk every horse card and rewrite its odds label. Cards without
+    // a matching data attribute fall back to "?" rather than throwing —
+    // a defensive guard for tests + any future bet types added without
+    // updating the template.
+    horseCards.forEach(function (card) {
+        const oddsEl = card.querySelector('.hr-horse-odds');
+        if (!oddsEl) return;
+        const mult = card.dataset[keySuffix + 'Mult'];
+        const display = (mult != null && mult !== '')
+            ? parseFloat(mult).toFixed(1) + '× ' + keySuffix
+            : '? ' + keySuffix;
+        oddsEl.textContent = display;
+    });
+}
+
 function renderHorseRacingResult(resultEl, body) {
     if (typeof window === 'undefined' || !window.TobyCasinoResult) return;
     const podium = (body && body.finishingOrder && body.finishingOrder.length)
@@ -228,6 +260,22 @@ function createHorseRacingAnimator(opts) {
         return checked ? checked.value : null;
     }
 
+    // Keep the per-horse odds label in sync with the currently-selected
+    // bet type. Without this the cards always showed `winMult` even when
+    // the user picked Place or Show — misleading for a 1.7× Place payout
+    // vs. a 3.1× Win payout on the same favourite.
+    const horseCards = Array.from(els.form.querySelectorAll('.hr-horse'));
+    function refreshHorseOdds() {
+        updateHorseOdds(horseCards, selectedBet());
+    }
+    els.form.querySelectorAll('input[name="bet"]').forEach(function (radio) {
+        radio.addEventListener('change', refreshHorseOdds);
+    });
+    // Prime on load in case the server-rendered "× win" labels don't
+    // match the initially-checked bet (e.g. a future template change
+    // defaults to Show).
+    refreshHorseOdds();
+
     const animator = createHorseRacingAnimator({
         runners: runners,
         track: track,
@@ -286,6 +334,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         renderHorseRacingResult: renderHorseRacingResult,
         createHorseRacingAnimator: createHorseRacingAnimator,
+        updateHorseOdds: updateHorseOdds,
         HR_RACE_MS: HR_RACE_MS,
         HR_STAGGER_MS: HR_STAGGER_MS,
         HR_MAX_FINISH_MS: HR_MAX_FINISH_MS,
