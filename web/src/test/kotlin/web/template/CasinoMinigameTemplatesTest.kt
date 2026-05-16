@@ -54,6 +54,29 @@ class CasinoMinigameTemplatesTest {
         "casinoholdem-solo.html",
     )
 
+    /**
+     * Casino pages that hand-roll their script list rather than including
+     * the shared `casinoMinigame :: scripts` fragment. They have a custom
+     * page flow (their own state-poll loop, no `TobyCasinoGame.init`
+     * scaffolding, no `{prefix}-bet`/`{prefix}-stake` DOM contract) so
+     * pulling in the full fragment would load five modules they never
+     * call. The trade-off is that their script load is opt-in: the next
+     * shared module they depend on has to be wired by hand. The test
+     * below pins the two scripts the celebratory win flourish needs.
+     *
+     * Regression for "no coins visible on /blackjack/{g}/solo": the
+     * refactor that swapped `CasinoRender.flashChipsOn` for
+     * `TobyCasinoWinSettle.fire` in blackjack-solo.js hoisted
+     * casino-win-settle.js into the shared fragment but never added
+     * the matching <script> tag to blackjack-solo.html — the chip
+     * flourish silently no-op'd at runtime because the helper was
+     * undefined.
+     */
+    private val bespokeCasinoTemplates = listOf(
+        "blackjack-solo.html",
+        "blackjack-table.html",
+    )
+
     @Test
     fun `every minigame template includes the shared casinoMinigame scripts fragment`() {
         val missing = minigameTemplates.filter { name ->
@@ -136,5 +159,31 @@ class CasinoMinigameTemplatesTest {
             winSettleIdx > gameIdx,
             "casino-win-settle.js must load before casino-game.js"
         )
+    }
+
+    @Test
+    fun `bespoke casino pages load casino-render and casino-win-settle in order`() {
+        val required = listOf("/js/casino-render.js", "/js/casino-win-settle.js")
+        bespokeCasinoTemplates.forEach { name ->
+            val path = templatesRoot.resolve(name)
+            assertTrue(Files.exists(path), "missing template: $path")
+            val content = Files.readString(path)
+            required.forEach { script ->
+                assertTrue(
+                    content.contains(script),
+                    "$name does not load $script — the chip-stack flourish " +
+                        "(TobyCasinoWinSettle.fire) silently no-ops without it. " +
+                        "Add `<script th:src=\"@{$script}\"></script>` to the " +
+                        "page's script block."
+                )
+            }
+            val renderIdx = content.indexOf("casino-render.js")
+            val settleIdx = content.indexOf("casino-win-settle.js")
+            assertTrue(
+                renderIdx in 0 until settleIdx,
+                "$name must load casino-render.js before casino-win-settle.js " +
+                    "(the helper reads window.CasinoRender at fire-time)."
+            )
+        }
     }
 }
