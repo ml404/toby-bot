@@ -6,9 +6,11 @@ import database.economy.Coinflip
 import database.economy.Dice
 import database.economy.Highlow
 import database.economy.Keno
+import database.economy.Plinko
 import database.economy.Roulette
 import database.economy.ScratchCard
 import database.economy.SlotMachine
+import database.economy.WheelOfFortune
 import database.blackjack.Blackjack
 import database.poker.CasinoHoldem
 import database.service.ConfigService
@@ -92,6 +94,22 @@ class StakeBounds(
         ConfigDto.Configurations.ROULETTE_MAX_STAKE,
         Roulette.MIN_STAKE,
         Roulette.MAX_STAKE,
+    )
+
+    fun plinko(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.PLINKO_MIN_STAKE,
+        ConfigDto.Configurations.PLINKO_MAX_STAKE,
+        Plinko.MIN_STAKE,
+        Plinko.MAX_STAKE,
+    )
+
+    fun wheelOfFortune(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.WHEEL_OF_FORTUNE_MIN_STAKE,
+        ConfigDto.Configurations.WHEEL_OF_FORTUNE_MAX_STAKE,
+        WheelOfFortune.MIN_STAKE,
+        WheelOfFortune.MAX_STAKE,
     )
 
     fun blackjackSolo(guildId: Long): Pair<Long, Long> = read(

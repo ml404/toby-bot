@@ -137,6 +137,10 @@ class ConfigDto(
         SCRATCH_MAX_STAKE("SCRATCH_MAX_STAKE"),
         ROULETTE_MIN_STAKE("ROULETTE_MIN_STAKE"),
         ROULETTE_MAX_STAKE("ROULETTE_MAX_STAKE"),
+        PLINKO_MIN_STAKE("PLINKO_MIN_STAKE"),
+        PLINKO_MAX_STAKE("PLINKO_MAX_STAKE"),
+        WHEEL_OF_FORTUNE_MIN_STAKE("WHEEL_OF_FORTUNE_MIN_STAKE"),
+        WHEEL_OF_FORTUNE_MAX_STAKE("WHEEL_OF_FORTUNE_MAX_STAKE"),
         // Solo blackjack reuses the existing BLACKJACK_MIN_ANTE /
         // BLACKJACK_MAX_ANTE keys — solo and multi share a single
         // configurable stake range.

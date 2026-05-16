@@ -1,0 +1,199 @@
+@import url("./casino-table.css");
+
+.plinko-header { margin-bottom: var(--space-5); }
+.plinko-header h1 { margin: var(--space-2) 0; }
+.plinko-header strong { color: #fff; }
+
+.plinko-table {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.plinko-board {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 240px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.05));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.plinko-ball {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.4rem;
+    color: var(--casino-gold);
+    line-height: 1;
+}
+.plinko-board.dropping .plinko-ball {
+    animation: plinko-drop 0.9s ease-in forwards;
+}
+@keyframes plinko-drop {
+    0%   { top: 8px;   transform: translateX(-50%) rotate(0deg); }
+    25%  { transform: translateX(calc(-50% - 30px)) rotate(120deg); }
+    50%  { transform: translateX(calc(-50% + 20px)) rotate(240deg); }
+    75%  { transform: translateX(calc(-50% - 10px)) rotate(360deg); }
+    100% { top: 200px; transform: translateX(-50%) rotate(480deg); }
+}
+
+.plinko-buckets {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 2px;
+    padding: 4px;
+}
+.plinko-bucket {
+    text-align: center;
+    padding: 6px 2px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.plinko-bucket-landed {
+    background: var(--casino-active-tile-bg);
+    color: #fff;
+    box-shadow: var(--casino-active-glow);
+    animation: plinko-bucket-bounce 0.35s ease-out;
+}
+@keyframes plinko-bucket-bounce {
+    0%   { transform: translateY(0); }
+    50%  { transform: translateY(-6px); }
+    100% { transform: translateY(0); }
+}
+
+.plinko-result {
+    min-height: 1.5em;
+    font-size: 1.05rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.plinko-result-win { color: #57F287; }
+.plinko-result-lose { color: #a0a0b0; }
+
+.plinko-bet {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 360px;
+}
+
+.plinko-risk-picker {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+    width: 100%;
+}
+.plinko-risk {
+    cursor: pointer;
+    user-select: none;
+}
+.plinko-risk input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.plinko-risk span {
+    display: block;
+    text-align: center;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.35);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.plinko-risk input[type="radio"]:checked + span {
+    border-color: var(--casino-gold);
+    color: #fff;
+    background: var(--casino-active-tile-bg);
+    box-shadow: var(--casino-active-glow);
+}
+.plinko-risk input[type="radio"]:focus-visible + span {
+    outline: 2px solid #5865F2;
+    outline-offset: 2px;
+}
+
+.plinko-stake-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    align-self: flex-start;
+}
+.plinko-bet input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+.plinko-bet button[type="submit"] { width: 100%; }
+
+.plinko-balance {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.plinko-balance strong { color: #fff; }
+
+.plinko-rules, .plinko-payouts {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.plinko-rules h2, .plinko-payouts h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.plinko-rules ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.plinko-rules strong { color: #fff; }
+.plinko-payouts table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+}
+.plinko-payouts th, .plinko-payouts td {
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+.plinko-payouts th { color: var(--text-muted); font-weight: 600; }
+
+@media (max-width: 600px) {
+    .plinko-board { height: 180px; }
+    .plinko-buckets { grid-template-columns: repeat(9, 1fr); }
+    .plinko-bucket { font-size: 0.7rem; padding: 4px 1px; }
+}

@@ -658,6 +658,44 @@
                     </div>
                 </div>
                 <div class="config-group">
+                    <h4>Plinko</h4>
+                    <div class="config-row" data-key="PLINKO_MIN_STAKE">
+                        <label>Minimum stake (default 10)</label>
+                        <input type="number" min="1"
+                               th:value="${overview.config['PLINKO_MIN_STAKE']}"
+                               placeholder="10"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="PLINKO_MAX_STAKE">
+                        <label>Maximum stake (0 = unlimited; default 500)</label>
+                        <input type="number" min="0"
+                               th:value="${overview.config['PLINKO_MAX_STAKE']}"
+                               placeholder="500"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+                <div class="config-group">
+                    <h4>Wheel of Fortune</h4>
+                    <div class="config-row" data-key="WHEEL_OF_FORTUNE_MIN_STAKE">
+                        <label>Minimum stake (default 10)</label>
+                        <input type="number" min="1"
+                               th:value="${overview.config['WHEEL_OF_FORTUNE_MIN_STAKE']}"
+                               placeholder="10"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="WHEEL_OF_FORTUNE_MAX_STAKE">
+                        <label>Maximum stake (0 = unlimited; default 500)</label>
+                        <input type="number" min="0"
+                               th:value="${overview.config['WHEEL_OF_FORTUNE_MAX_STAKE']}"
+                               placeholder="500"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+                <div class="config-group">
                     <h4>Casino Hold'em</h4>
                     <div class="config-row" data-key="HOLDEM_MIN_STAKE">
                         <label>Minimum stake (default 10)</label>

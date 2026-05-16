@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Plinko', '/css/plinko.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice},
+               data-rows=${rows}, data-buckets=${buckets}">
+
+    <div class="plinko-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🟢 Plinko • ' + ${guildName}">🟢 Plinko</h1>
+        <p class="muted">Drop a ball through
+            <span th:text="${rows}">8</span> peg rows; it lands in one of
+            <span th:text="${buckets}">9</span> buckets. Pick a risk profile —
+            higher risk swings the outer multipliers up and adds bust buckets
+            in the middle. Bet <span th:text="${minStake}">10</span> to
+            <span th:text="${maxStake}">500</span> credits.</p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <section class="plinko-table casino-felt">
+        <div class="plinko-board" id="plinko-board" aria-live="polite">
+            <div class="plinko-ball" id="plinko-ball" hidden>●</div>
+            <div class="plinko-buckets" id="plinko-buckets" th:attr="data-risk=${risks[0]}">
+                <span class="plinko-bucket"
+                      th:each="m, iter : ${payoutTables.get(risks[0])}"
+                      th:attr="data-index=${iter.index}"
+                      th:text="${m} + '×'">1.0×</span>
+            </div>
+        </div>
+
+        <div class="plinko-result" id="plinko-result" hidden></div>
+
+        <form class="plinko-bet" id="plinko-bet" autocomplete="off">
+            <div class="plinko-risk-picker" role="radiogroup" aria-label="Risk profile">
+                <label class="plinko-risk" th:each="r, iter : ${risks}">
+                    <input type="radio" name="risk" th:value="${r}" th:checked="${iter.index == 0}">
+                    <span th:text="${r}">LOW</span>
+                </label>
+            </div>
+            <label for="plinko-stake" class="plinko-stake-label">Stake (credits)</label>
+            <input id="plinko-stake"
+                   name="stake"
+                   type="number"
+                   th:attr="min=${minStake}, max=${maxStake}"
+                   th:value="${minStake}"
+                   step="1">
+            <button type="submit" id="plinko-drop" class="btn-primary">Drop</button>
+            <button type="submit" id="plinko-drop-toby" class="btn-secondary casino-bet-toby" hidden
+                    title="Sells just enough TOBY at the live market price to cover the shortfall, then drops.">
+                Drop (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+            </button>
+        </form>
+
+        <div class="plinko-balance">
+            Balance: <strong id="plinko-balance" th:text="${balance}">0</strong> credits
+        </div>
+        <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+    </section>
+
+    <section class="plinko-payouts">
+        <h2>Payout tables (× stake)</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Risk</th>
+                <th th:each="i : ${#numbers.sequence(0, buckets - 1)}" th:text="${i}">0</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${risks}">
+                <td th:text="${r}">LOW</td>
+                <td th:each="m : ${payoutTables.get(r)}" th:text="${m}">1.0</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="muted">All three profiles target ~0.90 RTP. Outer buckets pay big;
+            center buckets refund (×1), partially lose (×0.4–0.7), or bust (×0).</p>
+    </section>
+
+    <section class="plinko-rules">
+        <h2>Rules</h2>
+        <ul>
+            <li>Pick a risk profile (LOW / MEDIUM / HIGH) and a stake.</li>
+            <li>Each of the <span th:text="${rows}">8</span> rows flips a fair coin to nudge the ball left or right.</li>
+            <li>The ball settles into one of <span th:text="${buckets}">9</span> buckets; that bucket's multiplier is your payout.</li>
+            <li>Multiplier &gt; 1 = win, = 1 = refund, &lt; 1 = partial or full loss.</li>
+            <li>Wins roll for the jackpot pool; losses tribute the lost portion of the stake.</li>
+        </ul>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
+<script th:src="@{/js/plinko.js}"></script>
+</body>
+</html>
