@@ -15,14 +15,6 @@ class Application {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            // Belt for local/dev runs; the authoritative setter is the
-            // `-Djdk.http.auth.tunneling.disabledSchemes=` flag in Procfile
-            // so the property is present before any `-javaagent` premain
-            // (e.g. heroku-java-metrics-agent) can touch HttpURLConnection
-            // and freeze its static disabled-schemes set with `Basic` in it.
-            if (System.getProperty("jdk.http.auth.tunneling.disabledSchemes") == null) {
-                System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "")
-            }
             SpringApplication.run(Application::class.java, *args)
         }
     }

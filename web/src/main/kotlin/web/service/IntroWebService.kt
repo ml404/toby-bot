@@ -9,17 +9,17 @@ import database.dto.UserDto
 import database.service.MusicFileService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
+import okhttp3.Authenticator as OkAuthenticator
+import okhttp3.Credentials
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
-import java.net.Authenticator
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
-import java.net.PasswordAuthentication
 import java.net.Proxy
 import java.net.URI
 import java.net.URL
-import java.nio.charset.StandardCharsets
-import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 @Service
@@ -463,11 +463,8 @@ class IntroWebService(
         return try {
             val apiUrl = "https://www.googleapis.com/youtube/v3/videos" +
                 "?id=$videoId&part=snippet,contentDetails&key=$apiKey"
-            val connection = openYouTubeDataApiConnection(apiUrl)
-            if (connection.responseCode != 200) {
-                logger.warn {
-                    "YouTube Data API preview returned HTTP ${connection.responseCode} for videoId=$videoId"
-                }
+            val body = fetchYouTubeDataApi(apiUrl) ?: run {
+                logger.warn { "YouTube Data API preview empty response for videoId=$videoId" }
                 return YouTubePreview(
                     videoId = videoId,
                     title = null,
@@ -475,7 +472,6 @@ class IntroWebService(
                     durationSeconds = null
                 )
             }
-            val body = connection.inputStream.bufferedReader().readText()
             val item = objectMapper.readTree(body).path("items").firstOrNull() ?: return null
             val snippet = item.path("snippet")
             val title = snippet.path("title").asText().takeIf { it.isNotBlank() }
@@ -498,35 +494,44 @@ class IntroWebService(
         }
     }
 
-    private fun openYouTubeDataApiConnection(apiUrl: String): HttpURLConnection {
-        val proxy = YoutubeProxySettings.fromEnv()
-            ?: return URL(apiUrl).openConnection() as HttpURLConnection
-
-        val javaProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
-        val connection = URL(apiUrl).openConnection(javaProxy) as HttpURLConnection
-        if (proxy.hasAuth) {
-            // Per-connection authenticator so the JDK supplies Basic creds on
-            // the HTTPS CONNECT request itself. Without this, the proxy 407s
-            // the tunnel before setRequestProperty's Proxy-Authorization
-            // header ever gets a chance to ride inside it. The companion
-            // setter for jdk.http.auth.tunneling.disabledSchemes lives in
-            // Application.main — it has to run before sun.net's static
-            // initializer caches the disabled-schemes list, and that fires
-            // on the first HTTP open (the Discord guilds call typically
-            // beats us to it).
-            connection.setAuthenticator(object : Authenticator() {
-                override fun getPasswordAuthentication(): PasswordAuthentication? =
-                    if (requestorType == RequestorType.PROXY) {
-                        PasswordAuthentication(proxy.user, proxy.pass!!.toCharArray())
-                    } else null
-            })
-            // Retained for plain-HTTP targets; on HTTPS this rides inside the
-            // tunnel and is harmless.
-            val cred = Base64.getEncoder()
-                .encodeToString("${proxy.user}:${proxy.pass}".toByteArray(StandardCharsets.UTF_8))
-            connection.setRequestProperty("Proxy-Authorization", "Basic $cred")
+    // OkHttp here instead of JDK HttpURLConnection: on Heroku the bot's
+    // authenticated YouTube proxy 407s the HTTPS CONNECT no matter how we
+    // configure the JDK (Authenticator, jdk.http.auth.tunneling.disabledSchemes
+    // via Procfile -D flag, both — same 407). OkHttp's proxyAuthenticator
+    // handles CONNECT-time Basic correctly, which is also what
+    // `bot.configuration.AppConfig.httpClient` uses for music streaming.
+    private fun fetchYouTubeDataApi(apiUrl: String): String? {
+        val client = youtubeApiClient()
+        val request = Request.Builder().url(apiUrl).build()
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                logger.warn {
+                    "YouTube Data API returned HTTP ${response.code} (${response.message}) for $apiUrl"
+                }
+                null
+            } else {
+                response.body?.string()
+            }
         }
-        return connection
+    }
+
+    private fun youtubeApiClient(): OkHttpClient {
+        val proxy = YoutubeProxySettings.fromEnv()
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+        if (proxy != null) {
+            builder.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port)))
+            if (proxy.hasAuth) {
+                builder.proxyAuthenticator(OkAuthenticator { _, response ->
+                    val credential = Credentials.basic(proxy.user!!, proxy.pass!!)
+                    response.request.newBuilder()
+                        .header("Proxy-Authorization", credential)
+                        .build()
+                })
+            }
+        }
+        return builder.build()
     }
 
     /**
