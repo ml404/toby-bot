@@ -227,21 +227,23 @@ function renderWheelResult(resultEl, body) {
         if (!currentSpokes.length) return Promise.resolve();
         const target = currentSpokes.find(s => s.multiplier === landed);
         if (!target) return Promise.resolve();
-        // Snap rotor back to 0 before animating so successive spins
-        // start from a known transform — same pattern casino-jackpot-wheel
-        // uses to avoid accumulated-rotation drift. The pointer sits at
-        // angle 0 (top), so to bring the wedge midpoint under it we
-        // rotate by `360 - mid`, plus full rotations for drama.
+        // Pointer sits at angle 0 (top of the wheel). To bring the wedge
+        // midpoint under it we rotate by `360 - mid`, plus full rotations
+        // for drama. Snap rotor back to 0 first so successive spins
+        // start from a known transform — same dance casino-jackpot-wheel
+        // uses to avoid accumulated-rotation drift. The CSS transition
+        // is owned by `.wheel-rotor` (not inline) so the browser keeps a
+        // stable starting state across both the snap and the spin.
         const finalAngle = SPIN_ROTATIONS * 360 + (360 - (target.mid % 360));
         rotor.style.transition = 'none';
         rotor.style.transform = 'rotate(0deg)';
         // Force a layout read so the browser registers the snap-back
-        // before the next transition kicks in. Without this, the
-        // browser collapses both transform writes into the easing curve
-        // and the wheel spins backwards from the previous resting angle.
+        // as a discrete style change before the CSS transition kicks
+        // in. Without this, the browser collapses both transform writes
+        // into the easing curve and the wheel "spins" by zero degrees.
         // eslint-disable-next-line no-unused-expressions
         rotor.getBoundingClientRect();
-        rotor.style.transition = '';
+        rotor.style.transition = '';  // restore the CSS transition
         if (prefersReducedMotion()) {
             rotor.style.transition = 'none';
             rotor.style.transform = 'rotate(' + finalAngle + 'deg)';
@@ -260,7 +262,6 @@ function renderWheelResult(resultEl, body) {
                 resolve();
             }, SPIN_DURATION_MS + 400);
             requestAnimationFrame(() => {
-                rotor.style.transition = 'transform ' + SPIN_DURATION_MS + 'ms cubic-bezier(0.18, 0.6, 0.18, 1)';
                 rotor.style.transform = 'rotate(' + finalAngle + 'deg)';
             });
         });

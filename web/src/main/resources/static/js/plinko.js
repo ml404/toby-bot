@@ -180,10 +180,13 @@ function renderPlinkoResult(resultEl, body) {
 
     function animateDrop(targetBucket) {
         const path = decisionPath(targetBucket);
-        // X waypoints — start at (0, -BALL_R), then after each row k the
-        // ball is at `cum * PEG_X / 2` where cum = sum(decisions[0..k]).
-        // Each waypoint y sits just below the row's pegs.
-        const waypoints = [{ x: 0, y: -BALL_R }];
+        // X waypoints — start just below the top of the viewBox so the
+        // ball is visible from frame 0 (default SVG overflow clips
+        // anything outside viewBox), then after each row k the ball is
+        // at `cum * PEG_X / 2` where cum = sum(decisions[0..k]). Each
+        // waypoint y sits just below the row's pegs.
+        const START_Y = BALL_R + 4;
+        const waypoints = [{ x: 0, y: START_Y }];
         let cum = 0;
         for (let row = 0; row < ROWS; row++) {
             cum += path[row];
@@ -195,7 +198,8 @@ function renderPlinkoResult(resultEl, body) {
         // Final waypoint: settle into the bucket centre.
         waypoints.push({ x: bucketCenterX(targetBucket), y: BUCKET_Y_TOP + BUCKET_H / 2 });
 
-        ball.hidden = false;
+        // Snap to start; the ball was already visible at cy=8 on page
+        // load, so animateDrop continues from there.
         ball.setAttribute('cx', '0');
         ball.setAttribute('cy', '0');
         ball.setAttribute('transform', 'translate(' + waypoints[0].x + ',' + waypoints[0].y + ')');
@@ -250,10 +254,7 @@ function renderPlinkoResult(resultEl, body) {
     }
 
     function stopAnimation(_intervalId, body) {
-        if (!body || typeof body.bucket !== 'number') {
-            ball.hidden = true;
-            return;
-        }
+        if (!body || typeof body.bucket !== 'number') return;
         animateDrop(body.bucket).then(() => {
             highlightLanded(body.bucket);
             if (window.CasinoSounds) window.CasinoSounds.play('click');
