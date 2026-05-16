@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Swap per-horse odds label when Win/Place/Show changes",
+    "summary": "The horse cards always rendered the WIN multiplier regardless of which bet type was selected, so the favourite looked like \"3.1× win\" even when Place was active (where it actually pays 1.7×). Server-render all three multipliers as `data-{win|place|show}-mult` attributes on each `.hr-horse` card. New `updateHorseOdds(cards, betType)` helper rewrites the visible label when the bet radio changes. IIFE listens for `change` events on every `input[name=\"bet\"]` radio and primes t…",
+    "emoji": "🎰",
+    "prNumber": 463
+  },
+  {
+    "date": "May 2026",
     "title": "Add Horse Racing minigame (Win/Place/Show on 6-horse field)",
     "summary": "New casino minigame: `/horse-racing` slash command + `/casino/{guildId}/horse-racing` web page with an animated six-lane track. Six horses, named with distinct win odds (favourite H1 to longshot H6); three bet types — **Win** (1st only), **Place** (top 2), **Show** (top 3). **Pure logic** (`HorseRacing.kt`) uses Plackett–Luce sampling: each horse's \"strength\" is its stated win probability, so favourites land on the podium more often than just their win rate suggests — exac…",
     "emoji": "🎰",
