@@ -2,22 +2,19 @@ package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Caffeine
-import common.configuration.YoutubeProxySettings
 import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
 import database.service.MusicFileService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.net.HttpURLConnection
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.net.URI
 import java.net.URL
-import java.nio.charset.StandardCharsets
-import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 @Service
@@ -461,11 +458,8 @@ class IntroWebService(
         return try {
             val apiUrl = "https://www.googleapis.com/youtube/v3/videos" +
                 "?id=$videoId&part=snippet,contentDetails&key=$apiKey"
-            val connection = openYouTubeDataApiConnection(apiUrl)
-            if (connection.responseCode != 200) {
-                logger.warn {
-                    "YouTube Data API preview returned HTTP ${connection.responseCode} for videoId=$videoId"
-                }
+            val body = fetchYouTubeDataApi(apiUrl) ?: run {
+                logger.warn { "YouTube Data API preview empty response for videoId=$videoId" }
                 return YouTubePreview(
                     videoId = videoId,
                     title = null,
@@ -473,7 +467,6 @@ class IntroWebService(
                     durationSeconds = null
                 )
             }
-            val body = connection.inputStream.bufferedReader().readText()
             val item = objectMapper.readTree(body).path("items").firstOrNull() ?: return null
             val snippet = item.path("snippet")
             val title = snippet.path("title").asText().takeIf { it.isNotBlank() }
@@ -496,22 +489,30 @@ class IntroWebService(
         }
     }
 
-    private fun openYouTubeDataApiConnection(apiUrl: String): HttpURLConnection {
-        val proxy = YoutubeProxySettings.fromEnv()
-        val connection = if (proxy != null) {
-            val javaProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
-            (URL(apiUrl).openConnection(javaProxy) as HttpURLConnection).also {
-                if (proxy.hasAuth) {
-                    val cred = Base64.getEncoder()
-                        .encodeToString("${proxy.user}:${proxy.pass}".toByteArray(StandardCharsets.UTF_8))
-                    it.setRequestProperty("Proxy-Authorization", "Basic $cred")
+    // The YouTube Data API at googleapis.com authenticates by API key, not
+    // by source IP, so it doesn't need the YouTube IP-rotation proxy that
+    // music streaming uses. Routing it through the proxy was actively
+    // harmful in production — the proxy plan only authorises youtube.com
+    // CONNECT targets and 407s every googleapis.com call, blanking out
+    // every preview title.
+    private fun fetchYouTubeDataApi(apiUrl: String): String? {
+        val request = Request.Builder().url(apiUrl).build()
+        return youtubeApiClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                logger.warn {
+                    "YouTube Data API returned HTTP ${response.code} (${response.message}) for $apiUrl"
                 }
+                null
+            } else {
+                response.body?.string()
             }
-        } else {
-            URL(apiUrl).openConnection() as HttpURLConnection
         }
-        return connection
     }
+
+    private val youtubeApiClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     /**
      * Back-compat helper used by legacy tests. Returns the YouTube video title or null.
