@@ -44,6 +44,11 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
     // they hit "Reveal all") the result is shown.
     let activeCard = null;
     let game;
+    // Held across the user-driven reveal so casino-game.js keeps the buy
+    // buttons disabled until every cell is uncovered — otherwise a fast
+    // click (or autoclicker) can submit a second purchase on top of a
+    // half-revealed card. Resolved from the all-revealed branch below.
+    let revealResolve = null;
 
     function resetCells() {
         cellButtons.forEach(function (btn) {
@@ -95,6 +100,13 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
             // Card consumed — next "Buy ticket" starts a fresh one.
             activeCard = null;
             if (revealBtn) revealBtn.hidden = true;
+            // Release the busy-lock so casino-game.js can re-enable the
+            // buy buttons. Held since the renderResult Promise was issued.
+            if (revealResolve) {
+                const resolve = revealResolve;
+                revealResolve = null;
+                resolve();
+            }
         }
     }
 
@@ -169,7 +181,14 @@ function renderScratchResult(resultEl, body, matchThreshold, balanceEl) {
             }
         },
         renderResult: function () {
-            // Deliberately a no-op — see revealCell.
+            // Return a Promise so casino-game.js holds the busy-lock +
+            // setDisabled(true) across the user-driven reveal. Resolved
+            // from revealCell once the last cell is uncovered — same
+            // keno/baccarat shape covered by
+            // casino-game-lock-through-render.test.js.
+            return new Promise(function (resolve) {
+                revealResolve = resolve;
+            });
         },
     });
 })();

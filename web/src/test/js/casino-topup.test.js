@@ -175,3 +175,91 @@ describe('init', () => {
         expect(handle).toBeNull();
     });
 });
+
+// ---------------------------------------------------------------------------
+// casino-game.js wiring — applyBalance / applyTobyDelta must trigger a
+// TobyTopUp.refresh so the "Bet (sell TOBY)" button hides itself when a
+// win pushes the player's balance past their stake. Without this nudge
+// the secondary button is stranded on screen because refresh()'s normal
+// triggers (stake-input change, setTobyCoins, setMarketPrice) don't
+// cover the post-win balance bump for a regular wager.
+// ---------------------------------------------------------------------------
+
+describe('casino-game → TobyTopUp refresh on balance updates', () => {
+    let postJsonMock;
+
+    beforeEach(() => {
+        jest.resetModules();
+        jest.useFakeTimers();
+        document.body.innerHTML = `
+            <form id="f">
+                <input id="s" type="number" value="500">
+                <button id="p" type="submit">Bet</button>
+                <button id="t" type="submit" class="casino-bet-toby" hidden>
+                    <span class="casino-bet-toby-coins">0</span>
+                </button>
+            </form>
+            <span id="bal">0</span>
+            <div id="r"></div>
+        `;
+        postJsonMock = jest.fn();
+        window.TobyApi = { postJson: postJsonMock };
+        require('../../main/resources/static/js/casino-balance');
+        require('../../main/resources/static/js/casino-jackpot');
+        require('../../main/resources/static/js/casino-topup');
+        require('../../main/resources/static/js/casino-game');
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        delete window.TobyApi;
+        delete window.TobyCasinoGame;
+        delete window.TobyTopUp;
+        delete window.TobyBalance;
+        delete window.TobyJackpot;
+    });
+
+    function bootGame() {
+        return window.TobyCasinoGame.init({
+            guildId: 'g1',
+            endpoint: '/play',
+            form: document.getElementById('f'),
+            stakeInput: document.getElementById('s'),
+            primaryBtn: document.getElementById('p'),
+            tobyBtn: document.getElementById('t'),
+            balanceEl: document.getElementById('bal'),
+            resultEl: document.getElementById('r'),
+            tobyCoins: 1000,
+            marketPrice: 2.5,
+        });
+    }
+
+    test('applyBalance hides the TOBY button when the new balance covers the stake', () => {
+        const game = bootGame();
+        const tobyBtn = document.getElementById('t');
+        // Pre-win: stake=500 > balance=0, market+coins both healthy → button visible.
+        expect(tobyBtn.hidden).toBe(false);
+
+        // A win lands and the wallet now covers the stake outright.
+        game.applyBalance(600);
+
+        expect(document.getElementById('bal').textContent).toBe('600');
+        expect(tobyBtn.hidden).toBe(true);
+    });
+
+    test('applyTobyDelta with no soldTobyCoins still refreshes button visibility', () => {
+        const game = bootGame();
+        const tobyBtn = document.getElementById('t');
+        expect(tobyBtn.hidden).toBe(false);
+
+        // Simulate the balance moving via a different code path (e.g.
+        // scratch's renderScratchResult writes via TobyBalance.update
+        // directly), then call applyTobyDelta with a body that has
+        // neither soldTobyCoins nor newPrice — the helper still needs to
+        // refresh so the post-reveal balance hides the button.
+        document.getElementById('bal').textContent = '700';
+        game.applyTobyDelta({ newBalance: 700 });
+
+        expect(tobyBtn.hidden).toBe(true);
+    });
+});

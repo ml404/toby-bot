@@ -95,10 +95,14 @@
             // load (older test paths that don't require it).
             if (root && root.TobyBalance) {
                 root.TobyBalance.update(balanceEl, newBalance);
-                return;
+            } else if (typeof newBalance === 'number' && balanceEl) {
+                balanceEl.textContent = newBalance;
             }
-            if (typeof newBalance !== 'number') return;
-            if (balanceEl) balanceEl.textContent = newBalance;
+            // The "Bet (sell TOBY)" button's visibility is driven by
+            // stake-vs-balance. Without this nudge a player who was short
+            // before a win keeps the secondary button on screen even
+            // after their balance climbs past the stake.
+            if (topUp) topUp.refresh();
         }
 
         function applyWinSettle(body, override) {
@@ -123,6 +127,11 @@
                 topUp.setTobyCoins(remaining);
             }
             if (typeof body.newPrice === 'number') topUp.setMarketPrice(body.newPrice);
+            // Belt-and-suspenders for scratch's manual flow — it calls
+            // applyTobyDelta after the balance write so the secondary
+            // button re-evaluates against the post-reveal wallet even
+            // when the response carried no soldTobyCoins/newPrice.
+            topUp.refresh();
         }
 
         function showToast(message, type) {

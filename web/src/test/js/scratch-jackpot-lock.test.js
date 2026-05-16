@@ -158,4 +158,72 @@ describe('scratch.js — pool banner lock around reveal', () => {
         expect(holdSpy).toHaveBeenCalledTimes(1);
         expect(releaseSpy).not.toHaveBeenCalled();
     });
+
+    // Buy-button stays disabled through the user-driven reveal — otherwise
+    // a fast-clicker can submit a second buy on top of a half-scratched
+    // card. Mirrors the pool-banner lock pattern above: re-enable fires
+    // only when the LAST cell flips.
+    test('buy button stays disabled across cell-by-cell reveal and re-enables on the last cell', async () => {
+        postJsonMock.mockResolvedValue(makeCard(500));
+        const buyBtn = document.getElementById('scratch-buy');
+        submitBuy();
+        // Submit handler runs synchronously: setDisabled(true) fires.
+        expect(buyBtn.disabled).toBe(true);
+
+        // Drain the response → stopAnimation → renderResult issues its
+        // Promise. Button stays disabled because the Promise is pending.
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+        await Promise.resolve();
+        expect(buyBtn.disabled).toBe(true);
+
+        for (let i = 0; i < 8; i++) {
+            clickCell(i);
+            expect(buyBtn.disabled).toBe(true);
+        }
+        clickCell(8);
+        // revealResolve() → finishSettle → setDisabled(false). Needs a
+        // microtask flush because finishSettle is awaited via .then.
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+        expect(buyBtn.disabled).toBe(false);
+    });
+
+    test('Reveal-all releases the buy-button lock after the cascade settles', async () => {
+        postJsonMock.mockResolvedValue(makeCard(500));
+        const buyBtn = document.getElementById('scratch-buy');
+        submitBuy();
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+        await Promise.resolve();
+        expect(buyBtn.disabled).toBe(true);
+
+        document.getElementById('scratch-reveal-all').click();
+        // Mid-cascade the lock must still hold.
+        jest.advanceTimersByTime(60 * 4);
+        expect(buyBtn.disabled).toBe(true);
+
+        // Run the rest of the cascade and flush the resolution chain.
+        jest.advanceTimersByTime(60 * 5);
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+        expect(buyBtn.disabled).toBe(false);
+    });
+
+    test('server error path re-enables the buy button so the user can retry', async () => {
+        postJsonMock.mockResolvedValue({ ok: false, error: 'broke' });
+        const buyBtn = document.getElementById('scratch-buy');
+        submitBuy();
+        expect(buyBtn.disabled).toBe(true);
+
+        await Promise.resolve();
+        await Promise.resolve();
+        jest.advanceTimersByTime(0);
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+
+        // Scaffold's else-branch never invokes renderResult, so the
+        // Promise dance is bypassed entirely — setDisabled(false) fires
+        // from the failure path.
+        expect(buyBtn.disabled).toBe(false);
+    });
 });
