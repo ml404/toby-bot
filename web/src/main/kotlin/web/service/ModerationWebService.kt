@@ -887,6 +887,7 @@ class ModerationWebService(
             ConfigDto.Configurations.HOLDEM_MIN_STAKE,
             ConfigDto.Configurations.DUEL_MIN_STAKE,
             ConfigDto.Configurations.PLINKO_MIN_STAKE,
+            ConfigDto.Configurations.HORSE_RACING_MIN_STAKE,
             ConfigDto.Configurations.WHEEL_OF_FORTUNE_MIN_STAKE,
             ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> {
                 val n = rawValue.trim().toLongOrNull()
@@ -909,6 +910,7 @@ class ModerationWebService(
             ConfigDto.Configurations.HOLDEM_MAX_STAKE,
             ConfigDto.Configurations.DUEL_MAX_STAKE,
             ConfigDto.Configurations.PLINKO_MAX_STAKE,
+            ConfigDto.Configurations.HORSE_RACING_MAX_STAKE,
             ConfigDto.Configurations.WHEEL_OF_FORTUNE_MAX_STAKE -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."

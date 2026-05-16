@@ -5,6 +5,7 @@ import database.economy.Baccarat
 import database.economy.Coinflip
 import database.economy.Dice
 import database.economy.Highlow
+import database.economy.HorseRacing
 import database.economy.Keno
 import database.economy.Plinko
 import database.economy.Roulette
@@ -102,6 +103,14 @@ class StakeBounds(
         ConfigDto.Configurations.PLINKO_MAX_STAKE,
         Plinko.MIN_STAKE,
         Plinko.MAX_STAKE,
+    )
+
+    fun horseRacing(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.HORSE_RACING_MIN_STAKE,
+        ConfigDto.Configurations.HORSE_RACING_MAX_STAKE,
+        HorseRacing.MIN_STAKE,
+        HorseRacing.MAX_STAKE,
     )
 
     fun wheelOfFortune(guildId: Long): Pair<Long, Long> = read(
