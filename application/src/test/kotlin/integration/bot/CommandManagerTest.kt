@@ -13,6 +13,7 @@ import bot.toby.command.commands.economy.DuelCommand
 import bot.toby.command.commands.economy.HighlowCommand
 import bot.toby.command.commands.economy.KenoCommand
 import bot.toby.command.commands.economy.LotteryCommand
+import bot.toby.command.commands.economy.PlinkoCommand
 import bot.toby.command.commands.economy.PokerCommand
 import bot.toby.command.commands.economy.RouletteCommand
 import bot.toby.command.commands.economy.ScratchCommand
@@ -20,6 +21,7 @@ import bot.toby.command.commands.economy.SlotsCommand
 import bot.toby.command.commands.economy.TipCommand
 import bot.toby.command.commands.economy.TitleCommand
 import bot.toby.command.commands.economy.TobyCoinCommand
+import bot.toby.command.commands.economy.WheelOfFortuneCommand
 import bot.toby.command.commands.fetch.DbdRandomKillerCommand
 import bot.toby.command.commands.fetch.Kf2RandomMapCommand
 import bot.toby.command.commands.fetch.MemeCommand
@@ -148,11 +150,13 @@ class CommandManagerTest {
             CasinoHoldemCommand::class.java,
             RouletteCommand::class.java,
             LotteryCommand::class.java,
+            PlinkoCommand::class.java,
+            WheelOfFortuneCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(56, commandManager.allCommands.size)
-        Assertions.assertEquals(56, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(58, commandManager.allCommands.size)
+        Assertions.assertEquals(58, commandManager.allSlashCommands.size)
     }
 
     @Test
