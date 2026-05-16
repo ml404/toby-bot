@@ -11,68 +11,64 @@
     gap: var(--space-4);
 }
 
-.plinko-board {
-    position: relative;
+.plinko-stage {
     width: 100%;
     max-width: 480px;
-    height: 240px;
-    background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.05));
+    padding: var(--space-3);
+    background: linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.08));
     border: 1px solid var(--border);
     border-radius: 12px;
-    overflow: hidden;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+}
+
+.plinko-board-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+.plinko-peg {
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 0.3;
 }
 
 .plinko-ball {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 1.4rem;
-    color: var(--casino-gold);
-    line-height: 1;
+    fill: url(#plinko-ball-grad);
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 0.5;
 }
-.plinko-board.dropping .plinko-ball {
-    animation: plinko-drop 0.9s ease-in forwards;
+.plinko-ball[hidden] { display: none; }
+
+.plinko-bucket-rect {
+    stroke: rgba(0, 0, 0, 0.5);
+    stroke-width: 0.5;
+    transition: filter 0.25s ease, transform 0.25s ease;
+    transform-origin: center;
+    transform-box: fill-box;
 }
-@keyframes plinko-drop {
-    0%   { top: 8px;   transform: translateX(-50%) rotate(0deg); }
-    25%  { transform: translateX(calc(-50% - 30px)) rotate(120deg); }
-    50%  { transform: translateX(calc(-50% + 20px)) rotate(240deg); }
-    75%  { transform: translateX(calc(-50% - 10px)) rotate(360deg); }
-    100% { top: 200px; transform: translateX(-50%) rotate(480deg); }
+.plinko-bucket-bust    { fill: #5a2424; }
+.plinko-bucket-loss    { fill: #6b4a1f; }
+.plinko-bucket-push    { fill: #314a5e; }
+.plinko-bucket-win     { fill: #2c6b4a; }
+.plinko-bucket-jackpot { fill: #c97f24; }
+
+.plinko-bucket-landed {
+    filter: brightness(1.45) drop-shadow(0 0 6px rgba(247, 212, 106, 0.65));
+    transform: translateY(-1px);
 }
 
-.plinko-buckets {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 2px;
-    padding: 4px;
-}
-.plinko-bucket {
-    text-align: center;
-    padding: 6px 2px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-muted);
-    font-size: 0.8rem;
+.plinko-bucket-label {
+    fill: #fff8e1;
+    font-family: "Cambria", "Georgia", serif;
+    font-size: 7px;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-}
-.plinko-bucket-landed {
-    background: var(--casino-active-tile-bg);
-    color: #fff;
-    box-shadow: var(--casino-active-glow);
-    animation: plinko-bucket-bounce 0.35s ease-out;
-}
-@keyframes plinko-bucket-bounce {
-    0%   { transform: translateY(0); }
-    50%  { transform: translateY(-6px); }
-    100% { transform: translateY(0); }
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.6);
+    stroke-width: 0.4;
+    pointer-events: none;
 }
 
 .plinko-result {
@@ -191,9 +187,3 @@
     border-bottom: 1px solid var(--border);
 }
 .plinko-payouts th { color: var(--text-muted); font-weight: 600; }
-
-@media (max-width: 600px) {
-    .plinko-board { height: 180px; }
-    .plinko-buckets { grid-template-columns: repeat(9, 1fr); }
-    .plinko-bucket { font-size: 0.7rem; padding: 4px 1px; }
-}

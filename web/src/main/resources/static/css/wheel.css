@@ -11,41 +11,84 @@
     gap: var(--space-4);
 }
 
+/* SVG wheel reuses the brass-rim/hub/pointer/peg aesthetic from
+   `.jackpot-wheel-*` in base.css. The classes here are scoped so this
+   wheel can sit inline on the page while the jackpot wheel keeps its
+   overlay-only positioning. Visual styling is intentionally a clone. */
 .wheel-stage {
     position: relative;
+    width: clamp(260px, 78vw, 360px);
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 0.85rem;
 }
-.wheel-pointer {
-    color: var(--casino-gold);
-    font-size: 1.4rem;
-    line-height: 1;
-    margin-bottom: 4px;
+.wheel-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
 }
-.wheel-disc {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 50%, #0f1830 0%, #07101e 80%);
-    border: 4px solid var(--casino-gold);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--casino-active-glow);
+.wheel-rotor {
+    transform-origin: 0 0;
+    /* Transition is added/removed via JS so we can reset between spins
+       without animating the snap-back. */
 }
-.wheel-landed {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: #fff;
+.wheel-rim-outer {
+    fill: url(#wof-wheel-rim-grad);
+    stroke: rgba(0, 0, 0, 0.6);
+    stroke-width: 1;
+}
+.wheel-rim-inner {
+    fill: #0a1a12;
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.5;
+}
+.wheel-hub-outer {
+    fill: url(#wof-wheel-hub-grad);
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 1;
+}
+.wheel-hub-inner {
+    fill: #b07d1f;
+    stroke: rgba(255, 240, 180, 0.45);
+    stroke-width: 0.5;
+}
+.wheel-pointer-arrow {
+    fill: url(#wof-wheel-pointer-grad);
+    stroke: rgba(0, 0, 0, 0.5);
+    stroke-width: 0.75;
+    stroke-linejoin: round;
+}
+.wheel-peg {
+    fill: url(#wof-wheel-hub-grad);
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.4;
+}
+.wheel-segment {
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 0.75;
+}
+.wheel-segment-label {
+    fill: #fff8e1;
+    font-family: "Cambria", "Georgia", serif;
+    font-size: 10px;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.5;
+    pointer-events: none;
 }
-.wheel-disc.spinning {
-    animation: wheel-spin 1.6s linear infinite;
-}
-@keyframes wheel-spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+
+.wheel-status {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    min-height: 1.4em;
 }
 
 .wheel-result {
@@ -82,6 +125,9 @@
     pointer-events: none;
 }
 .wheel-pick span {
+    /* `--wheel-pick-tint` is set per-chip by wheel.js to the matching
+       wedge colour, so the player sees which wedges they're betting on. */
+    --wheel-pick-tint: var(--casino-gold);
     display: block;
     text-align: center;
     padding: 12px 0;
@@ -93,12 +139,22 @@
     font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
     transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.wheel-pick span::before {
+    content: '';
+    position: absolute;
+    inset: 4px auto 4px 6px;
+    width: 6px;
+    border-radius: 2px;
+    background: var(--wheel-pick-tint);
+    opacity: 0.85;
 }
 .wheel-pick input[type="radio"]:checked + span {
-    border-color: var(--casino-gold);
+    border-color: var(--wheel-pick-tint);
     color: #fff;
     background: var(--casino-active-tile-bg);
-    box-shadow: var(--casino-active-glow);
+    box-shadow: 0 0 12px var(--wheel-pick-tint, var(--casino-gold));
 }
 .wheel-pick input[type="radio"]:focus-visible + span {
     outline: 2px solid #5865F2;
@@ -165,7 +221,6 @@
 }
 .wheel-weights th { color: var(--text-muted); font-weight: 600; }
 
-@media (max-width: 600px) {
-    .wheel-disc { width: 130px; height: 130px; }
-    .wheel-landed { font-size: 2rem; }
+@media (prefers-reduced-motion: reduce) {
+    .wheel-rotor { transition: none !important; }
 }

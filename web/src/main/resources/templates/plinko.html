@@ -22,15 +22,44 @@
 
     <div th:replace="~{fragments/alerts :: error}"></div>
 
+    <!--
+        SVG-based board: pegs are real circles laid out in the classic
+        Galton triangle (row k has k+1 pegs), buckets are wedges across
+        the bottom. The ball is an SVG <circle> whose translate transform
+        is driven by plinko.js — each row's decision picks a mid-row
+        bounce X, ending in the exact center of the landing bucket. This
+        keeps the animation aligned with the bucket the server picked.
+
+        Per-risk payout tables are stashed in `__plinkoTables` so the
+        client can render the bucket labels and tint the landing bucket
+        without round-tripping to the server.
+    -->
     <section class="plinko-table casino-felt">
-        <div class="plinko-board" id="plinko-board" aria-live="polite">
-            <div class="plinko-ball" id="plinko-ball" hidden>●</div>
-            <div class="plinko-buckets" id="plinko-buckets" th:attr="data-risk=${risks[0]}">
-                <span class="plinko-bucket"
-                      th:each="m, iter : ${payoutTables.get(risks[0])}"
-                      th:attr="data-index=${iter.index}"
-                      th:text="${m} + '×'">1.0×</span>
-            </div>
+        <div class="plinko-stage">
+            <svg class="plinko-board-svg" id="plinko-board"
+                 viewBox="-100 0 200 220"
+                 preserveAspectRatio="xMidYMid meet"
+                 aria-live="polite">
+                <defs>
+                    <radialGradient id="plinko-ball-grad" cx="0.35" cy="0.35" r="0.7">
+                        <stop offset="0%" stop-color="#fff1b0"/>
+                        <stop offset="55%" stop-color="#e0a93a"/>
+                        <stop offset="100%" stop-color="#7a4f10"/>
+                    </radialGradient>
+                    <radialGradient id="plinko-peg-grad" cx="0.4" cy="0.4" r="0.7">
+                        <stop offset="0%" stop-color="#fff8d8"/>
+                        <stop offset="60%" stop-color="#c9a04a"/>
+                        <stop offset="100%" stop-color="#5e3c0b"/>
+                    </radialGradient>
+                    <filter id="plinko-ball-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="rgba(0,0,0,0.55)"/>
+                    </filter>
+                </defs>
+                <g class="plinko-pegs" id="plinko-pegs"></g>
+                <g class="plinko-buckets-svg" id="plinko-buckets"></g>
+                <circle id="plinko-ball" class="plinko-ball" r="4" cx="0" cy="0" hidden
+                        filter="url(#plinko-ball-shadow)"/>
+            </svg>
         </div>
 
         <div class="plinko-result" id="plinko-result" hidden></div>
@@ -61,6 +90,17 @@
         </div>
         <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
     </section>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // {LOW: [1.9,1.4,...], MEDIUM: [...], HIGH: [...]} — payout tables
+        // per risk profile, indexed by bucket. plinko.js paints the bucket
+        // labels and tints the active risk's row of the payout table.
+        window.__plinkoTables = /*[[${payoutTables}]]*/ {};
+        window.__plinkoRows = /*[[${rows}]]*/ 8;
+        window.__plinkoBuckets = /*[[${buckets}]]*/ 9;
+        /*]]>*/
+    </script>
 
     <section class="plinko-payouts">
         <h2>Payout tables (× stake)</h2>
