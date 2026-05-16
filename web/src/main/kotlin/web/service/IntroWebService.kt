@@ -505,11 +505,15 @@ class IntroWebService(
         val javaProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
         val connection = URL(apiUrl).openConnection(javaProxy) as HttpURLConnection
         if (proxy.hasAuth) {
-            enableProxyBasicAuthForHttpsTunnel()
             // Per-connection authenticator so the JDK supplies Basic creds on
             // the HTTPS CONNECT request itself. Without this, the proxy 407s
             // the tunnel before setRequestProperty's Proxy-Authorization
-            // header ever gets a chance to ride inside it.
+            // header ever gets a chance to ride inside it. The companion
+            // setter for jdk.http.auth.tunneling.disabledSchemes lives in
+            // Application.main — it has to run before sun.net's static
+            // initializer caches the disabled-schemes list, and that fires
+            // on the first HTTP open (the Discord guilds call typically
+            // beats us to it).
             connection.setAuthenticator(object : Authenticator() {
                 override fun getPasswordAuthentication(): PasswordAuthentication? =
                     if (requestorType == RequestorType.PROXY) {
@@ -523,16 +527,6 @@ class IntroWebService(
             connection.setRequestProperty("Proxy-Authorization", "Basic $cred")
         }
         return connection
-    }
-
-    // Java 8u111+ ships with `Basic` on the HTTPS-tunnelling disabled-schemes
-    // list, so the JDK refuses to answer a proxy's 407 with Basic creds on a
-    // CONNECT request. Clearing the list (only when we actually have an
-    // authenticated proxy configured) re-enables it.
-    private fun enableProxyBasicAuthForHttpsTunnel() {
-        if (System.getProperty("jdk.http.auth.tunneling.disabledSchemes") == null) {
-            System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "")
-        }
     }
 
     /**
