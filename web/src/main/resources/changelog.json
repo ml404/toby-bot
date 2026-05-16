@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Revert YouTube proxy from LavaPlayer + Ktor paths",
+    "summary": "LavaPlayer was 407-ing every CONNECT through the YouTube proxy across all configured clients, surfacing in production as: ``` dev.lavalink.youtube.AllClientsFailedException: (yts.version: 1.18.0) All clients failed to load the item. Client [TVHTML5_SIMPLY] failed: Invalid status code for fetch player script (embed): 407 Client [WEB] failed: Invalid status code for client config fetch: 407 Client [ANDROID] failed: Invalid status code for player api response: 407 ``` Every v…",
+    "emoji": "🎵",
+    "prNumber": 465
+  },
+  {
+    "date": "May 2026",
     "title": "Authenticate HTTPS CONNECT to YouTube proxy",
     "summary": "Intro preview was logging `YouTube Data API preview returned HTTP 407` on every URL pre-flight when the YouTube proxy was configured with auth. Root cause: `IntroWebService.openYouTubeDataApiConnection` set `Proxy-Authorization` via `HttpURLConnection.setRequestProperty`. That header is only attached to the inner HTTP request inside an established CONNECT tunnel — it isn't sent on the CONNECT itself. So for HTTPS targets like `googleapis.com`, the proxy 407s the tunnel bef…",
     "emoji": "🎵",
