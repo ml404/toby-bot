@@ -151,6 +151,15 @@ a:hover { color: var(--accent-hover); }
 .btn-secondary:active:not(:disabled) { transform: translateY(1px); }
 .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* `.btn-primary` and `.btn-secondary` both set explicit `display:
+   inline-flex`, which outranks the user-agent `[hidden] { display: none }`
+   and leaves any `<button class="btn-secondary" hidden>` visible until JS
+   flips it back. Casino pages rely on this for the "Bet (sell N TOBY)"
+   secondary button and per-game Reveal-all controls. Same shape as the
+   blackjack/baccarat [hidden] overrides. */
+.btn-primary[hidden],
+.btn-secondary[hidden] { display: none; }
+
 /* Green accent variant for confirm-style actions (blackjack's Stand,
    future "Lock in" / "Confirm" controls). Same shape as `.btn-primary`,
    different colour token. */
