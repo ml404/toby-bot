@@ -127,8 +127,9 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             }
 
             override fun loadFailed(exception: FriendlyException) {
-                logger.error(exception) {
-                    "Track load failed for url=$trackUrl severity=${exception.severity}"
+                logger.error {
+                    "Track load failed for url=$trackUrl severity=${exception.severity}\n" +
+                            exception.stackTraceToString()
                 }
                 event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
             }
