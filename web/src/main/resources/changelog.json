@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Load casino-win-settle.js on the bespoke web pages",
+    "summary": "User report: \"no coins visible\" on `/blackjack/{guild}/solo` after a winning hand — the chip-stack flourish that other casino pages drop on the felt never appeared. Root cause: #428 swapped `blackjack-solo.js`'s `CasinoRender.flashChipsOn(...)` call for the new shared helper `TobyCasinoWinSettle.fire(...)` and hoisted `casino-win-settle.js` into the shared `casinoMinigame :: scripts` fragment. But `blackjack-solo.html` (and `blackjack-table.html`) hand-roll their `<script>…",
+    "emoji": "♠️",
+    "prNumber": 459
+  },
+  {
+    "date": "May 2026",
     "title": "Split into subcommand-per-category modals",
     "summary": "Splits the monolithic `/setconfig` slash command into 12 subcommands, each opening a category-scoped modal pre-populated with the guild's current values. Replaces the previous 25-flat-option form that was hitting Discord's hard option cap and forcing ~45 other config keys to be web-only.",
     "emoji": "🎰",
