@@ -7,7 +7,6 @@ import database.service.PlinkoService
 import database.service.PlinkoService.DropOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
-import net.dv8tion.jda.api.interactions.commands.build.Choice
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -37,7 +36,7 @@ class PlinkoCommand @Autowired constructor(
 
     override val optionData: List<OptionData> = listOf(
         OptionData(OptionType.STRING, OPT_RISK, "Risk profile (LOW / MEDIUM / HIGH)", true)
-            .addChoices(Plinko.Risk.entries.map { Choice(it.name, it.name) }),
+            .also { opt -> Plinko.Risk.entries.forEach { opt.addChoice(it.name, it.name) } },
         OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
             .setMinValue(1L)
     )
@@ -67,16 +66,16 @@ class PlinkoCommand @Autowired constructor(
 
     private fun embedFor(outcome: DropOutcome) = when (outcome) {
         is DropOutcome.Win -> EmbedBuilder()
-            .setTitle("🟢 Bucket ${outcome.bucket} &middot; ${formatMult(outcome.multiplier)}")
-            .setDescription("Risk **${outcome.risk}** &middot; won **+${outcome.net} credits**.")
+            .setTitle("🟢 Bucket ${outcome.bucket} · ${formatMult(outcome.multiplier)}")
+            .setDescription("Risk **${outcome.risk}** · won **+${outcome.net} credits**.")
             .addField("New balance", "${outcome.newBalance} credits", true)
             .setColor(WagerCommandColors.WIN)
             .build()
 
         is DropOutcome.Lose -> EmbedBuilder()
-            .setTitle("🟢 Bucket ${outcome.bucket} &middot; ${formatMult(outcome.multiplier)}")
+            .setTitle("🟢 Bucket ${outcome.bucket} · ${formatMult(outcome.multiplier)}")
             .setDescription(
-                "Risk **${outcome.risk}** &middot; lost **${-outcome.net} credits**" +
+                "Risk **${outcome.risk}** · lost **${-outcome.net} credits**" +
                     if (outcome.payout > 0L) " (kept ${outcome.payout})." else "."
             )
             .addField("New balance", "${outcome.newBalance} credits", true)
@@ -84,8 +83,8 @@ class PlinkoCommand @Autowired constructor(
             .build()
 
         is DropOutcome.Push -> EmbedBuilder()
-            .setTitle("🟢 Bucket ${outcome.bucket} &middot; 1×")
-            .setDescription("Risk **${outcome.risk}** &middot; stake refunded.")
+            .setTitle("🟢 Bucket ${outcome.bucket} · 1×")
+            .setDescription("Risk **${outcome.risk}** · stake refunded.")
             .addField("New balance", "${outcome.newBalance} credits", true)
             .setColor(WagerCommandColors.LOSE)
             .build()

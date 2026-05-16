@@ -7,7 +7,6 @@ import database.service.WheelOfFortuneService
 import database.service.WheelOfFortuneService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
-import net.dv8tion.jda.api.interactions.commands.build.Choice
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -37,7 +36,7 @@ class WheelOfFortuneCommand @Autowired constructor(
 
     override val optionData: List<OptionData> = listOf(
         OptionData(OptionType.INTEGER, OPT_PICK, "Multiplier to bet on", true)
-            .addChoices(WheelOfFortune.PICKS.map { Choice("${it}×", it) }),
+            .also { opt -> WheelOfFortune.PICKS.forEach { opt.addChoice("${it}×", it) } },
         OptionData(OptionType.INTEGER, OPT_STAKE, "Credits to wager (per-guild bounds; service rejects out-of-range)", true)
             .setMinValue(1L)
     )

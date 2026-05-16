@@ -52,6 +52,8 @@ class CasinoMinigameTemplatesTest {
         "roulette.html",
         "baccarat.html",
         "casinoholdem-solo.html",
+        "plinko.html",
+        "wheel.html",
     )
 
     /**
