@@ -2,22 +2,17 @@ package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Caffeine
-import common.configuration.YoutubeProxySettings
 import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
 import database.service.MusicFileService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
-import okhttp3.Authenticator as OkAuthenticator
-import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.net.HttpURLConnection
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -494,16 +489,15 @@ class IntroWebService(
         }
     }
 
-    // OkHttp here instead of JDK HttpURLConnection: on Heroku the bot's
-    // authenticated YouTube proxy 407s the HTTPS CONNECT no matter how we
-    // configure the JDK (Authenticator, jdk.http.auth.tunneling.disabledSchemes
-    // via Procfile -D flag, both — same 407). OkHttp's proxyAuthenticator
-    // handles CONNECT-time Basic correctly, which is also what
-    // `bot.configuration.AppConfig.httpClient` uses for music streaming.
+    // The YouTube Data API at googleapis.com authenticates by API key, not
+    // by source IP, so it doesn't need the YouTube IP-rotation proxy that
+    // music streaming uses. Routing it through the proxy was actively
+    // harmful in production — the proxy plan only authorises youtube.com
+    // CONNECT targets and 407s every googleapis.com call, blanking out
+    // every preview title.
     private fun fetchYouTubeDataApi(apiUrl: String): String? {
-        val client = youtubeApiClient()
         val request = Request.Builder().url(apiUrl).build()
-        return client.newCall(request).execute().use { response ->
+        return youtubeApiClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 logger.warn {
                     "YouTube Data API returned HTTP ${response.code} (${response.message}) for $apiUrl"
@@ -515,24 +509,10 @@ class IntroWebService(
         }
     }
 
-    private fun youtubeApiClient(): OkHttpClient {
-        val proxy = YoutubeProxySettings.fromEnv()
-        val builder = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-        if (proxy != null) {
-            builder.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port)))
-            if (proxy.hasAuth) {
-                builder.proxyAuthenticator(OkAuthenticator { _, response ->
-                    val credential = Credentials.basic(proxy.user!!, proxy.pass!!)
-                    response.request.newBuilder()
-                        .header("Proxy-Authorization", credential)
-                        .build()
-                })
-            }
-        }
-        return builder.build()
-    }
+    private val youtubeApiClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     /**
      * Back-compat helper used by legacy tests. Returns the YouTube video title or null.
