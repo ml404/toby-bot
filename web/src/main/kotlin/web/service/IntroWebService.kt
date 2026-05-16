@@ -11,8 +11,10 @@ import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
+import java.net.Authenticator
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
+import java.net.PasswordAuthentication
 import java.net.Proxy
 import java.net.URI
 import java.net.URL
@@ -498,19 +500,39 @@ class IntroWebService(
 
     private fun openYouTubeDataApiConnection(apiUrl: String): HttpURLConnection {
         val proxy = YoutubeProxySettings.fromEnv()
-        val connection = if (proxy != null) {
-            val javaProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
-            (URL(apiUrl).openConnection(javaProxy) as HttpURLConnection).also {
-                if (proxy.hasAuth) {
-                    val cred = Base64.getEncoder()
-                        .encodeToString("${proxy.user}:${proxy.pass}".toByteArray(StandardCharsets.UTF_8))
-                    it.setRequestProperty("Proxy-Authorization", "Basic $cred")
-                }
-            }
-        } else {
-            URL(apiUrl).openConnection() as HttpURLConnection
+            ?: return URL(apiUrl).openConnection() as HttpURLConnection
+
+        val javaProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(proxy.host, proxy.port))
+        val connection = URL(apiUrl).openConnection(javaProxy) as HttpURLConnection
+        if (proxy.hasAuth) {
+            enableProxyBasicAuthForHttpsTunnel()
+            // Per-connection authenticator so the JDK supplies Basic creds on
+            // the HTTPS CONNECT request itself. Without this, the proxy 407s
+            // the tunnel before setRequestProperty's Proxy-Authorization
+            // header ever gets a chance to ride inside it.
+            connection.setAuthenticator(object : Authenticator() {
+                override fun getPasswordAuthentication(): PasswordAuthentication? =
+                    if (requestorType == RequestorType.PROXY) {
+                        PasswordAuthentication(proxy.user, proxy.pass!!.toCharArray())
+                    } else null
+            })
+            // Retained for plain-HTTP targets; on HTTPS this rides inside the
+            // tunnel and is harmless.
+            val cred = Base64.getEncoder()
+                .encodeToString("${proxy.user}:${proxy.pass}".toByteArray(StandardCharsets.UTF_8))
+            connection.setRequestProperty("Proxy-Authorization", "Basic $cred")
         }
         return connection
+    }
+
+    // Java 8u111+ ships with `Basic` on the HTTPS-tunnelling disabled-schemes
+    // list, so the JDK refuses to answer a proxy's 407 with Basic creds on a
+    // CONNECT request. Clearing the list (only when we actually have an
+    // authenticated proxy configured) re-enables it.
+    private fun enableProxyBasicAuthForHttpsTunnel() {
+        if (System.getProperty("jdk.http.auth.tunneling.disabledSchemes") == null) {
+            System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "")
+        }
     }
 
     /**
