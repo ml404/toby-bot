@@ -46,7 +46,14 @@ class TobyCoinTradePersistenceIntegrationTest {
 
     companion object {
         private val seq = AtomicLong()
-        private fun freshGuildId() = 800_000L + seq.incrementAndGet()
+        // 7_800_000+ keeps this test's guildIds disjoint from
+        // TitlesBuyWithTobyCoinIntegrationTest (800_000+) and
+        // EconomyTradeServiceIntegrationTest (900_000+). Those tests insert
+        // trade rows with `executedAt = now()` against shared Postgres rows
+        // that survive `deleteOlderThan(REF - 30 days)` (cutoff is in the
+        // past relative to `now()`); without disjoint ranges, `listSince`
+        // here picks them up and the survivor count blows past 1.
+        private fun freshGuildId() = 7_800_000L + seq.incrementAndGet()
 
         // Fixed reference point for deterministic windowing math. Avoids
         // Instant.now()-based off-by-microsecond drift between the value
