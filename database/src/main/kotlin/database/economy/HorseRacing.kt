@@ -121,12 +121,15 @@ class HorseRacing {
          * are calibrated so every (horse, bet-type) pair returns ~0.92
          * RTP under Plackett–Luce sampling — pinned by [HorseRacingTest].
          *
-         * The 0.92 target (slightly below the original 0.95 draft) sits
-         * Horse Racing comfortably in the same eligibility band as KENO
-         * (0.92), PLINKO (0.89), and SLOTS (0.89), and lifts it clear
-         * of the recommended `JACKPOT_RTP_MAX_PCT = 95` boundary —
-         * relevant because Show-on-favourite wins ~70% of races, so the
-         * jackpot roll cadence is higher than the typical wager game.
+         * Horse Racing is structurally jackpot-ineligible
+         * (`JackpotGame.HORSE_RACING.eligibleForJackpot = false`,
+         * mirroring HIGHLOW's carve-out) because Show-on-favourite wins
+         * ~75% of races — high enough that a farmer staking at anchor
+         * on H1-Show could flip the −10 c/race base EV into positive
+         * expected value once the pool grows past a few thousand
+         * credits. The RTP gate is the wrong proxy (filters by house
+         * edge, not win rate), so the carve-out is structural and
+         * losses still tribute into the pool.
          *
          * Lookup is 1-indexed externally (the slash command and web
          * surface both expose H1..H6) — when reading this list use
