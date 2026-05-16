@@ -1,6 +1,7 @@
 const {
     renderHorseRacingResult,
     createHorseRacingAnimator,
+    updateHorseOdds,
     HR_RACE_MS,
     HR_STAGGER_MS,
     HR_MAX_FINISH_MS,
@@ -482,5 +483,114 @@ describe('createHorseRacingAnimator', () => {
         // casino-game.js's `finishSettle` is gated by, so it can't drift
         // away from the RACE_MS + (FIELD-1) * STAGGER_MS arithmetic.
         expect(HR_MAX_FINISH_MS).toBe(HR_RACE_MS + 5 * HR_STAGGER_MS);
+    });
+});
+
+describe('updateHorseOdds', () => {
+    // The horse cards are server-rendered with all three multipliers on
+    // data-{win|place|show}-mult so the swap is purely client-side. These
+    // tests pin the swap behaviour: tap Place, every label reads "N.N×
+    // place" with the value drawn from data-place-mult.
+    let cards;
+
+    function setUpDom() {
+        document.body.innerHTML = `
+            <div id="hr-horse-picker">
+                <label class="hr-horse" data-win-mult="3.1" data-place-mult="1.7" data-show-mult="1.2">
+                    <span class="hr-horse-odds">3.1× win</span>
+                </label>
+                <label class="hr-horse" data-win-mult="4.2" data-place-mult="2.1" data-show-mult="1.5">
+                    <span class="hr-horse-odds">4.2× win</span>
+                </label>
+                <label class="hr-horse" data-win-mult="13.1" data-place-mult="6.0" data-show-mult="3.4">
+                    <span class="hr-horse-odds">13.1× win</span>
+                </label>
+            </div>
+        `;
+        cards = Array.from(document.querySelectorAll('.hr-horse'));
+    }
+
+    beforeEach(() => {
+        setUpDom();
+    });
+
+    function odds() {
+        return cards.map(c => c.querySelector('.hr-horse-odds').textContent);
+    }
+
+    test('WIN selection paints "N.N× win" on every horse using data-win-mult', () => {
+        updateHorseOdds(cards, 'WIN');
+        expect(odds()).toEqual(['3.1× win', '4.2× win', '13.1× win']);
+    });
+
+    test('PLACE selection paints "N.N× place" on every horse using data-place-mult', () => {
+        updateHorseOdds(cards, 'PLACE');
+        expect(odds()).toEqual(['1.7× place', '2.1× place', '6.0× place']);
+    });
+
+    test('SHOW selection paints "N.N× show" on every horse using data-show-mult', () => {
+        updateHorseOdds(cards, 'SHOW');
+        expect(odds()).toEqual(['1.2× show', '1.5× show', '3.4× show']);
+    });
+
+    test('successive swaps overwrite the previous label cleanly', () => {
+        updateHorseOdds(cards, 'WIN');
+        expect(odds()[0]).toBe('3.1× win');
+        updateHorseOdds(cards, 'PLACE');
+        expect(odds()[0]).toBe('1.7× place');
+        updateHorseOdds(cards, 'SHOW');
+        expect(odds()[0]).toBe('1.2× show');
+        updateHorseOdds(cards, 'WIN');
+        expect(odds()[0]).toBe('3.1× win');
+    });
+
+    test('unrecognised bet type falls back to WIN (defensive default)', () => {
+        // A future bet type added on the backend before the frontend is
+        // updated would otherwise produce blank labels; defaulting to
+        // WIN keeps the card readable while the rest of the UI catches
+        // up.
+        updateHorseOdds(cards, 'EXACTA');
+        expect(odds()).toEqual(['3.1× win', '4.2× win', '13.1× win']);
+    });
+
+    test('cards missing the matching data attribute render "?" rather than NaN', () => {
+        document.body.innerHTML = `
+            <div>
+                <label class="hr-horse" data-win-mult="3.1">
+                    <span class="hr-horse-odds">old</span>
+                </label>
+            </div>
+        `;
+        const cardsMissingShow = Array.from(document.querySelectorAll('.hr-horse'));
+        updateHorseOdds(cardsMissingShow, 'SHOW');
+        expect(cardsMissingShow[0].querySelector('.hr-horse-odds').textContent).toBe('? show');
+    });
+
+    test('an empty card list is a no-op (no throw)', () => {
+        expect(() => updateHorseOdds([], 'WIN')).not.toThrow();
+        expect(() => updateHorseOdds(null, 'WIN')).not.toThrow();
+        expect(() => updateHorseOdds(undefined, 'WIN')).not.toThrow();
+    });
+
+    test('decimal multipliers are formatted to one decimal place', () => {
+        // Server may send `3` instead of `3.0` for a tidy round number;
+        // ensure the client still renders "3.0× win" so all cards line
+        // up visually.
+        document.body.innerHTML = `
+            <div>
+                <label class="hr-horse" data-win-mult="3" data-place-mult="1.75" data-show-mult="1.234">
+                    <span class="hr-horse-odds">old</span>
+                </label>
+            </div>
+        `;
+        const onlyCard = Array.from(document.querySelectorAll('.hr-horse'));
+        updateHorseOdds(onlyCard, 'WIN');
+        expect(onlyCard[0].querySelector('.hr-horse-odds').textContent).toBe('3.0× win');
+        updateHorseOdds(onlyCard, 'PLACE');
+        // 1.75 rounds to 1.8 (toFixed(1)).
+        expect(onlyCard[0].querySelector('.hr-horse-odds').textContent).toBe('1.8× place');
+        updateHorseOdds(onlyCard, 'SHOW');
+        // 1.234 rounds to 1.2.
+        expect(onlyCard[0].querySelector('.hr-horse-odds').textContent).toBe('1.2× show');
     });
 });

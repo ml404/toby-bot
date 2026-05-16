@@ -145,32 +145,34 @@ class HorseRacingServiceTest {
     }
 
     @Test
-    fun `win does not roll the jackpot when the random draw misses`() {
-        // JackpotHelper.rollOnWin compares `Random.nextDouble()` to the
-        // base probability (1 % by default); with no config overrides
-        // the relaxed `configService` mock returns `null` for every
-        // lookup, leaving the default in place. The fixed-seed RNG in
-        // the service is unlikely to hit on a single sample, so the win
-        // path settles with jackpotPayout=0 and pure multiplier maths.
+    fun `win never rolls the jackpot — HORSE_RACING carries the global eligibility carve-out`() {
+        // Mirrors HighlowServiceTest's parity check. Even with a
+        // forced-hit jackpot mock and a non-empty pool, a Horse Racing
+        // win must surface jackpotPayout=0 and never touch the pool —
+        // `JackpotGame.HORSE_RACING.eligibleForJackpot = false`
+        // short-circuits `JackpotHelper.rollOnWin` regardless of
+        // config. The structural carve-out exists because
+        // Show-on-favourite wins ~75 % of races, putting roll cadence
+        // in farming-risk territory.
         val user = userWithBalance(1_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { horseRacing.race(1, HorseRacing.Bet.WIN, any()) } returns HorseRacing.Race(
             finishingOrder = listOf(1, 2, 3, 4, 5, 6),
             bet = HorseRacing.Bet.WIN,
             pickedHorse = 1,
-            multiplier = 3.2,
+            multiplier = 3.1,
         )
         every { userService.updateUser(any()) } returns user
+        every { jackpotService.awardJackpot(guildId, any()) } returns 9_999L  // would be banked if HORSE_RACING were eligible
 
         val outcome = service.race(
             discordId, guildId, stake = 100L, pickedHorse = 1, bet = HorseRacing.Bet.WIN,
         )
 
         val win = assertInstanceOf(HorseRacingService.RaceOutcome.Win::class.java, outcome)
-        // payout = floor(3.2 * 100) = 320; net = 220; balance = 1000 + 220 = 1220.
-        assertEquals(320L, win.payout)
-        assertEquals(220L, win.net)
-        assertEquals(1_220L, win.newBalance)
+        assertEquals(0L, win.jackpotPayout)
+        assertEquals(1_210L, win.newBalance, "newBalance must not include any jackpot top-up")
+        verify(exactly = 0) { jackpotService.awardJackpot(any(), any()) }
     }
 
     @Test
