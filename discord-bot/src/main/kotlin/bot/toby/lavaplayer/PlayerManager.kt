@@ -1,6 +1,5 @@
 package bot.toby.lavaplayer
 
-import common.configuration.YoutubeProxySettings
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
@@ -22,10 +21,6 @@ import dev.lavalink.youtube.clients.TvHtml5Simply
 import dev.lavalink.youtube.clients.Web
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
-import org.apache.http.HttpHost
-import org.apache.http.auth.AuthScope
-import org.apache.http.auth.UsernamePasswordCredentials
-import org.apache.http.impl.client.BasicCredentialsProvider
 
 private const val CIPHER_API_URL = "https://cipher.kikkia.dev/api"
 
@@ -53,8 +48,6 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
                         "See README for how to obtain a refresh token."
             }
         }
-
-        configureYoutubeProxy(youtubeAudioSourceManager)
 
         audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
         audioPlayerManager.registerSourceManager(TwitchStreamAudioSourceManager())
@@ -134,28 +127,12 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             }
 
             override fun loadFailed(exception: FriendlyException) {
+                logger.error(exception) {
+                    "Track load failed for url=$trackUrl severity=${exception.severity}"
+                }
                 event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
             }
         }
-    }
-
-    private fun configureYoutubeProxy(manager: YoutubeAudioSourceManager) {
-        val proxy = YoutubeProxySettings.fromEnv() ?: return
-        val httpHost = HttpHost(proxy.host, proxy.port)
-        val credentialsProvider = if (proxy.hasAuth) {
-            BasicCredentialsProvider().apply {
-                setCredentials(
-                    AuthScope(proxy.host, proxy.port),
-                    UsernamePasswordCredentials(proxy.user, proxy.pass)
-                )
-            }
-        } else null
-
-        manager.httpInterfaceManager.configureBuilder { builder ->
-            builder.setProxy(httpHost)
-            credentialsProvider?.let { builder.setDefaultCredentialsProvider(it) }
-        }
-        logger.info { "YouTube HTTP proxy enabled: ${proxy.host}:${proxy.port} (auth=${proxy.hasAuth})" }
     }
 
     fun destroyMusicManager(guildId: Long) {
