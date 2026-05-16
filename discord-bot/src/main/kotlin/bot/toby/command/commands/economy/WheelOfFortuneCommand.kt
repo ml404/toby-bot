@@ -25,8 +25,8 @@ class WheelOfFortuneCommand @Autowired constructor(
 
     override val name: String = "wheel"
     override val description: String =
-        "Pick a multiplier, spin the wheel. Per-pick RTPs cluster around 0.88. " +
-            "Stake bounds are per-guild (default ${WheelOfFortune.MIN_STAKE}-${WheelOfFortune.MAX_STAKE})."
+        "Pick a multiplier, spin the wheel. Stake bounds per-guild " +
+            "(default ${WheelOfFortune.MIN_STAKE}-${WheelOfFortune.MAX_STAKE})."
 
     companion object {
         private const val OPT_PICK = "pick"

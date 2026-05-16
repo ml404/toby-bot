@@ -211,6 +211,8 @@ class ConfigDto(
         COINFLIP_BOT_EDGE_MAX_PCT("COINFLIP_BOT_EDGE_MAX_PCT"),
         DICE_BOT_EDGE_MAX_PCT("DICE_BOT_EDGE_MAX_PCT"),
         SLOTS_BOT_EDGE_MAX_PCT("SLOTS_BOT_EDGE_MAX_PCT"),
+        PLINKO_BOT_EDGE_MAX_PCT("PLINKO_BOT_EDGE_MAX_PCT"),
+        WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT("WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT"),
 
         // Per-guild text-channel ID where anti-autoclicker session embeds
         // are posted: one message per suspicion session, edited in place

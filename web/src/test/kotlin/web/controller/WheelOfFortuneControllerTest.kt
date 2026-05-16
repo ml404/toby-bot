@@ -43,7 +43,7 @@ class WheelOfFortuneControllerTest {
 
     @Test
     fun `spin win returns 200 with win-shaped payload`() {
-        every { wheelService.spin(discordId, guildId, 100L, 5L, any()) } returns SpinOutcome.Win(
+        every { wheelService.spin(discordId, guildId, 100L, 5L, any(), any(), any(), any()) } returns SpinOutcome.Win(
             stake = 100L, pickedMultiplier = 5L, landedMultiplier = 5L,
             payout = 500L, net = 400L, newBalance = 1_400L,
         )
@@ -61,7 +61,7 @@ class WheelOfFortuneControllerTest {
 
     @Test
     fun `spin lose returns 200 with win=false and negative net`() {
-        every { wheelService.spin(discordId, guildId, 100L, 5L, any()) } returns SpinOutcome.Lose(
+        every { wheelService.spin(discordId, guildId, 100L, 5L, any(), any(), any(), any()) } returns SpinOutcome.Lose(
             stake = 100L, pickedMultiplier = 5L, landedMultiplier = 2L,
             newBalance = 400L, lossTribute = 10L,
         )
@@ -78,7 +78,7 @@ class WheelOfFortuneControllerTest {
 
     @Test
     fun `invalid pick returns 400`() {
-        every { wheelService.spin(discordId, guildId, 100L, 7L, any()) } returns
+        every { wheelService.spin(discordId, guildId, 100L, 7L, any(), any(), any(), any()) } returns
             SpinOutcome.InvalidPick(picks = WheelOfFortune.PICKS)
 
         val response = controller.spin(guildId, WheelSpinRequest(stake = 100L, pick = 7L), user)
@@ -89,7 +89,7 @@ class WheelOfFortuneControllerTest {
 
     @Test
     fun `spin returns 400 on insufficient credits`() {
-        every { wheelService.spin(discordId, guildId, 100L, 2L, any()) } returns
+        every { wheelService.spin(discordId, guildId, 100L, 2L, any(), any(), any(), any()) } returns
             SpinOutcome.InsufficientCredits(stake = 100L, have = 30L)
 
         val response = controller.spin(guildId, WheelSpinRequest(stake = 100L, pick = 2L), user)
@@ -99,7 +99,7 @@ class WheelOfFortuneControllerTest {
 
     @Test
     fun `spin returns 400 on invalid stake`() {
-        every { wheelService.spin(discordId, guildId, 5L, 2L, any()) } returns
+        every { wheelService.spin(discordId, guildId, 5L, 2L, any(), any(), any(), any()) } returns
             SpinOutcome.InvalidStake(min = 10L, max = 500L)
 
         val response = controller.spin(guildId, WheelSpinRequest(stake = 5L, pick = 2L), user)
@@ -114,12 +114,33 @@ class WheelOfFortuneControllerTest {
         val response = controller.spin(guildId, WheelSpinRequest(stake = 100L, pick = 2L), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { wheelService.spin(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { wheelService.spin(any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `controller forwards bot-suspicion signals into the service`() {
+        every {
+            wheelService.spin(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns SpinOutcome.Lose(
+            stake = 10L, pickedMultiplier = 2L, landedMultiplier = 5L, newBalance = 90L,
+        )
+
+        controller.spin(guildId, WheelSpinRequest(
+            stake = 10L, pick = 2L,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        ), user)
+
+        verify(exactly = 1) {
+            wheelService.spin(
+                discordId, guildId, 10L, 2L, false,
+                clickX = 350, clickY = 220, mouseMoved = false,
+            )
+        }
     }
 
     @Test
     fun `jackpot win surfaces jackpotPayout`() {
-        every { wheelService.spin(discordId, guildId, 100L, 10L, any()) } returns SpinOutcome.Win(
+        every { wheelService.spin(discordId, guildId, 100L, 10L, any(), any(), any(), any()) } returns SpinOutcome.Win(
             stake = 100L, pickedMultiplier = 10L, landedMultiplier = 10L,
             payout = 1_000L, net = 900L, newBalance = 10_900L, jackpotPayout = 10_000L,
         )

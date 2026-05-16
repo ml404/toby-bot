@@ -41,6 +41,20 @@ function renderPlinkoResult(resultEl, body) {
 
     const DROP_DURATION_MS = 900;
 
+    // Anti-autoclicker telemetry: same shape as dice/coinflip/slots — capture
+    // (clickX, clickY) from the bet button + a doc-level mousemove flag,
+    // forward both to the backend so CasinoBotSuspicionService can score
+    // the player's pattern. Genuine cursor motion clears the streak.
+    const botSuspicion = window.TobyCasinoBotSuspicion &&
+        window.TobyCasinoBotSuspicion.createTracker();
+    if (botSuspicion) {
+        document.addEventListener('mousemove', botSuspicion.recordMouseMove, { passive: true });
+        [els.primaryBtn, els.tobyBtn].forEach(function (btn) {
+            if (!btn) return;
+            btn.addEventListener('click', botSuspicion.recordClick, true);
+        });
+    }
+
     function selectedRisk() {
         const checked = els.form.querySelector('input[name="risk"]:checked');
         return checked ? checked.value : null;
@@ -85,10 +99,16 @@ function renderPlinkoResult(resultEl, body) {
             return null;
         },
         buildPayload: function (state) {
+            const signals = botSuspicion ? botSuspicion.snapshotAndReset() : {
+                clickX: null, clickY: null, mouseMoved: null,
+            };
             return {
                 stake: state.stake,
                 risk: selectedRisk(),
                 autoTopUp: state.autoTopUp,
+                clickX: signals.clickX,
+                clickY: signals.clickY,
+                mouseMoved: signals.mouseMoved,
             };
         },
         startAnimation: startDropAnimation,

@@ -86,6 +86,7 @@ class PlinkoController(
             )
         when (val outcome = plinkoService.drop(
             discordId, guildId, request.stake, risk, request.autoTopUp,
+            clickX = request.clickX, clickY = request.clickY, mouseMoved = request.mouseMoved,
         )) {
             is DropOutcome.Win -> ResponseEntity.ok(
                 DropResponse(
@@ -149,10 +150,16 @@ class PlinkoController(
         ?.let { name -> Plinko.Risk.entries.firstOrNull { it.name == name } }
 }
 
+// `clickX` / `clickY` / `mouseMoved` are bot-suspicion signals from
+// `plinko.js`'s tracker. All three nullable so non-browser callers (Discord,
+// keyboard submit) can omit them — backend treats nulls as non-suspicious.
 data class DropRequest(
     val stake: Long = 0,
     val risk: String? = null,
     val autoTopUp: Boolean = false,
+    val clickX: Int? = null,
+    val clickY: Int? = null,
+    val mouseMoved: Boolean? = null,
 )
 
 data class DropResponse(

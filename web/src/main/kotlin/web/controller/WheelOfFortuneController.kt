@@ -81,6 +81,7 @@ class WheelOfFortuneController(
     ) { discordId ->
         when (val outcome = wheelService.spin(
             discordId, guildId, request.stake, request.pick, request.autoTopUp,
+            clickX = request.clickX, clickY = request.clickY, mouseMoved = request.mouseMoved,
         )) {
             is SpinOutcome.Win -> ResponseEntity.ok(
                 WheelSpinResponse(
@@ -122,10 +123,16 @@ class WheelOfFortuneController(
     }
 }
 
+// `clickX` / `clickY` / `mouseMoved` are bot-suspicion signals from
+// `wheel.js`'s tracker. All three nullable so non-browser callers (Discord,
+// keyboard submit) can omit them — backend treats nulls as non-suspicious.
 data class WheelSpinRequest(
     val stake: Long = 0,
     val pick: Long = 0,
     val autoTopUp: Boolean = false,
+    val clickX: Int? = null,
+    val clickY: Int? = null,
+    val mouseMoved: Boolean? = null,
 )
 
 data class WheelSpinResponse(

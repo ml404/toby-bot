@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.UserDto
 import database.economy.WheelOfFortune
 import io.mockk.every
@@ -8,6 +9,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -19,6 +21,7 @@ class WheelOfFortuneServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
+    private lateinit var casinoEdgeService: CasinoEdgeService
     private lateinit var wheel: WheelOfFortune
     private lateinit var service: WheelOfFortuneService
 
@@ -32,14 +35,21 @@ class WheelOfFortuneServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        casinoEdgeService = mockk(relaxed = true)
         wheel = mockk(relaxed = true)
         every { wheel.isValidPick(any()) } answers {
             firstArg<Long>() in WheelOfFortune.PICKS
         }
         every { wheel.picks() } returns WheelOfFortune.PICKS
+        // Default: pass the fair spin through untouched.
+        every {
+            casinoEdgeService.applyBotEdge<WheelOfFortune.Spin>(
+                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+        } answers { arg<WheelOfFortune.Spin>(7) }
         service = WheelOfFortuneService(
             userService, jackpotService, tradeService, marketService, configService,
-            wheel, Random(0)
+            casinoEdgeService, wheel, Random(0)
         )
     }
 
@@ -142,6 +152,54 @@ class WheelOfFortuneServiceTest {
 
         assertEquals(WheelOfFortuneService.SpinOutcome.UnknownUser, outcome)
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `spin forwards bot signals + wheel gameKey + WHEEL_OF_FORTUNE config to CasinoEdgeService`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fair = WheelOfFortune.Spin(landedMultiplier = 2L, pickedMultiplier = 5L)
+        every { wheel.spin(5L, any()) } returns fair
+
+        service.spin(
+            discordId, guildId, stake = 100L, pickedMultiplier = 5L,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        )
+
+        verify(exactly = 1) {
+            casinoEdgeService.applyBotEdge(
+                discordId = discordId,
+                guildId = guildId,
+                gameKey = "wheel",
+                clickX = 350, clickY = 220, mouseMoved = false,
+                edgeMaxConfig = ConfigDto.Configurations.WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT,
+                fairOutcome = fair,
+                asLoss = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `forced-loss substitution lands on a non-picked multiplier`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        // Fair RNG would win — force a substituted loss instead.
+        val fairWin = WheelOfFortune.Spin(landedMultiplier = 5L, pickedMultiplier = 5L)
+        every { wheel.spin(5L, any()) } returns fairWin
+        val lossSlot = slot<() -> WheelOfFortune.Spin>()
+        every {
+            casinoEdgeService.applyBotEdge<WheelOfFortune.Spin>(
+                any(), any(), any(), any(), any(), any(), any(), any(),
+                asLoss = capture(lossSlot),
+            )
+        } answers { lossSlot.captured.invoke() }
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.spin(discordId, guildId, stake = 100L, pickedMultiplier = 5L)
+
+        val lose = assertInstanceOf(WheelOfFortuneService.SpinOutcome.Lose::class.java, outcome)
+        assertEquals(5L, lose.pickedMultiplier)
+        assertNotEquals(5L, lose.landedMultiplier, "forced-loss must land on a non-picked multiplier")
     }
 
     @Test

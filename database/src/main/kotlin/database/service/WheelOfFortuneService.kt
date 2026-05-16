@@ -26,6 +26,7 @@ class WheelOfFortuneService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val casinoEdgeService: CasinoEdgeService,
     private val wheel: WheelOfFortune = WheelOfFortune(),
     private val random: Random = Random.Default
 ) {
@@ -71,6 +72,9 @@ class WheelOfFortuneService(
         stake: Long,
         pickedMultiplier: Long,
         autoTopUp: Boolean = false,
+        clickX: Int? = null,
+        clickY: Int? = null,
+        mouseMoved: Boolean? = null,
     ): SpinOutcome {
         if (!wheel.isValidPick(pickedMultiplier)) {
             return SpinOutcome.InvalidPick(wheel.picks())
@@ -96,7 +100,22 @@ class WheelOfFortuneService(
             is TopUpResolution.Ok -> r
         }
 
-        val result = wheel.spin(pickedMultiplier, random)
+        val fairResult = wheel.spin(pickedMultiplier, random)
+        // Anti-autoclicker substitution: replace the fair spin with a
+        // landing on any non-picked multiplier (guaranteed loss for the
+        // player's pick). The wheel animation still settles naturally.
+        val result = casinoEdgeService.applyBotEdge(
+            discordId = discordId,
+            guildId = guildId,
+            gameKey = "wheel",
+            clickX = clickX, clickY = clickY, mouseMoved = mouseMoved,
+            edgeMaxConfig = ConfigDto.Configurations.WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT,
+            fairOutcome = fairResult,
+            asLoss = {
+                val loserMult = wheel.picks().first { it != pickedMultiplier }
+                WheelOfFortune.Spin(landedMultiplier = loserMult, pickedMultiplier = pickedMultiplier)
+            },
+        )
         val multiplier = if (result.isWin) pickedMultiplier else 0L
         val wager = WagerHelper.applyMultiplier(
             userService, resolved.user, resolved.balance, stake, multiplier

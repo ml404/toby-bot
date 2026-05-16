@@ -1,5 +1,6 @@
 package database.service
 
+import database.dto.ConfigDto
 import database.dto.UserDto
 import database.economy.Plinko
 import io.mockk.every
@@ -20,6 +21,7 @@ class PlinkoServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var configService: ConfigService
+    private lateinit var casinoEdgeService: CasinoEdgeService
     private lateinit var plinko: Plinko
     private lateinit var service: PlinkoService
 
@@ -33,10 +35,17 @@ class PlinkoServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
+        casinoEdgeService = mockk(relaxed = true)
         plinko = mockk(relaxed = true)
+        // Default: pass the fair drop through untouched.
+        every {
+            casinoEdgeService.applyBotEdge<Plinko.Drop>(
+                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+        } answers { arg<Plinko.Drop>(7) }
         service = PlinkoService(
             userService, jackpotService, tradeService, marketService, configService,
-            plinko, Random(0)
+            casinoEdgeService, plinko, Random(0)
         )
     }
 
@@ -163,6 +172,58 @@ class PlinkoServiceTest {
 
         assertEquals(PlinkoService.DropOutcome.UnknownUser, outcome)
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
+    fun `drop forwards bot signals + plinko gameKey + PLINKO config to CasinoEdgeService`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fair = Plinko.Drop(bucket = 4, multiplier = 0.0, risk = Plinko.Risk.MEDIUM)
+        every { plinko.drop(Plinko.Risk.MEDIUM, any()) } returns fair
+
+        service.drop(
+            discordId, guildId, stake = 100L, risk = Plinko.Risk.MEDIUM,
+            clickX = 350, clickY = 220, mouseMoved = false,
+        )
+
+        verify(exactly = 1) {
+            casinoEdgeService.applyBotEdge(
+                discordId = discordId,
+                guildId = guildId,
+                gameKey = "plinko",
+                clickX = 350, clickY = 220, mouseMoved = false,
+                edgeMaxConfig = ConfigDto.Configurations.PLINKO_BOT_EDGE_MAX_PCT,
+                fairOutcome = fair,
+                asLoss = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `forced-loss substitution lands on the worst-multiplier bucket for the risk profile`() {
+        // Verify the asLoss lambda invoked by the edge service produces a
+        // Drop whose multiplier is the minimum of the risk's payout table —
+        // so a forced bust is guaranteed regardless of the fair RNG.
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        val fairWin = Plinko.Drop(bucket = 0, multiplier = 40.0, risk = Plinko.Risk.HIGH)
+        every { plinko.drop(Plinko.Risk.HIGH, any()) } returns fairWin
+        every { plinko.payoutTable(Plinko.Risk.HIGH) } returns
+            Plinko.DEFAULT_PAYOUTS.getValue(Plinko.Risk.HIGH).copyOf()
+        val lossSlot = slot<() -> Plinko.Drop>()
+        every {
+            casinoEdgeService.applyBotEdge<Plinko.Drop>(
+                any(), any(), any(), any(), any(), any(), any(), any(),
+                asLoss = capture(lossSlot),
+            )
+        } answers { lossSlot.captured.invoke() }
+        every { userService.updateUser(any()) } returns user
+
+        val outcome = service.drop(discordId, guildId, stake = 100L, risk = Plinko.Risk.HIGH)
+
+        val lose = assertInstanceOf(PlinkoService.DropOutcome.Lose::class.java, outcome)
+        // HIGH profile min multiplier is 0.0 (buckets 3, 4, 5).
+        assertEquals(0.0, lose.multiplier, 1e-9, "forced-loss substitution must pick a 0× bucket on HIGH")
     }
 
     @Test

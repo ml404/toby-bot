@@ -25,8 +25,8 @@ class PlinkoCommand @Autowired constructor(
 
     override val name: String = "plinko"
     override val description: String =
-        "Drop a ball through ${Plinko.ROWS} rows into one of ${Plinko.BUCKETS} buckets. " +
-            "Stake bounds are per-guild (default ${Plinko.MIN_STAKE}-${Plinko.MAX_STAKE})."
+        "Drop a ball through ${Plinko.ROWS} rows into ${Plinko.BUCKETS} buckets. " +
+            "Stake bounds per-guild (default ${Plinko.MIN_STAKE}-${Plinko.MAX_STAKE})."
 
     companion object {
         private const val OPT_RISK = "risk"

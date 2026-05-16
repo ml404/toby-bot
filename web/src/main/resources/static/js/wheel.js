@@ -33,6 +33,17 @@ function renderWheelResult(resultEl, body) {
     const SPIN_TICK_MS = 70;
     const FACES = ['2×', '3×', '5×', '10×'];
 
+    // Anti-autoclicker telemetry: same shape as dice/coinflip/slots.
+    const botSuspicion = window.TobyCasinoBotSuspicion &&
+        window.TobyCasinoBotSuspicion.createTracker();
+    if (botSuspicion) {
+        document.addEventListener('mousemove', botSuspicion.recordMouseMove, { passive: true });
+        [els.primaryBtn, els.tobyBtn].forEach(function (btn) {
+            if (!btn) return;
+            btn.addEventListener('click', botSuspicion.recordClick, true);
+        });
+    }
+
     function selectedPick() {
         const checked = els.form.querySelector('input[name="pick"]:checked');
         return checked ? parseInt(checked.value, 10) : null;
@@ -78,10 +89,16 @@ function renderWheelResult(resultEl, body) {
             return null;
         },
         buildPayload: function (state) {
+            const signals = botSuspicion ? botSuspicion.snapshotAndReset() : {
+                clickX: null, clickY: null, mouseMoved: null,
+            };
             return {
                 stake: state.stake,
                 pick: selectedPick(),
                 autoTopUp: state.autoTopUp,
+                clickX: signals.clickX,
+                clickY: signals.clickY,
+                mouseMoved: signals.mouseMoved,
             };
         },
         startAnimation: startSpinAnimation,

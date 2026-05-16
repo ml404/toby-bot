@@ -27,6 +27,7 @@ class PlinkoService(
     private val tradeService: EconomyTradeService,
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
+    private val casinoEdgeService: CasinoEdgeService,
     private val plinko: Plinko = Plinko(),
     private val random: Random = Random.Default
 ) {
@@ -84,6 +85,9 @@ class PlinkoService(
         stake: Long,
         risk: Plinko.Risk,
         autoTopUp: Boolean = false,
+        clickX: Int? = null,
+        clickY: Int? = null,
+        mouseMoved: Boolean? = null,
     ): DropOutcome {
         val minStake = configService.cfgLong(
             ConfigDto.Configurations.PLINKO_MIN_STAKE, guildId, default = Plinko.MIN_STAKE, min = 1L
@@ -104,7 +108,24 @@ class PlinkoService(
             is TopUpResolution.Ok -> r
         }
 
-        val result = plinko.drop(risk, random)
+        val fairResult = plinko.drop(risk, random)
+        // Anti-autoclicker substitution: replace the fair drop with a
+        // forced-loss landing on the worst-bucket multiplier for this
+        // risk profile. The animation still settles naturally — the
+        // player only sees the bucket index + multiplier.
+        val result = casinoEdgeService.applyBotEdge(
+            discordId = discordId,
+            guildId = guildId,
+            gameKey = "plinko",
+            clickX = clickX, clickY = clickY, mouseMoved = mouseMoved,
+            edgeMaxConfig = ConfigDto.Configurations.PLINKO_BOT_EDGE_MAX_PCT,
+            fairOutcome = fairResult,
+            asLoss = {
+                val table = plinko.payoutTable(risk)
+                val minIdx = table.indices.minBy { table[it] }
+                Plinko.Drop(bucket = minIdx, multiplier = table[minIdx], risk = risk)
+            },
+        )
         val wager = WagerHelper.applyMultiplier(
             userService, resolved.user, resolved.balance, stake, result.multiplier
         )

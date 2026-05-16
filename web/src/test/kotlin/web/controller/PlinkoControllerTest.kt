@@ -43,7 +43,7 @@ class PlinkoControllerTest {
 
     @Test
     fun `drop win returns 200 with win-shaped payload`() {
-        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.MEDIUM, any()) } returns DropOutcome.Win(
+        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.MEDIUM, any(), any(), any(), any()) } returns DropOutcome.Win(
             stake = 100L, risk = Plinko.Risk.MEDIUM, bucket = 0, multiplier = 12.0,
             payout = 1_200L, net = 1_100L, newBalance = 2_100L,
         )
@@ -62,7 +62,7 @@ class PlinkoControllerTest {
 
     @Test
     fun `drop lose returns 200 with win=false`() {
-        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.MEDIUM, any()) } returns DropOutcome.Lose(
+        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.MEDIUM, any(), any(), any(), any()) } returns DropOutcome.Lose(
             stake = 100L, risk = Plinko.Risk.MEDIUM, bucket = 4, multiplier = 0.0,
             payout = 0L, net = -100L, newBalance = 400L, lossTribute = 10L,
         )
@@ -79,7 +79,7 @@ class PlinkoControllerTest {
 
     @Test
     fun `drop push returns 200 with push=true and net 0`() {
-        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.LOW, any()) } returns DropOutcome.Push(
+        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.LOW, any(), any(), any(), any()) } returns DropOutcome.Push(
             stake = 100L, risk = Plinko.Risk.LOW, bucket = 3, newBalance = 500L,
         )
 
@@ -99,12 +99,12 @@ class PlinkoControllerTest {
 
         assertEquals(400, response.statusCode.value())
         assertTrue(response.body?.error!!.contains("LOW"))
-        verify(exactly = 0) { plinkoService.drop(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { plinkoService.drop(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `risk parsing is case-insensitive`() {
-        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.HIGH, any()) } returns DropOutcome.Lose(
+        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.HIGH, any(), any(), any(), any()) } returns DropOutcome.Lose(
             stake = 100L, risk = Plinko.Risk.HIGH, bucket = 4, multiplier = 0.0,
             payout = 0L, net = -100L, newBalance = 400L,
         )
@@ -113,13 +113,13 @@ class PlinkoControllerTest {
 
         assertEquals(200, response.statusCode.value())
         verify(exactly = 1) {
-            plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.HIGH, any())
+            plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.HIGH, any(), any(), any(), any())
         }
     }
 
     @Test
     fun `drop returns 400 on insufficient credits`() {
-        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.LOW, any()) } returns
+        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.LOW, any(), any(), any(), any()) } returns
             DropOutcome.InsufficientCredits(stake = 100L, have = 30L)
 
         val response = controller.drop(guildId, DropRequest(stake = 100L, risk = "LOW"), user)
@@ -129,7 +129,7 @@ class PlinkoControllerTest {
 
     @Test
     fun `drop returns 400 on invalid stake`() {
-        every { plinkoService.drop(discordId, guildId, 5L, Plinko.Risk.LOW, any()) } returns
+        every { plinkoService.drop(discordId, guildId, 5L, Plinko.Risk.LOW, any(), any(), any(), any()) } returns
             DropOutcome.InvalidStake(min = 10L, max = 500L)
 
         val response = controller.drop(guildId, DropRequest(stake = 5L, risk = "LOW"), user)
@@ -144,12 +144,53 @@ class PlinkoControllerTest {
         val response = controller.drop(guildId, DropRequest(stake = 100L, risk = "LOW"), user)
 
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { plinkoService.drop(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { plinkoService.drop(any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `controller forwards bot-suspicion signals into the service`() {
+        every {
+            plinkoService.drop(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns DropOutcome.Lose(
+            stake = 10L, risk = Plinko.Risk.LOW, bucket = 4, multiplier = 0.0,
+            payout = 0L, net = -10L, newBalance = 90L,
+        )
+
+        controller.drop(guildId, DropRequest(
+            stake = 10L, risk = "LOW",
+            clickX = 350, clickY = 220, mouseMoved = false,
+        ), user)
+
+        verify(exactly = 1) {
+            plinkoService.drop(
+                discordId, guildId, 10L, Plinko.Risk.LOW, false,
+                clickX = 350, clickY = 220, mouseMoved = false,
+            )
+        }
+    }
+
+    @Test
+    fun `missing bot-suspicion fields are forwarded as null (Discord-equivalent path)`() {
+        every {
+            plinkoService.drop(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns DropOutcome.Lose(
+            stake = 10L, risk = Plinko.Risk.LOW, bucket = 4, multiplier = 0.0,
+            payout = 0L, net = -10L, newBalance = 90L,
+        )
+
+        controller.drop(guildId, DropRequest(stake = 10L, risk = "LOW"), user)
+
+        verify(exactly = 1) {
+            plinkoService.drop(
+                discordId, guildId, 10L, Plinko.Risk.LOW, false,
+                clickX = null, clickY = null, mouseMoved = null,
+            )
+        }
     }
 
     @Test
     fun `jackpot win surfaces jackpotPayout`() {
-        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.MEDIUM, any()) } returns DropOutcome.Win(
+        every { plinkoService.drop(discordId, guildId, 100L, Plinko.Risk.MEDIUM, any(), any(), any(), any()) } returns DropOutcome.Win(
             stake = 100L, risk = Plinko.Risk.MEDIUM, bucket = 0, multiplier = 12.0,
             payout = 1_200L, net = 1_100L, newBalance = 11_100L, jackpotPayout = 10_000L,
         )
