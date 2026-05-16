@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Lock buy buttons through reveal + refresh TOBY button on balance changes",
+    "summary": "Two scratch-card UX gaps that diverged from how the other casino games (slots, dice, coinflip, keno, etc.) behave: **Buy buttons re-enabled mid-reveal.** The \"Buy ticket\" / \"Buy (sell N TOBY)\" buttons flipped back to enabled the moment the server returned a card — before the player had finished scratching cells. A fast-clicker (or autoclicker) could submit a second buy on top of a half-revealed card. Fix: convert scratch's `renderResult` from a no-op to a Promise resolved…",
+    "emoji": "🎲",
+    "prNumber": 458
+  },
+  {
+    "date": "May 2026",
     "title": "SOLID/DRY pass + expand modal usage",
     "summary": "Three workstreams in one PR: ### A. Discord-bot SOLID/DRY **`Loggable` mixin** in `core-api/core/log` — `Command`, `Button`, `Menu`, `Modal` each used to declare an identical `val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)`. Now one interface. **`PermissionValidator`** + `DefaultPermissionValidator` (`actorMayActOn` / `botMayAct`) — `MoveCommand` and `KickCommand` migrated. Removes inline `canInteract`/`hasPermission` duplication. **`WagerCo…",
     "emoji": "🎰",
