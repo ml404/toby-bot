@@ -54,6 +54,11 @@ function renderHorseRacingResult(resultEl, body) {
     const FIELD_SIZE = Number(els.main.dataset.fieldSize) || 6;
     const RACE_MS = 2600;
     const STAGGER_MS = 220;
+    // Maximum time the slowest horse needs to traverse the rail after
+    // stopAnimation kicks off the rank-staggered finish. Used both as
+    // the result-line reveal delay and the renderResult Promise
+    // resolve gate.
+    const MAX_FINISH_MS = RACE_MS + (FIELD_SIZE - 1) * STAGGER_MS;
 
     const lanes = Array.from(track.querySelectorAll('.hr-lane'));
     const runners = lanes.map(function (lane) {
@@ -105,20 +110,25 @@ function renderHorseRacingResult(resultEl, body) {
         // Scroll the track into view on mobile so the user actually
         // sees the race after tapping Race — the bet form lives below
         // the track and the action can otherwise happen off-screen.
-        //
-        // No horizontal motion yet: the visible race is driven entirely
-        // by stopAnimation once the server returns the finishing order,
-        // so each horse traverses the rail in a single uninterrupted
-        // glide with a rank-specific duration (winner finishes first
-        // because its transition is shortest). An earlier draft kicked
-        // every horse off to a uniform mid-rail position during the
-        // pending phase; that produced a "they all bunch at 60 % then
-        // jump" feel which the players hated. Typical server response
-        // is sub-second so the brief stillness reads as "they're in
-        // the gate".
         if (track && typeof track.scrollIntoView === 'function') {
             track.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        // Visible warm-up while we wait for the server. Each horse heads
+        // toward a per-lane target between ~30 % and ~50 % of the rail
+        // over 4–7 s — long enough that they're still mid-stride when a
+        // slow `autoTopUp` response (1–3 s) finally lands, and jittered
+        // per lane so they don't move in lockstep. `stopAnimation` then
+        // overrides each horse's transition to land at the finish at its
+        // rank-staggered time, continuing smoothly from the warm-up
+        // position. Without this the rail looked frozen for the full
+        // request + minSettleMs gate (~5 s in the worst case).
+        runners.forEach(function (r) {
+            if (!r) return;
+            const targetPct = 30 + Math.random() * 20;
+            const duration = 4000 + Math.random() * 3000;
+            r.style.transition = 'left ' + duration + 'ms cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+            r.style.left = 'calc(' + targetPct.toFixed(1) + '% - 1.6rem)';
+        });
         return null;
     }
 
@@ -127,19 +137,26 @@ function renderHorseRacingResult(resultEl, body) {
         if (!body || !body.finishingOrder || body.finishingOrder.length !== FIELD_SIZE) {
             return;
         }
-        // Single continuous traversal per horse. Each horse's duration
-        // is `RACE_MS + rank * STAGGER_MS` so the favourite (rank 0)
-        // crosses the line at RACE_MS and the trailing horse (rank
-        // FIELD_SIZE-1) crosses ~1.1 s later. Different durations
-        // produce different perceived speeds, so the runners no longer
-        // move in lockstep — and they never stop at an intermediate
-        // position, which was the "stuck two-thirds in" feel.
-        // `calc(100% - 2rem)` leaves room for the runner emoji itself
-        // so it stops at the flag rather than disappearing off the
-        // edge.
+        // Redirect every horse to the finish line in a single transition
+        // with a rank-specific duration: winner (rank 0) takes RACE_MS,
+        // last (rank FIELD_SIZE-1) takes RACE_MS + 5×STAGGER_MS. The
+        // "snapshot the current computed left, reset transition to none,
+        // force reflow, then set the new transition + target" dance is
+        // the standard CSS-transition-restart pattern — without it the
+        // browser would keep running the warm-up transition because
+        // changing transition-duration alone doesn't reset the
+        // animation. With it, each horse continues smoothly from its
+        // current warm-up position to the finish over the new duration.
         body.finishingOrder.forEach(function (horseIdx, rank) {
             const runner = runners[horseIdx - 1];
             if (!runner) return;
+            const currentLeft = window.getComputedStyle(runner).left;
+            runner.style.transition = 'none';
+            runner.style.left = currentLeft;
+            // Force reflow so the new starting position takes hold
+            // before we apply the next transition.
+            // eslint-disable-next-line no-unused-expressions
+            runner.offsetWidth;
             const duration = RACE_MS + rank * STAGGER_MS;
             runner.style.transition = 'left ' + duration + 'ms cubic-bezier(0.35, 0.1, 0.45, 1)';
             runner.style.left = 'calc(100% - 2rem)';
@@ -164,9 +181,13 @@ function renderHorseRacingResult(resultEl, body) {
         resultEl: els.resultEl,
         tobyCoins: els.tobyCoins,
         marketPrice: els.marketPrice,
-        // Wait long enough for the lanes to visibly settle before
-        // surfacing the win/lose copy. RACE_MS + last-place stagger.
-        minSettleMs: RACE_MS + (FIELD_SIZE - 1) * STAGGER_MS + 400,
+        // Fire `stopAnimation` immediately on response so the rail
+        // redirects from warm-up to the staggered finish as soon as we
+        // know the order. The race-length gate that used to live here
+        // moved into `renderResult` below, which returns a Promise that
+        // resolves after the slowest horse crosses — keeping the result
+        // line, balance update, and button re-enable held until then.
+        minSettleMs: 0,
         failureMessage: 'Race failed.',
         validate: function () {
             if (!selectedHorse()) return 'Pick a horse first.';
@@ -189,7 +210,22 @@ function renderHorseRacingResult(resultEl, body) {
         },
         startAnimation: startAnimation,
         stopAnimation: stopAnimation,
-        renderResult: function (body) { renderHorseRacingResult(els.resultEl, body); },
+        renderResult: function (body) {
+            // The Promise gate ensures the result line, the win-settle
+            // chip flourish, the balance update, and the button
+            // re-enable all wait for the slowest horse to cross the
+            // line — `casino-game.js`'s `finishSettle` only runs after
+            // this resolves. Painting the result line at t=0 would
+            // spoil the reveal (the podium is right there); delaying
+            // it until MAX_FINISH_MS lets the player watch the race
+            // resolve first and then see "🥇 H3 · +220 credits".
+            return new Promise(function (resolve) {
+                setTimeout(function () {
+                    renderHorseRacingResult(els.resultEl, body);
+                    resolve();
+                }, MAX_FINISH_MS);
+            });
+        },
         flashTarget: tableEl,
     });
 })();
