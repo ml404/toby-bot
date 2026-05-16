@@ -63,7 +63,7 @@ enum class JackpotGame(val rtp: Double, val eligibleForJackpot: Boolean = true) 
     BACCARAT(0.99),    // Banker ~98.94%, Player ~98.76% — pin to the higher.
     ROULETTE(0.973),   // 36/37 European wheel — uniform across bet types.
     HOLDEM(0.97),      // Casino Hold'em vs dealer; ~2-3% edge industry-wide.
-    HORSE_RACING(0.95),// Plackett–Luce 6-horse field; per-bet multipliers calibrated to 0.95 RTP. Pinned by HorseRacingTest.
+    HORSE_RACING(0.92),// Plackett–Luce 6-horse field; per-bet multipliers calibrated to 0.92 RTP. Pinned by HorseRacingTest. Below the recommended JACKPOT_RTP_MAX_PCT=95 gate because Show-on-favourite wins ~70 % of races, putting roll cadence in farming-risk territory like KENO/SLOTS.
     HIGHLOW(0.923, eligibleForJackpot = false), // Honest 12/13 RTP but ~85 % win rate at extreme anchors farms rolls; loss-tribute only.
     KENO(0.92),        // 0.83-0.92 band; pin to the top so the gate is honest.
     PLINKO(0.89),      // ~11% edge across LOW/MEDIUM/HIGH profiles; pinned by PlinkoTest.

@@ -102,25 +102,23 @@ function renderHorseRacingResult(resultEl, body) {
     function startAnimation() {
         resetLanes();
         if (window.CasinoSounds) window.CasinoSounds.play('deal');
-        // Kick every horse off with a slow trot toward the finish — they
-        // settle to their actual finishing spots once the server reply
-        // arrives. `left` is animated (not transform) because percentage
-        // transforms are relative to the runner element's own width
-        // (~26px) and would barely budge the horse; `left` is relative
-        // to the rail's containing block, which is what we want.
-        // The `calc(60% - 1.6rem)` accounts for the runner's width so it
-        // doesn't visually overshoot the rail on the lead-in.
-        // Also scroll the track into view on mobile so the user actually
+        // Scroll the track into view on mobile so the user actually
         // sees the race after tapping Race — the bet form lives below
         // the track and the action can otherwise happen off-screen.
+        //
+        // No horizontal motion yet: the visible race is driven entirely
+        // by stopAnimation once the server returns the finishing order,
+        // so each horse traverses the rail in a single uninterrupted
+        // glide with a rank-specific duration (winner finishes first
+        // because its transition is shortest). An earlier draft kicked
+        // every horse off to a uniform mid-rail position during the
+        // pending phase; that produced a "they all bunch at 60 % then
+        // jump" feel which the players hated. Typical server response
+        // is sub-second so the brief stillness reads as "they're in
+        // the gate".
         if (track && typeof track.scrollIntoView === 'function') {
             track.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        runners.forEach(function (r) {
-            if (!r) return;
-            r.style.transition = 'left ' + RACE_MS + 'ms cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-            r.style.left = 'calc(60% - 1.6rem)';
-        });
         return null;
     }
 
@@ -129,21 +127,25 @@ function renderHorseRacingResult(resultEl, body) {
         if (!body || !body.finishingOrder || body.finishingOrder.length !== FIELD_SIZE) {
             return;
         }
-        // Assign each horse a finishing tick based on its rank. The
-        // winner crosses first (RACE_MS), each subsequent place is
-        // STAGGER_MS later, so the visual finish order matches the
-        // server result regardless of the jittered run-up. The
+        // Single continuous traversal per horse. Each horse's duration
+        // is `RACE_MS + rank * STAGGER_MS` so the favourite (rank 0)
+        // crosses the line at RACE_MS and the trailing horse (rank
+        // FIELD_SIZE-1) crosses ~1.1 s later. Different durations
+        // produce different perceived speeds, so the runners no longer
+        // move in lockstep — and they never stop at an intermediate
+        // position, which was the "stuck two-thirds in" feel.
         // `calc(100% - 2rem)` leaves room for the runner emoji itself
-        // so it stops at the flag rather than disappearing off the edge.
+        // so it stops at the flag rather than disappearing off the
+        // edge.
         body.finishingOrder.forEach(function (horseIdx, rank) {
             const runner = runners[horseIdx - 1];
             if (!runner) return;
-            const delay = rank * STAGGER_MS;
+            const duration = RACE_MS + rank * STAGGER_MS;
+            runner.style.transition = 'left ' + duration + 'ms cubic-bezier(0.35, 0.1, 0.45, 1)';
+            runner.style.left = 'calc(100% - 2rem)';
             const timer = setTimeout(function () {
-                runner.style.transition = 'left 500ms cubic-bezier(0.2, 0.7, 0.3, 1)';
-                runner.style.left = 'calc(100% - 2rem)';
                 runner.classList.add('hr-runner-finished');
-            }, delay);
+            }, duration);
             animationTimers.push(timer);
         });
         if (window.CasinoSounds) {

@@ -23,7 +23,7 @@ import kotlin.random.Random
  *   SHOW     — the horse must finish 1st, 2nd, or 3rd.
  *
  * The per-bet-type multipliers are calibrated so each bet on each horse
- * lands at the target RTP of ~0.95 — verified by [HorseRacingTest]. The
+ * lands at the target RTP of ~0.92 — verified by [HorseRacingTest]. The
  * payouts are fractional (Place/Show pay less than even money for the
  * favourite) so the service uses [database.service.WagerHelper.applyMultiplier]'s
  * `Double` overload (the same path Highlow uses).
@@ -118,20 +118,27 @@ class HorseRacing {
         /**
          * Six horses, favourite (H1) through longshot (H6). Win
          * probabilities sum to 1.0 by construction. Payout multipliers
-         * are calibrated so every (horse, bet-type) pair returns ~0.95
+         * are calibrated so every (horse, bet-type) pair returns ~0.92
          * RTP under Plackett–Luce sampling — pinned by [HorseRacingTest].
+         *
+         * The 0.92 target (slightly below the original 0.95 draft) sits
+         * Horse Racing comfortably in the same eligibility band as KENO
+         * (0.92), PLINKO (0.89), and SLOTS (0.89), and lifts it clear
+         * of the recommended `JACKPOT_RTP_MAX_PCT = 95` boundary —
+         * relevant because Show-on-favourite wins ~70% of races, so the
+         * jackpot roll cadence is higher than the typical wager game.
          *
          * Lookup is 1-indexed externally (the slash command and web
          * surface both expose H1..H6) — when reading this list use
          * `HORSES[index - 1]`.
          */
         val HORSES: List<HorseProfile> = listOf(
-            HorseProfile(1, "Thunderbolt", "🐎", winProb = 0.30, winMult = 3.2, placeMult = 1.7, showMult = 1.2),
-            HorseProfile(2, "Silver Streak", "🐴", winProb = 0.22, winMult = 4.3, placeMult = 2.2, showMult = 1.5),
-            HorseProfile(3, "Midnight Star", "🐎", winProb = 0.18, winMult = 5.3, placeMult = 2.6, showMult = 1.7),
-            HorseProfile(4, "Sun Dancer", "🐴", winProb = 0.13, winMult = 7.3, placeMult = 3.4, showMult = 2.1),
-            HorseProfile(5, "Iron Hoof", "🐎", winProb = 0.10, winMult = 9.5, placeMult = 4.4, showMult = 2.6),
-            HorseProfile(6, "Wild Card", "🐴", winProb = 0.07, winMult = 13.6, placeMult = 6.2, showMult = 3.5),
+            HorseProfile(1, "Thunderbolt", "🐎", winProb = 0.30, winMult = 3.1, placeMult = 1.7, showMult = 1.2),
+            HorseProfile(2, "Silver Streak", "🐴", winProb = 0.22, winMult = 4.2, placeMult = 2.1, showMult = 1.5),
+            HorseProfile(3, "Midnight Star", "🐎", winProb = 0.18, winMult = 5.1, placeMult = 2.5, showMult = 1.6),
+            HorseProfile(4, "Sun Dancer", "🐴", winProb = 0.13, winMult = 7.1, placeMult = 3.3, showMult = 2.0),
+            HorseProfile(5, "Iron Hoof", "🐎", winProb = 0.10, winMult = 9.2, placeMult = 4.3, showMult = 2.5),
+            HorseProfile(6, "Wild Card", "🐴", winProb = 0.07, winMult = 13.1, placeMult = 6.0, showMult = 3.4),
         )
 
         val FIELD_SIZE: Int = HORSES.size

@@ -98,10 +98,10 @@ class HorseRacingTest {
     }
 
     @Test
-    fun `each WIN bet pays back about 0_95 RTP per horse (calibration)`() {
+    fun `each WIN bet pays back about 0_92 RTP per horse (calibration)`() {
         // For each horse, repeatedly bet WIN on it and check empirical
-        // RTP lands in [0.90, 1.00] — comfortably brackets the 0.95
-        // target given finite-sample noise on the longshot.
+        // RTP lands inside a generous band that brackets the 0.92
+        // target with finite-sample slack on the longshot.
         val rng = Random(2026)
         val n = 50_000
         val stake = 100L
@@ -116,13 +116,13 @@ class HorseRacingTest {
             val rtp = returned.toDouble() / wagered
             assertTrue(
                 rtp in 0.85..1.05,
-                "WIN RTP on H${profile.index} was $rtp (expected ~0.95)"
+                "WIN RTP on H${profile.index} was $rtp (expected ~0.92)"
             )
         }
     }
 
     @Test
-    fun `each PLACE bet pays back about 0_95 RTP per horse (joint distribution)`() {
+    fun `each PLACE bet pays back about 0_92 RTP per horse (joint distribution)`() {
         val rng = Random(2026)
         val n = 50_000
         val stake = 100L
@@ -137,13 +137,13 @@ class HorseRacingTest {
             val rtp = returned.toDouble() / wagered
             assertTrue(
                 rtp in 0.85..1.05,
-                "PLACE RTP on H${profile.index} was $rtp (expected ~0.95)"
+                "PLACE RTP on H${profile.index} was $rtp (expected ~0.92)"
             )
         }
     }
 
     @Test
-    fun `each SHOW bet pays back about 0_95 RTP per horse (joint distribution)`() {
+    fun `each SHOW bet pays back about 0_92 RTP per horse (joint distribution)`() {
         val rng = Random(2026)
         val n = 50_000
         val stake = 100L
@@ -158,7 +158,7 @@ class HorseRacingTest {
             val rtp = returned.toDouble() / wagered
             assertTrue(
                 rtp in 0.85..1.05,
-                "SHOW RTP on H${profile.index} was $rtp (expected ~0.95)"
+                "SHOW RTP on H${profile.index} was $rtp (expected ~0.92)"
             )
         }
     }
